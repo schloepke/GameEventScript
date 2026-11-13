@@ -24,7 +24,10 @@ internal static partial class GesCSharpEmitter
         if (Scalar(value)) yield return value;
         foreach (var axis in value.Axes) yield return axis;
         foreach (var corner in value.Corners)
+        {
+            if (Scalar(corner)) yield return corner;
             foreach (var axis in corner.Axes) yield return axis;
+        }
         foreach (var alternative in value.Alternatives)
             foreach (var nested in Scalars(alternative)) yield return nested;
         if (value.Item is null && value.Element is not null)
@@ -213,7 +216,7 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Same(code, axis, a + "." + axis.Base, b + "." + axis.Base);
                 break;
-            case GesLayoutKind.Box:
+            case GesLayoutKind.Box or GesLayoutKind.Disc:
                 foreach (var corner in value.Corners) Same(code, corner, a + "." + corner.Base, b + "." + corner.Base);
                 break;
             case GesLayoutKind.Schema:
@@ -403,6 +406,15 @@ internal static partial class GesCSharpEmitter
                 code.Line($"{target} = new GesBox(lower{node}, upper{node});");
                 code.Close();
                 break;
+            case GesLayoutKind.Disc when Quantized(value):
+                // A disc is immutable: its centre and radius are quantized and make a new disc.
+                code.Open("{");
+                code.Line($"var center{node} = {target}.Center;");
+                code.Line($"var radius{node} = {target}.Radius;");
+                foreach (var part in value.Corners) Quantize(code, part, part.Label + node);
+                code.Line($"{target} = new GesDisc(center{node}, radius{node});");
+                code.Close();
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"{target}.__Quantize(paths, at + {N(value.Node + 1)}{NextLevel(value)});");
                 break;
@@ -441,12 +453,15 @@ internal static partial class GesCSharpEmitter
         }
     }
 
+    // A Point without axes, the centre of a Disc whose block names only the radius, which transmits nothing.
+    private static bool Empty(GesPlanValue value) => value.Encoding.Kind == GesLayoutKind.Point && value.Axes.Count == 0;
+
     // Whether a value holds a quantized number that Quantize changes; schemas always forward, as theirs may.
     private static bool Quantized(GesPlanValue value) => value.Encoding.Kind switch
     {
         GesLayoutKind.Quantized or GesLayoutKind.Schema => true,
         GesLayoutKind.Point or GesLayoutKind.Vector => value.Axes.Exists(Quantized),
-        GesLayoutKind.Box => value.Corners.Exists(Quantized),
+        GesLayoutKind.Box or GesLayoutKind.Disc => value.Corners.Exists(Quantized),
         GesLayoutKind.Union => value.Alternatives.Exists(Quantized),
         GesLayoutKind.List => value.Item is not null ? Quantized(value.Item.Fields[0].Value) : Quantized(value.Element!),
         _ => false
@@ -707,14 +722,21 @@ internal static partial class GesCSharpEmitter
                 code.Line($"if (!{set}) writer.Rewind(first{node});");
                 code.Close();
                 break;
-            case GesLayoutKind.Box:
-                // A nested delta of the corners, each one of a Point.
+            case GesLayoutKind.Box or GesLayoutKind.Disc:
+                // A nested delta of the corners, each one of a Point, or of a disc's centre and radius.
                 code.Open("{");
                 code.Line($"var first{node} = writer.BitPosition;");
                 code.Line($"writer.Write(0, {N(value.Corners.Count)});");
                 for (var index = 0; index < value.Corners.Count; index++)
                 {
                     var corner = value.Corners[index];
+                    if (Empty(corner))
+                    {
+                        // A centre without axes transmits nothing: its change bit stays clear, and it must lie at the origin.
+                        foreach (var axis in GesSchemaPlanner.Omitted(corner)) code.Line($"if ({a}.{corner.Base}.{axis} != 0) {Throw("TypeMismatch", corner)}");
+                        continue;
+                    }
+
                     code.Open("{");
                     code.Line($"var set{N(corner.Node)} = false;");
                     DeltaPayload(code, corner, a + "." + corner.Base, b + "." + corner.Base, $"set{N(corner.Node)}");
@@ -726,6 +748,7 @@ internal static partial class GesCSharpEmitter
                     code.Close();
                 }
 
+                if (value.Encoding.Kind == GesLayoutKind.Disc && value.Corners.Count == 1) code.Line($"if ({a}.Radius != 0) {Throw("TypeMismatch", value)}");
                 code.Line($"if (!{set}) writer.Rewind(first{node});");
                 code.Close();
                 break;
@@ -848,8 +871,9 @@ internal static partial class GesCSharpEmitter
                 code.Line($"if (!changed{node}) {Throw("InvalidDelta", value)}");
                 code.Close();
                 break;
-            case GesLayoutKind.Box:
-                // The corners start as the baseline's; the box orders what the delta changes.
+            case GesLayoutKind.Box or GesLayoutKind.Disc:
+                // The corners start as the baseline's; the box orders what the delta changes. A disc takes its centre and radius
+                // likewise.
                 code.Open("{");
                 code.Line($"reader.Require({N(value.Corners.Count)}, {Path(value)});");
                 code.Line($"var bits{node} = reader.BitPosition;");
@@ -860,6 +884,7 @@ internal static partial class GesCSharpEmitter
                     var corner = value.Corners[index];
                     var cornerNode = N(corner.Node);
                     code.Line($"var {corner.Label}{node} = {b}.{corner.Base};");
+                    if (Empty(corner)) continue;
                     code.Open("{");
                     code.Line($"var payload{cornerNode} = reader.BitPosition;");
                     code.Line($"reader.Seek(bits{node} + {N(index)});");
@@ -874,7 +899,8 @@ internal static partial class GesCSharpEmitter
                 }
 
                 code.Line($"if (!changed{node}) {Throw("InvalidDelta", value)}");
-                code.Line($"{a} = new GesBox(lower{node}, upper{node});");
+                if (value.Encoding.Kind == GesLayoutKind.Disc && value.Corners.Count == 1) code.Line($"var radius{node} = 0d;");
+                code.Line(value.Encoding.Kind == GesLayoutKind.Disc ? $"{a} = new GesDisc(center{node}, radius{node});" : $"{a} = new GesBox(lower{node}, upper{node});");
                 code.Close();
                 break;
             case GesLayoutKind.Schema:

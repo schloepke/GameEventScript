@@ -167,6 +167,9 @@ internal static class GesSwiftModelEmitter
         if (values is not null) names.Add(("toValue", "the generated member toValue"));
         if (bindings && fields.Exists(field => field.Field.Name == "fields"))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{type.Name}', the field fields and the generated field fields of its bindings share a name.");
+        // The values of the record defaults are held by a class named after the type.
+        if ((bindings || values is not null) && fields.Exists(field => field.Field.Default is { Kind: GesSchemaDefaultKind.Record }) && GesModelPlanner.TopLevel(layout, swift: true).Contains(type.Name + "Defaults"))
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The record defaults of '{type.Name}' are generated as '{type.Name}Defaults', which hides the top-level type of that name.");
         GesSchemaPlanner.Unique(type.Name, names, GesModelPlanner.TopLevel(layout, swift: true));
 
         code.Line($"/// The model of the schema `:{type.Name}`: a plain value that is never encoded.");
@@ -326,6 +329,7 @@ internal static class GesSwiftModelEmitter
         GesModelKind.Vector => "GesVector",
         GesModelKind.Box => "GesBox",
         GesModelKind.Poly => "GesPoly",
+        GesModelKind.Disc => "GesDisc",
         GesModelKind.Schema => value.Model.Schema,
         _ => value.Nested
     };
@@ -395,7 +399,7 @@ internal static class GesSwiftModelEmitter
             GesModelKind.Tag => $"{support}.tag({expression})",
             GesModelKind.List => $".list({expression}.map {{ {Encode(value.Element!, owner, "$0", helper, support, plain: plain)} }})",
             GesModelKind.Dice => $"{support}.dice({expression})",
-            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly => $"{expression}.value(unit: {Unit(value.Model.Unit)})",
+            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly or GesModelKind.Disc => $"{expression}.value(unit: {Unit(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{expression}.toValue()" : $"{expression}.gesValue()",
             _ => $"{helper}.value({expression})"
         };
@@ -421,6 +425,7 @@ internal static class GesSwiftModelEmitter
             GesModelKind.Vector => $"GesVector({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Box => $"GesBox({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Poly => $"GesPoly({expression}, unit: {Unit(value.Model.Unit)})",
+            GesModelKind.Disc => $"GesDisc({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{helper}.decode{value.Model.Schema}({expression})" : $"{value.Model.Schema}(gesValue: {expression})",
             _ => $"{helper}.decode{owner}{value.Nested}({expression})"
         };
@@ -544,14 +549,14 @@ internal static class GesSwiftModelEmitter
             code.Blank();
             code.Line($"/// Constructs a `:{type.Name}` from a Map or Record of its fields; an absent optional field may be left out.");
             code.Open($"private struct {type.Name}Constructor: GesExternalTypeConstructor {{");
-            Defaults(code, layout, fields, "Defaults", type.Name, support);
+            Defaults(code, layout, fields, type.Name + "Defaults", type.Name, support);
             code.Line($"var definition: GesExternalTypeConstructorDefinition {{ {type.Name}Value.definition.constructors[0] }}");
             code.Blank();
             code.Open("func invoke(_ call: GesExternalTypeConstructorCall) throws {");
             code.Open("guard");
             code.Line($"let fields = call.arguments[0].asMap, {support}.known(fields, {type.Name}Value.names){(fields.Count > 0 ? "," : "")}");
             for (var index = 0; index < fields.Count; index++)
-                code.Line($"let {Member(fields[index].Base)} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support, "Defaults"), "GesTypes", support)}{(index == fields.Count - 1 ? "" : ",")}");
+                code.Line($"let {Member(fields[index].Base)} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support, type.Name + "Defaults"), "GesTypes", support)}{(index == fields.Count - 1 ? "" : ",")}");
             code.Dedent();
             {
                 code.Open("else {");

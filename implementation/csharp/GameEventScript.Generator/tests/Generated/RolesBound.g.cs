@@ -2897,7 +2897,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         private sealed class WorldViewConstructor : IGesExternalTypeConstructor
         {
             // The values of the record defaults of :WorldView, built once.
-            private static class Defaults
+            private static class WorldViewDefaults
             {
                 internal static readonly GesValue Rig = new global::GameEventScript.Tests.Generator.Roles.Bound.Rig(note: null, level: 1, spare: null, tuning: new global::GameEventScript.Tests.Generator.Roles.Bound.Tuning(gain: 0.5)).ToValue();
                 internal static readonly GesValue Tuning = new global::GameEventScript.Tests.Generator.Roles.Bound.Tuning().ToValue();
@@ -2921,9 +2921,9 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
                     || !__GesModels50c3c3e7054686ea.List(__GesModels50c3c3e7054686ea.Field(fields, "gear"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Bound.GearView y0) => DecodeGearView(x0, out y0), out var gear)
                     || !__GesModels50c3c3e7054686ea.OptionalObject(__GesModels50c3c3e7054686ea.Field(fields, "preset"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Bound.GearPreset y0) => DecodeGearPreset(x0, out y0), out var preset)
                     || !__GesModels50c3c3e7054686ea.OptionalObject(__GesModels50c3c3e7054686ea.Field(fields, "echo"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Bound.RadarEcho y0) => DecodeRadarEcho(x0, out y0), out var echo)
-                    || !DecodeRig(fields.Get("rig") ?? Defaults.Rig, out var rig)
-                    || !DecodeTuning(fields.Get("tuning") ?? Defaults.Tuning, out var tuning)
-                    || !DecodeTuning(fields.Get("boost") ?? Defaults.Boost, out var boost))
+                    || !DecodeRig(fields.Get("rig") ?? WorldViewDefaults.Rig, out var rig)
+                    || !DecodeTuning(fields.Get("tuning") ?? WorldViewDefaults.Tuning, out var tuning)
+                    || !DecodeTuning(fields.Get("boost") ?? WorldViewDefaults.Boost, out var boost))
                 {
                     call.SetNothing();
                     return;

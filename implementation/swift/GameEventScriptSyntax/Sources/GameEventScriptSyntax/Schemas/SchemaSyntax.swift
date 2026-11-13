@@ -45,6 +45,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case box = "Box"
     /// A polygon of Points in the plane z = 0.
     case poly = "Poly"
+    /// A filled circle in the plane z = 0: a centre Point and a radius.
+    case disc = "Disc"
 }
 
 @_spi(Syntax) public enum GesSchemaTypeNames {
@@ -62,6 +64,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
         case "Vector": .vector
         case "Box": .box
         case "Poly": .poly
+        case "Disc": .disc
         case "Tag": .tag
         case "Text": .text
         case "Bytes": .bytes

@@ -8,20 +8,23 @@ using GameEventScript.Runtime.Values;
 namespace GameEventScript.Api;
 
 /// <summary>
-/// The standard geometry library: the external types <c>:Box</c> and <c>:Poly</c> over <see cref="GesBox"/> and
-/// <see cref="GesPoly"/>, and the extension functions <c>:geometry.*</c>, so that hosts and scripts compute alike. A host
+/// The standard geometry library: the external types <c>:Box</c>, <c>:Poly</c> and <c>:Disc</c> over <see cref="GesBox"/>,
+/// <see cref="GesPoly"/> and <see cref="GesDisc"/>, and the extension functions <c>:geometry.*</c>, so that hosts and scripts compute alike. A host
 /// that wants it passes <see cref="Catalog"/> to the compiler and <see cref="ExternalTypes"/> and <see cref="Extensions"/> to
 /// the host, each in front of its own catalog or registry, which resolves what the library does not.
 /// </summary>
 /// <remarks>
 /// <c>:Box(lower: p, upper: q)</c> takes two corners in any order, which its fields <c>lower</c> and <c>upper</c> return
 /// ordered (<c>min</c> and <c>max</c> are GES keywords), and <c>:Box(center: p, size: v)</c> a centre and a size;
-/// <c>:Poly(points: [...])</c> takes its points. Corners, points and sizes share one unit, which the value keeps; another
-/// kind or a mixed unit constructs <c>nothing</c>. A polygon need not be valid to exist, but its operations give
-/// <c>nothing</c> when it is not. Functions: <c>size</c>, <c>center</c>, <c>union</c>, <c>inset(_, by:)</c> and
-/// <c>nearest</c>, the point of a box nearest to a point (<c>clamp</c> is a GES keyword), of boxes; <c>bounds</c>, <c>area</c> (signed and unitless, like <c>dot</c>), <c>distance</c> and
-/// <c>centroid</c> of polygons; <c>contains</c> and <c>intersects</c> of both, a box with a polygon counting as its outline
-/// in the plane. Anything else, such as another unit, gives <c>nothing</c>.
+/// <c>:Poly(points: [...])</c> takes its points; <c>:Disc(center: p, radius: r)</c> a centre and a radius and
+/// <c>:Disc(radius: r)</c> a radius around the origin. Corners, points, sizes and radii share one unit, which the value
+/// keeps; another kind or a mixed unit constructs <c>nothing</c>. A polygon or disc need not be valid to exist, but its
+/// operations give <c>nothing</c> when it is not. Functions: <c>size</c>, <c>center</c>, <c>union</c>, <c>inset(_, by:)</c>
+/// and <c>nearest</c>, the point of a shape nearest to a point (<c>clamp</c> is a GES keyword), of boxes; <c>bounds</c>,
+/// <c>area</c> (signed and unitless, like <c>dot</c>), <c>distance</c> and <c>centroid</c> of polygons; <c>center</c>,
+/// <c>bounds</c>, <c>area</c>, <c>distance</c>, <c>inset(_, by:)</c> and <c>nearest</c> of discs; <c>contains</c> and
+/// <c>intersects</c> of all, a box with a polygon counting as its outline in the plane and a disc meeting a 2D box. Anything
+/// else, such as another unit, gives <c>nothing</c>.
 /// </remarks>
 public static class GesGeometryLibrary
 {
@@ -40,8 +43,14 @@ public static class GesGeometryLibrary
         [new GesExternalTypeFieldDefinition("points", GesBytecodeTypeKind.List)],
         [new GesExternalTypeConstructorDefinition("Poly", [new GesExternalTypeParameterDefinition("points", GesBytecodeTypeKind.List)])]);
 
-    /// <summary>Gets the declarations of <c>:Box</c> and <c>:Poly</c>.</summary>
-    public static IReadOnlyList<GesExternalTypeDefinition> Types { get; } = new[] { BoxDefinition, PolyDefinition };
+    private static readonly GesExternalTypeDefinition DiscDefinition = new(
+        "Disc",
+        [new GesExternalTypeFieldDefinition("center", GesBytecodeTypeKind.Point), new GesExternalTypeFieldDefinition("radius", GesBytecodeTypeKind.Float)],
+        [new GesExternalTypeConstructorDefinition("Disc", [new GesExternalTypeParameterDefinition("center", GesBytecodeTypeKind.Point), new GesExternalTypeParameterDefinition("radius", GesBytecodeTypeKind.Float)]),
+         new GesExternalTypeConstructorDefinition("Disc", [new GesExternalTypeParameterDefinition("radius", GesBytecodeTypeKind.Float)])]);
+
+    /// <summary>Gets the declarations of <c>:Box</c>, <c>:Poly</c> and <c>:Disc</c>.</summary>
+    public static IReadOnlyList<GesExternalTypeDefinition> Types { get; } = new[] { BoxDefinition, PolyDefinition, DiscDefinition };
 
     /// <summary>Creates the compiler catalog of the library in front of another one.</summary>
     /// <param name="next">The catalog that resolves every other type, or null for none.</param>
@@ -68,15 +77,16 @@ public static class GesGeometryLibrary
         {
             "Box" => BoxDefinition,
             "Poly" => PolyDefinition,
+            "Disc" => DiscDefinition,
             _ => next?.Resolve(typeName)
         };
 
         private static List<GesExternalTypeDefinition> Merge(IGesExternalTypeCatalog? next)
         {
-            var types = new List<GesExternalTypeDefinition> { BoxDefinition, PolyDefinition };
+            var types = new List<GesExternalTypeDefinition> { BoxDefinition, PolyDefinition, DiscDefinition };
             if (next is not null)
                 foreach (var type in next.Types)
-                    if (type.Name is not ("Box" or "Poly")) types.Add(type);
+                    if (type.Name is not ("Box" or "Poly" or "Disc")) types.Add(type);
             return types;
         }
     }
@@ -86,7 +96,7 @@ public static class GesGeometryLibrary
         public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)
         {
             if (reference is null) throw new ArgumentNullException(nameof(reference));
-            foreach (var definition in new[] { BoxDefinition, PolyDefinition })
+            foreach (var definition in new[] { BoxDefinition, PolyDefinition, DiscDefinition })
                 foreach (var constructor in definition.Constructors)
                     if (constructor.SignatureId == reference.SignatureId) return new Constructor(constructor);
             return next?.Resolve(reference);
@@ -107,6 +117,16 @@ public static class GesGeometryLibrary
                 return;
             }
 
+            if (Definition.TypeName == "Disc")
+            {
+                // The radius takes the unit of the centre; without one, the disc lies around the origin.
+                var radius = arguments.Length - 1;
+                var around = arguments.UnitAt(radius);
+                if (!IsNumber(arguments, radius, around) || (radius == 1 && (arguments.KindAt(0) != GesBytecodeTypeKind.Point || arguments.UnitAt(0) != around))) call.SetNothing();
+                else call.SetExternalValue(new DiscValue(new GesDisc(radius == 1 ? Point(arguments[0]) : GesPoint.Zero, arguments.GetAsNumber(radius)), around));
+                return;
+            }
+
             var unit = arguments.UnitAt(0);
             if (arguments.KindAt(0) != GesBytecodeTypeKind.Point || arguments.UnitAt(1) != unit) call.SetNothing();
             else if (Definition.Parameters[0].Name == "lower" && arguments.KindAt(1) == GesBytecodeTypeKind.Point)
@@ -118,6 +138,9 @@ public static class GesGeometryLibrary
     }
 
     private static GesPoint Point(in GesValue value) => new(value.X, value.Y, value.Z);
+
+    private static bool IsNumber(in GesValueArguments arguments, int index, GesQuantityUnit unit)
+        => arguments.KindAt(index) is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && arguments.UnitAt(index) == unit;
 
     private static GesVector Vector(in GesValue value) => new(value.X, value.Y, value.Z);
 
@@ -176,6 +199,23 @@ public static class GesGeometryLibrary
         }
     }
 
+    /// <summary>A <c>:Disc</c> held by a script, with the unit of its centre and radius.</summary>
+    internal sealed class DiscValue(GesDisc disc, GesQuantityUnit unit) : IGesExternalValue
+    {
+        internal GesDisc Disc { get; } = disc;
+
+        internal GesQuantityUnit Unit { get; } = unit;
+
+        public GesExternalTypeDefinition Definition => DiscDefinition;
+
+        public GesValue? GetField(string fieldName) => fieldName switch
+        {
+            "center" => Disc.Center.ToValue(Unit),
+            "radius" => GesValue.GesFloat(Disc.Radius, Unit),
+            _ => null
+        };
+    }
+
     private sealed class ExtensionOverlay(IGesExtensionRegistry? next) : IGesExtensionRegistry
     {
         public IGesExtensionFunction? Resolve(GesExtensionReference reference)
@@ -200,7 +240,8 @@ public static class GesGeometryLibrary
             var first = arguments[0].ExternalValue;
             var box = first as BoxValue;
             var poly = first as PolyValue;
-            var unit = box?.Unit ?? poly?.Unit ?? GesQuantityUnit.UnitNone;
+            var disc = first as DiscValue;
+            var unit = box?.Unit ?? poly?.Unit ?? disc?.Unit ?? GesQuantityUnit.UnitNone;
             var result = GesValue.GesNothing();
             switch (name)
             {
@@ -209,6 +250,15 @@ public static class GesGeometryLibrary
                     break;
                 case "center" when box is not null:
                     result = box.Box.Center.ToValue(unit);
+                    break;
+                case "center" when disc is not null:
+                    result = disc.Disc.Center.ToValue(unit);
+                    break;
+                case "bounds" when disc is not null:
+                    if (disc.Disc.Bounds is { } around) result = around.ToValue(unit);
+                    break;
+                case "area" when disc is not null:
+                    if (disc.Disc.Area is { } surface) result = GesValue.GesFloat(surface);
                     break;
                 case "bounds" when poly is not null:
                     if (poly.Poly.Bounds is { } bounds) result = bounds.ToValue(unit);
@@ -224,7 +274,7 @@ public static class GesGeometryLibrary
                     break;
                 case "contains" when PointOf(arguments, 1, unit) is { } point:
                     if (box is not null) result = GesValue.GesBoolean(box.Box.Contains(point));
-                    else if (poly?.Poly.Contains(point) is { } inside) result = GesValue.GesBoolean(inside);
+                    else if ((poly?.Poly.Contains(point) ?? disc?.Disc.Contains(point)) is { } inside) result = GesValue.GesBoolean(inside);
                     break;
                 case "intersects":
                     if (Shape(arguments[1].ExternalValue, unit) is { } other && Intersects(first, other) is { } touching) result = GesValue.GesBoolean(touching);
@@ -235,11 +285,20 @@ public static class GesGeometryLibrary
                 case "inset" when box is not null && IsNumber(arguments, 1, unit):
                     if (box.Box.Inset(arguments.GetAsNumber(1)) is { } inset) result = inset.ToValue(unit);
                     break;
+                case "inset" when disc is not null && IsNumber(arguments, 1, unit):
+                    if (disc.Disc.Inset(arguments.GetAsNumber(1)) is { } shrunk) result = shrunk.ToValue(unit);
+                    break;
                 case "nearest" when box is not null && PointOf(arguments, 1, unit) is { } target:
                     result = box.Box.Clamp(target).ToValue(unit);
                     break;
+                case "nearest" when disc is not null && PointOf(arguments, 1, unit) is { } toward:
+                    if (disc.Disc.Clamp(toward) is { } nearest) result = nearest.ToValue(unit);
+                    break;
                 case "distance" when poly is not null && PointOf(arguments, 1, unit) is { } from:
                     if (poly.Poly.DistanceTo(from) is { } distance) result = GesValue.GesFloat(distance, unit);
+                    break;
+                case "distance" when disc is not null && PointOf(arguments, 1, unit) is { } origin:
+                    if (disc.Disc.DistanceTo(origin) is { } gap) result = GesValue.GesFloat(gap, unit);
                     break;
             }
 
@@ -249,24 +308,32 @@ public static class GesGeometryLibrary
         private static GesPoint? PointOf(in GesValueArguments arguments, int index, GesQuantityUnit unit)
             => arguments.KindAt(index) == GesBytecodeTypeKind.Point && arguments.UnitAt(index) == unit ? Point(arguments[index]) : null;
 
-        private static bool IsNumber(in GesValueArguments arguments, int index, GesQuantityUnit unit)
-            => arguments.KindAt(index) is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && arguments.UnitAt(index) == unit;
-
         private static IGesExternalValue? Shape(IGesExternalValue? value, GesQuantityUnit unit) => value switch
         {
             BoxValue box when box.Unit == unit => box,
             PolyValue poly when poly.Unit == unit => poly,
+            DiscValue disc when disc.Unit == unit => disc,
             _ => null
         };
 
-        // Boxes intersect as boxes; a 2D box meets a polygon as the polygon of its outline.
+        // Boxes intersect as boxes; a 2D box meets a polygon as the polygon of its outline; a disc meets every shape as a disc.
         private static bool? Intersects(IGesExternalValue? first, IGesExternalValue second)
         {
             if (first is BoxValue a && second is BoxValue b) return a.Box.Intersects(b.Box);
+            if (first is DiscValue disc) return Meets(disc.Disc, second);
+            if (second is DiscValue other) return first is null ? null : Meets(other.Disc, first);
             var left = first is BoxValue boxA ? Outline(boxA.Box) : (first as PolyValue)?.Poly;
             var right = second is BoxValue boxB ? Outline(boxB.Box) : ((PolyValue)second).Poly;
             return left is null || right is null ? null : left.Intersects(right);
         }
+
+        private static bool? Meets(GesDisc disc, IGesExternalValue shape) => shape switch
+        {
+            DiscValue other => disc.Intersects(other.Disc),
+            BoxValue box => disc.Intersects(box.Box),
+            PolyValue poly => disc.Intersects(poly.Poly),
+            _ => null
+        };
 
         private static GesPoly? Outline(GesBox box)
             => box.Is2D ? new GesPoly([box.Min, new GesPoint(box.Max.X, box.Min.Y), box.Max, new GesPoint(box.Min.X, box.Max.Y)]) : null;

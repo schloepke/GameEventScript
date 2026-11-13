@@ -296,7 +296,8 @@ declarations and highlights them; the `Api/Schema` folder of Runtime checks thei
 computes the canonical form and FNV-1a 64 hash, and holds the allocation-free
 `GesSchemaWriter` and `GesSchemaReader`, the dump and the document check. `GesSchema` is the
 immutable description of one declaration with its fields; binding turns it into the flat layout of `GesBoundSchema`. Apart from `GesSchemaValues`, which converts
-Records and Messages, that folder uses neither `GesValue` nor the VM, which a repository test enforces;
+Records and Messages and builds the value of each record default once while a set loads (`GesResolvedRecord`), that
+folder uses neither `GesValue` nor the VM, which a repository test enforces;
 the document check leaves the construction of explicit forms to Runtime's document reading.
 Unity receives it as a precompiled assembly, so it stays within the `netstandard2.1` API: no
 `BitOperations`, `Unsafe`, `UInt128` or runtime code generation, and the hot path has no
@@ -335,8 +336,9 @@ record with computed fields as a script record on both VMs.
 (`:List(:Self) max n depth d`, specs/Schemas.md#recursion) unrolls per level at binding; only the recursive schema's
 generated methods take a level and order its deeper paths last, and every schema without one must generate unchanged
 code. `conformance/fixtures/SchemaGeneration/tree.gess` has checked-in goldens (`TreeWire`, `TreeModel`) and native tests
-in both ports. `:Box` binds as two Point corners and `:Poly` as a List of Points (specs/Schemas.md#geometry); generated
-wire code holds `GesBox` and a Poly's reusable Points with a `GesPoly` view, models `GesBox` and `GesPoly`, and
+in both ports. `:Box` binds as two Point corners, `:Poly` as a List of Points and `:Disc` as a centre Point and a radius
+(specs/Schemas.md#geometry); generated wire code holds `GesBox`, `GesDisc` and a Poly's reusable Points with a `GesPoly`
+view, models `GesBox`, `GesPoly` and `GesDisc`, and
 `conformance/fixtures/SchemaGeneration/geometry.gess` has goldens (`GeometryWire`, `GeometryModel`) and native tests in both
 ports.
 

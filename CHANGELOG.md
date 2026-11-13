@@ -32,7 +32,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `starts with`/`ends with` between two Ranges charge `MaxLoopIterations` for every Range item they visit, and
   shuffling a Range longer than `MaxRangeItems` reports that limit and gives an empty List, as `as :List` does.
 - `Box` and `Poly` are built-in schema types, so a schema, message or message set of that name is now
-  `schema.duplicateName`; rename it.
+  `schema.duplicateName`; rename it. The same now holds for `Disc`.
+- An external type's constructor parameter or field declared as a plain Number (`Float` without a unit) keeps a
+  Quantity's unit instead of dropping it, as an unconstrained Point or Vector already did: `5m` stays `5m` as binary64.
+  Declare a unit to convert, or convert the value in the host.
 - A required computed schema field that reads an optional field without `has value` or `default` is the new
   `schema.computedMayBeAbsent` instead of giving NaN or false where the field is absent; mark it `optional`, guard the
   read or give a fallback.
@@ -321,6 +324,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `document.*` or `wire.*` code, line, column and field path; a missing or other header is the new
   `document.schemaMismatch`. The Runtime's `GesSchemaDocument` does this for generated code, and `GesDocumentException.Path`
   (Swift `GesDocumentError.path`) names the field.
+- Schema type `:Disc(unit) { x ..., y ..., radius ... }` holds the geometry library's `GesDisc`: its centre as a Point of
+  the axes x and y, then its radius, binary64 without a block. The value path, documents (`[center: ..., radius: ...]`),
+  deltas, dumps, generated wire code and models handle it like a Box.
 - Schema types `:Box(unit) { ... }` and `:Poly(unit) max n { ... }` hold the geometry library's `GesBox` and `GesPoly`
   with per-axis constraints like `:Point`. A Box encodes its corners `lower` and `upper` as two Points and its value
   orders them; a Poly encodes its points in the plane z = 0 as a List of x and y. The value path converts the library's
@@ -387,6 +393,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - `ges schema generate --model --bindings` offers generated models to scripts as external types:
   a generated `GesTypes` catalog and registry, `ToGesValue`/`FromGesValue` (Swift `gesValue()`/
   `init?(gesValue:)`) and a `:Name(fields: map)` constructor, without the Bridge, macros or Reflection.
+- `GesDisc` in both runtimes, a filled circle in the plane z = 0, which the geometry library offers to scripts as
+  `:Disc(center: p, radius: r)` and `:Disc(radius: r)` around the origin, with `center`, `bounds`, `area`, `distance`,
+  `inset`, `nearest`, `contains` and `intersects` with discs, 2D boxes and polygons.
 - `GesBox` and `GesPoly` in both runtimes, and `GesGeometryLibrary`, which offers them to
   scripts as the external types `:Box` and `:Poly` with the functions `:geometry.size`, `center`,
   `union`, `inset`, `nearest`, `bounds`, `area`, `distance`, `centroid`, `contains` and

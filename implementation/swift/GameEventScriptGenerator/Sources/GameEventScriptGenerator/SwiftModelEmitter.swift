@@ -170,6 +170,10 @@ enum GesSwiftModelEmitter {
         if bindings && fields.contains(where: { $0.field.name == "fields" }) {
             throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(type.name)', the field fields and the generated field fields of its bindings share a name.")
         }
+        // The values of the record defaults are held by a type named after the type.
+        if bindings || values != nil, fields.contains(where: { $0.field.defaultValue?.kind == .record }), GesModelPlanner.topLevel(layout, swift: true).contains(type.name + "Defaults") {
+            throw GesGeneratorError(GesGeneratorError.nameCollision, "The record defaults of '\(type.name)' are generated as '\(type.name)Defaults', which hides the top-level type of that name.")
+        }
         try GesSchemaPlanner.unique(type.name, names, GesModelPlanner.topLevel(layout, swift: true))
 
         code.line("/// The model of the schema `:\(type.name)`: a plain value that is never encoded.")
@@ -328,6 +332,7 @@ enum GesSwiftModelEmitter {
         case .vector: "GesVector"
         case .box: "GesBox"
         case .poly: "GesPoly"
+        case .disc: "GesDisc"
         case .schema: value.model.schema
         case .union, .nothing, .flags: value.nested
         }
@@ -386,7 +391,7 @@ enum GesSwiftModelEmitter {
         case .tag: return "\(support).tag(\(expression))"
         case .list: return ".list(\(expression).map { \(encode(value.element!, owner, "$0", helper, support, plain: plain)) })"
         case .dice: return "\(support).dice(\(expression))"
-        case .point, .vector, .box, .poly: return "\(expression).value(unit: \(unit(value.model.unit)))"
+        case .point, .vector, .box, .poly, .disc: return "\(expression).value(unit: \(unit(value.model.unit)))"
         case .schema: return plain ? "\(expression).toValue()" : "\(expression).gesValue()"
         case .union, .nothing, .flags: return "\(helper).value(\(expression))"
         }
@@ -411,6 +416,7 @@ enum GesSwiftModelEmitter {
         case .vector: return "GesVector(\(expression), unit: \(unit(value.model.unit)))"
         case .box: return "GesBox(\(expression), unit: \(unit(value.model.unit)))"
         case .poly: return "GesPoly(\(expression), unit: \(unit(value.model.unit)))"
+        case .disc: return "GesDisc(\(expression), unit: \(unit(value.model.unit)))"
         case .schema: return plain ? "\(helper).decode\(value.model.schema)(\(expression))" : "\(value.model.schema)(gesValue: \(expression))"
         case .union, .nothing, .flags: return "\(helper).decode\(owner)\(value.nested)(\(expression))"
         }
@@ -542,14 +548,14 @@ enum GesSwiftModelEmitter {
             code.blank()
             code.line("/// Constructs a `:\(type.name)` from a Map or Record of its fields; an absent optional field may be left out.")
             code.open("private struct \(type.name)Constructor: GesExternalTypeConstructor {")
-            defaults(&code, layout, fields, "Defaults", type.name, support)
+            defaults(&code, layout, fields, type.name + "Defaults", type.name, support)
             code.line("var definition: GesExternalTypeConstructorDefinition { \(type.name)Value.definition.constructors[0] }")
             code.blank()
             code.open("func invoke(_ call: GesExternalTypeConstructorCall) throws {")
             code.open("guard")
             code.line("let fields = call.arguments[0].asMap, \(support).known(fields, \(type.name)Value.names)\(fields.isEmpty ? "" : ",")")
             for (index, field) in fields.enumerated() {
-                code.line("let \(member(field.base)) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support, "Defaults"), "GesTypes", support))\(index == fields.count - 1 ? "" : ",")")
+                code.line("let \(member(field.base)) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support, type.name + "Defaults"), "GesTypes", support))\(index == fields.count - 1 ? "" : ",")")
             }
             code.dedent()
             code.open("else {")

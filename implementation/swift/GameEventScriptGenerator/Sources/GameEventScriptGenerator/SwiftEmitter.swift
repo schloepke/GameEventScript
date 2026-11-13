@@ -217,6 +217,7 @@ enum GesSwiftEmitter {
         case .point: "GesPoint"
         case .vector: "GesVector"
         case .box: "GesBox"
+        case .disc: "GesDisc"
         case .list: "[\(elementName(value))]"
         default: nestedName(value)
         }
@@ -262,9 +263,13 @@ enum GesSwiftEmitter {
         case .union: "." + member(value.alternatives[0].label)
         case .list, .bytes, .flags: "[]"
         case .box: "GesBox(GesPoint(), GesPoint())"
+        case .disc: "GesDisc(radius: 0)"
         default: typeName(value) + "()"
         }
     }
+
+    // `var` for a local that later code assigns, `let` for one it only reads, so that Swift warns about neither.
+    static func binding(_ assigned: Bool) -> String { assigned ? "var" : "let" }
 
     static func members(_ code: inout Code, _ field: GesPlanField, _ access: String, _ stored: String, _ first: Bool) {
         if !first { code.blank() }
@@ -320,7 +325,7 @@ enum GesSwiftEmitter {
     static func description(_ value: GesPlanValue) -> String {
         let encoding = value.encoding
         switch encoding.kind {
-        case .quantized, .float, .integer, .point, .vector, .box: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
+        case .quantized, .float, .integer, .point, .vector, .box, .disc: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
         case .union: return ", the selected alternative"
         case .list where encoding.poly: return ", the points of a polygon\(encoding.unit != "none" ? " in " + encoding.unit : ""), at most \(encoding.maxCount)"
         case .list: return ", at most \(encoding.maxCount) elements"
@@ -574,6 +579,9 @@ enum GesSwiftEmitter {
             for axis in GesSchemaPlanner.omitted(value) { code.line("if \(target).\(member(axis)) != 0 { \(fail("typeMismatch", value)) }") }
         case .box:
             for corner in value.corners { write(&code, corner, target + "." + member(corner.base)) }
+        case .disc:
+            for part in value.corners { write(&code, part, target + "." + member(part.base)) }
+            if value.corners.count == 1 { code.line("if \(target).radius != 0 { \(fail("typeMismatch", value)) }") }
         case .schema:
             code.line("try \(target).__writeFields(&writer, paths, at + \(value.node + 1)\(nextLevel(value)))")
         case .union:
@@ -679,6 +687,14 @@ enum GesSwiftEmitter {
                 read(&code, corner, corner.label + String(value.node))
             }
             code.line("\(target) = GesBox(lower\(value.node), upper\(value.node))")
+            code.close()
+        case .disc:
+            // The centre and the radius, which a block can leave out; the disc takes the radius's magnitude.
+            code.open("do {")
+            code.line("var center\(value.node) = GesPoint()")
+            code.line("\(binding(value.corners.count > 1)) radius\(value.node) = 0.0")
+            for part in value.corners { read(&code, part, part.label + String(value.node)) }
+            code.line("\(target) = GesDisc(center: center\(value.node), radius: radius\(value.node))")
             code.close()
         case .schema:
             code.line("try \(target).__readFields(&reader, paths, at + \(value.node + 1)\(nextLevel(value)))")

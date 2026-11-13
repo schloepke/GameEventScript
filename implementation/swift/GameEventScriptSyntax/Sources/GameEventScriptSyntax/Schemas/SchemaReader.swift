@@ -399,12 +399,12 @@
             result.unit = unit
             result.kind = unit == .none ? .number : .quantity
             result.constraints = try constraints()
-        case .point, .vector, .box, .poly:
+        case .point, .vector, .box, .poly, .disc:
             let kind = GesSchemaTypeNames.kind(written)!
             result.kind = kind
             if position < bytes.count && bytes[position] == 40 { result.unit = try unit() ?? .none }
             skipSpaces()
-            // A polygon lies in the plane z = 0, so it has a count and only the axes x and y.
+            // A polygon lies in the plane z = 0, so it has a count and only the axes x and y; a disc lies there too and has a radius.
             if kind == .poly { try maximum(&result) }
             if consume(123) {
                 var axes: [GesSchemaAxisSyntax] = []
@@ -412,8 +412,20 @@
                 while !consume(125) {
                     let axisOffset = position
                     let axis = word()
-                    if kind == .poly ? axis != "x" && axis != "y" : axis != "x" && axis != "y" && axis != "z" {
-                        throw Failure(offset: axisOffset, message: kind == .poly ? "Expected the axis x or y of a Poly." : "Expected the axis x, y or z.")
+                    let valid =
+                        switch kind {
+                        case .poly: axis == "x" || axis == "y"
+                        case .disc: axis == "x" || axis == "y" || axis == "radius"
+                        default: axis == "x" || axis == "y" || axis == "z"
+                        }
+                    if !valid {
+                        let message =
+                            switch kind {
+                            case .poly: "Expected the axis x or y of a Poly."
+                            case .disc: "Expected the axis x or y or the radius of a Disc."
+                            default: "Expected the axis x, y or z."
+                            }
+                        throw Failure(offset: axisOffset, message: message)
                     }
                     skipSpaces()
                     axes.append(GesSchemaAxisSyntax(axis: axis, constraints: try constraints(), offset: axisOffset))

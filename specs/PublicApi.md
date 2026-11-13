@@ -599,8 +599,8 @@ schema code uses them for every spatial field, so hosts in both ports compute wi
 
 > **Since: Unreleased**
 
-`GesBox` and `GesPoly` are unitless shapes built on the spatial values, the same in both ports, and `GesGeometryLibrary`
-offers them to scripts as external types with a standard extension library, so that a host and its scripts compute alike.
+`GesBox`, `GesPoly` and `GesDisc` are unitless shapes built on the spatial values, the same in both ports, and
+`GesGeometryLibrary` offers them to scripts as external types with a standard extension library, so that a host and its scripts compute alike.
 Game logic, such as rounded hulls, bearings or sensor sectors, stays in hosts.
 
 - **`GesBox`** is an axis-aligned box. It is created from two corners in any order (C# `new GesBox(a, b)`, Swift
@@ -618,25 +618,40 @@ Game logic, such as rounded hulls, bearings or sensor sectors, stays in hosts.
   `contains(point)` (the outline counts as inside), `distance(to:)` (to the outline, for points inside and outside) and
   `intersects(poly)` (crossing or touching outlines, or one inside the other) are absent, as GES operations give `nothing`
   for a domain failure. Equality compares the points in order.
-- Both convert to and from a `GesValue` like the spatial values, with an explicit unit, as the external values `:Box` and
-  `:Poly` of the library; another value or unit converts to absence.
+- **`GesDisc`** is a filled circle in the plane z = 0: a centre and a radius (C# a readonly struct with `Center` and
+  `Radius`, Swift a `Hashable`, `Sendable`, `Codable` struct with `center` and `radius`). It is created from a centre and a
+  radius (C# `new GesDisc(center, radius)`, Swift `GesDisc(center:radius:)`) or from a radius around the origin
+  (`new GesDisc(radius)`, `GesDisc(radius:)`), and keeps the radius's magnitude, also when decoded. It is valid with a
+  finite centre whose `z` is 0 and a finite radius; an invalid disc exists, but its operations are absent. `area` is π·r²;
+  `bounds` is the 2D box around it; `contains(point)` includes the outline and is false for a point off the plane;
+  `distance(to:)` is the distance to the outline, for points inside and outside; `clamp` (Swift `clamp(_:)`) returns the
+  nearest point of the disc; `inset(by:)` shrinks the radius, grows it for a negative distance and is absent when the radius
+  would turn negative or the distance is not finite. `intersects` takes a disc (the centres within both radii), a box,
+  which must be 2D and finite, and is met at its point nearest to the centre, or a polygon, which holds the centre or whose
+  outline comes within the radius. Equality compares centre and radius.
+- All three convert to and from a `GesValue` like the spatial values, with an explicit unit, as the external values `:Box`,
+  `:Poly` and `:Disc` of the library; another value or unit converts to absence.
 - **`GesGeometryLibrary`** provides `Catalog(next)` for the compiler and `ExternalTypes(next)` and `Extensions(next)` for
   the host (Swift `catalog(next:)`, `externalTypes(next:)`, `extensions(next:)`), each resolving the library first and
-  everything else through `next`. Registering it takes the type names `Box` and `Poly`.
+  everything else through `next`. Registering it takes the type names `Box`, `Poly` and `Disc`.
   - `:Box(lower: p, upper: q)` takes two corners and `:Box(center: p, size: v)` a centre and a size, all of one unit, which
     the value keeps; its fields are `lower`, `upper`, `center` and `size`. `:Poly(points: [...])` takes a list of Points of
-    one unit and has the field `points`. Another kind or a mixed unit constructs `nothing`. `min` and `max` are GES keywords,
+    one unit and has the field `points`. `:Disc(center: p, radius: r)` takes a centre and a radius of one unit and
+    `:Disc(radius: r)` a radius around the origin, whose unit the origin takes; its fields are `center` and `radius`. Another
+    kind or a mixed unit constructs `nothing`. `min` and `max` are GES keywords,
     so the corner fields are `lower` and `upper`.
   - The functions are `:geometry.size`, `center`, `union(_, _)`, `inset(_, by:)` and `nearest(_, point)` of boxes
     (`clamp` is a GES keyword); `bounds`, `area`, `distance(_, point)` and `centroid` of polygons, where `bounds` of a box is
-    the box; and `contains(_, point)` and `intersects(_, _)` of both, where a 2D box meets a polygon as the polygon of its
-    outline. `area` is unitless, like `dot`; `distance` has the unit. Another kind, another unit or an invalid polygon gives
-    `nothing`. The functions have no purity contract, so the compiler treats them as effectful like every host call.
+    the box; `center`, `bounds`, `area`, `distance(_, point)`, `inset(_, by:)` and `nearest(_, point)` of discs; and
+    `contains(_, point)` and `intersects(_, _)` of all, where a 2D box meets a polygon as the polygon of its outline and a disc
+    meets each shape as `GesDisc.intersects` does, in either order. `area` is unitless, like `dot`; `distance` and a disc's
+    `radius` have the unit. Another kind, another unit or an invalid polygon or disc gives `nothing`. The functions have no purity contract, so the compiler treats them as effectful like every host call.
 
 | Concept | C# | Swift |
 | --- | --- | --- |
 | box | `readonly struct GesBox` with `Min`, `Max`, `Is2D`, `IsFinite`, `Size`, `Center`, `Contains`, `Intersects`, `Union`, `Inset`, `Clamp`, `ToValue`, `FromValue` | `struct GesBox` with `min`, `max`, `is2D`, `isFinite`, `size`, `center`, `contains(_:)`, `intersects(_:)`, `union(_:)`, `inset(by:)`, `clamp(_:)`, `value(unit:)`, `init?(_:unit:)` |
 | polygon | `sealed class GesPoly` with `Points`, `IsValid`, `Area`, `Bounds`, `Centroid`, `Contains`, `DistanceTo`, `Intersects`, `ToValue`, `FromValue` | `struct GesPoly` with `points`, `isValid`, `area`, `bounds`, `centroid`, `contains(_:)`, `distance(to:)`, `intersects(_:)`, `value(unit:)`, `init?(_:unit:)` |
+| disc | `readonly struct GesDisc` with `Center`, `Radius`, `IsValid`, `Area`, `Bounds`, `Contains`, `DistanceTo`, `Clamp`, `Inset`, `Intersects`, `ToValue`, `FromValue` | `struct GesDisc` with `center`, `radius`, `isValid`, `area`, `bounds`, `contains(_:)`, `distance(to:)`, `clamp(_:)`, `inset(by:)`, `intersects(_:)`, `value(unit:)`, `init?(_:unit:)` |
 | library | `static class GesGeometryLibrary` with `Namespace`, `Types`, `Catalog`, `ExternalTypes`, `Extensions` | `enum GesGeometryLibrary` with `namespace`, `types`, `catalog(next:)`, `externalTypes(next:)`, `extensions(next:)` |
 
 #### Literal parsing
@@ -728,7 +743,8 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 `GesSchemaDocument` reads a document as [generated models](Schemas.md#model-documents) do: its header must name one of the
 expected schemas, or the error is `document.schemaMismatch` at line 1, column 1, naming both; the document is then checked
 against that schema, whose error carries its `document.*` code, position and field path. `Value` is the Record of the
-document's entries, with a Box or Poly written as their corners or points turned into the geometry library's values.
+document's entries, with a Box, Poly or Disc written as their corners, points or centre and radius turned into the geometry
+library's values.
 `Locate` places a `GesWireException` of converting it into a model at the deepest entry its path names, a List for an
 element, and keeps its code and path.
 
@@ -1121,10 +1137,12 @@ unit, or custom type name. `ExternalTypeConstructorDefinition` contains type nam
 ordered unique parameters, and derived SignatureId.
 
 A Vector or Point declaration without a unit constraint preserves the supplied
-spatial value's unit. An explicit non-none unit overrides that unit without
-rescaling components. This applies equally to constructor arguments, direct
-field reads, and fields materialized by conversion to Map. A missing spatial
-unit constraint must never silently strip an existing unit.
+spatial value's unit, and a Number declaration (`Float` without a unit, or with
+the unit none) preserves a Quantity's unit while it makes the value binary64. An
+explicit non-none unit overrides that unit without rescaling components. This
+applies equally to constructor arguments, direct field reads, and fields
+materialized by conversion to Map. A missing unit constraint must never silently
+strip an existing unit.
 
 Constructor arguments and field values follow their declared builtin type before
 a constructor or script sees them. This applies equally to direct field reads
@@ -1460,7 +1478,7 @@ and throwing getters. Macro expansion adds no GES syntax or portable behavior.
 The C# `GesBridgeExternalTypeRegistry.Create(types)` reads `[GesType]`, `[GesField]`, `[GesConstruct]` and `[GesParam]`
 through Reflection and decides each member's conversion from its CLR type at registration, as the Swift macros and type
 checker do at compile time. A field may hold `GesValue`, `bool`, `string`, `byte[]`, `double`, `float`, `long`, `int`,
-`short`, `byte`, `GesPoint`, `GesVector`, `GesBox`, `GesPoly` (with the declared unit), a Message, a Handler signature, a
+`short`, `byte`, `GesPoint`, `GesVector`, `GesBox`, `GesPoly`, `GesDisc` (with the declared unit), a Message, a Handler signature, a
 nullable form of a value type, or a class with `[GesType]`; a constructor parameter the same types except Message and
 Handler signature. Any other type, such as `decimal` or an enum, and an external class that the same registry does not
 register fail `Create` with `ArgumentException`. A constructor argument converts strictly as for
@@ -1485,7 +1503,7 @@ Reflection, and both follow one set of rules:
   Integer or an integral Float in its range, a binary64 only from a Float or an Integer it represents exactly, a Boolean
   only from a Boolean, and Nothing only to an Optional (C# nullable value type), which receives nil or null; neither a
   Boolean nor a Percentage converts to a number. The types are numbers, Booleans, Text, `GesPoint`, `GesVector`,
-  `GesBox` and `GesPoly`, Optionals (C# nullable value types), and in Swift every `GesBridgeValueConvertible`; a `GesValue`
+  `GesBox`, `GesPoly` and `GesDisc`, Optionals (C# nullable value types), and in Swift every `GesBridgeValueConvertible`; a `GesValue`
   parameter receives the raw argument. A declared parameter unit (Swift `units: ["distance": .meter]`, since Swift has no
   attributes on parameters; C# `[GesParam(name, kind, unit)]`) must match exactly and is removed; without one the argument
   must be unitless. The result converts back; a declared result unit (`unit:`, C# `[GesFunction(name, kind, unit)]` or

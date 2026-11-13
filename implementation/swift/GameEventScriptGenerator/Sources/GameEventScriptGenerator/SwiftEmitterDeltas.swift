@@ -17,7 +17,10 @@ extension GesSwiftEmitter {
     static func scalars(_ value: GesPlanValue) -> [GesPlanValue] {
         var result: [GesPlanValue] = isScalar(value) ? [value] : []
         result += value.axes
-        for corner in value.corners { result += corner.axes }
+        for corner in value.corners {
+            if isScalar(corner) { result.append(corner) }
+            result += corner.axes
+        }
         for alternative in value.alternatives { result += scalars(alternative) }
         if value.item == nil, let element = value.element { result += scalars(element) }
         return result
@@ -173,7 +176,7 @@ extension GesSwiftEmitter {
             code.line("if \(bytes(value, ownerA)) != \(bytes(value, ownerB)) { return false }")
         case .point, .vector:
             for axis in value.axes { same(&code, axis, a + "." + member(axis.base), b + "." + member(axis.base), ownerA, ownerB) }
-        case .box:
+        case .box, .disc:
             for corner in value.corners { same(&code, corner, a + "." + member(corner.base), b + "." + member(corner.base), ownerA, ownerB) }
         case .schema:
             code.line("if !(try \(a).__same(\(b), paths, at + \(value.node + 1)\(nextLevel(value)))) { return false }")
@@ -318,6 +321,16 @@ extension GesSwiftEmitter {
             }
             code.line("\(target) = GesBox(lower\(node), upper\(node))")
             code.close()
+        case .disc where quantized(value):
+            // A disc is immutable: its centre and radius are quantized and make a new disc.
+            code.open("do {")
+            for part in value.corners {
+                code.line("\(binding(quantized(part))) \(part.label)\(node) = \(target).\(member(part.base))")
+                quantize(&code, part, part.label + node)
+            }
+            if value.corners.count == 1 { code.line("let radius\(node) = \(target).radius") }
+            code.line("\(target) = GesDisc(center: center\(node), radius: radius\(node))")
+            code.close()
         case .schema:
             code.line("try \(target).__quantize(paths, at + \(value.node + 1)\(nextLevel(value)))")
         case .list where quantized(value):
@@ -346,11 +359,14 @@ extension GesSwiftEmitter {
         }
     }
 
+    // A Point without axes, the centre of a Disc whose block names only the radius, which transmits nothing.
+    private static func empty(_ value: GesPlanValue) -> Bool { value.encoding.kind == .point && value.axes.isEmpty }
+
     private static func quantized(_ value: GesPlanValue) -> Bool {
         switch value.encoding.kind {
         case .quantized, .schema: true
         case .point, .vector: value.axes.contains(where: quantized)
-        case .box: value.corners.contains(where: quantized)
+        case .box, .disc: value.corners.contains(where: quantized)
         case .union: value.alternatives.contains(where: quantized)
         case .list: value.item.map { quantized($0.fields[0].value) } ?? quantized(value.element!)
         default: false
@@ -574,12 +590,17 @@ extension GesSwiftEmitter {
             for axis in GesSchemaPlanner.omitted(value) { code.line("if \(a).\(member(axis)) != 0 { \(fail("typeMismatch", value)) }") }
             code.line("if !\(set) { writer.rewind(to: first\(node)) }")
             code.close()
-        case .box:
-            // A nested delta of the corners, each one of a Point.
+        case .box, .disc:
+            // A nested delta of the corners, each one of a Point, or of a disc's centre and radius.
             code.open("do {")
             code.line("let first\(node) = writer.bitPosition")
             code.line("try writer.write(0, width: \(value.corners.count))")
             for (index, corner) in value.corners.enumerated() {
+                if empty(corner) {
+                    // A centre without axes transmits nothing: its change bit stays clear, and it must lie at the origin.
+                    for axis in GesSchemaPlanner.omitted(corner) { code.line("if \(a).\(member(corner.base)).\(member(axis)) != 0 { \(fail("typeMismatch", corner)) }") }
+                    continue
+                }
                 code.open("do {")
                 code.line("var set\(corner.node) = false")
                 deltaPayload(&code, corner, a + "." + member(corner.base), b + "." + member(corner.base), "set\(corner.node)")
@@ -589,6 +610,7 @@ extension GesSwiftEmitter {
                 code.close()
                 code.close()
             }
+            if value.encoding.kind == .disc && value.corners.count == 1 { code.line("if \(a).radius != 0 { \(fail("typeMismatch", value)) }") }
             code.line("if !\(set) { writer.rewind(to: first\(node)) }")
             code.close()
         case .schema:
@@ -701,8 +723,9 @@ extension GesSwiftEmitter {
             for axis in GesSchemaPlanner.omitted(value) { code.line("\(a).\(member(axis)) = 0") }
             code.line("if !changed\(node) { \(fail("invalidDelta", value)) }")
             code.close()
-        case .box:
-            // The corners start as the baseline's; the box orders what the delta changes.
+        case .box, .disc:
+            // The corners start as the baseline's; the box orders what the delta changes. A disc takes its centre and radius
+            // likewise.
             code.open("do {")
             code.line("try reader.require(\(value.corners.count), path: \(path(value)))")
             code.line("let bits\(node) = reader.bitPosition")
@@ -710,7 +733,8 @@ extension GesSwiftEmitter {
             code.line("var changed\(node) = false")
             for (index, corner) in value.corners.enumerated() {
                 let cornerNode = String(corner.node)
-                code.line("var \(corner.label)\(node) = \(b).\(member(corner.base))")
+                code.line("\(binding(!empty(corner))) \(corner.label)\(node) = \(b).\(member(corner.base))")
+                if empty(corner) { continue }
                 code.open("do {")
                 code.line("let payload\(cornerNode) = reader.bitPosition")
                 code.line("reader.seek(to: bits\(node) + \(index))")
@@ -723,7 +747,8 @@ extension GesSwiftEmitter {
                 code.close()
             }
             code.line("if !changed\(node) { \(fail("invalidDelta", value)) }")
-            code.line("\(a) = GesBox(lower\(node), upper\(node))")
+            if value.encoding.kind == .disc && value.corners.count == 1 { code.line("let radius\(node) = 0.0") }
+            code.line(value.encoding.kind == .disc ? "\(a) = GesDisc(center: center\(node), radius: radius\(node))" : "\(a) = GesBox(lower\(node), upper\(node))")
             code.close()
         case .schema:
             code.line("if !(try \(a).__readDelta(\(b), &reader, paths, at + \(value.node + 1), false\(nextLevel(value)))) { \(fail("invalidDelta", value)) }")

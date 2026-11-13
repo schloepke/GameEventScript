@@ -276,6 +276,13 @@ enum Validation {
             } else if type == ":Message" {
                 try fields(input, ["type", "message"])
                 try message(input.required("message"))
+            } else if type == ":Disc" {
+                try fields(input, ["type", "center", "radius"], optional: ["unit"])
+                let center = try input.required("center")
+                try fields(center, ["type", "x", "y", "z"])
+                try require(center["type"]?.stringValue == ":Point")
+                for key in ["x", "y", "z"] { _ = try RuntimeValues.parseNumber(center.text(key)) }
+                _ = try RuntimeValues.parseNumber(input.text("radius"))
             } else if type == ":Box" || type == ":Poly" {
                 try fields(input, type == ":Box" ? ["type", "lower", "upper"] : ["type", "points"], optional: ["unit"])
                 let points = type == ":Box" ? [try input.required("lower"), try input.required("upper")] : try array(input.required("points"))

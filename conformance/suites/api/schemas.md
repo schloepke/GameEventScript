@@ -5628,6 +5628,48 @@ schema:
 
 ---
 
+## Test: a document Disc reads as the library's value
+
+A document writes a Disc as the Map of its centre and radius; reading gives the geometry library's value with the
+radius's magnitude.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m)\n}\n"
+  readDocument:
+    text: ":Schema(:Zone)\nreach: [center: :Point(2m, 1m), radius: -3m]\n"
+    expected: ["Zone"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Zone"
+    value:
+      type: ":Zone"
+      entries:
+        - key: "reach"
+          value:
+            type: ":Disc"
+            center:
+              type: ":Point"
+              x: "2"
+              y: "1"
+              z: "0"
+            radius: "3"
+            unit: ":meter"
+```
+
+---
+
 ## Test: a document Box and Poly read as the library's values
 
 A document writes a Box as the Map of its corners and a Poly as the List of its points; reading gives the geometry library's
@@ -8004,6 +8046,521 @@ schema:
             points: []
             unit: ":meter"
     byteCount: 3
+```
+
+---
+
+## Test: a Disc with an axis block
+
+A Disc writes its centre as a Point of the block's axes x and y, then its radius.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n    radius between 0m and 7m step 1m\n  }\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "reach"
+        value:
+          type: ":Disc"
+          center:
+            type: ":Point"
+            x: "5"
+            y: "1"
+            z: "0"
+          radius: "3"
+          unit: ":meter"
+  decode: "8506"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "8506"
+  decoded:
+    value:
+      type: ":Zone"
+      entries:
+        - key: "reach"
+          value:
+            type: ":Disc"
+            center:
+              type: ":Point"
+              x: "5"
+              y: "1"
+              z: "0"
+            radius: "3"
+            unit: ":meter"
+    byteCount: 2
+```
+
+---
+
+## Test: a Disc without an axis block
+
+Without a block the centre takes x and y and the radius one more binary64 value; a decoded radius takes its magnitude.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-disc-raw
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "reach"
+        value:
+          type: ":Disc"
+          center:
+            type: ":Point"
+            x: "2"
+            y: "-0.5"
+            z: "0"
+          radius: "1.5"
+  decode: "0000000000000040000000000000e0bf000000000000f8bf"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0000000000000040000000000000e0bf000000000000f83f"
+  decoded:
+    value:
+      type: ":Zone"
+      entries:
+        - key: "reach"
+          value:
+            type: ":Disc"
+            center:
+              type: ":Point"
+              x: "2"
+              y: "-0.5"
+              z: "0"
+            radius: "1.5"
+    byteCount: 24
+```
+
+---
+
+## Test: a Disc centre outside the plane
+
+A Disc lies in the plane z = 0, which it does not transmit, so a centre with another `z` cannot be written.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-disc-z
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "reach"
+        value:
+          type: ":Disc"
+          center:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "1"
+          radius: "1"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "reach.center"
+```
+
+---
+
+## Test: a Disc block without the radius
+
+A block that leaves out the radius transmits none, as for an axis it leaves out, so only a disc of radius 0 can be written.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-disc-no-radius
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m step 1m\n  }\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "reach"
+        value:
+          type: ":Disc"
+          center:
+            type: ":Point"
+            x: "4"
+            y: "0"
+            z: "0"
+          radius: "1"
+          unit: ":meter"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "reach"
+```
+
+---
+
+## Test: a Disc of another unit
+
+A Disc keeps the unit of its centre and radius, which must be the field's unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-disc-unit
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m)\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "reach"
+        value:
+          type: ":Disc"
+          center:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+          radius: "1"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "reach"
+```
+
+---
+
+## Test: Disc is a built-in type name
+
+A declaration cannot take the name of a built-in type, so `Disc` names no schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-disc-builtin-name
+schemaApi:
+  sources:
+    - "schema :Disc as {\n  a: :Boolean\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a Disc has no z axis
+
+A Disc lies in the plane z = 0, so its block names x, y and the radius only.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-disc-axis
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc {\n    z between 0 and 1\n  }\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 3
+    column: 5
+```
+
+---
+
+## Test: a Disc radius declared twice
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-disc-radius-twice
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc {\n    radius between 0 and 1\n    radius between 0 and 2\n  }\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 4
+    column: 5
+```
+
+---
+
+## Test: a Disc in the canonical form
+
+The block of a Disc lists x and y, then the radius.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    radius between 0m and 7m step 1m\n    x between 0m and 100m\n  }\n}\n"
+  root: "Zone"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Zone\nfield reach Disc(meter) { x between 0e0 1e2 ; radius between 0e0 7e0 step 1e0 }\n"
+  hash: "7d73f2dd1237c1b0"
+```
+
+---
+
+## Test: a dump of a Disc
+
+A Disc and its centre have no line of their own, only the axes of the centre and the radius.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dump-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n    radius between 0m and 7m step 1m\n  }\n}\n"
+  root: "Zone"
+  dump: "8506"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "reach.center.x bit=0 width=7 value=5\nreach.center.y bit=7 width=2 value=1\nreach.radius bit=9 width=3 value=3\nbytes 2\n"
+    valid: true
+```
+
+---
+
+## Test: a delta of a Disc
+
+A Disc is a nested delta of its centre and radius, and its centre one of its axes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n    radius between 0m and 7m step 1m\n  }\n}\n"
+  root: "Zone"
+  deltaEncode:
+    record: "8506"
+    baseline: "8502"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "1d"
+```
+
+---
+
+## Test: the description of a Disc
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    radius between 0m and 7m\n  }\n}\n"
+  root: "Zone"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Zone"
+    kind: "Schema"
+    fields:
+      - name: "reach"
+        alternatives:
+          - kind: "Disc"
+            unit: "meter"
+            axes:
+              - name: "radius"
+                lower: "0e0"
+                upper: "7e0"
+```
+
+---
+
+## Test: a Disc in a document
+
+A document has no geometry literal: a Disc is the Map of its `center`, a Point, and its `radius`, a number of the unit, each within the block.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m\n    radius between 0m and 7m\n  }\n}\n"
+  document: ":Schema(:Zone)\nreach: [center: :Point(1m, 0m), radius: 3m]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document Disc without a radius
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-disc-missing-radius
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m)\n}\n"
+  document: ":Schema(:Zone)\nreach: [center: :Point(1m, 0m)]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.missingField"
+      line: 2
+      column: 8
+```
+
+---
+
+## Test: a document Disc with a radius outside its range
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-disc-radius-range
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    radius between 0m and 7m\n  }\n}\n"
+  document: ":Schema(:Zone)\nreach: [center: :Point(0m, 0m), radius: 8m]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.outOfRange"
+      line: 2
+      column: 41
 ```
 
 ---

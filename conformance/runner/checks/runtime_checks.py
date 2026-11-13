@@ -31,12 +31,14 @@ def value(raw):
                 raise InvalidDocument('Invalid spatial unit')
             result['unit'] = numeric.UNITS[raw['unit']]
         return result
-    if kind in (':Box', ':Poly') and 'entries' not in raw:
+    if kind in (':Box', ':Poly', ':Disc') and 'entries' not in raw:
         # A shape of the geometry library: unitless Points and the unit of the whole shape. A Record of that name has entries.
-        shape = {'type', 'lower', 'upper'} if kind == ':Box' else {'type', 'points'}
+        shape = {'type', 'lower', 'upper'} if kind == ':Box' else {'type', 'points'} if kind == ':Poly' else {'type', 'center', 'radius'}
         if set(raw) not in (shape, shape | {'unit'}):
             raise InvalidDocument('Invalid geometry value fields')
-        points = [raw['lower'], raw['upper']] if kind == ':Box' else raw['points']
+        if kind == ':Disc':
+            numeric.number(raw['radius'])
+        points = [raw['lower'], raw['upper']] if kind == ':Box' else [raw['center']] if kind == ':Disc' else raw['points']
         if not isinstance(points, list):
             raise InvalidDocument('Invalid polygon points')
         checked = []
@@ -47,6 +49,8 @@ def value(raw):
         result = dict(raw)
         if kind == ':Box':
             result['lower'], result['upper'] = checked
+        elif kind == ':Disc':
+            result['center'] = checked[0]
         else:
             result['points'] = checked
         if 'unit' in raw:

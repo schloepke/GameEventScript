@@ -185,6 +185,10 @@ enum GesCSharpModelEmitter {
         if bindings && fields.contains(where: { $0.field.name == "fields" }) {
             throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(type.name)', the field fields and the generated field fields of its bindings share a name.")
         }
+        // The values of the record defaults are held by a type named after the type.
+        if bindings || values != nil, fields.contains(where: { $0.field.defaultValue?.kind == .record }), GesModelPlanner.topLevel(layout, swift: false).contains(type.name + "Defaults") {
+            throw GesGeneratorError(GesGeneratorError.nameCollision, "The record defaults of '\(type.name)' are generated as '\(type.name)Defaults', which hides the top-level type of that name.")
+        }
         for field in fields {
             names.append((field.base, "the field " + field.field.name))
             nested(field.value, &names, field.field.name)
@@ -387,6 +391,7 @@ enum GesCSharpModelEmitter {
         case .vector: "GesVector"
         case .box: "GesBox"
         case .poly: "GesPoly"
+        case .disc: "GesDisc"
         case .schema: qualifier + value.model.schema
         case .union, .nothing, .flags: nested(value, qualifier, owner)
         }
@@ -412,8 +417,9 @@ enum GesCSharpModelEmitter {
     }
 
     // A record literal as a call of the model's constructor, which resolves sibling defaults as for any caller: the fields the
-    // literal names, and before the last of them every parameter without a default as the field's own default, null for a
-    // sibling or absent field, or its zero value.
+    // literal names, and every other parameter without a C# default, before the last field without a schema default, as the
+    // field's own literal default, or null for a sibling default or an absent field. A field without a default that the
+    // literal leaves out is optional or accepts nothing, so its parameter is nullable.
     private static func recordNative(_ layout: GesModelLayout, _ value: GesModelPlanValue, _ fallback: GesLayoutDefault, _ qualifier: String) -> String {
         let fields = GesModelPlanner.fields(layout.type(value.model.schema))
         let named = GesModelPlanner.entries(layout, value, fallback)
@@ -428,10 +434,8 @@ enum GesCSharpModelEmitter {
                 continue
             } else if let own = field.field.defaultValue, own.kind != .field {
                 argument = native(layout, field.value, own, qualifier, value.model.schema)
-            } else if field.field.defaultValue != nil || field.value.nullable {
-                argument = "null"
             } else {
-                argument = zero(field.value)
+                argument = "null"
             }
             arguments.append("\(parameter(field.base)): \(argument)")
         }
@@ -507,7 +511,7 @@ enum GesCSharpModelEmitter {
         case .number: return value.model.integer ? "0L" : "0d"
         case .tag where value.closedTag: return "default(\(value.nested))"
         case .flags: return "default(\(value.nested))"
-        case .point, .vector, .box: return "default(\(plain(value)))"
+        case .point, .vector, .box, .disc: return "default(\(plain(value)))"
         default: return initial(value)
         }
     }
@@ -671,6 +675,8 @@ enum GesCSharpModelEmitter {
             code.blank()
             code.line("internal static bool Box(in GesValue value, GesQuantityUnit unit, out GesBox result) => Read(GesBox.FromValue(value, unit), out result);")
             code.blank()
+            code.line("internal static bool Disc(in GesValue value, GesQuantityUnit unit, out GesDisc result) => Read(GesDisc.FromValue(value, unit), out result);")
+            code.blank()
             code.line("internal static bool Poly(in GesValue value, GesQuantityUnit unit, out GesPoly result)")
             code.open("{")
             code.line("result = GesPoly.FromValue(value, unit)!;")
@@ -695,7 +701,7 @@ enum GesCSharpModelEmitter {
 
     private static func isValueType(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
-        case .boolean, .number, .point, .vector, .box, .flags: true
+        case .boolean, .number, .point, .vector, .box, .disc, .flags: true
         default: value.closedTag
         }
     }
@@ -730,7 +736,7 @@ enum GesCSharpModelEmitter {
         case .tag: return "\(support).Tag(\(expression))"
         case .list: return "\(support).List(\(expression), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, support, depth + 1, plain: plain, pattern: pattern)))"
         case .dice: return "\(support).Dice(\(expression))"
-        case .point, .vector, .box, .poly: return "\(expression).ToValue(\(unitName(value.model.unit)))"
+        case .point, .vector, .box, .poly, .disc: return "\(expression).ToValue(\(unitName(value.model.unit)))"
         case .schema: return plain ? "\(expression).ToValue()" : "\(expression).ToGesValue()"
         case .union, .nothing, .flags: return "Value(\(expression))"
         }
@@ -767,6 +773,7 @@ enum GesCSharpModelEmitter {
         case .point: return "\(support).Point(\(expression), \(unitName(value.model.unit)), \(target))"
         case .vector: return "\(support).Vector(\(expression), \(unitName(value.model.unit)), \(target))"
         case .box: return "\(support).Box(\(expression), \(unitName(value.model.unit)), \(target))"
+        case .disc: return "\(support).Disc(\(expression), \(unitName(value.model.unit)), \(target))"
         case .poly: return "\(support).Poly(\(expression), \(unitName(value.model.unit)), \(target))"
         case .schema: return "Decode\(value.model.schema)(\(expression), \(target))"
         case .union, .nothing, .flags: return "Decode\(owner)\(value.nested)(\(expression), \(target))"
@@ -1034,7 +1041,7 @@ enum GesCSharpModelEmitter {
             code.line("/// <summary>Constructs a <c>:\(type.name)</c> from a Map or Record of its fields; an absent optional field may be left out.</summary>")
             code.line("private sealed class \(type.name)Constructor : IGesExternalTypeConstructor")
             code.open("{")
-            defaults(&code, layout, fields, "Defaults", type.name, qualifier, support)
+            defaults(&code, layout, fields, type.name + "Defaults", type.name, qualifier, support)
             code.line("/// <inheritdoc />")
             code.line("public GesExternalTypeConstructorDefinition Definition => \(type.name)Value.Declaration.Constructors[0];")
             code.blank()
@@ -1044,7 +1051,7 @@ enum GesCSharpModelEmitter {
             code.line("var fields = call.Arguments[0].AsMap();")
             var conditions = ["fields is null", "!\(support).Known(fields, \(type.name)Value.Names)"]
             for (index, field) in fields.enumerated() {
-                conditions.append("!" + decode(field.value, type.name, inline(layout, fields, index, type.name, qualifier, support, "Defaults"), "out var " + parameter(field.base), qualifier, support))
+                conditions.append("!" + decode(field.value, type.name, inline(layout, fields, index, type.name, qualifier, support, type.name + "Defaults"), "out var " + parameter(field.base), qualifier, support))
             }
             for (index, condition) in conditions.enumerated() { code.line((index == 0 ? "if (" : "    || ") + condition + (index == conditions.count - 1 ? ")" : "")) }
             code.open("{")

@@ -295,3 +295,128 @@ public struct GesPoly: Hashable, Sendable, Codable, CustomStringConvertible {
         return (point - closest).length
     }
 }
+
+/// A filled circle in the plane z = 0, without a unit: a centre and a radius.
+///
+/// Creating one takes the radius's magnitude. A disc is valid with a finite centre in the plane and a finite radius; the
+/// operations of an invalid one give nil, as GES operations give `nothing` for a domain failure. Scripts see it as the
+/// external type `:Disc` of ``GesGeometryLibrary``.
+public struct GesDisc: Hashable, Sendable, Codable, CustomStringConvertible {
+    /// The centre.
+    public let center: GesPoint
+    /// The radius, never negative.
+    public let radius: Double
+
+    /// Creates the disc with a centre and a radius; a negative radius counts as its magnitude.
+    public init(center: GesPoint, radius: Double) {
+        self.center = center
+        self.radius = radius.magnitude
+    }
+
+    /// Creates the disc around the origin; a negative radius counts as its magnitude.
+    public init(radius: Double) { self.init(center: .zero, radius: radius) }
+
+    private enum CodingKeys: String, CodingKey { case center, radius }
+
+    /// Decodes the centre and the radius, whose magnitude it takes as creating one does.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(center: try container.decode(GesPoint.self, forKey: .center), radius: try container.decode(Double.self, forKey: .radius))
+    }
+
+    /// Encodes the centre and the radius.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(center, forKey: .center)
+        try container.encode(radius, forKey: .radius)
+    }
+
+    /// Whether the centre is finite and lies in the plane z = 0 and the radius is finite.
+    public var isValid: Bool { center.isFinite && center.z == 0 && radius.isFinite }
+
+    /// The area, π·r², unitless like a product of two lengths; nil for an invalid disc.
+    public var area: Double? { isValid ? Double.pi * radius * radius : nil }
+
+    /// The smallest box that holds the disc; nil for an invalid disc.
+    public var bounds: GesBox? {
+        isValid ? GesBox(GesPoint(x: center.x - radius, y: center.y - radius), GesPoint(x: center.x + radius, y: center.y + radius)) : nil
+    }
+
+    /// Whether a point lies in the disc, its outline included: within the radius in the plane, false off the plane; nil for an
+    /// invalid disc or a point that is not finite.
+    public func contains(_ point: GesPoint) -> Bool? {
+        guard isValid, point.isFinite else { return nil }
+        if point.z != 0 { return false }
+        let x = point.x - center.x
+        let y = point.y - center.y
+        return (x * x) + (y * y) <= radius * radius
+    }
+
+    /// The distance from a point to the outline, for a point inside as well as outside; nil for an invalid disc or a point
+    /// that is not finite.
+    public func distance(to point: GesPoint) -> Double? {
+        guard isValid, point.isFinite else { return nil }
+        let x = point.x - center.x
+        let y = point.y - center.y
+        let across = ((x * x) + (y * y)).squareRoot() - radius
+        return ((across * across) + (point.z * point.z)).squareRoot()
+    }
+
+    /// Moves a point onto the nearest point of the disc: the point itself in the plane when the disc holds it, otherwise the
+    /// nearest point of its outline; nil for an invalid disc or a point that is not finite.
+    public func clamp(_ point: GesPoint) -> GesPoint? {
+        guard isValid, point.isFinite else { return nil }
+        let x = point.x - center.x
+        let y = point.y - center.y
+        let length = ((x * x) + (y * y)).squareRoot()
+        if length <= radius { return GesPoint(x: point.x, y: point.y) }
+        let scale = radius / length
+        return GesPoint(x: center.x + (x * scale), y: center.y + (y * scale))
+    }
+
+    /// Shrinks the radius by a distance, or grows it when the distance is negative; nil for an invalid disc, a distance that is
+    /// not finite or a radius that would turn negative.
+    public func inset(by distance: Double) -> GesDisc? {
+        guard isValid, distance.isFinite else { return nil }
+        let inset = radius - distance
+        return inset < 0 ? nil : GesDisc(center: center, radius: inset)
+    }
+
+    /// Whether two discs share a point; touching discs intersect. Nil when either is invalid.
+    public func intersects(_ other: GesDisc) -> Bool? {
+        guard isValid, other.isValid else { return nil }
+        let x = other.center.x - center.x
+        let y = other.center.y - center.y
+        let reach = radius + other.radius
+        return (x * x) + (y * y) <= reach * reach
+    }
+
+    /// Whether the disc shares a point with a 2D box; touching counts. Nil for an invalid disc or a box that is not 2D or not
+    /// finite.
+    public func intersects(_ box: GesBox) -> Bool? {
+        guard isValid, box.is2D, box.isFinite else { return nil }
+        return contains(box.clamp(center))
+    }
+
+    /// Whether the disc shares a point with a polygon: the polygon holds the centre, or its outline comes within the radius.
+    /// Nil when either is invalid.
+    public func intersects(_ poly: GesPoly) -> Bool? {
+        guard isValid, poly.isValid else { return nil }
+        if poly.contains(center) == true { return true }
+        guard let distance = poly.distance(to: center) else { return false }
+        return distance <= radius
+    }
+
+    /// Reads a `:Disc` of ``GesGeometryLibrary`` of exactly the given unit, or fails for another value or unit. Units never
+    /// convert.
+    public init?(_ value: GesValue, unit: GesQuantityUnit = .none) {
+        guard let disc = value.externalValue as? GesGeometryLibrary.DiscValue, disc.unit == unit else { return nil }
+        self = disc.disc
+    }
+
+    /// Converts the disc to the external value `:Disc` of ``GesGeometryLibrary`` with the unit of its centre and radius.
+    public func value(unit: GesQuantityUnit = .none) -> GesValue { .external(GesGeometryLibrary.DiscValue(self, unit)) }
+
+    /// The centre and the radius, for diagnostics.
+    public var description: String { ":Disc(center: \(center), radius: \(radius))" }
+}

@@ -179,6 +179,17 @@ internal static class GesSchemaLayoutJson
                 foreach (var corner in encoding.Corners) Field(json, corner, member: false);
                 json.EndArray();
                 break;
+            case GesLayoutKind.Disc:
+                json.String("unit", encoding.Unit);
+                json.Key("center");
+                Field(json, encoding.Corners[0], member: false, value: true);
+                if (encoding.Corners.Count > 1)
+                {
+                    json.Key("radius");
+                    Field(json, encoding.Corners[1], member: false, value: true);
+                }
+
+                break;
             case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float:
                 json.String("type", encoding.Type);
                 json.String("unit", encoding.Unit);
@@ -265,6 +276,7 @@ internal static class GesSchemaLayoutJson
         GesLayoutKind.Point => "point",
         GesLayoutKind.Vector => "vector",
         GesLayoutKind.Box => "box",
+        GesLayoutKind.Disc => "disc",
         GesLayoutKind.Schema => "schema",
         GesLayoutKind.Union => "union",
         _ => "nothing"

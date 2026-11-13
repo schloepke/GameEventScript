@@ -84,7 +84,8 @@ internal enum GesModelKind
     Nothing,
     Flags,
     Box,
-    Poly
+    Poly,
+    Disc
 }
 
 internal sealed class GesModelValue
@@ -291,12 +292,13 @@ internal static class GesModelLayoutBuilder
                 value.Lower = Bound(type.Lower);
                 value.Upper = Bound(type.Upper);
                 break;
-            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Poly:
+            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Poly or GesSchemaTypeKind.Disc:
                 value.Kind = type.Kind switch
                 {
                     GesSchemaTypeKind.Point => GesModelKind.Point,
                     GesSchemaTypeKind.Vector => GesModelKind.Vector,
                     GesSchemaTypeKind.Box => GesModelKind.Box,
+                    GesSchemaTypeKind.Disc => GesModelKind.Disc,
                     _ => GesModelKind.Poly
                 };
                 value.Unit = GesSchemaLayoutBuilder.UnitName(type.Kind, type.Unit);
@@ -427,7 +429,7 @@ internal static class GesModelLayoutJson
                 Optional(json, "lower", value.Lower);
                 Optional(json, "upper", value.Upper);
                 break;
-            case GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box:
+            case GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc:
                 json.String("unit", value.Unit);
                 json.Strings("axes", value.Axes);
                 break;
@@ -475,6 +477,7 @@ internal static class GesModelLayoutJson
         GesModelKind.Vector => "vector",
         GesModelKind.Box => "box",
         GesModelKind.Poly => "poly",
+        GesModelKind.Disc => "disc",
         GesModelKind.Schema => "schema",
         GesModelKind.Union => "union",
         _ => "nothing"

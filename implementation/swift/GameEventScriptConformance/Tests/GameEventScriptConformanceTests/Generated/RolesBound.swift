@@ -1518,7 +1518,7 @@ enum RolesBound {
         /// Constructs a `:WorldView` from a Map or Record of its fields; an absent optional field may be left out.
         private struct WorldViewConstructor: GesExternalTypeConstructor {
             /// The values of the record defaults of `:WorldView`, built once; immutable, so sharing them across threads is safe.
-            private enum Defaults {
+            private enum WorldViewDefaults {
                 nonisolated(unsafe) static let rig: GesValue = Rig(tuning: Tuning(gain: 0.5)).toValue()
                 nonisolated(unsafe) static let tuning: GesValue = Tuning().toValue()
                 nonisolated(unsafe) static let boost: GesValue = Tuning(gain: 1.5, mode: .hard, limit: 2000).toValue()
@@ -1537,9 +1537,9 @@ enum RolesBound {
                     let gear = __GesModels50c3c3e7054686ea.list(fields.get("gear") ?? .nothing, { GearView(gesValue: $0) }),
                     let preset = __GesModels50c3c3e7054686ea.optional(fields.get("preset") ?? .nothing, { GearPreset(gesValue: $0) }),
                     let echo = __GesModels50c3c3e7054686ea.optional(fields.get("echo") ?? .nothing, { RadarEcho(gesValue: $0) }),
-                    let rig = Rig(gesValue: fields.get("rig") ?? Defaults.rig),
-                    let tuning = Tuning(gesValue: fields.get("tuning") ?? Defaults.tuning),
-                    let boost = Tuning(gesValue: fields.get("boost") ?? Defaults.boost)
+                    let rig = Rig(gesValue: fields.get("rig") ?? WorldViewDefaults.rig),
+                    let tuning = Tuning(gesValue: fields.get("tuning") ?? WorldViewDefaults.tuning),
+                    let boost = Tuning(gesValue: fields.get("boost") ?? WorldViewDefaults.boost)
                 else {
                     call.setNothing()
                     return

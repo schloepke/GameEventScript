@@ -291,7 +291,11 @@ internal sealed class GesResolvedConstraints
 
 internal sealed class GesResolvedAxis
 {
-    internal char Axis { get; init; }
+    // x, y, z, or the radius of a Disc.
+    internal string Axis { get; init; } = "";
+
+    // The order of the axes in a block: x, y, z, then the radius.
+    internal static int Order(string axis) => axis switch { "x" => 0, "y" => 1, "z" => 2, _ => 3 };
 
     internal GesResolvedConstraints Constraints { get; init; } = new();
 }
@@ -889,14 +893,14 @@ internal sealed partial class GesFileScope
         if (type.Axes is { } written)
         {
             axes = new GesResolvedAxis[written.Length];
-            var seen = new HashSet<char>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             for (var index = 0; index < axes.Length; index++)
             {
                 if (!seen.Add(written[index].Axis)) throw Error(Code.DuplicateName, written[index].Offset, $"Axis '{written[index].Axis}' is declared twice.");
                 axes[index] = new GesResolvedAxis { Axis = written[index].Axis, Constraints = ResolveConstraints(written[index].Constraints, type.Unit, false, written[index].Offset) };
             }
 
-            Array.Sort(axes, (left, right) => left.Axis.CompareTo(right.Axis));
+            Array.Sort(axes, (left, right) => GesResolvedAxis.Order(left.Axis).CompareTo(GesResolvedAxis.Order(right.Axis)));
         }
 
         var constraints = ResolveConstraints(type.Constraints, type.Unit, type.Kind == GesSchemaTypeKind.Percentage, type.Offset);
@@ -1176,7 +1180,7 @@ internal static class GesSchemaCanonical
             case GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Dice:
                 WriteType(new GesResolvedType { Kind = type.Kind, Unit = type.Unit, Max = type.Max, Constraints = WithoutDelta(type.Constraints) }, builder);
                 return true;
-            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Poly:
+            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Poly or GesSchemaTypeKind.Disc:
                 var axes = type.Axes is { } written ? Array.ConvertAll(written, axis => new GesResolvedAxis { Axis = axis.Axis, Constraints = WithoutDelta(axis.Constraints) }) : null;
                 WriteType(new GesResolvedType { Kind = type.Kind, Unit = type.Unit, Max = type.Max, Axes = axes }, builder);
                 return true;
@@ -1218,6 +1222,7 @@ internal static class GesSchemaCanonical
             case GesSchemaTypeKind.Vector:
             case GesSchemaTypeKind.Box:
             case GesSchemaTypeKind.Poly:
+            case GesSchemaTypeKind.Disc:
                 builder.Append(type.Kind.ToString()).Append('(');
                 builder.Append(type.Unit == GesQuantityUnit.UnitNone ? "none" : type.Unit.ToTypeName()).Append(')');
                 if (type.Max is { } polyMax) builder.Append(" max ").Append(polyMax);

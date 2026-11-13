@@ -481,6 +481,7 @@ internal sealed partial class GesSchemaSourceReader
             case GesSchemaTypeKind.Vector:
             case GesSchemaTypeKind.Box:
             case GesSchemaTypeKind.Poly:
+            case GesSchemaTypeKind.Disc:
                 return ReadSpatial(GesSchemaTypeNames.Kind(name)!.Value, offset);
             case GesSchemaTypeKind.Tag:
             {
@@ -558,7 +559,7 @@ internal sealed partial class GesSchemaSourceReader
     {
         var unit = _position < _text.Length && _text[_position] == '(' ? ReadUnit() : GesQuantityUnit.UnitNone;
         SkipSpaces();
-        // A polygon lies in the plane z = 0, so it has a count and only the axes x and y.
+        // A polygon lies in the plane z = 0, so it has a count and only the axes x and y; a disc lies there too and has a radius.
         var max = kind == GesSchemaTypeKind.Poly ? ReadMax() : (null, "", 0);
         GesSchemaAxisSyntax[]? axes = null;
         if (Consume('{'))
@@ -569,10 +570,10 @@ internal sealed partial class GesSchemaSourceReader
             {
                 var axisOffset = _position;
                 var axis = ReadWord();
-                if (kind == GesSchemaTypeKind.Poly ? axis is not ("x" or "y") : axis is not ("x" or "y" or "z"))
-                    throw new SyntaxFailure(axisOffset, kind == GesSchemaTypeKind.Poly ? "Expected the axis x or y of a Poly." : "Expected the axis x, y or z.");
+                if (kind switch { GesSchemaTypeKind.Poly => axis is not ("x" or "y"), GesSchemaTypeKind.Disc => axis is not ("x" or "y" or "radius"), _ => axis is not ("x" or "y" or "z") })
+                    throw new SyntaxFailure(axisOffset, kind switch { GesSchemaTypeKind.Poly => "Expected the axis x or y of a Poly.", GesSchemaTypeKind.Disc => "Expected the axis x or y or the radius of a Disc.", _ => "Expected the axis x, y or z." });
                 SkipSpaces();
-                list.Add(new GesSchemaAxisSyntax { Axis = axis[0], Offset = axisOffset, Constraints = ReadConstraints() });
+                list.Add(new GesSchemaAxisSyntax { Axis = axis, Offset = axisOffset, Constraints = ReadConstraints() });
                 EndEntry('}');
                 SkipSeparators();
             }

@@ -421,6 +421,7 @@ final class GesSyntaxBinder {
             // as the sent value, as in `emit emit Done()`, starts with its own keyword and binds as an ordinary value.
             if let send = node.children.first, send.kind == .sendExpression, ![.emit, .publish].contains(c.tokens[send.firstToken].kind) {
                 let publish = try c.advance().kind == .publish
+                try c.newlines()
                 let send = try bindSend(c.takeNode(.sendExpression), publish: publish, start: start)
                 return GesStatement(kind: .expression(send), location: send.location)
             }

@@ -233,6 +233,7 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Point => "GesPoint",
         GesLayoutKind.Vector => "GesVector",
         GesLayoutKind.Box => "GesBox",
+        GesLayoutKind.Disc => "GesDisc",
         GesLayoutKind.List => $"[{ElementName(value)}]",
         _ => NestedName(value)
     };
@@ -248,8 +249,12 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Union => "." + Member(value.Alternatives[0].Label),
         GesLayoutKind.List or GesLayoutKind.Bytes or GesLayoutKind.Flags => "[]",
         GesLayoutKind.Box => "GesBox(GesPoint(), GesPoint())",
+        GesLayoutKind.Disc => "GesDisc(radius: 0)",
         _ => TypeName(value) + "()"
     };
+
+    // `var` for a local that later code assigns, `let` for one it only reads, so that Swift warns about neither.
+    private static string Binding(bool assigned) => assigned ? "var" : "let";
 
     private static void Members(GesSchemaPlanner.Code code, GesPlanField field, string access, string stored, bool first)
     {
@@ -348,7 +353,7 @@ internal static partial class GesSwiftEmitter
         return encoding.Kind switch
         {
             GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Integer when encoding.Unit != "none" => $", in {encoding.Unit}",
-            GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Box when encoding.Unit != "none" => $", in {encoding.Unit}",
+            GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Box or GesLayoutKind.Disc when encoding.Unit != "none" => $", in {encoding.Unit}",
             GesLayoutKind.List when encoding.Poly => $", the points of a polygon{(encoding.Unit != "none" ? " in " + encoding.Unit : "")}, at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}",
             GesLayoutKind.Union => ", the selected alternative",
             GesLayoutKind.List => $", at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)} elements",
@@ -625,6 +630,10 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Box:
                 foreach (var corner in value.Corners) Write(code, corner, target + "." + Member(corner.Base));
                 break;
+            case GesLayoutKind.Disc:
+                foreach (var part in value.Corners) Write(code, part, target + "." + Member(part.Base));
+                if (value.Corners.Count == 1) code.Line($"if {target}.radius != 0 {{ {Throw("typeMismatch", value)} }}");
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"try {target}.__writeFields(&writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)})");
                 break;
@@ -738,6 +747,15 @@ internal static partial class GesSwiftEmitter
                 }
 
                 code.Line($"{target} = GesBox(lower{N(value.Node)}, upper{N(value.Node)})");
+                code.Close();
+                break;
+            case GesLayoutKind.Disc:
+                // The centre and the radius, which a block can leave out; the disc takes the radius's magnitude.
+                code.Open("do {");
+                code.Line($"var center{N(value.Node)} = GesPoint()");
+                code.Line($"{Binding(value.Corners.Count > 1)} radius{N(value.Node)} = 0.0");
+                foreach (var part in value.Corners) Read(code, part, part.Label + N(value.Node));
+                code.Line($"{target} = GesDisc(center: center{N(value.Node)}, radius: radius{N(value.Node)})");
                 code.Close();
                 break;
             case GesLayoutKind.Schema:

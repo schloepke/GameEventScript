@@ -46,7 +46,7 @@ final class GesPlanValue {
     var node = 0
     var encoding = GesLayoutEncoding()
     var axes: [GesPlanValue] = []
-    // The corners of a Box, as the Points that its min and max hold.
+    // The corners of a Box, as the Points that its min and max hold, or the centre and the radius of a Disc.
     var corners: [GesPlanValue] = []
     var alternatives: [GesPlanValue] = []
     var element: GesPlanValue?
@@ -219,6 +219,12 @@ enum GesSchemaPlanner {
                 value.corners.append(self.value(context, corner.encoding, corner.name == "lower" ? "Min" : "Max", corner.name, cornerNode))
                 cornerNode += 1 + corner.encoding.axes.count
             }
+        case .disc:
+            var partNode = node + 1
+            for part in encoding.corners {
+                value.corners.append(self.value(context, part.encoding, pascal(part.name), part.name, partNode))
+                partNode += 1 + part.encoding.axes.count
+            }
         case .union:
             var alternativeNode = node + 1
             for alternative in encoding.alternatives {
@@ -310,6 +316,8 @@ enum GesSchemaPlanner {
             return 1 + encoding.axes.count
         case .box:
             return 1 + 2 * (1 + encoding.corners[0].encoding.axes.count)
+        case .disc:
+            return encoding.corners.count + 1 + encoding.corners[0].encoding.axes.count
         case .union:
             var total = 1
             for alternative in encoding.alternatives { total += count(layout, alternative.encoding, &counts) }
@@ -374,7 +382,7 @@ enum GesSchemaPlanner {
             if !recursive(encoding, owner) { self.paths(layout, encoding.element!.path, encoding.element!.encoding, &paths, &cache) }
         case .point, .vector:
             for axis in encoding.axes { paths.append(axis.path) }
-        case .box:
+        case .box, .disc:
             for corner in encoding.corners { self.paths(layout, corner.path, corner.encoding, &paths, &cache) }
         case .union:
             for alternative in encoding.alternatives { self.paths(layout, alternative.path, alternative.encoding, &paths, &cache) }

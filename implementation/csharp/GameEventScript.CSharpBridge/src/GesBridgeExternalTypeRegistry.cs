@@ -509,6 +509,7 @@ internal static class GesBridgeValueConverter
         if (type == typeof(GesPoint)) return value => ((GesPoint)value!).ToValue(unit);
         if (type == typeof(GesVector)) return value => ((GesVector)value!).ToValue(unit);
         if (type == typeof(GesBox)) return value => ((GesBox)value!).ToValue(unit);
+        if (type == typeof(GesDisc)) return value => ((GesDisc)value!).ToValue(unit);
         if (type == typeof(GesPoly)) return value => value is null ? GesValue.GesNothing() : ((GesPoly)value).ToValue(unit);
         if (type == typeof(GameEventScriptMessage))
             return value =>
@@ -571,6 +572,7 @@ internal static class GesBridgeValueConverter
         if (type == typeof(GesPoint)) return Shape(value => GesPoint.FromValue(value, unit));
         if (type == typeof(GesVector)) return Shape(value => GesVector.FromValue(value, unit));
         if (type == typeof(GesBox)) return Shape(value => GesBox.FromValue(value, unit));
+        if (type == typeof(GesDisc)) return Shape(value => GesDisc.FromValue(value, unit));
         if (type == typeof(GesPoly)) return Shape(value => GesPoly.FromValue(value, unit));
         if (type.IsClass && type.GetCustomAttribute<GesTypeAttribute>() is not null)
             return (in GesValue value, out object? result) =>

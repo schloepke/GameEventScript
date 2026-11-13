@@ -183,6 +183,9 @@ internal static class GesCSharpModelEmitter
         if (documents is not null) names.Add(("FromDocument", "the generated member FromDocument"));
         if (bindings && fields.Exists(field => field.Field.Name == "fields"))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{type.Name}', the field fields and the generated field fields of its bindings share a name.");
+        // The values of the record defaults are held by a class named after the type.
+        if ((bindings || values is not null) && fields.Exists(field => field.Field.Default is { Kind: GesSchemaDefaultKind.Record }) && GesModelPlanner.TopLevel(layout, swift: false).Contains(type.Name + "Defaults"))
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The record defaults of '{type.Name}' are generated as '{type.Name}Defaults', which hides the top-level type of that name.");
         foreach (var field in fields)
         {
             names.Add((field.Base, "the field " + field.Field.Name));
@@ -388,6 +391,7 @@ internal static class GesCSharpModelEmitter
         GesModelKind.Vector => "GesVector",
         GesModelKind.Box => "GesBox",
         GesModelKind.Poly => "GesPoly",
+        GesModelKind.Disc => "GesDisc",
         GesModelKind.Schema => qualifier + value.Model.Schema,
         _ => Nested(value, qualifier, owner)
     };
@@ -409,8 +413,9 @@ internal static class GesCSharpModelEmitter
     };
 
     // A record literal as a call of the model's constructor, which resolves sibling defaults as for any caller: the fields the
-    // literal names, and before the last of them every parameter without a default as the field's own default, null for a
-    // sibling or absent field, or its zero value.
+    // literal names, and every other parameter without a C# default, before the last field without a schema default, as the
+    // field's own literal default, or null for a sibling default or an absent field. A field without a default that the
+    // literal leaves out is optional or accepts nothing, so its parameter is nullable.
     private static string RecordNative(GesModelLayout layout, GesModelPlanValue value, GesLayoutDefault fallback, string? qualifier)
     {
         var fields = GesModelPlanner.Fields(layout.Type(value.Model.Schema));
@@ -426,8 +431,7 @@ internal static class GesCSharpModelEmitter
             if (entry >= 0) argument = Native(layout, field.Value, named[entry].Value, qualifier, value.Model.Schema);
             else if (index >= trailing) continue;
             else if (field.Field.Default is { Kind: not GesSchemaDefaultKind.Field } own) argument = Native(layout, field.Value, own, qualifier, value.Model.Schema);
-            else if (field.Field.Default is not null || field.Value.Nullable) argument = "null";
-            else argument = Zero(field.Value);
+            else argument = "null";
             arguments.Add($"{Parameter(field.Base)}: {argument}");
         }
 
@@ -505,7 +509,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Number => value.Model.Integer ? "0L" : "0d",
             GesModelKind.Tag when value.ClosedTag => $"default({value.Nested})",
             GesModelKind.Flags => $"default({value.Nested})",
-            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box => $"default({Plain(value)})",
+            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc => $"default({Plain(value)})",
             _ => Initial(value)
         };
     }
@@ -690,6 +694,8 @@ internal static class GesCSharpModelEmitter
             code.Blank();
             code.Line("internal static bool Box(in GesValue value, GesQuantityUnit unit, out GesBox result) => Read(GesBox.FromValue(value, unit), out result);");
             code.Blank();
+            code.Line("internal static bool Disc(in GesValue value, GesQuantityUnit unit, out GesDisc result) => Read(GesDisc.FromValue(value, unit), out result);");
+            code.Blank();
             code.Line("internal static bool Poly(in GesValue value, GesQuantityUnit unit, out GesPoly result)");
             code.Open("{");
             code.Line("result = GesPoly.FromValue(value, unit)!;");
@@ -702,7 +708,7 @@ internal static class GesCSharpModelEmitter
 
     private static string UnitName(string unit) => "GesQuantityUnit.Unit" + GesSchemaPlanner.Pascal(unit);
 
-    private static bool IsValueType(GesModelPlanValue value) => value.Kind is GesModelKind.Boolean or GesModelKind.Number or GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Flags
+    private static bool IsValueType(GesModelPlanValue value) => value.Kind is GesModelKind.Boolean or GesModelKind.Number or GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc or GesModelKind.Flags
         || value.ClosedTag;
 
     private static string Depth(int depth) => depth.ToString(CultureInfo.InvariantCulture);
@@ -726,7 +732,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Tag => $"{support}.Tag({expression})",
             GesModelKind.List => $"{support}.List({expression}, x{Depth(depth)} => {Encode(value.Element!, owner, "x" + Depth(depth), qualifier, support, depth + 1, plain: plain, pattern: pattern)})",
             GesModelKind.Dice => $"{support}.Dice({expression})",
-            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly => $"{expression}.ToValue({UnitName(value.Model.Unit)})",
+            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly or GesModelKind.Disc => $"{expression}.ToValue({UnitName(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{expression}.ToValue()" : $"{expression}.ToGesValue()",
             _ => $"Value({expression})"
         };
@@ -757,6 +763,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Vector => $"{support}.Vector({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Box => $"{support}.Box({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Poly => $"{support}.Poly({expression}, {UnitName(value.Model.Unit)}, {target})",
+            GesModelKind.Disc => $"{support}.Disc({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Schema => $"Decode{value.Model.Schema}({expression}, {target})",
             _ => $"Decode{owner}{value.Nested}({expression}, {target})"
         };
@@ -1020,7 +1027,7 @@ internal static class GesCSharpModelEmitter
             code.Line($"/// <summary>Constructs a <c>:{type.Name}</c> from a Map or Record of its fields; an absent optional field may be left out.</summary>");
             code.Line($"private sealed class {type.Name}Constructor : IGesExternalTypeConstructor");
             code.Open("{");
-            Defaults(code, layout, fields, "Defaults", type.Name, qualifier, support);
+            Defaults(code, layout, fields, type.Name + "Defaults", type.Name, qualifier, support);
             code.Line("/// <inheritdoc />");
             code.Line($"public GesExternalTypeConstructorDefinition Definition => {type.Name}Value.Declaration.Constructors[0];");
             code.Blank();
@@ -1030,7 +1037,7 @@ internal static class GesCSharpModelEmitter
             code.Line("var fields = call.Arguments[0].AsMap();");
             var conditions = new List<string> { "fields is null", $"!{support}.Known(fields, {type.Name}Value.Names)" };
             for (var index = 0; index < fields.Count; index++)
-                conditions.Add("!" + Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, qualifier, support, "Defaults"), "out var " + Parameter(fields[index].Base), qualifier, support));
+                conditions.Add("!" + Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, qualifier, support, type.Name + "Defaults"), "out var " + Parameter(fields[index].Base), qualifier, support));
             for (var index = 0; index < conditions.Count; index++)
                 code.Line((index == 0 ? "if (" : "    || ") + conditions[index] + (index == conditions.Count - 1 ? ")" : ""));
             code.Open("{");

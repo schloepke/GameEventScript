@@ -802,6 +802,13 @@ internal static class GesSchemaBinder
                 AddCorner(build, scope, type, "lower", path + ".lower", "xyz");
                 AddCorner(build, scope, type, "upper", path + ".upper", "xyz");
                 break;
+            case GesSchemaTypeKind.Disc:
+                // A centre Point in the plane z = 0 and a radius, of the axes of the block.
+                node.Kind = GesSchemaNodeKind.Group;
+                build.Nodes.Add(node);
+                AddCorner(build, scope, type, "center", path + ".center", "xy");
+                AddAxes(build, scope, type, path, "radius");
+                break;
             case GesSchemaTypeKind.Poly:
                 // A List of Points in the plane z = 0.
                 if (type.Max is not { } polyMax) throw scope.Error(Code.NotEncodable, type.Offset, "A Poly without max has no hard limit.");
@@ -874,7 +881,7 @@ internal static class GesSchemaBinder
     {
         switch (type.Kind)
         {
-            case GesSchemaTypeKind.Boolean or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box:
+            case GesSchemaTypeKind.Boolean or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Disc:
                 if (type.Axes is { } axes)
                     foreach (var axis in axes) CheckWrapping(scope, axis.Constraints, type.Offset);
                 break;
@@ -936,7 +943,7 @@ internal static class GesSchemaBinder
                 return type.Tags is not { Length: 1 };
             case GesSchemaTypeKind.Nothing:
                 return false;
-            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box:
+            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Disc:
                 return type.Axes is not { Length: 0 };
             case GesSchemaTypeKind.Reference:
                 foreach (var field in type.Reference!.Fields)
@@ -960,20 +967,22 @@ internal static class GesSchemaBinder
         return false;
     }
 
-    // The axes of a block, or every given axis as a binary64 without one.
+    // The axes of a block among `all`, the letters x, y and z or the word radius, or each of them as a binary64 without one.
     private static void AddAxes(Build build, GesFileScope scope, GesResolvedType type, string path, string all)
     {
+        var names = all == "radius" ? [all] : Array.ConvertAll(all.ToCharArray(), axis => axis.ToString());
         if (type.Axes is { } axes)
         {
-            foreach (var axis in axes) AddAxis(build, scope, axis.Axis, axis.Constraints, path, type.Offset);
+            foreach (var axis in axes)
+                if (Array.IndexOf(names, axis.Axis) >= 0) AddAxis(build, scope, axis.Axis, axis.Constraints, path, type.Offset);
             return;
         }
 
         var none = new GesResolvedConstraints();
-        foreach (var axis in all) AddAxis(build, scope, axis, none, path, type.Offset);
+        foreach (var axis in names) AddAxis(build, scope, axis, none, path, type.Offset);
     }
 
-    // A corner of a Box or a point of a Poly: a Point of the type's unit and axes.
+    // A corner of a Box, a point of a Poly or the centre of a Disc: a Point of the type's unit and axes.
     private static void AddCorner(Build build, GesFileScope scope, GesResolvedType type, string name, string path, string all)
     {
         CheckNodeCount(build, scope, type.Offset);
@@ -985,11 +994,10 @@ internal static class GesSchemaBinder
         build.Nodes[index] = corner;
     }
 
-    private static void AddAxis(Build build, GesFileScope scope, char axis, GesResolvedConstraints constraints, string path, int offset)
+    private static void AddAxis(Build build, GesFileScope scope, string name, GesResolvedConstraints constraints, string path, int offset)
     {
         CheckNodeCount(build, scope, offset);
         var index = build.Nodes.Count;
-        var name = axis.ToString();
         var node = new GesSchemaNode { Name = name, Path = path + "." + name, ValueKind = GesSchemaTypeKind.Number, SchemaName = "", Next = index + 1 };
         Number(build, scope, constraints, offset, ref node);
         build.Nodes.Add(node);

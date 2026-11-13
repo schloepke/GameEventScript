@@ -139,12 +139,12 @@ public readonly struct GesSchemaBound
     public double? ToDouble() => IsParameter ? null : double.Parse(Significand.ToString(CultureInfo.InvariantCulture) + "e" + Exponent.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
 }
 
-/// <summary>The limits of a numeric axis of a Point, Vector, Box or Poly.</summary>
+/// <summary>The limits of a numeric axis of a Point, Vector, Box, Poly or Disc, or of the radius of a Disc.</summary>
 public sealed class GesSchemaAxisInfo
 {
     internal GesSchemaAxisInfo(GesResolvedAxis axis)
     {
-        Name = axis.Axis.ToString();
+        Name = axis.Axis;
         var constraints = axis.Constraints;
         IsInteger = constraints.Integer;
         IsWrapping = constraints.Wrapping;
@@ -154,7 +154,7 @@ public sealed class GesSchemaAxisInfo
         Delta = GesSchemaType.Bound(constraints.Delta);
     }
 
-    /// <summary>Gets the axis: <c>x</c>, <c>y</c> or <c>z</c>.</summary>
+    /// <summary>Gets the axis: <c>x</c>, <c>y</c> or <c>z</c>, or <c>radius</c> for the radius of a Disc.</summary>
     public string Name { get; }
 
     /// <summary>Gets whether the axis holds whole numbers.</summary>
@@ -207,7 +207,7 @@ public sealed class GesSchemaType
     /// <summary>Gets the kind of type.</summary>
     public GesSchemaTypeKind Kind { get; }
 
-    /// <summary>Gets the unit of a Quantity, Point, Vector, Box or Poly.</summary>
+    /// <summary>Gets the unit of a Quantity, Point, Vector, Box, Poly or Disc.</summary>
     public GesQuantityUnit Unit { get; }
 
     /// <summary>Gets whether a number holds whole numbers.</summary>
@@ -249,8 +249,8 @@ public sealed class GesSchemaType
     /// nest in each other at most; 0 for every other type.</summary>
     public int Depth { get; }
 
-    /// <summary>Gets the axes of an axis block in x, y, z order; empty without a block, when every axis is stored in full: x, y
-    /// and z, or x and y of a Poly.</summary>
+    /// <summary>Gets the axes of an axis block in x, y, z, radius order; empty without a block, when every axis is stored in
+    /// full: x, y and z, x and y of a Poly, or x, y and the radius of a Disc.</summary>
     public GesReadOnlyArray<GesSchemaAxisInfo> Axes { get; }
 
     /// <summary>Gets the schema a <see cref="GesSchemaTypeKind.Reference"/> refers to.</summary>

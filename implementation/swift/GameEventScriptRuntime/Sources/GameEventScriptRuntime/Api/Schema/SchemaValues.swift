@@ -352,6 +352,7 @@ public enum GesSchemaValues {
         case .vector: value.valueKind == .vector
         case .box: value.externalValue is GesGeometryLibrary.BoxValue
         case .poly: value.externalValue is GesGeometryLibrary.PolyValue
+        case .disc: value.externalValue is GesGeometryLibrary.DiscValue
         case .percentage: value.valueKind == .percentage
         case .reference: value.customTypeName == candidate.schemaName
         default: (value.valueKind == .integer || value.valueKind == .float) && value.unit == candidate.unit
@@ -375,6 +376,19 @@ public enum GesSchemaValues {
             try encodePoint(&writer, schema, schema.nodes[index + 1].next, box.max.x, box.max.y, box.max.z)
             return
         }
+        if info.valueKind == .disc {
+            // The centre, then the radius, which a block can leave out: it is then zero, as an axis it leaves out is.
+            guard let disc = GesDisc(value, unit: info.unit) else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+            try writer.beginNested(field)
+            try encodePoint(&writer, schema, index + 1, disc.center.x, disc.center.y, disc.center.z)
+            let radius = schema.nodes[index + 1].next
+            if radius < node.next {
+                try writer.writeNumber(GesSchemaField(owner: schema, index: radius), disc.radius)
+            } else if disc.radius != 0 {
+                throw GesWireError(code: GesWireError.typeMismatch, path: info.path)
+            }
+            return
+        }
         if let name = value.customTypeName, name != info.schemaName { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
         guard let fields = try value.materializedMap() else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
         if strict && value.customTypeName == nil && !hasEveryKey(schema, index, fields) { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
@@ -382,8 +396,8 @@ public enum GesSchemaValues {
         try encodeFields(&writer, schema, index + 1, node.next, fields, strict: strict)
     }
 
-    // A checked document writes a Box as the Map of its corners and a Poly as the List of its points, since documents have no
-    // geometry literal; this gives them the geometry library's values, as the schema's fields and their alternatives expect.
+    // A checked document writes a Box as the Map of its corners, a Poly as the List of its points and a Disc as the Map of its
+    // centre and radius, since documents have no geometry literal; this gives them the geometry library's values, as the schema's fields and their alternatives expect.
     static func documentShapes(_ schema: GesResolvedDeclaration, _ value: GesValue) -> GesValue {
         guard let map = value.asMap else { return value }
         var keys: [String] = []
@@ -407,6 +421,12 @@ public enum GesSchemaValues {
                 {
                     return GesBox(lower, upper).value(unit: type.unit)
                 }
+            case .disc:
+                if let parts = value.asMap, parts.length == 2, let middle = parts.get("center").flatMap({ GesPoint($0, unit: type.unit) }),
+                    let radius = parts.get("radius"), radius.valueKind == .integer || radius.valueKind == .float, radius.unit == type.unit
+                {
+                    return GesDisc(center: middle, radius: radius.asNumber).value(unit: type.unit)
+                }
             case .poly:
                 guard value.valueKind == .list else { continue }
                 let points = value.asList.compactMap { GesPoint($0, unit: type.unit) }
@@ -424,7 +444,7 @@ public enum GesSchemaValues {
         return value
     }
 
-    // The components of a Point, Vector, Box corner or Poly point; an axis that the block leaves out must be zero.
+    // The components of a Point, Vector, Box corner, Poly point or Disc centre; an axis that the block leaves out must be zero.
     private static func encodePoint(_ writer: inout GesSchemaWriter, _ schema: GesBoundSchema, _ index: Int, _ x: Double, _ y: Double, _ z: Double) throws {
         let node = schema.nodes[index]
         var seen: Set<String> = []
@@ -441,7 +461,7 @@ public enum GesSchemaValues {
         }
     }
 
-    // The components of a Point, Vector, Box corner or Poly point; an axis that the block leaves out is zero.
+    // The components of a Point, Vector, Box corner, Poly point or Disc centre; an axis that the block leaves out is zero.
     private static func decodePoint(_ reader: inout GesSchemaReader, _ schema: GesBoundSchema, _ index: Int) throws -> GesPoint {
         let node = schema.nodes[index]
         try reader.beginNested(GesSchemaField(owner: schema, index: index))
@@ -553,6 +573,11 @@ public enum GesSchemaValues {
             let lower = try decodePoint(&reader, schema, index + 1)
             let upper = try decodePoint(&reader, schema, schema.nodes[index + 1].next)
             return GesBox(lower, upper).value(unit: info.unit)
+        case .group where info.valueKind == .disc:
+            try reader.beginNested(field)
+            let center = try decodePoint(&reader, schema, index + 1)
+            let radius = schema.nodes[index + 1].next
+            return GesDisc(center: center, radius: radius < node.next ? try reader.readNumber(GesSchemaField(owner: schema, index: radius)) : 0).value(unit: info.unit)
         case .group:
             try reader.beginNested(field)
             return try decodeRecord(&reader, schema, info.schemaName, index + 1, node.next)

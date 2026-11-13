@@ -60,8 +60,14 @@ class ComposedValueTests(unittest.TestCase):
         poly = {'type': ':Poly', 'points': [point, point]}
         self.assertEqual(poly, value(poly))
         self.assertFalse(equal(value(poly), value({**poly, 'points': [point]}), ulp))
+        disc = {'type': ':Disc', 'center': point, 'radius': '2', 'unit': ':meter'}
+        self.assertEqual(value(disc), value({**disc, 'unit': 'm'}))
+        self.assertTrue(equal(value(disc), value({**disc, 'radius': '2.0000000000000004'}), ulp))
+        self.assertFalse(equal(value(disc), value({**disc, 'radius': '3'}), ulp))
+        self.assertFalse(equal(value(disc), value({**disc, 'center': {**point, 'x': '3'}}), ulp))
         for raw in [{**box, 'lower': {**point, 'unit': ':meter'}}, {**box, 'lower': {**point, 'type': ':Vector'}},
-                    {'type': ':Box', 'lower': point}, {**poly, 'points': point}, {**poly, 'extra': True}]:
+                    {'type': ':Box', 'lower': point}, {**poly, 'points': point}, {**poly, 'extra': True},
+                    {'type': ':Disc', 'center': point}, {**disc, 'radius': 2}, {**disc, 'center': {**point, 'unit': ':meter'}}]:
             with self.assertRaises(InvalidDocument):
                 value(raw)
 

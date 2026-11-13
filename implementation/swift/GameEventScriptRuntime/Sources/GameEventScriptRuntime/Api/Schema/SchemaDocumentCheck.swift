@@ -143,6 +143,29 @@ struct GesSchemaDocumentCheck {
                 try under(key) { try spatial(type, Self.resolved(values[index], valueOffsets[index]), valueOffsets[index], point: true) }
             }
             if seen != 3 { throw fail(Self.missingField, start) }
+        case .disc:
+            // A Disc is the Map of its centre, a Point, and its radius, a number of the unit, or a Record "Disc" of them.
+            var fields = value
+            if case .form("record", let labels, let arguments, _) = value {
+                guard let positions = GesLiteralForms.positions("record", labels), let typeIndex = positions.firstIndex(of: 0), let fieldsIndex = positions.firstIndex(of: 1),
+                    case .text(let name) = Self.resolved(arguments[typeIndex], start), name == "Disc"
+                else { return try require(false) }
+                fields = arguments[fieldsIndex]
+            }
+            guard case .map(let keys, let values, let keyOffsets, let valueOffsets) = Self.resolved(fields, start) else { return try require(false) }
+            var seen = 0
+            for (index, key) in keys.enumerated() {
+                let part = key == "center" ? 1 : key == "radius" ? 2 : 0
+                if part == 0 { throw fail(Self.unknownField, keyOffsets[index], path: Self.join(attempts.path, key)) }
+                seen |= part
+                let child = Self.resolved(values[index], valueOffsets[index])
+                if part == 1 {
+                    try under(key) { try spatial(type, child, valueOffsets[index], point: true) }
+                } else {
+                    try under(key) { try radius(type, child, valueOffsets[index]) }
+                }
+            }
+            if seen != 3 { throw fail(Self.missingField, start) }
         case .poly:
             // A document has no geometry literal: a Poly is the List of its points.
             guard case .list(let items, let offsets) = value else { return try require(false) }
@@ -209,6 +232,17 @@ struct GesSchemaDocumentCheck {
         case .nothing:
             if case .nothing = value { return }
             try require(false)
+        }
+    }
+
+    // A radius of the Disc's unit, within the block's radius, or zero when the block leaves it out.
+    private func radius(_ type: GesResolvedType, _ value: GesDocumentNode, _ start: Int) throws {
+        guard case .number(let number) = value, number.kind != .percentage, number.unit == type.unit else { throw fail(Self.fieldType, start) }
+        guard let axes = type.axes else { return }
+        if let declared = axes.first(where: { $0.axis == "radius" }) {
+            try numeric(declared.constraints, number.kind == .integer, number.integerValue, number.floatValue, start)
+        } else if number.kind == .integer ? number.integerValue != 0 : number.floatValue != 0 {
+            throw fail(Self.fieldType, start)
         }
     }
 

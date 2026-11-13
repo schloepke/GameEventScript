@@ -216,6 +216,7 @@ enum GesCSharpEmitter {
         case .point: "GesPoint"
         case .vector: "GesVector"
         case .box: "GesBox"
+        case .disc: "GesDisc"
         case .list: "List<\(elementName(value))>"
         default: nestedName(value)
         }
@@ -367,7 +368,7 @@ enum GesCSharpEmitter {
     static func description(_ value: GesPlanValue) -> String {
         let encoding = value.encoding
         switch encoding.kind {
-        case .quantized, .float, .integer, .point, .vector, .box: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
+        case .quantized, .float, .integer, .point, .vector, .box, .disc: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
         case .union: return ", the selected alternative"
         case .list where encoding.poly: return ", the points of a polygon\(encoding.unit != "none" ? " in " + encoding.unit : ""), at most \(encoding.maxCount)"
         case .list: return ", at most \(encoding.maxCount) elements"
@@ -614,6 +615,9 @@ enum GesCSharpEmitter {
             for axis in GesSchemaPlanner.omitted(value) { code.line("if (\(target).\(axis) != 0) \(fail("TypeMismatch", value))") }
         case .box:
             for corner in value.corners { write(&code, corner, target + "." + corner.base) }
+        case .disc:
+            for part in value.corners { write(&code, part, target + "." + part.base) }
+            if value.corners.count == 1 { code.line("if (\(target).Radius != 0) \(fail("TypeMismatch", value))") }
         case .schema:
             code.line("\(target).__WriteFields(ref writer, paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .union:
@@ -723,6 +727,14 @@ enum GesCSharpEmitter {
                 read(&code, corner, corner.label + String(value.node))
             }
             code.line("\(target) = new GesBox(lower\(value.node), upper\(value.node));")
+            code.close()
+        case .disc:
+            // The centre and the radius, which a block can leave out; the disc takes the radius's magnitude.
+            code.open("{")
+            code.line("var center\(value.node) = new GesPoint();")
+            code.line("var radius\(value.node) = 0d;")
+            for part in value.corners { read(&code, part, part.label + String(value.node)) }
+            code.line("\(target) = new GesDisc(center\(value.node), radius\(value.node));")
             code.close()
         case .schema:
             code.line("\(target).__ReadFields(ref reader, paths, at + \(value.node + 1)\(nextLevel(value)));")

@@ -749,6 +749,11 @@ enum GesSchemaBinder {
             node.kind = .group
             try addCorner(&build, scope, type, "lower", path + ".lower", ["x", "y", "z"])
             try addCorner(&build, scope, type, "upper", path + ".upper", ["x", "y", "z"])
+        case .disc:
+            // A centre Point in the plane z = 0 and a radius, of the axes of the block.
+            node.kind = .group
+            try addCorner(&build, scope, type, "center", path + ".center", ["x", "y"])
+            try addAxes(&build, scope, type, path, ["radius"])
         case .poly:
             // A List of Points in the plane z = 0.
             guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A Poly without max has no hard limit.") }
@@ -811,7 +816,7 @@ enum GesSchemaBinder {
 
     private static func checkEncodable(_ scope: GesFileScope, _ type: GesResolvedType, _ lists: Int, _ known: inout Set<EncodableVisit>, _ levels: inout [ObjectIdentifier: Int]) throws {
         switch type.kind {
-        case .boolean, .point, .vector, .box:
+        case .boolean, .point, .vector, .box, .disc:
             for axis in type.axes ?? [] { try checkWrapping(scope, axis.constraints, type.offset) }
         case .poly:
             if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Poly without max has no hard limit.") }
@@ -860,7 +865,7 @@ enum GesSchemaBinder {
         switch type.kind {
         case .tag: return type.tags?.count != 1
         case .nothing: return false
-        case .point, .vector, .box: return type.axes.map { !$0.isEmpty } ?? true
+        case .point, .vector, .box, .disc: return type.axes.map { !$0.isEmpty } ?? true
         case .reference: return type.reference!.fields.contains { $0.marker == .optional || hasBits($0.alternatives) }
         default: return true
         }
@@ -870,16 +875,16 @@ enum GesSchemaBinder {
         if build.nodes.count >= maximumNodeCount { throw scope.error(Code.tooLarge, offset, "A bound layout has at most \(maximumNodeCount) fields.") }
     }
 
-    // The axes of a block, or every given axis as a binary64 without one.
+    // The axes of a block among `all`, the letters x, y and z or the word radius, or each of them as a binary64 without one.
     private static func addAxes(_ build: inout Build, _ scope: GesFileScope, _ type: GesResolvedType, _ path: String, _ all: [String]) throws {
         if let axes = type.axes {
-            for axis in axes { try addAxis(&build, scope, axis.axis, axis.constraints, path, type.offset) }
+            for axis in axes where all.contains(axis.axis) { try addAxis(&build, scope, axis.axis, axis.constraints, path, type.offset) }
         } else {
             for axis in all { try addAxis(&build, scope, axis, GesResolvedConstraints(), path, type.offset) }
         }
     }
 
-    // A corner of a Box or a point of a Poly: a Point of the type's unit and axes.
+    // A corner of a Box, a point of a Poly or the centre of a Disc: a Point of the type's unit and axes.
     private static func addCorner(_ build: inout Build, _ scope: GesFileScope, _ type: GesResolvedType, _ name: String, _ path: String, _ all: [String]) throws {
         try checkNodeCount(build, scope, type.offset)
         let index = build.nodes.count

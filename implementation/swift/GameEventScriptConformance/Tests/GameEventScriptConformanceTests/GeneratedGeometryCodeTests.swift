@@ -4,8 +4,8 @@
 import GameEventScriptRuntime
 import XCTest
 
-/// Code generated from conformance/fixtures/SchemaGeneration/geometry.gess: Boxes and Polys in wire records, where a Poly is a
-/// reusable array of Points with a polygon view, and in models, which hold GesBox and GesPoly.
+/// Code generated from conformance/fixtures/SchemaGeneration/geometry.gess: Boxes, Polys and Discs in wire records, where a Poly
+/// is a reusable array of Points with a polygon view, and in models, which hold GesBox, GesPoly and GesDisc.
 final class GeneratedGeometryCodeTests: XCTestCase {
     private func makeZone() -> GeometryWire.Zone {
         let zone = GeometryWire.Zone()
@@ -63,6 +63,66 @@ final class GeneratedGeometryCodeTests: XCTestCase {
         _ = try read.readDelta(from: delta, against: baseline)
         XCTAssertEqual(next.area, read.area)
         XCTAssertTrue(try read.wireEquals(next))
+    }
+
+    private func makeReach() -> GeometryWire.Reach {
+        let reach = GeometryWire.Reach()
+        reach.zone = GesDisc(center: GesPoint(x: 20, y: 3), radius: -5)
+        reach.hasFree = true
+        reach.free = GesDisc(center: GesPoint(x: 0.5, y: -0.25), radius: 1.5)
+        reach.aura = GesDisc(radius: 2.5)
+        reach.mark = GesDisc(center: GesPoint(x: 9, y: 0), radius: 0)
+        reach.pick = .disc
+        reach.pickDisc = GesDisc(center: GesPoint(x: 1, y: 2), radius: 3)
+        reach.rings = [GesDisc(radius: 2)]
+        return reach
+    }
+
+    func testDiscsRoundTripThroughBytesAndValues() throws {
+        let reach = makeReach()
+        XCTAssertEqual(5, reach.zone.radius, "A disc takes the radius's magnitude.")
+        let bytes = try reach.encoded()
+        let read = GeometryWire.Reach()
+        _ = try read.read(from: bytes)
+        XCTAssertTrue(try read.wireEquals(reach))
+        XCTAssertEqual(reach.zone, read.zone)
+        XCTAssertEqual(reach.free, read.free)
+        XCTAssertEqual(reach.aura, read.aura)
+        XCTAssertEqual(reach.mark, read.mark)
+        XCTAssertEqual(reach.rings[0], read.rings[0])
+
+        // The value path holds the geometry library's external values, which the wire record and the model convert alike.
+        let value = try read.toValue()
+        XCTAssertEqual(reach.zone, GesDisc(value.asMap!.get("zone")!, unit: .meter))
+        let copy = GeometryWire.Reach()
+        try copy.read(value: value)
+        XCTAssertEqual(bytes, try copy.encoded())
+        let model = try GeometryModel.Reach(value: value)
+        XCTAssertEqual(reach.zone, model.zone)
+        XCTAssertEqual(reach.free, model.free)
+        XCTAssertEqual(try value.json(), try model.toValue().json())
+
+        // A block without the radius transmits none, so only a disc of radius 0 can be written.
+        reach.mark = GesDisc(center: GesPoint(x: 9, y: 0), radius: 1)
+        XCTAssertThrowsError(try reach.encoded()) { error in XCTAssertEqual((error as? GesWireError)?.code, GesWireError.typeMismatch) }
+    }
+
+    func testDiscDeltasChangeTheRadiusAlone() throws {
+        let baseline = makeReach()
+        let next = makeReach()
+        next.zone = GesDisc(center: next.zone.center, radius: 6)
+        next.aura = GesDisc(radius: 2.75)
+        let delta = try next.deltaEncoded(against: baseline)
+        let read = GeometryWire.Reach()
+        _ = try read.read(from: try baseline.encoded())
+        _ = try read.readDelta(from: delta, against: baseline)
+        XCTAssertEqual(next.zone, read.zone)
+        XCTAssertEqual(next.aura, read.aura)
+        XCTAssertTrue(try read.wireEquals(next))
+        let quantized = makeReach()
+        quantized.aura = GesDisc(radius: 2.504)
+        try quantized.quantize()
+        XCTAssertEqual(GesDisc(radius: 2.5), quantized.aura)
     }
 
     private let zoneDocument = """

@@ -337,6 +337,7 @@ internal static class GesSchemaFormatter
             case GesSchemaTypeKind.Vector:
             case GesSchemaTypeKind.Box:
             case GesSchemaTypeKind.Poly:
+            case GesSchemaTypeKind.Disc:
                 builder.Append(':').Append(type.Kind.ToString());
                 if (type.Unit != GesQuantityUnit.UnitNone) builder.Append('(').Append(type.Unit.ToSuffix()).Append(')');
                 if (type.Max is { } polyMax) builder.Append(" max ").Append(polyMax);

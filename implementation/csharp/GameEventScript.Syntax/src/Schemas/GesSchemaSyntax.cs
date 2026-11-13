@@ -90,7 +90,8 @@ internal sealed class GesSchemaConstraintsSyntax
 
 internal sealed class GesSchemaAxisSyntax
 {
-    internal char Axis { get; init; }
+    // x, y, z, or the radius of a Disc.
+    internal string Axis { get; init; } = "";
 
     internal GesSchemaConstraintsSyntax Constraints { get; init; } = new();
 

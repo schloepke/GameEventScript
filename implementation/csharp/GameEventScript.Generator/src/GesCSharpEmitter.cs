@@ -227,6 +227,7 @@ internal static partial class GesCSharpEmitter
         GesLayoutKind.Point => "GesPoint",
         GesLayoutKind.Vector => "GesVector",
         GesLayoutKind.Box => "GesBox",
+        GesLayoutKind.Disc => "GesDisc",
         GesLayoutKind.List => $"List<{ElementName(value)}>",
         _ => NestedName(value)
     };
@@ -349,7 +350,7 @@ internal static partial class GesCSharpEmitter
         return encoding.Kind switch
         {
             GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Integer when encoding.Unit != "none" => $", in {encoding.Unit}",
-            GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Box when encoding.Unit != "none" => $", in {encoding.Unit}",
+            GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Box or GesLayoutKind.Disc when encoding.Unit != "none" => $", in {encoding.Unit}",
             GesLayoutKind.List when encoding.Poly => $", the points of a polygon{(encoding.Unit != "none" ? " in " + encoding.Unit : "")}, at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}",
             GesLayoutKind.Union => ", the selected alternative",
             GesLayoutKind.List => $", at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)} elements",
@@ -616,6 +617,10 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Box:
                 foreach (var corner in value.Corners) Write(code, corner, target + "." + corner.Base);
                 break;
+            case GesLayoutKind.Disc:
+                foreach (var part in value.Corners) Write(code, part, target + "." + part.Base);
+                if (value.Corners.Count == 1) code.Line($"if ({target}.Radius != 0) {Throw("TypeMismatch", value)}");
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"{target}.__WriteFields(ref writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)});");
                 break;
@@ -738,6 +743,15 @@ internal static partial class GesCSharpEmitter
                 }
 
                 code.Line($"{target} = new GesBox(lower{N(value.Node)}, upper{N(value.Node)});");
+                code.Close();
+                break;
+            case GesLayoutKind.Disc:
+                // The centre and the radius, which a block can leave out; the disc takes the radius's magnitude.
+                code.Open("{");
+                code.Line($"var center{N(value.Node)} = new GesPoint();");
+                code.Line($"var radius{N(value.Node)} = 0d;");
+                foreach (var part in value.Corners) Read(code, part, part.Label + N(value.Node));
+                code.Line($"{target} = new GesDisc(center{N(value.Node)}, radius{N(value.Node)});");
                 code.Close();
                 break;
             case GesLayoutKind.Schema:

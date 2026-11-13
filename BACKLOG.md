@@ -117,6 +117,16 @@ here.
   preserve the independently measured zero-allocation dispatch contract.
 - Implement Go and Rust as additional planned language ports, preserving the
   same portable Core, `.gesb` format, and shared Markdown Conformance contracts.
+- Add TypeScript/JavaScript as a target language of schema code generation
+  (`ges schema generate --language typescript`): wire records and models with the
+  same layout, byte-identical encoding and goldens as C# and Swift, checked by
+  `compare-schema-generation.py` and compiled by `test-generated-schemas.py`.
+  JavaScript numbers are binary64, so Int64 fields need `bigint` or a checked
+  safe-integer range.
+- Consider a GES-to-JavaScript transpiler that turns a Program into a
+  JavaScript module with a small runtime for host, queue and values, verified
+  against the shared Markdown Conformance; it must keep the VM's deterministic
+  ordering, randomness and exact Int64 semantics.
 - Add an independent CI job with build, unit tests, strict shared Conformance,
   canonical `.gesb` fixtures and cross-language result comparison for every new
   implementation. A future C runtime additionally requires sanitizer jobs.

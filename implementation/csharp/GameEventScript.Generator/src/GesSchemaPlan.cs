@@ -56,7 +56,7 @@ internal sealed class GesPlanValue
     internal GesLayoutEncoding Encoding = new();
     internal List<GesPlanValue> Axes = [];
 
-    // The corners of a Box, as the Points that its Min and Max hold.
+    // The corners of a Box, as the Points that its Min and Max hold, or the centre and the radius of a Disc.
     internal List<GesPlanValue> Corners = [];
     internal List<GesPlanValue> Alternatives = [];
     internal GesPlanValue? Element;
@@ -337,6 +337,15 @@ internal static class GesSchemaPlanner
                 }
 
                 break;
+            case GesLayoutKind.Disc:
+                var partNode = node + 1;
+                foreach (var part in encoding.Corners)
+                {
+                    value.Corners.Add(Value(context, part.Encoding, Pascal(part.Name), part.Name, partNode));
+                    partNode += 1 + part.Encoding.Axes.Count;
+                }
+
+                break;
             case GesLayoutKind.Union:
                 var alternativeNode = node + 1;
                 foreach (var alternative in encoding.Alternatives)
@@ -438,6 +447,8 @@ internal static class GesSchemaPlanner
                 return 1 + encoding.Axes.Count;
             case GesLayoutKind.Box:
                 return 1 + 2 * (1 + encoding.Corners[0].Encoding.Axes.Count);
+            case GesLayoutKind.Disc:
+                return encoding.Corners.Count + 1 + encoding.Corners[0].Encoding.Axes.Count;
             case GesLayoutKind.Union:
                 var total = 1;
                 foreach (var alternative in encoding.Alternatives) total += Count(layout, alternative.Encoding, counts);
@@ -519,7 +530,7 @@ internal static class GesSchemaPlanner
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in encoding.Axes) paths.Add(axis.Path);
                 break;
-            case GesLayoutKind.Box:
+            case GesLayoutKind.Box or GesLayoutKind.Disc:
                 foreach (var corner in encoding.Corners) Paths(layout, corner.Path, corner.Encoding, paths, cache);
                 break;
             case GesLayoutKind.Union:

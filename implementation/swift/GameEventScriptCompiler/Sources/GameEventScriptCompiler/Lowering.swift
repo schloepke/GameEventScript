@@ -310,7 +310,12 @@ extension GesCompiler {
         guard case .call(let name, let arguments) = e.kind else { preconditionFailure() }
         if let handler = scope.get(name) {
             let regs = try arguments.map { try expression($0.value, r, scope) }
-            if let labels = scope.handler(name), labels != arguments.map(\.label) { r.emit(.loadNothing, d) } else { r.emit(.bindHandler, d, handler, builder.list(regs)) }
+            // As in C#, an unlabeled argument fits its position; a labeled one must name the parameter there.
+            if let labels = scope.handler(name), labels.count != arguments.count || zip(arguments, labels).contains(where: { $0.label != "_" && $0.label != $1 }) {
+                r.emit(.loadNothing, d)
+            } else {
+                r.emit(.bindHandler, d, handler, builder.list(regs))
+            }
             return
         }
         let key = try callableKey(name, arguments, e.location)

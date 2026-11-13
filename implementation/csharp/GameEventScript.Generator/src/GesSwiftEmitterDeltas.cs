@@ -23,7 +23,10 @@ internal static partial class GesSwiftEmitter
         if (Scalar(value)) yield return value;
         foreach (var axis in value.Axes) yield return axis;
         foreach (var corner in value.Corners)
+        {
+            if (Scalar(corner)) yield return corner;
             foreach (var axis in corner.Axes) yield return axis;
+        }
         foreach (var alternative in value.Alternatives)
             foreach (var nested in Scalars(alternative)) yield return nested;
         if (value.Item is null && value.Element is not null)
@@ -207,7 +210,7 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Same(code, axis, a + "." + Member(axis.Base), b + "." + Member(axis.Base), ownerA, ownerB);
                 break;
-            case GesLayoutKind.Box:
+            case GesLayoutKind.Box or GesLayoutKind.Disc:
                 foreach (var corner in value.Corners) Same(code, corner, a + "." + Member(corner.Base), b + "." + Member(corner.Base), ownerA, ownerB);
                 break;
             case GesLayoutKind.Schema:
@@ -375,6 +378,19 @@ internal static partial class GesSwiftEmitter
                 code.Line($"{target} = GesBox(lower{node}, upper{node})");
                 code.Close();
                 break;
+            case GesLayoutKind.Disc when Quantized(value):
+                // A disc is immutable: its centre and radius are quantized and make a new disc.
+                code.Open("do {");
+                foreach (var part in value.Corners)
+                {
+                    code.Line($"{Binding(Quantized(part))} {part.Label}{node} = {target}.{Member(part.Base)}");
+                    Quantize(code, part, part.Label + node);
+                }
+
+                if (value.Corners.Count == 1) code.Line($"let radius{node} = {target}.radius");
+                code.Line($"{target} = GesDisc(center: center{node}, radius: radius{node})");
+                code.Close();
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"try {target}.__quantize(paths, at + {N(value.Node + 1)}{NextLevel(value)})");
                 break;
@@ -403,11 +419,14 @@ internal static partial class GesSwiftEmitter
         }
     }
 
+    // A Point without axes, the centre of a Disc whose block names only the radius, which transmits nothing.
+    private static bool Empty(GesPlanValue value) => value.Encoding.Kind == GesLayoutKind.Point && value.Axes.Count == 0;
+
     private static bool Quantized(GesPlanValue value) => value.Encoding.Kind switch
     {
         GesLayoutKind.Quantized or GesLayoutKind.Schema => true,
         GesLayoutKind.Point or GesLayoutKind.Vector => value.Axes.Exists(Quantized),
-        GesLayoutKind.Box => value.Corners.Exists(Quantized),
+        GesLayoutKind.Box or GesLayoutKind.Disc => value.Corners.Exists(Quantized),
         GesLayoutKind.Union => value.Alternatives.Exists(Quantized),
         GesLayoutKind.List => value.Item is not null ? Quantized(value.Item.Fields[0].Value) : Quantized(value.Element!),
         _ => false
@@ -657,14 +676,21 @@ internal static partial class GesSwiftEmitter
                 code.Line($"if !{set} {{ writer.rewind(to: first{node}) }}");
                 code.Close();
                 break;
-            case GesLayoutKind.Box:
-                // A nested delta of the corners, each one of a Point.
+            case GesLayoutKind.Box or GesLayoutKind.Disc:
+                // A nested delta of the corners, each one of a Point, or of a disc's centre and radius.
                 code.Open("do {");
                 code.Line($"let first{node} = writer.bitPosition");
                 code.Line($"try writer.write(0, width: {N(value.Corners.Count)})");
                 for (var index = 0; index < value.Corners.Count; index++)
                 {
                     var corner = value.Corners[index];
+                    if (Empty(corner))
+                    {
+                        // A centre without axes transmits nothing: its change bit stays clear, and it must lie at the origin.
+                        foreach (var axis in GesSchemaPlanner.Omitted(corner)) code.Line($"if {a}.{Member(corner.Base)}.{Member(axis)} != 0 {{ {Throw("typeMismatch", corner)} }}");
+                        continue;
+                    }
+
                     code.Open("do {");
                     code.Line($"var set{N(corner.Node)} = false");
                     DeltaPayload(code, corner, a + "." + Member(corner.Base), b + "." + Member(corner.Base), $"set{N(corner.Node)}");
@@ -675,6 +701,7 @@ internal static partial class GesSwiftEmitter
                     code.Close();
                 }
 
+                if (value.Encoding.Kind == GesLayoutKind.Disc && value.Corners.Count == 1) code.Line($"if {a}.radius != 0 {{ {Throw("typeMismatch", value)} }}");
                 code.Line($"if !{set} {{ writer.rewind(to: first{node}) }}");
                 code.Close();
                 break;
@@ -799,8 +826,9 @@ internal static partial class GesSwiftEmitter
                 code.Line($"if !changed{node} {{ {Throw("invalidDelta", value)} }}");
                 code.Close();
                 break;
-            case GesLayoutKind.Box:
-                // The corners start as the baseline's; the box orders what the delta changes.
+            case GesLayoutKind.Box or GesLayoutKind.Disc:
+                // The corners start as the baseline's; the box orders what the delta changes. A disc takes its centre and radius
+                // likewise.
                 code.Open("do {");
                 code.Line($"try reader.require({N(value.Corners.Count)}, path: {Path(value)})");
                 code.Line($"let bits{node} = reader.bitPosition");
@@ -810,7 +838,8 @@ internal static partial class GesSwiftEmitter
                 {
                     var corner = value.Corners[index];
                     var cornerNode = N(corner.Node);
-                    code.Line($"var {corner.Label}{node} = {b}.{Member(corner.Base)}");
+                    code.Line($"{Binding(!Empty(corner))} {corner.Label}{node} = {b}.{Member(corner.Base)}");
+                    if (Empty(corner)) continue;
                     code.Open("do {");
                     code.Line($"let payload{cornerNode} = reader.bitPosition");
                     code.Line($"reader.seek(to: bits{node} + {N(index)})");
@@ -824,7 +853,8 @@ internal static partial class GesSwiftEmitter
                 }
 
                 code.Line($"if !changed{node} {{ {Throw("invalidDelta", value)} }}");
-                code.Line($"{a} = GesBox(lower{node}, upper{node})");
+                if (value.Encoding.Kind == GesLayoutKind.Disc && value.Corners.Count == 1) code.Line($"let radius{node} = 0.0");
+                code.Line(value.Encoding.Kind == GesLayoutKind.Disc ? $"{a} = GesDisc(center: center{node}, radius: radius{node})" : $"{a} = GesBox(lower{node}, upper{node})");
                 code.Close();
                 break;
             case GesLayoutKind.Schema:

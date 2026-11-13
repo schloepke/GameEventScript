@@ -42,12 +42,13 @@ internal static class RuntimeValues
             var z = ParseNumber(value.GetProperty("z").GetString()!);
             return type == ":Vector" ? GesValue.GesVector(x, y, z, ReadUnit(value)) : GesValue.GesPoint(x, y, z, ReadUnit(value));
         }
-        if (type is ":Box" or ":Poly" && !value.TryGetProperty("entries", out _))
+        if (type is ":Box" or ":Poly" or ":Disc" && !value.TryGetProperty("entries", out _))
         {
             // A shape of the geometry library: unitless Points and the unit of the whole shape. A Record of that name has entries.
-            var fields = type == ":Box" ? new[] { "type", "lower", "upper" } : new[] { "type", "points" };
+            var fields = type switch { ":Box" => new[] { "type", "lower", "upper" }, ":Poly" => new[] { "type", "points" }, _ => new[] { "type", "center", "radius" } };
             Fields(value, value.TryGetProperty("unit", out _) ? [.. fields, "unit"] : fields);
             var shapeUnit = ReadUnit(value);
+            if (type == ":Disc") return new GesDisc(UnitlessPoint(value.GetProperty("center")), ParseNumber(value.GetProperty("radius").GetString()!)).ToValue(shapeUnit);
             if (type == ":Box") return new GesBox(UnitlessPoint(value.GetProperty("lower")), UnitlessPoint(value.GetProperty("upper"))).ToValue(shapeUnit);
             return new GesPoly(value.GetProperty("points").EnumerateArray().Select(UnitlessPoint).ToArray()).ToValue(shapeUnit);
         }
@@ -181,7 +182,7 @@ internal static class RuntimeValues
         return new GesPoint(ParseNumber(point.GetProperty("x").GetString()!), ParseNumber(point.GetProperty("y").GetString()!), ParseNumber(point.GetProperty("z").GetString()!));
     }
 
-    // A Box or Poly of the geometry library, whose unit the public API reads only by asking for one.
+    // A Box, Poly or Disc of the geometry library, whose unit the public API reads only by asking for one.
     private static Dictionary<string, object>? Geometry(GesValue value)
     {
         foreach (var unit in Enum.GetValues<GesQuantityUnit>())
@@ -189,6 +190,7 @@ internal static class RuntimeValues
             Dictionary<string, object>? result = null;
             if (GesBox.FromValue(value, unit) is { } box) result = new() { ["type"] = ":Box", ["lower"] = Unitless(box.Min), ["upper"] = Unitless(box.Max) };
             else if (GesPoly.FromValue(value, unit) is { } poly) result = new() { ["type"] = ":Poly", ["points"] = poly.Points.Select(Unitless).ToArray() };
+            else if (GesDisc.FromValue(value, unit) is { } disc) result = new() { ["type"] = ":Disc", ["center"] = Unitless(disc.Center), ["radius"] = disc.Radius.ToString("R", CultureInfo.InvariantCulture) };
             if (result is null) continue;
             if (unit != GesQuantityUnit.UnitNone) result["unit"] = ":" + unit.ToTypeName();
             return result;

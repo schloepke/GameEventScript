@@ -41,6 +41,7 @@ public enum GesBridgeValueConversion {
         }
         if let box = GesBox(encoded) { return box.value(unit: unit) }
         if let poly = GesPoly(encoded) { return poly.value(unit: unit) }
+        if let disc = GesDisc(encoded) { return disc.value(unit: unit) }
         try requireKind(encoded, .integer, .float)
         if let integer = encoded.integerValue { return .integer(integer, unit: unit) }
         return .float(encoded.floatValue!, unit: unit)
@@ -57,6 +58,7 @@ public enum GesBridgeValueConversion {
         }
         if let box = GesBox(value, unit: unit) { return try T.fromGesValue(box.value()) }
         if let poly = GesPoly(value, unit: unit) { return try T.fromGesValue(poly.value()) }
+        if let disc = GesDisc(value, unit: unit) { return try T.fromGesValue(disc.value()) }
         guard value.unit == unit, value.valueKind == .integer || value.valueKind == .float else {
             throw GesBridgeConversionError.typeMismatch(expected: "Quantity(" + unit.suffix + ")", actual: String(describing: value.valueKind) + value.unit.suffix)
         }
@@ -239,6 +241,19 @@ extension GesPoly: GesBridgeValueConvertible {
     public static func fromGesValue(_ value: GesValue) throws -> Self {
         guard let poly = GesPoly(value) else { throw GesBridgeConversionError.typeMismatch(expected: "Poly", actual: String(describing: value.valueKind) + value.unit.suffix) }
         return poly
+    }
+}
+
+extension GesDisc: GesBridgeValueConvertible {
+    /// Encodes this disc as the unitless external value `:Disc` of `GesGeometryLibrary`.
+    public func toGesValue() -> GesValue { value() }
+
+    /// Decodes a unitless `:Disc` of `GesGeometryLibrary`.
+    ///
+    /// - Throws: A conversion type mismatch for other values or units.
+    public static func fromGesValue(_ value: GesValue) throws -> Self {
+        guard let disc = GesDisc(value) else { throw GesBridgeConversionError.typeMismatch(expected: "Disc", actual: String(describing: value.valueKind) + value.unit.suffix) }
+        return disc
     }
 }
 

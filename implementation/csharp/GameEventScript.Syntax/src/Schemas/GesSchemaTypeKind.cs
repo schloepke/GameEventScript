@@ -67,7 +67,10 @@ public enum GesSchemaTypeKind : byte
     Box,
 
     /// <summary>A polygon of Points in the plane z = 0.</summary>
-    Poly
+    Poly,
+
+    /// <summary>A filled circle in the plane z = 0: a centre Point and a radius.</summary>
+    Disc
 }
 
 internal static class GesSchemaTypeNames
@@ -86,6 +89,7 @@ internal static class GesSchemaTypeNames
         "Vector" => GesSchemaTypeKind.Vector,
         "Box" => GesSchemaTypeKind.Box,
         "Poly" => GesSchemaTypeKind.Poly,
+        "Disc" => GesSchemaTypeKind.Disc,
         "Tag" => GesSchemaTypeKind.Tag,
         "Text" => GesSchemaTypeKind.Text,
         "Bytes" => GesSchemaTypeKind.Bytes,

@@ -225,8 +225,19 @@ struct GesResolvedConstraints {
 }
 
 struct GesResolvedAxis {
+    // x, y, z, or the radius of a Disc.
     let axis: String
     let constraints: GesResolvedConstraints
+
+    // The order of the axes in a block: x, y, z, then the radius.
+    static func order(_ axis: String) -> Int {
+        switch axis {
+        case "x": 0
+        case "y": 1
+        case "z": 2
+        default: 3
+        }
+    }
 }
 
 final class GesResolvedType {
@@ -750,7 +761,7 @@ final class GesFileScope {
                 if !seen.insert(axis.axis).inserted { throw error(Code.duplicateName, axis.offset, "Axis '\(axis.axis)' is declared twice.") }
                 list.append(GesResolvedAxis(axis: axis.axis, constraints: try resolveConstraints(axis.constraints, type.unit, false, axis.offset)))
             }
-            axes = list.sorted { $0.axis < $1.axis }
+            axes = list.sorted { GesResolvedAxis.order($0.axis) < GesResolvedAxis.order($1.axis) }
         }
         var element: [GesResolvedType]?
         if let written = type.element { element = try resolveUnion(written, all) }
@@ -1014,7 +1025,7 @@ enum GesSchemaCanonical {
             if let max = type.max { output += " max \(max)" }
             if type.depth > 0 { output += " depth \(type.depth)" }
             return true
-        case .number, .percentage, .quantity, .dice, .point, .vector, .box, .poly:
+        case .number, .percentage, .quantity, .dice, .point, .vector, .box, .poly, .disc:
             var constraints = type.constraints
             constraints.delta = nil
             let axes = type.axes?.map { axis in
@@ -1057,7 +1068,7 @@ enum GesSchemaCanonical {
         case .number, .percentage:
             output += type.kind.rawValue
             writeConstraints(type.constraints, &output)
-        case .point, .vector, .box, .poly:
+        case .point, .vector, .box, .poly, .disc:
             output += "\(type.kind.rawValue)(\(type.unit == .none ? "none" : type.unit.rawValue))"
             if let max = type.max { output += " max \(max)" }
             if let axes = type.axes {

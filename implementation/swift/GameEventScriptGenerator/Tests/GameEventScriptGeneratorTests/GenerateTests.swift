@@ -11,6 +11,16 @@ final class GenerateTests: XCTestCase {
         try GesSchemaGenerator.generate(try GesSchemaSet(parsing: source), roots: [root], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: language, namespace: namespace))
     }
 
+    func testTheValuesOfRecordDefaultsTakeNoTypeName() throws {
+        // The values of the record defaults of :S are held by SDefaults, which the schema of that name would also be.
+        let set = try GesSchemaSet(parsing: "schema :C as { a: :Number default 1 }\nschema :SDefaults as { b: :Boolean }\nschema :S as {\n  c: :C default [:]\n  d: :SDefaults\n}\n")
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["S"], options: GesSchemaGenerateOptions(language: language, values: true)) }, "generate.nameCollision")
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["S"], options: GesSchemaGenerateOptions(language: language, bindings: true)) }, "generate.nameCollision")
+            XCTAssertTrue(try GesSchemaGenerator.generateModels(set, roots: ["S"], options: GesSchemaGenerateOptions(language: language)).contains("SDefaults"))
+        }
+    }
+
     func testTheDocumentTypeTakesNoGeneratedName() throws {
         // In a namespace the reading type is Document, which a model root of that name would also be.
         let set = try GesSchemaSet(parsing: "schema :Document as { a: :Boolean }\n")

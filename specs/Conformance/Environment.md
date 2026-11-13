@@ -142,10 +142,10 @@ their declared types.
 
 > **Since: Unreleased**
 
-The environment includes the standard [geometry library](../PublicApi.md#geometry-library): its catalog resolves `:Box`
-and `:Poly` in front of the fixture types above, and its constructor and extension registries resolve `:geometry.*` in front
-of the fixture registries. The names `Box` and `Poly` are therefore taken in script cases, as they are for every host that
-registers the library.
+The environment includes the standard [geometry library](../PublicApi.md#geometry-library): its catalog resolves `:Box`,
+`:Poly` and `:Disc` in front of the fixture types above, and its constructor and extension registries resolve `:geometry.*`
+in front of the fixture registries. The names `Box`, `Poly` and `Disc` are therefore taken in script cases, as they are for
+every host that registers the library.
 
 ## Declarative Host environment
 

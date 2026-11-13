@@ -50,7 +50,7 @@ final class GesModelField {
 }
 
 enum GesModelKind {
-    case boolean, number, tag, text, bytes, list, dice, point, vector, schema, union, nothing, flags, box, poly
+    case boolean, number, tag, text, bytes, list, dice, point, vector, schema, union, nothing, flags, box, poly, disc
 }
 
 final class GesModelValue {
@@ -223,8 +223,8 @@ enum GesModelLayoutBuilder {
             value.max = type.max
             value.lower = bound(type.lower)
             value.upper = bound(type.upper)
-        case .point, .vector, .box, .poly:
-            value.kind = type.kind == .point ? .point : type.kind == .vector ? .vector : type.kind == .box ? .box : .poly
+        case .point, .vector, .box, .poly, .disc:
+            value.kind = type.kind == .point ? .point : type.kind == .vector ? .vector : type.kind == .box ? .box : type.kind == .disc ? .disc : .poly
             value.unit = GesSchemaLayoutBuilder.unitName(type.kind, type.unit)
             value.max = type.max
             value.axes = type.axes.map(\.name)
@@ -328,7 +328,7 @@ enum GesModelLayoutJson {
             optional(&json, "max", value.max)
             optional(&json, "lower", value.lower)
             optional(&json, "upper", value.upper)
-        case .point, .vector, .box:
+        case .point, .vector, .box, .disc:
             json.string("unit", value.unit)
             json.strings("axes", value.axes)
         case .poly:
@@ -369,6 +369,7 @@ enum GesModelLayoutJson {
         case .vector: "vector"
         case .box: "box"
         case .poly: "poly"
+        case .disc: "disc"
         case .schema: "schema"
         case .union: "union"
         case .nothing: "nothing"

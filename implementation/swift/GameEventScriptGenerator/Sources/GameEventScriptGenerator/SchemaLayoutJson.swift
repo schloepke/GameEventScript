@@ -173,6 +173,14 @@ enum GesSchemaLayoutJson {
             json.beginArray("corners")
             for corner in encoding.corners { field(&json, corner, member: false) }
             json.endArray()
+        case .disc:
+            json.string("unit", encoding.unit)
+            json.key("center")
+            field(&json, encoding.corners[0], member: false, value: true)
+            if encoding.corners.count > 1 {
+                json.key("radius")
+                field(&json, encoding.corners[1], member: false, value: true)
+            }
         case .list:
             json.boolean("dice", encoding.dice)
             json.number("maxCount", encoding.maxCount)
@@ -214,6 +222,7 @@ enum GesSchemaLayoutJson {
         case .point: "point"
         case .vector: "vector"
         case .box: "box"
+        case .disc: "disc"
         case .schema: "schema"
         case .union: "union"
         case .nothing: "nothing"

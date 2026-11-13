@@ -354,6 +354,73 @@ steps:
 
 ---
 
+## Test: a handler binds unlabeled arguments by position
+
+An unlabeled argument of a handler call takes the parameter at its position, and a labeled one must name it; a delayed
+send statement may break its line between the keyword and `after`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: handler-bind-positional
+kind: scriptApi
+level: scenario
+sources:
+  - name: "handler-bind-positional.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module positionalhandlerbinding
+on Start(success) {
+  let myHandler be Success(message, value)
+  let positional be myHandler(message: 'hello', success)
+  let shuffled be myHandler(value: success, 'hello')
+  emit
+    after (0s) Done(text: positional.arguments.message, value: positional.arguments.value, shuffledIsNothing: shuffled is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args:
+        - name: "success"
+          value:
+            type: ":Boolean"
+            value: true
+    local:
+      - name: "Done"
+        args:
+          - name: "text"
+            value:
+              type: ":Text"
+              value: "hello"
+          - name: "value"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "shuffledIsNothing"
+            value:
+              type: ":Boolean"
+              value: true
+```
+
+---
+
 ## Test: invalid handler binding and non message emit are lenient no ops
 
 This runtime case exercises “invalid handler binding and non message emit are lenient no ops” and verifies the declared messages, values, and execution result.

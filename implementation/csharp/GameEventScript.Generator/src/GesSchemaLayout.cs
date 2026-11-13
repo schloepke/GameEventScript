@@ -191,7 +191,8 @@ internal enum GesLayoutKind
     Schema,
     Union,
     Nothing,
-    Flags
+    Flags,
+    Disc
 }
 
 internal sealed class GesLayoutEncoding
@@ -228,7 +229,8 @@ internal sealed class GesLayoutEncoding
     // A recursive List: how many records of its schema nest at most, and 0 for every other List.
     internal int Depth;
 
-    // Point and Vector axes, the corners lower and upper of a Box, union alternatives and schema references.
+    // Point and Vector axes, the corners lower and upper of a Box or the centre and the radius of a Disc, union alternatives
+    // and schema references. A Disc whose block leaves out the radius has the centre alone.
     internal List<GesLayoutField> Axes = [];
     internal List<GesLayoutField> Corners = [];
     internal List<GesLayoutField> Alternatives = [];
@@ -436,6 +438,25 @@ internal static class GesSchemaLayoutBuilder
                 encoding.Corners.Add(Corner(nodes, ref index, type));
                 encoding.Corners.Add(Corner(nodes, ref index, type));
                 return encoding;
+            case GesSchemaTypeKind.Disc:
+                // The centre, a Point of the block's axes x and y, then the radius, unless the block leaves it out.
+                encoding.Kind = GesLayoutKind.Disc;
+                encoding.Unit = UnitName(type.Kind, type.Unit);
+                var disc = index;
+                index++;
+                encoding.Corners.Add(Corner(nodes, ref index, type));
+                if (index < nodes[disc].Next)
+                {
+                    var radius = new GesLayoutEncoding();
+                    GesSchemaAxisInfo? bounds = null;
+                    foreach (var axis in type.Axes)
+                        if (axis.Name == "radius") bounds = axis;
+                    Number(in nodes[index], GesSchemaTypeKind.Number, GesQuantityUnit.UnitNone, bounds?.Lower, bounds?.Upper, radius);
+                    encoding.Corners.Add(new GesLayoutField { Name = nodes[index].Name, Path = nodes[index].Path, Encoding = radius });
+                    index++;
+                }
+
+                return encoding;
             case GesSchemaTypeKind.Poly:
                 // A List of Points with the axes x and y.
                 List(in node, encoding);
@@ -555,5 +576,5 @@ internal static class GesSchemaLayoutBuilder
     }
 
     internal static string UnitName(GesSchemaTypeKind kind, GesQuantityUnit unit)
-        => kind is GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Poly && unit != GesQuantityUnit.UnitNone ? unit.ToTypeName() : "none";
+        => kind is GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Poly or GesSchemaTypeKind.Disc && unit != GesQuantityUnit.UnitNone ? unit.ToTypeName() : "none";
 }

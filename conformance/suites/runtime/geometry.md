@@ -532,3 +532,210 @@ steps:
             value:
               type: ":Nothing"
 ```
+
+---
+
+## Test: disc operations
+
+A disc keeps its centre, the magnitude of its radius and their unit; `:Disc(radius:)` lies around the origin. Its operations follow the native GesDisc.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: geometry-disc
+kind: scriptApi
+level: scenario
+sources:
+  - name: "geometry-disc.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let disc be :Disc(center: :Point(2m, 3m), radius: -5m)
+  let origin be :Disc(radius: 2m)
+  emit Done(center: disc.center, radius: disc.radius, at: origin.center, bounds: :geometry.bounds(disc).upper, area: :geometry.area(origin), inside: :geometry.contains(disc, :Point(5m, 7m)), outside: :geometry.contains(disc, :Point(6m, 7m)), lifted: :geometry.contains(disc, :Point(2m, 3m, 1m)), distance: :geometry.distance(disc, :Point(2m, 0m)), outer: :geometry.distance(disc, :Point(2m, 11m)), nearest: :geometry.nearest(disc, :Point(2m, 13m)), held: :geometry.nearest(disc, :Point(3m, 3m)), inset: :geometry.inset(disc, by: 1m).radius, vanished: :geometry.inset(disc, by: 6m), touching: :geometry.intersects(disc, :Disc(center: :Point(12m, 3m), radius: 5m)), apart: :geometry.intersects(disc, :Disc(center: :Point(13m, 3m), radius: 5m)))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+steps:
+  step-0001:
+    local:
+      - name: "Done"
+        args:
+          - name: "center"
+            value:
+              type: ":Point"
+              x: "2"
+              y: "3"
+              z: "0"
+              unit: ":meter"
+          - name: "radius"
+            value:
+              type: ":Quantity.int64"
+              value: "5"
+              unit: ":meter"
+          - name: "at"
+            value:
+              type: ":Point"
+              x: "0"
+              y: "0"
+              z: "0"
+              unit: ":meter"
+          - name: "bounds"
+            value:
+              type: ":Point"
+              x: "7"
+              y: "8"
+              z: "0"
+              unit: ":meter"
+          - name: "area"
+            value:
+              type: ":Number.binary64"
+              value: "12.566370614359172"
+          - name: "inside"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "outside"
+            value:
+              type: ":Boolean"
+              value: false
+          - name: "lifted"
+            value:
+              type: ":Boolean"
+              value: false
+          - name: "distance"
+            value:
+              type: ":Quantity.int64"
+              value: "2"
+              unit: ":meter"
+          - name: "outer"
+            value:
+              type: ":Quantity.int64"
+              value: "3"
+              unit: ":meter"
+          - name: "nearest"
+            value:
+              type: ":Point"
+              x: "2"
+              y: "8"
+              z: "0"
+              unit: ":meter"
+          - name: "held"
+            value:
+              type: ":Point"
+              x: "3"
+              y: "3"
+              z: "0"
+              unit: ":meter"
+          - name: "inset"
+            value:
+              type: ":Quantity.int64"
+              value: "4"
+              unit: ":meter"
+          - name: "vanished"
+            value:
+              type: ":Nothing"
+          - name: "touching"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "apart"
+            value:
+              type: ":Boolean"
+              value: false
+```
+
+---
+
+## Test: a disc meets boxes and polygons
+
+A disc meets a 2D box at its point nearest to the centre and a polygon that holds the centre or comes within the radius, in either order. Another unit or kind constructs or gives nothing, and an invalid disc gives nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: geometry-disc-shapes
+kind: scriptApi
+level: scenario
+sources:
+  - name: "geometry-disc-shapes.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let disc be :Disc(radius: 2)
+  let poly be :Poly(points: [:Point(2, -1), :Point(6, -1), :Point(6, 1), :Point(2, 1)])
+  emit Done(box: :geometry.intersects(disc, :Box(lower: :Point(2, 2), upper: :Point(4, 4))), corner: :geometry.intersects(:Box(lower: :Point(1, 1), upper: :Point(4, 4)), disc), deep: :geometry.intersects(disc, :Box(lower: :Point(0, 0, 0), upper: :Point(1, 1, 1))), poly: :geometry.intersects(disc, poly), far: :geometry.intersects(poly, :Disc(center: :Point(10, 0), radius: 1)), inner: :geometry.intersects(:Disc(center: :Point(4, 0), radius: 0.5), poly), mixed: :Disc(center: :Point(0m, 0m), radius: 1), text: :Disc(radius: 'r'), unit: :geometry.contains(:Disc(radius: 1m), :Point(0, 0)), invalid: :geometry.area(:Disc(center: :Point(0, 0, 1), radius: 1)))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+steps:
+  step-0001:
+    local:
+      - name: "Done"
+        args:
+          - name: "box"
+            value:
+              type: ":Boolean"
+              value: false
+          - name: "corner"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "deep"
+            value:
+              type: ":Nothing"
+          - name: "poly"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "far"
+            value:
+              type: ":Boolean"
+              value: false
+          - name: "inner"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "mixed"
+            value:
+              type: ":Nothing"
+          - name: "text"
+            value:
+              type: ":Nothing"
+          - name: "unit"
+            value:
+              type: ":Nothing"
+          - name: "invalid"
+            value:
+              type: ":Nothing"
+```

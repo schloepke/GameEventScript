@@ -43,6 +43,7 @@ symbol {"access":"public","declaration":"case decibel","kind":"swift.enum.case",
 symbol {"access":"public","declaration":"case degree","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.degree"}
 symbol {"access":"public","declaration":"case degreePerSecond","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.degreePerSecond"}
 symbol {"access":"public","declaration":"case dice","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.dice"}
+symbol {"access":"public","declaration":"case disc","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.disc"}
 symbol {"access":"public","declaration":"case flags","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.flags"}
 symbol {"access":"public","declaration":"case function","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.function"}
 symbol {"access":"public","declaration":"case ges","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.ges"}

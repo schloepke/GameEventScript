@@ -42,7 +42,7 @@ internal static class GesExternalTypeValueConverter
         }
 
         if (kind == GesBytecodeTypeKind.Float &&
-            unit is not null)
+            unit is not null && unit != GesQuantityUnit.UnitNone)
         {
             var result = new GesValue();
             result.SetFloat(value.AsNumeric, unit.ToStoredUnit());
@@ -69,7 +69,8 @@ internal static class GesExternalTypeValueConverter
                 result.SetPercentage(value.AsNumeric);
                 return result;
             case "Number":
-                result.SetFloat(value.AsNumeric);
+                // Without a unit constraint a Quantity keeps its unit, as an unconstrained Vector or Point does.
+                result.SetFloat(value.AsNumeric, value.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float ? value.ValueUnit : GesQuantityUnit.UnitNone);
                 return result;
             case "Boolean":
                 result.SetBoolean(value.IsTrue);

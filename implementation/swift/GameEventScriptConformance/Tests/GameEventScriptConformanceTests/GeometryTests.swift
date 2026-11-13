@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+import Foundation
 import GameEventScriptRuntime
 import XCTest
 
@@ -150,5 +151,29 @@ final class GeometryTests: XCTestCase {
             XCTAssertNil(poly.contains(GesPoint(x: 1, y: 1)))
             XCTAssertNil(poly.distance(to: GesPoint(x: 1, y: 1)))
         }
+    }
+
+    func testDiscsTakeTheMagnitudeOfTheirRadius() throws {
+        let disc = GesDisc(center: GesPoint(x: 2, y: 3), radius: -5)
+        XCTAssertEqual(disc.radius, 5)
+        XCTAssertEqual(GesDisc(radius: 2), GesDisc(center: .zero, radius: 2))
+        XCTAssertEqual(disc.bounds, GesBox(GesPoint(x: -3, y: -2), GesPoint(x: 7, y: 8)))
+        XCTAssertEqual(disc.contains(GesPoint(x: 5, y: 7)), true)
+        XCTAssertEqual(disc.contains(GesPoint(x: 6, y: 7)), false)
+        XCTAssertEqual(disc.distance(to: GesPoint(x: 2, y: 0)), 2)
+        XCTAssertEqual(disc.clamp(GesPoint(x: 2, y: 13)), GesPoint(x: 2, y: 8))
+        XCTAssertEqual(disc.inset(by: 1), GesDisc(center: GesPoint(x: 2, y: 3), radius: 4))
+        XCTAssertNil(disc.inset(by: 6))
+        XCTAssertEqual(disc.intersects(GesDisc(center: GesPoint(x: 12, y: 3), radius: 5)), true)
+        XCTAssertEqual(GesDisc(radius: 2).intersects(GesBox(GesPoint(x: 1, y: 1), GesPoint(x: 4, y: 4))), true)
+        XCTAssertNil(GesDisc(radius: 2).intersects(GesBox(.zero, GesPoint(x: 1, y: 1, z: 1))))
+        XCTAssertEqual(GesDisc(radius: 2).intersects(GesPoly([GesPoint(x: 2, y: -1), GesPoint(x: 6, y: -1), GesPoint(x: 6, y: 1), GesPoint(x: 2, y: 1)])), true)
+        let lifted = GesDisc(center: GesPoint(x: 0, y: 0, z: 1), radius: 1)
+        XCTAssertFalse(lifted.isValid)
+        XCTAssertNil(lifted.area)
+        XCTAssertEqual(GesDisc(disc.value(unit: .meter), unit: .meter), disc)
+        XCTAssertNil(GesDisc(disc.value(unit: .meter)))
+        let decoded = try JSONDecoder().decode(GesDisc.self, from: Data(#"{"center":{"x":1,"y":2,"z":0},"radius":-3}"#.utf8))
+        XCTAssertEqual(decoded, GesDisc(center: GesPoint(x: 1, y: 2), radius: 3))
     }
 }

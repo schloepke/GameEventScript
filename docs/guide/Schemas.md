@@ -90,9 +90,10 @@ schema :Tank as {
   roll takes 31 bits. A Dice value always holds its rolls sorted, whatever their order in the data.
 - `optional` adds one presence bit. An absent value reads as `nothing`.
 - `:Point` and `:Vector` list the axes they transmit. An axis left out is not sent and must be zero.
-- `:Box(m) { ... }` holds an axis-aligned box as its corners `lower` and `upper`, and `:Poly(m) max 16 { x ..., y ... }`
-  a polygon of up to 16 points in the plane z = 0. Code reads them as the runtime's `GesBox` and `GesPoly`, and scripts
-  as `:Box` and `:Poly` of the geometry library.
+- `:Box(m) { ... }` holds an axis-aligned box as its corners `lower` and `upper`, `:Poly(m) max 16 { x ..., y ... }`
+  a polygon of up to 16 points in the plane z = 0, and `:Disc(m) { x ..., y ..., radius ... }` a filled circle in that plane
+  as its `center` and `radius`. Code reads them as the runtime's `GesBox`, `GesPoly` and `GesDisc`, and scripts as `:Box`,
+  `:Poly` and `:Disc` of the geometry library.
 - `:Weapon` refers to another schema, whose fields follow inline. References cannot form a cycle, except through
   a recursive List, shown below.
 

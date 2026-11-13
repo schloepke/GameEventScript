@@ -151,6 +151,7 @@ enum GesLayoutKind {
     case union
     case nothing
     case flags
+    case disc
 }
 
 // A class, because a list's element and a union's alternatives nest encodings.
@@ -187,7 +188,8 @@ final class GesLayoutEncoding {
     // A recursive List: how many records of its schema nest at most, and 0 for every other List.
     var depth = 0
 
-    // Point and Vector axes, the corners lower and upper of a Box, union alternatives and schema references.
+    // Point and Vector axes, the corners lower and upper of a Box or the centre and the radius of a Disc, union alternatives
+    // and schema references. A Disc whose block leaves out the radius has the centre alone.
     var axes: [GesLayoutField] = []
     var corners: [GesLayoutField] = []
     var alternatives: [GesLayoutField] = []
@@ -376,6 +378,21 @@ enum GesSchemaLayoutBuilder {
             encoding.corners.append(corner(bound, &index, type))
             encoding.corners.append(corner(bound, &index, type))
             return encoding
+        case .disc:
+            // The centre, a Point of the block's axes x and y, then the radius, unless the block leaves it out.
+            encoding.kind = .disc
+            encoding.unit = unitName(type.kind, type.unit)
+            let disc = index
+            index += 1
+            encoding.corners.append(corner(bound, &index, type))
+            if index < bound.nodes[disc].next {
+                let radius = GesLayoutEncoding()
+                let bounds = type.axes.last { $0.name == "radius" }
+                number(bound.nodes[index], .number, .none, bounds?.lower, bounds?.upper, radius)
+                encoding.corners.append(GesLayoutField(name: bound.infos[index].name, path: bound.infos[index].path, encoding: radius))
+                index += 1
+            }
+            return encoding
         case .poly:
             // A List of Points with the axes x and y.
             list(node, encoding)
@@ -470,6 +487,6 @@ enum GesSchemaLayoutBuilder {
     }
 
     static func unitName(_ kind: GesSchemaTypeKind, _ unit: GesQuantityUnit) -> String {
-        (kind == .quantity || kind == .point || kind == .vector || kind == .box || kind == .poly) && unit != .none ? unit.rawValue : "none"
+        (kind == .quantity || kind == .point || kind == .vector || kind == .box || kind == .poly || kind == .disc) && unit != .none ? unit.rawValue : "none"
     }
 }

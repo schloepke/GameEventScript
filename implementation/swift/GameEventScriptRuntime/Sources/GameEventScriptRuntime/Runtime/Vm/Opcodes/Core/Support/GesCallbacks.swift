@@ -6,6 +6,8 @@
 enum GesCallbacks {
     static func convert(_ value: GesValue, to name: String, _ c: GesContext) throws -> GesValue {
         if name == "numeric" { return GesCasts.number(value) }
+        // A number keeps its unit for a declaration without one; the declared type then makes it binary64.
+        if name == "Number", value.kind == .integer || value.kind == .float { return value }
         let kind: GesBytecodeTypeKind
         switch name {
         case "Nothing": kind = .nothing

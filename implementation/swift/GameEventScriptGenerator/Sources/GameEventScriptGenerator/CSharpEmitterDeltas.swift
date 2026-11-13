@@ -18,7 +18,10 @@ extension GesCSharpEmitter {
     static func scalars(_ value: GesPlanValue) -> [GesPlanValue] {
         var result: [GesPlanValue] = isScalar(value) ? [value] : []
         result += value.axes
-        for corner in value.corners { result += corner.axes }
+        for corner in value.corners {
+            if isScalar(corner) { result.append(corner) }
+            result += corner.axes
+        }
         for alternative in value.alternatives { result += scalars(alternative) }
         if value.item == nil, let element = value.element { result += scalars(element) }
         return result
@@ -182,7 +185,7 @@ extension GesCSharpEmitter {
             code.line("if (!\(text(value, prefix(a))).SequenceEqual(\(text(value, prefix(b))))) return false;")
         case .point, .vector:
             for axis in value.axes { same(&code, axis, a + "." + axis.base, b + "." + axis.base) }
-        case .box:
+        case .box, .disc:
             for corner in value.corners { same(&code, corner, a + "." + corner.base, b + "." + corner.base) }
         case .schema:
             code.line("if (!\(a).__Same(\(b), paths, at + \(value.node + 1)\(nextLevel(value)))) return false;")
@@ -343,6 +346,14 @@ extension GesCSharpEmitter {
             }
             code.line("\(target) = new GesBox(lower\(node), upper\(node));")
             code.close()
+        case .disc where quantized(value):
+            // A disc is immutable: its centre and radius are quantized and make a new disc.
+            code.open("{")
+            code.line("var center\(node) = \(target).Center;")
+            code.line("var radius\(node) = \(target).Radius;")
+            for part in value.corners { quantize(&code, part, part.label + node) }
+            code.line("\(target) = new GesDisc(center\(node), radius\(node));")
+            code.close()
         case .schema:
             code.line("\(target).__Quantize(paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .list where quantized(value):
@@ -375,12 +386,15 @@ extension GesCSharpEmitter {
         }
     }
 
+    // A Point without axes, the centre of a Disc whose block names only the radius, which transmits nothing.
+    private static func empty(_ value: GesPlanValue) -> Bool { value.encoding.kind == .point && value.axes.isEmpty }
+
     // Whether a value holds a quantized number that Quantize changes; schemas always forward, as theirs may.
     private static func quantized(_ value: GesPlanValue) -> Bool {
         switch value.encoding.kind {
         case .quantized, .schema: true
         case .point, .vector: value.axes.contains(where: quantized)
-        case .box: value.corners.contains(where: quantized)
+        case .box, .disc: value.corners.contains(where: quantized)
         case .union: value.alternatives.contains(where: quantized)
         case .list: value.item.map { quantized($0.fields[0].value) } ?? quantized(value.element!)
         default: false
@@ -616,12 +630,17 @@ extension GesCSharpEmitter {
             for axis in GesSchemaPlanner.omitted(value) { code.line("if (\(a).\(axis) != 0) \(fail("TypeMismatch", value))") }
             code.line("if (!\(set)) writer.Rewind(first\(node));")
             code.close()
-        case .box:
-            // A nested delta of the corners, each one of a Point.
+        case .box, .disc:
+            // A nested delta of the corners, each one of a Point, or of a disc's centre and radius.
             code.open("{")
             code.line("var first\(node) = writer.BitPosition;")
             code.line("writer.Write(0, \(value.corners.count));")
             for (index, corner) in value.corners.enumerated() {
+                if empty(corner) {
+                    // A centre without axes transmits nothing: its change bit stays clear, and it must lie at the origin.
+                    for axis in GesSchemaPlanner.omitted(corner) { code.line("if (\(a).\(corner.base).\(axis) != 0) \(fail("TypeMismatch", corner))") }
+                    continue
+                }
                 code.open("{")
                 code.line("var set\(corner.node) = false;")
                 deltaPayload(&code, corner, a + "." + corner.base, b + "." + corner.base, "set\(corner.node)")
@@ -632,6 +651,7 @@ extension GesCSharpEmitter {
                 code.close()
                 code.close()
             }
+            if value.encoding.kind == .disc && value.corners.count == 1 { code.line("if (\(a).Radius != 0) \(fail("TypeMismatch", value))") }
             code.line("if (!\(set)) writer.Rewind(first\(node));")
             code.close()
         case .schema:
@@ -738,8 +758,9 @@ extension GesCSharpEmitter {
             for axis in GesSchemaPlanner.omitted(value) { code.line("\(a).\(axis) = 0;") }
             code.line("if (!changed\(node)) \(fail("InvalidDelta", value))")
             code.close()
-        case .box:
-            // The corners start as the baseline's; the box orders what the delta changes.
+        case .box, .disc:
+            // The corners start as the baseline's; the box orders what the delta changes. A disc takes its centre and radius
+            // likewise.
             code.open("{")
             code.line("reader.Require(\(value.corners.count), \(path(value)));")
             code.line("var bits\(node) = reader.BitPosition;")
@@ -748,6 +769,7 @@ extension GesCSharpEmitter {
             for (index, corner) in value.corners.enumerated() {
                 let cornerNode = String(corner.node)
                 code.line("var \(corner.label)\(node) = \(b).\(corner.base);")
+                if empty(corner) { continue }
                 code.open("{")
                 code.line("var payload\(cornerNode) = reader.BitPosition;")
                 code.line("reader.Seek(bits\(node) + \(index));")
@@ -761,7 +783,8 @@ extension GesCSharpEmitter {
                 code.close()
             }
             code.line("if (!changed\(node)) \(fail("InvalidDelta", value))")
-            code.line("\(a) = new GesBox(lower\(node), upper\(node));")
+            if value.encoding.kind == .disc && value.corners.count == 1 { code.line("var radius\(node) = 0d;") }
+            code.line(value.encoding.kind == .disc ? "\(a) = new GesDisc(center\(node), radius\(node));" : "\(a) = new GesBox(lower\(node), upper\(node));")
             code.close()
         case .schema:
             code.line("if (!\(a).__ReadDelta(\(b), ref reader, paths, at + \(value.node + 1), false\(nextLevel(value)))) \(fail("InvalidDelta", value))")

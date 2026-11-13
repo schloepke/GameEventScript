@@ -35,9 +35,9 @@ public struct GesSchemaBound: Sendable {
     public var doubleValue: Double? { isParameter ? nil : Double("\(significand)e\(exponent)") }
 }
 
-/// The limits of a numeric axis of a Point, Vector, Box or Poly.
+/// The limits of a numeric axis of a Point, Vector, Box, Poly or Disc, or of the radius of a Disc.
 public struct GesSchemaAxisInfo: Sendable {
-    /// The axis: `x`, `y` or `z`.
+    /// The axis: `x`, `y` or `z`, or `radius` for the radius of a Disc.
     public let name: String
     /// Whether the axis holds whole numbers.
     public let isInteger: Bool
@@ -68,7 +68,7 @@ public struct GesSchemaAxisInfo: Sendable {
 public struct GesSchemaType: Sendable {
     /// The kind of type.
     public let kind: GesSchemaTypeKind
-    /// The unit of a Quantity, Point, Vector, Box or Poly.
+    /// The unit of a Quantity, Point, Vector, Box, Poly or Disc.
     public let unit: GesQuantityUnit
     /// Whether a number holds whole numbers.
     public let isInteger: Bool
@@ -97,8 +97,8 @@ public struct GesSchemaType: Sendable {
     /// The `depth` of a List whose element is the schema that declares it: how many records of that schema nest in each
     /// other at most; 0 for every other type.
     public let depth: Int
-    /// The axes of an axis block in x, y, z order; empty without a block, when every axis is stored in full: x, y and z, or x and
-    /// y of a Poly.
+    /// The axes of an axis block in x, y, z, radius order; empty without a block, when every axis is stored in full: x, y and
+    /// z, x and y of a Poly, or x, y and the radius of a Disc.
     public let axes: [GesSchemaAxisInfo]
     /// The schema a `.reference` refers to.
     public let schema: GesSchema?

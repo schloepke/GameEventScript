@@ -102,6 +102,73 @@ public sealed class GesGeometryGeneratedCodeTests
         Assert.IsTrue(read.WireEquals(next));
     }
 
+    private static Wire.Reach Reach()
+    {
+        var reach = new Wire.Reach
+        {
+            Zone = new GesDisc(new GesPoint(20, 3), -5),
+            HasFree = true,
+            Free = new GesDisc(new GesPoint(0.5, -0.25), 1.5),
+            Aura = new GesDisc(2.5),
+            Mark = new GesDisc(new GesPoint(9, 0), 0),
+            Pick = Wire.Reach.PickAlternative.Disc,
+            PickDisc = new GesDisc(new GesPoint(1, 2), 3)
+        };
+        reach.Rings.Add(new GesDisc(2));
+        return reach;
+    }
+
+    [TestMethod]
+    public void DiscsRoundTripThroughBytesAndValues()
+    {
+        var reach = Reach();
+        Assert.AreEqual(5d, reach.Zone.Radius, "A disc takes the radius's magnitude.");
+        var bytes = reach.ToBytes();
+        var read = new Wire.Reach();
+        read.Read(bytes);
+        Assert.IsTrue(read.WireEquals(reach));
+        Assert.AreEqual(reach.Zone, read.Zone);
+        Assert.AreEqual(reach.Free, read.Free);
+        Assert.AreEqual(reach.Aura, read.Aura);
+        Assert.AreEqual(reach.Mark, read.Mark);
+        Assert.AreEqual(reach.Rings[0], read.Rings[0]);
+
+        // The value path holds the geometry library's external values, which the wire record and the model convert alike.
+        var value = read.ToValue();
+        Assert.AreEqual(reach.Zone, GesDisc.FromValue(value.AsMap()!.Get("zone")!.Value, GesQuantityUnit.UnitMeter));
+        var copy = new Wire.Reach();
+        copy.ReadValue(value);
+        CollectionAssert.AreEqual(bytes, copy.ToBytes());
+        var model = Model.Reach.FromValue(value);
+        Assert.AreEqual(reach.Zone, model.Zone);
+        Assert.AreEqual(reach.Free, model.Free);
+        Assert.AreEqual(value.ToJson(), model.ToValue().ToJson());
+
+        // A block without the radius transmits none, so only a disc of radius 0 can be written.
+        reach.Mark = new GesDisc(new GesPoint(9, 0), 1);
+        Assert.AreEqual(GesWireException.TypeMismatch, Assert.ThrowsExactly<GesWireException>(() => reach.ToBytes()).Code);
+    }
+
+    [TestMethod]
+    public void DiscDeltasChangeTheRadiusAlone()
+    {
+        var baseline = Reach();
+        var next = Reach();
+        next.Zone = new GesDisc(next.Zone.Center, 6);
+        next.Aura = new GesDisc(2.75);
+        var delta = next.ToDeltaBytes(baseline);
+        var read = new Wire.Reach();
+        read.Read(baseline.ToBytes());
+        read.ReadDelta(delta, baseline);
+        Assert.AreEqual(next.Zone, read.Zone);
+        Assert.AreEqual(next.Aura, read.Aura);
+        Assert.IsTrue(read.WireEquals(next));
+        var quantized = Reach();
+        quantized.Aura = new GesDisc(2.504);
+        quantized.Quantize();
+        Assert.AreEqual(new GesDisc(2.5), quantized.Aura);
+    }
+
     private const string ZoneDocument = """
         :Schema(:Zone)
         id: 7

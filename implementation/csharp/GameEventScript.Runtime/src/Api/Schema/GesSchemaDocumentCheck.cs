@@ -166,6 +166,7 @@ internal sealed class GesSchemaDocumentCheck
             case GesSchemaTypeKind.Point: Spatial(type, value, GesDocumentNodeKind.Point); break;
             case GesSchemaTypeKind.Vector: Spatial(type, value, GesDocumentNodeKind.Vector); break;
             case GesSchemaTypeKind.Box: Box(type, value); break;
+            case GesSchemaTypeKind.Disc: Disc(type, value); break;
             case GesSchemaTypeKind.Poly:
                 // A document has no geometry literal: a Poly is the List of its points.
                 Require(value, value.Kind == GesDocumentNodeKind.List);
@@ -272,13 +273,53 @@ internal sealed class GesSchemaDocumentCheck
         if (seen != 3) throw Fail(MissingField, value.Start);
     }
 
+    // A Disc is the Map of its centre, a Point, and its radius, a number of the unit, or a Record "Disc" of them.
+    private void Disc(GesResolvedType type, GesDocumentNode value)
+    {
+        var fields = value;
+        if (IsForm(value, "record"))
+        {
+            var positions = GesLiteralForms.Positions("record", value.Labels);
+            Require(value, positions is not null);
+            var name = Resolved(value.Children[Array.IndexOf(positions!, 0)]);
+            Require(value, name.Kind == GesDocumentNodeKind.Text && name.Name == "Disc");
+            fields = value.Children[Array.IndexOf(positions!, 1)];
+        }
+
+        fields = Resolved(fields);
+        Require(value, fields.Kind == GesDocumentNodeKind.Map);
+        var seen = 0;
+        for (var index = 0; index < fields.Labels.Length; index++)
+        {
+            var part = fields.Labels[index] switch { "center" => 1, "radius" => 2, _ => 0 };
+            if (part == 0) throw Fail(UnknownField, fields.KeyOffsets[index], Join(_path, fields.Labels[index]));
+            seen |= part;
+            var child = Resolved(fields.Children[index]);
+            if (part == 1) Under("center", () => Spatial(type, child, GesDocumentNodeKind.Point));
+            else Under("radius", () => Radius(type, child));
+        }
+
+        if (seen != 3) throw Fail(MissingField, value.Start);
+    }
+
+    // A radius of the Disc's unit, within the block's radius, or zero when the block leaves it out.
+    private void Radius(GesResolvedType type, GesDocumentNode value)
+    {
+        Require(value, value.Kind == GesDocumentNodeKind.Number && value.Number.Kind != GesNumberLiteralKind.Percentage && value.Number.Unit == type.Unit);
+        var number = value.Number;
+        if (type.Axes is not { } axes) return;
+        var declared = Array.Find(axes, candidate => candidate.Axis == "radius");
+        if (declared is null) Require(value, number.Kind == GesNumberLiteralKind.Integer ? number.IntegerValue == 0 : number.FloatValue == 0);
+        else Numeric(declared.Constraints, number.Kind == GesNumberLiteralKind.Integer, number.IntegerValue, number.FloatValue, value);
+    }
+
     private void Spatial(GesResolvedType type, GesDocumentNode value, GesDocumentNodeKind kind)
     {
         Require(value, value.Kind == kind && value.Unit == type.Unit);
         if (type.Axes is not { } axes) return;
-        foreach (var axis in "xyz")
+        foreach (var axis in new[] { "x", "y", "z" })
         {
-            var component = axis == 'x' ? value.X : axis == 'y' ? value.Y : value.Z;
+            var component = axis == "x" ? value.X : axis == "y" ? value.Y : value.Z;
             var declared = Array.Find(axes, candidate => candidate.Axis == axis);
             if (declared is null) Require(value, component == 0);
             else Numeric(declared.Constraints, false, 0, component, value);

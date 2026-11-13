@@ -566,6 +566,29 @@ enum GameEventScript.Api.GesDiagnosticSymbolKind
   enum-field Message = 5
   enum-field Variable = 6
   enum-field GlobalDefinition = 7
+struct GameEventScript.Api.GesDisc
+  ctor GesDisc(GameEventScript.Api.GesPoint center, System.Double radius)
+  ctor GesDisc(System.Double radius)
+  method GameEventScript.Api.GesDisc? Inset(System.Double by)
+  method GameEventScript.Api.GesPoint? Clamp(GameEventScript.Api.GesPoint point)
+  method GameEventScript.Runtime.Values.GesValue ToValue(GameEventScript.Api.GesQuantityUnit unit)
+  method System.Boolean Equals(GameEventScript.Api.GesDisc other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean? Contains(GameEventScript.Api.GesPoint point)
+  method System.Boolean? Intersects(GameEventScript.Api.GesBox box)
+  method System.Boolean? Intersects(GameEventScript.Api.GesDisc other)
+  method System.Boolean? Intersects(GameEventScript.Api.GesPoly poly)
+  method System.Double? DistanceTo(GameEventScript.Api.GesPoint point)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static GameEventScript.Api.GesDisc? FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesDisc left, GameEventScript.Api.GesDisc right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesDisc left, GameEventScript.Api.GesDisc right)
+  property GameEventScript.Api.GesBox? Bounds { get }
+  property GameEventScript.Api.GesPoint Center { get }
+  property System.Boolean IsValid { get }
+  property System.Double Radius { get }
+  property System.Double? Area { get }
 sealed class GameEventScript.Api.GesDocument
   ctor GesDocument(GameEventScript.Runtime.Values.GesValue value, GameEventScript.Api.GesDocumentSchema schema)
   method System.Boolean Equals(GameEventScript.Api.GesDocument other)
@@ -1161,6 +1184,7 @@ enum GameEventScript.Api.GesSchemaTypeKind
   enum-field Flags = 18
   enum-field Box = 19
   enum-field Poly = 20
+  enum-field Disc = 21
 static class GameEventScript.Api.GesSchemaValues
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, GameEventScript.Runtime.Values.GesValue baseline, System.Int64 byteLimit)
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, System.Int64 byteLimit)

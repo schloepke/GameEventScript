@@ -351,6 +351,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         if (parameterType == typeof(GesPoint)) return new SpatialArgumentReader<GesPoint>(value => GesPoint.FromValue(value, definition.Unit));
         if (parameterType == typeof(GesVector)) return new SpatialArgumentReader<GesVector>(value => GesVector.FromValue(value, definition.Unit));
         if (parameterType == typeof(GesBox)) return new SpatialArgumentReader<GesBox>(value => GesBox.FromValue(value, definition.Unit));
+        if (parameterType == typeof(GesDisc)) return new SpatialArgumentReader<GesDisc>(value => GesDisc.FromValue(value, definition.Unit));
         if (parameterType == typeof(GesPoly)) return new PolyArgumentReader(definition.Unit);
 
         if (parameterType.IsValueType)
@@ -434,6 +435,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         if (returnType == typeof(GesPoint)) return new SpatialReturnConverter<GesPoint>(value => value.ToValue(unit));
         if (returnType == typeof(GesVector)) return new SpatialReturnConverter<GesVector>(value => value.ToValue(unit));
         if (returnType == typeof(GesBox)) return new SpatialReturnConverter<GesBox>(value => value.ToValue(unit));
+        if (returnType == typeof(GesDisc)) return new SpatialReturnConverter<GesDisc>(value => value.ToValue(unit));
         if (returnType == typeof(GesPoly)) return new SpatialReturnConverter<GesPoly>(value => value is null ? GesValue.GesNothing() : value.ToValue(unit));
 
         if (returnType == typeof(ValueTuple<double, GesQuantityUnit>))

@@ -26,6 +26,19 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
+    public void TheValuesOfRecordDefaultsTakeNoTypeName()
+    {
+        // The values of the record defaults of :S are held by SDefaults, which the schema of that name would also be.
+        var set = GesSchemaSet.Parse("schema :C as { a: :Number default 1 }\nschema :SDefaults as { b: :Boolean }\nschema :S as {\n  c: :C default [:]\n  d: :SDefaults\n}\n");
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, ["S"], new GesSchemaGenerateOptions { Language = language, Values = true })));
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, ["S"], new GesSchemaGenerateOptions { Language = language, Bindings = true })));
+            StringAssert.Contains(GesSchemaGenerator.GenerateModels(set, ["S"], new GesSchemaGenerateOptions { Language = language }), "SDefaults");
+        }
+    }
+
+    [TestMethod]
     public void NamesFollowTheLanguage()
     {
         const string source = "schema :S as {\n  default: :Boolean\n  state: :Tag(#idle, #in)\n}\n";

@@ -175,4 +175,28 @@ public sealed class GesGeometryTests
             Assert.IsNull(poly.DistanceTo(new GesPoint(1, 1)));
         }
     }
+
+    [TestMethod]
+    public void DiscsTakeTheMagnitudeOfTheirRadius()
+    {
+        var disc = new GesDisc(new GesPoint(2, 3), -5);
+        Assert.AreEqual(5d, disc.Radius);
+        Assert.AreEqual(new GesDisc(GesPoint.Zero, 2), new GesDisc(2));
+        Assert.AreEqual(new GesBox(new GesPoint(-3, -2), new GesPoint(7, 8)), disc.Bounds);
+        Assert.IsTrue(disc.Contains(new GesPoint(5, 7))!.Value);
+        Assert.IsFalse(disc.Contains(new GesPoint(6, 7))!.Value);
+        Assert.AreEqual(2d, disc.DistanceTo(new GesPoint(2, 0)));
+        Assert.AreEqual(new GesPoint(2, 8), disc.Clamp(new GesPoint(2, 13)));
+        Assert.AreEqual(new GesDisc(new GesPoint(2, 3), 4), disc.Inset(1));
+        Assert.IsNull(disc.Inset(6));
+        Assert.IsTrue(disc.Intersects(new GesDisc(new GesPoint(12, 3), 5))!.Value);
+        Assert.IsTrue(new GesDisc(2).Intersects(new GesBox(new GesPoint(1, 1), new GesPoint(4, 4)))!.Value);
+        Assert.IsNull(new GesDisc(2).Intersects(new GesBox(GesPoint.Zero, new GesPoint(1, 1, 1))));
+        Assert.IsTrue(new GesDisc(2).Intersects(new GesPoly([new GesPoint(2, -1), new GesPoint(6, -1), new GesPoint(6, 1), new GesPoint(2, 1)]))!.Value);
+        var lifted = new GesDisc(new GesPoint(0, 0, 1), 1);
+        Assert.IsFalse(lifted.IsValid);
+        Assert.IsNull(lifted.Area);
+        Assert.AreEqual(disc, GesDisc.FromValue(disc.ToValue(GesQuantityUnit.UnitMeter), GesQuantityUnit.UnitMeter));
+        Assert.IsNull(GesDisc.FromValue(disc.ToValue(GesQuantityUnit.UnitMeter)));
+    }
 }

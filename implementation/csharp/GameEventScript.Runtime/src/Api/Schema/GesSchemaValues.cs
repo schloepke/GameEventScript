@@ -395,6 +395,7 @@ public static class GesSchemaValues
             case GesSchemaTypeKind.Vector: return value.ValueKind == GesBytecodeTypeKind.Vector;
             case GesSchemaTypeKind.Box: return value.ExternalValue is GesGeometryLibrary.BoxValue;
             case GesSchemaTypeKind.Poly: return value.ExternalValue is GesGeometryLibrary.PolyValue;
+            case GesSchemaTypeKind.Disc: return value.ExternalValue is GesGeometryLibrary.DiscValue;
             case GesSchemaTypeKind.Percentage: return value.ValueKind == GesBytecodeTypeKind.Percentage;
             case GesSchemaTypeKind.Reference: return value.CustomTypeName == candidate.SchemaName;
             default: return value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == candidate.Unit;
@@ -422,6 +423,18 @@ public static class GesSchemaValues
             return;
         }
 
+        if (node.ValueKind == GesSchemaTypeKind.Disc)
+        {
+            // The centre, then the radius, which a block can leave out: it is then zero, as an axis it leaves out is.
+            var disc = GesDisc.FromValue(value, node.Unit) ?? throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+            writer.BeginNested(field);
+            EncodePoint(ref writer, schema, index + 1, disc.Center.X, disc.Center.Y, disc.Center.Z);
+            var radius = schema.Nodes[index + 1].Next;
+            if (radius < node.Next) writer.WriteNumber(new GesSchemaField(schema, radius), disc.Radius);
+            else if (disc.Radius != 0) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+            return;
+        }
+
         if (value.CustomTypeName is { } name2 && name2 != node.SchemaName) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         var fields = value.MaterializedMap() ?? throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         if (strict && value.CustomTypeName is null && !HasEveryKey(schema, index, fields)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
@@ -429,7 +442,8 @@ public static class GesSchemaValues
         EncodeFields(ref writer, schema, index + 1, node.Next, fields, strict);
     }
 
-    // A checked document writes a Box as the Map of its corners and a Poly as the List of its points, since documents have no
+    // A checked document writes a Box as the Map of its corners, a Poly as the List of its points and a Disc as the Map of its
+    // centre and radius, since documents have no
     // geometry literal; this gives them the geometry library's values, as the schema's fields and their alternatives expect.
     internal static GesValue DocumentShapes(GesResolvedDeclaration schema, GesValue value)
     {
@@ -458,6 +472,9 @@ public static class GesSchemaValues
                     return new GesBox(low, high).ToValue(type.Unit);
                 case GesSchemaTypeKind.Poly when value.ValueKind == GesBytecodeTypeKind.List && Points(value.AsList(), type.Unit) is { } points:
                     return new GesPoly(points).ToValue(type.Unit);
+                case GesSchemaTypeKind.Disc when value.AsMap() is { Length: 2 } parts && parts.Get("center") is { } center && parts.Get("radius") is { } radius
+                    && GesPoint.FromValue(center, type.Unit) is { } middle && radius.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && radius.ValueUnit == type.Unit:
+                    return new GesDisc(middle, radius.AsNumber()).ToValue(type.Unit);
                 case GesSchemaTypeKind.List when type.Element is { } element && value.ValueKind == GesBytecodeTypeKind.List:
                     var list = value.AsList();
                     var shaped = new GesValue[list.Length];
@@ -656,6 +673,11 @@ public static class GesSchemaValues
                 var lower = DecodePoint(ref reader, schema, index + 1);
                 var upper = DecodePoint(ref reader, schema, schema.Nodes[index + 1].Next);
                 return new GesBox(lower, upper).ToValue(node.Unit);
+            case GesSchemaNodeKind.Group when node.ValueKind == GesSchemaTypeKind.Disc:
+                reader.BeginNested(field);
+                var center = DecodePoint(ref reader, schema, index + 1);
+                var radius = schema.Nodes[index + 1].Next;
+                return new GesDisc(center, radius < node.Next ? reader.ReadNumber(new GesSchemaField(schema, radius)) : 0).ToValue(node.Unit);
             case GesSchemaNodeKind.Group:
                 reader.BeginNested(field);
                 return DecodeRecord(ref reader, schema, node.SchemaName, index + 1, node.Next);
@@ -667,7 +689,7 @@ public static class GesSchemaValues
         }
     }
 
-    // The components of a Point, Vector, Box corner or Poly point; an axis that the block leaves out is zero.
+    // The components of a Point, Vector, Box corner, Poly point or Disc centre; an axis that the block leaves out is zero.
     private static GesPoint DecodePoint(ref GesSchemaReader reader, GesBoundSchema schema, int index)
     {
         ref readonly var node = ref schema.Nodes[index];

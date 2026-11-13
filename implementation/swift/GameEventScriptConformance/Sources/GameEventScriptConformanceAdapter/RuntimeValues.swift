@@ -103,6 +103,8 @@ enum RuntimeValues {
             return GesBox(try unitlessPoint(node.required("lower")), try unitlessPoint(node.required("upper"))).value(unit: unit)
         case ":Poly" where node["entries"] == nil:
             return GesPoly(try node.values("points").map(unitlessPoint)).value(unit: unit)
+        case ":Disc" where node["entries"] == nil:
+            return GesDisc(center: try unitlessPoint(node.required("center")), radius: try parseNumber(node.text("radius"))).value(unit: unit)
         default:
             let nodes = node.values("entries")
             var keys = try nodes.map { try $0.text("key") }
@@ -137,7 +139,7 @@ extension RuntimeValues {
 
     private static func unitless(_ point: GesPoint) -> [String: Any] { ["type": ":Point", "x": numberText(point.x), "y": numberText(point.y), "z": numberText(point.z)] }
 
-    // A Box or Poly of the geometry library; its unit is no public property, so it is read by reflection.
+    // A Box, Poly or Disc of the geometry library; its unit is no public property, so it is read by reflection.
     private static func geometry(_ value: GesValue) -> [String: Any]? {
         guard let external = value.externalValue, let unit = Mirror(reflecting: external).children.first(where: { $0.label == "unit" })?.value as? GesQuantityUnit else { return nil }
         var result: [String: Any]
@@ -145,6 +147,8 @@ extension RuntimeValues {
             result = ["type": ":Box", "lower": unitless(box.min), "upper": unitless(box.max)]
         } else if let poly = GesPoly(value, unit: unit) {
             result = ["type": ":Poly", "points": poly.points.map(unitless)]
+        } else if let disc = GesDisc(value, unit: unit) {
+            result = ["type": ":Disc", "center": unitless(disc.center), "radius": numberText(disc.radius)]
         } else {
             return nil
         }

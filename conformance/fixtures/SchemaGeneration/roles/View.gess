@@ -86,6 +86,9 @@ schema :Tuning as {
 }
 
 schema :Rig as {
+  note: :Text max 16 optional
+  level: :Number integer between 0 and 9 default 1
+  spare: :Tuning default tuning
   tuning: :Tuning
   slot: :Number integer default 0
 }

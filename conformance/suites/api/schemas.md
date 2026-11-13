@@ -1903,6 +1903,32 @@ schema:
 
 ---
 
+## Test: a record literal across lines
+
+Comments and line breaks may stand between all tokens of a record literal, also between a field name and its colon.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-default-record-lines
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number default 3\n  on: :Boolean default true\n}\nschema :S as {\n  c: :C default [ // the defaults\n    on // the switch\n      : false,\n    power: 7\n  ]\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield c C default [power: 7e0, on: false]\nschema C\nfield power Number default 3e0\nfield on Boolean default true\n"
+  hash: "3caaafdc0d6ced9b"
+```
+
+---
+
 ## Test: the description of a record default
 
 A record default lists the fields it names with their values in field order, a nested literal as a record of its own.

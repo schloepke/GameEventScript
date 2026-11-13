@@ -324,7 +324,7 @@
             skipTrivia()
             let start = position
             let entryName = try name(GesNames.plain, "field name")
-            skipSpaces()
+            skipTrivia()
             try expect(58)
             skipTrivia()
             let entry = position < bytes.count && bytes[position] == 91 ? try recordDefault(position, depth: depth + 1) : try entryValue(position)

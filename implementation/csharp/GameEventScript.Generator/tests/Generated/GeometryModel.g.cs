@@ -22,6 +22,9 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
         /// <summary>Creates a record with every field at its default or zero value: absent, empty or the first alternative.</summary>
         public Zone()
         {
+            Outline = new GesPoly(global::System.Array.Empty<GesPoint>());
+            Free = new GesPoly(global::System.Array.Empty<GesPoint>());
+            Rings = new List<GesPoly>();
         }
 
         /// <summary>Creates a record from its fields.</summary>
@@ -53,16 +56,16 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
         public GesBox? Bounds { get; set; }
 
         /// <summary><c>outline: :Poly(meter) max 3 { x, y }</c></summary>
-        public GesPoly Outline { get; set; } = new GesPoly(global::System.Array.Empty<GesPoint>());
+        public GesPoly Outline { get; set; }
 
         /// <summary><c>free: :Poly max 4</c></summary>
-        public GesPoly Free { get; set; } = new GesPoly(global::System.Array.Empty<GesPoint>());
+        public GesPoly Free { get; set; }
 
         /// <summary><c>pick: :Box(meter) | :Nothing</c></summary>
         public GesBox? Pick { get; set; }
 
         /// <summary><c>rings: :List(:Poly(meter) max 2) max 2</c></summary>
-        public List<GesPoly> Rings { get; set; } = new List<GesPoly>();
+        public List<GesPoly> Rings { get; set; }
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>

@@ -276,7 +276,8 @@ internal static class GesSwiftModelEmitter
 
     // The GES value that a field left out of a Record or Map takes: its literal default, the value read for the sibling it
     // names, or else `missing`.
-    private static string Held(GesModelLayout layout, List<GesModelPlanField> fields, int index, string owner, string support, Func<int, string> sibling, string missing)
+    // A record default reads the value that `defaults` built once for the field.
+    private static string Held(GesModelLayout layout, List<GesModelPlanField> fields, int index, string owner, string support, string defaults, Func<int, string> sibling, string missing)
     {
         var field = fields[index];
         var key = $"fields.get({GesSchemaPlanner.Literal(field.Field.Name, true)})";
@@ -285,13 +286,28 @@ internal static class GesSwiftModelEmitter
             null => missing,
             { Kind: GesSchemaDefaultKind.Field } => $"{key} ?? {sibling(GesModelPlanner.Sibling(fields, field)!.Value)}",
             { Kind: GesSchemaDefaultKind.Tag } fallback => $"{key} ?? {support}.tag({GesSchemaPlanner.Literal(fallback.Value, true)})",
+            { Kind: GesSchemaDefaultKind.Record } => $"{key} ?? {defaults}.{Member(field.Base)}",
             { } fallback => $"{key} ?? {Encode(field.Value, owner, Native(layout, field.Value, fallback), "", support, false, true)}"
         };
     }
 
     // A field's GES value inline, following defaults to siblings; `.nothing` when no value or default is left.
-    private static string Inline(GesModelLayout layout, List<GesModelPlanField> fields, int index, string owner, string support)
-        => Held(layout, fields, index, owner, support, sibling => Inline(layout, fields, sibling, owner, support), $"fields.get({GesSchemaPlanner.Literal(fields[index].Field.Name, true)}) ?? .nothing");
+    private static string Inline(GesModelLayout layout, List<GesModelPlanField> fields, int index, string owner, string support, string defaults)
+        => Held(layout, fields, index, owner, support, defaults, sibling => Inline(layout, fields, sibling, owner, support, defaults), $"fields.get({GesSchemaPlanner.Literal(fields[index].Field.Name, true)}) ?? .nothing");
+
+    // The GES values of a type's record defaults in an enum of their own, built once on first use, so that a left-out record
+    // field neither creates a model nor encodes one on every read.
+    private static void Defaults(GesSchemaPlanner.Code code, GesModelLayout layout, List<GesModelPlanField> fields, string name, string owner, string support)
+    {
+        var records = fields.FindAll(field => field.Field.Default is { Kind: GesSchemaDefaultKind.Record });
+        if (records.Count == 0) return;
+        code.Line($"/// The values of the record defaults of `:{owner}`, built once; immutable, so sharing them across threads is safe.");
+        code.Open($"private enum {name} {{");
+        foreach (var field in records)
+            code.Line($"nonisolated(unsafe) static let {Member(field.Base)}: GesValue = {Encode(field.Value, owner, Native(layout, field.Value, field.Field.Default!), "", support, false, true)}");
+        code.Close();
+        code.Blank();
+    }
 
     private static string Default(GesModelPlanValue value) => value.Nullable ? " = nil" : value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Bytes or GesModelKind.Flags ? " = []" : "";
 
@@ -528,13 +544,14 @@ internal static class GesSwiftModelEmitter
             code.Blank();
             code.Line($"/// Constructs a `:{type.Name}` from a Map or Record of its fields; an absent optional field may be left out.");
             code.Open($"private struct {type.Name}Constructor: GesExternalTypeConstructor {{");
+            Defaults(code, layout, fields, "Defaults", type.Name, support);
             code.Line($"var definition: GesExternalTypeConstructorDefinition {{ {type.Name}Value.definition.constructors[0] }}");
             code.Blank();
             code.Open("func invoke(_ call: GesExternalTypeConstructorCall) throws {");
             code.Open("guard");
             code.Line($"let fields = call.arguments[0].asMap, {support}.known(fields, {type.Name}Value.names){(fields.Count > 0 ? "," : "")}");
             for (var index = 0; index < fields.Count; index++)
-                code.Line($"let {Member(fields[index].Base)} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support), "GesTypes", support)}{(index == fields.Count - 1 ? "" : ",")}");
+                code.Line($"let {Member(fields[index].Base)} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support, "Defaults"), "GesTypes", support)}{(index == fields.Count - 1 ? "" : ",")}");
             code.Dedent();
             {
                 code.Open("else {");
@@ -627,6 +644,7 @@ internal static class GesSwiftModelEmitter
             first = false;
             code.Line($"static let {names} = [{string.Join(", ", fields.ConvertAll(field => GesSchemaPlanner.Literal(field.Field.Name, true)))}]");
             code.Blank();
+            Defaults(code, layout, fields, type.Name + "Defaults", type.Name, support);
             // A value also carries the computed fields, as decoding the record's bytes gives them; reading ignores them.
             var keys = names;
             if (type.Computed.Length > 0)
@@ -658,7 +676,7 @@ internal static class GesSwiftModelEmitter
                     var fieldLiteral = GesSchemaPlanner.Literal(fields[index].Field.Name, true);
                     var held = "value" + index.ToString(CultureInfo.InvariantCulture);
                     var missing = fields[index].Value.Nullable ? $"fields.get({fieldLiteral}) ?? .nothing" : $"try required(fields, {fieldLiteral}, path)";
-                    code.Line($"let {held} = {Held(layout, fields, index, type.Name, support, sibling => "value" + sibling.ToString(CultureInfo.InvariantCulture), missing)}");
+                    code.Line($"let {held} = {Held(layout, fields, index, type.Name, support, type.Name + "Defaults", sibling => "value" + sibling.ToString(CultureInfo.InvariantCulture), missing)}");
                     if (Descends(fields[index].Value)) code.Line($"let field{index} = {Read(fields[index].Value, type.Name, held, $"fieldPath(path, {fieldLiteral})", name, support)}");
                     else code.Line($"guard let field{index} = {Decode(fields[index].Value, type.Name, held, name, support, plain: true)} else {{ throw failure({held}, fieldPath(path, {fieldLiteral})) }}");
                 }
@@ -675,7 +693,7 @@ internal static class GesSwiftModelEmitter
                 code.Open("guard");
                 code.Line($"let fields = recordFields(value, {typeLiteral}, {names}),");
                 for (var index = 0; index < fields.Count; index++)
-                    code.Line($"let field{index} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support), name, support, plain: true)}{(index == fields.Count - 1 ? "" : ",")}");
+                    code.Line($"let field{index} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support, type.Name + "Defaults"), name, support, plain: true)}{(index == fields.Count - 1 ? "" : ",")}");
                 code.Dedent();
                 code.Line("else { return nil }");
             }

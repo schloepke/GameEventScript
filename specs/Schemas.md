@@ -1702,10 +1702,14 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
   share.
 - **C#** has settable properties in declared order, a constructor with every field and a parameterless one that leaves every
   field at its default or zero value (empty text and lists, new records, the first alternative with its zero value). A
-  sibling default takes a nullable parameter that resolves `null` to the sibling's property. A record default initializes
-  its property with an object initializer of the fields it names, as in `new Unit_Consumer { Efficiency = 0.9 }`, which
-  also sets each field that defaults to a named field, since the parameterless constructor copies siblings first; as a
-  parameter it is no constant, so it takes `= null` and resolves `null` to that object. C# optional parameters end
+  sibling default takes a nullable parameter that resolves `null` to the sibling's property. A record default is a call of
+  the constructor with the fields it names as named arguments, as in `new Unit_Consumer(efficiency: 0.9)`, so that the
+  constructor resolves sibling defaults; a parameter before the last named field that the literal leaves out gets the
+  field's own default, `null` for a sibling default or an absent field, or its zero value. As a parameter a record default
+  is no constant, so it takes `= null` and resolves `null` to that call. The parameterless constructor creates records,
+  lists and union alternatives, and the other one assigns every field, so no property initializer creates an object that
+  a constructor replaces. Reading a value or document that leaves out a field with a record default takes a GES value
+  built once per field, not a new model encoded on every read. C# optional parameters end
   the list, so a default becomes one, `= value` or `= null`, only for the fields after the last field without a default. It uses C# 9 with
   neither `record`, `init` accessors nor Reflection, so Unity and IL2CPP need no shim. Classes keep a copy from sharing a
   list with its original; value equality compares lists element by element, and 0 and -0 hash alike. A file holds one

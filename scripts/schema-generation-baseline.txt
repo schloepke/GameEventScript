@@ -550,6 +550,10 @@ ac07f2c9d25c5809 generate/csharp 5520eb1f463c3b94
 ac07f2c9d25c5809 generate/swift 3e7582fc350315a0
 ac07f2c9d25c5809 layout bfdea3130240444e
 ac07f2c9d25c5809 layout/--all-roots bfdea3130240444e
+ae64dbcd8ec618ec generate/csharp 8455d2014e1af83b
+ae64dbcd8ec618ec generate/swift f32b48ea688898df
+ae64dbcd8ec618ec layout eae8d030bf85cd48
+ae64dbcd8ec618ec layout/--all-roots 8fa7194a18424d48
 aee8ee93652a9d94 generate/csharp 29671e64ffe7c857
 aee8ee93652a9d94 generate/swift 9f8e394595b9d582
 aee8ee93652a9d94 layout 77c743ebc0dddd9e

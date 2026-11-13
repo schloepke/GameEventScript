@@ -90,6 +90,7 @@ namespace GameEventScript.Tests.Generator.Computed.Model
         /// <summary>Creates a record with every field at its default or zero value: absent, empty or the first alternative.</summary>
         public Reactor()
         {
+            Cells = new List<Cell>();
         }
 
         /// <summary>Creates a record from its fields.</summary>
@@ -122,7 +123,7 @@ namespace GameEventScript.Tests.Generator.Computed.Model
         public double? Trim { get; set; }
 
         /// <summary><c>cells: :List(:Cell) max 8</c></summary>
-        public List<Cell> Cells { get; set; } = new List<Cell>();
+        public List<Cell> Cells { get; set; }
 
         /// <summary><c>ticks: :Number integer</c></summary>
         public long Ticks { get; set; }

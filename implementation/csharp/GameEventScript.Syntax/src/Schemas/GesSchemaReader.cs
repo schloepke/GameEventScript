@@ -394,7 +394,7 @@ internal sealed partial class GesSchemaSourceReader
             SkipTrivia();
             var start = _position;
             var name = ReadName(GesText.IsFieldName, "field name");
-            SkipSpaces();
+            SkipTrivia();
             Expect(':');
             SkipTrivia();
             var value = _position < _text.Length && _text[_position] == '[' ? ReadRecordDefault(_position, depth + 1) : ReadEntryValue(_position);

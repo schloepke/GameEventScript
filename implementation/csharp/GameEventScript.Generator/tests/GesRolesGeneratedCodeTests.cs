@@ -236,7 +236,10 @@ public sealed class GesRolesGeneratedCodeTests
     {
         var view = new Model.WorldView();
         Assert.AreEqual(new Model.Tuning(1, Model.Tuning.ModeTag.Soft, 100, 100), view.Tuning, "[:] gives every field its own default.");
-        Assert.AreEqual(new Model.Rig(new Model.Tuning(0.5)), view.Rig, "A nested literal fills in the record it names.");
+        Assert.AreEqual(new Model.Rig(null, 1, null, new Model.Tuning(0.5)), view.Rig, "A nested literal fills in the record it names.");
+        Assert.AreEqual(view.Rig.Tuning, view.Rig.Spare, "A field left out of a literal takes the sibling it defaults to.");
+        Assert.AreEqual(1, view.Rig.Level);
+        Assert.IsNull(view.Rig.Note);
         Assert.AreEqual(new Model.Tuning(1.5, Model.Tuning.ModeTag.Hard, 2000, 2000), view.Boost, "A field that defaults to a named field takes its value.");
 
         var built = new Model.WorldView(1, 0, new GesVector(0, 0), [], null, [], null, null);

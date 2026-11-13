@@ -277,20 +277,36 @@ enum GesSwiftModelEmitter {
 
     /// The GES value that a field left out of a Record or Map takes: its literal default, the value read for the sibling it
     /// names, or else `missing`.
-    private static func held(_ layout: GesModelLayout, _ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ support: String, _ sibling: (Int) -> String, _ missing: String) -> String {
+    /// A record default reads the value that `defaults` built once for the field.
+    private static func held(_ layout: GesModelLayout, _ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ support: String, _ defaults: String, _ sibling: (Int) -> String, _ missing: String) -> String {
         let field = fields[index]
         let key = "fields.get(\(literal(field.field.name)))"
         guard let fallback = field.field.defaultValue else { return missing }
         switch fallback.kind {
         case .field: return "\(key) ?? \(sibling(GesModelPlanner.sibling(fields, field)!))"
         case .tag: return "\(key) ?? \(support).tag(\(literal(fallback.value)))"
+        case .record: return "\(key) ?? \(defaults).\(member(field.base))"
         default: return "\(key) ?? \(encode(field.value, owner, native(layout, field.value, fallback), "", support, nullable: false, plain: true))"
         }
     }
 
     /// A field's GES value inline, following defaults to siblings; `.nothing` when no value or default is left.
-    private static func inline(_ layout: GesModelLayout, _ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ support: String) -> String {
-        held(layout, fields, index, owner, support, { inline(layout, fields, $0, owner, support) }, "fields.get(\(literal(fields[index].field.name))) ?? .nothing")
+    private static func inline(_ layout: GesModelLayout, _ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ support: String, _ defaults: String) -> String {
+        held(layout, fields, index, owner, support, defaults, { inline(layout, fields, $0, owner, support, defaults) }, "fields.get(\(literal(fields[index].field.name))) ?? .nothing")
+    }
+
+    /// The GES values of a type's record defaults in an enum of their own, built once on first use, so that a left-out record
+    /// field neither creates a model nor encodes one on every read.
+    private static func defaults(_ code: inout GesSchemaPlanner.Code, _ layout: GesModelLayout, _ fields: [GesModelPlanField], _ name: String, _ owner: String, _ support: String) {
+        let records = fields.filter { $0.field.defaultValue?.kind == .record }
+        if records.isEmpty { return }
+        code.line("/// The values of the record defaults of `:\(owner)`, built once; immutable, so sharing them across threads is safe.")
+        code.open("private enum \(name) {")
+        for field in records {
+            code.line("nonisolated(unsafe) static let \(member(field.base)): GesValue = \(encode(field.value, owner, native(layout, field.value, field.field.defaultValue!), "", support, nullable: false, plain: true))")
+        }
+        code.close()
+        code.blank()
     }
 
     private static func defaultValue(_ value: GesModelPlanValue) -> String {
@@ -526,13 +542,14 @@ enum GesSwiftModelEmitter {
             code.blank()
             code.line("/// Constructs a `:\(type.name)` from a Map or Record of its fields; an absent optional field may be left out.")
             code.open("private struct \(type.name)Constructor: GesExternalTypeConstructor {")
+            defaults(&code, layout, fields, "Defaults", type.name, support)
             code.line("var definition: GesExternalTypeConstructorDefinition { \(type.name)Value.definition.constructors[0] }")
             code.blank()
             code.open("func invoke(_ call: GesExternalTypeConstructorCall) throws {")
             code.open("guard")
             code.line("let fields = call.arguments[0].asMap, \(support).known(fields, \(type.name)Value.names)\(fields.isEmpty ? "" : ",")")
             for (index, field) in fields.enumerated() {
-                code.line("let \(member(field.base)) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support), "GesTypes", support))\(index == fields.count - 1 ? "" : ",")")
+                code.line("let \(member(field.base)) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support, "Defaults"), "GesTypes", support))\(index == fields.count - 1 ? "" : ",")")
             }
             code.dedent()
             code.open("else {")
@@ -602,6 +619,7 @@ enum GesSwiftModelEmitter {
             if typeIndex > 0 { code.blank() }
             code.line("static let \(names) = [\(fields.map { literal($0.field.name) }.joined(separator: ", "))]")
             code.blank()
+            defaults(&code, layout, fields, type.name + "Defaults", type.name, support)
             // A value also carries the computed fields, as decoding the record's bytes gives them; reading ignores them.
             var keys = names
             if !type.computed.isEmpty {
@@ -629,7 +647,7 @@ enum GesSwiftModelEmitter {
                     let fieldLiteral = literal(field.field.name)
                     let held = "value\(index)"
                     let missing = field.value.nullable ? "fields.get(\(fieldLiteral)) ?? .nothing" : "try required(fields, \(fieldLiteral), path)"
-                    code.line("let \(held) = \(self.held(layout, fields, index, type.name, support, { "value\($0)" }, missing))")
+                    code.line("let \(held) = \(self.held(layout, fields, index, type.name, support, type.name + "Defaults", { "value\($0)" }, missing))")
                     if descends(field.value) {
                         code.line("let field\(index) = \(read(field.value, type.name, held, "fieldPath(path, \(fieldLiteral))", name, support))")
                     } else {
@@ -647,7 +665,7 @@ enum GesSwiftModelEmitter {
                 code.open("guard")
                 code.line("let fields = recordFields(value, \(typeLiteral), \(names)),")
                 for (index, field) in fields.enumerated() {
-                    code.line("let field\(index) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support), name, support, plain: true))\(index == fields.count - 1 ? "" : ",")")
+                    code.line("let field\(index) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support, type.name + "Defaults"), name, support, plain: true))\(index == fields.count - 1 ? "" : ",")")
                 }
                 code.dedent()
                 code.line("else { return nil }")

@@ -209,56 +209,32 @@ public static class GesSchemaValues
                 for (var sibling = start; sibling < end; sibling = schema.Nodes[sibling].Next)
                     if (schema.Nodes[sibling].Name == fallback.Name) return Held(schema, start, end, fields, sibling, out value);
                 return index;
-            case { Kind: GesSchemaDefaultKind.Boolean } fallback:
-                value = GesValue.GesBoolean(fallback.Boolean);
-                return -1;
-            case { Kind: GesSchemaDefaultKind.Tag } fallback:
-                value = GesValue.GesTag(fallback.Name);
-                return -1;
-            case { Kind: GesSchemaDefaultKind.Record } fallback:
-                value = RecordValue(fallback);
-                return -1;
-            case var fallback when node.Kind == GesSchemaNodeKind.Integer:
-                value = GesValue.GesInteger(Whole(fallback.Value), node.Unit);
-                return -1;
             case var fallback:
-                var number = double.Parse(fallback.Value.Canonical, System.Globalization.CultureInfo.InvariantCulture);
-                value = node.ValueKind == GesSchemaTypeKind.Percentage ? GesValue.GesPercentage(number) : GesValue.GesFloat(number, node.Unit);
+                value = Literal(fallback, node.Kind == GesSchemaNodeKind.Integer, node.ValueKind == GesSchemaTypeKind.Percentage, node.Unit);
                 return -1;
         }
     }
 
-    // The Map of the fields a record literal names; encoding gives every other field its own default.
-    private static GesValue RecordValue(GesResolvedDefault fallback)
+    // The value of a literal default that names no sibling: a Boolean, a tag, the Map of a record literal, or a number of
+    // the field's kind and unit.
+    internal static GesValue Literal(GesResolvedDefault fallback, bool integer, bool percentage, GesQuantityUnit unit)
     {
-        var keys = new string[fallback.Entries.Length];
-        var values = new GesValue[keys.Length];
-        for (var index = 0; index < keys.Length; index++)
+        switch (fallback.Kind)
         {
-            var entry = fallback.Entries[index];
-            keys[index] = entry.Field.Name;
-            var type = entry.Field.Alternatives[0];
-            var value = entry.Value;
-            values[index] = value.Kind switch
-            {
-                GesSchemaDefaultKind.Boolean => GesValue.GesBoolean(value.Boolean),
-                GesSchemaDefaultKind.Tag => GesValue.GesTag(value.Name),
-                GesSchemaDefaultKind.Record => RecordValue(value),
-                _ when type.Constraints.Integer => GesValue.GesInteger(Whole(value.Value), type.Unit),
-                _ => type.Kind == GesSchemaTypeKind.Percentage
-                    ? GesValue.GesPercentage(double.Parse(value.Value.Canonical, System.Globalization.CultureInfo.InvariantCulture))
-                    : GesValue.GesFloat(double.Parse(value.Value.Canonical, System.Globalization.CultureInfo.InvariantCulture), type.Unit)
-            };
+            case GesSchemaDefaultKind.Boolean:
+                return GesValue.GesBoolean(fallback.Boolean);
+            case GesSchemaDefaultKind.Tag:
+                return GesValue.GesTag(fallback.Name);
+            case GesSchemaDefaultKind.Record:
+                return fallback.Record!.Value;
+            case var _ when integer:
+                var whole = fallback.Value.Significand;
+                for (var power = 0; power < fallback.Value.Exponent; power++) whole *= 10;
+                return GesValue.GesInteger(whole, unit);
+            default:
+                var number = double.Parse(fallback.Value.Canonical, System.Globalization.CultureInfo.InvariantCulture);
+                return percentage ? GesValue.GesPercentage(number) : GesValue.GesFloat(number, unit);
         }
-
-        return GesValue.GesMap(keys, values);
-    }
-
-    private static long Whole(GesSchemaDecimal value)
-    {
-        var whole = value.Significand;
-        for (var power = 0; power < value.Exponent; power++) whole *= 10;
-        return whole;
     }
 
     // A flag Map sets a member for true and leaves it unset for false or an absent key. Returns the wire code that
@@ -717,4 +693,34 @@ public static class GesSchemaValues
         value.SetBytes(bytes);
         return value;
     }
+}
+
+// The named fields of a record literal in the field order of its schema, filled once every schema is composed and immutable
+// after loading. Setting them also builds the Map that a left-out field takes, once, so that reading and encoding share it;
+// encoding gives every field the Map leaves out its own default.
+internal sealed class GesResolvedRecord
+{
+    private GesResolvedRecordEntry[] _entries = [];
+
+    internal GesResolvedRecordEntry[] Entries
+    {
+        get => _entries;
+        set
+        {
+            _entries = value;
+            var keys = new string[value.Length];
+            var values = new GesValue[value.Length];
+            for (var index = 0; index < value.Length; index++)
+            {
+                var entry = value[index];
+                var type = entry.Field.Alternatives[0];
+                keys[index] = entry.Field.Name;
+                values[index] = GesSchemaValues.Literal(entry.Value, type.Constraints.Integer, type.Kind == GesSchemaTypeKind.Percentage, type.Unit);
+            }
+
+            Value = GesValue.GesMap(keys, values);
+        }
+    }
+
+    internal GesValue Value { get; private set; } = GesValue.GesMap([], []);
 }

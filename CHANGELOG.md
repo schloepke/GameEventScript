@@ -349,7 +349,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   records take nested literals, and every other field takes its own default. Each value is checked like a default of its
   field, and a literal that leaves out a required field without a default is `schema.invalidDefault`. Generated models
   default such a field to an initializer call (Swift `Unit_Consumer(efficiency: 0.9)`, C#
-  `new Unit_Consumer { Efficiency = 0.9 }`); `GesSchemaDefaultKind.Record` with `GesSchemaDefaultInfo.Entries` describes
+  `new Unit_Consumer(efficiency: 0.9)`); `GesSchemaDefaultKind.Record` with `GesSchemaDefaultInfo.Entries` describes
   it, and layouts list its entries.
 - Schemas declare constants with `let retention be 2s` inside their braces. Its fields can name a let as a bound, step,
   delta range or `max`; generated wire and model types declare it as a static member in base units, and it belongs to

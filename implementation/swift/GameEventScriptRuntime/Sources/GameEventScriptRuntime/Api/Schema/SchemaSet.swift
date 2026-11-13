@@ -299,12 +299,6 @@ struct GesResolvedDefault: Sendable {
     var offset = 0
 }
 
-/// The named fields of a record literal in the field order of its schema, filled once every schema is composed and immutable
-/// after loading.
-final class GesResolvedRecord: @unchecked Sendable {
-    var entries: [GesResolvedRecordEntry] = []
-}
-
 /// A field a record literal names, with its default-like value: a number, a Boolean, a tag, or again a record literal.
 struct GesResolvedRecordEntry {
     let field: GesResolvedField
@@ -648,8 +642,14 @@ final class GesFileScope {
                 resolved[index] = GesResolvedDefault(kind: .record, record: record, offset: entry.offset)
                 continue
             }
-            let scalars: Set<GesSchemaTypeKind> = [.boolean, .tag, .number, .percentage, .quantity]
-            if !scalars.contains(type.kind) || value.record != nil {
+            let takes: Bool
+            switch type.kind {
+            case .boolean: takes = value.boolean != nil
+            case .tag: takes = value.tag != nil
+            case .number, .percentage, .quantity: takes = value.value != nil
+            default: takes = false
+            }
+            if !takes {
                 throw error(Code.invalidDefault, entry.offset, "'\(entry.name)' is a \(type.kind.rawValue) field, which takes no such value in a record literal.")
             }
             var scalar = value

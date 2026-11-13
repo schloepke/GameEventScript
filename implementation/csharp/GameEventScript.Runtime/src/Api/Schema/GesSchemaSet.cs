@@ -370,13 +370,6 @@ internal sealed class GesResolvedDefault
     internal int Offset { get; init; }
 }
 
-// The named fields of a record literal in the field order of its schema, filled once every schema is composed and immutable
-// after loading.
-internal sealed class GesResolvedRecord
-{
-    internal GesResolvedRecordEntry[] Entries { get; set; } = [];
-}
-
 // A field a record literal names, with its default-like value: a number, a Boolean, a tag, or again a record literal.
 internal sealed class GesResolvedRecordEntry
 {
@@ -748,7 +741,14 @@ internal sealed partial class GesFileScope
                 continue;
             }
 
-            if (type.Kind is not (GesSchemaTypeKind.Boolean or GesSchemaTypeKind.Tag or GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity) || value.Record is not null)
+            var takes = type.Kind switch
+            {
+                GesSchemaTypeKind.Boolean => value.Boolean is not null,
+                GesSchemaTypeKind.Tag => value.Tag is not null,
+                GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity => value.Value is not null,
+                _ => false
+            };
+            if (!takes)
                 throw Error(Code.InvalidDefault, entry.Offset, $"'{entry.Name}' is a {type.Kind} field, which takes no such value in a record literal.");
             resolved[index] = ResolveDefault(type, new GesSchemaDefaultSyntax { Value = value.Value, Boolean = value.Boolean, Tag = value.Tag, Offset = entry.Offset });
         }

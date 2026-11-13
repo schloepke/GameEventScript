@@ -22,6 +22,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         /// <summary>Creates a record with every field at its default or zero value: absent, empty or the first alternative.</summary>
         public Bind()
         {
+            Units = new List<Bind>();
         }
 
         /// <summary>Creates a record from its fields.</summary>
@@ -37,7 +38,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         public string Name { get; set; } = "";
 
         /// <summary><c>units: :List(:Bind) max 4 depth 3</c></summary>
-        public List<Bind> Units { get; set; } = new List<Bind>();
+        public List<Bind> Units { get; set; }
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>
@@ -97,6 +98,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         /// <summary>Creates a record with every field at its default or zero value: absent, empty or the first alternative.</summary>
         public Crew()
         {
+            Units = new List<UnitsItemAlternative>();
         }
 
         /// <summary>Creates a record from its fields.</summary>
@@ -112,7 +114,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         public string Name { get; set; } = "";
 
         /// <summary><c>units: :List(:Text max 8 | :Crew) max 4 depth 3</c></summary>
-        public List<UnitsItemAlternative> Units { get; set; } = new List<UnitsItemAlternative>();
+        public List<UnitsItemAlternative> Units { get; set; }
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>
@@ -243,6 +245,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         /// <summary>Creates a record with every field at its default or zero value: absent, empty or the first alternative.</summary>
         public Leaf()
         {
+            Kids = new List<Node>();
         }
 
         /// <summary>Creates a record from its fields.</summary>
@@ -260,7 +263,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         public string Tag { get; set; } = "";
 
         /// <summary><c>kids: :List(:Node) max 2 depth 3</c></summary>
-        public List<Node> Kids { get; set; } = new List<Node>();
+        public List<Node> Kids { get; set; }
 
         /// <summary><c>name: :Text max 4</c></summary>
         public string Name { get; set; } = "";
@@ -325,6 +328,10 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         /// <summary>Creates a record with every field at its default or zero value: absent, empty or the first alternative.</summary>
         public Loadout()
         {
+            Root = new Bind();
+            Team = new Unit();
+            Leaf = new Leaf();
+            Crew = new Crew();
         }
 
         /// <summary>Creates a record from its fields.</summary>
@@ -341,16 +348,16 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         }
 
         /// <summary><c>root: :Bind</c></summary>
-        public Bind Root { get; set; } = new Bind();
+        public Bind Root { get; set; }
 
         /// <summary><c>team: :Unit</c></summary>
-        public Unit Team { get; set; } = new Unit();
+        public Unit Team { get; set; }
 
         /// <summary><c>leaf: :Leaf</c></summary>
-        public Leaf Leaf { get; set; } = new Leaf();
+        public Leaf Leaf { get; set; }
 
         /// <summary><c>crew: :Crew</c></summary>
-        public Crew Crew { get; set; } = new Crew();
+        public Crew Crew { get; set; }
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>
@@ -414,6 +421,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         /// <summary>Creates a record with every field at its default or zero value: absent, empty or the first alternative.</summary>
         public Node()
         {
+            Kids = new List<Node>();
         }
 
         /// <summary>Creates a record from its fields.</summary>
@@ -429,7 +437,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         public string Tag { get; set; } = "";
 
         /// <summary><c>kids: :List(:Node) max 2 depth 3</c></summary>
-        public List<Node> Kids { get; set; } = new List<Node>();
+        public List<Node> Kids { get; set; }
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>
@@ -489,6 +497,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         /// <summary>Creates a record with every field at its default or zero value: absent, empty or the first alternative.</summary>
         public Unit()
         {
+            Units = new List<Unit>();
         }
 
         /// <summary>Creates a record from its fields.</summary>
@@ -504,7 +513,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         public long Id { get; set; }
 
         /// <summary><c>units: :List(:Unit) max 4 depth 3</c></summary>
-        public List<Unit> Units { get; set; } = new List<Unit>();
+        public List<Unit> Units { get; set; }
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>

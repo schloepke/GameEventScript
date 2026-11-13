@@ -189,53 +189,30 @@ public enum GesSchemaValues {
                 sibling = schema.nodes[sibling].next
             }
             return index
-        case .boolean:
-            value = .boolean(fallback.boolean)
-        case .tag:
-            value = (try? .tag(fallback.name)) ?? .nothing
-        case .number where schema.nodes[index].kind == .integer:
-            var whole = fallback.value.significand
-            for _ in 0..<max(fallback.value.exponent, 0) { whole *= 10 }
-            value = .integer(whole, unit: info.unit)
-        case .number:
-            let number = Double(fallback.value.canonical) ?? 0
-            value = info.valueKind == .percentage ? .percentage(number) : .float(number, unit: info.unit)
-        case .record:
-            value = recordValue(fallback)
+        default:
+            value = literal(fallback, integer: schema.nodes[index].kind == .integer, percentage: info.valueKind == .percentage, unit: info.unit)
         }
         return nil
     }
 
-    /// The Map of the fields a record literal names; encoding gives every other field its own default.
-    private static func recordValue(_ fallback: GesResolvedDefault) -> GesValue {
-        let entries = fallback.record?.entries ?? []
-        var keys: [String] = []
-        var values: [GesValue] = []
-        keys.reserveCapacity(entries.count)
-        values.reserveCapacity(entries.count)
-        for entry in entries {
-            keys.append(entry.field.name)
-            let type = entry.field.alternatives[0]
-            let value = entry.value
-            switch value.kind {
-            case .boolean:
-                values.append(.boolean(value.boolean))
-            case .tag:
-                values.append((try? .tag(value.name)) ?? .nothing)
-            case .record:
-                values.append(recordValue(value))
-            default:
-                if type.constraints.integer {
-                    var whole = value.value.significand
-                    for _ in 0..<max(value.value.exponent, 0) { whole *= 10 }
-                    values.append(.integer(whole, unit: type.unit))
-                } else {
-                    let number = Double(value.value.canonical) ?? 0
-                    values.append(type.kind == .percentage ? .percentage(number) : .float(number, unit: type.unit))
-                }
-            }
+    /// The value of a literal default that names no sibling: a Boolean, a tag, the Map of a record literal, or a number of
+    /// the field's kind and unit.
+    static func literal(_ fallback: GesResolvedDefault, integer: Bool, percentage: Bool, unit: GesQuantityUnit) -> GesValue {
+        switch fallback.kind {
+        case .boolean:
+            return .boolean(fallback.boolean)
+        case .tag:
+            return (try? .tag(fallback.name)) ?? .nothing
+        case .record:
+            return fallback.record?.value ?? .map(keys: [], values: [])
+        case .number where integer:
+            var whole = fallback.value.significand
+            for _ in 0..<max(fallback.value.exponent, 0) { whole *= 10 }
+            return .integer(whole, unit: unit)
+        default:
+            let number = Double(fallback.value.canonical) ?? 0
+            return percentage ? .percentage(number) : .float(number, unit: unit)
         }
-        return .map(keys: keys, values: values)
     }
 
     private static func acceptsNothing(_ schema: GesBoundSchema, _ index: Int) -> Bool {
@@ -636,4 +613,22 @@ private struct GesRecordScope: GesComputedScope {
         }
         return current
     }
+}
+
+/// The named fields of a record literal in the field order of its schema, filled once every schema is composed and immutable
+/// after loading. Setting them also builds the Map that a left-out field takes, once, so that reading and encoding share it;
+/// encoding gives every field the Map leaves out its own default.
+final class GesResolvedRecord: @unchecked Sendable {
+    var entries: [GesResolvedRecordEntry] = [] {
+        didSet {
+            value = .map(
+                keys: entries.map(\.field.name),
+                values: entries.map { entry in
+                    let type = entry.field.alternatives[0]
+                    return GesSchemaValues.literal(entry.value, integer: type.constraints.integer, percentage: type.kind == .percentage, unit: type.unit)
+                }
+            )
+        }
+    }
+    private(set) var value: GesValue = .map(keys: [], values: [])
 }

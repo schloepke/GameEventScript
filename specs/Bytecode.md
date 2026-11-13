@@ -195,11 +195,13 @@ shared program validator enforces this for compiler output and loaded binaries.
 ```text
 bits 0..4  UnitId        0..31
 bits 5     NormalizeResultAsPredicate
-bits 6     WithTags (result-bearing sends only)
+bits 6     WithTags on result-bearing sends; Numeric on Move and the arithmetic opcodes; Strict on ParseLiteral
 bits 7     Indirect (result-bearing sends only)
 ```
 
-Flag meanings are opcode-specific. Result-bearing sends reject bit 5; instructions other than iterator creation reject bits 6 and 7. Iterator creation
+Flag meanings are opcode-specific. Result-bearing sends reject bit 5. Bit 6 is defined only for result-bearing sends,
+Move, the arithmetic opcodes that the opcode table marks Numeric (0x40) and ParseLiteral (Strict, 0x40); bit 7 only for
+result-bearing sends; other instructions except iterator creation reject both. Iterator creation
 uses bits 5..7 as the mode field defined below; IteratorNext uses bit 5 for
 component output. Iterator instructions require zero UnitId. Undefined flag combinations are invalid.
 

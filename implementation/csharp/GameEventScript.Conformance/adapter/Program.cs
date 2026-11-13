@@ -293,7 +293,7 @@ static void ValidateLimits(JsonElement limits)
 {
     var allowedLimits = new[]
     {
-        "maxProcessedEventsPerRun", "maxQueuedMessagesPerRun", "maxExecutionSteps", "maxRegisterValues", "maxLoopIterations", "maxCallDepth",
+        "maxProcessedMessagesPerRun", "maxQueuedMessages", "maxExecutionSteps", "maxRegisterValues", "maxLoopIterations", "maxCallDepth",
         "maxRandomScopeDepth", "maxRangeItems", "maxGeneratedCollectionItems", "maxValueDepth", "maxDiceCount", "maxDiceSides"
     };
     foreach (var property in limits.EnumerateObject())

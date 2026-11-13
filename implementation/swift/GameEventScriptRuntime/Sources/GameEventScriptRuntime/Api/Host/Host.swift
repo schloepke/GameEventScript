@@ -221,8 +221,8 @@ public final class GameEventScriptHost {
         while remaining > 0 {
             if active == nil {
                 if !starting { promoteDelayed() }
-                if !starting && limits.maxProcessedEventsPerRun > 0 && processed >= limits.maxProcessedEventsPerRun && queue.count > 0 {
-                    context.reportLimit("MaxProcessedEventsPerRun", limits.maxProcessedEventsPerRun)
+                if !starting && limits.maxProcessedMessagesPerRun > 0 && processed >= limits.maxProcessedMessagesPerRun && queue.count > 0 {
+                    context.reportLimit("MaxProcessedMessagesPerRun", limits.maxProcessedMessagesPerRun)
                     limitReached = true
                     break
                 }
@@ -345,7 +345,7 @@ public final class GameEventScriptHost {
             let matches = (exact[message.signatureId] ?? []).contains { $0.matches(message) } || (byName[message.name] ?? []).contains { $0.matches(message) }
             let fallback = message.name != "undeliverable" && ((exact["undeliverable(message)"] ?? []).contains { $0.matches(message) } || (byName["undeliverable"] ?? []).contains { $0.matches(message) })
             if queueFull && (matches || fallback) {
-                context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
+                context.budget.exhaust("MaxQueuedMessages", limits.maxQueuedMessages)
                 return false
             }
             if publish { _ = self.publish(message) } else { _ = emit(message) }
@@ -367,7 +367,7 @@ public final class GameEventScriptHost {
             return !context.budget.isExhausted
         }
         if queueFull {
-            context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
+            context.budget.exhaust("MaxQueuedMessages", limits.maxQueuedMessages)
             return false
         }
         lastSendID += 1
@@ -469,7 +469,7 @@ public final class GameEventScriptHost {
         if let handler { observer?.dispatchCompleted(active!.message, id: active!.id, signatureID: handler.dispatchSignature) }
     }
 
-    private var queueFull: Bool { limits.maxQueuedMessagesPerRun > 0 && pendingMessageCount >= limits.maxQueuedMessagesPerRun }
+    private var queueFull: Bool { limits.maxQueuedMessages > 0 && pendingMessageCount >= limits.maxQueuedMessages }
 
     // Enqueues under a fresh send ID, or under the ID a publish reserved. Returns that ID, or 0 when nothing was enqueued.
     private func enqueue(_ message: GameEventScriptMessage, initializationOutput: Bool = false, reservedID: Int64 = 0) -> Int64 {
@@ -483,9 +483,9 @@ public final class GameEventScriptHost {
         }
         if queueFull {
             if initializationOutput {
-                context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
+                context.budget.exhaust("MaxQueuedMessages", limits.maxQueuedMessages)
             } else {
-                observer?.runtimeLimitReached("MaxQueuedMessagesPerRun", detail: "Message queue limit reached. Dropped '" + message.name + "'.", limit: limits.maxQueuedMessagesPerRun)
+                observer?.runtimeLimitReached("MaxQueuedMessages", detail: "Message queue limit reached. Dropped '" + message.name + "'.", limit: limits.maxQueuedMessages)
             }
             return 0
         }

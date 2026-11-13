@@ -269,6 +269,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - The end of console input (EOF) delivers scheduled delayed messages before the CLI exits, as a batch `run` does, so
   piped console scripts lose no timer or delayed `ErrorCode`; `:quit` still discards them.
 
+- Host configuration names now say what they configure, before 1.0 freezes them: `MaxProcessedEventsPerRun` is
+  `MaxProcessedMessagesPerRun`, `MaxQueuedMessagesPerRun` is `MaxQueuedMessages` (it bounds the host's persistent queue,
+  not one run), and `WithRegistry` / `withRegistry` is `WithExtensionRegistry` / `withExtensionRegistry`. Observer
+  callbacks and diagnostics report the new limit names.
+- C# removes `GesValue.AsNumeric`, which duplicated `AsNumber()`, and `GesValue.GesNumber`, an alias of `GesFloat`.
+- Swift `GesContext.extensionRegistry` is no longer optional: a host without extensions has an empty registry, as in C#.
+- C# `GesPoint` and `GesVector` compare components with binary64 equality, as Swift does, so a NaN component makes two
+  values unequal.
+
 ### Added
 - `:Bytes`, an immutable byte sequence: literals `:Bytes[0xa0, 183]` and `:Bytes("a0b7")`, `as :Bytes`
   from integer Lists and hexadecimal Text, `as :Text`/`parse`/documents, count, `in`, indexing,
@@ -749,6 +758,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - `:save` writes through a symbolic link to its target and keeps the file's permissions in both CLIs.
 - C# diagnostics no longer end in an empty `[program=]`, and an I/O error without a file has no leading colon.
 - The C# console's waiting prompt indents continuation lines without ` ... ` markers.
+- The specifications define the typed value reads (`AsInteger`, `AsNumber`, `AsBoolean`, `AsText`) of both ports, why
+  `ValueKind` uses the bytecode type kinds and which of them a host observes, the module graph with Syntax and
+  Generator, the anonymous name of an empty Program, `InvalidProgram` for duplicate callable signatures and Record
+  names, reserved section types as unknown sections, and the instruction flag bits; stale runner names and a Swift
+  Host initializer are gone.
+- The public C# Runtime types document what each member does instead of generated placeholder text.
 
 ## [0.4.0] — 2026-10-11
 

@@ -22,7 +22,7 @@ public sealed class GesRuntimeLimits
     /// after all captured handlers finish. Exactly reaching the limit while draining the queue
     /// completes normally. Otherwise pending messages remain queued for a later pump call.
     /// </remarks>
-    public int MaxProcessedEventsPerRun { get; init; } = 64;
+    public int MaxProcessedMessagesPerRun { get; init; } = 64;
 
     /// <summary>
     /// Specifies the maximum number of logical messages a host may hold queued, delayed entries included.
@@ -33,7 +33,7 @@ public sealed class GesRuntimeLimits
     /// result-bearing or delayed send stops its handler with this limit; an initialization snapshot that finds no slot
     /// fails <c>Load</c> with <c>link.initializationQueueFull</c>.
     /// </remarks>
-    public int MaxQueuedMessagesPerRun { get; init; }
+    public int MaxQueuedMessages { get; init; }
 
     /// <summary>
     /// Specifies the maximum number of opcodes one script handler may execute.

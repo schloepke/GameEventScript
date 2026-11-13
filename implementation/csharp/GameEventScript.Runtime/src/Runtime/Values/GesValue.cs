@@ -18,7 +18,8 @@ namespace GameEventScript.Runtime.Values;
 internal readonly record struct GesNumericWithUnit(double Value, GesQuantityUnit Unit);
 
 /// <summary>
-/// Represents a ges value.
+/// An immutable GES value: Nothing, a number with optional quantity unit, Boolean, Text, Tag, Vector, Point, Dice,
+/// Bytes, List, Map, Record, external value, Range, Series, Message or Handler. Equality is strict and structural.
 /// </summary>
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
@@ -47,16 +48,16 @@ public partial struct GesValue : IEquatable<GesValue>
     [FieldOffset(18)] internal GesValueFlags Flags;
 
     /// <summary>
-    /// Performs the ges nothing operation.
+    /// Returns Nothing, the canonical absence value; equal to <see langword="default"/>.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>Nothing.</returns>
     public static GesValue GesNothing() => new();
 
     /// <summary>
-    /// Performs the ges boolean operation.
+    /// Creates a Boolean value.
     /// </summary>
-    /// <param name="boolean">The boolean value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="boolean">The truth value to store.</param>
+    /// <returns>The Boolean value.</returns>
     public static GesValue GesBoolean(bool boolean)
     {
         var value = new GesValue();
@@ -65,11 +66,11 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges integer operation.
+    /// Creates a number with exact Int64 storage and an optional quantity unit.
     /// </summary>
-    /// <param name="integer">The integer value.</param>
-    /// <param name="unit">The unit value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="integer">The exact integer to store.</param>
+    /// <param name="unit">The quantity unit, stored as given; <see cref="GesQuantityUnit.UnitNone"/> for a plain number.</param>
+    /// <returns>The number value.</returns>
     public static GesValue GesInteger(long integer, GesQuantityUnit unit = UnitNone)
     {
         var value = new GesValue();
@@ -78,11 +79,13 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges float operation.
+    /// Creates a number with an optional quantity unit. A finite integral value within the Int64 range is stored as an
+    /// exact integer (so <c>-0.0</c> becomes <c>0</c>), other values including infinities as binary64, and NaN yields
+    /// Nothing without a unit.
     /// </summary>
-    /// <param name="number">The number value.</param>
-    /// <param name="unit">The unit value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="number">The binary64 number.</param>
+    /// <param name="unit">The quantity unit, stored as given; <see cref="GesQuantityUnit.UnitNone"/> for a plain number.</param>
+    /// <returns>The number value, or Nothing for NaN.</returns>
     public static GesValue GesFloat(double number, GesQuantityUnit unit = UnitNone)
     {
         var value = new GesValue();
@@ -91,19 +94,11 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges number operation.
+    /// Creates a Percentage from its ratio, for example <c>0.5</c> for 50%. A finite ratio is stored as Percentage with
+    /// signed zero normalized; an infinite ratio becomes a unitless binary64 infinity, and NaN yields Nothing.
     /// </summary>
-    /// <param name="number">The number value.</param>
-    /// <param name="unit">The unit value.</param>
-    /// <returns>The result of the operation.</returns>
-    public static GesValue GesNumber(double number, GesQuantityUnit unit = UnitNone)
-        => GesFloat(number, unit);
-
-    /// <summary>
-    /// Performs the ges percentage operation.
-    /// </summary>
-    /// <param name="ratio">The ratio value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="ratio">The ratio, where <c>1</c> is 100%.</param>
+    /// <returns>The Percentage, a binary64 infinity, or Nothing.</returns>
     public static GesValue GesPercentage(double ratio)
     {
         var value = new GesValue();
@@ -112,10 +107,12 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges text operation.
+    /// Creates a Text value that keeps <paramref name="text"/> verbatim; <see langword="null"/> becomes empty text.
+    /// Equality and ordering use Unicode scalars, not canonical equivalence.
     /// </summary>
-    /// <param name="text">The text value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="text">The text to store.</param>
+    /// <returns>The Text value.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> contains an unpaired UTF-16 surrogate.</exception>
     public static GesValue GesText(string text)
     {
         text ??= string.Empty;
@@ -126,10 +123,12 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges tag operation.
+    /// Creates a Tag from its name without the leading <c>#</c>.
     /// </summary>
-    /// <param name="tag">The tag value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="tag">The tag name: an ASCII lowercase letter followed by ASCII letters or digits.</param>
+    /// <returns>The Tag value.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="tag"/> is <see langword="null"/>, empty or violates the
+    /// tag name grammar.</exception>
     public static GesValue GesTag(string tag)
     {
         tag ??= string.Empty;
@@ -141,13 +140,14 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges vector operation.
+    /// Creates a Vector with binary64 coordinates and an optional quantity unit. Signed zeros are normalized and
+    /// infinities are kept; any NaN coordinate yields Nothing.
     /// </summary>
-    /// <param name="x">The x value.</param>
-    /// <param name="y">The y value.</param>
-    /// <param name="z">The z value.</param>
-    /// <param name="unit">The unit value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="x">The x coordinate.</param>
+    /// <param name="y">The y coordinate.</param>
+    /// <param name="z">The z coordinate.</param>
+    /// <param name="unit">The quantity unit shared by all coordinates.</param>
+    /// <returns>The Vector, or Nothing.</returns>
     public static GesValue GesVector(double x, double y = 0d, double z = 0d, GesQuantityUnit unit = UnitNone)
     {
         var value = new GesValue();
@@ -156,13 +156,14 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges point operation.
+    /// Creates a Point with binary64 coordinates and an optional quantity unit. Signed zeros are normalized and
+    /// infinities are kept; any NaN coordinate yields Nothing.
     /// </summary>
-    /// <param name="x">The x value.</param>
-    /// <param name="y">The y value.</param>
-    /// <param name="z">The z value.</param>
-    /// <param name="unit">The unit value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="x">The x coordinate.</param>
+    /// <param name="y">The y coordinate.</param>
+    /// <param name="z">The z coordinate.</param>
+    /// <param name="unit">The quantity unit shared by all coordinates.</param>
+    /// <returns>The Point, or Nothing.</returns>
     public static GesValue GesPoint(double x, double y = 0d, double z = 0d, GesQuantityUnit unit = UnitNone)
     {
         var value = new GesValue();
@@ -171,10 +172,10 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges list operation.
+    /// Creates a List from a copy of <paramref name="items"/>, so later changes to the array do not affect the value.
     /// </summary>
-    /// <param name="items">The items value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="items">The elements in order.</param>
+    /// <returns>The List value.</returns>
     public static GesValue GesList(GesValue[] items)
     {
         GesValue[] copy = items.Length == 0 ? [] : new GesValue[items.Length];
@@ -189,10 +190,13 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Wraps a host-provided external value.
+    /// Wraps a host-provided external value and captures its type definition. Field values are not read or kept; each
+    /// read runs the getters. Values from separate calls are not equal, even for the same host object.
     /// </summary>
     /// <param name="value">The host object.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The external value, whose kind is <see cref="GesBytecodeTypeKind.Custom"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> provides no type definition.</exception>
     public static GesValue GesExternal(IGesExternalValue value)
     {
         var result = new GesValue();
@@ -204,9 +208,9 @@ public partial struct GesValue : IEquatable<GesValue>
     /// Creates a Map from parallel keys and values in canonical key order, keeping the last value of a duplicate key.
     /// Extra keys or values beyond the shorter array are ignored.
     /// </summary>
-    /// <param name="keys">The keys value.</param>
-    /// <param name="values">The values value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="keys">The keys, paired by position with <paramref name="values"/>.</param>
+    /// <param name="values">The values, paired by position with <paramref name="keys"/>.</param>
+    /// <returns>The Map value.</returns>
     /// <exception cref="ArgumentNullException">Thrown when an array or a key is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when a key is not valid Unicode.</exception>
     public static GesValue GesMap(string[] keys, GesValue[] values)
@@ -220,7 +224,7 @@ public partial struct GesValue : IEquatable<GesValue>
     /// Creates a Map from ordered entries in canonical key order, keeping the last value of a duplicate key.
     /// </summary>
     /// <param name="entries">The ordered key-value entries.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The Map value.</returns>
     /// <exception cref="ArgumentNullException">Thrown when the array or a key is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when a key is not valid Unicode.</exception>
     public static GesValue GesMap(params (string, GesValue)[] entries)
@@ -235,10 +239,10 @@ public partial struct GesValue : IEquatable<GesValue>
     /// Creates a Record from parallel field names and values in canonical key order, keeping the last value of a
     /// duplicate name. Extra names or values beyond the shorter array are ignored.
     /// </summary>
-    /// <param name="typeName">The type name value.</param>
-    /// <param name="keys">The keys value.</param>
-    /// <param name="values">The values value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="typeName">The Record type name; <see langword="null"/> becomes empty.</param>
+    /// <param name="keys">The field names, paired by position with <paramref name="values"/>.</param>
+    /// <param name="values">The field values, paired by position with <paramref name="keys"/>.</param>
+    /// <returns>The Record value.</returns>
     /// <exception cref="ArgumentNullException">Thrown when an array or a name is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when a name is not valid Unicode.</exception>
     public static GesValue GesRecord(string typeName, string[] keys, GesValue[] values)
@@ -251,9 +255,9 @@ public partial struct GesValue : IEquatable<GesValue>
     /// <summary>
     /// Creates a Record from ordered fields in canonical key order, keeping the last value of a duplicate name.
     /// </summary>
-    /// <param name="typeName">The type name value.</param>
+    /// <param name="typeName">The Record type name; <see langword="null"/> becomes empty.</param>
     /// <param name="fields">The ordered field name and value entries.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The Record value.</returns>
     /// <exception cref="ArgumentNullException">Thrown when the array or a name is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when a name is not valid Unicode.</exception>
     public static GesValue GesRecord(string typeName, params (string, GesValue)[] fields)
@@ -315,10 +319,11 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges dice operation.
+    /// Creates a Dice value from a copy of <paramref name="rolls"/>, sorted in descending order, without drawing random
+    /// numbers. The rolls are not validated; the value's number is their sum.
     /// </summary>
-    /// <param name="rolls">The rolls value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="rolls">The individual rolls.</param>
+    /// <returns>The Dice value.</returns>
     public static GesValue GesDice(int[] rolls)
     {
         int[] copy = rolls.Length == 0 ? [] : new int[rolls.Length];
@@ -345,12 +350,13 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges range operation.
+    /// Creates a lazy exact Int64 range from <paramref name="from"/> to <paramref name="to"/>, both inclusive. A zero
+    /// step, or a step whose sign points away from <paramref name="to"/>, yields the canonical empty integer range.
     /// </summary>
-    /// <param name="from">The from value.</param>
-    /// <param name="to">The to value.</param>
-    /// <param name="step">The step value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="from">The first term.</param>
+    /// <param name="to">The inclusive bound.</param>
+    /// <param name="step">The signed distance between terms.</param>
+    /// <returns>The Range value.</returns>
     public static GesValue GesRange(long from, long to, long step = 1)
     {
         var value = new GesValue();
@@ -361,10 +367,10 @@ public partial struct GesValue : IEquatable<GesValue>
     /// <summary>
     /// Creates a lazy range. Finite endpoints and step that are exactly representable as Int64 normalize to an exact integer range; other finite inputs use binary64 terms. Non-finite inputs produce Nothing.
     /// </summary>
-    /// <param name="from">The from value.</param>
-    /// <param name="to">The to value.</param>
-    /// <param name="step">The step value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="from">The first term.</param>
+    /// <param name="to">The inclusive bound.</param>
+    /// <param name="step">The signed distance between terms; zero or the wrong sign gives the canonical empty integer range.</param>
+    /// <returns>The Range value, or Nothing.</returns>
     public static GesValue GesRange(double from, double to, double step = 1d)
     {
         var value = new GesValue();
@@ -373,10 +379,10 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges message operation.
+    /// Wraps an immutable Message as a value without copying it.
     /// </summary>
-    /// <param name="message">The message value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="message">The Message to wrap.</param>
+    /// <returns>The Message value.</returns>
     public static GesValue GesMessage(GameEventScriptMessage message)
     {
         var value = new GesValue();
@@ -385,10 +391,10 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges handler operation.
+    /// Wraps a message signature as a Handler value.
     /// </summary>
-    /// <param name="signature">The signature value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="signature">The handler's message signature.</param>
+    /// <returns>The Handler value.</returns>
     public static GesValue GesHandler(GesMessageSignature signature)
     {
         var value = new GesValue();
@@ -410,23 +416,26 @@ public partial struct GesValue : IEquatable<GesValue>
     internal readonly bool IsTruthIndeterminate => (Flags & (IsTrueFlag | IsFalseFlag)) == 0;
 
     /// <summary>
-    /// Gets a value indicating whether is numeric.
+    /// Gets whether the value takes part in numeric conversion: a Boolean, number, Percentage or Dice value.
     /// </summary>
     public readonly bool IsNumeric => (Flags & IsNumericFlag) != 0;
     /// <summary>
-    /// Gets a value indicating whether has value.
+    /// Gets whether the value has content: <see langword="false"/> for Nothing and for empty Text, Dice, Bytes, List,
+    /// Map, Record or Range; <see langword="true"/> otherwise, including <c>false</c>, zero and every external value.
     /// </summary>
     public readonly bool HasValue => (Flags & HasValueFlag) != 0;
 
     /// <summary>
-    /// Gets a value indicating whether is nothing.
+    /// Gets whether the value is Nothing; a number or Percentage payload holding NaN also counts, although the
+    /// factories never store one.
     /// </summary>
     public readonly bool IsNothing => Kind is Nothing || (Kind is Float or Percentage && double.IsNaN(FloatValue));
     internal readonly bool IsNotNothing => Kind is not Nothing && Kind is not Float and not Percentage || Kind is Float or Percentage && !double.IsNaN(FloatValue);
 
     internal readonly bool IsUnit(GesQuantityUnit requiredUnit) => Unit == requiredUnit;
     /// <summary>
-    /// Gets a value indicating whether has unit.
+    /// Gets whether a quantity unit is attached, that is, <see cref="ValueUnit"/> is one of the defined units other
+    /// than <see cref="GesQuantityUnit.UnitNone"/>.
     /// </summary>
     public readonly bool HasUnit => Unit.IsNumericUnit();
     internal readonly bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
@@ -436,19 +445,22 @@ public partial struct GesValue : IEquatable<GesValue>
     internal readonly string TextValue => ObjectValue as string ?? (ObjectValue as GesTextPayload)?.Text ?? string.Empty;
 
     /// <summary>
-    /// Gets the value kind.
+    /// Gets the value's kind, the same type kinds as bytecode casts and checks. Integer and binary64 ranges are both
+    /// <see cref="GesBytecodeTypeKind.Range"/>; Records and external values are <see cref="GesBytecodeTypeKind.Custom"/>.
     /// </summary>
     public readonly GesBytecodeTypeKind ValueKind => Kind;
 
     /// <summary>
-    /// Gets the value unit.
+    /// Gets the quantity unit of a number, Vector or Point, otherwise <see cref="GesQuantityUnit.UnitNone"/>.
     /// </summary>
     public readonly GesQuantityUnit ValueUnit => Unit;
 
     /// <summary>
-    /// Performs the as integer operation.
+    /// Converts the numeric projection to Int64: an exact integer as stored, a Dice value as its sum, a Boolean as
+    /// <c>1</c> or <c>0</c>, and binary64 or Percentage storage truncated toward zero and saturated at the Int64 bounds.
+    /// Every other kind gives <c>0</c>.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The integer; the unit is not applied.</returns>
     public readonly long AsInteger() => Kind switch
     {
         GesBytecodeTypeKind.Integer or Dice => IntegerValue,
@@ -458,9 +470,11 @@ public partial struct GesValue : IEquatable<GesValue>
     };
 
     /// <summary>
-    /// Performs the as number operation.
+    /// Returns the numeric projection: a number as stored, a Percentage as its ratio, a Dice value as its sum and a
+    /// Boolean as <c>1</c> or <c>0</c>. Every other kind, including Text, gives NaN; text parsing belongs to the language
+    /// cast.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The binary64 number; the unit is not applied.</returns>
     public readonly double AsNumber() => Kind switch
     {
         GesBytecodeTypeKind.Integer or Dice => IntegerValue,
@@ -470,9 +484,11 @@ public partial struct GesValue : IEquatable<GesValue>
     };
 
     /// <summary>
-    /// Performs the as boolean operation.
+    /// Applies the portable Boolean conversion: a Boolean as stored; a number or Percentage when nonzero; a Vector or
+    /// Point when a coordinate is nonzero; Text when it is <c>1</c> or ASCII case-insensitive <c>true</c>. Every other
+    /// kind gives <see langword="false"/>, including Dice and non-empty collections.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The truth value.</returns>
     public readonly bool AsBoolean() => Kind switch
     {
         GesBytecodeTypeKind.Boolean => IsTrue,
@@ -483,23 +499,24 @@ public partial struct GesValue : IEquatable<GesValue>
     };
 
     /// <summary>
-    /// Performs the as text operation.
+    /// Returns the stored text of a Text value or the name of a Tag without <c>#</c>; every other kind gives the same
+    /// language text as <see cref="ToString"/>.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The text.</returns>
     public readonly string AsText() => TextValue.Length > 0 || Kind is GesBytecodeTypeKind.Text or Tag ? TextValue : ToText;
 
     /// <summary>
-    /// Gets the x.
+    /// Gets the x coordinate of a Vector or Point, or zero for every other kind.
     /// </summary>
     public readonly double X => ObjectValue is GesSpatialValue vector ? vector.X : 0d;
 
     /// <summary>
-    /// Gets the y.
+    /// Gets the y coordinate of a Vector or Point, or zero for every other kind.
     /// </summary>
     public readonly double Y => ObjectValue is GesSpatialValue vector ? vector.Y : 0d;
 
     /// <summary>
-    /// Gets the z.
+    /// Gets the z coordinate of a Vector or Point, or zero for every other kind.
     /// </summary>
     public readonly double Z => ObjectValue is GesSpatialValue vector ? vector.Z : 0d;
 
@@ -525,17 +542,17 @@ public partial struct GesValue : IEquatable<GesValue>
     };
 
     /// <summary>
-    /// Gets the message.
+    /// Gets the wrapped Message of a Message value, otherwise <see langword="null"/>.
     /// </summary>
     public readonly GameEventScriptMessage? Message => ObjectValue as GameEventScriptMessage;
 
     /// <summary>
-    /// Gets the handler.
+    /// Gets the message signature of a Handler value, otherwise <see langword="null"/>.
     /// </summary>
     public readonly GesMessageSignature? Handler => ObjectValue as GesMessageSignature;
 
     /// <summary>
-    /// Gets the custom type name.
+    /// Gets the type name of a Record or the definition name of an external value, otherwise <see langword="null"/>.
     /// </summary>
     public readonly string? CustomTypeName => ObjectValue switch
     {
@@ -545,9 +562,10 @@ public partial struct GesValue : IEquatable<GesValue>
     };
 
     /// <summary>
-    /// Performs the as list operation.
+    /// Returns a read-only view of a List's elements without copying them; every other kind, including Map and Range,
+    /// gives an empty slice.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The elements, or <see cref="GesValueSlice.Empty"/>.</returns>
     public readonly GesValueSlice AsList()
         => ObjectValue is GesValue[] source ? new GesValueSlice(source) : GesValueSlice.Empty;
 
@@ -619,9 +637,9 @@ public partial struct GesValue : IEquatable<GesValue>
     public readonly ReadOnlySpan<byte> AsBytes() => ObjectValue is byte[] bytes && Kind == Bytes ? bytes : default;
 
     /// <summary>
-    /// Performs the as dice operation.
+    /// Returns a copy of a Dice value's rolls in descending order; every other kind gives an empty array.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>A new array the caller owns.</returns>
     public readonly int[] AsDice()
     {
         if (ObjectValue is not int[] rolls)
@@ -635,39 +653,43 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Gets the integer range.
+    /// Gets the descriptor of an exact Int64 Range, otherwise <see langword="null"/>. Empty ranges, including empty
+    /// binary64 inputs, use the canonical empty integer range.
     /// </summary>
     public readonly GesIntegerRange? IntegerRange => ObjectValue as GesIntegerRange;
 
     /// <summary>
-    /// Gets the float range.
+    /// Gets the descriptor of a binary64 Range, otherwise <see langword="null"/>.
     /// </summary>
     public readonly GesFloatRange? FloatRange => ObjectValue as GesFloatRange;
 
     /// <summary>
-    /// Returns the equals result for this value.
+    /// Compares strictly and structurally: kinds and units must match, numbers compare by stored integer or binary64
+    /// payload, text and keys by ordinal code units, and collections element by element. External values, iterators
+    /// and builders compare by identity.
     /// </summary>
-    /// <param name="other">The other value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="other">The value to compare with.</param>
+    /// <returns><see langword="true"/> when both values are equal.</returns>
     public readonly bool Equals(GesValue other) => EqualsValue(in other);
 
     /// <summary>
-    /// Returns the equals result for this value.
+    /// Compares with a boxed <see cref="GesValue"/> using <see cref="Equals(GesValue)"/>.
     /// </summary>
-    /// <param name="obj">The obj value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="obj">The object to compare with.</param>
+    /// <returns><see langword="true"/> when <paramref name="obj"/> is an equal <see cref="GesValue"/>.</returns>
     public override readonly bool Equals(object? obj) => obj is GesValue other && Equals(other);
 
     /// <summary>
-    /// Returns the get hash code result for this value.
+    /// Computes a hash code from kind, unit and payload, consistent with <see cref="Equals(GesValue)"/>.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The hash code.</returns>
     public override readonly int GetHashCode() => GetValueHashCode();
 
     /// <summary>
-    /// Returns the to string result for this value.
+    /// Returns the language text representation: Text unquoted, a Tag with <c>#</c>, numbers with their unit, and
+    /// nested Text in collections quoted.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The text representation.</returns>
     public override readonly string ToString() => ToText;
 
     internal void SetNothing()
@@ -1030,10 +1052,8 @@ public partial struct GesValue : IEquatable<GesValue>
         ObjectValue = orderBuilder;
     }
 
-    /// <summary>
-    /// Gets the as numeric.
-    /// </summary>
-    public readonly double AsNumeric => Kind switch
+    // The number of a numeric, Boolean or Dice value and NaN for others; AsNumber() is its public form.
+    internal readonly double AsNumeric => Kind switch
     {
         Integer => IntegerValue,
         Float or Percentage => FloatValue,

@@ -28,7 +28,7 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
         var clock = new VirtualClock();
         var builder = GameEventScriptHost.CreateBuilder().WithClock(clock).WithRuntimeObserver(observer)
             .WithExternalTypeRegistry(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Registry)
-            .WithRegistry(GesGeometryLibrary.Extensions(new RuntimeFixtures())).WithRuntimeLimits(CreateLimits(request.GetProperty("limits")));
+            .WithExtensionRegistry(GesGeometryLibrary.Extensions(new RuntimeFixtures())).WithRuntimeLimits(CreateLimits(request.GetProperty("limits")));
         if (request.GetProperty("publishSink").GetString() != "absent") builder.WithPublishSink(observer);
         RuntimeRandom.Configure(builder, request.GetProperty("random"));
         var host = builder.Build();
@@ -89,8 +89,8 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
         int Read(string name, int fallback) => limits.TryGetProperty(name, out var item) ? item.GetInt32() : fallback;
         return new GesRuntimeLimits
         {
-            MaxProcessedEventsPerRun = Read("maxProcessedEventsPerRun", defaults.MaxProcessedEventsPerRun),
-            MaxQueuedMessagesPerRun = Read("maxQueuedMessagesPerRun", defaults.MaxQueuedMessagesPerRun),
+            MaxProcessedMessagesPerRun = Read("maxProcessedMessagesPerRun", defaults.MaxProcessedMessagesPerRun),
+            MaxQueuedMessages = Read("maxQueuedMessages", defaults.MaxQueuedMessages),
             MaxExecutionSteps = Read("maxExecutionSteps", defaults.MaxExecutionSteps),
             MaxRegisterValues = Read("maxRegisterValues", defaults.MaxRegisterValues),
             MaxLoopIterations = Read("maxLoopIterations", defaults.MaxLoopIterations),

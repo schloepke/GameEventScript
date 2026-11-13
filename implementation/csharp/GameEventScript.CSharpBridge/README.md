@@ -139,9 +139,9 @@ public static class CombatFunctions
 ```
 
 Register it on the host builder with
-`.WithRegistry(GesBridgeExtensionRegistry.Create(typeof(CombatFunctions)))`.
+`.WithExtensionRegistry(GesBridgeExtensionRegistry.Create(typeof(CombatFunctions)))`.
 The script calls `:combat.bonus(energy: 100)`. Extension registries and external
-type registries have distinct roles: `WithRegistry` installs functions;
+type registries have distinct roles: `WithExtensionRegistry` installs functions;
 `WithExternalTypeRegistry` installs native types.
 
 ## Native messages and values

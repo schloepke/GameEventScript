@@ -17,7 +17,7 @@ public sealed class GesExtensionArgumentLifetimeTests
     {
         var extension = new RetainingExtension();
         var program = new GesProgramBuilder().AddScript("on Start(a) { let value be :app.keep(a); emit Done(value: value) }\non Other(b) { let value be b + 1; emit Done(value: value) }").Compile();
-        var host = GameEventScriptHost.CreateBuilder().WithRegistry(extension).Build();
+        var host = GameEventScriptHost.CreateBuilder().WithExtensionRegistry(extension).Build();
         host.Load(program);
         host.Start();
         Assert.IsTrue(host.Receive(Create("Start", [new GesMessageArgument("a", GesValue.GesInteger(7))])));

@@ -91,7 +91,7 @@ public sealed class GameEventScriptCallbackFailureTests
         var program = new GesProgramBuilder().AddScript("on Start { let value be :app.fail; emit Done(value: value) }").Compile();
         var diagnostics = new List<GesDiagnostic>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithRegistry(new FailingExtensionRegistry(own))
+            .WithExtensionRegistry(new FailingExtensionRegistry(own))
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add))
             .Build().StartForTest();
         host.Load(program);

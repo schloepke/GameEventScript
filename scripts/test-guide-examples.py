@@ -48,7 +48,7 @@ def csharp():
     bridge_examples = blocks(ROOT / "implementation/csharp/GameEventScript.CSharpBridge/README.md", "csharp")
     bridge_source = bridge_examples[0].replace(
         ".WithExternalTypeRegistry(registry)",
-        ".WithExternalTypeRegistry(registry)\n    .WithRegistry(GesBridgeExtensionRegistry.Create(typeof(CombatFunctions)))",
+        ".WithExternalTypeRegistry(registry)\n    .WithExtensionRegistry(GesBridgeExtensionRegistry.Create(typeof(CombatFunctions)))",
     )
     (directory / "Program.cs").write_text(bridge_source + "\n" + bridge_examples[1])
     run(["dotnet", "build", str(directory / "GuideExample.csproj"), "--configuration", "Release", "--nologo"])

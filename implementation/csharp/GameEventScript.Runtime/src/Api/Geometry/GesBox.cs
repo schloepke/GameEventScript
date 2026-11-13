@@ -115,7 +115,7 @@ public readonly struct GesBox : IEquatable<GesBox>
     public GesValue ToValue(GesQuantityUnit unit = GesQuantityUnit.UnitNone) => GesValue.GesExternal(new GesGeometryLibrary.BoxValue(this, unit));
 
     /// <summary>Reads a <c>:Box</c> of exactly the given unit. Units never convert.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The GES value to read.</param>
     /// <param name="unit">The expected unit.</param>
     /// <returns>The box, or null when the value is no <c>:Box</c> of <see cref="GesGeometryLibrary"/> or has another unit.</returns>
     public static GesBox? FromValue(in GesValue value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)

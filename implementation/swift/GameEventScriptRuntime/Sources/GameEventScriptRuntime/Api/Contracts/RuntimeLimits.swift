@@ -4,11 +4,11 @@
 /// Host safeguards for execution, queues, registers and generated collections.
 public struct GesRuntimeLimits: Sendable {
     /// Maximum processed logical messages per pump call; nonpositive disables this scheduling bound.
-    public var maxProcessedEventsPerRun = 64
+    public var maxProcessedMessagesPerRun = 64
     /// Maximum logical messages a host holds queued, delayed entries included; nonpositive disables the bound. A full
     /// queue drops the message of an Emit or Publish statement and continues, stops a result-bearing or delayed send's
     /// handler, and fails `load` of an initialization with `link.initializationQueueFull`.
-    public var maxQueuedMessagesPerRun = 0
+    public var maxQueuedMessages = 0
     /// Maximum script execution steps per handler; nonpositive disables this bound.
     public var maxExecutionSteps = 100_000
     /// Register limit used while linking and executing; nonpositive selects the runtime fallback capacity.

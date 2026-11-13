@@ -67,7 +67,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         let compiled = try GesProgramBuilder().withExternalTypeCatalog(types).addScript(source).compile()
         let bytes = try compiled.encode()
         let program = try GameEventScriptProgram.read(bytes)
-        let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
+        let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withExtensionRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
         var result: GameEventScriptMessage?
         _ = try host.subscribe(.init(name: "Done", parameters: ["name", "score"])) { message, _ in result = message }
         _ = try host.load(program)
@@ -98,7 +98,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
             let types = try GesBridgeExternalTypeRegistry([type.binding])
             for (expression, unexpected) in [(":app.fail()", "runtime.extensionCallFailed"), (":Player()", "runtime.externalConstructorFailed")] {
                 let program = try GesProgramBuilder().withExternalTypeCatalog(types).addScript("on Start() { emit Done(\(expression)) }").compile()
-                let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
+                let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withExtensionRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
                 _ = try host.load(program)
                 host.receive(try .init(name: "Start"))
                 let result = try host.runToCompletion()
@@ -131,7 +131,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         ]
         for source in sources {
             let program = try GesProgramBuilder().withExternalTypeCatalog(types).addScript(source).compile()
-            let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
+            let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withExtensionRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
             _ = try host.subscribe(.init(name: "Native")) { _, _ in throw own }
             _ = try host.load(program)
             host.receive(try .init(name: "Start"))

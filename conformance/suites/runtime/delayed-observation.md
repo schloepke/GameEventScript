@@ -354,7 +354,7 @@ sources:
   - name: zero-full.ges
     program: main
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 ```
 
 ### Source code under test
@@ -380,7 +380,7 @@ steps:
     local: [{ name: Ping }]
     runtimeLimits:
       include:
-        - name: MaxQueuedMessagesPerRun
+        - name: MaxQueuedMessages
           limit: 1
     trace:
       - event: dispatchStarted
@@ -397,7 +397,7 @@ steps:
         message: { name: Ping }
         accepted: true
       - event: runtimeLimit
-        runtimeLimit: { name: MaxQueuedMessagesPerRun, limit: 1 }
+        runtimeLimit: { name: MaxQueuedMessages, limit: 1 }
       - event: dispatchCompleted
         id: "1"
         message: { name: Start }
@@ -420,7 +420,7 @@ sources:
     program: main
 publishSink: accept
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 stepActions:
   due:
     - advanceMicroseconds: "1000000"
@@ -452,7 +452,7 @@ steps:
     waiting: false
     runtimeLimits:
       include:
-        - name: MaxQueuedMessagesPerRun
+        - name: MaxQueuedMessages
           limit: 1
     trace:
       - event: dispatchStarted
@@ -465,7 +465,7 @@ steps:
         deadline: "1000000"
         publish: true
       - event: runtimeLimit
-        runtimeLimit: { name: MaxQueuedMessagesPerRun, limit: 1 }
+        runtimeLimit: { name: MaxQueuedMessages, limit: 1 }
       - event: dispatchCompleted
         id: "1"
         message: { name: Start }

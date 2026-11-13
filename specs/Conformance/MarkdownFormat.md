@@ -292,8 +292,8 @@ sequence means no debug segments. Its default is all three values.
 written as canonical `.gesb`, read again, and only then used by the test.
 Enabling it implicitly requires the core capability `program-binary`.
 
-`runtimeLimits` uses the exact portable names `maxProcessedEventsPerRun`,
-`maxQueuedMessagesPerRun`, `maxExecutionSteps`, `maxRegisterValues`,
+`runtimeLimits` uses the exact portable names `maxProcessedMessagesPerRun`,
+`maxQueuedMessages`, `maxExecutionSteps`, `maxRegisterValues`,
 `maxLoopIterations`, `maxCallDepth`, `maxRandomScopeDepth`, `maxRangeItems`,
 `maxGeneratedCollectionItems`, `maxDiceCount`, and `maxDiceSides`. Values are
 positive integers. Omitted fields use Core defaults.

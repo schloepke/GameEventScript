@@ -37,7 +37,7 @@ public sealed partial class GameEventScriptHost
             if (IsMessageQueueFull && (HasMatch(message, Get(_exact, message.SignatureId), Get(_byName, message.Name)) ||
                 !GesSystemEndpoints.IsUndeliverableName(message.Name) && HasMatch(message, Get(_exact, GesSystemEndpoints.UndeliverableSignatureId), Get(_byName, GesSystemEndpoints.UndeliverableName))))
             {
-                _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun), "Message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
+                _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessages), "Message queue limit reached.", _limits.MaxQueuedMessages);
                 return false;
             }
             if (publish) PublishFromContext(message);
@@ -63,7 +63,7 @@ public sealed partial class GameEventScriptHost
         }
         if (IsMessageQueueFull)
         {
-            _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun), "Delayed message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
+            _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessages), "Delayed message queue limit reached.", _limits.MaxQueuedMessages);
             return false;
         }
         var pending = new GesPendingMessage(message, exact, names, ++_lastSendId, initializationOutput: _initializationInstance);

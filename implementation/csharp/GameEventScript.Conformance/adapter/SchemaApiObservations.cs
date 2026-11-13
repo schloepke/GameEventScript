@@ -34,7 +34,7 @@ internal static class SchemaApiObservations
 
                 var value = RuntimeValues.Decode(parameter.GetProperty("value"));
                 if (value.ValueKind == GesBytecodeTypeKind.Integer) parameters.With(name, value.AsInteger(), value.ValueUnit);
-                else parameters.With(name, value.AsNumeric, value.ValueUnit);
+                else parameters.With(name, value.AsNumber(), value.ValueUnit);
             }
             var root = input.GetProperty("root").GetString();
             if (root is not null)

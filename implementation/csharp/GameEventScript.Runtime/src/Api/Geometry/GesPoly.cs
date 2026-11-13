@@ -19,6 +19,7 @@ public sealed class GesPoly : IEquatable<GesPoly>
 
     /// <summary>Creates a polygon from its points, which are copied; validity is checked once.</summary>
     /// <param name="points">The points in order.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="points"/> is <see langword="null"/>.</exception>
     public GesPoly(IEnumerable<GesPoint> points)
     {
         if (points is null) throw new ArgumentNullException(nameof(points));
@@ -33,10 +34,11 @@ public sealed class GesPoly : IEquatable<GesPoly>
     /// <summary>Gets whether the polygon is a valid simple polygon with an area.</summary>
     public bool IsValid { get; }
 
-    /// <summary>Gets the signed area: positive when the points run counterclockwise, negative when clockwise.</summary>
+    /// <summary>Gets the signed area: positive when the points run counterclockwise, negative when clockwise; null for an
+    /// invalid polygon.</summary>
     public double? Area => IsValid ? SignedArea(_points) : null;
 
-    /// <summary>Gets the smallest box that holds every point.</summary>
+    /// <summary>Gets the smallest box that holds every point, a 2D box; null for an invalid polygon.</summary>
     public GesBox? Bounds
     {
         get
@@ -54,7 +56,7 @@ public sealed class GesPoly : IEquatable<GesPoly>
         }
     }
 
-    /// <summary>Gets the centre of the area.</summary>
+    /// <summary>Gets the centre of the area, a point with z 0; null for an invalid polygon.</summary>
     public GesPoint? Centroid
     {
         get
@@ -78,7 +80,8 @@ public sealed class GesPoly : IEquatable<GesPoly>
 
     /// <summary>Tests whether a point lies in the polygon, its outline included.</summary>
     /// <param name="point">The point.</param>
-    /// <returns>Whether the polygon holds the point, or null when the polygon is invalid or the point not finite.</returns>
+    /// <returns>Whether the polygon holds the point, false for a point outside the plane z = 0, or null when the polygon is
+    /// invalid or the point not finite.</returns>
     public bool? Contains(GesPoint point)
     {
         if (!IsValid || !point.IsFinite) return null;
@@ -114,6 +117,7 @@ public sealed class GesPoly : IEquatable<GesPoly>
     /// <summary>Tests whether two polygons share a point: crossing or touching outlines, or one inside the other.</summary>
     /// <param name="other">The other polygon.</param>
     /// <returns>Whether they intersect, or null when either is invalid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="other"/> is <see langword="null"/>.</exception>
     public bool? Intersects(GesPoly other)
     {
         if (other is null) throw new ArgumentNullException(nameof(other));
@@ -135,7 +139,7 @@ public sealed class GesPoly : IEquatable<GesPoly>
     public GesValue ToValue(GesQuantityUnit unit = GesQuantityUnit.UnitNone) => GesValue.GesExternal(new GesGeometryLibrary.PolyValue(this, unit));
 
     /// <summary>Reads a <c>:Poly</c> of exactly the given unit. Units never convert.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The GES value to read.</param>
     /// <param name="unit">The expected unit.</param>
     /// <returns>The polygon, or null when the value is no <c>:Poly</c> of <see cref="GesGeometryLibrary"/> or has another unit.</returns>
     public static GesPoly? FromValue(in GesValue value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)

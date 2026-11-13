@@ -72,7 +72,7 @@ public sealed class GesBridgeExtensionAttributeTests
     private static (GameEventScriptMessage? Seen, GesExecutionResult Result) Run(string body, IGesExtensionRegistry registry)
     {
         var program = new GesProgramBuilder().AddScript("on Start() {\n" + body + "\n}").Compile();
-        var host = GameEventScriptHost.CreateBuilder().WithRegistry(registry).Build().StartForTest();
+        var host = GameEventScriptHost.CreateBuilder().WithExtensionRegistry(registry).Build().StartForTest();
         host.Load(program);
         GameEventScriptMessage? seen = null;
         host.Subscribe("Seen", ["a", "b", "c", "d"], (message, _) => seen = message);

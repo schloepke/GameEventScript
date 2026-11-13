@@ -63,7 +63,7 @@ struct RunOptions {
                     seed = parsed
                 } else {
                     guard let parsed = Int32(value), parsed > 0, Self.integerSpelling(value, signed: false) else { throw ToolError.usage("\(argument) requires a positive 32-bit integer.") }
-                    if argument == "--max-messages" { limits.maxProcessedEventsPerRun = Int(parsed) } else { limits.maxExecutionSteps = Int(parsed) }
+                    if argument == "--max-messages" { limits.maxProcessedMessagesPerRun = Int(parsed) } else { limits.maxExecutionSteps = Int(parsed) }
                 }
             } else if argument == "--color" {
                 color = true

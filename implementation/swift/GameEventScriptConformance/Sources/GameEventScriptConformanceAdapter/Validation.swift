@@ -164,7 +164,7 @@ enum Validation {
 
     static func limits(_ input: Input) throws {
         let allowed = [
-            "maxProcessedEventsPerRun", "maxQueuedMessagesPerRun", "maxExecutionSteps", "maxRegisterValues", "maxLoopIterations", "maxCallDepth", "maxRandomScopeDepth", "maxRangeItems", "maxGeneratedCollectionItems", "maxValueDepth", "maxDiceCount",
+            "maxProcessedMessagesPerRun", "maxQueuedMessages", "maxExecutionSteps", "maxRegisterValues", "maxLoopIterations", "maxCallDepth", "maxRandomScopeDepth", "maxRangeItems", "maxGeneratedCollectionItems", "maxValueDepth", "maxDiceCount",
             "maxDiceSides",
         ]
         try fields(input, [], optional: allowed)

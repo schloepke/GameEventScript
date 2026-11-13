@@ -36,7 +36,7 @@ final class HostScenario {
     static func makeHost(_ test: Input, observer: (any GesRuntimeObserver)?, publishSink: (any GesPublishSink)?, clock: (any GesClock)? = nil) throws -> GameEventScriptHost {
         var limits = GesRuntimeLimits()
         let setters: [String: WritableKeyPath<GesRuntimeLimits, Int>] = [
-            "maxProcessedEventsPerRun": \.maxProcessedEventsPerRun, "maxQueuedMessagesPerRun": \.maxQueuedMessagesPerRun, "maxExecutionSteps": \.maxExecutionSteps, "maxRegisterValues": \.maxRegisterValues, "maxLoopIterations": \.maxLoopIterations,
+            "maxProcessedMessagesPerRun": \.maxProcessedMessagesPerRun, "maxQueuedMessages": \.maxQueuedMessages, "maxExecutionSteps": \.maxExecutionSteps, "maxRegisterValues": \.maxRegisterValues, "maxLoopIterations": \.maxLoopIterations,
             "maxCallDepth": \.maxCallDepth, "maxRandomScopeDepth": \.maxRandomScopeDepth, "maxRangeItems": \.maxRangeItems, "maxGeneratedCollectionItems": \.maxGeneratedCollectionItems, "maxValueDepth": \.maxValueDepth,
             "maxDiceCount": \.maxDiceCount, "maxDiceSides": \.maxDiceSides,
         ]
@@ -56,7 +56,7 @@ final class HostScenario {
         let builder = GameEventScriptHost.makeBuilder()
             .withRandomSequence(sequence, fallbackSeed: seed ?? 0)
             .withRuntimeLimits(limits)
-            .withRegistry(GesGeometryLibrary.extensions(next: RuntimeFixtures()))
+            .withExtensionRegistry(GesGeometryLibrary.extensions(next: RuntimeFixtures()))
         if let observer { builder.withRuntimeObserver(observer) }
         switch test["externalTypeRegistry"]?.stringValue {
         case "absent": break

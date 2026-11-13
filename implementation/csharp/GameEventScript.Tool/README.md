@@ -595,7 +595,7 @@ from ConsoleOut and ConsoleErr output and defines no portable serialization form
 host's random sequence. Without it, the normal host seed generation applies.
 All Programs, the scenario, and interactive inputs share this host's random generator.
 
-Runtime limits remain active. `--max-messages` sets `MaxProcessedEventsPerRun`
+Runtime limits remain active. `--max-messages` sets `MaxProcessedMessagesPerRun`
 (default 64) per pump, including initialization and native console messages.
 The initial Start phase, its subsequent ordinary-message drain, Main, and each
 interactive input are separate pumps; their message-processing limits reset

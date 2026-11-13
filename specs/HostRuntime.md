@@ -109,7 +109,7 @@ Program before `Start`. `Receive` returns false before a successful Start;
 `Load` validates and links before committing registration. Validation, resource,
 link, and initialization-queue capacity failures leave registrations, queued
 messages, active execution and random state unchanged. An initialization snapshot
-reserves one queue slot under `MaxQueuedMessagesPerRun`; insufficient capacity
+reserves one queue slot under `MaxQueuedMessages`; insufficient capacity
 raises `link.initializationQueueFull`. A Program without initialization needs no
 slot. Loading is available to embedding code and native message handlers.
 Reentrant loading during active script/extension execution or the initial Start
@@ -138,7 +138,7 @@ available when any initialization emits, so its enqueue-time snapshot can includ
 another member of the group. No ordinary queued message is dispatched by Start.
 
 Every initialization uses the ordinary runtime safety limits. Exhaustion fails
-startup; the initial group never becomes partially ready. `MaxProcessedEventsPerRun`
+startup; the initial group never becomes partially ready. `MaxProcessedMessagesPerRun`
 paces ordinary pumps and does not bound Start: Start completes every
 initialization snapshot of the group, however many there are, because a failed
 Start is terminal while a paced pump resumes later. Successful Start marks
@@ -284,7 +284,7 @@ implementation and therefore does not depend on C# reflection.
   never rolls back or corrupts local delivery. The observer sees the result.
 - Queue limits count logical messages, not handler invocations.
 - A send needs a queue slot for an instant message with local recipients and
-  for every delayed entry. When it finds `MaxQueuedMessagesPerRun` reached
+  for every delayed entry. When it finds `MaxQueuedMessages` reached
   outside initialization, an Emit or Publish statement and a native Emit or
   Publish drop the local message, report the limit to the observer and continue
   the handler. A result-bearing or delayed send instead stops its handler with

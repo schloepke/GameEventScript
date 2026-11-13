@@ -16,6 +16,7 @@ public readonly struct GesSchemaSource
     /// <summary>Creates a source.</summary>
     /// <param name="name">The name that errors report, such as a file name.</param>
     /// <param name="text">The source text.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> or <paramref name="text"/> is <see langword="null"/>.</exception>
     public GesSchemaSource(string name, string text)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -52,6 +53,7 @@ public sealed class GesSchemaSet
     /// <summary>Reads and validates one or several sources. References resolve across all of them.</summary>
     /// <param name="sources">The sources.</param>
     /// <returns>The validated set.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
     /// <exception cref="GesSchemaException">A source breaks a rule; the first error is reported.</exception>
     public static GesSchemaSet Parse(params GesSchemaSource[] sources)
     {
@@ -70,10 +72,11 @@ public sealed class GesSchemaSet
     /// <summary>Gets the schemas, messages and message sets, in source order.</summary>
     public GesReadOnlyArray<GesSchema> Schemas { get; private set; }
 
-    /// <summary>Gets a declaration by name.</summary>
-    /// <param name="name">The name of a schema, message or message set.</param>
+    /// <summary>Gets a declaration by its exact name, compared ordinally.</summary>
+    /// <param name="name">The name of a schema, message or message set, without the leading <c>:</c>.</param>
     /// <returns>Its description.</returns>
-    /// <exception cref="GesSchemaException">The name is not declared.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GesSchemaException">The name is not declared (<c>schema.unknownName</c>).</exception>
     public GesSchema Schema(string name) => Declaration(name).Public;
 
     /// <summary>

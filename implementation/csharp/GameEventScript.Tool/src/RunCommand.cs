@@ -88,7 +88,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         string? profilePath = null;
         RunProfiler? profiler = null;
         long? seed = null;
-        var maxMessages = GesRuntimeLimits.Default.MaxProcessedEventsPerRun;
+        var maxMessages = GesRuntimeLimits.Default.MaxProcessedMessagesPerRun;
         var maxSteps = GesRuntimeLimits.Default.MaxExecutionSteps;
         var verbose = false;
         var quiet = false;
@@ -209,7 +209,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
             try
             {
                 color = color && !PrettyPrompt.PromptConfiguration.HasUserOptedOutFromColor;
-                var session = new RunSession(seed, new GesRuntimeLimits { MaxProcessedEventsPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, profiler: profiler);
+                var session = new RunSession(seed, new GesRuntimeLimits { MaxProcessedMessagesPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, profiler: profiler);
                 for (var index = 0; index < programs.Count; index++) session.Inventory.Load(programs[index], binaryCount > 0 ? [paths[index]] : paths);
                 if (scenario is not null) session.Inventory.Load(scenario, scenarioPaths);
                 var runMain = scenario is null && !interactive;

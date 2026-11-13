@@ -26,12 +26,21 @@ The optional build-time Generator package writes typed schema code; see
 The portable product modules and independent verification tooling are separated as follows:
 
 ```text
+GameEventScript Syntax
+  lossless lexer and parser, source validation, documents, schema declarations, highlighting
+  -> depends on no GES module
+
 GameEventScript Runtime
-  values, messages, program, binary codec, validation, host, VM, literal parsing
+  values, messages, program, binary codec, validation, host, VM, literal parsing, schemas
+  -> depends only on GameEventScript Syntax
 
 GameEventScript Compiler
-  source builder, lexer, parser, validation, optimizer, bytecode generation
-  -> depends only on GameEventScript Runtime
+  source builder, binding, validation, optimizer, bytecode generation
+  -> depends only on GameEventScript Runtime and Syntax
+
+GameEventScript Generator (build-time)
+  schema generation layout and C#/Swift emitters
+  -> depends only on GameEventScript Syntax and Runtime; no Runtime or Compiler depends on it
 
 Independent Conformance runner (Python, repository tooling)
   Markdown parser, normalized test model, assertions, reports, received output
@@ -42,7 +51,8 @@ Independent Conformance runner (Python, repository tooling)
 Runtime must load and execute precompiled Programs without a source compiler.
 Shared value semantics, text/number conversions, runtime literal parsing, Program
 validation, and declarative external-type definitions remain in Runtime. There
-is no additional shared Core module. Compiler uses these Runtime contracts;
+is no additional shared Core module; Syntax holds only what both source tools and the Runtime read from text. Compiler
+uses these Runtime contracts;
 Runtime never references Compiler or Conformance. Compiler never references
 Conformance or language-specific adapters. Both portable modules remain
 synchronous and independent of filesystem, network, threads, and test frameworks.
@@ -95,8 +105,8 @@ within a compatible major line.
 
 Native naming, value/reference representation and error transport may differ
 between languages as specified below; each published language binding retains
-its own source API compatibility. There is no requirement for identical symbol
-names across languages. Native object layout and compiler-generated ABI are not
+its own source API compatibility. Corresponding types and members use the same names in both ports, apart from the
+language-idiomatic mappings that [PortConventions](../implementation/PortConventions.md) lists. Native object layout and compiler-generated ABI are not
 the portable binary interchange contract; `.gesb` compatibility is owned by
 [Binary format](BinaryFormat.md#release-and-format-compatibility).
 
@@ -216,7 +226,8 @@ builder defaults. Ports may choose either builder setters or one options object,
 provided there is one unambiguous resolved configuration. Compilation never
 modifies an earlier Program.
 
-An empty builder produces the valid empty Program named `EmptyModule`.
+An empty builder produces a valid empty Program with the derived anonymous name that
+[Language](Language.md) defines for a compilation without a module name.
 Malformed source fails with one or more structured diagnostics.
 The fixed source nesting limits in [Language](Language.md#source-nesting-limits)
 apply to every compilation. Exceeding them produces the Parse diagnostic
@@ -507,9 +518,30 @@ Each port spells these with the language's own means, without another library.
 
 `ValueKind`, `ValueUnit`, `HasValue`, `IsNothing`, `IsNumeric`, `HasUnit`,
 `Length`, `CustomTypeName`, coordinate/range/message/handler views, and typed
-read operations expose the active value. A typed `As...` operation on an
-incompatible kind follows the public value conversion contract and must never
-expose uninitialized native storage. `AsList` and `AsMap` return immutable
+read operations expose the active value. A typed `As...` operation never fails and never exposes uninitialized
+native storage; on another kind it applies the following conversion, which both ports share:
+
+| Read | Integer, Dice | Float, Percentage | Boolean | Text, Tag | other kinds |
+| --- | --- | --- | --- | --- | --- |
+| `AsInteger` | the value; a Dice its roll sum | truncated toward zero and saturated to Int64; NaN gives 0 | 1 or 0 | 0 | 0 |
+| `AsNumber` | the value as binary64; a Dice its roll sum | the value; a Percentage its ratio, so 50% is 0.5 | 1 or 0 | NaN | NaN |
+| `AsBoolean` | not 0; a Dice is false | not 0 | the value | a Text `1` or ASCII case-insensitive `true`; a Tag is false | false; a Vector or Point is true when a component is not 0 |
+| `AsText` | the language text | the language text | the language text | the text, or the bare tag name | the language text |
+
+The language text is the representation of `as :Text`, the same as `ToString()` / `description`. Units are not part of
+these reads; `ValueUnit` reports them. A read that must not convert checks the kind first: Swift offers kind-strict
+optionals (`integerValue`, `floatValue`, `textValue`, `listValue`, `bytesValue`, `diceRolls`, `integerRangeValue`,
+`floatRangeValue`), and C# compares `ValueKind` before calling an `As...` read or uses the nullable views
+(`IntegerRange`, `FloatRange`, `ExternalValue`, `Message`, `Handler`), since GES has no public `Try...` contracts.
+
+`ValueKind` uses the bytecode type kinds of [Bytecode](Bytecode.md) on purpose: the language's `is` checks, casts and the
+`.gesb` type operands use the same numbering, so a host compares a value's kind with the same constants as a Program.
+A host observes only Nothing, Boolean, Integer, Float, Percentage, Text, Tag, Vector, Point, Range, Dice, Bytes, List,
+Map, Handler, Message and Custom; the builder and iterator kinds exist only inside the VM's registers and never reach a
+value a host receives. Range covers both range storages and Custom both Records and external values, as the language
+does; `IntegerRange` / `integerRangeValue` and `FloatRange` / `floatRangeValue` tell the ranges apart, and
+`ExternalValue` / `externalValue` tells an external value from a Record. Renumbering these kinds is therefore a
+change of the bytecode format and of this API alike. `AsList` and `AsMap` return immutable
 views; `AsDice` returns an independent ordered copy in the C# mapping. C#
 `AsBytes()` returns a read-only span over the stored bytes without copying; Swift
 `bytesValue` and `asBytes` return the stored array.
@@ -766,7 +798,7 @@ reentrancy requirements of those callbacks.
 | `WithRandomSeed(seed)` | Selects the complete signed-64 deterministic seed and clears a prior entropy or sequence configuration. |
 | `WithRandomEntropy(entropy)` | Folds a non-empty entropy byte span into the deterministic seed with the portable mixing function and clears a prior direct seed or sequence configuration. |
 | `WithRandomSequence(values, fallbackSeed?)` | Copies a finite Binary64 start sequence, optionally selects a deterministic fallback seed, and clears a prior direct seed. Exhaustion continues with the private fallback generator. |
-| `WithRegistry(registry)` | Selects the extension registry. Absence is represented by an empty registry, not null. |
+| `WithExtensionRegistry(registry)` | Selects the extension registry. Absence is represented by an empty registry, not null. |
 | `WithExternalTypeRegistry(registry)` | Selects the runtime external-constructor registry. |
 | `WithPublishSink(sink)` | Selects the single outbound sink. Not calling it means no sink. |
 | `WithProfiler(profiler)` | Selects optional synchronous opcode instrumentation; omission disables it. See [opcode instrumentation](#opcode-instrumentation). |
@@ -785,8 +817,8 @@ nesting depth, dice count, and dice sides. The exact defaults are part of the pu
 
 | Setting | Default |
 | --- | ---: |
-| `MaxProcessedEventsPerRun` | 64 |
-| `MaxQueuedMessagesPerRun` | 0 (unlimited) |
+| `MaxProcessedMessagesPerRun` | 64 |
+| `MaxQueuedMessages` | 0 (unlimited) |
 | `MaxExecutionSteps` | 100,000 |
 | `MaxRegisterValues` | 512 |
 | `MaxLoopIterations` | 100,000 |
@@ -819,8 +851,8 @@ rules are in [Host runtime](HostRuntime.md).
 | `Load(program, priority = 0)` | Validates, links and atomically registers one instance with an initialization snapshot when present. During initial loading it joins the Start group; on a ready host it joins the ordinary FIFO. |
 | `Start()` | Synchronously initializes the initial group without processing ordinary messages and returns StartResult. Repeated calls return the original result. |
 | `IsReady` | True after successful initial Start; later instance failures and queued messages do not reset it. |
-| `Subscribe(signature, handler, requiredTags?, excludedTags?, priority = 0)` | Adds one exact-signature native subscription and returns a Subscription. Inputs are copied/retained as immutable registration data. |
-| `SubscribeMessageName(name, handler, requiredTags?, excludedTags?, priority = 0)` | Adds a native subscription matching every signature of that normalized message name. |
+| `Subscribe(signature, handler, matchingTags?, withoutTags?, priority = 0)` | Adds one exact-signature native subscription and returns a Subscription. Inputs are copied/retained as immutable registration data. |
+| `SubscribeMessageName(name, handler, matchingTags?, withoutTags?, priority = 0)` | Adds a native subscription matching every signature of that normalized message name. |
 | `Receive(message)` | Captures current matching subscriptions and attempts to enqueue the logical message locally. Returns whether accepted. Before Start succeeds it returns false. It never pumps and never publishes outbound. |
 | `ExecuteFrame(opcodeBudget)` | Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a runtime limit/error ends the call. Budget must be positive and the host must be ready. |
 | `RunToCompletion()` | Synchronously pumps until idle, only future messages remain, or a runtime limit/error terminates this pump call. The host must be ready. It creates no worker thread. |
@@ -941,8 +973,7 @@ above.
 > **Since: Unreleased**
 
 `WithProfiler` / `withProfiler` selects an optional synchronous
-`IGesProfiler` / `GesProfiler` factory. Swift also accepts
-`profiler` in its Host initializer. The Host calls
+`IGesProfiler` / `GesProfiler` factory. The Host calls
 `CreateProgramProfiler(program)` / `createProgramProfiler(program)` once per linked
 load instance, before execution. The result implements
 `IGesProgramProfiler` / `GesProgramProfiler` and remains
@@ -1274,9 +1305,9 @@ immutable arrays. Their `Iterator` yields `GesMessageArgument` pairs
 without creating an intermediate pair array. Returned arrays retain Swift
 copy-on-write semantics; caller mutations cannot change a message.
 
-The Swift mapping separates the `GameEventScriptRuntime`,
-`GameEventScriptCompiler`, and `GameEventScriptConformance` SwiftPM packages.
-Compiler depends only on Runtime; Conformance depends on both. Runtime has no
+The Swift mapping separates the `GameEventScriptSyntax`, `GameEventScriptRuntime`,
+`GameEventScriptCompiler`, `GameEventScriptGenerator` and `GameEventScriptConformance` SwiftPM packages, with the
+dependencies of the diagram above; Conformance depends on Runtime and Compiler. Runtime has no
 dependency on Compiler, a test framework, or Conformance.
 
 `GesProgramBuilder.addScript(_:sourceName:)` accepts source text and assigns
@@ -1583,8 +1614,8 @@ input representation, not a promise of unnormalized internal storage.
 
 > **Since: 0.3.0**
 
-C# Host and CSharpHostRunner expose `long? IdleDurationMicroseconds`; Swift Host
-and SwiftHostRunner expose `Int64? idleDurationMicroseconds`. These are read-only
+The C# Host and `GesBridgeHostRunner` expose `long? IdleDurationMicroseconds`; the Swift Host
+and `GesBridgeHostRunner` expose `Int64? idleDurationMicroseconds`. These are read-only
 observations using the configured monotonic clock. Their lifecycle, reset and
 absence rules are owned by [Host Runtime](HostRuntime.md#idle-duration-observation).
 Runner reads are serialized through the ownership gate; a disposed/closed runner
@@ -1599,6 +1630,5 @@ The public bytecode opcode enumeration assigns `Cartesian` the stable value
 Iterator modes and component output reuse existing instruction words and the
 UInt16 list pool; no mutable iterator is added to the portable Program API.
 
-The numeric instruction flag (bit `0x40` of `UnitAndFlags`) applies to Move, Add, Subtract,
-Multiply, Divide, Power, IntegerDivide, Modulo, Remainder, Min, Max, Negate, Abs and Clamp only. The same bit retains WithTags semantics on result-bearing sends;
-interpret flags by opcode.
+The meaning of instruction flag bits, such as the numeric flag of `UnitAndFlags`, depends on the opcode and is owned by
+[Bytecode](Bytecode.md); interpret flags by opcode.

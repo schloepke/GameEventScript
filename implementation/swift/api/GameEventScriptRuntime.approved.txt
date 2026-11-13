@@ -299,13 +299,13 @@ symbol {"access":"public","declaration":"@discardableResult func with(_ name: St
 symbol {"access":"public","declaration":"@discardableResult func with(_ name: String, _ value: Int64, unit: GesQuantityUnit = .none) -> GesSchemaParameters","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaParameters.with(_:_:unit:)"}
 symbol {"access":"public","declaration":"@discardableResult func with(_ name: String, literal: String) throws -> GesSchemaParameters","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaParameters.with(_:literal:)"}
 symbol {"access":"public","declaration":"@discardableResult func withClock(_ clock: any GesClock) -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withClock(_:)"}
+symbol {"access":"public","declaration":"@discardableResult func withExtensionRegistry(_ value: any GesExtensionRegistry) -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withExtensionRegistry(_:)"}
 symbol {"access":"public","declaration":"@discardableResult func withExternalTypeRegistry(_ value: any GesExternalTypeRegistry) -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withExternalTypeRegistry(_:)"}
 symbol {"access":"public","declaration":"@discardableResult func withProfiler(_ value: any GesProfiler) -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withProfiler(_:)"}
 symbol {"access":"public","declaration":"@discardableResult func withPublishSink(_ value: any GesPublishSink) -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withPublishSink(_:)"}
 symbol {"access":"public","declaration":"@discardableResult func withRandomEntropy(_ bytes: [UInt8]) throws -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withRandomEntropy(_:)"}
 symbol {"access":"public","declaration":"@discardableResult func withRandomSeed(_ value: Int64) -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withRandomSeed(_:)"}
 symbol {"access":"public","declaration":"@discardableResult func withRandomSequence(_ values: [Double], fallbackSeed: Int64? = nil) -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withRandomSequence(_:fallbackSeed:)"}
-symbol {"access":"public","declaration":"@discardableResult func withRegistry(_ value: any GesExtensionRegistry) -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withRegistry(_:)"}
 symbol {"access":"public","declaration":"@discardableResult func withRuntimeLimits(_ value: GesRuntimeLimits) -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withRuntimeLimits(_:)"}
 symbol {"access":"public","declaration":"@discardableResult func withRuntimeObserver(_ value: any GesRuntimeObserver) -> Self","kind":"swift.method","path":"GameEventScriptRuntime.GesHostBuilder.withRuntimeObserver(_:)"}
 symbol {"access":"public","declaration":"@discardableResult func write(into destination: inout [UInt8]) throws -> Int","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptProgram.write(into:)","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.class"}}
@@ -962,7 +962,7 @@ symbol {"access":"public","declaration":"let executedOpcodes: Int","kind":"swift
 symbol {"access":"public","declaration":"let exponent: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaBound.exponent"}
 symbol {"access":"public","declaration":"let expression: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaComputedFieldInfo.expression"}
 symbol {"access":"public","declaration":"let extensionName: String","kind":"swift.property","path":"GameEventScriptRuntime.GesExtensionReference.extensionName"}
-symbol {"access":"public","declaration":"let extensionRegistry: (any GesExtensionRegistry)?","kind":"swift.property","path":"GameEventScriptRuntime.GesContext.extensionRegistry"}
+symbol {"access":"public","declaration":"let extensionRegistry: any GesExtensionRegistry","kind":"swift.property","path":"GameEventScriptRuntime.GesContext.extensionRegistry"}
 symbol {"access":"public","declaration":"let fields: [GesExternalTypeFieldDefinition]","kind":"swift.property","path":"GameEventScriptRuntime.GesExternalTypeDefinition.fields"}
 symbol {"access":"public","declaration":"let flags: GesSectionFlags","kind":"swift.property","path":"GameEventScriptRuntime.GesOpaqueSection.flags"}
 symbol {"access":"public","declaration":"let formatVersion: UInt16","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.formatVersion"}
@@ -1572,8 +1572,8 @@ symbol {"access":"public","declaration":"var maxGeneratedCollectionItems: Int","
 symbol {"access":"public","declaration":"var maxIndexLists: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramReadLimits.maxIndexLists"}
 symbol {"access":"public","declaration":"var maxInstructions: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramReadLimits.maxInstructions"}
 symbol {"access":"public","declaration":"var maxLoopIterations: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesRuntimeLimits.maxLoopIterations"}
-symbol {"access":"public","declaration":"var maxProcessedEventsPerRun: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesRuntimeLimits.maxProcessedEventsPerRun"}
-symbol {"access":"public","declaration":"var maxQueuedMessagesPerRun: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesRuntimeLimits.maxQueuedMessagesPerRun"}
+symbol {"access":"public","declaration":"var maxProcessedMessagesPerRun: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesRuntimeLimits.maxProcessedMessagesPerRun"}
+symbol {"access":"public","declaration":"var maxQueuedMessages: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesRuntimeLimits.maxQueuedMessages"}
 symbol {"access":"public","declaration":"var maxRandomScopeDepth: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesRuntimeLimits.maxRandomScopeDepth"}
 symbol {"access":"public","declaration":"var maxRangeItems: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesRuntimeLimits.maxRangeItems"}
 symbol {"access":"public","declaration":"var maxRegisterValues: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesRuntimeLimits.maxRegisterValues"}

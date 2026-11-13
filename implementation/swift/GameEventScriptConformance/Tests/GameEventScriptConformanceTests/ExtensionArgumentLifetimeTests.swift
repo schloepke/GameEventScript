@@ -25,7 +25,7 @@ final class ExtensionArgumentLifetimeTests: XCTestCase {
     func testRetainedArgumentsReadAsEmptyAfterTheirCall() throws {
         let extensions = RetainingExtension()
         let program = try GesProgramBuilder().addScript("on Start(a) { let value be :app.keep(a); emit Done(value: value) }\non Other(b) { let value be b + 1; emit Done(value: value) }").compile()
-        let host = try GameEventScriptHost.makeBuilder().withRegistry(extensions).build().startForTest()
+        let host = try GameEventScriptHost.makeBuilder().withExtensionRegistry(extensions).build().startForTest()
         _ = try host.load(program)
         XCTAssertTrue(try host.receive(.init(name: "Start", arguments: [.init(name: "a", value: .integer(7))])))
         _ = try host.runToCompletion()

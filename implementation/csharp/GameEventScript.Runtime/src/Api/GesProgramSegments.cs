@@ -133,7 +133,8 @@ public readonly struct GesStringConstantSegment
 }
 
 /// <summary>
-/// Represents an immutable slice of unsigned 16-bit indices.
+/// A read-only view of one list of a <see cref="GesUInt16IndexListSegment"/>, such as an argument register list or a
+/// message shape; it shares the segment's storage without copying.
 /// </summary>
 public readonly struct GesUInt16IndexList
 {

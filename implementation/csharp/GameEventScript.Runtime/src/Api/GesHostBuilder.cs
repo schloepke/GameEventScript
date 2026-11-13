@@ -119,7 +119,7 @@ public sealed class GesHostBuilder
     /// </summary>
     /// <param name="registry">The host runtime extension registry.</param>
     /// <returns>This builder.</returns>
-    public GesHostBuilder WithRegistry(IGesExtensionRegistry registry)
+    public GesHostBuilder WithExtensionRegistry(IGesExtensionRegistry registry)
     {
         _extensionRegistry = registry ?? throw new ArgumentNullException(nameof(registry));
         return this;

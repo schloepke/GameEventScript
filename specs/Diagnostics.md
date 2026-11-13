@@ -87,7 +87,8 @@ stops at the end of that phase.
   then, module by module in source order, the rules that need other sources or
   the host's catalog (unknown types, calls and predicate tests, constructors,
   predicate results, seeds and send delays) for its records, predicates,
-  functions and handlers; and finally a module-name mismatch between sources,
+  functions and handlers; and finally a module-name mismatch between sources
+  (`validate.invalidIdentifierCase` at the differing module declaration),
   which is reported only when no other validation diagnostic exists.
 - Lowering and resource analysis stop at the first `compile.*` diagnostic.
 

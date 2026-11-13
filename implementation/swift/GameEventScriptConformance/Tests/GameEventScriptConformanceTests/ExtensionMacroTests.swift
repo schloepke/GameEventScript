@@ -64,7 +64,7 @@ final class ExtensionMacroTests: XCTestCase {
 
     private func run(_ body: String, _ registry: some GesExtensionRegistry) throws -> (GameEventScriptMessage?, GesExecutionResult) {
         let program = try GesProgramBuilder().addScript("on Start() {\n" + body + "\n}").compile()
-        let host = try GameEventScriptHost.makeBuilder().withRegistry(registry).build()
+        let host = try GameEventScriptHost.makeBuilder().withExtensionRegistry(registry).build()
         let instance = try host.load(program)
         XCTAssertNil(instance.startResult?.diagnostic, "\(String(describing: instance.startResult))")
         var seen: GameEventScriptMessage?

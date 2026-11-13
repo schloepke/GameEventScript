@@ -222,7 +222,7 @@ public static class GesSchemaValues
                 return -1;
             case var fallback:
                 var number = double.Parse(fallback.Value.Canonical, System.Globalization.CultureInfo.InvariantCulture);
-                value = node.ValueKind == GesSchemaTypeKind.Percentage ? GesValue.GesPercentage(number) : GesValue.GesNumber(number, node.Unit);
+                value = node.ValueKind == GesSchemaTypeKind.Percentage ? GesValue.GesPercentage(number) : GesValue.GesFloat(number, node.Unit);
                 return -1;
         }
     }
@@ -541,7 +541,7 @@ public static class GesSchemaValues
             values.Add(value.Kind switch
             {
                 GesComputedKind.Integer => GesValue.GesInteger(value.Integer, field.Unit),
-                GesComputedKind.Float => GesValue.GesNumber(value.Number, field.Unit),
+                GesComputedKind.Float => GesValue.GesFloat(value.Number, field.Unit),
                 GesComputedKind.Percentage => GesValue.GesPercentage(value.Number),
                 GesComputedKind.True or GesComputedKind.False => GesValue.GesBoolean(value.Kind == GesComputedKind.True),
                 _ => default
@@ -653,7 +653,7 @@ public static class GesSchemaValues
                 return GesValue.GesInteger(reader.ReadInteger(field), node.Unit);
             default:
                 var number = reader.ReadNumber(field);
-                return node.ValueKind == GesSchemaTypeKind.Percentage ? GesValue.GesPercentage(number) : GesValue.GesNumber(number, node.Unit);
+                return node.ValueKind == GesSchemaTypeKind.Percentage ? GesValue.GesPercentage(number) : GesValue.GesFloat(number, node.Unit);
         }
     }
 

@@ -51,7 +51,7 @@ public struct GesPoint : IEquatable<GesPoint>
     public readonly GesValue ToValue(GesQuantityUnit unit = GesQuantityUnit.UnitNone) => GesValue.GesPoint(X, Y, Z, unit);
 
     /// <summary>Reads a GES Point of exactly the given unit. Units never convert.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The GES value to read.</param>
     /// <param name="unit">The expected unit.</param>
     /// <returns>The point, or null when the value is no Point or has another unit.</returns>
     public static GesPoint? FromValue(in GesValue value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)
@@ -87,10 +87,11 @@ public struct GesPoint : IEquatable<GesPoint>
     /// <returns>Whether a component differs.</returns>
     public static bool operator !=(GesPoint left, GesPoint right) => !left.Equals(right);
 
-    /// <summary>Compares the components; 0 and -0 are equal.</summary>
+    /// <summary>Compares the components with binary64 equality, as Swift does: 0 and -0 are equal, and a NaN component is
+    /// equal to nothing, itself included.</summary>
     /// <param name="other">The other point.</param>
     /// <returns>Whether all components are equal.</returns>
-    public readonly bool Equals(GesPoint other) => X.Equals(other.X) && Y.Equals(other.Y) && Z.Equals(other.Z);
+    public readonly bool Equals(GesPoint other) => X == other.X && Y == other.Y && Z == other.Z;
 
     /// <inheritdoc />
     public override readonly bool Equals(object? obj) => obj is GesPoint other && Equals(other);

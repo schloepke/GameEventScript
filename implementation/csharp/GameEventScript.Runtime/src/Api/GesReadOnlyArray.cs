@@ -25,7 +25,8 @@ public readonly struct GesReadOnlyArray<T> : IReadOnlyList<T>
     /// <summary>
     /// Takes an immutable snapshot, reusing storage only when the input is already a GesReadOnlyArray of the same element type.
     /// </summary>
-    /// <param name="items">The items value.</param>
+    /// <param name="items">The elements to copy in order; <see langword="null"/> or an empty list yields an empty array. Element references
+    /// are copied, not the referenced objects.</param>
     public GesReadOnlyArray(IReadOnlyList<T>? items)
     {
         if (items is GesReadOnlyArray<T> immutable)
@@ -48,22 +49,23 @@ public readonly struct GesReadOnlyArray<T> : IReadOnlyList<T>
     }
 
     /// <summary>
-    /// Gets the count.
+    /// Gets the number of elements; zero for a default instance.
     /// </summary>
     public int Count => _items?.Length ?? 0;
     /// <summary>
-    /// Gets the length.
+    /// Gets the number of elements; the same as <see cref="Count"/>.
     /// </summary>
     public int Length => Count;
     /// <summary>
-    /// Gets the value at the specified index.
+    /// Gets the element at <paramref name="index"/>.
     /// </summary>
-    /// <param name="index">The index value.</param>
+    /// <param name="index">The zero-based index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <exception cref="IndexOutOfRangeException"><paramref name="index"/> is outside the array.</exception>
     public T this[int index] => (_items ?? [])[index];
     /// <summary>
-    /// Gets the enumerator.
+    /// Returns a new enumerator over the elements in order.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>An enumerator over the elements; a default instance enumerates nothing.</returns>
     public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)(_items ?? [])).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 

@@ -55,7 +55,7 @@ internal static class AllocationObservations
         for (var index = 0; index < samples.Length; index++)
         {
             var observer = observe ? new CountingObserver() : null;
-            var builder = GameEventScriptHost.CreateBuilder().WithRegistry(GesGeometryLibrary.Extensions(new RuntimeFixtures()))
+            var builder = GameEventScriptHost.CreateBuilder().WithExtensionRegistry(GesGeometryLibrary.Extensions(new RuntimeFixtures()))
                 .WithExternalTypeRegistry(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Registry)
                 .WithRuntimeLimits(RuntimeObservations.CreateLimits(runtime.GetProperty("limits")));
             if (observer is not null) builder.WithRuntimeObserver(observer);

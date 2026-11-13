@@ -123,7 +123,7 @@ public sealed class GameEventScriptHostSteppingTests
             .WithRandomSeed(0L)
             .WithRuntimeLimits(new GesRuntimeLimits { MaxRandomScopeDepth = 1 })
             .WithRuntimeObserver(observer)
-            .WithRegistry(RandomScopeExtensionRegistry.Instance)
+            .WithExtensionRegistry(RandomScopeExtensionRegistry.Instance)
             .Build().StartForTest();
         host.Load(Compile("on Start { let value be :randomTest.overpush; emit Done(value: value) }"));
         long? followingValue = null;
@@ -153,7 +153,7 @@ public sealed class GameEventScriptHostSteppingTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithRandomSeed(0L)
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add))
-            .WithRegistry(RandomScopeExtensionRegistry.Instance)
+            .WithExtensionRegistry(RandomScopeExtensionRegistry.Instance)
             .Build().StartForTest();
         host.Load(Compile("on Start { let value be :randomTest.leak; emit Done(value: value) }"));
         long? followingValue = null;

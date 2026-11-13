@@ -10,56 +10,58 @@ using System.Text;
 namespace GameEventScript.Api;
 
 /// <summary>
-/// Defines the supported game event script binary bind kind values.
+/// Identifies the role of a <see cref="GesBindingSegment"/> entry: an executable declaration, an outbound message signature
+/// or a host import.
 /// </summary>
 public enum GesBinaryBindKind : byte
 {
     /// <summary>
-    /// Identifies the message handler value.
+    /// Script handler matching a name and ordered argument labels.
     /// </summary>
     MessageHandler = 0x10,
     /// <summary>
-    /// Identifies the message name handler value.
+    /// Script handler matching a message name regardless of argument labels.
     /// </summary>
     MessageNameHandler = 0x11,
     /// <summary>
-    /// Identifies the function value.
+    /// Script function returning a value.
     /// </summary>
     Function = 0x12,
     /// <summary>
-    /// Identifies the predicate value.
+    /// Script predicate returning a Boolean result.
     /// </summary>
     Predicate = 0x13,
     /// <summary>
-    /// Identifies the extension call value.
+    /// Import resolved against the host extension registry.
     /// </summary>
     ExtensionCall = 0x20,
     /// <summary>
-    /// Identifies the outbound message value.
+    /// Message signature used by emit or publish instructions.
     /// </summary>
     OutboundMessage = 0x21,
     /// <summary>
-    /// Identifies the record value.
+    /// Script record constructor.
     /// </summary>
     Record = 0x30,
     /// <summary>
-    /// Identifies the external type value.
+    /// Import resolved against the host external-type registry.
     /// </summary>
     ExternalType = 0x31
 }
 
 /// <summary>
-/// Defines the supported game event script instruction flag values.
+/// Instruction flags stored in bits 5 to 7 of <see cref="GesBytecodeInstruction.UnitAndFlags"/>. Their meaning is
+/// opcode-specific, so several flags share a bit.
 /// </summary>
 [Flags]
 internal enum GesInstructionFlag : byte
 {
     /// <summary>
-    /// Identifies the none value.
+    /// No flag is set.
     /// </summary>
     None = 0,
     /// <summary>
-    /// Identifies the normalize result as predicate value.
+    /// Normalizes the result of a call to a Boolean or <c>nothing</c>, as a predicate result.
     /// </summary>
     NormalizeResultAsPredicate = 0x20,
     /// <summary>Selects the strict numeric view for Move and scalar arithmetic for binary arithmetic, Min, Max, Negate, Abs and Clamp.</summary>
@@ -73,48 +75,48 @@ internal enum GesInstructionFlag : byte
 }
 
 /// <summary>
-/// Defines the supported game event script bytecode type kind values.
+/// Identifies portable value kinds and VM-internal storage kinds used as bytecode type operands.
 /// </summary>
 public enum GesBytecodeTypeKind : byte
 {
     /// <summary>
-    /// Identifies the nothing value.
+    /// Absence of a value.
     /// </summary>
     Nothing = 0x00,
     /// <summary>
-    /// Identifies the boolean value.
+    /// Boolean value.
     /// </summary>
     Boolean = 0x02,
     /// <summary>
-    /// Identifies the integer value.
+    /// Exact signed Int64 number.
     /// </summary>
     Integer = 0x03,
     /// <summary>
-    /// Identifies the float value.
+    /// IEEE 754 binary64 number.
     /// </summary>
     Float = 0x04,
     /// <summary>
-    /// Identifies the percentage value.
+    /// Binary64 ratio carrying Percentage kind.
     /// </summary>
     Percentage = 0x05,
     /// <summary>
-    /// Identifies the tag value.
+    /// Validated tag name.
     /// </summary>
     Tag = 0x06,
     /// <summary>
-    /// Identifies the text value.
+    /// Unicode text.
     /// </summary>
     Text = 0x07,
     /// <summary>
-    /// Identifies the vector value.
+    /// Three-coordinate vector.
     /// </summary>
     Vector = 0x08,
     /// <summary>
-    /// Identifies the point value.
+    /// Three-coordinate point.
     /// </summary>
     Point = 0x09,
     /// <summary>
-    /// Identifies the range value.
+    /// Lazy numeric range.
     /// </summary>
     Range = 0x0a,
     /// <summary>
@@ -123,102 +125,104 @@ public enum GesBytecodeTypeKind : byte
     Bytes = 0x0b,
 
     /// <summary>
-    /// Identifies the handler value.
+    /// Message-handler signature.
     /// </summary>
     Handler = 0x10,
     /// <summary>
-    /// Identifies the message value.
+    /// Message signature, arguments and tags.
     /// </summary>
     Message = 0x11,
 
     /// <summary>
-    /// Identifies the list value.
+    /// Ordered immutable value collection.
     /// </summary>
     List = 0x20,
     /// <summary>
-    /// Identifies the dice value.
+    /// Descending Int32 dice rolls.
     /// </summary>
     Dice = 0x21,
     /// <summary>
-    /// Identifies the map value.
+    /// Canonical Text-keyed value map.
     /// </summary>
     Map = 0x22,
     /// <summary>
-    /// Identifies the list builder value.
+    /// Internal mutable list construction state.
     /// </summary>
     ListBuilder = 0x23,
     /// <summary>
-    /// Identifies the map builder value.
+    /// Internal mutable map construction state.
     /// </summary>
     MapBuilder = 0x24,
     /// <summary>
-    /// Identifies the distinct builder value.
+    /// Internal distinct-value construction state.
     /// </summary>
     DistinctBuilder = 0x25,
     /// <summary>
-    /// Identifies the group builder value.
+    /// Internal grouping construction state.
     /// </summary>
     GroupBuilder = 0x26,
     /// <summary>
-    /// Identifies the order builder value.
+    /// Internal sorting construction state.
     /// </summary>
     OrderBuilder = 0x27,
 
     /// <summary>
-    /// Identifies the iterator value.
+    /// Internal collection iteration state.
     /// </summary>
     Iterator = 0x30,
     /// <summary>
-    /// Identifies the series value.
+    /// Lazy built-in numeric series.
     /// </summary>
     Series = 0x31,
 
     /// <summary>
-    /// Identifies the custom value.
+    /// Record or host-defined external value.
     /// </summary>
     Custom = 0xFF,
 }
 
 /// <summary>
-/// Defines the supported game event script bytecode pattern kind values.
+/// Identifies the dice pattern of <see cref="GesBytecodeOpCode.HasPattern"/> and <see cref="GesBytecodeOpCode.TakePattern"/>.
 /// </summary>
 public enum GesBytecodePatternKind : ushort
 {
     /// <summary>
-    /// Identifies the count any value.
+    /// Count a matching group of any face.
     /// </summary>
     CountAny = 0x00,
     /// <summary>
-    /// Identifies the count face value.
+    /// Count occurrences of a specified face.
     /// </summary>
     CountFace = 0x01,
     /// <summary>
-    /// Identifies the full house value.
+    /// Match a full-house pattern.
     /// </summary>
     FullHouse = 0x02,
     /// <summary>
-    /// Identifies the straight value.
+    /// Match a consecutive-face pattern.
     /// </summary>
     Straight = 0x03,
 }
 
 /// <summary>
-/// Defines the supported game event script bytecode series kind values.
+/// Identifies a built-in lazy numeric series for <see cref="GesBytecodeOpCode.CreateSeries"/>.
 /// </summary>
 public enum GesBytecodeSeriesKind : ushort
 {
     /// <summary>
-    /// Identifies the fibonacci value.
+    /// The Fibonacci series.
     /// </summary>
     Fibonacci = 0x01,
     /// <summary>
-    /// Identifies the factorial value.
+    /// The factorial series.
     /// </summary>
     Factorial = 0x02,
 }
 
 /// <summary>
-/// Represents a game event script bytecode instruction.
+/// One logical bytecode instruction: an opcode, a unit-and-flags byte, three 16-bit operand words and a 64-bit payload,
+/// encoded as 16 bytes in <c>.gesb</c>. The named properties are opcode-specific views of the same words; the
+/// in-memory layout does not define the encoding.
 /// </summary>
 [StructLayout(LayoutKind.Sequential, Size = 16)]
 public struct GesBytecodeInstruction
@@ -227,135 +231,135 @@ public struct GesBytecodeInstruction
     private const byte InstructionFlagMask = 0xE0;
 
     /// <summary>
-    /// Defines the op code value.
+    /// The operation, which determines how the operands are interpreted.
     /// </summary>
     public GesBytecodeOpCode OpCode;
     /// <summary>
-    /// Defines the unit and flags value.
+    /// The quantity unit ID in bits 0 to 4 and opcode-specific instruction flags in bits 5 to 7.
     /// </summary>
     public byte UnitAndFlags;
     private ushort _word0;
     private ushort _word1;
     private ushort _word2;
     /// <summary>
-    /// Defines the payload value.
+    /// The raw 64-bit payload: an inline literal or four packed 16-bit operands.
     /// </summary>
     public ulong Payload;
 
     /// <summary>
-    /// Gets the destination register.
+    /// Gets or sets the register that receives the result; the first operand word.
     /// </summary>
     public ushort DestinationRegister { readonly get => _word0; set => _word0 = value; }
     /// <summary>
-    /// Gets the message destination.
+    /// Gets or sets the outbound message binding ID of a send instruction; the first operand word.
     /// </summary>
     public ushort MessageDestination { readonly get => _word0; set => _word0 = value; }
 
     /// <summary>
-    /// Gets the immediate x.
+    /// Gets or sets a signed 16-bit immediate, such as a range start or a vector start form; the second operand word.
     /// </summary>
     public short ImmediateX { readonly get => unchecked((short)_word1); set => _word1 = unchecked((ushort)value); }
     /// <summary>
-    /// Gets the condition register.
+    /// Gets or sets the register a conditional branch tests; the second operand word.
     /// </summary>
     public ushort ConditionRegister { readonly get => _word1; set => _word1 = value; }
     /// <summary>
-    /// Gets the x register.
+    /// Gets or sets the first source register; the second operand word.
     /// </summary>
     public ushort XRegister { readonly get => _word1; set => _word1 = value; }
     /// <summary>
-    /// Gets the string index.
+    /// Gets or sets a string-constant index, such as a literal or member name; the second operand word.
     /// </summary>
     public ushort StringIndex { readonly get => _word1; set => _word1 = value; }
     /// <summary>
-    /// Gets the secondary list index.
+    /// Gets or sets a second index-list index, such as a tag register list or message shape; the second operand word.
     /// </summary>
     public ushort SecondaryListIndex { readonly get => _word1; set => _word1 = value; }
     /// <summary>
-    /// Gets the bind id.
+    /// Gets or sets a binding ID, such as an extension, record or external type binding; the second operand word.
     /// </summary>
     public ushort BindId { readonly get => _word1; set => _word1 = value; }
     /// <summary>
-    /// Gets the index.
+    /// Gets or sets the 1-based element index of <see cref="GesBytecodeOpCode.IndexAccess"/>; the second operand word.
     /// </summary>
     public ushort Index { readonly get => _word1; set => _word1 = value; }
     /// <summary>
-    /// Gets the count.
+    /// Gets or sets the signed local register delta of <see cref="GesBytecodeOpCode.RegisterLocals"/>; the second operand word.
     /// </summary>
     public short Count { readonly get => unchecked((short)_word1); set => _word1 = unchecked((ushort)value); }
 
     /// <summary>
-    /// Gets the immediate y.
+    /// Gets or sets a second signed 16-bit immediate, such as a range end or a pattern count; the third operand word.
     /// </summary>
     public short ImmediateY { readonly get => unchecked((short)_word2); set => _word2 = unchecked((ushort)value); }
     /// <summary>
-    /// Gets the target address.
+    /// Gets or sets the code address a branch or call jumps to; the third operand word.
     /// </summary>
     public ushort TargetAddress { readonly get => _word2; set => _word2 = value; }
     /// <summary>
-    /// Gets the y register.
+    /// Gets or sets the second source register; the third operand word.
     /// </summary>
     public ushort YRegister { readonly get => _word2; set => _word2 = value; }
     /// <summary>
-    /// Gets the entry address.
+    /// Gets or sets the entry address of a called function, predicate or helper routine; the third operand word.
     /// </summary>
     public ushort EntryAddress { readonly get => _word2; set => _word2 = value; }
     /// <summary>
-    /// Gets the secondary string index.
+    /// Gets or sets a second string-constant index, such as the type name of a custom cast or check; the third operand word.
     /// </summary>
     public ushort SecondaryStringIndex { readonly get => _word2; set => _word2 = value; }
     /// <summary>
-    /// Gets the list index.
+    /// Gets or sets an index-list index, such as an argument register list; the third operand word.
     /// </summary>
     public ushort ListIndex { readonly get => _word2; set => _word2 = value; }
     /// <summary>
-    /// Gets the type operand.
+    /// Gets or sets the type operand: a type kind, a series kind or a type-name string index; the third operand word.
     /// </summary>
     public ushort TypeOperand { readonly get => _word2; set => _word2 = value; }
     /// <summary>
-    /// Gets the type kind.
+    /// Gets or sets the type operand as a built-in <see cref="GesBytecodeTypeKind"/>; the third operand word.
     /// </summary>
     public GesBytecodeTypeKind TypeKind { readonly get => (GesBytecodeTypeKind)_word2; set => _word2 = (ushort)value; }
 
     /// <summary>
-    /// Gets the au.
+    /// Gets or sets payload bits 0 to 15 as an unsigned operand.
     /// </summary>
     public ushort AU { readonly get => (ushort)Payload; set => Payload = (Payload & 0xFFFFFFFFFFFF0000UL) | value; }
     /// <summary>
-    /// Gets the as.
+    /// Gets or sets payload bits 0 to 15 as a signed operand.
     /// </summary>
     public short AS { readonly get => unchecked((short)AU); set => AU = unchecked((ushort)value); }
     /// <summary>
-    /// Gets the bu.
+    /// Gets or sets payload bits 16 to 31 as an unsigned operand.
     /// </summary>
     public ushort BU { readonly get => (ushort)(Payload >> 16); set => Payload = (Payload & 0xFFFFFFFF0000FFFFUL) | ((ulong)value << 16); }
     /// <summary>
-    /// Gets the bs.
+    /// Gets or sets payload bits 16 to 31 as a signed operand.
     /// </summary>
     public short BS { readonly get => unchecked((short)BU); set => BU = unchecked((ushort)value); }
     /// <summary>
-    /// Gets the cu.
+    /// Gets or sets payload bits 32 to 47 as an unsigned operand.
     /// </summary>
     public ushort CU { readonly get => (ushort)(Payload >> 32); set => Payload = (Payload & 0xFFFF0000FFFFFFFFUL) | ((ulong)value << 32); }
     /// <summary>
-    /// Gets the cs.
+    /// Gets or sets payload bits 32 to 47 as a signed operand.
     /// </summary>
     public short CS { readonly get => unchecked((short)CU); set => CU = unchecked((ushort)value); }
     /// <summary>
-    /// Gets the du.
+    /// Gets or sets payload bits 48 to 63 as an unsigned operand.
     /// </summary>
     public ushort DU { readonly get => (ushort)(Payload >> 48); set => Payload = (Payload & 0x0000FFFFFFFFFFFFUL) | ((ulong)value << 48); }
     /// <summary>
-    /// Gets the ds.
+    /// Gets or sets payload bits 48 to 63 as a signed operand.
     /// </summary>
     public short DS { readonly get => unchecked((short)DU); set => DU = unchecked((ushort)value); }
 
     /// <summary>
-    /// Gets the i64.
+    /// Gets or sets the payload bits as a signed 64-bit integer literal.
     /// </summary>
     public long I64 { readonly get => unchecked((long)Payload); set => Payload = unchecked((ulong)value); }
     /// <summary>
-    /// Gets the f64.
+    /// Gets or sets the payload bits as an IEEE 754 binary64 literal.
     /// </summary>
     public double F64
     {
@@ -396,240 +400,252 @@ public struct GesBytecodeInstruction
 }
 
 /// <summary>
-/// Defines the supported game event script bytecode op code values.
+/// Identifies a V1 bytecode instruction. The numeric values are part of the <c>.gesb</c> format; operand layouts and
+/// semantics are defined in the bytecode specification.
 /// </summary>
 public enum GesBytecodeOpCode : byte
 {
     #region Group 1 - control, calls, messages, types, values
 
     /// <summary>
-    /// Identifies the nop value.
+    /// No operation.
     /// </summary>
     Nop = 0x00,
     /// <summary>
-    /// Identifies the register locals value.
+    /// Adds <c>Count &gt; 0</c> active local registers or releases <c>-Count</c> registers when <c>Count &lt; 0</c>.
+    /// Entry prologs reserve only locals beyond preloaded arguments.
     /// </summary>
     RegisterLocals = 0x01,
     /// <summary>
-    /// Identifies the jump value.
+    /// Unconditional branch.
     /// </summary>
     Jump = 0x02,
     /// <summary>
-    /// Identifies the jump if true value.
+    /// Branches when <c>X.IsTrue()</c>.
     /// </summary>
     JumpIfTrue = 0x03,
     /// <summary>
-    /// Identifies the jump if false value.
+    /// Branches when <c>X.IsFalse()</c>.
     /// </summary>
     JumpIfFalse = 0x04,
     /// <summary>
-    /// Identifies the jump if not true value.
+    /// Branches when <c>!X.IsTrue()</c>, including <c>nothing</c>.
     /// </summary>
     JumpIfNotTrue = 0x05,
     /// <summary>
-    /// Identifies the jump if nothing value.
+    /// Branches when <c>X.Kind</c> is <c>Nothing</c>.
     /// </summary>
     JumpIfNothing = 0x06,
 
     /// <summary>
-    /// Identifies the call value.
+    /// Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence
+    /// immediately before the call. With <c>NormalizeResultAsPredicate</c>, the returned value is normalized to boolean
+    /// or <c>nothing</c>.
     /// </summary>
     Call = 0x07,
     /// <summary>
-    /// Identifies the create series value.
+    /// Creates a built-in mathematical series. Supported kinds are <c>Fibonacci</c> and <c>Factorial</c>.
     /// </summary>
     CreateSeries = 0x08,
     /// <summary>
-    /// Identifies the call external value.
+    /// Calls a dynamically bound host extension. With <c>NormalizeResultAsPredicate</c>, the result is normalized to
+    /// boolean or <c>nothing</c>.
     /// </summary>
     CallExternal = 0x09,
 
     /// <summary>
-    /// Identifies the return void value.
+    /// Returns no value from the current frame; normal calls map this to DSL <c>nothing</c>.
     /// </summary>
     ReturnVoid = 0x0A,
     /// <summary>
-    /// Identifies the return value value.
+    /// Returns the value in <c>X</c> from the current frame.
     /// </summary>
     ReturnValue = 0x0B,
 
     /// <summary>
-    /// Identifies the emit message value.
+    /// Emits a statically shaped message without tags.
     /// </summary>
     EmitMessage = 0x0C,
     /// <summary>
-    /// Identifies the emit message with tags value.
+    /// Emits a statically shaped message with tags.
     /// </summary>
     EmitMessageWithTags = 0x0D,
     /// <summary>
-    /// Identifies the emit message value value.
+    /// Emits a dynamic message value without tags.
     /// </summary>
     EmitMessageValue = 0x0E,
     /// <summary>
-    /// Identifies the emit message value with tags value.
+    /// Emits a dynamic message value with tags.
     /// </summary>
     EmitMessageValueWithTags = 0x0F,
 
     /// <summary>
-    /// Identifies the publish message value.
+    /// Publishes a statically shaped message without tags.
     /// </summary>
     PublishMessage = 0x10,
     /// <summary>
-    /// Identifies the publish message with tags value.
+    /// Publishes a statically shaped message with tags.
     /// </summary>
     PublishMessageWithTags = 0x11,
     /// <summary>
-    /// Identifies the publish message value value.
+    /// Publishes a dynamic message value without tags.
     /// </summary>
     PublishMessageValue = 0x12,
     /// <summary>
-    /// Identifies the publish message value with tags value.
+    /// Publishes a dynamic message value with tags.
     /// </summary>
     PublishMessageValueWithTags = 0x13,
 
     /// <summary>
-    /// Identifies the cast value.
+    /// Converts <c>X</c> to the declared built-in type. Custom/record types use <c>CastCustom</c>. <c>Cast :Tag</c>
+    /// validates tag syntax; invalid tag text writes <c>nothing</c>. <c>Cast :Vector</c>/<c>:Point</c> structurally
+    /// convert between vectors and points by copying components and unit.
     /// </summary>
     Cast = 0x14,
     /// <summary>
-    /// Identifies the cast custom value.
+    /// Converts <c>X</c> to a custom/record type identified by <c>Y</c>.
     /// </summary>
     CastCustom = 0x15,
     /// <summary>
-    /// Identifies the cast unit value.
+    /// Converts <c>X</c> to the numeric unit carried in <c>UnitAndFlags</c>. Units are not represented as declared type
+    /// kinds.
     /// </summary>
     CastUnit = 0x16,
     /// <summary>
-    /// Identifies the cast numeric value.
+    /// Coerces <c>X</c> through the source-level <c>:Number</c> type, including explicit numeric text parsing; invalid
+    /// text writes <c>nothing</c>. Integral values stay integer; otherwise the result is float.
     /// </summary>
     CastNumeric = 0x17,
 
     /// <summary>
-    /// Identifies the check type value.
+    /// Writes whether <c>X</c> has the declared built-in type. Custom/record types use <c>CheckCustomType</c>.
     /// </summary>
     CheckType = 0x18,
     /// <summary>
-    /// Identifies the check custom type value.
+    /// Writes whether <c>X</c> has the custom/record type identified by <c>Y</c>.
     /// </summary>
     CheckCustomType = 0x19,
     /// <summary>
-    /// Identifies the check unit value.
+    /// Writes whether <c>X</c> has the numeric unit carried in <c>UnitAndFlags</c>. Units are not represented as
+    /// declared type kinds.
     /// </summary>
     CheckUnit = 0x1A,
     /// <summary>
-    /// Identifies the check numeric value.
+    /// Writes whether <c>X</c> has a runtime numeric view. Numbers, percentages, booleans (<c>false</c> = <c>0</c>,
+    /// <c>true</c> = <c>1</c>), and dice sums are numeric. Text and tags are not parsed here.
     /// </summary>
     CheckNumeric = 0x1B,
     /// <summary>
-    /// Identifies the check integer value.
+    /// Writes whether <c>X</c> has a finite integral numeric view. Booleans and dice are integer. Text is not parsed
+    /// here.
     /// </summary>
     CheckInteger = 0x1C,
     /// <summary>
-    /// Identifies the check fractional value.
+    /// Writes whether <c>X</c> has a finite non-integral numeric view. Text is not parsed here.
     /// </summary>
     CheckFractional = 0x1D,
 
     /// <summary>
-    /// Identifies the move value.
+    /// Copies a register value/reference; the source register remains unchanged.
     /// </summary>
     Move = 0x1E,
     /// <summary>
-    /// Identifies the member access value.
+    /// Reads a named member.
     /// </summary>
     MemberAccess = 0x1F,
     /// <summary>
-    /// Identifies the index access value.
+    /// Reads a statically known positional element.
     /// </summary>
     IndexAccess = 0x20,
     /// <summary>
-    /// Identifies the property access value.
+    /// Reads a dynamic property: integer selectors use index semantics; text/tag selectors use member semantics.
     /// </summary>
     PropertyAccess = 0x21,
     /// <summary>
-    /// Identifies the bind handler value.
+    /// Binds ordered argument values to a handler signature. Argument names come from the signature.
     /// </summary>
     BindHandler = 0x22,
 
     /// <summary>
-    /// Identifies the load nothing value.
+    /// Loads <c>nothing</c>.
     /// </summary>
     LoadNothing = 0x23,
     /// <summary>
-    /// Identifies the load true value.
+    /// Loads boolean <c>true</c>.
     /// </summary>
     LoadTrue = 0x24,
     /// <summary>
-    /// Identifies the load false value.
+    /// Loads boolean <c>false</c>.
     /// </summary>
     LoadFalse = 0x25,
     /// <summary>
-    /// Identifies the load integer value.
+    /// Loads an inline signed <c>Int64</c>.
     /// </summary>
     LoadInteger = 0x26,
     /// <summary>
-    /// Identifies the load float value.
+    /// Loads an inline IEEE-754 <c>Float64</c>.
     /// </summary>
     LoadFloat = 0x27,
     /// <summary>
-    /// Identifies the load percentage value.
+    /// Loads an inline percentage ratio as the dedicated percentage value kind.
     /// </summary>
     LoadPercentage = 0x28,
     /// <summary>
-    /// Identifies the load text value.
+    /// Loads a text literal.
     /// </summary>
     LoadText = 0x29,
     /// <summary>
-    /// Identifies the load tag value.
+    /// Loads a tag literal.
     /// </summary>
     LoadTag = 0x2A,
     /// <summary>
-    /// Identifies the load handler value.
+    /// Loads a handler literal. The shape list is <c>[messageNameStringIndex, argumentNameStringIndex...]</c>.
     /// </summary>
     LoadHandler = 0x2B,
     /// <summary>
-    /// Identifies the load message value.
+    /// Loads a statically shaped message value. Shape is <c>[messageNameStringIndex, argumentNameStringIndex...]</c>.
     /// </summary>
     LoadMessage = 0x2C,
 
     /// <summary>
-    /// Identifies the stage register value.
+    /// Stages a register value for the next stage-consuming instruction.
     /// </summary>
     StageRegister = 0x2D,
     /// <summary>
-    /// Identifies the stage nothing value.
+    /// Stages DSL <c>nothing</c> for the next stage-consuming instruction.
     /// </summary>
     StageNothing = 0x2E,
     /// <summary>
-    /// Identifies the stage true value.
+    /// Stages <c>true</c> for the next stage-consuming instruction.
     /// </summary>
     StageTrue = 0x2F,
     /// <summary>
-    /// Identifies the stage false value.
+    /// Stages <c>false</c> for the next stage-consuming instruction.
     /// </summary>
     StageFalse = 0x30,
     /// <summary>
-    /// Identifies the stage integer value.
+    /// Stages an inline integer value.
     /// </summary>
     StageInteger = 0x31,
     /// <summary>
-    /// Identifies the stage float value.
+    /// Stages an inline float value.
     /// </summary>
     StageFloat = 0x32,
     /// <summary>
-    /// Identifies the stage text value.
+    /// Stages a text literal from <c>StringPool</c>.
     /// </summary>
     StageText = 0x33,
     /// <summary>
-    /// Identifies the stage tag value.
+    /// Stages a tag literal from <c>StringPool</c>.
     /// </summary>
     StageTag = 0x34,
     /// <summary>
-    /// Identifies the stage percentage value.
+    /// Stages an inline percentage ratio value.
     /// </summary>
     StagePercentage = 0x35,
 
     /// <summary>
-    /// Identifies the create dice value.
+    /// Creates a dice value; <c>X</c> and <c>Y</c> are not registers.
     /// </summary>
     CreateDice = 0x36,
     /// <summary>
@@ -643,56 +659,57 @@ public enum GesBytecodeOpCode : byte
     /// </summary>
     CreatePoint = 0x38,
     /// <summary>
-    /// Identifies the create list value.
+    /// Creates a list from the contiguous staged value sequence immediately before the opcode.
     /// </summary>
     CreateList = 0x39,
     /// <summary>
-    /// Identifies the create map value.
+    /// Creates a map from key names and the contiguous staged value sequence immediately before the opcode.
     /// </summary>
     CreateMap = 0x3A,
     /// <summary>
-    /// Identifies the create range value.
+    /// Creates a range value with implicit step <c>1</c>.
     /// </summary>
     CreateRange = 0x3B,
     /// <summary>
-    /// Identifies the create range with step value.
+    /// Creates a range value with explicit step.
     /// </summary>
     CreateRangeWithStep = 0x3C,
     /// <summary>
-    /// Identifies the create range iterator value.
+    /// Creates a VM-internal range iterator with default step <c>+1</c>.
     /// </summary>
     CreateRangeIterator = 0x3D,
     /// <summary>
-    /// Identifies the create range iterator with step value.
+    /// Creates a VM-internal range iterator with an explicit step.
     /// </summary>
     CreateRangeIteratorWithStep = 0x3E,
     /// <summary>
-    /// Identifies the create range iterator short value.
+    /// Creates a compact literal range iterator.
     /// </summary>
     CreateRangeIteratorShort = 0x3F,
     /// <summary>
-    /// Identifies the create record value.
+    /// Calls the record constructor bind with staged constructor-parameter values; computed fields are derived inside
+    /// the constructor.
     /// </summary>
     CreateRecord = 0x40,
     /// <summary>
-    /// Identifies the create record value value.
+    /// Creates the concrete custom record value from the constructor-produced field map.
     /// </summary>
     CreateRecordValue = 0x41,
     /// <summary>
-    /// Identifies the create external type value.
+    /// Constructs a host-bound external type value from named staged argument values.
     /// </summary>
     CreateExternalType = 0x42,
 
     /// <summary>
-    /// Identifies the has value value.
+    /// Semantic value check; exact complement of <c>IsEmpty</c>.
     /// </summary>
     HasValue = 0x43,
     /// <summary>
-    /// Identifies the is empty value.
+    /// Semantic emptiness check; true for <c>nothing</c>, <c>NaN</c>, and empty text/collections.
     /// </summary>
     IsEmpty = 0x44,
     /// <summary>
-    /// Identifies the default value.
+    /// Writes <c>X</c> when it has a value, otherwise <c>Y</c>.
     /// </summary>
     Default = 0x45,
 
@@ -701,291 +718,292 @@ public enum GesBytecodeOpCode : byte
     #region Group 2 - boolean algebra, comparison, math and random
 
     /// <summary>
-    /// Identifies the or value.
+    /// Combines <c>X</c> and <c>Y</c> with three-valued logical or, treating <c>nothing</c> as unknown.
     /// </summary>
     Or = 0x50,
     /// <summary>
-    /// Identifies the and value.
+    /// Combines <c>X</c> and <c>Y</c> with three-valued logical and, treating <c>nothing</c> as unknown.
     /// </summary>
     And = 0x51,
     /// <summary>
-    /// Identifies the xor value.
+    /// Combines <c>X</c> and <c>Y</c> with three-valued exclusive or, treating <c>nothing</c> as unknown.
     /// </summary>
     Xor = 0x52,
     /// <summary>
-    /// Identifies the implies value.
+    /// Combines antecedent <c>X</c> and consequent <c>Y</c> with three-valued implication.
     /// </summary>
     Implies = 0x53,
     /// <summary>
-    /// Identifies the not value.
+    /// Logical negation.
     /// </summary>
     Not = 0x54,
     /// <summary>
-    /// Identifies the equal value.
+    /// Writes whether <c>X</c> equals <c>Y</c>.
     /// </summary>
     Equal = 0x55,
     /// <summary>
-    /// Identifies the not equal value.
+    /// Writes whether <c>X</c> differs from <c>Y</c>.
     /// </summary>
     NotEqual = 0x56,
     /// <summary>
-    /// Identifies the less value.
+    /// Compares whether <c>X</c> is less than <c>Y</c>.
     /// </summary>
     Less = 0x57,
     /// <summary>
-    /// Identifies the greater value.
+    /// Compares whether <c>X</c> is greater than <c>Y</c>.
     /// </summary>
     Greater = 0x58,
     /// <summary>
-    /// Identifies the less or equal value.
+    /// Compares whether <c>X</c> is less than or equal to <c>Y</c>.
     /// </summary>
     LessOrEqual = 0x59,
     /// <summary>
-    /// Identifies the greater or equal value.
+    /// Compares whether <c>X</c> is greater than or equal to <c>Y</c>.
     /// </summary>
     GreaterOrEqual = 0x5A,
     /// <summary>
-    /// Identifies the add value.
+    /// Adds <c>Y</c> to <c>X</c>; the <c>Numeric</c> flag selects scalar arithmetic.
     /// </summary>
     Add = 0x5B,
     /// <summary>
-    /// Identifies the subtract value.
+    /// Subtracts <c>Y</c> from <c>X</c>; the <c>Numeric</c> flag selects scalar arithmetic.
     /// </summary>
     Subtract = 0x5C,
     /// <summary>
-    /// Identifies the multiply value.
+    /// Multiplies <c>X</c> by <c>Y</c>; the <c>Numeric</c> flag selects scalar arithmetic.
     /// </summary>
     Multiply = 0x5D,
     /// <summary>
-    /// Identifies the divide value.
+    /// Divides <c>X</c> by <c>Y</c>; the <c>Numeric</c> flag selects scalar arithmetic.
     /// </summary>
     Divide = 0x5E,
     /// <summary>
-    /// Identifies the power value.
+    /// Raises <c>X</c> to the power <c>Y</c>; the <c>Numeric</c> flag selects scalar arithmetic.
     /// </summary>
     Power = 0x5F,
     /// <summary>
-    /// Identifies the integer divide value.
+    /// Floor-like integer division operation.
     /// </summary>
     IntegerDivide = 0x60,
     /// <summary>
-    /// Identifies the modulo value.
+    /// Numeric modulo operation.
     /// </summary>
     Modulo = 0x61,
     /// <summary>
-    /// Identifies the remainder value.
+    /// Numeric remainder operation.
     /// </summary>
     Remainder = 0x62,
     /// <summary>
-    /// Identifies the min value.
+    /// Writes the smaller of <c>X</c> and <c>Y</c>; also the reduce step of a minimum.
     /// </summary>
     Min = 0x63,
     /// <summary>
-    /// Identifies the max value.
+    /// Writes the larger of <c>X</c> and <c>Y</c>; also the reduce step of a maximum.
     /// </summary>
     Max = 0x64,
     /// <summary>
-    /// Identifies the negate value.
+    /// Numeric negation.
     /// </summary>
     Negate = 0x65,
     /// <summary>
-    /// Identifies the abs value.
+    /// Absolute value.
     /// </summary>
     Abs = 0x66,
     /// <summary>
-    /// Identifies the log n value.
+    /// Natural logarithm.
     /// </summary>
     LogN = 0x67,
     /// <summary>
-    /// Identifies the chance value.
+    /// Draws <c>true</c> with the probability given by <c>X</c> as a ratio or percentage; invalid input writes <c>nothing</c>.
     /// </summary>
     Chance = 0x68,
     /// <summary>
-    /// Identifies the clamp value.
+    /// The only opcode with three direct source registers.
     /// </summary>
     Clamp = 0x69,
     /// <summary>
-    /// Identifies the random take value.
+    /// Takes an integer random value from integer bounds using the current random scope.
     /// </summary>
     RandomTake = 0x6A,
     /// <summary>
-    /// Identifies the random take float value.
+    /// Takes a float random value from numeric bounds using the current random scope.
     /// </summary>
     RandomTakeFloat = 0x6B,
     /// <summary>
-    /// Identifies the random push value.
+    /// Saves the active random state and resets it from a valid dynamic unitless integer seed; an invalid seed retains
+    /// the copied state.
     /// </summary>
     RandomPush = 0x6C,
     /// <summary>
-    /// Identifies the random push constant value.
+    /// Saves the active random state and resets it from an inline signed <c>Int64</c>.
     /// </summary>
     RandomPushConstant = 0x6D,
     /// <summary>
-    /// Identifies the random pop value.
+    /// Restores the previous random scope.
     /// </summary>
     RandomPop = 0x6E,
     /// <summary>
-    /// Identifies the term value.
+    /// Reads a zero-based mathematical series term; non-series sources yield <c>nothing</c>.
     /// </summary>
     Term = 0x6F,
     /// <summary>
-    /// Identifies the exp value.
+    /// Natural exponential. Unitless numeric input only; overflow to <c>+Infinity</c> is valid.
     /// </summary>
     Exp = 0x70,
     /// <summary>
-    /// Identifies the floor value.
+    /// Floors a unitless numeric value and writes an integer.
     /// </summary>
     Floor = 0x71,
     /// <summary>
-    /// Identifies the ceil value.
+    /// Ceils a unitless numeric value and writes an integer.
     /// </summary>
     Ceil = 0x72,
     /// <summary>
-    /// Identifies the truncate value.
+    /// Truncates a unitless numeric value toward zero and writes an integer.
     /// </summary>
     Truncate = 0x73,
     /// <summary>
-    /// Identifies the round half even value.
+    /// Rounds a unitless numeric value using midpoint-to-even and writes an integer.
     /// </summary>
     RoundHalfEven = 0x74,
     /// <summary>
-    /// Identifies the round half up value.
+    /// Rounds midpoint values away from zero and writes an integer.
     /// </summary>
     RoundHalfUp = 0x75,
     /// <summary>
-    /// Identifies the round half down value.
+    /// Rounds midpoint values toward zero and writes an integer.
     /// </summary>
     RoundHalfDown = 0x76,
     /// <summary>
-    /// Identifies the degree to radians value.
+    /// Converts degrees to unitless radians.
     /// </summary>
     DegreeToRadians = 0x77,
     /// <summary>
-    /// Identifies the degree from radians value.
+    /// Converts unitless radians to a degree quantity.
     /// </summary>
     DegreeFromRadians = 0x78,
     /// <summary>
-    /// Identifies the wrap degree value.
+    /// Normalizes a degree or unitless numeric value into <c>[0, 360)</c> degrees.
     /// </summary>
     WrapDegree = 0x79,
     /// <summary>
-    /// Identifies the sin value.
+    /// Sine. Unitless input is radians; degree input is converted to radians; result is unitless.
     /// </summary>
     Sin = 0x7A,
     /// <summary>
-    /// Identifies the cos value.
+    /// Cosine. Unitless input is radians; degree input is converted to radians; result is unitless.
     /// </summary>
     Cos = 0x7B,
     /// <summary>
-    /// Identifies the tan value.
+    /// Tangent. Unitless input is radians; degree input is converted to radians; result is unitless.
     /// </summary>
     Tan = 0x7C,
     /// <summary>
-    /// Identifies the asin value.
+    /// Inverse sine for unitless numeric input in <c>[-1, 1]</c>; result is radians.
     /// </summary>
     Asin = 0x7D,
     /// <summary>
-    /// Identifies the acos value.
+    /// Inverse cosine for unitless numeric input in <c>[-1, 1]</c>; result is radians.
     /// </summary>
     Acos = 0x7E,
     /// <summary>
-    /// Identifies the atan value.
+    /// Inverse tangent for unitless numeric input; result is radians.
     /// </summary>
     Atan = 0x7F,
     /// <summary>
-    /// Identifies the atan2 value.
+    /// <c>atan2(y, x)</c> with matching units; result is radians. <c>(0, 0)</c> yields <c>0</c>.
     /// </summary>
     Atan2 = 0x80,
     /// <summary>
-    /// Identifies the hypot2 d value.
+    /// 2D hypotenuse; matching units are retained in the result.
     /// </summary>
     Hypot2D = 0x81,
     /// <summary>
-    /// Identifies the hypot3 d value.
+    /// 3D hypotenuse; matching units are retained in the result.
     /// </summary>
     Hypot3D = 0x82,
     /// <summary>
-    /// Identifies the distance value.
+    /// Scalar distance or 3D vector/point distance; matching units are retained.
     /// </summary>
     Distance = 0x83,
     /// <summary>
-    /// Identifies the distance2 d value.
+    /// 2D coordinate distance; matching units are retained.
     /// </summary>
     Distance2D = 0x84,
     /// <summary>
-    /// Identifies the distance3 d value.
+    /// 3D coordinate distance; matching units are retained.
     /// </summary>
     Distance3D = 0x85,
     /// <summary>
-    /// Identifies the distance squared value.
+    /// Scalar or 3D vector/point squared distance; result is unitless.
     /// </summary>
     DistanceSquared = 0x86,
     /// <summary>
-    /// Identifies the distance squared2 d value.
+    /// 2D squared coordinate distance; result is unitless.
     /// </summary>
     DistanceSquared2D = 0x87,
     /// <summary>
-    /// Identifies the distance squared3 d value.
+    /// 3D squared coordinate distance; result is unitless.
     /// </summary>
     DistanceSquared3D = 0x88,
     /// <summary>
-    /// Identifies the length squared value.
+    /// Scalar square or vector/point squared length; result is unitless.
     /// </summary>
     LengthSquared = 0x89,
     /// <summary>
-    /// Identifies the length squared2 d value.
+    /// 2D squared length; result is unitless.
     /// </summary>
     LengthSquared2D = 0x8A,
     /// <summary>
-    /// Identifies the length squared3 d value.
+    /// 3D squared length; result is unitless.
     /// </summary>
     LengthSquared3D = 0x8B,
     /// <summary>
-    /// Identifies the normalize value.
+    /// Normalizes a 3D vector/point and returns a unitless vector; zero length yields <c>nothing</c>.
     /// </summary>
     Normalize = 0x8C,
     /// <summary>
-    /// Identifies the normalize2 d value.
+    /// Normalizes 2D coordinates and returns a unitless vector with <c>z=0</c>; zero length yields <c>nothing</c>.
     /// </summary>
     Normalize2D = 0x8D,
     /// <summary>
-    /// Identifies the normalize3 d value.
+    /// Normalizes 3D coordinates and returns a unitless vector; zero length yields <c>nothing</c>.
     /// </summary>
     Normalize3D = 0x8E,
     /// <summary>
-    /// Identifies the dot value.
+    /// 3D vector/point dot product with matching units; result is unitless.
     /// </summary>
     Dot = 0x8F,
     /// <summary>
-    /// Identifies the dot2 d value.
+    /// 2D coordinate dot product; result is unitless.
     /// </summary>
     Dot2D = 0x90,
     /// <summary>
-    /// Identifies the dot3 d value.
+    /// 3D coordinate dot product; result is unitless.
     /// </summary>
     Dot3D = 0x91,
     /// <summary>
-    /// Identifies the cross value.
+    /// 3D vector/point cross product with matching units; result is a unitless vector.
     /// </summary>
     Cross = 0x92,
     /// <summary>
-    /// Identifies the cross2 d value.
+    /// 2D coordinate cross product; result is the scalar z component, unitless.
     /// </summary>
     Cross2D = 0x93,
     /// <summary>
-    /// Identifies the cross3 d value.
+    /// 3D coordinate cross product; result is a unitless vector.
     /// </summary>
     Cross3D = 0x94,
     /// <summary>
-    /// Identifies the angle between value.
+    /// 3D vector/point angle in radians; zero length yields <c>nothing</c>.
     /// </summary>
     AngleBetween = 0x95,
     /// <summary>
-    /// Identifies the angle between2 d value.
+    /// 2D coordinate angle in radians; zero length yields <c>nothing</c>.
     /// </summary>
     AngleBetween2D = 0x96,
     /// <summary>
-    /// Identifies the angle between3 d value.
+    /// 3D coordinate angle in radians; zero length yields <c>nothing</c>.
     /// </summary>
     AngleBetween3D = 0x97,
 
@@ -994,231 +1012,246 @@ public enum GesBytecodeOpCode : byte
     #region Group 3 - text, collection, iterators
 
     /// <summary>
-    /// Identifies the take first value.
+    /// Takes the first <c>Y</c> values from a series, list, dice, range, or iterator source.
     /// </summary>
     TakeFirst = 0xA0,
     /// <summary>
-    /// Identifies the drop first value.
+    /// Drops the first <c>Y</c> values from a series, list, dice, range, or iterator source.
     /// </summary>
     DropFirst = 0xA1,
     /// <summary>
-    /// Identifies the take last value.
+    /// Takes the last <c>Y</c> values from a finite list, dice, range, or iterator source; series yields
+    /// <c>nothing</c>.
     /// </summary>
     TakeLast = 0xA2,
     /// <summary>
-    /// Identifies the drop last value.
+    /// Drops the last <c>Y</c> values from a finite list, dice, range, or iterator source; series yields
+    /// <c>nothing</c>.
     /// </summary>
     DropLast = 0xA3,
     /// <summary>
-    /// Identifies the take highest value.
+    /// Takes the highest <c>Y</c> values from a finite list, dice, range, or iterator source; series yields
+    /// <c>nothing</c>.
     /// </summary>
     TakeHighest = 0xA4,
     /// <summary>
-    /// Identifies the take lowest value.
+    /// Takes the lowest <c>Y</c> values from a finite list, dice, range, or iterator source; series yields
+    /// <c>nothing</c>.
     /// </summary>
     TakeLowest = 0xA5,
     /// <summary>
-    /// Identifies the drop highest value.
+    /// Drops the highest <c>Y</c> values from a finite list, dice, range, or iterator source; series yields
+    /// <c>nothing</c>.
     /// </summary>
     DropHighest = 0xA6,
     /// <summary>
-    /// Identifies the drop lowest value.
+    /// Drops the lowest <c>Y</c> values from a finite list, dice, range, or iterator source; series yields
+    /// <c>nothing</c>.
     /// </summary>
     DropLowest = 0xA7,
     /// <summary>
-    /// Identifies the one random value.
+    /// Chooses one random element from a finite list, dice, range, or iterator source; empty/invalid/series sources
+    /// yield <c>nothing</c>.
     /// </summary>
     OneRandom = 0xA8,
     /// <summary>
-    /// Identifies the take random value.
+    /// Chooses up to <c>Y</c> random elements without replacement. Lists stay lists, dice stay dice, ranges and
+    /// iterators materialize as lists.
     /// </summary>
     TakeRandom = 0xA9,
     /// <summary>
-    /// Identifies the one weighted value.
+    /// Selects one item using positive finite weights. Empty/no-positive-weight lists -&gt; <c>nothing</c>.
     /// </summary>
     OneWeighted = 0xAA,
     /// <summary>
-    /// Identifies the take weighted value.
+    /// Selects up to <c>Y</c> items without replacement using positive finite weights. Result is a list.
     /// </summary>
     TakeWeighted = 0xAB,
     /// <summary>
-    /// Identifies the count value.
+    /// Counts collection/string/range/map items or consumes an iterator to count.
     /// </summary>
     Count = 0xAC,
     /// <summary>
-    /// Identifies the starts with value.
+    /// Text/tag raw-text prefix check or list/dice/range sequence prefix check.
     /// </summary>
     StartsWith = 0xAD,
     /// <summary>
-    /// Identifies the ends with value.
+    /// Text/tag raw-text suffix check or list/dice/range sequence suffix check.
     /// </summary>
     EndsWith = 0xAE,
     /// <summary>
-    /// Identifies the contains value.
+    /// Text/tag substring, map key, list/dice/range membership, or vector/point component membership.
     /// </summary>
     Contains = 0xAF,
     /// <summary>
-    /// Identifies the contains any value.
+    /// Tests whether the container contains any value from the needle sequence. Iterators are consumed until the first
+    /// match or exhaustion.
     /// </summary>
     ContainsAny = 0xB0,
     /// <summary>
-    /// Identifies the contains all value.
+    /// Tests whether the container contains every value from the needle sequence. Iterators are consumed until all
+    /// needles match or exhaustion.
     /// </summary>
     ContainsAll = 0xB1,
     /// <summary>
-    /// Identifies the has any value.
+    /// Truthiness <c>any</c> over list/dice/range/map values/text/tag/vector/point or iterator sources. Empty -&gt;
+    /// <c>false</c>; <c>nothing</c> -&gt; <c>nothing</c>.
     /// </summary>
     HasAny = 0xB2,
     /// <summary>
-    /// Identifies the has all value.
+    /// Truthiness <c>all</c> over list/dice/range/map values/text/tag/vector/point or iterator sources. Empty -&gt;
+    /// <c>true</c>; <c>nothing</c> -&gt; <c>nothing</c>.
     /// </summary>
     HasAll = 0xB3,
     /// <summary>
-    /// Identifies the contains value value.
+    /// Value membership for map-like containers, vectors, and points.
     /// </summary>
     ContainsValue = 0xB4,
     /// <summary>
-    /// Identifies the union value.
+    /// Collection union/merge for list, dice, and map shapes; invalid shapes -&gt; <c>nothing</c>.
     /// </summary>
     Union = 0xB5,
     /// <summary>
-    /// Identifies the intersect value.
+    /// Map key intersection or list/dice multiset intersection; invalid shapes -&gt; <c>nothing</c>.
     /// </summary>
     Intersect = 0xB6,
     /// <summary>
-    /// Identifies the zip value.
+    /// List zip into <c>{ left, right }</c> maps up to the shorter length; invalid shapes -&gt; <c>nothing</c>.
     /// </summary>
     Zip = 0xB7,
     /// <summary>
-    /// Identifies the keys of map value.
+    /// Map/custom-type keys projection; <c>nothing</c> and non-map operands produce <c>nothing</c>.
     /// </summary>
     KeysOfMap = 0xB8,
     /// <summary>
-    /// Identifies the values of map value.
+    /// Map/custom-type values projection; <c>nothing</c> and non-map operands produce <c>nothing</c>.
     /// </summary>
     ValuesOfMap = 0xB9,
     /// <summary>
-    /// Identifies the entries of map value.
+    /// Map/custom-type entries projection; <c>nothing</c> and non-map operands produce <c>nothing</c>.
     /// </summary>
     EntriesOfMap = 0xBA,
     /// <summary>
-    /// Identifies the first value.
+    /// Returns the first element from list, dice, range, map/custom values, text/tag, or iterator; invalid/empty
+    /// sources -&gt; <c>nothing</c>.
     /// </summary>
     First = 0xBB,
     /// <summary>
-    /// Identifies the last value.
+    /// Returns the last element from list, dice, range, map/custom values, text/tag, or iterator; invalid/empty sources
+    /// -&gt; <c>nothing</c>.
     /// </summary>
     Last = 0xBC,
     /// <summary>
-    /// Identifies the single value.
+    /// Returns the only element from list, dice, range, map/custom values, text/tag, or iterator;
+    /// invalid/empty/multiple-element sources -&gt; <c>nothing</c>.
     /// </summary>
     Single = 0xBD,
     /// <summary>
-    /// Identifies the iterator create value.
+    /// Creates a VM-internal iterator over a collection or range value. Non-iterable sources write <c>nothing</c>.
     /// </summary>
     IteratorCreate = 0xBE,
     /// <summary>
-    /// Identifies the iterator create or jump value.
+    /// Creates a VM-internal iterator, or writes <c>nothing</c> and jumps to <c>Y</c> when no iterator can be created.
     /// </summary>
     IteratorCreateOrJump = 0xBF,
     /// <summary>
-    /// Identifies the iterator next value.
+    /// Writes the next item and continues, or jumps to <c>Y</c> when exhausted.
     /// </summary>
     IteratorNext = 0xC0,
     /// <summary>
-    /// Identifies the iterator close value.
+    /// Disposes/closes a VM-internal iterator.
     /// </summary>
     IteratorClose = 0xC1,
     /// <summary>
-    /// Identifies the distinct value.
+    /// Materializes distinct source items in source order. Supports direct collection fast paths and iterators.
     /// </summary>
     Distinct = 0xC2,
     /// <summary>
-    /// Identifies the sort ascending value.
+    /// Sorts source items ascending. Supports direct list, dice, range, and iterator sources.
     /// </summary>
     SortAscending = 0xC3,
     /// <summary>
-    /// Identifies the sort descending value.
+    /// Sorts source items descending. Supports direct list, dice, range, and iterator sources.
     /// </summary>
     SortDescending = 0xC4,
     /// <summary>
-    /// Identifies the reverse value.
+    /// Reverses list, dice, range, or iterator sources. Dice and iterators materialize lists; ranges stay ranges.
     /// </summary>
     Reverse = 0xC5,
     /// <summary>
-    /// Identifies the shuffle value.
+    /// Shuffles list, dice, range, or iterator sources. Result is a list.
     /// </summary>
     Shuffle = 0xC6,
     /// <summary>
-    /// Identifies the list builder create value.
+    /// Creates a VM-internal list builder for generated collections.
     /// </summary>
     ListBuilderCreate = 0xC7,
     /// <summary>
-    /// Identifies the list builder add value.
+    /// Checks <c>MaxGeneratedCollectionItems</c> before adding an item.
     /// </summary>
     ListBuilderAdd = 0xC8,
     /// <summary>
-    /// Identifies the list builder finish value.
+    /// Materializes the list builder as a list.
     /// </summary>
     ListBuilderFinish = 0xC9,
     /// <summary>
-    /// Identifies the map builder create value.
+    /// Creates a VM-internal map builder for generated map projections.
     /// </summary>
     MapBuilderCreate = 0xCA,
     /// <summary>
-    /// Identifies the map builder add value.
+    /// Adds or overwrites a map entry; empty/nothing keys are skipped.
     /// </summary>
     MapBuilderAdd = 0xCB,
     /// <summary>
-    /// Identifies the map builder finish value.
+    /// Materializes the map builder as a map.
     /// </summary>
     MapBuilderFinish = 0xCC,
     /// <summary>
-    /// Identifies the distinct builder create value.
+    /// Creates a VM-internal builder for <c>distinct by</c> loop lowering.
     /// </summary>
     DistinctBuilderCreate = 0xCD,
     /// <summary>
-    /// Identifies the distinct builder add value.
+    /// Adds the value only when the key was not seen before.
     /// </summary>
     DistinctBuilderAdd = 0xCE,
     /// <summary>
-    /// Identifies the distinct builder finish value.
+    /// Materializes the distinct-by builder as a list.
     /// </summary>
     DistinctBuilderFinish = 0xCF,
     /// <summary>
-    /// Identifies the group builder create value.
+    /// Creates a VM-internal builder for <c>group by</c> loop lowering.
     /// </summary>
     GroupBuilderCreate = 0xD0,
     /// <summary>
-    /// Identifies the group builder add value.
+    /// Adds the value to the group identified by the key text.
     /// </summary>
     GroupBuilderAdd = 0xD1,
     /// <summary>
-    /// Identifies the group builder finish value.
+    /// Materializes the group builder as a map from keys to grouped lists.
     /// </summary>
     GroupBuilderFinish = 0xD2,
     /// <summary>
-    /// Identifies the order builder create value.
+    /// Creates a VM-internal builder for <c>order by</c> loop lowering.
     /// </summary>
     OrderBuilderCreate = 0xD3,
     /// <summary>
-    /// Identifies the order builder add value.
+    /// Adds a key/value pair preserving source order for stable ordering.
     /// </summary>
     OrderBuilderAdd = 0xD4,
     /// <summary>
-    /// Identifies the order builder finish ascending value.
+    /// Sorts by stored keys ascending and materializes the ordered values as a list.
     /// </summary>
     OrderBuilderFinishAscending = 0xD5,
     /// <summary>
-    /// Identifies the order builder finish descending value.
+    /// Sorts by stored keys descending and materializes the ordered values as a list.
     /// </summary>
     OrderBuilderFinishDescending = 0xD6,
     /// <summary>
-    /// Identifies the has pattern value.
+    /// Tests a dice/card pattern and returns boolean.
     /// </summary>
     HasPattern = 0xD7,
     /// <summary>
-    /// Identifies the take pattern value.
+    /// Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists.
     /// </summary>
     TakePattern = 0xD8,
     /// <summary>

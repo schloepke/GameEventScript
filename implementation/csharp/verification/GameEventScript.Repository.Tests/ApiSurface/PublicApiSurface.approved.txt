@@ -710,6 +710,7 @@ sealed class GameEventScript.Api.GesHostBuilder
   ctor GesHostBuilder()
   method GameEventScript.Api.GameEventScriptHost Build()
   method GameEventScript.Api.GesHostBuilder WithClock(GameEventScript.Api.IGesClock clock)
+  method GameEventScript.Api.GesHostBuilder WithExtensionRegistry(GameEventScript.Api.IGesExtensionRegistry registry)
   method GameEventScript.Api.GesHostBuilder WithExternalTypeRegistry(GameEventScript.Api.IGesExternalTypeRegistry registry)
   method GameEventScript.Api.GesHostBuilder WithProfiler(GameEventScript.Api.IGesProfiler profiler)
   method GameEventScript.Api.GesHostBuilder WithPublishSink(GameEventScript.Api.IGesPublishSink publishSink)
@@ -717,7 +718,6 @@ sealed class GameEventScript.Api.GesHostBuilder
   method GameEventScript.Api.GesHostBuilder WithRandomSeed(System.Int64 seed)
   method GameEventScript.Api.GesHostBuilder WithRandomSequence(System.Collections.Generic.IReadOnlyList<System.Double> values)
   method GameEventScript.Api.GesHostBuilder WithRandomSequence(System.Collections.Generic.IReadOnlyList<System.Double> values, System.Int64 fallbackSeed)
-  method GameEventScript.Api.GesHostBuilder WithRegistry(GameEventScript.Api.IGesExtensionRegistry registry)
   method GameEventScript.Api.GesHostBuilder WithRuntimeLimits(GameEventScript.Api.GesRuntimeLimits limits)
   method GameEventScript.Api.GesHostBuilder WithRuntimeObserver(GameEventScript.Api.IGesRuntimeObserver observer)
 sealed class GameEventScript.Api.GesIntegerRange
@@ -978,8 +978,8 @@ sealed class GameEventScript.Api.GesRuntimeLimits
   property System.Int32 MaxExecutionSteps { get set }
   property System.Int32 MaxGeneratedCollectionItems { get set }
   property System.Int32 MaxLoopIterations { get set }
-  property System.Int32 MaxProcessedEventsPerRun { get set }
-  property System.Int32 MaxQueuedMessagesPerRun { get set }
+  property System.Int32 MaxProcessedMessagesPerRun { get set }
+  property System.Int32 MaxQueuedMessages { get set }
   property System.Int32 MaxRandomScopeDepth { get set }
   property System.Int32 MaxRangeItems { get set }
   property System.Int32 MaxRegisterValues { get set }
@@ -1533,7 +1533,6 @@ struct GameEventScript.Runtime.Values.GesValue
   method static GameEventScript.Runtime.Values.GesValue GesMap(System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] entries)
   method static GameEventScript.Runtime.Values.GesValue GesMessage(GameEventScript.Api.GameEventScriptMessage message)
   method static GameEventScript.Runtime.Values.GesValue GesNothing()
-  method static GameEventScript.Runtime.Values.GesValue GesNumber(System.Double number, GameEventScript.Api.GesQuantityUnit unit)
   method static GameEventScript.Runtime.Values.GesValue GesPercentage(System.Double ratio)
   method static GameEventScript.Runtime.Values.GesValue GesPoint(System.Double x, System.Double y, System.Double z, GameEventScript.Api.GesQuantityUnit unit)
   method static GameEventScript.Runtime.Values.GesValue GesRange(System.Double from, System.Double to, System.Double step)
@@ -1557,7 +1556,6 @@ struct GameEventScript.Runtime.Values.GesValue
   property System.Boolean HasValue { get }
   property System.Boolean IsNothing { get }
   property System.Boolean IsNumeric { get }
-  property System.Double AsNumeric { get }
   property System.Double X { get }
   property System.Double Y { get }
   property System.Double Z { get }

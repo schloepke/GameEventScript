@@ -243,7 +243,7 @@ public sealed class GesSchemaFieldInfo
         Default = field.Default is { } fallback ? new GesSchemaDefaultInfo(fallback) : null;
     }
 
-    /// <summary>Gets the name.</summary>
+    /// <summary>Gets the field name, or the argument label of a message argument.</summary>
     public string Name { get; }
 
     /// <summary>Gets whether a message argument has no label.</summary>
@@ -278,7 +278,7 @@ public sealed class GesSchemaComputedFieldInfo
         Expression = builder.ToString();
     }
 
-    /// <summary>Gets the name.</summary>
+    /// <summary>Gets the field name.</summary>
     public string Name { get; }
 
     /// <summary>Gets the type: <see cref="GesSchemaTypeKind.Number"/>, <see cref="GesSchemaTypeKind.Quantity"/>,
@@ -305,7 +305,7 @@ public sealed class GesSchemaParameterInfo
         Unit = unit;
     }
 
-    /// <summary>Gets the name.</summary>
+    /// <summary>Gets the parameter name, which <see cref="GesSchemaParameters"/> supplies a value for at binding.</summary>
     public string Name { get; }
 
     /// <summary>Gets the kind: Number, Percentage or Quantity.</summary>
@@ -328,7 +328,7 @@ public sealed class GesSchemaConstantInfo
         Value = new GesSchemaBound(new GesResolvedValue { Value = let.Value });
     }
 
-    /// <summary>Gets the name.</summary>
+    /// <summary>Gets the constant name.</summary>
     public string Name { get; }
 
     /// <summary>Gets the kind its literal gives it: Number, Percentage or Quantity.</summary>
@@ -363,7 +363,8 @@ public sealed class GesSchema
         IsAbstract = declaration.Abstract;
     }
 
-    /// <summary>Gets the name.</summary>
+    /// <summary>Gets the declared name without the leading <c>:</c>, such as <c>Ship</c>; <see cref="GesSchemaSet.Schema"/>
+    /// finds the declaration by it.</summary>
     public string Name { get; }
 
     /// <summary>Gets the kind of declaration.</summary>
@@ -415,7 +416,8 @@ public sealed class GesSchema
     /// <summary>Binds the declaration for encoding and decoding. It can be bound any number of times.</summary>
     /// <param name="parameters">The values of the parameters it reaches, if it has any.</param>
     /// <returns>The immutable bound schema.</returns>
-    /// <exception cref="GesSchemaException">The declaration cannot be encoded or a value breaks a rule.</exception>
+    /// <exception cref="GesSchemaException">The declaration is abstract or cannot be encoded, a reached parameter has no value
+    /// or a value of another kind, or a value breaks a rule.</exception>
     public GesBoundSchema Bind(GesSchemaParameters? parameters = null) => GesSchemaBinder.Bind(_declaration, parameters ?? new GesSchemaParameters());
 
     /// <summary>Checks a GES document against this schema, whatever its header says.</summary>

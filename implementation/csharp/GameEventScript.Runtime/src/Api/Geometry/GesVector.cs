@@ -74,7 +74,7 @@ public struct GesVector : IEquatable<GesVector>
     public readonly GesValue ToValue(GesQuantityUnit unit = GesQuantityUnit.UnitNone) => GesValue.GesVector(X, Y, Z, unit);
 
     /// <summary>Reads a GES Vector of exactly the given unit. Units never convert.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The GES value to read.</param>
     /// <param name="unit">The expected unit.</param>
     /// <returns>The vector, or null when the value is no Vector or has another unit.</returns>
     public static GesVector? FromValue(in GesValue value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)
@@ -127,10 +127,11 @@ public struct GesVector : IEquatable<GesVector>
     /// <returns>Whether a component differs.</returns>
     public static bool operator !=(GesVector left, GesVector right) => !left.Equals(right);
 
-    /// <summary>Compares the components; 0 and -0 are equal.</summary>
+    /// <summary>Compares the components with binary64 equality, as Swift does: 0 and -0 are equal, and a NaN component is
+    /// equal to nothing, itself included.</summary>
     /// <param name="other">The other vector.</param>
     /// <returns>Whether all components are equal.</returns>
-    public readonly bool Equals(GesVector other) => X.Equals(other.X) && Y.Equals(other.Y) && Z.Equals(other.Z);
+    public readonly bool Equals(GesVector other) => X == other.X && Y == other.Y && Z == other.Z;
 
     /// <inheritdoc />
     public override readonly bool Equals(object? obj) => obj is GesVector other && Equals(other);

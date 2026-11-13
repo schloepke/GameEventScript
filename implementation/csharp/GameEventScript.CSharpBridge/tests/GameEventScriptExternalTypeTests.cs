@@ -86,7 +86,7 @@ public sealed class GameEventScriptExternalTypeTests
         var received = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypeRegistry(registry)
-            .WithRegistry(GesBridgeExtensionRegistry.Create(typeof(AimExtensionFunctions)))
+            .WithExtensionRegistry(GesBridgeExtensionRegistry.Create(typeof(AimExtensionFunctions)))
             .Build().StartForTest();
         host.Load(bytecode);
         host.Subscribe("Done", ["score", "lead", "distance", "integerDistance"], (message, _) => received.Add(message));

@@ -35,6 +35,16 @@ public sealed class GesGeometryTests
     }
 
     [TestMethod]
+    public void EqualityIsBinary64Equality()
+    {
+        Assert.IsTrue(new GesPoint(0, 1, 2) == new GesPoint(-0d, 1, 2));
+        Assert.AreEqual(new GesPoint(0, 1, 2).GetHashCode(), new GesPoint(-0d, 1, 2).GetHashCode());
+        Assert.IsFalse(new GesPoint(double.NaN, 0) == new GesPoint(double.NaN, 0), "A NaN component is equal to nothing, as in Swift.");
+        Assert.IsFalse(new GesVector(0, double.NaN).Equals(new GesVector(0, double.NaN)));
+        Assert.IsFalse(new GesBox(new GesPoint(double.NaN, 0), new GesPoint(1, 1)) == new GesBox(new GesPoint(double.NaN, 0), new GesPoint(1, 1)));
+    }
+
+    [TestMethod]
     public void ValuesCarryAnExplicitUnit()
     {
         var value = new GesPoint(1, 2, 3).ToValue(GesQuantityUnit.UnitMeter);

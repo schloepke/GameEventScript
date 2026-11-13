@@ -11,7 +11,7 @@ from core.corpus import InvalidDocument, closed
 from checks.compiler_checks import exact, diagnostic
 from checks import numeric_checks as numeric
 
-LIMITS = {'maxProcessedEventsPerRun', 'maxQueuedMessagesPerRun', 'maxExecutionSteps', 'maxRegisterValues',
+LIMITS = {'maxProcessedMessagesPerRun', 'maxQueuedMessages', 'maxExecutionSteps', 'maxRegisterValues',
           'maxLoopIterations', 'maxCallDepth', 'maxRandomScopeDepth', 'maxRangeItems',
           'maxGeneratedCollectionItems', 'maxValueDepth', 'maxDiceCount', 'maxDiceSides'}
 

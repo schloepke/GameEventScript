@@ -266,7 +266,7 @@ id: case-0005
 kind: scriptApi
 level: scenario
 runtimeLimits:
-  maxProcessedEventsPerRun: 4
+  maxProcessedMessagesPerRun: 4
 comparison:
   binary64:
     mode: ulp
@@ -327,7 +327,7 @@ id: case-0006
 kind: scriptApi
 level: scenario
 runtimeLimits:
-  maxQueuedMessagesPerRun: 2
+  maxQueuedMessages: 2
 comparison:
   binary64:
     mode: ulp
@@ -374,7 +374,7 @@ steps:
         args: []
     runtimeLimits:
       include:
-        - name: "MaxQueuedMessagesPerRun"
+        - name: "MaxQueuedMessages"
           limit: 2
     trace:
       - event: dispatchStarted
@@ -391,7 +391,7 @@ steps:
         accepted: true
       - event: runtimeLimit
         runtimeLimit:
-          name: MaxQueuedMessagesPerRun
+          name: MaxQueuedMessages
           limit: 2
       - event: emit
         id: "0"

@@ -296,7 +296,7 @@ public sealed class GesSchemaTests
         return GesValue.GesRecord(
             "S",
             ["id", "x", "name", "items", "part", "pick"],
-            [GesValue.GesInteger(7), GesValue.GesNumber(x * 40, GesQuantityUnit.UnitMeter), GesValue.GesText(name), GesValue.GesList([GesValue.GesText("a"), GesValue.GesText(name[..1])]), part, part]);
+            [GesValue.GesInteger(7), GesValue.GesFloat(x * 40, GesQuantityUnit.UnitMeter), GesValue.GesText(name), GesValue.GesList([GesValue.GesText("a"), GesValue.GesText(name[..1])]), part, part]);
     }
 
     [TestMethod]

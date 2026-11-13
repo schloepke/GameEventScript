@@ -29,7 +29,7 @@ public sealed class GesSchemaDocument
         _text = text;
     }
 
-    /// <summary>Gets the schema the header names.</summary>
+    /// <summary>Gets the name of the schema the header names, without the leading <c>:</c>.</summary>
     public string Schema { get; }
 
     /// <summary>Gets the document's entries as a Record of <see cref="Schema"/>, which a model of it converts.</summary>
@@ -38,8 +38,9 @@ public sealed class GesSchemaDocument
     /// <summary>Reads document text whose header names one of the expected schemas and checks it against that schema.</summary>
     /// <param name="schemas">The schema set that declares the expected schemas.</param>
     /// <param name="text">The document text.</param>
-    /// <param name="expected">The schemas the header may name.</param>
-    /// <returns>The checked document.</returns>
+    /// <param name="expected">The names of the schemas the header may name, without the leading <c>:</c>.</param>
+    /// <returns>The checked document with the schema it names and its entries as a Record.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="schemas"/>, <paramref name="text"/> or <paramref name="expected"/> is <see langword="null"/>.</exception>
     /// <exception cref="GesDocumentException">The text is no document, its header names no expected schema
     /// (<see cref="SchemaMismatch"/>, naming both), or it breaks the schema, with the <c>document.*</c> code, its position and
     /// the field path.</exception>
@@ -68,7 +69,8 @@ public sealed class GesSchemaDocument
     /// entry the path names, and a List for an element of it, since paths name no index.
     /// </summary>
     /// <param name="error">The conversion error.</param>
-    /// <returns>A document error with the error's code and path.</returns>
+    /// <returns>A document error with the error's code and path, located at the line and column of that value.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="error"/> is <see langword="null"/>.</exception>
     public GesDocumentException Locate(GesWireException error)
     {
         if (error is null) throw new ArgumentNullException(nameof(error));

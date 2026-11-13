@@ -67,7 +67,7 @@ public final class GesHostBuilder {
     }
 
     /// Sets the runtime extension resolver used while linking Programs. Returns this builder.
-    @discardableResult public func withRegistry(_ value: any GesExtensionRegistry) -> Self {
+    @discardableResult public func withExtensionRegistry(_ value: any GesExtensionRegistry) -> Self {
         extensions = value
         return self
     }

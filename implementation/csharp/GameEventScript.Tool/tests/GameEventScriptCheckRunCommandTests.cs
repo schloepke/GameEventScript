@@ -199,7 +199,7 @@ public sealed class GameEventScriptCheckRunCommandTests
     /// <param name="value">The configured limit.</param>
     /// <param name="limitName">The expected runtime limit identity.</param>
     [TestMethod]
-    [DataRow("--max-messages", "3", "MaxProcessedEventsPerRun")]
+    [DataRow("--max-messages", "3", "MaxProcessedMessagesPerRun")]
     [DataRow("--max-steps", "1", "MaxExecutionSteps")]
     public void RunConsoleOutsFailureAtRuntimeLimits(string option, string value, string limitName)
     {

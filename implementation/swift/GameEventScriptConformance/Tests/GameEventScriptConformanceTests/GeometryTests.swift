@@ -6,6 +6,12 @@ import XCTest
 
 /// The native spatial and shape values; the C# tests use the same inputs and results.
 final class GeometryTests: XCTestCase {
+    func testEqualityIsBinary64Equality() {
+        XCTAssertEqual(GesPoint(x: 0, y: 1, z: 2), GesPoint(x: -0.0, y: 1, z: 2))
+        XCTAssertNotEqual(GesPoint(x: .nan, y: 0), GesPoint(x: .nan, y: 0), "A NaN component is equal to nothing, as in C#.")
+        XCTAssertNotEqual(GesVector(x: 0, y: .nan), GesVector(x: 0, y: .nan))
+    }
+
     func testPointsAndVectorsFollowTheLanguage() {
         let start = GesPoint(x: 1, y: 2)
         let end = GesPoint(x: 4, y: 6)

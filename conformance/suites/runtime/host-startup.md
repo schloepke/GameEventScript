@@ -383,7 +383,7 @@ initialization:
 
 ## Test: Start completes more initializations than the processed-message limit
 
-This scenario verifies that `MaxProcessedEventsPerRun` paces ordinary pumps only: Start completes all three initializations under a limit of 1, and the first ordinary pump afterwards stops after one message.
+This scenario verifies that `MaxProcessedMessagesPerRun` paces ordinary pumps only: Start completes all three initializations under a limit of 1, and the first ordinary pump afterwards stops after one message.
 
 ### Case description
 
@@ -391,7 +391,7 @@ This scenario verifies that `MaxProcessedEventsPerRun` paces ordinary pumps only
 gesBlock: case
 id: initial-group-beyond-processed-limit
 runtimeLimits:
-  maxProcessedEventsPerRun: 1
+  maxProcessedMessagesPerRun: 1
 sources:
   - name: a.ges
     program: a
@@ -441,7 +441,7 @@ initialization:
     - name: Three
   runtimeLimits:
     exclude:
-      - name: MaxProcessedEventsPerRun
+      - name: MaxProcessedMessagesPerRun
         limit: 1
 steps:
   first:
@@ -450,7 +450,7 @@ steps:
       - name: SeenOne
     runtimeLimits:
       include:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
 ```
 

@@ -115,7 +115,8 @@ def terminal_test(color):
 
 
 def pipe_tests():
-    command = sys.argv[1:]
+    # These processes run in a temporary directory, so a relative executable or DLL path must name the same file there.
+    command = [str(Path(value).resolve()) if Path(value).exists() else value for value in sys.argv[1:]]
     with tempfile.TemporaryDirectory() as directory:
         work = Path(directory)
 
@@ -127,7 +128,8 @@ def pipe_tests():
                 process.stdin.write(b'emit ConsoleOut("' + word + b'")\n')
                 process.stdin.flush()
                 assert select.select([process.stdout], [], [], 10)[0], ('no reply while stdin stays open', word)
-                assert process.stdout.readline() == word + b'\n'
+                line = process.stdout.readline()
+                assert line == word + b'\n', (word, line, process.poll())
             process.stdin.close()
             assert process.wait(timeout=10) == 0
         finally:

@@ -102,18 +102,40 @@ final class ToolLineReader {
                 buffer.removeAll()
                 return text
             }
-            let bytes = try FileHandle.standardInput.read(upToCount: 4096) ?? Data()
-            eof = bytes.isEmpty
-            buffer.append(contentsOf: bytes)
+            // read(2) returns what is available, so a driver that keeps the pipe open gets each line answered; a
+            // FileHandle read of a fixed count would wait for 4096 bytes or the end of the input.
+            var chunk = [UInt8](repeating: 0, count: 4096)
+            var count: Int
+            repeat {
+                count = chunk.withUnsafeMutableBytes { read(0, $0.baseAddress, $0.count) }
+            } while count < 0 && errno == EINTR
+            if count < 0 { throw ToolError.io("<stdin>: " + String(cString: strerror(errno))) }
+            eof = count == 0
+            buffer.append(contentsOf: chunk[..<count])
         }
     }
 }
 
 func quoted(_ text: String) -> String {
-    // Foundation's JSON writer provides portable escaping for paths and verbose Text arguments.
-    let data = try? JSONSerialization.data(withJSONObject: [text], options: [.fragmentsAllowed, .withoutEscapingSlashes])
-    guard let data, let array = String(data: data, encoding: .utf8) else { return "\"\"" }
-    return String(array.dropFirst().dropLast())
+    // A display string in JSON quotes, as the C# CLI writes it: only quotes, backslashes and control characters are
+    // escaped, so Unicode text and paths stay readable. Unicode scalars, since C# escapes UTF-16 units below U+0020 alike.
+    var result = "\""
+    for scalar in text.unicodeScalars {
+        switch scalar {
+        case "\"": result += "\\\""
+        case "\\": result += "\\\\"
+        case "\n": result += "\\n"
+        case "\r": result += "\\r"
+        case "\t": result += "\\t"
+        case "\u{8}": result += "\\b"
+        case "\u{c}": result += "\\f"
+        case _ where scalar.value < 0x20:
+            let hex = String(scalar.value, radix: 16)
+            result += "\\u" + String(repeating: "0", count: 4 - hex.count) + hex
+        default: result.unicodeScalars.append(scalar)
+        }
+    }
+    return result + "\""
 }
 
 /// Compares Unicode scalar sequences exactly, without Swift String canonical equivalence; matches the Runtime's

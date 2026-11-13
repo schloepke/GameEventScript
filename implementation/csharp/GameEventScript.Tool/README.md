@@ -441,7 +441,7 @@ Interactive commands are:
 | `:dump @<ID>` | Select a Program by session ID, including anonymous or duplicate modules |
 | `:source <module\|ID>` | Show only embedded source documents, each with a filename heading |
 | `:show <file>` | Show a `.ges`, `.gesa`, `.gesd` or `.gess` file highlighted and mark its errors, without loading it |
-| `:quit` | End the session; EOF also exits |
+| `:quit` | End the session, discarding scheduled delayed messages; EOF also exits after delivering them, as a batch `run` does |
 
 Help, prompts, and load/unload/reload reports go to stderr. Prompts and the introductory message
 appear only when stdin is a terminal; redirected UTF-8 input is accepted without
@@ -586,8 +586,9 @@ message removed before it was dispatched, for example after a failed
 initialization. `:edit` and `:reload` replace the host instead of clearing it, so
 the queued messages they drop print no `discard` lines. No outbound sink is
 configured, so publications only reach local subscribers. Nothing is sent to an
-external service. Root Text arguments in verbose traces use JSON quoting/escaping;
-other values use the existing GES text representation. Trace rendering is distinct
+external service. Root Text arguments in verbose traces use JSON quotes; both CLIs escape only quotes, backslashes and
+control characters, so Unicode text stays readable, as do the paths of `:list`, `:source` and `:show`; other values
+use the existing GES text representation. Trace rendering is distinct
 from ConsoleOut and ConsoleErr output and defines no portable serialization format.
 
 `--seed` accepts a signed decimal Int64. The same seed and programs reproduce the
@@ -858,6 +859,9 @@ unsaved editor drafts; clean file-backed programs are reread from disk. Save ref
 file changes and existing scratch destinations. Unload refuses unsaved drafts.
 EOF with unsaved drafts reports a failure for redirected input; terminal EOF
 keeps the prompt open. Use :quit! to discard explicitly.
+EOF waits for scheduled delayed messages before it exits; :quit discards them.
+:save writes UTF-8 without a BOM through a symbolic link to its target and keeps the
+file permissions.
 
 Editor selection uses GES_EDITOR, then VISUAL, then EDITOR (blank values are skipped).
 Without configuration, the default is nano on macOS/Linux and notepad.exe on Windows.

@@ -835,7 +835,7 @@ symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"Gam
 symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptRuntime.GesSchemaParameters.init()"}
 symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptRuntime.GesVector.init()"}
 symbol {"access":"public","declaration":"init(_ arguments: [GesMessageArgument] = []) throws","kind":"swift.init","path":"GameEventScriptRuntime.GesMessageArguments.init(_:)"}
-symbol {"access":"public","declaration":"init(_ code: GesProgramFormatErrorCode, message: String = \"Invalid GES program\", byteOffset: Int? = nil, sectionType: UInt16? = nil, entryIndex: Int? = nil)","kind":"swift.init","path":"GameEventScriptRuntime.GesProgramFormatError.init(_:message:byteOffset:sectionType:entryIndex:)"}
+symbol {"access":"public","declaration":"init(_ code: GesProgramFormatErrorCode, message: String? = nil, byteOffset: Int? = nil, sectionType: UInt16? = nil, entryIndex: Int? = nil)","kind":"swift.init","path":"GameEventScriptRuntime.GesProgramFormatError.init(_:message:byteOffset:sectionType:entryIndex:)"}
 symbol {"access":"public","declaration":"init(_ corner: GesPoint, _ opposite: GesPoint)","kind":"swift.init","path":"GameEventScriptRuntime.GesBox.init(_:_:)"}
 symbol {"access":"public","declaration":"init(_ points: [GesPoint])","kind":"swift.init","path":"GameEventScriptRuntime.GesPoly.init(_:)"}
 symbol {"access":"public","declaration":"init(_ schema: GesBoundSchema, data: UnsafeRawBufferPointer, byteLimit: Int = .max)","kind":"swift.init","path":"GameEventScriptRuntime.GesSchemaReader.init(_:data:byteLimit:)"}

@@ -14,7 +14,7 @@ extension Tool {
         while io.outputError == nil {
             if io.inputTerminal && prompt == nil { io.write("ges> ", toError: true) }
             guard var line = try prompt?.readLine(session: session) ?? (prompt == nil ? session.readInput() : nil) else {
-                if session.workspace.canQuit(io) { return success }
+                if session.workspace.canQuit(io) { return try session.drainDelayed() && success }
                 if io.inputTerminal { continue }
                 return false
             }

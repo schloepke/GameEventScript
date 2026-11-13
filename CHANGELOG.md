@@ -266,6 +266,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   such as `decimal` or enums, and external classes it does not register. A constructor argument that does not convert
   exactly, such as `2.7` for an `int`, is now `runtime.externalConstructorFailed` instead of a truncated value.
 
+- The end of console input (EOF) delivers scheduled delayed messages before the CLI exits, as a batch `run` does, so
+  piped console scripts lose no timer or delayed `ErrorCode`; `:quit` still discards them.
+
 ### Added
 - `:Bytes`, an immutable byte sequence: literals `:Bytes[0xa0, 183]` and `:Bytes("a0b7")`, `as :Bytes`
   from integer Lists and hexadecimal Text, `as :Text`/`parse`/documents, count, `in`, indexing,
@@ -524,6 +527,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - C# external-type fields and constructor parameters accept `float`, `GesPoint`, `GesVector`, `GesBox`, `GesPoly` and
   nullable value types, and a `[GesConstruct]` factory may return an instance of a derived class.
 
+- Verbose traces and the paths of `:list`, `:source` and `:show` escape only quotes, backslashes and control characters
+  in both CLIs, so Unicode text stays readable; the C# CLI escaped all non-ASCII text and `<`, `>`, `'` before.
+- The Swift Runtime explains every Program format error and reached runtime limit with a specific message, as C#
+  does, instead of a generic one.
+
 ### Changed
 
 - `Host.Load` and the writer no longer validate a Program again that the Reader, the Compiler or an earlier validation
@@ -736,6 +744,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   skipped.
 - Swift encodes an empty non-byte array, such as `[String]()`, as an empty List instead of empty Bytes.
 - A Swift runner delivers delayed work after the last outside reference to it is gone, as the C# runner does.
+- The Swift console answers each piped line at once instead of waiting for 4096 bytes or the end of the input.
+- The C# CLI ends with status 1 when stdout is a closed pipe, as Swift does, instead of returning the script's code.
+- `:save` writes through a symbolic link to its target and keeps the file's permissions in both CLIs.
+- C# diagnostics no longer end in an empty `[program=]`, and an I/O error without a file has no leading colon.
+- The C# console's waiting prompt indents continuation lines without ` ... ` markers.
 
 ## [0.4.0] — 2026-10-11
 

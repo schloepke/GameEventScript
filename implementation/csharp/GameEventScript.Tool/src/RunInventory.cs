@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Globalization;
-using System.Text.Json;
 using GameEventScript.Api;
 using static GameEventScript.Api.GesBindingSegment;
 
@@ -60,7 +59,7 @@ internal sealed class RunInventory(GameEventScriptHost host, RunWorkspace worksp
         foreach (var entry in programs)
         {
             Console.Error.WriteLine($"  {entry.Id}  {(entry.Id == 0 ? "scratch [no file]" : entry.Instance.Program.ModuleName)}  version={entry.Instance.Program.ProgramVersion}  handlers={Handlers(entry).Count()}{DraftStatus(entry.Id)}");
-            Console.Error.WriteLine("      files: " + string.Join(", ", entry.Paths.Select(path => JsonSerializer.Serialize(path, ToolJsonContext.Default.String))));
+            Console.Error.WriteLine("      files: " + string.Join(", ", entry.Paths.Select(path => ToolText.Quote(path))));
         }
         foreach (var draft in workspace.Drafts.Values.Where(d => !programs.Any(e => e.Id == d.Id)))
             Console.Error.WriteLine($"  {draft.Id}  {(draft.Id == 0 ? "scratch [no file]" : string.Join(", ", draft.Paths))}{DraftStatus(draft.Id)}");
@@ -117,7 +116,7 @@ internal sealed class RunInventory(GameEventScriptHost host, RunWorkspace worksp
         {
             for (var index = 0; index < draft.Text.Length; index++)
             {
-                var header = "// Source: " + JsonSerializer.Serialize(draft.Paths[index], ToolJsonContext.Default.String);
+                var header = "// Source: " + ToolText.Quote(draft.Paths[index]);
                 Console.Error.WriteLine(color ? RunHighlighting.Paint(header, 90) : header);
                 var text = Console.IsErrorRedirected ? draft.Text[index] : ToolTextDisplay.ExpandTabs(draft.Text[index]);
                 Console.Error.WriteLine(color ? RunHighlighting.Render(text) : text);
@@ -134,7 +133,7 @@ internal sealed class RunInventory(GameEventScriptHost host, RunWorkspace worksp
         }
         foreach (var source in archive.Sources)
         {
-            var header = "// Source: " + JsonSerializer.Serialize(source.SourceName, ToolJsonContext.Default.String);
+            var header = "// Source: " + ToolText.Quote(source.SourceName);
             Console.Error.WriteLine(color ? RunHighlighting.Paint(header, 90) : header);
             var text = source.ResolveText();
             if (!Console.IsErrorRedirected) text = ToolTextDisplay.ExpandTabs(text);

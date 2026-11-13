@@ -34,6 +34,9 @@ unsaved editor drafts; clean file-backed programs are reread from disk. Save ref
 file changes and existing scratch destinations. Unload refuses unsaved drafts.
 EOF with unsaved drafts reports a failure for redirected input; terminal EOF
 keeps the prompt open. Use :quit! to discard explicitly.
+EOF waits for scheduled delayed messages before it exits; :quit discards them.
+:save writes UTF-8 without a BOM through a symbolic link to its target and keeps the
+file permissions.
 
 Editor selection uses GES_EDITOR, then VISUAL, then EDITOR (blank values are skipped).
 Without configuration, the default is nano on macOS/Linux and notepad.exe on Windows.

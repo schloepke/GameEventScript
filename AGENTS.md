@@ -707,7 +707,8 @@ order. All Programs are loaded into one host before execution. By default it
 drains initialization and then sends one `Main(args)` message, with a List of Text
 values from `--arg`, `--args`, or the remainder after `--`. No implicit parsing
 is applied. Batch execution waits for delayed work; interactive input pumps due work
-while preserving the current prompt and unfinished input. `--args` stops at the next option; `--` stops option parsing entirely.
+while preserving the current prompt and unfinished input, and the end of console input waits for delayed work too
+(`:quit` discards it). `--args` stops at the next option; `--` stops option parsing entirely.
 `--scenario` replaces Main with a separately compiled GES scenario; `--interactive` replaces it with an explicit event console.
 Those modes are mutually exclusive. Missing Main must not implicitly start a REPL.
 

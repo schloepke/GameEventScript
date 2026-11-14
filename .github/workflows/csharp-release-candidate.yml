@@ -9,7 +9,7 @@ on:
       version:
         description: NuGet package version to prepare
         required: true
-        default: 0.3.0
+        default: 0.5.0
         type: string
       publish:
         description: Publish after environment approval (disabled by default)

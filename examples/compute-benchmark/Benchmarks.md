@@ -107,7 +107,7 @@ Its JSON results stay in `artifacts/bench`.
 
 ## Opcode and source-line profiling
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Use the same binary to collect comparable execution counts and locate expensive
 opcode families or source lines:

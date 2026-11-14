@@ -24,9 +24,9 @@ versions retain their original package contents; icons are included starting wit
 
 | Distribution | Public products |
 | --- | --- |
-| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.Syntax`, `GameEventScript.Generator` (since Unreleased) |
+| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.Syntax`, `GameEventScript.Generator` (since 0.5.0) |
 | NuGet tools (since 0.3.0) | `GameEventScript.Tool`, `GameEventScript.Tool.Aot` (plus RID implementation packages) |
-| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntax`, `GameEventScriptGenerator` (since Unreleased) |
+| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntax`, `GameEventScriptGenerator` (since 0.5.0) |
 
 The root SwiftPM package exposes only libraries. The CLI uses its separate development package.
 
@@ -277,7 +277,7 @@ the qualified measurement host without extending ordinary Swift PR CI.
 
 Release preparation also requires the [release consumer upgrade checks](../../../conformance/cross-language/ReleaseUpgrade.md).
 The C# Release Candidate workflow runs the separate C#/Swift upgrade workflow
-before preparation; it does not extend normal Swift PR CI. The selected 0.3.0
+before preparation; it does not extend normal Swift PR CI. The selected 0.4.0
 baseline is tested against the checked-out candidate commit without publication.
 
 

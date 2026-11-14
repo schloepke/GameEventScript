@@ -210,7 +210,7 @@ let x be 10
 let y be 20; let z be x + y // same statement separator model
 ```
 
-> **Since: Unreleased** — underscores in message and type names
+> **Since: 0.5.0** — underscores in message and type names
 
 Names are intentionally narrow:
 
@@ -252,7 +252,7 @@ Names are intentionally narrow:
   with a lowercase ASCII letter and continues with lowercase ASCII letters or
   digits. Uppercase letters, `_`, and `-` are forbidden.
 
-> **Since: Unreleased** — names in backticks and keyword-like field names
+> **Since: 0.5.0** — names in backticks and keyword-like field names
 
 A name in backticks is the plain name wherever a lowercase name stands: a
 binding and its reads, a parameter, a callable name, an argument label, a record
@@ -334,7 +334,7 @@ let rate be 4/s                // spelling of 4Hz
 let color be 0xff_88_00        // hexadecimal integer 16746496
 ```
 
-> **Since: Unreleased** — hexadecimal integer literals
+> **Since: 0.5.0** — hexadecimal integer literals
 
 A hexadecimal literal is `0x` followed by hexadecimal digits `0`–`9`, `a`–`f`
 or `A`–`F`; single underscores may separate adjacent digits as in decimal
@@ -346,7 +346,7 @@ digits, a larger value or any directly attached letter, digit or other
 non-structural character makes the whole word an illegal token. Values print
 in decimal; nothing records the spelling.
 
-> **Since: Unreleased** — physical unit literals
+> **Since: 0.5.0** — physical unit literals
 
 The lexer takes the longest unit spelling that is followed by whitespace, a
 structural character or the end of input, so `10m/s` is one quantity literal
@@ -519,7 +519,7 @@ grammar, empty tags are omitted, and later duplicates are omitted while retainin
 first occurrence order. Applying `with` to an existing message replaces that
 message's tags with the normalized clause result.
 
-> **Since: Unreleased** — statement sends with an invalid tag clause
+> **Since: 0.5.0** — statement sends with an invalid tag clause
 
 A clause with an invalid tag
 sends nothing and execution continues, as for every other send that cannot be made.
@@ -944,7 +944,7 @@ value is empty
 value has value
 ```
 
-> **Since: Unreleased** — inclusive range comparisons
+> **Since: 0.5.0** — inclusive range comparisons
 
 `value is between lower and upper` is an inclusive range check with the same
 comparison and three-valued Boolean semantics as `value >= lower and value <= upper`,
@@ -1026,7 +1026,7 @@ accepts any unitless number. Invalid domains, incompatible units, unsupported
 values, and `nothing` produce `nothing`. Transcendental portability follows
 [Number semantics](Semantics/Numbers.md).
 
-> **Since: Unreleased** — parenthesized intrinsic as power base
+> **Since: 0.5.0** — parenthesized intrinsic as power base
 
 When the first token after the intrinsic word, including the mode words of
 `round half even`, `round half up`, `round half down` and `wrap degree`, is `(`,
@@ -1217,7 +1217,7 @@ For example, `parse input as :Number` means `(parse input) as :Number`.
 Literal recognition, quoted Text decoding, and the exact original-Text fallback
 are owned by [Text semantics](Semantics/Text.md#literal-recognition-from-text).
 
-> **Since: Unreleased** — strict literal parsing
+> **Since: 0.5.0** — strict literal parsing
 
 `parse strict` recognizes the same literals but produces `nothing` instead of the
 original Text when its operand is not a complete data literal:
@@ -1231,7 +1231,7 @@ let level be parse strict input default #standard
 the operand. To parse a binding named `strict`, write `parse (strict)` or
 `parse strict strict`; `parse strict` without a further operand is a syntax error.
 
-> **Since: Unreleased** — GES documents
+> **Since: 0.5.0** — GES documents
 
 Hosts read configuration and content files written with the same data literals
 from [GES documents](Documents.md) (`.gesd`). Documents are not scripts; `parse`
@@ -1270,7 +1270,7 @@ conflicting existing unit. Percentage construction uses the numeric ratio.
 offset to zero; it must be a nonnegative unitless integer. A labeled `:Range` needs
 both `from` and `to`. Range and Series remain lazy.
 
-> **Since: Unreleased** — message names, positional tags and tag checks of these forms
+> **Since: 0.5.0** — message names, positional tags and tag checks of these forms
 
 `:Message(...)` explicitly distinguishes a message instance, including an
 argumentless one, from `:Handler(Name(labels))`. Both name a message with its
@@ -1372,7 +1372,7 @@ valid mathematics: `point * scalar`, `scalar * point`, `point / scalar`,
 Unary negation follows the same model: `-vector` negates each component, while
 `-point` is invalid mathematics and produces numeric `NaN`.
 
-> **Since: Unreleased** — quantity squares, cubes and roots
+> **Since: 0.5.0** — quantity squares, cubes and roots
 
 Power with quantity units follows the closed unit set. A quantity may be raised
 only to a unitless numeric exponent: `0` gives a unitless value and `1` keeps the
@@ -1496,7 +1496,7 @@ let b be 90 as :Quantity(°)
 let unitlessDistance be distance as :Quantity(none)
 ```
 
-> **Since: Unreleased** — units other than meter, second and degree
+> **Since: 0.5.0** — units other than meter, second and degree
 
 The unit set is closed; there is no general dimensional algebra. Each unit has
 a canonical symbol, which literals, `:Quantity(...)` and formatting use, and a
@@ -1704,7 +1704,7 @@ exact and ordering is lexicographic by Unicode scalar value; see
 
 ### Bytes
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Bytes are an immutable sequence of bytes for opaque host data such as hashes,
 identifiers and encoded records. A Bytes literal lists integer literals from 0
@@ -1768,7 +1768,7 @@ is `validate.invalidTypeConstructor`. Labels cannot be mixed with positional
 components, as in `:Vector(v, z: 2)`. Every omitted component is zero with the
 unit of the others.
 
-> **Since: Unreleased** — one positional argument as the cast
+> **Since: 0.5.0** — one positional argument as the cast
 
 One positional argument is the cast, so `:Vector([1, 2])` means
 `[1, 2] as :Vector`. Two or three positional components fill `x`, `y` and `z` in
@@ -2777,7 +2777,7 @@ and computed-field bodies accept this form. Ordinary expressions do not.
 
 ## Compact selector chains and extension names
 
-> **Since: Unreleased** — compact selector syntax
+> **Since: 0.5.0** — compact selector syntax
 
 A selector bracket may contain multiple colon-prefixed steps. For example,
 `items[:filter x where x > 0 :select x => x * 2]` is equivalent to

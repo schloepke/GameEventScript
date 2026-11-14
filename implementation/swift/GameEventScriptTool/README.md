@@ -250,7 +250,7 @@ The CLI is built from this separate package; the root SwiftPM package exposes on
 
 ## Opcode profiling
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Pass `--profile report.md` to `run` to collect opcode, source-line and instruction
 measurements:
@@ -296,7 +296,7 @@ completed-opcode counter. The report measures neither allocations nor CPU time.
 
 ## In-process benchmark
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `ges bench workload.gesb` measures the steady state of a compiled program inside one process, with the same flags,
 statistics, text and JSON output as `dotnet ges bench`. The [C# CLI README](../../csharp/GameEventScript.Tool/README.md#in-process-benchmark)

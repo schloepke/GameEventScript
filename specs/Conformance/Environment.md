@@ -76,7 +76,7 @@ starting at 1. Reading `other` raises an unanticipated platform failure when
 
 ## External type `NumberProbe`
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 The fixed V1 external-type catalog also declares `NumberProbe(value: Float<UnitNone>)` with fields
 `value: Float<UnitNone>` and `stored: Float<UnitNone>` in that order. `value` retains the converted
@@ -149,7 +149,7 @@ their declared types.
 
 ## Geometry library
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 The environment includes the standard [geometry library](../PublicApi.md#geometry-library): its catalog resolves `:Box`,
 `:Poly` and `:Disc` in front of the fixture types above, and its constructor and extension registries resolve `:geometry.*`

@@ -845,7 +845,7 @@ value:
   equalHash: true
 ```
 
-> **Since: Unreleased** — member access input
+> **Since: 0.5.0** — member access input
 
 Alternatively, `valueApi.access` reads members and traverses a Map or Record, and
 allows no other `valueApi` field. It holds either `value` or `external`, an
@@ -887,7 +887,7 @@ access:
     - { key: a, value: { type: ":Number.int64", value: "1" } }
 ```
 
-> **Since: Unreleased** — literal parsing input
+> **Since: 0.5.0** — literal parsing input
 
 Alternatively, `valueApi.literal` parses `text` through the public literal
 parsing API, with `mode` `lenient` or `strict`, and allows no other `valueApi`
@@ -913,7 +913,7 @@ literal:
 
 ### `schemaApi`
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Requires `schema-api` and no GES source. `schemaApi.sources` lists schema source texts, named
 `schema0.gess` and so on; `root` names a declaration and `parameters` maps parameter names to
@@ -929,7 +929,7 @@ contains any of `error` (`code` with optional `line` and `column`; it stands alo
 
 ### `documentApi`
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Requires `document-api` and no GES source. `documentApi.text` reads
 [GES document](../Documents.md) text through the public document API; it may use

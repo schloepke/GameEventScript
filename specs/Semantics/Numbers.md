@@ -147,7 +147,7 @@ Leading zeroes are allowed in the integer part and exponent. Both `e` and `E`,
 an explicit positive exponent sign, and exponent leading zeroes are accepted.
 Thus `1000`, `100.2`, `1.02e20`, `1e03`, and `1E+003` are valid inputs.
 
-> **Since: Unreleased** — hexadecimal numeric text
+> **Since: 0.5.0** — hexadecimal numeric text
 
 A `Hexadecimal` token is an exact Int64 integer, matching hexadecimal source
 literals: its magnitude may be at most `0x7fff_ffff_ffff_ffff`, also with a
@@ -421,7 +421,7 @@ the DSL's unit, domain, absence, and special-value checks. Exact bit identity
 between different correctly rounded or near-correctly-rounded math libraries is
 not required.
 
-> **Since: Unreleased** — exact square roots
+> **Since: 0.5.0** — exact square roots
 
 A power with the exponent 0.5, which `sqrt` and `√` lower to, is the correctly rounded IEEE square root rather than the
 library's `pow`, so a square root has the same bits on every platform. Like `pow`, it gives `+infinity` for `-infinity`

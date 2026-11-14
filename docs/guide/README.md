@@ -21,7 +21,7 @@ consult the [changelog](../../CHANGELOG.md) when targeting a published release.
 
 ## Data files and schemas
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 - [GES documents](../../specs/Documents.md) (`.gesd`) hold configuration and content
   written like GES literals. The [C#](CSharp.md#read-data-documents) and

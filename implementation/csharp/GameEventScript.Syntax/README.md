@@ -3,7 +3,7 @@
 
 # C# Syntax module
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `GameEventScript.Syntax` is the .NET Standard 2.1 module with the GES lexer,
 parser, single-source validator and GES document and schema readers that

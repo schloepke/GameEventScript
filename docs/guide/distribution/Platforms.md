@@ -3,7 +3,7 @@
 
 # Platform support and release evidence
 
-For 0.4.0, support is scoped to the product and verification level below.
+For 0.5.0, support is scoped to the product and verification level below.
 The tables describe the configured checks, not a claim that an unreleased
 candidate has already passed them. A release must retain successful evidence
 for its exact source commit before claiming the corresponding support.

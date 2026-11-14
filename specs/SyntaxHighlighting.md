@@ -10,7 +10,7 @@ Highlighting classifies source text for display and reports the diagnostics a
 single source can know. It never executes source and does not replace the
 Compiler's diagnostics. Runtime, Compiler and native Bridges do not depend on it.
 
-> **Since: Unreleased** — tree-based highlighting, span diagnostics
+> **Since: 0.5.0** — tree-based highlighting, span diagnostics
 
 ## Input and result
 
@@ -39,7 +39,7 @@ the parser recorded for it, and for a few constructs the node that owns it.
 Leading trivia contributes Plain whitespace, a leading BOM as Plain and `//`
 comments as Comment.
 
-> **Since: Unreleased** — names in backticks and keyword-like field names
+> **Since: 0.5.0** — names in backticks and keyword-like field names
 
 A name in backticks is one token, backticks included, and is categorized like
 any other name, usually as Identifier; invalid backtick content is an illegal
@@ -70,7 +70,7 @@ are Comment. GESA has no diagnostics.
 
 ## GES documents
 
-> **Since: Unreleased** — GES document highlighting
+> **Since: 0.5.0** — GES document highlighting
 
 A GES document ([Documents](Documents.md)) is categorized token by token, so
 text after an error keeps its categories. Whitespace, line breaks and a leading
@@ -98,7 +98,7 @@ are reported only by reading the document (`GesDocument`).
 
 ## GES schemas
 
-> **Since: Unreleased** — GES schema highlighting
+> **Since: 0.5.0** — GES schema highlighting
 
 A GES schema source ([Schemas](Schemas.md)) is categorized token by token from left to right, so text after an error
 keeps its categories. Whitespace, line breaks, a leading BOM and every character that starts no token below, such as

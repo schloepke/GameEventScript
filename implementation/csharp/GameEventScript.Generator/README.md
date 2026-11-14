@@ -3,7 +3,7 @@
 
 # C# Generator module
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `GameEventScript.Generator` is the .NET Standard 2.1 library behind `ges schema layout`
 and `ges schema generate`. It turns `.gess` schemas into typed record code, in C# or

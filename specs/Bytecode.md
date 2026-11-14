@@ -208,7 +208,7 @@ component output. Iterator instructions require zero UnitId. Undefined flag comb
 The UnitId map keeps the defined ids stable and reserves
 room for likely game-domain units:
 
-> **Since: Unreleased** — UnitIds 4 to 18
+> **Since: 0.5.0** — UnitIds 4 to 18
 
 | UnitId | Unit | Portable name | Intended use |
 | --- | --- | --- | --- |
@@ -526,7 +526,7 @@ is a local variable and is not encoded in the binding.
 System endpoint entries use reserved lowercase names outside normal message
 casing. Only handler entries may use them: an `OutboundMessage` entry and the
 message shape of `LoadHandler` and `LoadMessage` with such a name are invalid
-(**Since: Unreleased**). The defined endpoints are:
+(**Since: 0.5.0**). The defined endpoints are:
 
 ```text
 initialization
@@ -1612,7 +1612,7 @@ separate approximate-equality opcode.
 writes `nothing`. It reads `XRegister` before writing the destination; source
 and destination may alias. `YRegister`, payload words, and the unit bits are zero.
 
-> **Since: Unreleased** — strict literal parsing
+> **Since: 0.5.0** — strict literal parsing
 
 The only permitted flag is Strict (`0x40`), which implements `parse strict`:
 recognition failure writes `nothing` instead of the original Text. Every other
@@ -1753,7 +1753,7 @@ Neither instruction charges synthetic opcode work per item.
 
 ### Compound iterator operand encoding
 
-> **Since: Unreleased** — compound iterator transport
+> **Since: 0.5.0** — compound iterator transport
 
 Iterator creation modes are Normal=0, Union=1, Intersect=2, Difference=3,
 Lockstep=4, Cartesian=5, Entries=6. Mode 7 is invalid. The mode is encoded as

@@ -271,7 +271,7 @@ implementation and therefore does not depend on C# reflection.
   signature's declared order.
 - `Receive(message)` captures current subscription snapshots and queues the
   message locally. It never invokes the outbound sink.
-- **Since: Unreleased:** Only the host uses the system endpoints `initialization` and
+- **Since: 0.5.0:** Only the host uses the system endpoints `initialization` and
   `undeliverable`. No Message can be constructed with those names and no Program can
   create one, as [Program validation](Bytecode.md) rejects them outside handler entries. An observer
   still sees the host's initialization message, and `Receive` rejects it. Signatures
@@ -558,7 +558,7 @@ values and expected local/outbound messages.
 
 ## Send IDs
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Every message the Host queues or processes carries a host-local send ID, a
 positive Int64. A Host starts at 1 and assigns the next ID, in order of
@@ -617,7 +617,7 @@ the runnable FIFO in deadline order; equal deadlines retain enqueue order.
 Promotion occurs between complete logical messages, never in the middle of an
 active or paused handler. Future entries do not block runnable messages.
 
-> **Since: Unreleased** — delayed emits without recipients
+> **Since: 0.5.0** — delayed emits without recipients
 
 A delayed emit whose snapshot, including the `undeliverable` fallback, is empty
 at acceptance behaves exactly like the instant emit without recipients: it is
@@ -630,7 +630,7 @@ rejection or failure cannot change the Boolean already returned to script.
 The existing sink diagnostic behavior remains applicable. Emit observations occur
 at acceptance; delayed publish observations occur when the publication is released.
 
-> **Since: Unreleased** — scheduling observation
+> **Since: 0.5.0** — scheduling observation
 
 When an observer is configured, each accepted delayed send reports
 `MessageScheduled` once with its send ID, immediately after it enters the delayed

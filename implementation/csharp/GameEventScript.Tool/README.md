@@ -885,7 +885,7 @@ Both interactive prompts indent continuation lines without adding `...` tokens.
 
 ## Opcode profiling
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Pass `--profile report.md` to `run` to collect opcode, source-line and instruction
 measurements:
@@ -931,7 +931,7 @@ completed-opcode counter. The report measures neither allocations nor CPU time.
 
 ## In-process benchmark
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `bench` measures the steady state of a compiled program inside one process, the same way in both CLIs, so the Swift
 runtime, the .NET JIT and .NET NativeAOT can be compared. It is the contract for both implementations:

@@ -19,7 +19,7 @@ contains exactly `version: 1` and `value`. A message object contains exactly
 are part of the signature. Named labels must be unique; `_` may repeat.
 Tags use bare lowercase tag names, normalized by the ordinary message API.
 
-> **Since: Unreleased** — system endpoint names
+> **Since: 0.5.0** — system endpoint names
 
 The `name` of a message or Handler starts uppercase: writing or reading the system
 endpoints `initialization` and `undeliverable` is `message.invalidValue`.

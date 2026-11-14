@@ -3,7 +3,7 @@
 
 # Performance and allocation release checks
 
-Release 0.4.0 uses the existing checked-in performance budgets. Verification
+Release 0.5.0 uses the existing checked-in performance budgets. Verification
 never recalibrates or relaxes them. These are implementation regression checks,
 not cross-language speed comparisons or promises for all supported platforms.
 The initial 0.4.0 findings are [resolved and documented](../../development/Release040Performance.md).

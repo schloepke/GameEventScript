@@ -2,7 +2,7 @@
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
 
-"""Isolated 0.3.0 consumer upgrade smoke tests; never publishes packages or tags. Each version builds the consumer
+"""Isolated 0.4.0 consumer upgrade smoke tests; never publishes packages or tags. Each version builds the consumer
 source committed with it, so breaking pre-1.0 API changes are checked as the documented migration."""
 import argparse
 import base64
@@ -16,9 +16,10 @@ import subprocess
 from verification_workspace import verification_workspace
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE = '0.3.0'
-BASELINE_COMMIT = '4ed9d44ded085ddccebff943365fb924bd0a3ce5'
-CANDIDATE = '0.4.0-upgrade-test'
+BASELINE = '0.4.0'
+BASELINE_COMMIT = '3d5e6d31ae30f612d0b5ae3ba7ed5f1be26e24ce'
+CANDIDATE = '0.5.0-upgrade-test'
+FIXTURES = ROOT / 'conformance/fixtures/Release040'
 # The optional highlighter package became the Syntax package after the baseline release; the Generator is new.
 MODULES = {BASELINE: ('Runtime', 'Compiler', 'SwiftBridge', 'SyntaxHighlighter')}
 CANDIDATE_MODULES = ('Runtime', 'Compiler', 'SwiftBridge', 'Syntax', 'Generator')
@@ -78,7 +79,7 @@ def require_versions(actual, expected, names):
 
 
 def require_fixture(language, data):
-    expected = (ROOT / 'conformance/fixtures/Release030' / (language + '-consumer.gesb')).read_bytes()
+    expected = (FIXTURES / (language + '-consumer.gesb')).read_bytes()
     if data != expected:
         raise AssertionError(f'{language}: baseline compiler output differs from the frozen release fixture')
 
@@ -197,7 +198,7 @@ def main():
             'baselineFixtureSha256': hashlib.sha256(data).hexdigest(),
             'baselineFixtureBase64': base64.b64encode(data).decode(),
         }, indent=2) + '\n')
-    print(f'{args.language}: 0.3.0 to candidate consumer upgrade and selected old binary passed')
+    print(f'{args.language}: {BASELINE} to candidate consumer upgrade and selected old binary passed')
 
 
 if __name__ == '__main__':

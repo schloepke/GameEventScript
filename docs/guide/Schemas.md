@@ -3,7 +3,7 @@
 
 # Describe data with schemas
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A schema (`.gess`) describes what your data looks like: which fields exist, in which range and
 how precise they are. From that one description you get two things:
@@ -249,7 +249,7 @@ schema :SoundMade as {
 computes the same bits as a script, units and integer rules included; `ges schema check` rejects an expression whose
 units do not fit, such as `energy + duration`. See [computed fields](../../specs/Schemas.md#computed-fields).
 
-> **Since: Unreleased** — functions in computed fields
+> **Since: 0.5.0** — functions in computed fields
 
 The functions of GES work there too, such as `sqrt area`, `sin heading`, `deg atan2(dy, dx)`, `hypot(dx, dy)` or
 `side²`, and a field named with a word that GES reserves is read in backticks, as `` `length` / 2 ``. A square root has
@@ -507,7 +507,7 @@ list, which stays correct but saves nothing. See [Keyed lists](../../specs/Schem
 
 ## 13. Generate typed code
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 The writer and reader look fields up through handles. When your schemas are fixed at build time,
 `ges schema generate` writes a type per schema instead, with fields you assign directly and the
@@ -557,7 +557,7 @@ does not ship. See [Tools](../../specs/Schemas.md#tools) for the exact shape.
 
 ## 14. Mark roots and generate models
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Instead of repeating `--root` in a build script, mark the roots in the schemas. A role belongs to a group, so one set of
 files can feed several generations:
@@ -606,7 +606,7 @@ See [Roles](../../specs/Schemas.md#roles) and [Model types](../../specs/Schemas.
 
 ## 15. Pack dense data into words
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A map of millions of points needs neither a class per point nor a GES value per point. Mark a schema of small fixed-width
 fields `packed`, and generated code holds each record as one machine word:

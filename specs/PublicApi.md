@@ -329,7 +329,7 @@ by [Bytecode](Bytecode.md).
 and suffixes. Parse operations return absence for an unknown valid string;
 predicate operations never use locale; formatting returns canonical GES text.
 
-> **Since: Unreleased** — physical units
+> **Since: 0.5.0** — physical units
 
 `QuantityUnit` has one member per defined UnitId: C# `UnitNone`, `UnitDegree`,
 `UnitMeter`, `UnitSecond`, `UnitMeterPerSecond`, `UnitMeterPerSecondSquared`,
@@ -423,7 +423,7 @@ Dump allocation is outside the runtime hot path.
 `MessageSignature` is immutable content identified by normalized message name
 plus ordered parameter labels. Tags and values are not part of a signature.
 
-> **Since: Unreleased** — system endpoint names
+> **Since: 0.5.0** — system endpoint names
 
 A signature may name a system endpoint to subscribe, but creates no Message from it:
 message creation and JSON decoding reject `initialization` and `undeliverable`, as
@@ -488,7 +488,7 @@ iteration. C# dictionary factories belong to CSharpBridge and delegate to the
 portable ordered factories; their canonical ordering is governed by
 [Determinism](Semantics/Determinism.md).
 
-> **Since: Unreleased** — ordered entries, member reads, map traversal
+> **Since: 0.5.0** — ordered entries, member reads, map traversal
 
 A Map or Record value can be created from ordered key-value entries. The last value
 of a duplicate key wins, and the result has canonical key order. The parallel key and
@@ -569,7 +569,7 @@ the deterministic language semantics.
 
 #### Spatial values
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `GesPoint` and `GesVector` are the native counterparts of the language's [Point and Vector](Language.md#vector-and-point):
 plain values with three Binary64 components `x`, `y` and `z`, where a 2D value has `z` 0, and with no unit. Generated
@@ -597,7 +597,7 @@ schema code uses them for every spatial field, so hosts in both ports compute wi
 
 #### Geometry library
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `GesBox`, `GesPoly` and `GesDisc` are unitless shapes built on the spatial values, the same in both ports, and
 `GesGeometryLibrary` offers them to scripts as external types with a standard extension library, so that a host and its scripts compute alike.
@@ -657,7 +657,7 @@ Game logic, such as rounded hulls, bearings or sensor sectors, stays in hosts.
 
 #### Literal parsing
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `Value` recognizes one complete data literal from Text without a Host, with the
 rules of `parse` and `parse strict` as owned by
@@ -678,7 +678,7 @@ and the numeric `Limit`/`limit`. C# rejects a null input with
 
 #### Documents
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `Document` is an immutable [GES document](Documents.md): a Map or Record root
 with an optional schema reference, read from and printed to `.gesd` text.
@@ -712,7 +712,7 @@ clamped to that range. Equality compares the root values and schema references.
 
 ### Schemas
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, they use neither
 `GesValue` nor the VM, and report their own error types.
@@ -754,7 +754,7 @@ element, and keeps its code and path.
 
 ### Schema code generation
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 The Generator package (C# `GameEventScript.Generator`, namespace `GameEventScript.Generator`; Swift product
 `GameEventScriptGenerator`) computes the [generation layout](Schemas.md#generation-layout) and writes the
@@ -782,7 +782,7 @@ codes and types (`GesSchemaException`, `GesSchemaError`), so a root that names n
 unchecked exclusivity in Swift classes, as the CLI's defaults do. Equal inputs give identical text in every
 port.
 
-> **Since: Unreleased** — roles and models
+> **Since: 0.5.0** — roles and models
 
 `WireRoots` and `ModelRoots` list the [roots of a group](Schemas.md#roles) in declaration order, empty when it has none.
 `ModelLayout` and `GenerateModels` write the [model layout](Schemas.md#model-layout) and the
@@ -790,7 +790,7 @@ port.
 fails with `generate.usage`, and so do the wire-only options `CheckedExclusivity` and `Models`; `Generate` rejects the model-only options
 `Bindings` and `Documents` with `generate.usage`. A reached type without a model type fails with `generate.unsupported`.
 
-> **Since: Unreleased** — split files
+> **Since: 0.5.0** — split files
 
 `GenerateFiles` and `GenerateModelFiles` return the [split output](Schemas.md#split-output) of `Generate` and
 `GenerateModels` as files, `Split` choosing one per declaration (`Schema`) or per schema source (`File`): each file's name
@@ -971,7 +971,7 @@ Swift spells these `messageEmitted(_:id:accepted:)`, `messagePublished(_:id:resu
 `runtimeLimitReached(_:detail:limit:)`, `runtimeError(_:)`,
 `messageScheduled(_:id:deadline:publish:)` and `messageDiscarded(id:)`.
 
-> **Since: Unreleased** — send IDs, scheduling and discard callbacks, default implementations
+> **Since: 0.5.0** — send IDs, scheduling and discard callbacks, default implementations
 
 `id` is the send ID defined in `HostRuntime.md#send-ids`; it is 0 for an Emit
 that was not queued and for a Publish the Host did not accept. The same section
@@ -988,7 +988,7 @@ above.
 
 ### Opcode instrumentation
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `WithProfiler` / `withProfiler` selects an optional synchronous
 `IGesProfiler` / `GesProfiler` factory. The Host calls
@@ -1489,7 +1489,7 @@ extensions below; one that does not, such as `2.7` for an `int` or a value outsi
 for a `nothing` argument without calling the constructor. A factory may return an instance of a derived class, which
 takes the binding of its nearest registered base class.
 
-> **Since: Unreleased** — extensions declared with macros and attributes
+> **Since: 0.5.0** — extensions declared with macros and attributes
 
 `@GesExtension(namespace)` on an enum, struct or final class generates `gesExtensions()`, the `GesBridgeExtension` list of
 its methods marked `@GesFunction(name, unit:, units:)` or `@GesPredicate(name, units:)`, for a `GesBridgeExtensionRegistry`.
@@ -1653,7 +1653,7 @@ returns no value. Reading does not schedule work or produce notifications.
 
 ### Compound collection instruction identifiers
 
-> **Since: Unreleased** — Cartesian opcode
+> **Since: 0.5.0** — Cartesian opcode
 
 The public bytecode opcode enumeration assigns `Cartesian` the stable value
 0xE0. Its operands and reserved fields are owned by [Bytecode](Bytecode.md).

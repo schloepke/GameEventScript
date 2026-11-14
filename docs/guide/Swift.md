@@ -20,7 +20,7 @@ dependency URL, not a package collection URL.
 Select a published tag and add `GameEventScriptRuntime`,
 `GameEventScriptCompiler` and `GameEventScriptSwiftBridge` to your target.
 `GameEventScriptSyntax` is optional for editors and terminal displays, and
-`GameEventScriptGenerator` (since Unreleased) for build tools that generate typed
+`GameEventScriptGenerator` (since 0.5.0) for build tools that generate typed
 schema code; a game does not ship it.
 
 For a command-line SwiftPM project, create this `Package.swift` and replace
@@ -175,7 +175,7 @@ for complete binding examples and conversion guarantees.
 
 ## Read data documents
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Configuration and content files can use [GES documents](../../specs/Documents.md)
 (`.gesd`), whose values are written like GES literals. GES does not touch the
@@ -199,7 +199,7 @@ header is a reference for your application; GES does not validate it.
 
 ## Send data compactly with a schema
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A [schema](../../specs/Schemas.md) (`.gess`) describes a data format with ranges and steps and
 yields a very compact binary encoding. The writer and reader allocate nothing on success and need no VM.

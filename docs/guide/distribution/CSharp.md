@@ -16,7 +16,7 @@ packages under the `GameEventScript` product name:
 - `GameEventScript.Syntax` contains the lexer, parser and validator and the
   highlighting of whole GES, GESA, GESD and GESS documents with UTF-16 ranges and
   ANSI rendering, with no GES dependency.
-- `GameEventScript.Generator` (since Unreleased) writes typed C# and Swift code
+- `GameEventScript.Generator` (since 0.5.0) writes typed C# and Swift code
   for `.gess` schemas at build time and depends on Runtime and Syntax. Games
   never ship it; the code it generates needs Runtime only.
 
@@ -68,7 +68,7 @@ The repository package tool rewrites this packaging-only metadata, ZIP entry
 order, and timestamps into a canonical form. Package normalization is permitted
 only before signing. A signed archive is rejected.
 
-> **Since: Unreleased** — commit-time timestamps
+> **Since: 0.5.0** — commit-time timestamps
 
 Every packaged file takes the time of the packed commit, or the current time
 when the working tree has uncommitted changes (`SOURCE_DATE_EPOCH` overrides

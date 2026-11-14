@@ -54,7 +54,7 @@ than installing both variants, which describe the same syntax and scopes.
 
 ## Sublime Text installation
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Extract the download and copy its `GameEventScript` directory into the directory
 opened by **Preferences → Browse Packages**. Keep that directory name: the
@@ -85,7 +85,7 @@ those two files and rebuild the cache again.
 
 ## CLI actions
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Install the [GES CLI](https://gameeventscript.org/docs/tools/downloads/) and make
 `ges` available on the **editor process's PATH**. Launching an editor from the
@@ -123,7 +123,7 @@ these single-file actions.
 
 ## Syntax completions and snippets
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Sublime offers completion through its popup; TextMate uses its normal completion
 command (Escape by default). Suggestions are deliberately syntax-only:

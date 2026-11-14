@@ -3,7 +3,7 @@
 
 # GES schemas and wire format
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 This document owns GES schemas: `.gess` files that describe data formats, and the
 compact binary encoding derived from them. It is written for server-driven
@@ -153,7 +153,7 @@ exactly one comma. A line break is allowed only in these places: between declara
 the braces of a schema or an axis block, and before or after each `|` of a union. Each field, with its type and marker,
 otherwise stays on one line.
 
-> **Since: Unreleased** — unions across lines
+> **Since: 0.5.0** — unions across lines
 
 A union may span lines wherever it stands: in a field, an argument, a List element and with labeled alternatives. A `|` may
 end a line with the next alternative on the following line, or start a line, which then continues the union of the field
@@ -192,7 +192,7 @@ A source is a sequence of declarations in any order; a reference may come before
   never encoded and is no field of a value or document, but it belongs to the [canonical form](#canonical-form) and the
   hash, since both sides of a connection rely on it, and [generated code](#tools) declares it as a static member of the
   schema's types. Its name differs from the fields and lets of its schema and from the parameters of its file, since a
-  bound may name either, or it is `schema.duplicateName`. *Since: Unreleased.*
+  bound may name either, or it is `schema.duplicateName`. *Since: 0.5.0.*
 
   A let is one value, not an expression: binding and reading evaluate nothing, and arithmetic between lets, such as
   `peakPower * 2s`, would need an expression language for a single convenience; its result is written instead. File
@@ -207,14 +207,14 @@ A source is a sequence of declarations in any order; a reference may come before
   and lets are not taken. A taken field named like a field or let of the schema is `schema.duplicateName`, a field
   `without` names that the taken schema lacks `schema.unknownName`, a taken default whose sibling `without` leaves out
   `schema.invalidDefault`, a taken key that does not end up first `schema.invalidKey`, and schemas that take each other
-  `schema.cycle`. Only a schema takes fields; a message has no `with`. *Since: Unreleased.*
+  `schema.cycle`. Only a schema takes fields; a message has no `with`. *Since: 0.5.0.*
 - **`abstract schema :Name as { ... }`** declares a schema that only lends its fields with `with`, such as the fields many
   unit schemas share. It is no field type, list element, union alternative or root, takes no role, is never bound or
   checked against a document, and is never generated as a type of its own: each of these is `schema.invalidAbstract`, a
   role `schema.invalidRole`. It may take other schemas, abstract or not. It is described like other schemas, with a hash
   over its own fields, but has no hash on the wire: its fields belong to the hash of each schema that takes them. The
   keyword is `abstract` rather than `protocol`, since the ports name what is generated differently and a schema
-  describes fields, not behaviour. *Since: Unreleased.*
+  describes fields, not behaviour. *Since: 0.5.0.*
 
   `with` is composition within one schema set; taking a schema from another set, such as a mod building on a game's
   contract, would need a version or hash both sides bind and will use another keyword.
@@ -233,7 +233,7 @@ A source is a sequence of declarations in any order; a reference may come before
   alternative of type `:Name` is the `:Tag(#a, #b)` written in place: the same constraints, encoding, values and
   [canonical form](#canonical-form), so the name belongs to no hash and renaming a set changes no bytes. A set
   is no root, and a union cannot hold it beside another Tag. [Generated code](#tools) declares one type per set
-  that every field of it uses, instead of one per field. *Since: Unreleased.*
+  that every field of it uses, instead of one per field. *Since: 0.5.0.*
 
 Schemas, messages, message sets and tag sets share one namespace across all sources.
 
@@ -242,11 +242,11 @@ names the alternative after its label instead of its type (`.bind`, C# `Bind`); 
 paths, canonical form or hash, as alternatives are told apart by the kind of their value. A label stands only in a union
 of two or more alternatives and not on `:Nothing`, which has no value, or it is `schema.invalidUnion`; labels and the
 type names of unlabeled alternatives, with a label's first letter capitalized, differ within a union, or it is
-`schema.duplicateName`. *Since: Unreleased.*
+`schema.duplicateName`. *Since: 0.5.0.*
 
 ### Roles
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A role marks a declaration as a root of a kind of [code generation](#tools), optionally in a named group:
 
@@ -313,7 +313,7 @@ A schema, message or message set cannot take the name of a built-in type of this
 
 ### Geometry
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `:Box`, `:Poly` and `:Disc` hold the shapes of the [geometry library](PublicApi.md#geometry-library), so that a record
 carries them as its native types instead of as two `:Point` fields, a `:List(:Point)` or a Point and a radius.
@@ -358,7 +358,7 @@ schema :Zone as {
 
 ### Defaults
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A schema field may end with **`default`**, the value it takes when a value or document leaves it out.
 
@@ -422,7 +422,7 @@ model(data) schema :WeaponUnit as { electricity: :Unit_Consumer default [efficie
 
 ### Computed fields
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A schema field may be written **`computed by`** an expression, as a field of a [script record](Language.md#records-and-custom-types)
 is: a value derived from the other fields, which is never encoded and never read from a document. Rules that both a server
@@ -447,7 +447,7 @@ schema :SoundMade as {
   `< <= > >= = <>`, `and`, `or`, `not`, `value when condition, …, otherwise fallback`, `min of a and b …`,
   `max of …`, `clamp x between a and b`, `default`, `has value`, and over a list field `[:count]`, `[:sum]` and
   `[:sum item => value]`. A line break may follow an operator, a keyword, a comma or `by`.
-- **Functions and powers** (*Since: Unreleased*) are those of GES with its spellings: `sqrt` or `√`, `cbrt` or `∛`, `sin`,
+- **Functions and powers** (*Since: 0.5.0*) are those of GES with its spellings: `sqrt` or `√`, `cbrt` or `∛`, `sin`,
   `cos`, `tan`, `asin`, `acos`, `atan`, `exp`, `ln`, `floor`, `ceil`, `truncate`, `round half even`, `round half up`,
   `round half down`, `rad` and `deg` before their operand, as `sqrt area` or `sqrt (a * a)`; `atan2(y, x)` and
   `hypot(x, y)` or `hypot(x, y, z)` with arguments; and the power `x ^ y`, `x²` and `x³`. A power binds tighter than unary
@@ -455,7 +455,7 @@ schema :SoundMade as {
   function or `abs` is its whole operand, and the function is then the base of a power as in GES: `sqrt(x) ^ 2` is
   `(sqrt x) ^ 2` and `floor(x)²` squares the floor, while `sqrt x ^ 2` is the root of `x ^ 2`. A
   power sign belongs to a literal where it completes a unit, as in `16m²`, and is a power otherwise, as in `2²` or `2s²`.
-- **Names in backticks** (*Since: Unreleased*). A name that GES reserves, such as `length`, `e`, `pi` or `on`, names a
+- **Names in backticks** (*Since: 0.5.0*). A name that GES reserves, such as `length`, `e`, `pi` or `on`, names a
   field or let only in backticks, as `` `length` / 2 ``, since a script record reads the plain word differently: `e` is
   Euler's number there. Without backticks it is `schema.invalidExpression`. Backticks are spelling only: the field is the
   same, the [canonical form](#canonical-form) writes its plain name, and a field may be declared `length` without them.
@@ -481,7 +481,7 @@ schema :SoundMade as {
   root of a negative number, `ln` of one, `asin 2` or `sin` of an infinity. Rounding gives an integer, saturated at the
   bounds of Int64. `ln 0` is `-infinity`, `atan2(0, 0)` is `0`, and the square root of `-infinity` is `infinity`, as the
   power 0.5 that it is gives.
-- **Square roots are exact, the other functions are not** (*Since: Unreleased*). `sqrt`, `√` and a power with the
+- **Square roots are exact, the other functions are not** (*Since: 0.5.0*). `sqrt`, `√` and a power with the
   exponent 0.5 give the correctly rounded square root, so their bits are the same on every platform and in every port, as
   the bits of `+ - * /`, rounding, `rad` and `deg` are. Trigonometry, `exp`, `ln`, `cbrt` and other powers come from the
   platform's math library, as they do in [scripts](Semantics/Numbers.md#transcendental-functions): the runtimes and the
@@ -518,7 +518,7 @@ platform's math library.
 
 ### Recursion
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A schema cannot hold itself, except through one recursive List: `units: :List(:Loadout_Bind) max 16 depth 3` in the
 schema `:Loadout_Bind` holds records of that schema, which hold such a List in turn, so that at most `d` records of the
@@ -557,7 +557,7 @@ several schemas or with several Lists would need a level per path, for no use fo
 
 ### Packed schemas
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `packed` before `schema` declares a record of fixed width that generated code holds as one machine word. It may follow
 [roles](#roles) and is no role itself:
@@ -1166,7 +1166,7 @@ delta. In a [keyed list](#keyed-lists), an element's key has neither.
 
 ### Keyed lists
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A list is keyed when its element type is a single `:TypeName` whose schema has a `key`, at any depth.
 This needs no syntax, and the full encoding does not change. A [recursive List](#recursion) is keyed at every level but
@@ -1729,7 +1729,7 @@ a type or member of the same name could hide, such as `global::System.Math` and 
 
 #### Packed records and models
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A [packed schema](#packed-schemas) is one type in model and wire code, its model type below: a value type over one word of
 its width, whose fields are computed properties over their bits. A field of it in a wire record is a plain value and a
@@ -1789,7 +1789,7 @@ such data take it as a Record, and native code uses the conversion above.
 
 ### Split output
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `-o` writes one file, and without it `generate` prints that file. `-d <dir>` (`--out-dir`) instead writes several files
 into a directory that `generate` owns, which compiles on several cores and turns a schema change into a diff of the files
@@ -1829,7 +1829,7 @@ Unity both ignore the hidden manifest. Every CLI writes identical files and mani
 
 ### Model types
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `generate --model` writes model types: plain values that a program builds, keeps and compares, such as a client's view of
 the world, and that never travel. They have no reading, writing, deltas, quantization or storage reuse, so a model schema
@@ -1907,7 +1907,7 @@ argument.
 - Every [let](#declarations) of a schema is a static member of its model and wire types, in base units with a Percentage
   as its ratio: C# `public const long` for an integer and `public const double` otherwise, named in PascalCase; Swift
   `static let` of type `Int` in models, `Int64` in wire records and `Double` otherwise. A member that would take the name
-  of a generated member or another member fails with `generate.nameCollision`. *Since: Unreleased.*
+  of a generated member or another member fails with `generate.nameCollision`. *Since: 0.5.0.*
 - **Composition.** A schema that types take unchanged with `with`, without `all optional` or `without`, becomes a
   protocol (Swift) or interface (C#) with read-only properties, and every model type that takes it adopts it; a plain
   schema that is taken also adopts its own. An abstract schema is generated only as this protocol. Swift names it after
@@ -1917,7 +1917,7 @@ argument.
   [tag set](#declarations) shares its type. `all optional` and `without` change the fields' shape, so such a taking adopts
   nothing. A protocol named like a type or tag set of the file is `generate.nameCollision`. Wire records adopt no
   protocol: their fields are storage that a read reuses, with presence flags and UTF-8 text, so a shared read-only
-  property would need an allocating view; a program reads shared fields on models. *Since: Unreleased.*
+  property would need an allocating view; a program reads shared fields on models. *Since: 0.5.0.*
 - **Computed fields.** A [computed field](#computed-fields) is a read-only property of models and wire records alike,
   derived on each read: `Double` (C# `double`) for a number or percentage ratio, `Double?` when it is `optional`, and
   `Bool` for a Boolean; a required number that gives nothing reads as NaN. Binding knows each operand's kind, unit,
@@ -1933,7 +1933,7 @@ argument.
   generation's suffix without a namespace): no negative zero, where binding cannot exclude one; the equality of GES numbers
   (whole numbers exactly, others within two ULPs); `min`, `max` and `clamp`, which give nothing for nothing; three-valued
   `and`, `or` and comparisons; and the conversions to optional fields and ratios. Each sum is a private method with a loop.
-  Functions and powers (*Since: Unreleased*) call the same platform functions as the virtual machine: a square root is
+  Functions and powers (*Since: 0.5.0*) call the same platform functions as the virtual machine: a square root is
   `Math.Sqrt` or `.squareRoot()` (through the helper `SquareRoot` only where the operand may be `-infinity`), rounding is
   `Math.Floor`, `Math.Round` or `.rounded(...)`, and the other functions are helpers such as `Sine`, `Power`, `Arctangent`
   (`atan2`, 0 for `(0, 0)`), `Hypotenuse` or `Radians` over `System.Math` and the C math library. Swift reaches the C
@@ -1950,7 +1950,7 @@ argument.
   parameter, is not stored, encoded or part of equality and `Codable`, and its name must not collide with a generated
   member, such as the presence flag `hasMain` of a field `main`. With `--values` a model's value carries it as decoding a
   record's bytes does, and reading ignores it; `--bindings` offers it to scripts as a field they read but cannot set.
-  *Since: Unreleased.*
+  *Since: 0.5.0.*
 - A model is a plain value: an optional field that defaults to a sibling holds what it is given, and reading a value that
   gives `nothing` for it keeps it absent, though its initializer resolves `nil` to the sibling. Swift's synthesized
   `Codable` stores every property and applies no default; defaults belong to GES values and documents.
@@ -1986,7 +1986,7 @@ a stored `hashValue` would otherwise satisfy the deprecated requirement in place
 
 ### Model documents
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `--documents` (option `Documents`) lets generated models read GES document text, so a host that loads data files repeats
 no parsing, header check, schema check or error mapping. It includes `--values`, concerns only model code and does no file
@@ -2013,7 +2013,7 @@ I/O: text goes in, a model comes out.
 
 ### Script bindings
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `generate --model --bindings` also offers the model types to scripts as
 [external types](HostRuntime.md#external-type-boundary). The generated code implements the Runtime's portable

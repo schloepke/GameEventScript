@@ -3,7 +3,7 @@
 
 # GES documents
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 This document owns GES documents: human-editable data files whose values are
 written exactly like GES data literals. The standard file extension is `.gesd`.
@@ -149,7 +149,7 @@ decide how to interpret the document.
 
 ### Checking against a schema
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A schema is a declaration in a `.gess` file, written in the one schema language of
 [GES schemas](Schemas.md), which also describes the compact binary encoding.

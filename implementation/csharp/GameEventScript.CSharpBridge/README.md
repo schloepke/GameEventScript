@@ -144,7 +144,7 @@ The script calls `:combat.bonus(energy: 100)`. Extension registries and external
 type registries have distinct roles: `WithExtensionRegistry` installs functions;
 `WithExternalTypeRegistry` installs native types.
 
-> **Since: Unreleased** — random generator parameters
+> **Since: 0.5.0** — random generator parameters
 
 A function that draws random numbers takes the host's generator as a
 `GesRandomGenerator` parameter, in any position and without `[GesParam]`. It is
@@ -189,7 +189,7 @@ The `Subscribe` host extensions create message handlers from delegates directly.
 pumping outside the portable Runtime. A loading host still needs an explicit
 Start.
 
-> **Since: Unreleased — automatic wakeups for delayed messages**
+> **Since: 0.5.0 — automatic wakeups for delayed messages**
 
 The runner also schedules wakeups for delayed messages.
 

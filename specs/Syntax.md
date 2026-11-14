@@ -3,7 +3,7 @@
 
 # Syntax module
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 This document owns the structure of the Syntax module that both ports share:
 its dependencies, the lossless token stream, the syntax tree with error nodes,
@@ -41,7 +41,7 @@ one outside the innermost open `{`. The tokens of a
 source therefore cover it without gaps and reproduce it exactly, for valid and
 malformed source alike: text the lexer cannot read becomes an illegal token.
 
-> **Since: Unreleased** — names in backticks
+> **Since: 0.5.0** — names in backticks
 
 A name in backticks ([Language](Language.md#lexical-rules)) is one identifier
 token whose spelling includes both backticks and whose value is the name
@@ -106,7 +106,7 @@ the rules that need other sources, the external catalog or the host, and
 reports both groups in the order
 [Diagnostics](Diagnostics.md#compiler-diagnostic-collection) defines.
 
-> **Since: Unreleased** — unresolved variables
+> **Since: 0.5.0** — unresolved variables
 
 A bare name in an expression (the Variable role) refers only to a binding of
 its own source: a parameter, a `let`, `if let`, loop, selector, weight, fold or

@@ -10,6 +10,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+## [0.5.0] — 2026-11-14
+
+This release adds GES schemas (`.gess`) with exact bit-level encoding, deltas and
+generated C# and Swift code, GES documents (`.gesd`), the Bytes type, the shared
+Syntax module and the Generator package, and gives the C# and Swift ports the same
+public names and byte-identical compiler output.
+
 ### Breaking
 - Line breaks inside any parentheses or square brackets separate nothing, so parameter lists, selectors such as
   `[:take highest⏎1]` and parenthesized expressions may span lines in both ports; inside braces they separate
@@ -31,14 +38,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - `:contains any` and `:contains all` with a Range of candidates, `has any`/`has all` over a binary64 Range and
   `starts with`/`ends with` between two Ranges charge `MaxLoopIterations` for every Range item they visit, and
   shuffling a Range longer than `MaxRangeItems` reports that limit and gives an empty List, as `as :List` does.
-- `Box` and `Poly` are built-in schema types, so a schema, message or message set of that name is now
-  `schema.duplicateName`; rename it. The same now holds for `Disc`.
 - An external type's constructor parameter or field declared as a plain Number (`Float` without a unit) keeps a
   Quantity's unit instead of dropping it, as an unconstrained Point or Vector already did: `5m` stays `5m` as binary64.
   Declare a unit to convert, or convert the value in the host.
-- A required computed schema field that reads an optional field without `has value` or `default` is the new
-  `schema.computedMayBeAbsent` instead of giving NaN or false where the field is absent; mark it `optional`, guard the
-  read or give a fallback.
 - Swift `[UInt8]` converts to and from GES Bytes instead of a List of numbers.
 - Text such as `"0x10"` is now a hexadecimal number for `parse`, `as :Number`, `as :Percentage`,
   documents and Message JSON instead of Text or `nothing`.
@@ -48,11 +50,6 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   so `:Vector([1, 2])` is 1, 2, 0 instead of `nothing` and `:Vector(:Dice[6, 3])` is
   6, 3, 0 instead of 9, 0, 0.
 - `:Message` rejects the labels `value` and `tags` in source; use `with`.
-- `MaxByteCount` of a schema is the larger of its largest full record and its largest delta,
-  which can raise it by a few bytes.
-- Encoding a schema value reports `nothing` in a required field, argument or list element
-  as the new `wire.nothingValue`; `wire.missingField` stays for absent keys and arguments
-  and for fields a typed writer leaves unwritten.
 - The literal `nothing` and a constant with that value are no tags: this is the new
   `validate.invalidTag`, and a tag value that is `nothing` at runtime makes the tag
   clause invalid instead of adding `#nothing`.
@@ -247,18 +244,6 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `Length` instead.
 - Attributed C# extension parameters check units: a `[GesParam]` with a unit requires exactly
   that unit, and one without a unit a unitless argument; another unit gives `nothing`.
-- Generated schema code holds `:Point` and `:Vector` fields as the runtime's `GesPoint` and
-  `GesVector` instead of a nested struct per field, such as `PositionPoint`. Writing a record
-  or a delta whose axis outside the field's axis block is not zero fails with
-  `wire.typeMismatch`, as the value path does, and reading sets that axis to zero.
-
-- Schema generation rejects names that would break the generated code with `generate.nameCollision`: a type that a
-  record nests for a field (such as `SlotsItem` or `ModeTag`) may not take the name of a schema, message or tag set of
-  the generation, a type or C# member may not take a runtime name of the form `Ges` and an uppercase letter, a Swift
-  type may not take a name that generated Swift uses, such as `String`, `Int`, `Array`, `Type` or `Swift`, and a Swift
-  model field may not be named `hashValue` or `hash`. Such code previously failed to compile or bound the wrong type.
-- A `:Poly` whose block leaves its points without bits, such as a single wrapping axis with a period of one step, fails
-  binding with `schema.notEncodable`, as a List element without bits does, because no data would limit its count.
 
 - The C# `GesBridgeHostRunner` returns a runner-owned `GesBridgeHostRunnerRegistration` from `Load` and `Subscribe`, as
   the Swift runner does; its `IsAttached`, `StartResult` and `Detach()` take the runner's lock. `GetStartResult`,
@@ -349,7 +334,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   types and units, and the expression belongs to the hash. Computed fields are never encoded, decoding adds them, a
   document that sets one fails, and generated models and wire records give them as read-only properties that compute the
   bits of the virtual machine. `GesSchema.ComputedFields` (Swift `computedFields`) describes them; mistakes are
-  `schema.invalidExpression`. Generated code is plain binary64 and Boolean code in the language's own operators, such as
+  `schema.invalidExpression`, and a required field that reads an optional field without `has value` or `default` is
+  `schema.computedMayBeAbsent`. Generated code is plain binary64 and Boolean code in the language's own operators, such as
   `duration <= 0.0 ? 0.0 : energy / duration`, with a small `GesComputed` helper type for the rules plain code lacks;
   only a field where whole numbers beyond 2^53 could meet keeps the exact-value helpers.
 - A schema union may span lines: a `|` may end a line or start the next one, with comments and blank lines between the
@@ -369,6 +355,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   orders them; a Poly encodes its points in the plane z = 0 as a List of x and y. The value path converts the library's
   external values, documents write a Box as the Map of its corners and a Poly as the List of its points, generated wire code
   holds `GesBox` and the reusable Points of a Poly with a `GesPoly` view, and models hold `GesBox` and `GesPoly`.
+  The built-in names `Box`, `Poly` and `Disc` are reserved: a schema, message or message set of that name is
+  `schema.duplicateName`.
 - Recursive schema Lists: `units: :List(:Loadout_Bind) max 16 depth 3` in `:Loadout_Bind` holds records of that schema
   up to three deep, so a tree needs one schema instead of one per level. The wire encoding is that of one schema per
   level; a record deeper than the depth fails with the new `wire.tooDeep`, whose message names the depth, such as
@@ -646,13 +634,6 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `steph.ges.compiler.swift` and version `0.1.0`, as the binary format requires
   of every port. Runtime behavior does not depend on it.
 
-- Generated C# qualifies the platform types it uses (`global::System.Math`, `Array`, `BitConverter`, `Text.Encoding`,
-  exceptions and attributes), so schemas and fields such as `:Math`, `system` or `array` compile.
-- Generated C# computed fields never add a product in the same expression: `number + percentage` and an addition or
-  subtraction of a product call the helper `Product`, so a C++ compiler under IL2CPP cannot fuse them into one rounding.
-- Swift generated wire code writes and reads the bytes of a Text or Bytes field with the bit primitives' array overloads
-  instead of one call per byte, so `encodedByteCount()` and `encoded()` no longer cost a loop over every byte.
-
 ### Fixed
 - A random scope that a handler leaves open is reported as `runtime.randomScopeImbalance` even when an earlier handler of
   the same message failed; before, any earlier error in the frame suppressed it.
@@ -696,11 +677,6 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   longer take quadratic time; equal deadlines still keep their scheduling order.
 - C# `:distinct`, `:distinct by`, `:group by`, `:map by` and Map union index their keys once they hold sixteen, so large
   results no longer take quadratic time.
-- Generated schema code for a List whose elements get an item type, such as `:List(:Number step 0.5 | :Text max 8)` or a
-  List of Lists of Points, quantizes its elements in `CopyFrom` and deltas instead of skipping them, and no longer fails to
-  generate for a List of Lists.
-- Generated Swift models write keyword argument labels such as `default` without backticks, which Swift warned about;
-  only a declared `var`, `let` or `inout` label keeps them.
 - The C# CLI builds with .NET SDK 10.0.404, so the Windows archives and the AOT tool packages
   contain .NET 8.0.34 instead of 8.0.25, which had known vulnerabilities such as CVE-2026-111497.
   The libraries keep their .NET Standard 2.1 target.
@@ -709,8 +685,6 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - External field values are no longer cached, so they can change between handlers. In C#,
   a script's field read runs only that field's getter instead of all of them, so a failing
   getter affects only its own field.
-- Swift `GesSchemaValues.encode` accepts an external value of the schema's type name, as C#
-  does, instead of reporting `wire.typeMismatch`.
 - Swift matches external field names by Unicode scalars, not by canonical equivalence.
 - C# `GesValue.GesRecord(typeName, keys, values)` keeps the last value of a duplicate name,
   like `GesMap` and Swift; it used to keep both entries.
@@ -801,19 +775,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   position: the offending token, the repeated or misnamed parameter, argument,
   condition or binding, the failing call or constructor, or the first construct
   that exceeds the nesting limit.
-- The split manifest of model code generated with `documents` records `values: true`, since that code always contains
-  the value conversions; equal code now has an equal manifest.
-- C# schema highlighting reports an error at the end of the text with length zero and one on a scalar outside the BMP
-  over both UTF-16 units, as Swift does. GES schema highlighting is now specified and compared between the ports.
-- Decoding a `:Poly` through the value path grows its point storage with the data instead of allocating by the claimed
-  count, and the C# value path allocates one scratch of the largest encoding per delta call instead of two.
-- Swift `GesBitWriter.setBit(_:)`, `rewind(to:)` and `GesBitReader.seek(to:)` trap on a negative position instead of
-  accessing memory out of bounds in release builds.
-- The specification names `wire.outOfRange` for decoding a finite binary64 outside the range of a field without a step,
-  and states that a bound member of a message set reports its set's hash and binding hash.
 - A Swift `@GesFunction` or `@GesPredicate` with an Optional parameter receives `nil` for `nothing` instead of being
   skipped.
-- Swift encodes an empty non-byte array, such as `[String]()`, as an empty List instead of empty Bytes.
 - A Swift runner delivers delayed work after the last outside reference to it is gone, as the C# runner does.
 - The Swift console answers each piped line at once instead of waiting for 4096 bytes or the end of the input.
 - The C# CLI ends with status 1 when stdout is a closed pipe, as Swift does, instead of returning the script's code.
@@ -844,38 +807,23 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - The C# CLI writes a script's output to a redirected file at the shared offset, so a later writer no longer overwrites
   it, and it formats canonical decimals, schema hashes and generated code culture-invariantly, where a locale with the
   minus sign U+2212 changed them. `bench --entry initialization` is `cli.missingEntry` instead of a crash.
-- Model generation no longer fails for a field bounded by a parameter whose name contains an `e`. Generated Swift packed
-  models throw `GesWireError` for an out-of-range value from a GES value, a document or a script instead of trapping,
-  and a wrapping packed field's `fits` matches its setter. Generated delta readers reject a set change bit of a Disc
-  centre without axes as the runtime does. A packed root's `MaxByteCount` counts its delta, a change bit and the word.
-  Computed `default` keeps its operands whole, and Swift static code no longer misreads a negative literal before a
-  method call. C# models read optional packed fields and reject packed wire roots with fields named like their wire
-  members.
-- A record written as `:Record(...)` in a schema document keeps the union alternatives the check chose. Swift compares
-  schema field, Flags and expected names by Unicode scalars, as C# does. `schema generate --out-dir` removes stale files
-  before writing, so a name changed only in case on a case-insensitive file system is kept. Validation checks a tag or
-  type name shared by many instructions once. The schema formatter keeps the operand of `sqrt ((a - b) ^ 2)` whole, and
-  the CLI example schema binds again.
 - The release gate requires the native jobs of Swift CI to have run, not only a successful run that skipped them.
-- Reading a schema document converts each union along the alternative that the document check accepted, so a List of
-  points that breaks a Poly's `max` stays the List that a later alternative takes instead of becoming a Poly. Without an
-  axis block, the points of a Poly and the centre of a Disc must lie in the plane z = 0, as encoding requires.
-- `GesSchemaDocument` accepts only a concrete schema of the set as an expected root: an abstract schema, a message or an
-  undeclared name is `document.schemaMismatch` in both ports, where C# threw `GesSchemaException` for an undeclared one.
-- Decoding a Swift `GesBox` orders its corners as creating one does.
-- Generated models give a field lent with `with` one member name in its interface or protocol and in every type taking it
-  when the field is named like one of them, and C# model generation rejects members named like their type and the
-  document roots `Value` and `FromDocument` with `generate.nameCollision` instead of emitting code that does not compile.
-- `ges schema generate --out-dir` writes the manifest after removing the files it no longer names, so a failed removal
-  keeps them owned.
 - The Swift compiler assigns binding IDs per kind with counters, as C# does, instead of in quadratic time.
-- Generated Swift setters of packed fields shift the field after subtracting its lower bound; they ORed every field into
-  the lowest bits.
 - The DLLs in the C# packages carry the time of the packed commit, or the current time for uncommitted changes, instead
   of a fixed date, so MSBuild's copy into a build output replaces the DLL of an older package version of the same size.
 - A unary intrinsic with a parenthesized operand, such as `floor(x)`, and an intrinsic call such as `atan2(y, x)` are power
   bases in both ports: `floor(x) ^ 2` is `(floor x) ^ 2`. C# rejected both, and Swift accepted `-x² ^ 2` and `floor x² ^ 2`,
   which are syntax errors.
+
+### Migrating from 0.4.0
+
+- Upgrade the GES libraries together and recompile scripts with the matching
+  Compiler and Runtime. GESB remains V1; the tested 0.4.0 upgrade covers selected
+  consumers and frozen fixtures, not arbitrary old Programs.
+- Replace the optional highlighter packages with the Syntax module and apply the
+  renamed public types listed under **Breaking**; the C# and Swift ports now use
+  the same names for corresponding types.
+- Perform a clean rebuild of C# consumers after updating packages.
 
 ## [0.4.0] — 2026-10-11
 

@@ -66,7 +66,7 @@ ModuleName         = ModuleSegment { "." ModuleSegment }
 UnlabeledArgument  = "_"
 ```
 
-> **Since: Unreleased** — underscores in message and type names
+> **Since: 0.5.0** — underscores in message and type names
 
 Consequences:
 
@@ -332,7 +332,7 @@ separate from literal-recognition failure and follows the fixed
 
 ### Strict recognition
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `parse strict` applies exactly the same recognition, evaluation and limits as
 `parse`. The only difference is the recognition-failure result: where `parse`
@@ -354,7 +354,7 @@ operand produces `nothing` in both modes.
 
 ### Recognition outside a Program
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 The public value API exposes the same recognition without a Host as
 `ParseLiteral` and `ParseLiteralStrict` (see [Public API](../PublicApi.md)). It

@@ -1754,12 +1754,16 @@ Swift as static members of an enum `<Name>Wire` that take the record (`Wire.MapP
 to and from GES values through its model's `--values` conversion, which gives the same Record. The conversion of wire
 records and the wire members of a packed root that wire code declares itself extend their types at file scope, also in
 split files, and name wire and model types so that neither hides the other. `--models` must name another namespace than
-`--namespace`, and a namespace that begins in the global namespace of the other side must not start with the name of a
-type there, else `generate.nameCollision`; a `<Name>Wire` that another type of the generation already names is
+`--namespace`, and where one of the two namespaces continues the other, its next component must not be the name of a
+type in the shorter one, else `generate.nameCollision`: a type of the wire code, or a type of a model group whose models
+the wire code shares or converts to, since the models' namespace holds those groups; a `<Name>Wire` that another type of the generation already names is
 `generate.nameCollision` too. Swift declares each namespace component as an enum, so two generations of one module whose
 namespaces share leading components must declare them once: wire code extends the components it shares with the models'
-namespace (`extension Game { enum Wire { … } }` beside models in `Game.Model`), and `--extend-namespace`
-(`ExtendNamespace`) makes any generation extend all of its enclosing components, which another generation declares. The conversion members take the wire code's `--access` and name the models' types, so the models need the same
+namespace (`extension Game { enum Wire { … } }` beside models in `Game.Model`), and `--extend-namespace <A>`
+(`ExtendNamespace`) makes any generation extend the leading part `A` of its namespace, which another generation declares:
+`Game` for `Game.Panels` writes `extension Game { enum Panels { … } }`, and `Game` for `Game` writes `extension Game { … }`.
+A part that does not lead the namespace is `generate.usage`; the split manifest records it as `"extendNamespace"`, and C#
+generation, whose namespaces merge, rejects it with `generate.usage`. The conversion members take the wire code's `--access` and name the models' types, so the models need the same
 `--access`, or a broader one. `--models` is
 only for wire code and is a usage error with `--model`.
 

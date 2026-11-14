@@ -76,11 +76,12 @@ public struct GesSchemaGenerateOptions: Sendable {
     /// each wire record directly to and from the model of the same schema that a model root of any group reaches. An empty
     /// string is the global namespace. Only wire generation takes it.
     public var models: String?
-    /// Whether the enclosing components of a Swift namespace are declared by another generation of the module, so that this
-    /// one extends them instead of declaring them again: with `Game.Panels` it writes `extension Game { enum Panels { … } }`
-    /// beside a generation that declares `enum Game`. Wire code with `models` extends the components it shares with the
-    /// models' namespace on its own. C# merges namespaces, so this does not change C# output.
-    public var extendNamespace: Bool
+    /// The leading part of the Swift `namespace` that another generation of the module declares, or nil for none, the
+    /// default. This generation extends it instead of declaring it again: with the namespace `Game.Panels` and `Game` here it
+    /// writes `extension Game { enum Panels { … } }`, and with `Game` for both it writes `extension Game { … }`. It must be a
+    /// leading part of the namespace, else `generate.usage`. Wire code with `models` extends the part it shares with the
+    /// models' namespace on its own. C# merges namespaces, so C# generation rejects it with `generate.usage`.
+    public var extendNamespace: String?
 
     /// Creates options.
     /// - Parameters:
@@ -93,7 +94,7 @@ public struct GesSchemaGenerateOptions: Sendable {
     ///   - documents: Whether generated model roots also read GES document text.
     ///   - split: How the code is divided into files.
     ///   - models: The namespace of the model code that wire code shares types with, or nil for none.
-    ///   - extendNamespace: Whether another generation of the module declares the enclosing Swift namespace components.
+    ///   - extendNamespace: The leading part of the Swift namespace that another generation of the module declares, or nil.
     public init(
         language: GesSchemaLanguage = .csharp,
         namespace: String = "",
@@ -104,7 +105,7 @@ public struct GesSchemaGenerateOptions: Sendable {
         documents: Bool = false,
         split: GesSchemaSplit = .none,
         models: String? = nil,
-        extendNamespace: Bool = false
+        extendNamespace: String? = nil
     ) {
         self.language = language
         self.namespace = namespace

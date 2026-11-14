@@ -1517,8 +1517,8 @@ sealed class GameEventScript.Generator.GesSchemaGenerateOptions
   property System.Boolean Bindings { get set }
   property System.Boolean CheckedExclusivity { get set }
   property System.Boolean Documents { get set }
-  property System.Boolean ExtendNamespace { get set }
   property System.Boolean Values { get set }
+  property System.String ExtendNamespace { get set }
   property System.String Models { get set }
   property System.String Namespace { get set }
 static class GameEventScript.Generator.GesSchemaGenerator

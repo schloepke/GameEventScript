@@ -44,7 +44,9 @@ PACKED_SPLITS = ((["--model", "packed", "--values"], "", "PackedSplitModel", "fi
                  # shares it with the models, and a second model generation extends it as asked.
                  (["--model", "packed", "--values"], "Game.Model", "GameModel", "schema"),
                  (["--wire", "packed", "--values", "--models", "Game.Model"], "Game.Wire", "GameWire", "file"),
-                 (["--model", "packed", "--extend-namespace"], "Game.Copy", "GameCopy", "file"))
+                 (["--model", "packed", "--extend-namespace", "Game"], "Game.Copy", "GameCopy", "file"),
+                 # Wire code whose whole namespace the models' namespace begins with extends `Game` itself.
+                 (["--wire", "packed", "--values", "--models", "Game.Model"], "Game", "GameRoot", "schema"))
 # Split output of the role fixture: each split once for wire code and once for models, so that the files of one generation
 # reach each other's types and helpers and the shared file declares the namespace, nested for two of them.
 SPLITS = (("schema", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "SchemaSplit.Wire"),
@@ -457,6 +459,9 @@ def main():
                 raise SystemExit(f"The role fixture does not generate split by {split}: {run.stderr.decode('utf-8', 'replace').strip()}")
     for selection, space, directory, split in PACKED_SPLITS:
         for language, target in (("csharp", csharp), ("swift", swift)):
+            # C# merges namespaces, so extending them is Swift's alone.
+            if language == "csharp" and "--extend-namespace" in selection:
+                continue
             run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", PACKED.name, *selection, "--language", language, "--namespace", space,
                                   "--access", "internal", "--out-dir", str(target / directory), "--split", split], cwd=PACKED.parent, capture_output=True, check=False)
             if run.returncode != 0:

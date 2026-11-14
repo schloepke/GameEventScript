@@ -29,7 +29,9 @@ enum GesSwiftModelEmitter {
             access: access,
             holds: "model"
         )
-        document.extended = GesSchemaPlanner.extended(document.space, options.extendNamespace, nil)
+        var extendParts: [String]?
+        if let extend = options.extendNamespace { extendParts = try GesSchemaPlanner.namespace(extend, GesSwiftEmitter.keywords) }
+        document.extended = GesSchemaPlanner.extended(document.space, extendParts, nil)
         let computed = GesModelPlanner.computed(layout, GesComputedEmitter.helper(options.namespace, suffix), swift: true)
         let documents = options.documents ? "__GesModelDocuments" + suffix : nil
         let documentType = options.documents ? try GesModelPlanner.documentType(layout, document.space) : ""

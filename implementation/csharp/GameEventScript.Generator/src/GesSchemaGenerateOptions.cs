@@ -102,13 +102,14 @@ public sealed class GesSchemaGenerateOptions
     public bool CheckedExclusivity { get; set; }
 
     /// <summary>
-    /// Gets or sets whether the enclosing components of a Swift namespace are declared by another generation of the module,
-    /// so that this one extends them instead of declaring them again: with <c>Game.Panels</c> it writes
-    /// <c>extension Game { enum Panels { … } }</c> beside a generation that declares <c>enum Game</c>. Wire code with
-    /// <see cref="Models"/> extends the components it shares with the models' namespace on its own. C# merges namespaces, so
-    /// this does not change C# output.
+    /// Gets or sets the leading part of the Swift <see cref="Namespace"/> that another generation of the module declares, or
+    /// null for none, the default. This generation extends it instead of declaring it again: with the namespace
+    /// <c>Game.Panels</c> and <c>Game</c> here it writes <c>extension Game { enum Panels { … } }</c>, and with <c>Game</c> for
+    /// both it writes <c>extension Game { … }</c>. It must be a leading part of the namespace, else <c>generate.usage</c>.
+    /// Wire code with <see cref="Models"/> extends the part it shares with the models' namespace on its own. C# merges
+    /// namespaces, so C# generation rejects it with <c>generate.usage</c>.
     /// </summary>
-    public bool ExtendNamespace { get; set; }
+    public string? ExtendNamespace { get; set; }
 
     /// <summary>
     /// Gets or sets how the code is divided into files. <see cref="GesSchemaSplit.None"/>, the default, is the single text of

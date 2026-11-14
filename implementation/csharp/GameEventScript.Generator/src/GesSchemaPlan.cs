@@ -674,11 +674,11 @@ internal static class GesSchemaPlanner
     // Names of the form Ges and a capital letter belong to the runtime types that generated code names without qualification.
     private static bool IsRuntimeName(string name) => name.Length > 3 && name.StartsWith("Ges", System.StringComparison.Ordinal) && name[3] is >= 'A' and <= 'Z';
 
-    // How many leading Swift namespace components another generation declares, which this one extends: all but the last with
-    // ExtendNamespace, and those that the wire code shares with the models' namespace.
-    internal static int Extended(List<string> space, bool extendNamespace, List<string>? models)
+    // How many leading Swift namespace components another generation declares, which this one extends: those that
+    // ExtendNamespace names, and those that the wire code shares with the models' namespace.
+    internal static int Extended(List<string> space, List<string>? extendNamespace, List<string>? models)
     {
-        var extended = extendNamespace ? System.Math.Max(0, space.Count - 1) : 0;
+        var extended = extendNamespace?.Count ?? 0;
         if (models is null) return extended;
         var common = 0;
         while (common < space.Count && common < models.Count && space[common] == models[common]) common++;

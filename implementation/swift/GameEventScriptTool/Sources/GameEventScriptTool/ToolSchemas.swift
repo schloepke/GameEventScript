@@ -19,7 +19,7 @@ extension ToolHelp {
           ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                               [--param <name>=<literal> ...]
                               --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                              [--checked-exclusivity] [--bindings] [--documents] [--models <namespace>] [--extend-namespace]
+                              [--checked-exclusivity] [--bindings] [--documents] [--models <namespace>] [--extend-namespace <A>]
                               [-o <file> | -d <dir> [--split schema|file]] [--check]
 
         Commands:
@@ -41,8 +41,8 @@ extension ToolHelp {
           --access <level>          The visibility of the generated types: public (default) or internal.
           --values                  Also convert generated records and models to and from GES values and messages.
           --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
-          --extend-namespace        Extend the enclosing components of the Swift namespace, which another generation of the
-                                    module declares, instead of declaring them; wire code with --models does so for shared ones.
+          --extend-namespace <A>    Extend this leading part of the Swift namespace, which another generation of the module
+                                    declares, instead of declaring it; wire code with --models does so for the part it shares.
           --bindings                Also offer generated model types to scripts as external types; only with --model.
           --documents               Also read model roots from GES document text; includes --values, only with --model.
           --models <namespace>      Share the packed types of the model code in that namespace ("" for the global one) and
@@ -77,7 +77,7 @@ extension Tool {
         var check = false
         var withValues = false
         var checkedExclusivity = false
-        var extendNamespace = false
+        var extendNamespace: String?
         var bindings = false
         var documents = false
         var models: String?
@@ -108,20 +108,18 @@ extension Tool {
                 withValues = true
             } else if argument == "--checked-exclusivity" && command == "generate" {
                 checkedExclusivity = true
-            } else if argument == "--extend-namespace" && command == "generate" {
-                extendNamespace = true
             } else if argument == "--bindings" && command == "generate" {
                 bindings = true
             } else if argument == "--documents" && command == "generate" {
                 documents = true
-            } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model", "-d", "--out-dir", "--split", "--models"].contains(argument) {
+            } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model", "-d", "--out-dir", "--split", "--models", "--extend-namespace"].contains(argument) {
                 let applies: Bool
                 switch argument {
                 case "--root": applies = ["hash", "canonical", "dump", "layout", "generate"].contains(command)
                 case "--wire", "--model": applies = command == "layout" || command == "generate"
                 case "--param": applies = ["hash", "dump", "layout", "generate"].contains(command)
                 case "--data", "--baseline": applies = command == "dump"
-                case "--language", "--namespace", "--access", "-d", "--out-dir", "--split", "--models": applies = command == "generate"
+                case "--language", "--namespace", "--access", "-d", "--out-dir", "--split", "--models", "--extend-namespace": applies = command == "generate"
                 default: applies = ["format", "layout", "generate"].contains(command)
                 }
                 guard applies else { throw ToolError.usage("Unknown schema \(command) option '\(argument)'.") }
@@ -145,6 +143,7 @@ extension Tool {
                 case "-d", "--out-dir": outDir = next
                 case "--split": split = next
                 case "--models": models = next
+                case "--extend-namespace": extendNamespace = next
                 default:
                     guard let separator = next.firstIndex(of: "="), separator != next.startIndex else { throw ToolError.usage("A parameter is written name=literal.") }
                     let name = String(next[..<separator])
@@ -170,6 +169,9 @@ extension Tool {
         if bindings && modelGroup == nil { throw ToolError.usage("--bindings concerns model code and requires --model.") }
         if documents && modelGroup == nil { throw ToolError.usage("--documents concerns model code and requires --model.") }
         if models != nil && modelGroup != nil { throw ToolError.usage("--models concerns wire code, not --model.") }
+        if extendNamespace != nil && language != "swift" {
+            throw ToolError.usage("--extend-namespace concerns Swift, whose namespaces are enums; C# merges namespaces.")
+        }
         if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
         if let access, access != "public" && access != "internal" { throw ToolError.usage("--access is public or internal.") }
         if output != nil && outDir != nil { return generateUsage("-o writes one file and --out-dir a directory; give one of them.") }

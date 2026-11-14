@@ -24,7 +24,7 @@ Usage:
   dotnet ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                              [--param <name>=<literal> ...]
                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                             [--checked-exclusivity] [--bindings] [--documents] [--models <namespace>] [--extend-namespace]
+                             [--checked-exclusivity] [--bindings] [--documents] [--models <namespace>] [--extend-namespace <A>]
                              [-o <file> | -d <dir> [--split schema|file]] [--check]
 
 Commands:
@@ -46,8 +46,8 @@ Options:
   --access <level>          The visibility of the generated types: public (default) or internal.
   --values                  Also convert generated records and models to and from GES values and messages.
   --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
-  --extend-namespace        Extend the enclosing components of the Swift namespace, which another generation of the
-                            module declares, instead of declaring them; wire code with --models does so for shared ones.
+  --extend-namespace <A>    Extend this leading part of the Swift namespace, which another generation of the module
+                            declares, instead of declaring it; wire code with --models does so for the part it shares.
   --bindings                Also offer generated model types to scripts as external types; only with --model.
   --documents               Also read model roots from GES document text; includes --values, only with --model.
   --models <namespace>      Share the packed types of the model code in that namespace ("" for the global one) and
@@ -83,7 +83,7 @@ Options:
         var check = false;
         var withValues = false;
         var checkedExclusivity = false;
-        var extendNamespace = false;
+        string? extendNamespace = null;
         var bindings = false;
         var documents = false;
         string? language = null;
@@ -111,10 +111,9 @@ Options:
             else if (argument == "--check" && command == "generate") check = true;
             else if (argument == "--values" && command == "generate") withValues = true;
             else if (argument == "--checked-exclusivity" && command == "generate") checkedExclusivity = true;
-            else if (argument == "--extend-namespace" && command == "generate") extendNamespace = true;
             else if (argument == "--bindings" && command == "generate") bindings = true;
             else if (argument == "--documents" && command == "generate") documents = true;
-            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split" or "--models")
+            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace")
             {
                 var applies = argument switch
                 {
@@ -122,7 +121,7 @@ Options:
                     "--wire" or "--model" => command is "layout" or "generate",
                     "--param" => command is "hash" or "dump" or "layout" or "generate",
                     "--data" or "--baseline" => command == "dump",
-                    "--language" or "--namespace" or "--access" or "-d" or "--out-dir" or "--split" or "--models" => command == "generate",
+                    "--language" or "--namespace" or "--access" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace" => command == "generate",
                     _ => command is "format" or "layout" or "generate"
                 };
                 if (!applies) return UsageError($"Unknown schema {command} option '{argument}'.");
@@ -149,6 +148,7 @@ Options:
                 else if (argument is "-d" or "--out-dir") outDir = next;
                 else if (argument == "--split") split = next;
                 else if (argument == "--models") models = next;
+                else if (argument == "--extend-namespace") extendNamespace = next;
                 else
                 {
                     var separator = next.IndexOf('=');
@@ -173,6 +173,7 @@ Options:
         if (bindings && modelGroup is null) return UsageError("--bindings concerns model code and requires --model.");
         if (documents && modelGroup is null) return UsageError("--documents concerns model code and requires --model.");
         if (models is not null && modelGroup is not null) return UsageError("--models concerns wire code, not --model.");
+        if (extendNamespace is not null && language != "swift") return UsageError("--extend-namespace concerns Swift, whose namespaces are enums; C# merges namespaces.");
         if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
         if (access is not (null or "public" or "internal")) return UsageError("--access is public or internal.");
         if (output is not null && outDir is not null) return GenerateUsage("-o writes one file and --out-dir a directory; give one of them.");

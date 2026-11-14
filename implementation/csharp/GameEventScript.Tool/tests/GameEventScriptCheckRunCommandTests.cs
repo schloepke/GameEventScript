@@ -417,6 +417,15 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--checked-exclusivity").ExitCode);
         Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--models", "Model").ExitCode);
         Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--models", "Model").ExitCode);
+        // Extending a leading part of the namespace concerns Swift alone and is named in the manifest.
+        Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "csharp", "--namespace", "Game.View", "--extend-namespace", "Game").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--extend-namespace", "Game").ExitCode);
+        var extended = Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game");
+        Assert.AreEqual(0, extended.ExitCode);
+        StringAssert.Contains(extended.StandardOutput, "extension Game {");
+        Assert.AreEqual(1, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "View").ExitCode);
+        Assert.AreEqual(0, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game", "-d", "ExtendedView").ExitCode);
+        StringAssert.Contains(File.ReadAllText(Path.Combine(_directory, "ExtendedView", ".ges-generated.json")), "\"extendNamespace\": \"Game\"");
         Assert.AreEqual(2, Run("schema", "hash", "view.gess", "--model", "view").ExitCode);
         Write("bad.gess", "wire schema :Bad as { name: :Text }\n");
         var check = Run("schema", "check", "bad.gess");

@@ -229,7 +229,9 @@ def stale_goldens(csharp, swift):
 ROLE_SPLITS = ((["--wire", "world", "--param", "worldWidth=2000m", "--values"], "csharp", "Roles.Wire"),
                (["--wire", "world", "--param", "worldWidth=2000m", "--values"], "swift", "Roles.Wire"),
                (["--model", "view", "--bindings", "--values"], "csharp", "Roles.Model"),
-               (["--model", "view", "--bindings", "--values"], "swift", "Roles.Model"))
+               (["--model", "view", "--bindings", "--values"], "swift", "Roles.Model"),
+               # Namespaces that another generation declares: the manifest names the option, and the files extend `Roles`.
+               (["--model", "view", "--extend-namespace", "Roles"], "swift", "Roles.View"))
 
 
 def role_splits(csharp, swift, work):

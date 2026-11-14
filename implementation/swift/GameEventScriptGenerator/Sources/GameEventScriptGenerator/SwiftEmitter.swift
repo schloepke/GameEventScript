@@ -43,8 +43,9 @@ enum GesSwiftEmitter {
         let computed = GesSchemaPlanner.computed(types, GesComputedEmitter.helper(options.namespace, GesSchemaPlanner.suffix(header, options)), swift: true)
         let sets = GesSchemaPlanner.tagSets(types, "")
         // Packed records are the model types over one word, the shared ones of the model namespace or declared here.
-        var models = ""
-        if let modelSpace = options.models { models = (try GesSchemaPlanner.namespace(modelSpace, keywords)).map { $0 + "." }.joined() }
+        var modelParts: [String]?
+        if let modelSpace = options.models { modelParts = try GesSchemaPlanner.namespace(modelSpace, keywords) }
+        let models = modelParts.map { $0.map { $0 + "." }.joined() } ?? ""
         for type in types {
             for field in type.fields { GesSchemaPlanner.qualifyPacked(field.value, models) }
         }
@@ -71,9 +72,9 @@ enum GesSwiftEmitter {
             holds: "schema",
             parameters: !layout.parameters.isEmpty
         )
-        var modelParts: [String]?
-        if let modelSpace = options.models { modelParts = try GesSchemaPlanner.namespace(modelSpace, keywords) }
-        document.extended = GesSchemaPlanner.extended(spaceParts, options.extendNamespace, modelParts)
+        var extendParts: [String]?
+        if let extend = options.extendNamespace { extendParts = try GesSchemaPlanner.namespace(extend, keywords) }
+        document.extended = GesSchemaPlanner.extended(spaceParts, extendParts, modelParts)
         if let conversion = context.models {
             for type in types where type.kind == .schema && type.layout.packedWidth == 0 {
                 guard let model = conversion.type(type.name) else { continue }

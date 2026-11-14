@@ -184,6 +184,13 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--wire", "world"]).code, 2)
         XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--root", "View"]).code, 2)
         XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--checked-exclusivity"]).code, 2)
+        // Extending a leading part of the namespace concerns Swift alone.
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "csharp", "--namespace", "Game.View", "--extend-namespace", "Game"]).code, 2)
+        XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--extend-namespace", "Game"]).code, 2)
+        let extended = run(["schema", "generate", view, "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game"])
+        XCTAssertEqual(extended.code, 0, extended.error)
+        XCTAssertTrue(extended.output.contains("extension Game {"))
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "View"]).code, 1)
         XCTAssertEqual(run(["schema", "hash", view, "--model", "view"]).code, 2)
         let bad = try file("bad.gess", "wire schema :Bad as { name: :Text }\n")
         let check = run(["schema", "check", bad])

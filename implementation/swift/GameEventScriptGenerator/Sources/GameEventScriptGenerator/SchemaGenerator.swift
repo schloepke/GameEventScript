@@ -64,6 +64,7 @@ public enum GesSchemaGenerator {
         let wireSpace = try GesSchemaPlanner.namespace(options.namespace, keywords)
         var modelSpace: [String]?
         if let models = options.models { modelSpace = try GesSchemaPlanner.namespace(models, keywords) }
+        try checkExtendNamespace(options, wireSpace, keywords)
         // Wire records and models of one schema share its name, so they need different namespaces.
         if let models = options.models, let modelSpace, modelSpace == wireSpace {
             throw GesGeneratorError(
@@ -82,24 +83,35 @@ public enum GesSchemaGenerator {
             for schema in set.schemas where schema.modelGroup != nil { modelRoots.append(schema.name) }
         }
         let models = !modelRoots.isEmpty ? try GesModelLayoutBuilder.build(set, roots: modelRoots) : nil
-        // A namespace that starts in the global one of the other side must not take the name of a type there.
+        // Where one namespace continues the other, its next component must not take the name of a type in the shorter one.
+        // The models' namespace holds every type of each model group whose models the wire code shares or converts to; other
+        // groups may live elsewhere, so their types do not count.
         if let modelSpace {
             let wireNames = GesSchemaPlanner.topLevel(types, GesSchemaPlanner.tagSets(types, ""))
             var modelNames = Set(packed)
-            if let models {
-                for type in models.types { modelNames.insert(type.name) }
-                for set in GesModelPlanner.tagSets(models) { modelNames.insert(set.name) }
+            var groups: [String: [String]] = [:]
+            for schema in set.schemas {
+                guard let group = schema.modelGroup else { continue }
+                groups[group, default: []].append(schema.name)
             }
-            if modelSpace.isEmpty, let first = wireSpace.first, modelNames.contains(first) {
+            for group in groups.keys.sorted(by: { $0.unicodeScalars.lexicographicallyPrecedes($1.unicodeScalars) }) {
+                let groupLayout = try GesModelLayoutBuilder.build(set, roots: groups[group]!)
+                if !groupLayout.types.contains(where: { wireNames.contains($0.name) || packed.contains($0.name) }) { continue }
+                for type in groupLayout.types { modelNames.insert(type.name) }
+                for tagSet in GesModelPlanner.tagSets(groupLayout) { modelNames.insert(tagSet.name) }
+            }
+            var common = 0
+            while common < wireSpace.count && common < modelSpace.count && wireSpace[common] == modelSpace[common] { common += 1 }
+            if common == modelSpace.count && common < wireSpace.count && modelNames.contains(wireSpace[common]) {
                 throw GesGeneratorError(
                     GesGeneratorError.nameCollision,
-                    "The namespace '\(options.namespace)' of the wire code starts with '\(first)', the name of a model type in the global namespace."
+                    "The namespace '\(options.namespace)' of the wire code continues the models' namespace with '\(wireSpace[common])', the name of a model type there."
                 )
             }
-            if wireSpace.isEmpty, let first = modelSpace.first, wireNames.contains(first) {
+            if common == wireSpace.count && common < modelSpace.count && wireNames.contains(modelSpace[common]) {
                 throw GesGeneratorError(
                     GesGeneratorError.nameCollision,
-                    "The namespace '\(options.models ?? "")' of the models starts with '\(first)', the name of a wire type in the global namespace."
+                    "The namespace '\(options.models ?? "")' of the models continues the wire code's namespace with '\(modelSpace[common])', the name of a wire type there."
                 )
             }
         }
@@ -171,6 +183,8 @@ public enum GesSchemaGenerator {
 
     private static func models(_ set: GesSchemaSet, _ roots: [String], _ options: GesSchemaGenerateOptions) throws -> (document: GesCodeDocument, layout: GesModelLayout) {
         if options.checkedExclusivity { throw GesGeneratorError(GesGeneratorError.usage, "Checked exclusivity concerns wire code, not models.") }
+        let keywords = options.language == .csharp ? GesCSharpEmitter.keywords : GesSwiftEmitter.keywords
+        try checkExtendNamespace(options, try GesSchemaPlanner.namespace(options.namespace, keywords), GesSwiftEmitter.keywords)
         if options.models != nil {
             throw GesGeneratorError(GesGeneratorError.usage, "Models concern wire code, which shares their types; models do not name another namespace.")
         }
@@ -205,6 +219,7 @@ public enum GesSchemaGenerator {
         json.boolean("bindings", options.bindings)
         if options.documents { json.boolean("documents", true) }
         json.boolean("checkedExclusivity", options.checkedExclusivity)
+        if let extended = options.extendNamespace { json.string("extendNamespace", extended) }
         json.beginArray("roots")
         for root in roots {
             let (hash, bindingHash) = hashes(root)
@@ -228,5 +243,17 @@ public enum GesSchemaGenerator {
         json.strings("files", files)
         json.endObject()
         return json.text + "\n"
+    }
+
+    // The part of the namespace that another generation declares: Swift alone, whose namespaces are enums, and a leading part.
+    private static func checkExtendNamespace(_ options: GesSchemaGenerateOptions, _ space: [String], _ keywords: Set<String>) throws(GesGeneratorError) {
+        guard let extend = options.extendNamespace else { return }
+        if options.language == .csharp {
+            throw GesGeneratorError(GesGeneratorError.usage, "Extending namespace components concerns Swift, whose namespaces are enums; C# merges namespaces.")
+        }
+        let extended = try GesSchemaPlanner.namespace(extend, keywords)
+        if extended.isEmpty || extended.count > space.count || Array(space[0..<extended.count]) != extended {
+            throw GesGeneratorError(GesGeneratorError.usage, "'\(extend)' is no leading part of the namespace '\(options.namespace)', which the generation would extend.")
+        }
     }
 }

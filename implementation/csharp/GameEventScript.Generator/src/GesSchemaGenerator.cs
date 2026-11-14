@@ -90,6 +90,7 @@ public static class GesSchemaGenerator
         var keywords = options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Keywords : GesSwiftEmitter.Keywords;
         var wireSpace = GesSchemaPlanner.Namespace(options.Namespace, keywords);
         var modelSpace = options.Models is null ? null : GesSchemaPlanner.Namespace(options.Models, keywords);
+        CheckExtendNamespace(options, wireSpace, keywords);
         // Wire records and models of one schema share its name, so they need different namespaces.
         if (modelSpace is not null && string.Join(".", modelSpace) == string.Join(".", wireSpace))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The models live in the namespace of the wire code ('{options.Models}'), where a wire record and the model of its schema would share a name; generate them into different namespaces.");
@@ -104,22 +105,35 @@ public static class GesSchemaGenerator
             foreach (var schema in set.Schemas)
                 if (schema.ModelGroup is not null) modelRoots.Add(schema.Name);
         var models = modelRoots.Count > 0 ? GesModelLayoutBuilder.Build(set, modelRoots) : null;
-        // A namespace that starts in the global one of the other side must not take the name of a type there.
+        // Where one namespace continues the other, its next component must not take the name of a type in the shorter one.
+        // The models' namespace holds every type of each model group whose models the wire code shares or converts to; other
+        // groups may live elsewhere, so their types do not count.
         if (modelSpace is not null)
         {
             var wireNames = GesSchemaPlanner.TopLevel(types, GesSchemaPlanner.TagSets(types, ""));
-            var modelNames = new HashSet<string>(StringComparer.Ordinal);
-            if (models is not null)
+            var modelNames = new HashSet<string>(packed, StringComparer.Ordinal);
+            var groups = new SortedDictionary<string, List<string>>(StringComparer.Ordinal);
+            foreach (var schema in set.Schemas)
             {
-                foreach (var type in models.Types) modelNames.Add(type.Name);
-                foreach (var (name, _) in GesModelPlanner.TagSets(models)) modelNames.Add(name);
+                if (schema.ModelGroup is not { } group) continue;
+                if (!groups.TryGetValue(group, out var groupRoots)) groups.Add(group, groupRoots = []);
+                groupRoots.Add(schema.Name);
             }
 
-            foreach (var name in packed) modelNames.Add(name);
-            if (modelSpace.Count == 0 && wireSpace.Count > 0 && modelNames.Contains(wireSpace[0]))
-                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The namespace '{options.Namespace}' of the wire code starts with '{wireSpace[0]}', the name of a model type in the global namespace.");
-            if (wireSpace.Count == 0 && modelSpace.Count > 0 && wireNames.Contains(modelSpace[0]))
-                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The namespace '{options.Models}' of the models starts with '{modelSpace[0]}', the name of a wire type in the global namespace.");
+            foreach (var groupRoots in groups.Values)
+            {
+                var groupLayout = GesModelLayoutBuilder.Build(set, groupRoots);
+                if (!groupLayout.Types.Exists(type => wireNames.Contains(type.Name) || packed.Contains(type.Name))) continue;
+                foreach (var type in groupLayout.Types) modelNames.Add(type.Name);
+                foreach (var (name, _) in GesModelPlanner.TagSets(groupLayout)) modelNames.Add(name);
+            }
+
+            var common = 0;
+            while (common < wireSpace.Count && common < modelSpace.Count && wireSpace[common] == modelSpace[common]) common++;
+            if (common == modelSpace.Count && common < wireSpace.Count && modelNames.Contains(wireSpace[common]))
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The namespace '{options.Namespace}' of the wire code continues the models' namespace with '{wireSpace[common]}', the name of a model type there.");
+            if (common == wireSpace.Count && common < modelSpace.Count && wireNames.Contains(modelSpace[common]))
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The namespace '{options.Models}' of the models continues the wire code's namespace with '{modelSpace[common]}', the name of a wire type there.");
         }
 
         return options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Emit(layout, types, options, shared, models) : GesSwiftEmitter.Emit(layout, types, options, shared, models);
@@ -204,9 +218,23 @@ public static class GesSchemaGenerator
         return GesCodeFiles.Split(document, options.Split, set.SourceName, files => Manifest(options, model: true, layout.Roots, root => (layout.Type(root).Hash, null), [], files));
     }
 
+    // The part of the namespace that another generation declares: Swift alone, whose namespaces are enums, and a leading part.
+    private static void CheckExtendNamespace(GesSchemaGenerateOptions options, List<string> space, ISet<string> keywords)
+    {
+        if (options.ExtendNamespace is null) return;
+        if (options.Language == GesSchemaLanguage.CSharp)
+            throw new GesGeneratorException(GesGeneratorException.Usage, "Extending namespace components concerns Swift, whose namespaces are enums; C# merges namespaces.");
+        var extended = GesSchemaPlanner.Namespace(options.ExtendNamespace, keywords);
+        var leading = extended.Count > 0 && extended.Count <= space.Count;
+        for (var index = 0; leading && index < extended.Count; index++) leading = extended[index] == space[index];
+        if (!leading)
+            throw new GesGeneratorException(GesGeneratorException.Usage, $"'{options.ExtendNamespace}' is no leading part of the namespace '{options.Namespace}', which the generation would extend.");
+    }
+
     private static GesCodeDocument Models(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaGenerateOptions options, out GesModelLayout layout)
     {
         if (options.CheckedExclusivity) throw new GesGeneratorException(GesGeneratorException.Usage, "Checked exclusivity concerns wire code, not models.");
+        CheckExtendNamespace(options, GesSchemaPlanner.Namespace(options.Namespace, options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Keywords : GesSwiftEmitter.Keywords), GesSwiftEmitter.Keywords);
         if (options.Models is not null) throw new GesGeneratorException(GesGeneratorException.Usage, "Models concern wire code, which shares their types; models do not name another namespace.");
         layout = GesModelLayoutBuilder.Build(set, roots);
         // Reading documents converts through the plain values.
@@ -231,7 +259,7 @@ public static class GesSchemaGenerator
         json.Boolean("bindings", options.Bindings);
         if (options.Documents) json.Boolean("documents", true);
         json.Boolean("checkedExclusivity", options.CheckedExclusivity);
-        if (options.ExtendNamespace) json.Boolean("extendNamespace", true);
+        if (options.ExtendNamespace is { } extended) json.String("extendNamespace", extended);
         json.BeginArray("roots");
         foreach (var root in roots)
         {

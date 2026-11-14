@@ -41,11 +41,27 @@ final class GenerateTests: XCTestCase {
         let extended = try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire", models: "Game.Model"))
         XCTAssertTrue(extended.contains("extension Game {\n    /// The namespace `Wire` of generated schema types.\n    public enum Wire {"))
         XCTAssertEqual(wire(.csharp, "Game.Wire", "Game.Model"), "")
-        let panels = try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Panels", extendNamespace: true))
+        let panels = try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Panels", extendNamespace: "Game"))
         XCTAssertTrue(panels.contains("extension Game {\n    /// The namespace `Panels` of generated model types.\n    public enum Panels {"))
         // A namespace that starts in the global one of the other side must not take the name of a type there.
         XCTAssertEqual(wire(.swift, "Grid.Wire", ""), "generate.nameCollision")
         XCTAssertEqual(wire(.csharp, "", "Grid.Model"), "generate.nameCollision")
+        // Nor where one namespace continues the other: models in Game hold Grid, so wire code cannot live in Game.Grid.
+        XCTAssertEqual(wire(.swift, "Game.Grid", "Game"), "generate.nameCollision")
+        // Wire code in the whole namespace that the models' one begins with extends it with one brace for every one it opens.
+        let whole = try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game", models: "Game.Model"))
+        XCTAssertTrue(whole.contains("\nextension Game {\n"))
+        XCTAssertEqual(whole.filter { $0 == "{" }.count, whole.filter { $0 == "}" }.count)
+        // C# merges namespaces, so extending them is a usage error there.
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .csharp, namespace: "Game.Panels", extendNamespace: "Game")) }, "generate.usage")
+        // A one-part namespace can be extended as a whole, and only a leading part of the namespace can be extended.
+        let single = try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game", extendNamespace: "Game"))
+        XCTAssertTrue(single.contains("\nextension Game {\n"))
+        XCTAssertEqual(single.filter { $0 == "{" }.count, single.filter { $0 == "}" }.count)
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Panels", extendNamespace: "Panels")) }, "generate.usage")
+        // A model-only type of the models' group counts too: models in Game hold Report, so wire code cannot live in Game.Report.
+        let withReport = try GesSchemaSet(parsing: "wire model schema :Grid as { a: :Boolean }\nmodel schema :Report as { b: :Boolean }\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(withReport, roots: ["Grid"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Report", models: "Game")) }, "generate.nameCollision")
         // An invalid namespace reports itself first.
         XCTAssertEqual(wire(.swift, ".Wire", ".Wire"), "generate.invalidNamespace")
     }

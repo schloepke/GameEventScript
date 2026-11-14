@@ -586,10 +586,10 @@ enum GesSchemaPlanner {
         return scalars.count > 3 && name.hasPrefix("Ges") && ("A"..."Z").contains(scalars[3])
     }
 
-    // How many leading Swift namespace components another generation declares, which this one extends: all but the last with
-    // extendNamespace, and those that the wire code shares with the models' namespace.
-    static func extended(_ space: [String], _ extendNamespace: Bool, _ models: [String]?) -> Int {
-        let extended = extendNamespace ? max(0, space.count - 1) : 0
+    // How many leading Swift namespace components another generation declares, which this one extends: those that
+    // extendNamespace names, and those that the wire code shares with the models' namespace.
+    static func extended(_ space: [String], _ extendNamespace: [String]?, _ models: [String]?) -> Int {
+        let extended = extendNamespace?.count ?? 0
         guard let models else { return extended }
         var common = 0
         while common < space.count && common < models.count && space[common] == models[common] { common += 1 }

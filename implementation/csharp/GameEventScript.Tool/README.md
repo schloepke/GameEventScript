@@ -711,8 +711,9 @@ the global one) and convert each wire record with a model directly to and from i
 a usage error with `--model`. The models need another namespace than the wire code (`generate.nameCollision` otherwise),
 and the same `--access` or a broader one, since the conversion uses the models' types in members of the wire code's
 access. Swift declares each namespace component as an enum: wire code extends the components it shares with the models'
-namespace, and `--extend-namespace` makes any generation extend its enclosing components, which another generation of the
-module declares (`Game.World` beside `Game.Panels`). A packed wire root that the models declare gets
+namespace, and `--extend-namespace <A>` makes any Swift generation extend the leading part `A` of its namespace, which another
+generation of the module declares (`--namespace Game.Panels --extend-namespace Game` beside `Game.World`, or `Game` for both
+when two generations share `Game`); C# merges namespaces, so a C# run rejects it. A packed wire root that the models declare gets
 its wire members as `<Name>Wire` in the wire namespace: C# extension methods, Swift static members such as
 `Wire.MapPointWire.encoded(point)`.
 

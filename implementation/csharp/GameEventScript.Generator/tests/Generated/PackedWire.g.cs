@@ -21,7 +21,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
         /// <summary>The hash over the schema hash and the parameter values this code was generated with.</summary>
         public const ulong BindingHash = 0x2077da395dfc1175UL;
 
-        /// <summary>The size of the encoding in bytes, the same for every record.</summary>
+        /// <summary>The size in bytes of the largest encoding, a delta of a change bit and the word, which every buffer for writing needs.</summary>
         public const int MaxByteCount = 2;
 
         internal static readonly string[] __paths = { "level", "open", "kind", "slope", "marks" };
@@ -43,7 +43,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
             return writer.Finish();
         }
 
-        /// <summary>Counts the bytes that <see cref="Write"/> writes, which are <see cref="MaxByteCount"/>.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes, the same for every record.</summary>
         /// <returns>The byte count.</returns>
         /// <exception cref="GesWireException">A word taken unchecked holds an invalid field.</exception>
         public static int ByteCount(this global::GameEventScript.Tests.Generator.Packed.Model.Cell record)
@@ -54,7 +54,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
             if ((((ulong)record.RawValue >> 0) & 15UL) > 9UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 0]);
             if ((((ulong)record.RawValue >> 5) & 3UL) > 2UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 2]);
             if ((((ulong)record.RawValue >> 7) & 15UL) > 10UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 3]);
-            return MaxByteCount;
+            return 2;
         }
 
         /// <summary>Writes the record into a new array of its size.</summary>
@@ -62,7 +62,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
         /// <exception cref="GesWireException">A word taken unchecked holds an invalid field.</exception>
         public static byte[] ToBytes(this global::GameEventScript.Tests.Generator.Packed.Model.Cell record)
         {
-            var buffer = new byte[MaxByteCount];
+            var buffer = new byte[2];
             record.Write(buffer);
             return buffer;
         }
@@ -200,7 +200,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
         public const ulong BindingHash = 0x49e642a84014d2c3UL;
 
         /// <summary>The size of the largest encoding in bytes.</summary>
-        public const int MaxByteCount = 311;
+        public const int MaxByteCount = 310;
 
         internal static readonly string[] __paths =
         {
@@ -2730,7 +2730,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
         /// <summary>The hash over the schema hash and the parameter values this code was generated with.</summary>
         public const ulong BindingHash = 0x5d879f5b86b9c623UL;
 
-        /// <summary>The size of the encoding in bytes, the same for every record.</summary>
+        /// <summary>The size in bytes of the largest encoding, a delta of a change bit and the word, which every buffer for writing needs.</summary>
         public const int MaxByteCount = 2;
 
         internal static readonly string[] __paths = { "delta", "gear", "lift", "kind" };
@@ -2751,7 +2751,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
             return writer.Finish();
         }
 
-        /// <summary>Counts the bytes that <see cref="Write"/> writes, which are <see cref="MaxByteCount"/>.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes, the same for every record.</summary>
         /// <returns>The byte count.</returns>
         /// <exception cref="GesWireException">A word taken unchecked holds an invalid field.</exception>
         public static int ByteCount(this global::GameEventScript.Tests.Generator.Packed.Model.Offset record)
@@ -2761,7 +2761,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
             if (((ulong)record.RawValue >> 11) != 0) throw new GesWireException(GesWireException.OutOfRange, "");
             if ((((ulong)record.RawValue >> 6) & 7UL) > 4UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 2]);
             if ((((ulong)record.RawValue >> 9) & 3UL) > 2UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 3]);
-            return MaxByteCount;
+            return 2;
         }
 
         /// <summary>Writes the record into a new array of its size.</summary>
@@ -2769,7 +2769,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
         /// <exception cref="GesWireException">A word taken unchecked holds an invalid field.</exception>
         public static byte[] ToBytes(this global::GameEventScript.Tests.Generator.Packed.Model.Offset record)
         {
-            var buffer = new byte[MaxByteCount];
+            var buffer = new byte[2];
             record.Write(buffer);
             return buffer;
         }
@@ -2892,7 +2892,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
         /// <summary>The hash over the schema hash and the parameter values this code was generated with.</summary>
         public const ulong BindingHash = 0xc1860a6f3ed30904UL;
 
-        /// <summary>The size of the encoding in bytes, the same for every record.</summary>
+        /// <summary>The size in bytes of the largest encoding, a delta of a change bit and the word, which every buffer for writing needs.</summary>
         public const int MaxByteCount = 4;
 
         internal static readonly string[] __paths = { "low", "low.level", "low.open", "low.kind", "low.slope", "low.marks", "high", "high.level", "high.open", "high.kind", "high.slope", "high.marks" };
@@ -2917,7 +2917,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
             return writer.Finish();
         }
 
-        /// <summary>Counts the bytes that <see cref="Write"/> writes, which are <see cref="MaxByteCount"/>.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes, the same for every record.</summary>
         /// <returns>The byte count.</returns>
         /// <exception cref="GesWireException">A word taken unchecked holds an invalid field.</exception>
         public static int ByteCount(this global::GameEventScript.Tests.Generator.Packed.Model.Pair record)
@@ -2931,7 +2931,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
             if ((((ulong)record.RawValue >> 13) & 15UL) > 9UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 7]);
             if ((((ulong)record.RawValue >> 18) & 3UL) > 2UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 9]);
             if ((((ulong)record.RawValue >> 20) & 15UL) > 10UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 10]);
-            return MaxByteCount;
+            return 4;
         }
 
         /// <summary>Writes the record into a new array of its size.</summary>
@@ -2939,7 +2939,7 @@ namespace GameEventScript.Tests.Generator.Packed.Wire
         /// <exception cref="GesWireException">A word taken unchecked holds an invalid field.</exception>
         public static byte[] ToBytes(this global::GameEventScript.Tests.Generator.Packed.Model.Pair record)
         {
-            var buffer = new byte[MaxByteCount];
+            var buffer = new byte[4];
             record.Write(buffer);
             return buffer;
         }

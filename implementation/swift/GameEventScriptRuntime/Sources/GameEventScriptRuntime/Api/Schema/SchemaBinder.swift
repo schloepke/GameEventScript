@@ -523,7 +523,8 @@ enum GesSchemaBinder {
         }
         seal(&build.nodes)
         var bits = cost(build.nodes, 0, build.nodes.count)
-        if declaration.kind == .schema { bits = max(bits, deltaCost(build.nodes)) }
+        // A packed record's delta is a change bit and its whole word.
+        if declaration.kind == .schema { bits = max(bits, declaration.packedWidth > 0 ? 1 + bits : deltaCost(build.nodes)) }
         if bits > maximumByteCount * 8 { throw declaration.scope.error(Code.tooLarge, declaration.offset, "The largest encoding of '\(declaration.name)' exceeds \(maximumByteCount) bytes.") }
         return GesBoundSchema(
             schema: declaration.schema!,
@@ -591,6 +592,8 @@ enum GesSchemaBinder {
         switch node.kind {
         case .boolean, .nothing:
             return 0
+        case .group where node.packed:
+            return fullCost(nodes, index)
         case .group:
             return deltaCost(nodes, index + 1, node.next)
         case .list where node.keyedElements:

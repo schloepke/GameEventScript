@@ -186,6 +186,16 @@ internal static class GesSchemaFormatter
         return builder.ToString();
     }
 
+    // The operand of a unary function or abs: one that needs no parentheses of its own but starts with `(` would read as the
+    // function's parenthesized operand and leave the rest outside it, so it takes parentheses.
+    private static void Operand(GesSchemaExpressionSyntax operand, StringBuilder builder)
+    {
+        var text = new StringBuilder();
+        Expression(operand, 8, text);
+        if (Level(operand) >= 8 && text.Length > 0 && text[0] == '(') builder.Append('(').Append(text).Append(')');
+        else builder.Append(text);
+    }
+
     // Prints an expression on one line with the parentheses its precedence needs: 0 choice, 1 default, 2 or, 3 and,
     // 4 equality, 5 relation, 6 addition, 7 multiplication, 8 unary, 9 power, 10 postfix and primary. A name that GES reserves
     // is written in backticks.
@@ -225,7 +235,7 @@ internal static class GesSchemaFormatter
                 break;
             case GesSchemaExpressionKind.Function:
                 builder.Append(expression.Name).Append(' ');
-                Expression(children[0], 8, builder);
+                Operand(children[0], builder);
                 break;
             case GesSchemaExpressionKind.Binary when expression.Operator == GesSchemaBinaryOperator.Power:
                 // The base takes no power of its own and the exponent is unary, so powers associate to the right.
@@ -237,9 +247,13 @@ internal static class GesSchemaFormatter
                 builder.Append('-');
                 Expression(children[0], 8, builder);
                 break;
-            case GesSchemaExpressionKind.Not or GesSchemaExpressionKind.Abs:
-                builder.Append(expression.Kind == GesSchemaExpressionKind.Not ? "not " : "abs ");
+            case GesSchemaExpressionKind.Not:
+                builder.Append("not ");
                 Expression(children[0], 8, builder);
+                break;
+            case GesSchemaExpressionKind.Abs:
+                builder.Append("abs ");
+                Operand(children[0], builder);
                 break;
             case GesSchemaExpressionKind.Binary:
                 Expression(children[0], level, builder);

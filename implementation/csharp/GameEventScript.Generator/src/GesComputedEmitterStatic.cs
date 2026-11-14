@@ -554,7 +554,11 @@ internal sealed partial class GesComputedEmitter
         {
             case GesComputedOp.Literal:
                 if (node.Type == GesComputedType.Boolean) return new Text(node.Literal.Kind == GesComputedKind.True ? "true" : "false", 10);
-                return new Text(Literal(node), 10);
+                {
+                    // A negative literal is a negation, which a following member access would otherwise bind first.
+                    var literal = Literal(node);
+                    return new Text(literal, literal.StartsWith("-", System.StringComparison.Ordinal) ? 9 : 10);
+                }
             case GesComputedOp.Field or GesComputedOp.Item:
                 return Field(node, want, root);
             case GesComputedOp.Negate:
@@ -864,7 +868,8 @@ internal sealed partial class GesComputedEmitter
         {
             var value = Emit(children[0], Want.Tri, root);
             var fallback = Emit(children[1], want, root);
-            return new Text($"({value.Value} ?? {fallback.Value})", 10);
+            // `??` binds tighter than comparisons and conditionals in C# and Swift, so each side stays whole.
+            return new Text($"({Wrap(value, 10)} ?? {Wrap(fallback, 10)})", 10);
         }
 
         var right = Emit(children[1], Want.Plain, root);
@@ -882,7 +887,7 @@ internal sealed partial class GesComputedEmitter
                 if (reach.Nullable)
                 {
                     var number = reach.Integer && _swift ? $"{reach.Text}.map {{ Double($0) }}" : reach.Text;
-                    return new Text($"({number} ?? {right.Value})", 10);
+                    return new Text($"({number} ?? {Wrap(right, 10)})", 10);
                 }
 
                 if (conditions.Count > 0) return new Text($"{string.Join(" && ", conditions)} ? {member} : {Wrap(right, 3)}", 2);

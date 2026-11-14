@@ -324,7 +324,7 @@ public enum GesSchemaValues {
         guard value.valueKind == .map, let map = value.asMap else { return (0, GesWireError.typeMismatch) }
         var mask: UInt64 = 0
         for entry in 0..<map.length {
-            guard let member = info.tags.firstIndex(of: map.key(at: entry)) else { return (0, GesWireError.unknownTag) }
+            guard let member = info.tags.firstIndex(where: { GesText.scalarEqual($0, map.key(at: entry)) }) else { return (0, GesWireError.unknownTag) }
             let set = map.value(at: entry)
             if set.valueKind != .boolean { return (0, GesWireError.typeMismatch) }
             if set.asBoolean { mask |= 1 << UInt64(member) }
@@ -414,8 +414,11 @@ public enum GesSchemaValues {
             let entry = map.value(at: index)
             keys.append(key)
             var child: (node: GesDocumentNode, start: Int)?
-            if case .map(let names, let children, _, let offsets)? = node, let label = names.firstIndex(of: key) { child = (children[label], offsets[label]) }
-            values.append(schema.fields.first { $0.name == key }.map { documentShape($0.alternatives, entry, child, chosen) } ?? entry)
+            // A Record form holds its entries in its fields argument, where the check recorded their unions too.
+            if let node, case .map(let names, let children, _, let offsets)? = GesSchemaDocument.entries(node), let label = names.firstIndex(where: { GesText.scalarEqual($0, key) }) {
+                child = (children[label], offsets[label])
+            }
+            values.append(schema.fields.first { GesText.scalarEqual($0.name, key) }.map { documentShape($0.alternatives, entry, child, chosen) } ?? entry)
         }
         if let name = value.customTypeName { return .record(typeName: name, keys: keys, values: values) }
         return .map(keys: keys, values: values)

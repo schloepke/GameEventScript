@@ -125,13 +125,19 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive, Ru
     }
 
     // .NET's Unix console stream ignores EPIPE, so a ConsoleOut into a closed pipe would go unnoticed and the run would
-    // return the script's code. A redirected stdout is therefore written through a file stream on descriptor 1, whose
-    // failed write raises the IOException that ends the session with failure status 1, as in the Swift CLI. A terminal
-    // keeps Console.Out, through which the interactive prompt redraws around delayed output.
+    // return the script's code. A stdout redirected to a pipe is therefore written through a file stream on descriptor 1,
+    // whose failed write raises the IOException that ends the session with failure status 1, as in the Swift CLI. A file
+    // stream on a regular file writes at its own position and never moves the offset that the shell shares with later
+    // writers, so a redirected file, which has no EPIPE, keeps Console.Out, as does a terminal, through which the
+    // interactive prompt redraws around delayed output.
     private static readonly Lazy<TextWriter> ScriptOutput = new(() =>
-        OperatingSystem.IsWindows() || !Console.IsOutputRedirected
-            ? Console.Out
-            : new StreamWriter(new FileStream(new SafeFileHandle(1, ownsHandle: false), FileAccess.Write, 1), new UTF8Encoding(false)) { AutoFlush = true });
+    {
+        if (OperatingSystem.IsWindows() || !Console.IsOutputRedirected) return Console.Out;
+        var stream = new FileStream(new SafeFileHandle(1, ownsHandle: false), FileAccess.Write, 1);
+        if (!stream.CanSeek) return new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true };
+        stream.Dispose();
+        return Console.Out;
+    });
 
     private static string ColorValue(GesValue value) => value.ValueKind switch
     {

@@ -1728,7 +1728,8 @@ the bytes as Int64 numbers.
 
 Bytes count their bytes, index from 1 to an Int64 number from 0 to 255 and
 iterate in order. `x in bytes` is true for a unitless integer equal to one of
-the bytes. Equality compares the bytes exactly; ordering is lexicographic by
+the bytes, and `:contains any`, `:contains all`, `[:first]`, `[:last]` and
+`[:single]` treat Bytes as the List of those numbers. Equality compares the bytes exactly; ordering is lexicographic by
 unsigned byte, so a prefix comes first ([Determinism](Semantics/Determinism.md)).
 Empty Bytes are `empty`. Like Lists, Bytes are neither true nor false in
 Boolean logic. Bytes are not numeric, not Text and no List.

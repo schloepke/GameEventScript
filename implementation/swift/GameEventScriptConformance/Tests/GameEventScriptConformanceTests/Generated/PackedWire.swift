@@ -19,7 +19,7 @@ extension PackedWire {
         /// The hash over the schema hash and the parameter values this code was generated with.
         static let bindingHash: UInt64 = 0x2077da395dfc1175
 
-        /// The size of the encoding in bytes, the same for every record.
+        /// The size in bytes of the largest encoding, a delta of a change bit and the word, which every buffer for writing needs.
         static let maxByteCount = 2
 
         static let __paths: [String] = ["level", "open", "kind", "slope", "marks"]
@@ -38,7 +38,7 @@ extension PackedWire {
             return try writer.finish()
         }
 
-        /// Counts the bytes that `write(_:into:)` writes, which are `maxByteCount`.
+        /// Counts the bytes that `write(_:into:)` writes, the same for every record.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.
         static func encodedByteCount(_ record: PackedModel.Cell) throws(GesWireError) -> Int {
             let paths = Self.__paths
@@ -47,13 +47,13 @@ extension PackedWire {
             if ((UInt64(record.rawValue) >> 0) & 15) > 9 { throw GesWireError(code: GesWireError.outOfRange, path: paths[at + 0]) }
             if ((UInt64(record.rawValue) >> 5) & 3) > 2 { throw GesWireError(code: GesWireError.outOfRange, path: paths[at + 2]) }
             if ((UInt64(record.rawValue) >> 7) & 15) > 10 { throw GesWireError(code: GesWireError.outOfRange, path: paths[at + 3]) }
-            return Self.maxByteCount
+            return 2
         }
 
         /// Writes the record into a new array of its size.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.
         static func encoded(_ record: PackedModel.Cell) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Self.maxByteCount, alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 2, alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(record, into: buffer)
             return Array(buffer[0..<count])
@@ -190,7 +190,7 @@ extension PackedWire {
         /// The hash over the schema hash and the parameter values this code was generated with.
         static let bindingHash: UInt64 = 0x49e642a84014d2c3
         /// The size of the largest encoding in bytes.
-        static let maxByteCount = 311
+        static let maxByteCount = 310
         static let __paths: [String] = [
             "name",
             "cells",
@@ -2197,7 +2197,7 @@ extension PackedWire {
         /// The hash over the schema hash and the parameter values this code was generated with.
         static let bindingHash: UInt64 = 0x5d879f5b86b9c623
 
-        /// The size of the encoding in bytes, the same for every record.
+        /// The size in bytes of the largest encoding, a delta of a change bit and the word, which every buffer for writing needs.
         static let maxByteCount = 2
 
         static let __paths: [String] = ["delta", "gear", "lift", "kind"]
@@ -2215,7 +2215,7 @@ extension PackedWire {
             return try writer.finish()
         }
 
-        /// Counts the bytes that `write(_:into:)` writes, which are `maxByteCount`.
+        /// Counts the bytes that `write(_:into:)` writes, the same for every record.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.
         static func encodedByteCount(_ record: PackedModel.Offset) throws(GesWireError) -> Int {
             let paths = Self.__paths
@@ -2223,13 +2223,13 @@ extension PackedWire {
             if (UInt64(record.rawValue) >> 11) != 0 { throw GesWireError(code: GesWireError.outOfRange, path: "") }
             if ((UInt64(record.rawValue) >> 6) & 7) > 4 { throw GesWireError(code: GesWireError.outOfRange, path: paths[at + 2]) }
             if ((UInt64(record.rawValue) >> 9) & 3) > 2 { throw GesWireError(code: GesWireError.outOfRange, path: paths[at + 3]) }
-            return Self.maxByteCount
+            return 2
         }
 
         /// Writes the record into a new array of its size.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.
         static func encoded(_ record: PackedModel.Offset) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Self.maxByteCount, alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 2, alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(record, into: buffer)
             return Array(buffer[0..<count])
@@ -2353,7 +2353,7 @@ extension PackedWire {
         /// The hash over the schema hash and the parameter values this code was generated with.
         static let bindingHash: UInt64 = 0xc1860a6f3ed30904
 
-        /// The size of the encoding in bytes, the same for every record.
+        /// The size in bytes of the largest encoding, a delta of a change bit and the word, which every buffer for writing needs.
         static let maxByteCount = 4
 
         static let __paths: [String] = ["low", "low.level", "low.open", "low.kind", "low.slope", "low.marks", "high", "high.level", "high.open", "high.kind", "high.slope", "high.marks"]
@@ -2375,7 +2375,7 @@ extension PackedWire {
             return try writer.finish()
         }
 
-        /// Counts the bytes that `write(_:into:)` writes, which are `maxByteCount`.
+        /// Counts the bytes that `write(_:into:)` writes, the same for every record.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.
         static func encodedByteCount(_ record: PackedModel.Pair) throws(GesWireError) -> Int {
             let paths = Self.__paths
@@ -2387,13 +2387,13 @@ extension PackedWire {
             if ((UInt64(record.rawValue) >> 13) & 15) > 9 { throw GesWireError(code: GesWireError.outOfRange, path: paths[at + 7]) }
             if ((UInt64(record.rawValue) >> 18) & 3) > 2 { throw GesWireError(code: GesWireError.outOfRange, path: paths[at + 9]) }
             if ((UInt64(record.rawValue) >> 20) & 15) > 10 { throw GesWireError(code: GesWireError.outOfRange, path: paths[at + 10]) }
-            return Self.maxByteCount
+            return 4
         }
 
         /// Writes the record into a new array of its size.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.
         static func encoded(_ record: PackedModel.Pair) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Self.maxByteCount, alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 4, alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(record, into: buffer)
             return Array(buffer[0..<count])

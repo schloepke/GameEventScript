@@ -64,6 +64,9 @@ def check(name, command, work):
     failure = bench(command, work, "probe.gesb", "--entry", "Fail", "--warmup", "0", "--iterations", "2", expected=1).stderr
     assert "error cli.benchFailed: iteration 1: the script set ErrorCode(3)" in failure, failure
     assert "error cli.missingEntry" in bench(command, work, "probe.gesb", "--entry", "Nowhere", expected=1).stderr
+    # The host's system endpoints name no message a benchmark could send.
+    for endpoint in ("initialization", "undeliverable"):
+        assert "error cli.missingEntry" in bench(command, work, "probe.gesb", "--entry", endpoint, expected=1).stderr
     assert "error cli.usage" in bench(command, work, "probe.ges", expected=2).stderr
     return report["checksum"]
 

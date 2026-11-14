@@ -20,7 +20,8 @@ extension GesSwiftEmitter {
         case .integer where !encoding.wrapping:
             return "value >= \(long(encoding.lower)) && UInt64(bitPattern: Int64(value)) &- \(UInt64(bitPattern: encoding.lower)) <= \(encoding.maxIndex)"
         case .quantized where encoding.wrapping:
-            return "value.isFinite"
+            // A wrapping step index exists for finite values within 2^50 steps of the lower bound, as the setter computes it.
+            return "(try? GesWireRules.wrappedQuantizedIndex(value, tenPower: \(double(encoding.tenPower)), numerator: \(double(encoding.numerator)), lower: \(long(encoding.lower)), period: \(encoding.maxIndex &+ 1), path: \"\")) != nil"
         case .quantized:
             return "value >= \(bits(encoding.lowerValue)) && value <= \(bits(encoding.upperValue))"
         case .flags where encoding.width < 64:
@@ -179,8 +180,8 @@ extension GesSwiftEmitter {
         code.line("/// The hash over the schema hash and the parameter values this code was generated with.")
         code.line("\(access)static let bindingHash: UInt64 = 0x\(GesSchemaLayoutJson.hex(type.layout.bindingHash))")
         code.blank()
-        code.line("/// The size of the encoding in bytes, the same for every record.")
-        code.line("\(access)static let maxByteCount = \((word.bits + 7) / 8)")
+        code.line("/// The size in bytes of the largest encoding, a delta of a change bit and the word, which every buffer for writing needs.")
+        code.line("\(access)static let maxByteCount = \((word.bits + 8) / 8)")
         code.blank()
         code.line("static let __paths: [String] = [\(type.paths.map { GesSchemaPlanner.literal($0, swift: true) }.joined(separator: ", "))]")
         code.blank()
@@ -199,18 +200,18 @@ extension GesSwiftEmitter {
         code.line("return try writer.finish()")
         code.close()
         code.blank()
-        code.line("/// Counts the bytes that `\(shared ? "write(_:into:)" : "write(into:)")` writes, which are `maxByteCount`.")
+        code.line("/// Counts the bytes that `\(shared ? "write(_:into:)" : "write(into:)")` writes, the same for every record.")
         code.line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.")
         code.open(sig(false, "encodedByteCount", "", " throws(GesWireError) -> Int"))
         GesCSharpEmitter.packedPaths(&code, word, "let paths = Self.__paths", "let at = 0")
         packedChecks(&code, word, "UInt64(\(rawOf))", "\"\"")
-        code.line("return Self.maxByteCount")
+        code.line("return \((word.bits + 7) / 8)")
         code.close()
         code.blank()
         code.line("/// Writes the record into a new array of its size.")
         code.line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.")
         code.open(sig(false, "encoded", "", " throws(GesWireError) -> [UInt8]"))
-        code.line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Self.maxByteCount, alignment: 8)")
+        code.line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: \((word.bits + 7) / 8), alignment: 8)")
         code.line("defer { buffer.deallocate() }")
         code.line("let count = try \(call("write", "into: buffer"))")
         code.line("return Array(buffer[0..<count])")

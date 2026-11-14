@@ -745,7 +745,16 @@ extension GesSwiftEmitter {
             for (index, corner) in value.corners.enumerated() {
                 let cornerNode = String(corner.node)
                 code.line("\(binding(!empty(corner))) \(corner.label)\(node) = \(b).\(member(corner.base))")
-                if empty(corner) { continue }
+                if empty(corner) {
+                    // A centre without axes never changes, so its change bit must be clear in the canonical delta.
+                    code.open("do {")
+                    code.line("let payload\(cornerNode) = reader.bitPosition")
+                    code.line("reader.seek(to: bits\(node) + \(index))")
+                    code.line("if try reader.read(1, path: \(path(corner))) == 1 { \(fail("invalidDelta", corner)) }")
+                    code.line("reader.seek(to: payload\(cornerNode))")
+                    code.close()
+                    continue
+                }
                 code.open("do {")
                 code.line("let payload\(cornerNode) = reader.bitPosition")
                 code.line("reader.seek(to: bits\(node) + \(index))")

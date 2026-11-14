@@ -29,9 +29,9 @@ internal static class ToolGeneratedDirectory
         Directory.CreateDirectory(root);
         var generated = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in files) generated.Add(file.Path);
-        // The manifest, the last file, follows the removal of the files it no longer names: a run that fails before keeps
-        // the previous manifest, which still owns them.
-        for (var index = 0; index < files.Count - 1; index++) WriteChanged(Path.Combine(root, files[index].Path), files[index].Text);
+        // Stale owned files go first: on a file system that ignores case, a file renamed only in case would otherwise keep its
+        // old entry and be removed right after being written. The manifest, the last file, follows the code files, so a run
+        // that fails before keeps the previous manifest, which still owns what it named.
         foreach (var name in Entries(root))
         {
             if (generated.Contains(name)) continue;
@@ -40,6 +40,7 @@ internal static class ToolGeneratedDirectory
             else Console.Error.WriteLine($"warning cli.unowned: {Path.Combine(directory, name)} is not generated and was left alone.");
         }
 
+        for (var index = 0; index < files.Count - 1; index++) WriteChanged(Path.Combine(root, files[index].Path), files[index].Text);
         WriteChanged(Path.Combine(root, files[files.Count - 1].Path), files[files.Count - 1].Text);
 
         return 0;

@@ -65,9 +65,11 @@ extension GesVirtualMachine {
         case .list:
             let result = registers[x].listValue! + [registers[y].registerValue]
             registers[destination].setList(result)
+            checkValueDepth(absolute: destination)
         case _ where rightKind == .list:
             let result = [registers[x].registerValue] + registers[y].listValue!
             registers[destination].setList(result)
+            checkValueDepth(absolute: destination)
         // Bytes join only Bytes, Text and Lists; any other partner yields nothing.
         case .bytes,
             _ where rightKind == .bytes:

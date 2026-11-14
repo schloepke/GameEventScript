@@ -174,14 +174,16 @@ internal static partial class GesCSharpEmitter
         string Set(string value) => shared is null ? $"_raw = {value};" : $"record = {name}.FromRawUnchecked({value});";
         var word = GesPackedWord.Of(context.Layout, type.Name, -1);
         var raw = PackedRaw(word.Width);
+        // The record is its word; its delta is a change bit and the word, so the largest encoding has one bit more.
         var bytes = N((word.Bits + 7) / 8);
+        var maxBytes = N((word.Bits + 8) / 8);
         var self = new GesPlanValue { Node = -1, Packed = word };
         if (shared is null) code.Blank();
         code.Line("/// <summary>The hash over the schema hash and the parameter values this code was generated with.</summary>");
         code.Line($"public const ulong BindingHash = 0x{GesSchemaLayoutJson.Hex(type.Layout.BindingHash)}UL;");
         code.Blank();
-        code.Line("/// <summary>The size of the encoding in bytes, the same for every record.</summary>");
-        code.Line($"public const int MaxByteCount = {bytes};");
+        code.Line("/// <summary>The size in bytes of the largest encoding, a delta of a change bit and the word, which every buffer for writing needs.</summary>");
+        code.Line($"public const int MaxByteCount = {maxBytes};");
         code.Blank();
         code.Line($"internal static readonly string[] __paths = {{ {string.Join(", ", type.Paths.ConvertAll(path => GesSchemaPlanner.Literal(path, false)))} }};");
         code.Blank();
@@ -197,14 +199,14 @@ internal static partial class GesCSharpEmitter
         code.Line("return writer.Finish();");
         code.Close();
         code.Blank();
-        code.Line("/// <summary>Counts the bytes that <see cref=\"Write\"/> writes, which are <see cref=\"MaxByteCount\"/>.</summary>");
+        code.Line("/// <summary>Counts the bytes that <see cref=\"Write\"/> writes, the same for every record.</summary>");
         code.Line("/// <returns>The byte count.</returns>");
         code.Line("/// <exception cref=\"GesWireException\">A word taken unchecked holds an invalid field.</exception>");
         code.Line(Sig(false, "int", "ByteCount", ""));
         code.Open("{");
         PackedPaths(code, word, "var paths = __paths;", "const int at = 0;");
         PackedChecks(code, word, $"(ulong){rawOf}", "\"\"");
-        code.Line("return MaxByteCount;");
+        code.Line($"return {bytes};");
         code.Close();
         code.Blank();
         code.Line("/// <summary>Writes the record into a new array of its size.</summary>");
@@ -212,7 +214,7 @@ internal static partial class GesCSharpEmitter
         code.Line("/// <exception cref=\"GesWireException\">A word taken unchecked holds an invalid field.</exception>");
         code.Line(Sig(false, "byte[]", "ToBytes", ""));
         code.Open("{");
-        code.Line("var buffer = new byte[MaxByteCount];");
+        code.Line($"var buffer = new byte[{bytes}];");
         code.Line($"{me}Write(buffer);");
         code.Line("return buffer;");
         code.Close();

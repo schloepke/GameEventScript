@@ -1361,6 +1361,12 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                         reader.Seek(bits10 + 2);
                         var changed10 = false;
                         var center10 = baseline.Aura.Center;
+                        {
+                            var payload11 = reader.BitPosition;
+                            reader.Seek(bits10 + 0);
+                            if (reader.Read(1, paths[at + 11]) == 1) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 11]);
+                            reader.Seek(payload11);
+                        }
                         var radius10 = baseline.Aura.Radius;
                         {
                             var payload12 = reader.BitPosition;

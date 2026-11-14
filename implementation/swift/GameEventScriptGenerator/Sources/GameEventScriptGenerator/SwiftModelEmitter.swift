@@ -433,6 +433,20 @@ enum GesSwiftModelEmitter {
     }
 
     /// Returns the record read from `field<n>`, setting afterwards the optional fields whose initializer would take a sibling.
+    // The tests `fits<Field>` of a packed model's fields by index, nil where every value fits or the model is not packed, so
+    // that converting a value fails as a GesWireError where the field's setter would trap.
+    private static func packedChecks(_ type: GesModelType, _ fields: [GesModelPlanField]) -> [String?] {
+        guard let packedLayout = type.packed else { return Array(repeating: nil, count: fields.count) }
+        let bits = GesCSharpEmitter.packedLayout(packedLayout, packedLayout.type(type.name))
+        return fields.indices.map { index in
+            let field = GesCSharpEmitter.PackedField(field: bits[index].field, shift: bits[index].shift, width: bits[index].width, member: fields[index].base, type: "", nestedRaw: nil)
+            return GesSwiftEmitter.packedFits(field) == nil ? nil : "\(type.name).fits\(fields[index].base)"
+        }
+    }
+
+    // The condition that a converted packed field fits, appended to its `let` in a condition list.
+    private static func fits(_ checks: [String?], _ index: Int, _ value: String) -> String { checks[index].map { ", \($0)(\(value))" } ?? "" }
+
     private static func construct(_ code: inout GesSchemaPlanner.Code, _ type: String, _ arguments: String, _ fields: [GesModelPlanField]) {
         let kept = GesModelPlanner.kept(fields)
         if kept.isEmpty {
@@ -732,8 +746,11 @@ enum GesSwiftModelEmitter {
             code.open("func invoke(_ call: GesExternalTypeConstructorCall) throws {")
             code.open("guard")
             code.line("let fields = call.arguments[0].asMap, \(support).known(fields, \(type.name)Value.names)\(fields.isEmpty ? "" : ",")")
+            let checks = packedChecks(type, fields)
             for (index, field) in fields.enumerated() {
-                code.line("let \(member(field.base)) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support, type.name + "Defaults"), "GesTypes", support))\(index == fields.count - 1 ? "" : ",")")
+                code.line(
+                    "let \(member(field.base)) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support, type.name + "Defaults"), "GesTypes", support))\(fits(checks, index, member(field.base)))\(index == fields.count - 1 ? "" : ",")"
+                )
             }
             code.dedent()
             code.open("else {")
@@ -811,6 +828,7 @@ enum GesSwiftModelEmitter {
                 code.line("static let \(keys) = \(names) + [\(type.computed.map { literal($0.name) }.joined(separator: ", "))]")
                 code.blank()
             }
+            let checks = packedChecks(type, fields)
             code.open("static func value(_ record: \(type.name)) -> GesValue {")
             code.line(".record(typeName: \(typeLiteral), keys: \(keys), values: [")
             for field in fields { code.line("    " + encode(field.value, type.name, "record." + member(field.base), name, support, plain: true) + ",") }
@@ -835,7 +853,9 @@ enum GesSwiftModelEmitter {
                     if descends(field.value) {
                         code.line("let field\(index) = \(read(field.value, type.name, held, "fieldPath(path, \(fieldLiteral))", name, support))")
                     } else {
-                        code.line("guard let field\(index) = \(decode(field.value, type.name, held, name, support, plain: true)) else { throw failure(\(held), fieldPath(path, \(fieldLiteral))) }")
+                        code.line(
+                            "guard let field\(index) = \(decode(field.value, type.name, held, name, support, plain: true))\(fits(checks, index, "field\(index)")) else { throw failure(\(held), fieldPath(path, \(fieldLiteral))) }"
+                        )
                     }
                 }
                 construct(&code, type.name, arguments, fields)
@@ -849,7 +869,9 @@ enum GesSwiftModelEmitter {
                 code.open("guard")
                 code.line("let fields = recordFields(value, \(typeLiteral), \(names)),")
                 for (index, field) in fields.enumerated() {
-                    code.line("let field\(index) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support, type.name + "Defaults"), name, support, plain: true))\(index == fields.count - 1 ? "" : ",")")
+                    code.line(
+                        "let field\(index) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support, type.name + "Defaults"), name, support, plain: true))\(fits(checks, index, "field\(index)"))\(index == fields.count - 1 ? "" : ",")"
+                    )
                 }
                 code.dedent()
                 code.line("else { return nil }")

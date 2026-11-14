@@ -852,7 +852,18 @@ internal static partial class GesSwiftEmitter
                     var corner = value.Corners[index];
                     var cornerNode = N(corner.Node);
                     code.Line($"{Binding(!Empty(corner))} {corner.Label}{node} = {b}.{Member(corner.Base)}");
-                    if (Empty(corner)) continue;
+                    if (Empty(corner))
+                    {
+                        // A centre without axes never changes, so its change bit must be clear in the canonical delta.
+                        code.Open("do {");
+                        code.Line($"let payload{cornerNode} = reader.bitPosition");
+                        code.Line($"reader.seek(to: bits{node} + {N(index)})");
+                        code.Line($"if try reader.read(1, path: {Path(corner)}) == 1 {{ {Throw("invalidDelta", corner)} }}");
+                        code.Line($"reader.seek(to: payload{cornerNode})");
+                        code.Close();
+                        continue;
+                    }
+
                     code.Open("do {");
                     code.Line($"let payload{cornerNode} = reader.bitPosition");
                     code.Line($"reader.seek(to: bits{node} + {N(index)})");

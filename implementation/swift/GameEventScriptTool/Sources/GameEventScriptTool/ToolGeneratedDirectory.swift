@@ -15,9 +15,9 @@ struct ToolGeneratedDirectory {
         let owned = Self.owned(Self.join(root, files[files.count - 1].path))
         try FileManager.default.createDirectory(atPath: root, withIntermediateDirectories: true)
         let generated = Set(files.map(\.path))
-        // The manifest, the last file, follows the removal of the files it no longer names: a run that fails before keeps
-        // the previous manifest, which still owns them.
-        for file in files.dropLast() { try Self.writeChanged(Self.join(root, file.path), file.text) }
+        // Stale owned files go first: on a file system that ignores case, a file renamed only in case would otherwise keep its
+        // old entry and be removed right after being written. The manifest, the last file, follows the code files, so a run
+        // that fails before keeps the previous manifest, which still owns what it named.
         for name in try Self.entries(root) where !generated.contains(name) {
             let path = Self.join(root, name)
             var isDirectory: ObjCBool = false
@@ -27,6 +27,7 @@ struct ToolGeneratedDirectory {
                 io.line("warning cli.unowned: \(Self.join(directory, name)) is not generated and was left alone.", toError: true)
             }
         }
+        for file in files.dropLast() { try Self.writeChanged(Self.join(root, file.path), file.text) }
         try Self.writeChanged(Self.join(root, files[files.count - 1].path), files[files.count - 1].text)
         return 0
     }

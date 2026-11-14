@@ -82,6 +82,14 @@
         return output
     }
 
+    // The operand of a unary function or abs: one that needs no parentheses of its own but starts with `(` would read as the
+    // function's parenthesized operand and leave the rest outside it, so it takes parentheses.
+    private static func operand(_ node: GesSchemaExpressionSyntax, _ output: inout String) {
+        var text = ""
+        expression(node, 8, &text)
+        output += level(node) >= 8 && text.hasPrefix("(") ? "(" + text + ")" : text
+    }
+
     /// Prints an expression with the parentheses its precedence needs: 0 choice, 1 default, 2 or, 3 and, 4 equality,
     /// 5 relation, 6 addition, 7 multiplication, 8 unary, 9 power, 10 postfix and primary. A name that GES reserves is written in
     /// backticks.
@@ -106,7 +114,7 @@
             output += ")"
         case .function:
             output += node.name + " "
-            expression(children[0], 8, &output)
+            operand(children[0], &output)
         case .binary where node.binary == .power:
             // The base takes no power of its own and the exponent is unary, so powers associate to the right.
             expression(children[0], 10, &output)
@@ -115,9 +123,12 @@
         case .negate:
             output += "-"
             expression(children[0], 8, &output)
-        case .not, .abs:
-            output += node.kind == .not ? "not " : "abs "
+        case .not:
+            output += "not "
             expression(children[0], 8, &output)
+        case .abs:
+            output += "abs "
+            operand(children[0], &output)
         case .binary:
             expression(children[0], level, &output)
             output += " \(symbol(node.binary)) "

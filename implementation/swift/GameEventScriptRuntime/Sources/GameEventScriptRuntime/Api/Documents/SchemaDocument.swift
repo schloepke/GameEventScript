@@ -38,7 +38,7 @@ public struct GesSchemaDocument {
         let syntax = GesDocumentReader.read(text)
         var named: String?
         if case .type(let name) = syntax.schema { named = name }
-        guard let name = named, expected.contains(name) else {
+        guard let name = named, expected.contains(where: { GesText.scalarEqual($0, name) }) else {
             let wanted = expected.map { ":" + $0 }.joined(separator: " or ")
             throw GesDocumentError(code: Self.schemaMismatch, line: 1, column: 1, message: "The document names \(named.map { ":" + $0 } ?? "no schema") where \(wanted) is expected.")
         }
@@ -74,7 +74,7 @@ public struct GesSchemaDocument {
         var offset = 0
         for segment in error.path.split(separator: ".", omittingEmptySubsequences: false) {
             let name = segment.prefix { $0 != "[" && $0 != ":" }
-            guard let current = node, case .map(let keys, let values, _, let valueOffsets) = Self.entries(current), let index = keys.firstIndex(of: String(name)) else { break }
+            guard let current = node, case .map(let keys, let values, _, let valueOffsets) = Self.entries(current), let index = keys.firstIndex(where: { GesText.scalarEqual($0, String(name)) }) else { break }
             node = values[index]
             offset = valueOffsets[index]
             if segment.contains("[") { break }
@@ -84,7 +84,7 @@ public struct GesSchemaDocument {
     }
 
     // The entries of a Map or of a Record form.
-    private static func entries(_ node: GesDocumentNode) -> GesDocumentNode? {
+    static func entries(_ node: GesDocumentNode) -> GesDocumentNode? {
         if case .map = node { return node }
         guard case .form("record", let labels, let arguments, _) = node, let positions = GesLiteralForms.positions("record", labels), let fields = positions.firstIndex(of: 1) else { return nil }
         if case .map = arguments[fields] { return arguments[fields] }

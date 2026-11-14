@@ -43,6 +43,8 @@ internal sealed partial class GesSyntaxParser
             }
             else if (Match(Emit) || Match(Publish))
             {
+                // As in a statement send, the message may stand on the next line.
+                SkipNewLines();
                 ParsePublishMessageExpression();
                 ParseOptionalTagExpressions();
                 lines++;
@@ -1456,9 +1458,11 @@ internal sealed partial class GesSyntaxParser
         var startToken = CurrentIndex;
         var typeToken = Current;
         var typeName = GesText.CanonicalTypeName(ParseTypeName());
+        // A type name that starts no constructor is itself the unexpected token, also after a quantity unit; the failure
+        // leaves a following line break unread, so recovery stops there and the next statement parses.
+        if (_reader.PeekSignificant(0).Kind != LeftParen) throw new ParseException($"Unexpected token '{typeToken.Text}'", typeToken);
         SkipNewLines();
-        // A type name that starts no constructor is itself the unexpected token, also after a quantity unit.
-        if (!Match(LeftParen)) throw new ParseException($"Unexpected token '{typeToken.Text}'", typeToken);
+        Advance();
         if (typeName == "handler" && _reader.PeekSignificant(0).Kind == Message)
         {
             // The handler literal of this data form adds no level of its own.

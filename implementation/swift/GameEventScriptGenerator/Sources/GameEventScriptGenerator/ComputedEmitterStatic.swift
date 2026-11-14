@@ -537,7 +537,9 @@ extension GesComputedEmitter {
         switch node.op {
         case .literal:
             if node.type == .boolean { return Text(node.literal.kind == .true ? "true" : "false", 10) }
-            return Text(literal(node), 10)
+            // A negative literal is a negation, which a following member access would otherwise bind first.
+            let text = literal(node)
+            return Text(text, text.hasPrefix("-") ? 9 : 10)
         case .field, .item:
             return fieldText(node, want, root)
         case .negate:
@@ -749,7 +751,8 @@ extension GesComputedEmitter {
         if node.type == .boolean {
             let value = emit(children[0], .tri, root)
             let fallback = emit(children[1], want, root)
-            return Text("(\(value.value) ?? \(fallback.value))", 10)
+            // `??` binds tighter than comparisons and conditionals in C# and Swift, so each side stays whole.
+            return Text("(\(Self.wrap(value, 10)) ?? \(Self.wrap(fallback, 10)))", 10)
         }
         let right = emit(children[1], .plain, root)
         // An optional field that is only ever absent reads its fallback directly.
@@ -760,7 +763,7 @@ extension GesComputedEmitter {
                 let member = reach.integer ? (swift ? "Double(\(reach.text))" : "(double)\(reach.text)") : reach.text
                 if reach.nullable {
                     let number = reach.integer && swift ? "\(reach.text).map { Double($0) }" : reach.text
-                    return Text("(\(number) ?? \(right.value))", 10)
+                    return Text("(\(number) ?? \(Self.wrap(right, 10)))", 10)
                 }
                 if !conditions.isEmpty { return Text("\(conditions.joined(separator: " && ")) ? \(member) : \(Self.wrap(right, 3))", 2) }
             }

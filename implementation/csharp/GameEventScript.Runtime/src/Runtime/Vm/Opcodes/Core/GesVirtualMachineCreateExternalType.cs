@@ -109,6 +109,9 @@ internal partial class GesVirtualMachine
                 case "Text":
                     converted = CastValue(in source, Text, this, destinationRegister);
                     break;
+                case "Bytes":
+                    converted = CastValue(in source, Bytes, this, destinationRegister);
+                    break;
                 case "Vector":
                     converted = CastValue(in source, Vector, this, destinationRegister);
                     break;

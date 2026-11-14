@@ -63,7 +63,9 @@ enum GesProgramValidator {
         if !p.stringConstants.contains(where: { GesText.scalarEqual($0, p.moduleName) }) { throw failure(.invalidStringIndex, 1) }
         // A list is validated once per role; later references only check what depends on their instruction.
         var validatedLists: [Int: Set<UInt16>?] = [:]
-        for (index, instruction) in p.code.enumerated() { try validateInstruction(p, instruction, index, ids, &validatedLists) }
+        // A tag or type name shared by many instructions is checked once, so that a long name cannot make validation quadratic.
+        var validatedNames: Set<Int> = []
+        for (index, instruction) in p.code.enumerated() { try validateInstruction(p, instruction, index, ids, &validatedLists, &validatedNames) }
         try GesProgramDebugValidator.validate(p)
         try GesProgramDebugValidator.validateOpaque(p)
         try GesProgramCallGraphValidator.validate(p)
@@ -71,7 +73,14 @@ enum GesProgramValidator {
 
     static func failure(_ code: GesProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil) -> GesProgramFormatError { .init(code, sectionType: section, entryIndex: entry) }
 
-    static func validateInstruction(_ p: GameEventScriptProgram, _ i: GesBytecodeInstruction, _ index: Int, _ ids: Set<UInt64>, _ validatedLists: inout [Int: Set<UInt16>?]) throws {
+    static func validateInstruction(
+        _ p: GameEventScriptProgram,
+        _ i: GesBytecodeInstruction,
+        _ index: Int,
+        _ ids: Set<UInt64>,
+        _ validatedLists: inout [Int: Set<UInt16>?],
+        _ validatedNames: inout Set<Int>
+    ) throws {
         if i.opcode.isResultSend {
             if i.unitAndFlags & 0x3f != 0 || i.c != 0 || i.d != 0 || i.unitAndFlags & 0x40 == 0 && i.a != 0 || i.unitAndFlags & 0x80 != 0 && i.word2 != 0
                 || (i.opcode == .emitInstant || i.opcode == .publishInstant) && i.b != 0
@@ -100,8 +109,14 @@ enum GesProgramValidator {
             } else if operand.isString {
                 let stringIndex = operand == .customTypeName ? i.word2 : i.word1
                 if Int(stringIndex) >= p.stringConstants.count { throw failure(.invalidStringIndex, 16, index) }
-                let text = p.stringConstants[Int(stringIndex)]
-                if operand == .tag && !GesNames.plain(text) || operand == .customTypeName && !GesNames.type(text) { throw failure(.invalidOperand, 16, index) }
+                if operand == .tag || operand == .customTypeName {
+                    let checked = Int(stringIndex) << 1 | (operand == .tag ? 0 : 1)
+                    if !validatedNames.contains(checked) {
+                        let text = p.stringConstants[Int(stringIndex)]
+                        if operand == .tag && !GesNames.plain(text) || operand == .customTypeName && !GesNames.type(text) { throw failure(.invalidOperand, 16, index) }
+                        validatedNames.insert(checked)
+                    }
+                }
             } else if operand.isList {
                 let listIndex = Int(i.list(operand))
                 if listIndex >= p.uint16IndexLists.count { throw failure(.invalidListIndex, 16, index) }

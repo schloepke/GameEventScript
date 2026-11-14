@@ -40,6 +40,10 @@ Options:
 
     private static int Main(string[] arguments)
     {
+        // The tool's output, schema hashes and generated code use ASCII digits and signs whatever the system locale, as the
+        // Swift CLI does; a locale whose minus sign is U+2212 would otherwise change them.
+        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+        System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
         if (arguments is ["compile", ..]) return CompileCommand.Run(arguments[1..]);
         if (arguments is ["check", ..]) return CompileCommand.Run(arguments[1..], checkOnly: true);
         if (arguments is ["run", ..]) return RunCommand.Run(arguments[1..]);

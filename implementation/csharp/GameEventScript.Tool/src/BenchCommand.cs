@@ -233,6 +233,9 @@ Options:
     // `<entry>(args: [])` for an `<entry>(args)` handler, otherwise `<entry>()`, as `run` sends Main(args).
     private static GameEventScriptMessage EntryMessage(GameEventScriptProgram program, string entry)
     {
+        // Only the host sends its system endpoints; no message can name them.
+        if (entry is "initialization" or "undeliverable")
+            throw new BenchFailure($"{entry} is a system endpoint that only the host sends. Choose another message with --entry.", "cli.missingEntry");
         bool withArgs = false, withoutArgs = false;
         foreach (var binding in program.Bindings.Entries)
         {

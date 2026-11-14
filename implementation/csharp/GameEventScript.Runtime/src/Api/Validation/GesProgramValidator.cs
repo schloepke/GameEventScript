@@ -166,16 +166,18 @@ internal static class GesProgramValidator
     {
         if (program.Code.Count > ushort.MaxValue) Throw(GesProgramFormatErrorCode.TooManyEntries, "CodeSegment exceeds 65535 instructions.");
         var lists = new Dictionary<int, HashSet<ushort>?>();
+        // A tag or type name shared by many instructions is checked once, so that a long name cannot make validation quadratic.
+        var checkedNames = new HashSet<int>();
         for (var index = 0; index < program.Code.Count; index++)
         {
             var instruction = program.Code[index];
             if (!GesProgramEnumValidation.IsDefined(instruction.OpCode))
                 Throw(GesProgramFormatErrorCode.InvalidOpcode, $"Unknown opcode 0x{(byte)instruction.OpCode:X2}.", (ushort)GesSectionType.Code, index);
-            ValidateInstructionOperands(program, indexedBindingIds, instruction, index, lists);
+            ValidateInstructionOperands(program, indexedBindingIds, instruction, index, lists, checkedNames);
         }
     }
 
-    private static void ValidateInstructionOperands(GameEventScriptProgram program, HashSet<ulong> indexedBindingIds, GesBytecodeInstruction instruction, int instructionIndex, Dictionary<int, HashSet<ushort>?> lists)
+    private static void ValidateInstructionOperands(GameEventScriptProgram program, HashSet<ulong> indexedBindingIds, GesBytecodeInstruction instruction, int instructionIndex, Dictionary<int, HashSet<ushort>?> lists, HashSet<int> checkedNames)
     {
         var encodedUnit = instruction.UnitAndFlags & 0x1F;
         var encodedFlags = instruction.UnitAndFlags & 0xE0;
@@ -243,9 +245,12 @@ internal static class GesProgramValidator
             {
                 var stringIndex = operand == GesOpcodePrinter.OperandPart.CustomTypeName ? instruction.SecondaryStringIndex : instruction.StringIndex;
                 if (stringIndex >= program.StringConstants.Slices.Count) Throw(GesProgramFormatErrorCode.InvalidStringIndex, "Instruction references a missing string.", (ushort)GesSectionType.Code, instructionIndex);
+                var checkedName = stringIndex << 1 | (operand == GesOpcodePrinter.OperandPart.Tag ? 0 : 1);
+                if (operand is GesOpcodePrinter.OperandPart.Tag or GesOpcodePrinter.OperandPart.CustomTypeName && checkedNames.Contains(checkedName)) continue;
                 if (operand == GesOpcodePrinter.OperandPart.Tag && !IsPortablePlainName(program.StringConstants, stringIndex)) InvalidOperand("Tag constants must use the portable lowercase ASCII name grammar.", instructionIndex);
                 if (operand == GesOpcodePrinter.OperandPart.CustomTypeName && !IsPortableTypeName(program.StringConstants, stringIndex))
                     InvalidOperand("Custom type names must use the portable lowercase ASCII type-name grammar.", instructionIndex);
+                if (operand is GesOpcodePrinter.OperandPart.Tag or GesOpcodePrinter.OperandPart.CustomTypeName) checkedNames.Add(checkedName);
                 continue;
             }
             if (IsListOperand(operand))

@@ -98,6 +98,35 @@ internal partial class GesVirtualMachine
 
                 SetBoolean(dst, true);
                 return;
+            case Bytes when source.ObjectValue is byte[] bytes:
+                if (bytes.Length == 0)
+                {
+                    SetBoolean(dst, requireAll);
+                    return;
+                }
+
+                if (!requireAll)
+                {
+                    for (var i = 0; i < bytes.Length; i++)
+                    {
+                        if (bytes[i] == 0) continue;
+                        SetBoolean(dst, true);
+                        return;
+                    }
+
+                    SetBoolean(dst, false);
+                    return;
+                }
+
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    if (bytes[i] != 0) continue;
+                    SetBoolean(dst, false);
+                    return;
+                }
+
+                SetBoolean(dst, true);
+                return;
             case Map when source.ObjectValue is GesValueMap map:
             {
                 var list = map.ValueList;
@@ -321,6 +350,27 @@ internal partial class GesVirtualMachine
 
                 SetBoolean(dst, requireAll);
                 return;
+            case Bytes when a.ObjectValue is byte[] bytes:
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    candidate.SetInteger(bytes[i]);
+                    if (ContainsHelper(candidate, b) == true)
+                    {
+                        if (!requireAll)
+                        {
+                            SetBoolean(dst, true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        SetBoolean(dst, false);
+                        return;
+                    }
+                }
+
+                SetBoolean(dst, requireAll);
+                return;
             case Text or Tag:
             {
                 var text = a.TextValue;
@@ -430,6 +480,14 @@ internal partial class GesVirtualMachine
                 for (var i = 0; i < dice.Length; i++)
                 {
                     candidate.SetInteger(dice[i]);
+                    candidates.Add(in candidate);
+                }
+
+                break;
+            case Bytes when a.ObjectValue is byte[] bytes:
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    candidate.SetInteger(bytes[i]);
                     candidates.Add(in candidate);
                 }
 
@@ -575,6 +633,15 @@ internal partial class GesVirtualMachine
                 for (var i = 0; i < dice.Length; i++)
                 {
                     if (dice[i] != a.IntegerValue) continue;
+                    return true;
+                }
+
+                return false;
+            case Bytes when b.ObjectValue is byte[] bytes:
+                if (a.Kind is not Integer || a.Unit is not GesQuantityUnit.UnitNone) return false;
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    if (bytes[i] != a.IntegerValue) continue;
                     return true;
                 }
 

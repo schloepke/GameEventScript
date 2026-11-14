@@ -17,6 +17,13 @@ internal static class GesCSharpModelEmitter
     // Members every model type declares or inherits.
     private static readonly string[] Reserved = ["Equals", "GetHashCode", "ToString", "GetType"];
 
+    // The members that wire code adds to a packed root it declares itself.
+    private static readonly string[] PackedWireMembers =
+    [
+        "BindingHash", "MaxByteCount", "Write", "ByteCount", "ToBytes", "Read", "WireEquals", "CopyFrom", "Quantize", "WriteDelta", "DeltaByteCount",
+        "ToDeltaBytes", "ReadDelta", "ToValue", "ReadValue"
+    ];
+
     internal static GesCodeDocument Emit(GesModelLayout layout, GesSchemaGenerateOptions options)
     {
         GesSchemaPlanner.CheckTopLevel(GesModelPlanner.TopLevel(layout, swift: false), swift: false);
@@ -375,6 +382,9 @@ internal static class GesCSharpModelEmitter
         var names = new List<(string, string)> { (type.Name, "the type itself") };
         foreach (var reserved in Reserved) names.Add((reserved, "the inherited member " + reserved));
         foreach (var reserved in new[] { "SchemaHash", "Bits", "RawValue", "IsValid", "FromRaw", "FromRawUnchecked" }) names.Add((reserved, "the generated member " + reserved));
+        // A packed wire root that the wire code declares itself also holds the wire members.
+        if (members is not null)
+            foreach (var reserved in PackedWireMembers) names.Add((reserved, "the wire member " + reserved));
         if (bindings)
             foreach (var reserved in new[] { "ToGesValue", "FromGesValue" }) names.Add((reserved, "the generated member " + reserved));
         if (values is not null)
@@ -1011,7 +1021,8 @@ internal static class GesCSharpModelEmitter
     {
         var x = "x" + Depth(depth);
         var p = "p" + Depth(depth);
-        if (nullable && value.Nullable) return $"ReadOptional({expression}, {path}, (in GesValue {x}, string {p}) => {Read(value, owner, x, p, qualifier, support, depth + 1, false)})";
+        // A packed model is a struct, which the reference-type ReadOptional cannot return as absent.
+        if (nullable && value.Nullable) return $"{(value.Kind == GesModelKind.Schema && value.Model.Packed ? "ReadOptionalValue" : "ReadOptional")}({expression}, {path}, (in GesValue {x}, string {p}) => {Read(value, owner, x, p, qualifier, support, depth + 1, false)})";
         if (value.Kind == GesModelKind.Schema) return $"Read{value.Model.Schema}({expression}, {path})";
         var element = Descends(value.Element!)
             ? Read(value.Element!, owner, x, p, qualifier, support, depth + 1)
@@ -1157,6 +1168,8 @@ internal static class GesCSharpModelEmitter
         code.Close();
         code.Blank();
         code.Line("private static T? ReadOptional<T>(in GesValue value, string path, Reader<T> read) where T : class => value.IsNothing ? null : read(value, path);");
+        if (layout.Types.Exists(type => type.Packed is not null))
+            code.Line("private static T? ReadOptionalValue<T>(in GesValue value, string path, Reader<T> read) where T : struct => value.IsNothing ? null : read(value, path);");
         code.Close();
     }
 

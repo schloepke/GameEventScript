@@ -781,7 +781,16 @@ extension GesCSharpEmitter {
             for (index, corner) in value.corners.enumerated() {
                 let cornerNode = String(corner.node)
                 code.line("var \(corner.label)\(node) = \(b).\(corner.base);")
-                if empty(corner) { continue }
+                if empty(corner) {
+                    // A centre without axes never changes, so its change bit must be clear in the canonical delta.
+                    code.open("{")
+                    code.line("var payload\(cornerNode) = reader.BitPosition;")
+                    code.line("reader.Seek(bits\(node) + \(index));")
+                    code.line("if (reader.Read(1, \(path(corner))) == 1) \(fail("InvalidDelta", corner))")
+                    code.line("reader.Seek(payload\(cornerNode));")
+                    code.close()
+                    continue
+                }
                 code.open("{")
                 code.line("var payload\(cornerNode) = reader.BitPosition;")
                 code.line("reader.Seek(bits\(node) + \(index));")

@@ -20,7 +20,8 @@ internal static partial class GesSwiftEmitter
         return encoding.Kind switch
         {
             GesLayoutKind.Integer when !encoding.Wrapping => $"value >= {Long(encoding.Lower)} && UInt64(bitPattern: Int64(value)) &- {Unsigned(unchecked((ulong)encoding.Lower))} <= {Unsigned(encoding.MaxIndex)}",
-            GesLayoutKind.Quantized when encoding.Wrapping => "value.isFinite",
+            // A wrapping step index exists for finite values within 2^50 steps of the lower bound, as the setter computes it.
+            GesLayoutKind.Quantized when encoding.Wrapping => $"(try? GesWireRules.wrappedQuantizedIndex(value, tenPower: {Double(encoding.TenPower)}, numerator: {Double(encoding.Numerator)}, lower: {Long(encoding.Lower)}, period: {Unsigned(encoding.MaxIndex + 1)}, path: \"\")) != nil",
             GesLayoutKind.Quantized => $"value >= {Bits(encoding.LowerValue)} && value <= {Bits(encoding.UpperValue)}",
             GesLayoutKind.Flags when encoding.Width < 64 => $"value.rawValue <= {Unsigned(Full(encoding.Width))}",
             _ => null
@@ -203,8 +204,8 @@ internal static partial class GesSwiftEmitter
         code.Line("/// The hash over the schema hash and the parameter values this code was generated with.");
         code.Line($"{access}static let bindingHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(type.Layout.BindingHash)}");
         code.Blank();
-        code.Line("/// The size of the encoding in bytes, the same for every record.");
-        code.Line($"{access}static let maxByteCount = {N((word.Bits + 7) / 8)}");
+        code.Line("/// The size in bytes of the largest encoding, a delta of a change bit and the word, which every buffer for writing needs.");
+        code.Line($"{access}static let maxByteCount = {N((word.Bits + 8) / 8)}");
         code.Blank();
         code.Line($"static let __paths: [String] = [{string.Join(", ", type.Paths.ConvertAll(path => GesSchemaPlanner.Literal(path, true)))}]");
         code.Blank();
@@ -224,18 +225,18 @@ internal static partial class GesSwiftEmitter
         code.Line("return try writer.finish()");
         code.Close();
         code.Blank();
-        code.Line($"/// Counts the bytes that `{writeName}` writes, which are `maxByteCount`.");
+        code.Line($"/// Counts the bytes that `{writeName}` writes, the same for every record.");
         code.Line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.");
         code.Open(Sig(false, "encodedByteCount", "", " throws(GesWireError) -> Int"));
         GesCSharpEmitter.PackedPaths(code, word, "let paths = Self.__paths", "let at = 0");
         PackedChecks(code, word, $"UInt64({rawOf})", "\"\"");
-        code.Line("return Self.maxByteCount");
+        code.Line($"return {N((word.Bits + 7) / 8)}");
         code.Close();
         code.Blank();
         code.Line("/// Writes the record into a new array of its size.");
         code.Line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.");
         code.Open(Sig(false, "encoded", "", " throws(GesWireError) -> [UInt8]"));
-        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Self.maxByteCount, alignment: 8)");
+        code.Line($"let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: {N((word.Bits + 7) / 8)}, alignment: 8)");
         code.Line("defer { buffer.deallocate() }");
         code.Line($"let count = try {Call("write", "into: buffer")}");
         code.Line("return Array(buffer[0..<count])");

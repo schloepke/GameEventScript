@@ -117,6 +117,11 @@ final class GesVirtualMachine {
         if registers[frameStart + index].nestingDepth > maxValueDepth { exceedValueDepth() }
     }
 
+    // The same check for an absolute register offset, which the operations that build Lists in place use.
+    func checkValueDepth(absolute index: Int) {
+        if registers[index].nestingDepth > maxValueDepth { exceedValueDepth() }
+    }
+
     private func exceedValueDepth() { valueBudget?.exhaust("MaxValueDepth", Int(clamping: maxValueDepth)) }
 
     // Operations that visit Range items without a loop charge each visited item like a loop iteration.

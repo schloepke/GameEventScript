@@ -173,6 +173,10 @@ extension Tool {
 
     // `<entry>(args: [])` for an `<entry>(args)` handler, otherwise `<entry>()`, as `run` sends Main(args).
     static func entryMessage(_ program: GameEventScriptProgram, _ entry: String) throws -> GameEventScriptMessage {
+        // Only the host sends its system endpoints; no message can name them.
+        if entry == "initialization" || entry == "undeliverable" {
+            throw BenchFailure(message: "\(entry) is a system endpoint that only the host sends. Choose another message with --entry.", code: "cli.missingEntry")
+        }
         var withArgs = false
         var withoutArgs = false
         for binding in program.bindings where binding.requiredTags.isEmpty && program.stringConstants[Int(binding.name)] == entry {

@@ -898,7 +898,18 @@ internal static partial class GesCSharpEmitter
                     var corner = value.Corners[index];
                     var cornerNode = N(corner.Node);
                     code.Line($"var {corner.Label}{node} = {b}.{corner.Base};");
-                    if (Empty(corner)) continue;
+                    if (Empty(corner))
+                    {
+                        // A centre without axes never changes, so its change bit must be clear in the canonical delta.
+                        code.Open("{");
+                        code.Line($"var payload{cornerNode} = reader.BitPosition;");
+                        code.Line($"reader.Seek(bits{node} + {N(index)});");
+                        code.Line($"if (reader.Read(1, {Path(corner)}) == 1) {Throw("InvalidDelta", corner)}");
+                        code.Line($"reader.Seek(payload{cornerNode});");
+                        code.Close();
+                        continue;
+                    }
+
                     code.Open("{");
                     code.Line($"var payload{cornerNode} = reader.BitPosition;");
                     code.Line($"reader.Seek(bits{node} + {N(index)});");

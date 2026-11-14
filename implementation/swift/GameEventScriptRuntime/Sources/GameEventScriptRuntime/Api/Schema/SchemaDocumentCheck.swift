@@ -100,7 +100,7 @@ struct GesSchemaDocumentCheck {
         defer { attempts.levels[ObjectIdentifier(schema)] = level == 0 ? nil : level }
         var seen: Set<String> = []
         for (index, key) in keys.enumerated() {
-            guard let field = schema.fields.first(where: { $0.name == key }) else { throw fail(Self.unknownField, keyOffsets[index], path: Self.join(attempts.path, key)) }
+            guard let field = schema.fields.first(where: { GesText.scalarEqual($0.name, key) }) else { throw fail(Self.unknownField, keyOffsets[index], path: Self.join(attempts.path, key)) }
             seen.insert(field.name)
             let value = Self.resolved(values[index], valueOffsets[index])
             if field.marker == .optional, case .nothing = value { continue }
@@ -207,7 +207,7 @@ struct GesSchemaDocumentCheck {
             // Each key names a member and each value is a Boolean.
             guard case .map(let keys, let values, let keyOffsets, let valueOffsets) = value else { return try require(false) }
             for (index, key) in keys.enumerated() {
-                if !(type.tags ?? []).contains(key) { throw fail(Self.fieldType, keyOffsets[index]) }
+                if !(type.tags ?? []).contains(where: { GesText.scalarEqual($0, key) }) { throw fail(Self.fieldType, keyOffsets[index]) }
                 guard case .boolean = Self.resolved(values[index], valueOffsets[index]) else { throw fail(Self.fieldType, valueOffsets[index]) }
             }
         case .bytes:

@@ -13,6 +13,11 @@ enum GesCSharpModelEmitter {
 
     // Members every model type declares or inherits.
     private static let reserved = ["Equals", "GetHashCode", "ToString", "GetType"]
+    // The members that wire code adds to a packed root it declares itself.
+    private static let packedWireMembers = [
+        "BindingHash", "MaxByteCount", "Write", "ByteCount", "ToBytes", "Read", "WireEquals", "CopyFrom", "Quantize", "WriteDelta", "DeltaByteCount",
+        "ToDeltaBytes", "ReadDelta", "ToValue", "ReadValue",
+    ]
 
     static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> GesCodeDocument {
         try GesSchemaPlanner.checkTopLevel(GesModelPlanner.topLevel(layout, swift: false), swift: false)
@@ -377,6 +382,8 @@ enum GesCSharpModelEmitter {
         let raw = GesCSharpEmitter.packedRaw(wire.packedWidth)
         var names: Names = [(type.name, "the type itself")] + reserved.map { ($0, "the inherited member " + $0) }
         names += ["SchemaHash", "Bits", "RawValue", "IsValid", "FromRaw", "FromRawUnchecked"].map { ($0, "the generated member " + $0) }
+        // A packed wire root that the wire code declares itself also holds the wire members.
+        if members != nil { names += packedWireMembers.map { ($0, "the wire member " + $0) } }
         if bindings { names += ["ToGesValue", "FromGesValue"].map { ($0, "the generated member " + $0) } }
         if values != nil { names += ["ToValue", "FromValue"].map { ($0, "the generated member " + $0) } }
         if documents != nil { names.append(("FromDocument", "the generated member FromDocument")) }
@@ -1023,7 +1030,9 @@ enum GesCSharpModelEmitter {
         let x = "x\(depth)"
         let p = "p\(depth)"
         if nullable && value.nullable {
-            return "ReadOptional(\(expression), \(path), (in GesValue \(x), string \(p)) => \(read(value, owner, x, p, qualifier, support, depth + 1, nullable: false)))"
+            // A packed model is a struct, which the reference-type ReadOptional cannot return as absent.
+            let helper = value.kind == .schema && value.model.packed ? "ReadOptionalValue" : "ReadOptional"
+            return "\(helper)(\(expression), \(path), (in GesValue \(x), string \(p)) => \(read(value, owner, x, p, qualifier, support, depth + 1, nullable: false)))"
         }
         if value.kind == .schema { return "Read\(value.model.schema)(\(expression), \(path))" }
         let element =
@@ -1163,6 +1172,9 @@ enum GesCSharpModelEmitter {
         code.close()
         code.blank()
         code.line("private static T? ReadOptional<T>(in GesValue value, string path, Reader<T> read) where T : class => value.IsNothing ? null : read(value, path);")
+        if layout.types.contains(where: { $0.packed != nil }) {
+            code.line("private static T? ReadOptionalValue<T>(in GesValue value, string path, Reader<T> read) where T : struct => value.IsNothing ? null : read(value, path);")
+        }
         code.close()
     }
 

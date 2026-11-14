@@ -1145,6 +1145,7 @@ namespace GameEventScript.Tests.Generator.Packed.Model
         }
 
         private static T? ReadOptional<T>(in GesValue value, string path, Reader<T> read) where T : class => value.IsNothing ? null : read(value, path);
+        private static T? ReadOptionalValue<T>(in GesValue value, string path, Reader<T> read) where T : struct => value.IsNothing ? null : read(value, path);
     }
 
     /// <summary>Value equality of lists and numbers and GES value conversions for the models of this file.</summary>

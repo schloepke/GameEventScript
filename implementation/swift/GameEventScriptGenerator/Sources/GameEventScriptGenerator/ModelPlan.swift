@@ -303,7 +303,10 @@ enum GesModelPlanner {
     // A canonical decimal `<significand>e<exponent>` as plain digits; a parameter name stays as it is. A Percentage's limits
     // are fractions, written with a shift of two and a percent sign.
     static func decimal(_ canonical: String, _ shift: Int = 0) -> String {
-        guard let e = canonical.firstIndex(of: "e") else { return canonical }
+        // Only a canonical decimal starts with a digit or a minus sign; a parameter's name, such as worldHeight, may hold an e.
+        guard let first = canonical.unicodeScalars.first, first == "-" || ("0"..."9").contains(first), let e = canonical.firstIndex(of: "e") else {
+            return canonical
+        }
         var digits = String(canonical[..<e])
         let exponent = Int(canonical[canonical.index(after: e)...])! + shift
         let negative = digits.hasPrefix("-")

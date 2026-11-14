@@ -1254,6 +1254,12 @@ extension GeometryWire {
                         reader.seek(to: bits10 + 2)
                         var changed10 = false
                         let center10 = baseline.aura.center
+                        do {
+                            let payload11 = reader.bitPosition
+                            reader.seek(to: bits10 + 0)
+                            if try reader.read(1, path: paths[at + 11]) == 1 { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 11]) }
+                            reader.seek(to: payload11)
+                        }
                         var radius10 = baseline.aura.radius
                         do {
                             let payload12 = reader.bitPosition

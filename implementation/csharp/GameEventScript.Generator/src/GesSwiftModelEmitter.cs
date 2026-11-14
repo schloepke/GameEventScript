@@ -738,8 +738,9 @@ internal static class GesSwiftModelEmitter
             code.Open("func invoke(_ call: GesExternalTypeConstructorCall) throws {");
             code.Open("guard");
             code.Line($"let fields = call.arguments[0].asMap, {support}.known(fields, {type.Name}Value.names){(fields.Count > 0 ? "," : "")}");
+            var checks = PackedChecks(type, fields);
             for (var index = 0; index < fields.Count; index++)
-                code.Line($"let {Member(fields[index].Base)} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support, type.Name + "Defaults"), "GesTypes", support)}{(index == fields.Count - 1 ? "" : ",")}");
+                code.Line($"let {Member(fields[index].Base)} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support, type.Name + "Defaults"), "GesTypes", support)}{Fits(checks, index, Member(fields[index].Base))}{(index == fields.Count - 1 ? "" : ",")}");
             code.Dedent();
             {
                 code.Open("else {");
@@ -766,6 +767,22 @@ internal static class GesSwiftModelEmitter
     }
 
     // Returns the record read from `field<n>`, setting afterwards the optional fields whose initializer would take a sibling.
+    // The tests `fits<Field>` of a packed model's fields by index, null where every value fits or the model is not packed, so
+    // that converting a value fails as a GesWireError where the field's setter would trap.
+    private static string?[] PackedChecks(GesModelType type, List<GesModelPlanField> fields)
+    {
+        var checks = new string?[fields.Count];
+        if (type.Packed is null) return checks;
+        var bits = GesCSharpEmitter.PackedLayout(type.Packed, type.Packed.Type(type.Name));
+        for (var index = 0; index < fields.Count; index++)
+            if (GesSwiftEmitter.PackedFits(new GesCSharpEmitter.PackedField(bits[index].Field, bits[index].Shift, bits[index].Width, fields[index].Base, "", null)) is not null)
+                checks[index] = $"{type.Name}.fits{fields[index].Base}";
+        return checks;
+    }
+
+    // The condition that a converted packed field fits, appended to its `let` in a condition list.
+    private static string Fits(string?[] checks, int index, string value) => checks[index] is { } check ? $", {check}({value})" : "";
+
     private static void Construct(GesSchemaPlanner.Code code, string type, List<string> arguments, List<GesModelPlanField> fields)
     {
         var kept = GesModelPlanner.Kept(fields);
@@ -842,6 +859,7 @@ internal static class GesSwiftModelEmitter
                 code.Blank();
             }
 
+            var checks = PackedChecks(type, fields);
             code.Open($"static func value(_ record: {type.Name}) -> GesValue {{");
             code.Line($".record(typeName: {typeLiteral}, keys: {keys}, values: [");
             foreach (var field in fields) code.Line("    " + Encode(field.Value, type.Name, "record." + Member(field.Base), name, support, plain: true) + ",");
@@ -866,7 +884,7 @@ internal static class GesSwiftModelEmitter
                     var missing = fields[index].Value.Nullable ? $"fields.get({fieldLiteral}) ?? .nothing" : $"try required(fields, {fieldLiteral}, path)";
                     code.Line($"let {held} = {Held(layout, fields, index, type.Name, support, type.Name + "Defaults", sibling => "value" + sibling.ToString(CultureInfo.InvariantCulture), missing)}");
                     if (Descends(fields[index].Value)) code.Line($"let field{index} = {Read(fields[index].Value, type.Name, held, $"fieldPath(path, {fieldLiteral})", name, support)}");
-                    else code.Line($"guard let field{index} = {Decode(fields[index].Value, type.Name, held, name, support, plain: true)} else {{ throw failure({held}, fieldPath(path, {fieldLiteral})) }}");
+                    else code.Line($"guard let field{index} = {Decode(fields[index].Value, type.Name, held, name, support, plain: true)}{Fits(checks, index, "field" + index.ToString(CultureInfo.InvariantCulture))} else {{ throw failure({held}, fieldPath(path, {fieldLiteral})) }}");
                 }
 
                 Construct(code, type.Name, arguments, fields);
@@ -881,7 +899,7 @@ internal static class GesSwiftModelEmitter
                 code.Open("guard");
                 code.Line($"let fields = recordFields(value, {typeLiteral}, {names}),");
                 for (var index = 0; index < fields.Count; index++)
-                    code.Line($"let field{index} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support, type.Name + "Defaults"), name, support, plain: true)}{(index == fields.Count - 1 ? "" : ",")}");
+                    code.Line($"let field{index} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support, type.Name + "Defaults"), name, support, plain: true)}{Fits(checks, index, "field" + index.ToString(CultureInfo.InvariantCulture))}{(index == fields.Count - 1 ? "" : ",")}");
                 code.Dedent();
                 code.Line("else { return nil }");
             }

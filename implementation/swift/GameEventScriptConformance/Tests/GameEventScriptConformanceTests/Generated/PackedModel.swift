@@ -527,26 +527,26 @@ extension PackedModel {
         static func readCell(_ value: GesValue, _ path: String) throws(GesWireError) -> Cell {
             guard let fields = recordFields(value, "Cell", CellFields) else { throw failure(value, path) }
             let value0 = try required(fields, "level", path)
-            guard let field0 = __GesModelsccffb4914c9f4f34.integer(value0, .none) else { throw failure(value0, fieldPath(path, "level")) }
+            guard let field0 = __GesModelsccffb4914c9f4f34.integer(value0, .none), Cell.fitsLevel(field0) else { throw failure(value0, fieldPath(path, "level")) }
             let value1 = try required(fields, "open", path)
             guard let field1 = __GesModelsccffb4914c9f4f34.boolean(value1) else { throw failure(value1, fieldPath(path, "open")) }
             let value2 = try required(fields, "kind", path)
             guard let field2 = __GesModelsccffb4914c9f4f34.tag(value2).flatMap(Cell.KindTag.init(rawValue:)) else { throw failure(value2, fieldPath(path, "kind")) }
             let value3 = try required(fields, "slope", path)
-            guard let field3 = __GesModelsccffb4914c9f4f34.percentage(value3) else { throw failure(value3, fieldPath(path, "slope")) }
+            guard let field3 = __GesModelsccffb4914c9f4f34.percentage(value3), Cell.fitsSlope(field3) else { throw failure(value3, fieldPath(path, "slope")) }
             let value4 = try required(fields, "marks", path)
-            guard let field4 = __GesModelValuesccffb4914c9f4f34.decodeCellMarksFlags(value4) else { throw failure(value4, fieldPath(path, "marks")) }
+            guard let field4 = __GesModelValuesccffb4914c9f4f34.decodeCellMarksFlags(value4), Cell.fitsMarks(field4) else { throw failure(value4, fieldPath(path, "marks")) }
             return Cell(level: field0, open: field1, kind: field2, slope: field3, marks: field4)
         }
 
         static func decodeCell(_ value: GesValue) -> Cell? {
             guard
                 let fields = recordFields(value, "Cell", CellFields),
-                let field0 = __GesModelsccffb4914c9f4f34.integer(fields.get("level") ?? .nothing, .none),
+                let field0 = __GesModelsccffb4914c9f4f34.integer(fields.get("level") ?? .nothing, .none), Cell.fitsLevel(field0),
                 let field1 = __GesModelsccffb4914c9f4f34.boolean(fields.get("open") ?? .nothing),
                 let field2 = __GesModelsccffb4914c9f4f34.tag(fields.get("kind") ?? .nothing).flatMap(Cell.KindTag.init(rawValue:)),
-                let field3 = __GesModelsccffb4914c9f4f34.percentage(fields.get("slope") ?? .nothing),
-                let field4 = __GesModelValuesccffb4914c9f4f34.decodeCellMarksFlags(fields.get("marks") ?? .nothing)
+                let field3 = __GesModelsccffb4914c9f4f34.percentage(fields.get("slope") ?? .nothing), Cell.fitsSlope(field3),
+                let field4 = __GesModelValuesccffb4914c9f4f34.decodeCellMarksFlags(fields.get("marks") ?? .nothing), Cell.fitsMarks(field4)
             else { return nil }
             return Cell(level: field0, open: field1, kind: field2, slope: field3, marks: field4)
         }
@@ -670,11 +670,11 @@ extension PackedModel {
         static func readOffset(_ value: GesValue, _ path: String) throws(GesWireError) -> Offset {
             guard let fields = recordFields(value, "Offset", OffsetFields) else { throw failure(value, path) }
             let value0 = try required(fields, "delta", path)
-            guard let field0 = __GesModelsccffb4914c9f4f34.integer(value0, .none) else { throw failure(value0, fieldPath(path, "delta")) }
+            guard let field0 = __GesModelsccffb4914c9f4f34.integer(value0, .none), Offset.fitsDelta(field0) else { throw failure(value0, fieldPath(path, "delta")) }
             let value1 = try required(fields, "gear", path)
-            guard let field1 = __GesModelsccffb4914c9f4f34.integer(value1, .none) else { throw failure(value1, fieldPath(path, "gear")) }
+            guard let field1 = __GesModelsccffb4914c9f4f34.integer(value1, .none), Offset.fitsGear(field1) else { throw failure(value1, fieldPath(path, "gear")) }
             let value2 = try required(fields, "lift", path)
-            guard let field2 = __GesModelsccffb4914c9f4f34.number(value2, .meter) else { throw failure(value2, fieldPath(path, "lift")) }
+            guard let field2 = __GesModelsccffb4914c9f4f34.number(value2, .meter), Offset.fitsLift(field2) else { throw failure(value2, fieldPath(path, "lift")) }
             let value3 = try required(fields, "kind", path)
             guard let field3 = __GesModelsccffb4914c9f4f34.tag(value3).flatMap(Offset.KindTag.init(rawValue:)) else { throw failure(value3, fieldPath(path, "kind")) }
             return Offset(delta: field0, gear: field1, lift: field2, kind: field3)
@@ -683,9 +683,9 @@ extension PackedModel {
         static func decodeOffset(_ value: GesValue) -> Offset? {
             guard
                 let fields = recordFields(value, "Offset", OffsetFields),
-                let field0 = __GesModelsccffb4914c9f4f34.integer(fields.get("delta") ?? .nothing, .none),
-                let field1 = __GesModelsccffb4914c9f4f34.integer(fields.get("gear") ?? .nothing, .none),
-                let field2 = __GesModelsccffb4914c9f4f34.number(fields.get("lift") ?? .nothing, .meter),
+                let field0 = __GesModelsccffb4914c9f4f34.integer(fields.get("delta") ?? .nothing, .none), Offset.fitsDelta(field0),
+                let field1 = __GesModelsccffb4914c9f4f34.integer(fields.get("gear") ?? .nothing, .none), Offset.fitsGear(field1),
+                let field2 = __GesModelsccffb4914c9f4f34.number(fields.get("lift") ?? .nothing, .meter), Offset.fitsLift(field2),
                 let field3 = __GesModelsccffb4914c9f4f34.tag(fields.get("kind") ?? .nothing).flatMap(Offset.KindTag.init(rawValue:))
             else { return nil }
             return Offset(delta: field0, gear: field1, lift: field2, kind: field3)

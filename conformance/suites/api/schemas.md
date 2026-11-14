@@ -6775,6 +6775,53 @@ schema:
 
 ---
 
+## Test: a document union inside a Record form takes the checked alternative
+
+A record written as `:Record(...)` keeps the alternatives that the check chose for its fields, as a Map does.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-union-choice-in-form
+schemaApi:
+  sources:
+    - "schema :Zone as { inner: :Inner }\nschema :Inner as { outline: :Poly max 1 | :List(:Point) max 5 }\n"
+  readDocument:
+    text: ":Schema(:Zone)\ninner: :Record('Inner', [outline: [:Point(1, 2), :Point(3, 4)]])\n"
+    expected: ["Zone"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Zone"
+    value:
+      type: ":Zone"
+      entries:
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "outline"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Point"
+                      x: "1"
+                      y: "2"
+                      z: "0"
+                    - type: ":Point"
+                      x: "3"
+                      y: "4"
+                      z: "0"
+```
+
+---
+
 ## Test: a union continues on a line that starts with |
 
 A line whose first token is `|` continues the union of the field before it, and the field's marker follows the last alternative.
@@ -12809,6 +12856,68 @@ schema:
     error:
       code: "wire.outOfRange"
       path: "v"
+```
+
+---
+
+## Test: a delta that sets the change bit of a Disc centre without axes
+
+A Disc whose block names only its radius never writes its centre, so the canonical delta leaves the centre's change bit
+clear and reading one that sets it is `wire.invalidDelta` at the centre.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-delta-decode-disc-centre-bit
+schemaApi:
+  sources:
+    - "schema :R as { d: :Disc(m) { radius between 0m and 3m step 1m } }\n"
+  root: "R"
+  deltaDecode:
+    delta: "0f"
+    baseline: "00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "d.center"
+```
+
+---
+
+## Test: the delta of a packed root fits its largest encoding
+
+A packed root's delta is a change bit and its whole word, one bit more than the record, so eight Boolean fields write two
+bytes and the largest encoding counts them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-delta-packed-root-size
+schemaApi:
+  sources:
+    - "packed schema :Switches as {\n  a: :Boolean\n  b: :Boolean\n  c: :Boolean\n  d: :Boolean\n  e: :Boolean\n  f: :Boolean\n  g: :Boolean\n  h: :Boolean\n}\n"
+  root: "Switches"
+  deltaEncode:
+    record: "ff"
+    baseline: "00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "ff01"
 ```
 
 ---

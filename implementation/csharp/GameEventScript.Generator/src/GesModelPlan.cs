@@ -435,7 +435,8 @@ internal static class GesModelPlanner
     // A Percentage's limits are fractions, written with a shift of two and a percent sign.
     internal static string Decimal(string canonical, int shift = 0)
     {
-        var e = canonical.IndexOf('e');
+        // Only a canonical decimal starts with a digit or a minus sign; a parameter's name, such as worldHeight, may hold an e.
+        var e = canonical.Length > 0 && (canonical[0] == '-' || canonical[0] is >= '0' and <= '9') ? canonical.IndexOf('e') : -1;
         if (e < 0) return canonical;
         var digits = canonical.Substring(0, e);
         var exponent = int.Parse(canonical.Substring(e + 1), System.Globalization.CultureInfo.InvariantCulture) + shift;

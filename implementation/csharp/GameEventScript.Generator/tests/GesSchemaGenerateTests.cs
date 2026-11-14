@@ -70,6 +70,33 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
+    public void ModelsBoundedByParametersDescribeTheirNames()
+    {
+        // A parameter's name may hold an e, which a canonical decimal also holds.
+        var set = GesSchemaSet.Parse("parameter worldHeight: :Quantity(m)\nmodel schema :Spot as { y: :Quantity(m) between 0m and worldHeight step 1cm }\n");
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+            StringAssert.Contains(GesSchemaGenerator.GenerateModels(set, ["Spot"], new GesSchemaGenerateOptions { Language = language }), "worldHeight");
+    }
+
+    [TestMethod]
+    public void GeneratedCodeIsTheSameInEveryCulture()
+    {
+        // Canonical decimals, hashes and code use ASCII signs also where the culture's minus sign is U+2212.
+        var set = GesSchemaSet.Parse("wire schema :S as { x: :Quantity(m) between -5m and 5m step 1cm }\n");
+        var invariant = GesSchemaGenerator.Generate(set, ["S"], new GesSchemaParameters(), new GesSchemaGenerateOptions());
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("sv-SE");
+            Assert.AreEqual(invariant, GesSchemaGenerator.Generate(set, ["S"], new GesSchemaParameters(), new GesSchemaGenerateOptions()));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+        }
+    }
+
+    [TestMethod]
     public void LentFieldsKeepOneNameInTheirInterfaceAndEveryTypeTakingThem()
     {
         // A field named like the lending schema, or like a schema that takes it, is renamed alike everywhere it is lent.

@@ -103,7 +103,7 @@ public sealed class GesSchemaDocument
     }
 
     // The entries of a Map or of a Record form.
-    private static GesDocumentNode? Entries(GesDocumentNode node)
+    internal static GesDocumentNode? Entries(GesDocumentNode node)
     {
         if (node.Kind == GesDocumentNodeKind.Map) return node;
         if (node.Kind != GesDocumentNodeKind.Form || node.Name != "record" || GesLiteralForms.Positions("record", node.Labels) is not { } positions) return null;

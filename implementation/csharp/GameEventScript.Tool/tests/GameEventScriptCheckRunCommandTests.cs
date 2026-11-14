@@ -346,6 +346,17 @@ public sealed class GameEventScriptCheckRunCommandTests
         StringAssert.Contains(invalid.StandardError, "error generate.invalidNamespace");
     }
 
+    /// <summary>Verifies that a namespace renamed only in case keeps the generated files, also where the file system ignores case.</summary>
+    [TestMethod]
+    public void SchemaGenerateKeepsFilesRenamedOnlyInCase()
+    {
+        Write("s.gess", "model schema :Alpha as { a: :Number }\n");
+        Assert.AreEqual(0, Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "game.net", "-d", "out").ExitCode);
+        var renamed = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game.Net", "-d", "out");
+        Assert.AreEqual(0, renamed.ExitCode, renamed.StandardError);
+        Assert.AreEqual(0, Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game.Net", "-d", "out", "--check").ExitCode);
+    }
+
     /// <summary>Verifies schema generate into a directory: the split, the manifest, removed and foreign files, and the check.</summary>
     [TestMethod]
     public void SchemaGenerateOwnsItsOutputDirectory()

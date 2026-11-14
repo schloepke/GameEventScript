@@ -574,7 +574,8 @@ internal static class GesSchemaBinder
         var nodes = inner.Nodes.ToArray();
         Seal(nodes);
         var bits = Cost(nodes, 0, nodes.Length);
-        if (declaration.Kind == GesSchemaKind.Schema) bits = Math.Max(bits, DeltaCost(nodes));
+        // A packed record's delta is a change bit and its whole word.
+        if (declaration.Kind == GesSchemaKind.Schema) bits = Math.Max(bits, declaration.PackedWidth > 0 ? 1 + bits : DeltaCost(nodes));
         if (bits > MaximumByteCount * 8) throw declaration.Scope.Error(Code.TooLarge, declaration.Offset, $"The largest encoding of '{declaration.Name}' exceeds {MaximumByteCount} bytes.");
         var labels = new string[declaration.Fields.Length];
         for (var index = 0; index < labels.Length; index++) labels[index] = declaration.Fields[index].Unlabeled ? "_" : declaration.Fields[index].Name;
@@ -636,6 +637,8 @@ internal static class GesSchemaBinder
         {
             case GesSchemaNodeKind.Boolean or GesSchemaNodeKind.Nothing:
                 return 0;
+            case GesSchemaNodeKind.Group when node.Packed:
+                return FullCost(nodes, index);
             case GesSchemaNodeKind.Group:
                 return DeltaCost(nodes, index + 1, node.Next);
             case GesSchemaNodeKind.List when node.KeyedElements:

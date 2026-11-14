@@ -43,8 +43,8 @@ internal readonly struct GesSchemaDecimal : IEquatable<GesSchemaDecimal>
 
     internal int Exponent { get; }
 
-    // The canonical spelling of the schema hash.
-    internal string Canonical => $"{Significand}e{Exponent}";
+    // The canonical spelling of the schema hash, with ASCII signs whatever the current culture.
+    internal string Canonical => Significand.ToString(System.Globalization.CultureInfo.InvariantCulture) + "e" + Exponent.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     public bool Equals(GesSchemaDecimal other) => Significand == other.Significand && Exponent == other.Exponent;
 

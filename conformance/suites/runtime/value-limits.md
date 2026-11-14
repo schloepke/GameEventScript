@@ -126,6 +126,102 @@ steps:
 
 ---
 
+## Test: Inserting into a List one level deeper than the limit stops the handler
+
+This case verifies: Adding a value to a List with + builds a List whose depth is checked like any other construction.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "value-depth-list-insertion"
+runtimeLimits:
+  maxValueDepth: 3
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Before()
+  let value be [] + [[[1]]]
+  emit Unexpected(value: value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: "Before"
+        args: []
+    runtimeLimits:
+      include:
+        - name: "MaxValueDepth"
+          limit: 3
+```
+
+---
+
+## Test: Zipping Lists one level deeper than the limit stops the handler
+
+This case verifies: zip builds Maps of the items of two Lists, whose depth is checked like any other construction.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "value-depth-zip"
+runtimeLimits:
+  maxValueDepth: 3
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Before()
+  let value be [[[1]]] zip [[[1]]]
+  emit Unexpected(value: value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: "Before"
+        args: []
+    runtimeLimits:
+      include:
+        - name: "MaxValueDepth"
+          limit: 3
+```
+
+---
+
 ## Test: Maps count toward the nesting depth
 
 This case verifies: A Map is one level deeper than its deepest value, so a Map of a Map of a List exceeds a limit of 2.

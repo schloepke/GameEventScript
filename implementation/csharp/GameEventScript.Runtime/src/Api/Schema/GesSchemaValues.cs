@@ -457,8 +457,10 @@ public static class GesSchemaValues
             keys[index] = map.KeyAt(index);
             var entry = map.ValueAt(index);
             var field = Array.Find(schema.Fields, candidate => candidate.Name == keys[index]);
-            var label = node is { Kind: GesDocumentNodeKind.Map } ? Array.IndexOf(node.Labels, keys[index]) : -1;
-            values[index] = field is null ? entry : DocumentShape(field.Alternatives, entry, label < 0 ? null : node!.Children[label], chosen);
+            // A Record form holds its entries in its fields argument, where the check recorded their unions too.
+            var entries = node is null ? null : GesSchemaDocument.Entries(node);
+            var label = entries is null ? -1 : Array.IndexOf(entries.Labels, keys[index]);
+            values[index] = field is null ? entry : DocumentShape(field.Alternatives, entry, label < 0 ? null : entries!.Children[label], chosen);
         }
 
         return value.CustomTypeName is { } name ? GesValue.GesRecord(name, keys, values) : GesValue.GesMap(keys, values);

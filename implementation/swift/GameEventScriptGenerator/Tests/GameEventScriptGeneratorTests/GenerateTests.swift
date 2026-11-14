@@ -155,6 +155,14 @@ final class GenerateTests: XCTestCase {
         XCTAssertTrue(swift.contains("public struct S: Sendable {"))
     }
 
+    func testModelsBoundedByParametersDescribeTheirNames() throws {
+        // A parameter's name may hold an e, which a canonical decimal also holds.
+        let set = try GesSchemaSet(parsing: "parameter worldHeight: :Quantity(m)\nmodel schema :Spot as { y: :Quantity(m) between 0m and worldHeight step 1cm }\n")
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            XCTAssertTrue(try GesSchemaGenerator.generateModels(set, roots: ["Spot"], options: GesSchemaGenerateOptions(language: language)).contains("worldHeight"))
+        }
+    }
+
     func testLentFieldsKeepOneNameInTheirInterfaceAndEveryTypeTakingThem() throws {
         // A field named like the lending schema, or like a schema that takes it, is renamed alike everywhere it is lent.
         let lent = [

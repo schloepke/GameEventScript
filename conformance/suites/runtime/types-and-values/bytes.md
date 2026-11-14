@@ -276,6 +276,91 @@ steps:
 
 ---
 
+## Test: selection and membership of several values
+
+Bytes select their first, last and single byte and answer `:contains any` and `:contains all` with their bytes, as Lists of
+those numbers do.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "selection-and-membership"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let value be :Bytes[5, 7, 9]
+  let one be :Bytes[4]
+  let blank be :Bytes[]
+  let numbers be [1, 7, 9]
+  emit Done(first: value[:first], last: value[:last], single: value[:single], one: one[:single], fromEmpty: blank[:first], any: value[:contains any [2, 7]], anyMissing: value[:contains any [2, 8]], all: value[:contains all [9, 5]], allMissing: value[:contains all [5, 6]], into: numbers[:contains any value])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "first"
+            value:
+              type: ":Number.int64"
+              value: "5"
+          - name: "last"
+            value:
+              type: ":Number.int64"
+              value: "9"
+          - name: "single"
+            value:
+              type: ":Nothing"
+          - name: "one"
+            value:
+              type: ":Number.int64"
+              value: "4"
+          - name: "fromEmpty"
+            value:
+              type: ":Nothing"
+          - name: "any"
+            value:
+              type: ":Boolean"
+              value: "true"
+          - name: "anyMissing"
+            value:
+              type: ":Boolean"
+              value: "false"
+          - name: "all"
+            value:
+              type: ":Boolean"
+              value: "true"
+          - name: "allMissing"
+            value:
+              type: ":Boolean"
+              value: "false"
+          - name: "into"
+            value:
+              type: ":Boolean"
+              value: "true"
+```
+
+---
+
 ## Test: equality and order
 
 Equality compares the bytes exactly; sorting orders Bytes lexicographically by unsigned byte after every other ranked kind.

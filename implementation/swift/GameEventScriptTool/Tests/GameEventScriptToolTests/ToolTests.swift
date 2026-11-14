@@ -239,6 +239,16 @@ final class ToolTests: XCTestCase {
         XCTAssertTrue(invalid.error.contains("error generate.invalidNamespace"))
     }
 
+    func testSchemaGenerateKeepsFilesRenamedOnlyInCase() throws {
+        // A namespace renamed only in case keeps the generated files, also where the file system ignores case.
+        let source = try file("s.gess", "model schema :Alpha as { a: :Number }\n")
+        let output = directory.appendingPathComponent("out").path
+        XCTAssertEqual(run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "game.net", "-d", output]).code, 0)
+        let renamed = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game.Net", "-d", output])
+        XCTAssertEqual(renamed.code, 0, renamed.error)
+        XCTAssertEqual(run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game.Net", "-d", output, "--check"]).code, 0)
+    }
+
     func testSchemaGenerateOwnsItsOutputDirectory() throws {
         let source = try file("s.gess", "model schema :Alpha as { a: :Number }\nmodel schema :Beta as { b: :Text }\n")
         let output = directory.appendingPathComponent("out").path

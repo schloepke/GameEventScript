@@ -838,6 +838,25 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   code.
 - The Conformance runner scales its batch deadline with the selected cases and prints how long a batch took.
 - Workflow container images are pinned by digest and every job has a timeout.
+- Swift `list + value` and `zip` check MaxValueDepth like every other construction, where a deep fold crashed the Swift
+  process. C# Bytes answer `:contains any`, `:contains all`, `[:first]`, `[:last]` and `[:single]` as Swift does, and C#
+  external type constructors take Bytes parameters.
+- The C# CLI writes a script's output to a redirected file at the shared offset, so a later writer no longer overwrites
+  it, and it formats canonical decimals, schema hashes and generated code culture-invariantly, where a locale with the
+  minus sign U+2212 changed them. `bench --entry initialization` is `cli.missingEntry` instead of a crash.
+- Model generation no longer fails for a field bounded by a parameter whose name contains an `e`. Generated Swift packed
+  models throw `GesWireError` for an out-of-range value from a GES value, a document or a script instead of trapping,
+  and a wrapping packed field's `fits` matches its setter. Generated delta readers reject a set change bit of a Disc
+  centre without axes as the runtime does. A packed root's `MaxByteCount` counts its delta, a change bit and the word.
+  Computed `default` keeps its operands whole, and Swift static code no longer misreads a negative literal before a
+  method call. C# models read optional packed fields and reject packed wire roots with fields named like their wire
+  members.
+- A record written as `:Record(...)` in a schema document keeps the union alternatives the check chose. Swift compares
+  schema field, Flags and expected names by Unicode scalars, as C# does. `schema generate --out-dir` removes stale files
+  before writing, so a name changed only in case on a case-insensitive file system is kept. Validation checks a tag or
+  type name shared by many instructions once. The schema formatter keeps the operand of `sqrt ((a - b) ^ 2)` whole, and
+  the CLI example schema binds again.
+- The release gate requires the native jobs of Swift CI to have run, not only a successful run that skipped them.
 - Reading a schema document converts each union along the alternative that the document check accepted, so a List of
   points that breaks a Poly's `max` stays the List that a later alternative takes instead of becoming a Poly. Without an
   axis block, the points of a Poly and the centre of a Disc must lie in the plane z = 0, as encoding requires.

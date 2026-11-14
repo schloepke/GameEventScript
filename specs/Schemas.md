@@ -1738,8 +1738,9 @@ elements, it checks the remaining bits once and reads each word as one value, ne
 beyond a field's range, such as 10 in a field `between 0 and 9` of 4 bits, or beyond a closed Tag's tags, is
 `wire.invalidIndex` at that field's path in either path, and the per-word check is left out when every field uses all of its
 bits. Writing checks a word that was taken unchecked field by field, `wire.outOfRange` at the field, and a word with bits
-above the fields at the record. A packed wire root gets the wire members of every root over its word, `MaxByteCount` being
-`ceil(bits / 8)`; its delta is a change bit and the word.
+above the fields at the record. A packed wire root gets the wire members of every root over its word; its record takes
+`ceil(bits / 8)` bytes and its delta is a change bit and the word, so `MaxByteCount`, which serves both, is
+`ceil((bits + 1) / 8)`.
 
 `--models <namespace>` (an empty string for the global namespace) is for wire code that sits beside model code of the
 same schemas, generated with `--model` into that namespace in the same module. The wire code then uses the models'
@@ -1819,8 +1820,9 @@ code includes the value conversions, so that equal code has an equal manifest), 
 [generation layout](#generation-layout); empty for models) and `files`, the generated file names in ordinal order without
 the manifest. Without `--check`, `generate` writes every file whose bytes changed, keeps unchanged files with their time
 stamps, removes the files that the previous manifest lists and that are no longer generated, and leaves every other file
-alone with the warning `cli.unowned`; a missing or unreadable manifest owns nothing. It writes the manifest last, after
-that removal, so a run that fails before keeps the previous manifest and its files stay owned. With `--check` it compares the whole
+alone with the warning `cli.unowned`; a missing or unreadable manifest owns nothing. It removes before it writes, so a
+file renamed only in case on a file system that ignores case is written anew, and writes the manifest last, so a run that
+fails before keeps the previous manifest and its files stay owned. With `--check` it compares the whole
 directory and fails with `cli.outdated` for every changed, missing and surplus file. Names that begin with `.` and Unity's
 `.meta` files are neither reported nor removed, so editors and engines may keep their files beside the code; SwiftPM and
 Unity both ignore the hidden manifest. Every CLI writes identical files and manifests.

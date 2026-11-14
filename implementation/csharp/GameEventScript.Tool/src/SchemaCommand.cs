@@ -173,8 +173,8 @@ Options:
         if (bindings && modelGroup is null) return UsageError("--bindings concerns model code and requires --model.");
         if (documents && modelGroup is null) return UsageError("--documents concerns model code and requires --model.");
         if (models is not null && modelGroup is not null) return UsageError("--models concerns wire code, not --model.");
-        if (extendNamespace is not null && language != "swift") return UsageError("--extend-namespace concerns Swift, whose namespaces are enums; C# merges namespaces.");
         if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
+        if (extendNamespace is not null && language != "swift") return UsageError("--extend-namespace concerns Swift, whose namespaces are enums; C# merges namespaces.");
         if (access is not (null or "public" or "internal")) return UsageError("--access is public or internal.");
         if (output is not null && outDir is not null) return GenerateUsage("-o writes one file and --out-dir a directory; give one of them.");
         if (split is not null && outDir is null) return GenerateUsage("--split divides the files of --out-dir.");

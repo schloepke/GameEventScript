@@ -59,9 +59,36 @@ final class GenerateTests: XCTestCase {
         XCTAssertTrue(single.contains("\nextension Game {\n"))
         XCTAssertEqual(single.filter { $0 == "{" }.count, single.filter { $0 == "}" }.count)
         XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Panels", extendNamespace: "Panels")) }, "generate.usage")
-        // A model-only type of the models' group counts too: models in Game hold Report, so wire code cannot live in Game.Report.
-        let withReport = try GesSchemaSet(parsing: "wire model schema :Grid as { a: :Boolean }\nmodel schema :Report as { b: :Boolean }\n")
-        XCTAssertEqual(code { try GesSchemaGenerator.generate(withReport, roots: ["Grid"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Report", models: "Game")) }, "generate.nameCollision")
+        // A type of any model group counts, since the models' namespace holds them all: models in Game hold Report, so wire code
+        // cannot live in Game.Report, whether Report shares the wire root's group or not.
+        for source in ["wire model schema :Grid as { a: :Boolean }\nmodel schema :Report as { b: :Boolean }\n", "wire model schema :Grid as { a: :Boolean }\nmodel(hud) schema :Report as { b: :Boolean }\n"] {
+            let withReport = try GesSchemaSet(parsing: source)
+            XCTAssertEqual(
+                code { try GesSchemaGenerator.generate(withReport, roots: ["Grid"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Report", models: "Game")) },
+                "generate.nameCollision"
+            )
+        }
+        // The wire namespace holds the `<Name>Wire` members of packed roots, which a models' namespace continuing it cannot name.
+        XCTAssertEqual(wire(.swift, "Game", "Game.CellWire"), "generate.nameCollision")
+        // Swift wire code names model types through the models' namespace, which no wire type, nested type or later wire
+        // namespace component may hide; C# qualifies with global:: and is not affected.
+        let hiding = try GesSchemaSet(parsing: "wire(w) model(m) packed schema :Cell as { level: :Number integer between 0 and 9 }\nwire(w) schema :Model as { cell: :Cell }\nwire(w) schema :Holder as { cell: :Cell\n  model: :Flags(#a, #b) }\n")
+        for (space, modelSpace, hidingRoots) in [("Wire", "Model", ["Cell", "Model"]), ("Wire.Model", "Model", ["Cell"]), ("Wire", "ModelFlags", ["Cell", "Holder"])] {
+            XCTAssertEqual(
+                code { try GesSchemaGenerator.generate(hiding, roots: hidingRoots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: space, models: modelSpace)) },
+                "generate.nameCollision",
+                space + " " + modelSpace
+            )
+            let csharp = try GesSchemaGenerator.generate(hiding, roots: hidingRoots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .csharp, namespace: space, models: modelSpace))
+            XCTAssertTrue(csharp.contains("global::\(modelSpace).Cell"))
+        }
+        // Wire generation also extends only a leading part, and the larger of that part and the one shared with the models.
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire", extendNamespace: "Wire")) }, "generate.usage")
+        let deeper = try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire.Packed", models: "Game.Model", extendNamespace: "Game.Wire"))
+        XCTAssertTrue(deeper.contains("\nextension Game.Wire {\n"))
+        // Models that read documents extend the namespace too.
+        let documents = try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Panels", documents: true, extendNamespace: "Game"))
+        XCTAssertTrue(documents.contains("extension Game {\n    /// The namespace `Panels` of generated model types.\n    public enum Panels {"))
         // An invalid namespace reports itself first.
         XCTAssertEqual(wire(.swift, ".Wire", ".Wire"), "generate.invalidNamespace")
     }

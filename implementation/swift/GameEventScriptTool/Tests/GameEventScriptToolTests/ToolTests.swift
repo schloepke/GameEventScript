@@ -191,6 +191,14 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(extended.code, 0, extended.error)
         XCTAssertTrue(extended.output.contains("extension Game {"))
         XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "View"]).code, 1)
+        let extendedDirectory = directory.appendingPathComponent("ExtendedView").path
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game", "-d", extendedDirectory]).code, 0)
+        let manifest = try String(contentsOfFile: extendedDirectory + "/.ges-generated.json", encoding: .utf8)
+        XCTAssertTrue(manifest.contains("\"extendNamespace\": \"Game\""))
+        // A missing language is reported as such, not as an option that concerns Swift.
+        let noLanguage = run(["schema", "generate", view, "--model", "view", "--extend-namespace", "Game"])
+        XCTAssertEqual(noLanguage.code, 2)
+        XCTAssertTrue(noLanguage.error.contains("requires --language"), noLanguage.error)
         XCTAssertEqual(run(["schema", "hash", view, "--model", "view"]).code, 2)
         let bad = try file("bad.gess", "wire schema :Bad as { name: :Text }\n")
         let check = run(["schema", "check", bad])

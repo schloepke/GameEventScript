@@ -30,7 +30,7 @@ internal static partial class GesSwiftEmitter
         "schemaHash", "bindingHash", "maxByteCount", "write", "read", "readKey", "encoded", "encodedByteCount", "writeDelta", "deltaEncoded", "deltaEncodedByteCount", "readDelta", "wireEquals", "copy", "quantize"
     ];
 
-    internal static GesCodeDocument Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options, GesModelLayout? packed, GesModelLayout? modelLayout)
+    internal static GesCodeDocument Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options, GesModelLayout? packed, GesModelLayout? modelLayout, int extended)
     {
         var access = options.Access == GesSchemaAccess.Public ? "public " : "";
         var prologue = new GesSchemaPlanner.Code();
@@ -58,7 +58,7 @@ internal static partial class GesSwiftEmitter
             Parameters = layout.Parameters.Count > 0
         };
         var modelSpace = options.Models is null ? null : GesSchemaPlanner.Namespace(options.Models, Keywords);
-        document.Extended = GesSchemaPlanner.Extended(document.Space, options.ExtendNamespace is null ? null : GesSchemaPlanner.Namespace(options.ExtendNamespace, Keywords), modelSpace);
+        document.Extended = GesSchemaPlanner.Extended(document.Space, extended, modelSpace);
         context.Layout = layout;
         // Packed records are the model types over one word, the shared ones of the model namespace or declared here.
         var models = modelSpace is null ? "" : string.Concat(modelSpace.ConvertAll(part => part + "."));
@@ -95,7 +95,12 @@ internal static partial class GesSwiftEmitter
         var sets = GesSchemaPlanner.TagSets(types, "");
         foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
         context.TopLevel = GesSchemaPlanner.TopLevel(types, sets);
-        if (options.Models is not null) GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
+        if (modelSpace is not null)
+        {
+            GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
+            GesSchemaPlanner.ReserveModelsRoot(document.Space, modelSpace, context.TopLevel);
+        }
+
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: true);
 
         // Split files reach the sources of another file, so the holder is internal there.

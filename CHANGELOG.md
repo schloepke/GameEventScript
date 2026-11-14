@@ -892,8 +892,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   with `--models ""`, cannot hide each other. A packed wire root shared with the models gets its wire members as static
   members of an enum `<Name>Wire` in the wire namespace, as C# does with its class, so that several wire generations of a
   module can share the model, with `copy` and `quantize` as in C#; `--models` naming the wire namespace itself, a
-  namespace that continues the other side's with the name of a type there and a `<Name>Wire` that another type already
-  names are `generate.nameCollision`.
+  namespace that continues the other side's with the name of a type there (a `<Name>Wire` or a type of any model group
+  included), a `<Name>Wire` that another type already names and, in Swift, a wire type, nested type or later wire
+  namespace component that would hide the models' namespace are `generate.nameCollision`.
 - Swift wire code with `--models` extends the namespace components it shares with the models' namespace instead of
   declaring them again, and the new `ges schema generate --extend-namespace <A>` (`GesSchemaGenerateOptions.ExtendNamespace`)
   makes any Swift generation extend the leading part `A` of its namespace that another generation declares, so

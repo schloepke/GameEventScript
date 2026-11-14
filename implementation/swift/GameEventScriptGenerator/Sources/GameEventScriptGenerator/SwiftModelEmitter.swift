@@ -7,7 +7,7 @@ enum GesSwiftModelEmitter {
     typealias Code = GesSchemaPlanner.Code
     typealias Names = [(name: String, origin: String)]
 
-    static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> GesCodeDocument {
+    static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions, extended: Int) throws(GesGeneratorError) -> GesCodeDocument {
         try GesSchemaPlanner.checkTopLevel(GesModelPlanner.topLevel(layout, swift: true), swift: true)
         let access = options.access == .public ? "public " : ""
         let header = GesModelPlanner.header(layout)
@@ -29,9 +29,7 @@ enum GesSwiftModelEmitter {
             access: access,
             holds: "model"
         )
-        var extendParts: [String]?
-        if let extend = options.extendNamespace { extendParts = try GesSchemaPlanner.namespace(extend, GesSwiftEmitter.keywords) }
-        document.extended = GesSchemaPlanner.extended(document.space, extendParts, nil)
+        document.extended = extended
         let computed = GesModelPlanner.computed(layout, GesComputedEmitter.helper(options.namespace, suffix), swift: true)
         let documents = options.documents ? "__GesModelDocuments" + suffix : nil
         let documentType = options.documents ? try GesModelPlanner.documentType(layout, document.space) : ""

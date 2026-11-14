@@ -12,7 +12,7 @@ namespace GameEventScript.Generator;
 // memberwise initializer, an enum per closed Tag and per union, and the runtime's GesPoint and GesVector for spatial fields.
 internal static class GesSwiftModelEmitter
 {
-    internal static GesCodeDocument Emit(GesModelLayout layout, GesSchemaGenerateOptions options)
+    internal static GesCodeDocument Emit(GesModelLayout layout, GesSchemaGenerateOptions options, int extended)
     {
         GesSchemaPlanner.CheckTopLevel(GesModelPlanner.TopLevel(layout, swift: true), swift: true);
         var access = options.Access == GesSchemaAccess.Public ? "public " : "";
@@ -36,7 +36,7 @@ internal static class GesSwiftModelEmitter
             Access = access,
             Holds = "model"
         };
-        document.Extended = GesSchemaPlanner.Extended(document.Space, options.ExtendNamespace is null ? null : GesSchemaPlanner.Namespace(options.ExtendNamespace, GesSwiftEmitter.Keywords), null);
+        document.Extended = extended;
         var computed = GesModelPlanner.Computed(layout, GesComputedEmitter.Helper(options.Namespace, suffix), swift: true);
         var documents = options.Documents ? "__GesModelDocuments" + suffix : null;
         var documentType = options.Documents ? GesModelPlanner.DocumentType(layout, document.Space) : "";

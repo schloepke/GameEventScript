@@ -586,10 +586,9 @@ enum GesSchemaPlanner {
         return scalars.count > 3 && name.hasPrefix("Ges") && ("A"..."Z").contains(scalars[3])
     }
 
-    // How many leading Swift namespace components another generation declares, which this one extends: those that
-    // extendNamespace names, and those that the wire code shares with the models' namespace.
-    static func extended(_ space: [String], _ extendNamespace: [String]?, _ models: [String]?) -> Int {
-        let extended = extendNamespace?.count ?? 0
+    // How many leading Swift namespace components another generation declares, which this one extends: the `extended` ones
+    // that extendNamespace names, and those that the wire code shares with the models' namespace.
+    static func extended(_ space: [String], _ extended: Int, _ models: [String]?) -> Int {
         guard let models else { return extended }
         var common = 0
         while common < space.count && common < models.count && space[common] == models[common] { common += 1 }
@@ -606,6 +605,25 @@ enum GesSchemaPlanner {
                     "The wire members of the packed root '\(type.name)' take the name '\(type.name)Wire', which another type of the generation has."
                 )
             }
+        }
+    }
+
+    // Swift wire code names the models' types through their namespace from inside its own, where a wire type, a type nested in
+    // a record or a later component of the wire namespace of the same name as the first component would hide it. Reserving
+    // that name among the top-level ones also makes nested types of that name fail.
+    static func reserveModelsRoot(_ space: [String], _ models: [String], _ names: inout Set<String>) throws(GesGeneratorError) {
+        guard let root = models.first else { return }
+        for part in space.dropFirst() where part == root {
+            throw GesGeneratorError(
+                GesGeneratorError.nameCollision,
+                "The component '\(part)' of the wire namespace hides the models' namespace '\(root)', through which the wire code names their types."
+            )
+        }
+        if !names.insert(root).inserted {
+            throw GesGeneratorError(
+                GesGeneratorError.nameCollision,
+                "The wire type '\(root)' hides the models' namespace '\(root)', through which the wire code names their types."
+            )
         }
     }
 

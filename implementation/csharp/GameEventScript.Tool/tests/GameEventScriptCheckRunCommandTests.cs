@@ -426,6 +426,10 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(1, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "View").ExitCode);
         Assert.AreEqual(0, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game", "-d", "ExtendedView").ExitCode);
         StringAssert.Contains(File.ReadAllText(Path.Combine(_directory, "ExtendedView", ".ges-generated.json")), "\"extendNamespace\": \"Game\"");
+        // A missing language is reported as such, not as an option that concerns Swift.
+        var noLanguage = Run("schema", "generate", "view.gess", "--model", "view", "--extend-namespace", "Game");
+        Assert.AreEqual(2, noLanguage.ExitCode);
+        StringAssert.Contains(noLanguage.StandardError, "requires --language");
         Assert.AreEqual(2, Run("schema", "hash", "view.gess", "--model", "view").ExitCode);
         Write("bad.gess", "wire schema :Bad as { name: :Text }\n");
         var check = Run("schema", "check", "bad.gess");

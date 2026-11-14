@@ -169,10 +169,10 @@ extension Tool {
         if bindings && modelGroup == nil { throw ToolError.usage("--bindings concerns model code and requires --model.") }
         if documents && modelGroup == nil { throw ToolError.usage("--documents concerns model code and requires --model.") }
         if models != nil && modelGroup != nil { throw ToolError.usage("--models concerns wire code, not --model.") }
+        if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
         if extendNamespace != nil && language != "swift" {
             throw ToolError.usage("--extend-namespace concerns Swift, whose namespaces are enums; C# merges namespaces.")
         }
-        if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
         if let access, access != "public" && access != "internal" { throw ToolError.usage("--access is public or internal.") }
         if output != nil && outDir != nil { return generateUsage("-o writes one file and --out-dir a directory; give one of them.") }
         if split != nil && outDir == nil { return generateUsage("--split divides the files of --out-dir.") }

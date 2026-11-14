@@ -28,7 +28,8 @@ enum GesSwiftEmitter {
         _ types: [GesPlanType],
         _ options: GesSchemaGenerateOptions,
         _ packed: GesModelLayout?,
-        _ modelLayout: GesModelLayout?
+        _ modelLayout: GesModelLayout?,
+        extended: Int
     ) throws(GesGeneratorError) -> GesCodeDocument {
         let access = options.access == .public ? "public " : ""
         var prologue = Code()
@@ -52,7 +53,10 @@ enum GesSwiftEmitter {
         let spaceParts = try GesSchemaPlanner.namespace(options.namespace, keywords)
         let space = spaceParts.map { $0 + "." }.joined()
         var topLevel = GesSchemaPlanner.topLevel(types, sets)
-        if options.models != nil { try GesSchemaPlanner.reserveSharedRoots(layout, types, &topLevel) }
+        if let modelParts {
+            try GesSchemaPlanner.reserveSharedRoots(layout, types, &topLevel)
+            try GesSchemaPlanner.reserveModelsRoot(spaceParts, modelParts, &topLevel)
+        }
         let context = Context(
             layout: layout,
             models: modelLayout.map { ModelConversion($0, models, space) },
@@ -72,9 +76,7 @@ enum GesSwiftEmitter {
             holds: "schema",
             parameters: !layout.parameters.isEmpty
         )
-        var extendParts: [String]?
-        if let extend = options.extendNamespace { extendParts = try GesSchemaPlanner.namespace(extend, keywords) }
-        document.extended = GesSchemaPlanner.extended(spaceParts, extendParts, modelParts)
+        document.extended = GesSchemaPlanner.extended(spaceParts, extended, modelParts)
         if let conversion = context.models {
             for type in types where type.kind == .schema && type.layout.packedWidth == 0 {
                 guard let model = conversion.type(type.name) else { continue }

@@ -674,11 +674,10 @@ internal static class GesSchemaPlanner
     // Names of the form Ges and a capital letter belong to the runtime types that generated code names without qualification.
     private static bool IsRuntimeName(string name) => name.Length > 3 && name.StartsWith("Ges", System.StringComparison.Ordinal) && name[3] is >= 'A' and <= 'Z';
 
-    // How many leading Swift namespace components another generation declares, which this one extends: those that
-    // ExtendNamespace names, and those that the wire code shares with the models' namespace.
-    internal static int Extended(List<string> space, List<string>? extendNamespace, List<string>? models)
+    // How many leading Swift namespace components another generation declares, which this one extends: the `extended` ones
+    // that ExtendNamespace names, and those that the wire code shares with the models' namespace.
+    internal static int Extended(List<string> space, int extended, List<string>? models)
     {
-        var extended = extendNamespace?.Count ?? 0;
         if (models is null) return extended;
         var common = 0;
         while (common < space.Count && common < models.Count && space[common] == models[common]) common++;
@@ -695,6 +694,19 @@ internal static class GesSchemaPlanner
             if (!names.Add(type.Name + "Wire"))
                 throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The wire members of the packed root '{type.Name}' take the name '{type.Name}Wire', which another type of the generation has.");
         }
+    }
+
+    // Swift wire code names the models' types through their namespace from inside its own, where a wire type, a type nested in
+    // a record or a later component of the wire namespace of the same name as the first component would hide it. Reserving
+    // that name among the top-level ones also makes nested types of that name fail.
+    internal static void ReserveModelsRoot(List<string> space, List<string> models, HashSet<string> names)
+    {
+        if (models.Count == 0) return;
+        for (var index = 1; index < space.Count; index++)
+            if (space[index] == models[0])
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The component '{space[index]}' of the wire namespace hides the models' namespace '{models[0]}', through which the wire code names their types.");
+        if (!names.Add(models[0]))
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The wire type '{models[0]}' hides the models' namespace '{models[0]}', through which the wire code names their types.");
     }
 
     // The types declared beside the records must not take a name that the generated code uses for another type.

@@ -1755,15 +1755,18 @@ to and from GES values through its model's `--values` conversion, which gives th
 records and the wire members of a packed root that wire code declares itself extend their types at file scope, also in
 split files, and name wire and model types so that neither hides the other. `--models` must name another namespace than
 `--namespace`, and where one of the two namespaces continues the other, its next component must not be the name of a
-type in the shorter one, else `generate.nameCollision`: a type of the wire code, or a type of a model group whose models
-the wire code shares or converts to, since the models' namespace holds those groups; a `<Name>Wire` that another type of the generation already names is
-`generate.nameCollision` too. Swift declares each namespace component as an enum, so two generations of one module whose
+type in the shorter one, else `generate.nameCollision`: a type of the wire code including its `<Name>Wire` types, or a
+type of any model group, since the wire code converts to the models of every group and their namespace holds them all; a
+`<Name>Wire` that another type of the generation already names is `generate.nameCollision` too. Swift wire code names the
+models' types through their namespace from inside its own, so there the first component of a non-global models'
+namespace must not be the name of a wire type, of a type nested in a wire record or of a later component of the wire
+namespace, all of which would hide it (`generate.nameCollision`); C# qualifies them with `global::`. Swift declares each namespace component as an enum, so two generations of one module whose
 namespaces share leading components must declare them once: wire code extends the components it shares with the models'
 namespace (`extension Game { enum Wire { … } }` beside models in `Game.Model`), and `--extend-namespace <A>`
 (`ExtendNamespace`) makes any generation extend the leading part `A` of its namespace, which another generation declares:
 `Game` for `Game.Panels` writes `extension Game { enum Panels { … } }`, and `Game` for `Game` writes `extension Game { … }`.
-A part that does not lead the namespace is `generate.usage`; the split manifest records it as `"extendNamespace"`, and C#
-generation, whose namespaces merge, rejects it with `generate.usage`. The conversion members take the wire code's `--access` and name the models' types, so the models need the same
+A part that does not lead the namespace is `generate.usage`, and C# generation, whose namespaces merge, rejects it with
+`generate.usage` too. The conversion members take the wire code's `--access` and name the models' types, so the models need the same
 `--access`, or a broader one. `--models` is
 only for wire code and is a usage error with `--model`.
 
@@ -1800,7 +1803,7 @@ roots and hashes, so that it changes only with its own declarations; the single 
 The directory holds the manifest `.ges-generated.json`, canonical JSON with the members `manifest` (1), `code` (`wire` or
 `model`), `language`, `split` (`schema` or `file`), `namespace`, `access`, `values` (also `true` with `documents`, whose
 code includes the value conversions, so that equal code has an equal manifest), `bindings`, `documents` only when given, `checkedExclusivity`,
-`roots` (each with `name`, `hash` and for wire code `bindingHash`), `parameters` (as in the
+`extendNamespace` (the part that `--extend-namespace` names) only when given, `roots` (each with `name`, `hash` and for wire code `bindingHash`), `parameters` (as in the
 [generation layout](#generation-layout); empty for models) and `files`, the generated file names in ordinal order without
 the manifest. Without `--check`, `generate` writes every file whose bytes changed, keeps unchanged files with their time
 stamps, removes the files that the previous manifest lists and that are no longer generated, and leaves every other file

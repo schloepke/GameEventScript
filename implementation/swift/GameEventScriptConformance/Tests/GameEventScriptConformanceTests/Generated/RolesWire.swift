@@ -11,7 +11,9 @@
 import GameEventScriptRuntime
 
 /// The namespace `RolesWire` of generated schema types.
-enum RolesWire {
+enum RolesWire {}
+
+extension RolesWire {
     /// The schema `:Panel_Badge`, read and written without allocation once its storage has grown.
     final class Panel_Badge {
         /// The schema hash, independent of parameter values.

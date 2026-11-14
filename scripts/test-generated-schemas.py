@@ -47,6 +47,15 @@ PACKED_SPLITS = ((["--model", "packed", "--values"], "", "PackedSplitModel", "fi
                  (["--model", "packed", "--extend-namespace", "Game"], "Game.Copy", "GameCopy", "file"),
                  # Wire code whose whole namespace the models' namespace begins with extends `Game` itself.
                  (["--wire", "packed", "--values", "--models", "Game.Model"], "Game", "GameRoot", "schema"))
+# Single Swift files whose names Swift lookup must not confuse, each group in a target of its own: wire code in a namespace
+# that continues the models' one beside the model type Cell, a later wire component named like the models' namespace, and
+# with models in the global namespace a later wire component named like the packed type that the wire code names bare.
+HIDING = (("HidingPrefix", ((["--model", "packed"], "Cell"),
+                            (["--wire", "packed", "--models", "Cell"], "Cell.Net"),
+                            (["--model", "packed"], "Shared"),
+                            (["--wire", "packed", "--models", "Shared"], "Net.Shared"))),
+          ("HidingGlobal", ((["--model", "packed"], ""),
+                            (["--wire", "packed", "--models", ""], "Wire.Cell"))))
 # Split output of the role fixture: each split once for wire code and once for models, so that the files of one generation
 # reach each other's types and helpers and the shared file declares the namespace, nested for two of them.
 SPLITS = (("schema", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "SchemaSplit.Wire"),
@@ -466,6 +475,13 @@ def main():
                                   "--access", "internal", "--out-dir", str(target / directory), "--split", split], cwd=PACKED.parent, capture_output=True, check=False)
             if run.returncode != 0:
                 raise SystemExit(f"The packed fixture does not generate split: {run.stderr.decode('utf-8', 'replace').strip()}")
+    for target, generations in HIDING:
+        for index, (selection, space) in enumerate(generations):
+            (WORK / "swift/Sources" / target).mkdir(parents=True, exist_ok=True)
+            run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", PACKED.name, *selection, "--language", "swift", "--namespace", space,
+                                  "--access", "internal", "-o", str(WORK / "swift/Sources" / target / f"Generation{index}.swift")], cwd=PACKED.parent, capture_output=True, check=False)
+            if run.returncode != 0:
+                raise SystemExit(f"The packed fixture does not generate for {target}: {run.stderr.decode('utf-8', 'replace').strip()}")
     (csharp / "Harness.cs").write_text(csharp_program(entries), encoding="utf-8")
     (csharp / "Harness.csproj").write_text(f"""<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -495,6 +511,16 @@ let package = Package(
             name: "Harness",
             dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
             swiftSettings: [.unsafeFlags(["-warnings-as-errors"]), .define("GES_CHECK_SHARING")]
+        ),
+        .target(
+            name: "HidingPrefix",
+            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
+            swiftSettings: [.unsafeFlags(["-warnings-as-errors"])]
+        ),
+        .target(
+            name: "HidingGlobal",
+            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
+            swiftSettings: [.unsafeFlags(["-warnings-as-errors"])]
         ),
         // The same sources without the check, as release builds of users compile them; one build shares the Runtime.
         .executableTarget(

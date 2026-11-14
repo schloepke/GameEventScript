@@ -17,7 +17,9 @@ import GameEventScriptRuntime
 #endif
 
 /// The namespace `ComputedModel` of generated model types.
-enum ComputedModel {
+enum ComputedModel {}
+
+extension ComputedModel {
     /// The model of the schema `:Cell`: a plain value that is never encoded.
     struct Cell: Hashable, Sendable, Codable {
         /// The hash of the schema `:Cell`, which wire records of it carry too; a test that compares it notices stale generated code.

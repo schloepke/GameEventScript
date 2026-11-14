@@ -649,15 +649,20 @@ internal static class GesSchemaPlanner
         return names;
     }
 
-    internal static void Unique(string scope, List<(string Name, string Origin)> names, ICollection<string> topLevel, string? modelsRoot = null)
+    // `hidden` holds the first components of namespaces that code inside the type names, which a nested type must not hide.
+    internal static void Unique(string scope, List<(string Name, string Origin)> names, ICollection<string> topLevel, List<string>? hidden = null)
     {
         Unique(scope, names);
         foreach (var (name, origin) in names)
         {
-            if (origin.StartsWith(NestedTypeOrigin, System.StringComparison.Ordinal) && topLevel.Contains(name))
-                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{scope}', {origin} is generated as '{name}', which hides the top-level type of that name.");
-            if (origin.StartsWith(NestedTypeOrigin, System.StringComparison.Ordinal) && name == modelsRoot)
-                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{scope}', {origin} is generated as '{name}', which hides the models' namespace through which the wire code names their types.");
+            if (origin.StartsWith(NestedTypeOrigin, System.StringComparison.Ordinal))
+            {
+                if (topLevel.Contains(name))
+                    throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{scope}', {origin} is generated as '{name}', which hides the top-level type of that name.");
+                if (hidden is not null && hidden.Contains(name))
+                    throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{scope}', {origin} is generated as '{name}', which hides the namespace '{name}' through which the generated code names types.");
+            }
+
             if (IsRuntimeName(name))
                 throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{scope}', {origin} is generated as '{name}', a name of the runtime types that generated code uses.");
         }
@@ -698,20 +703,25 @@ internal static class GesSchemaPlanner
         }
     }
 
-    // Swift wire code that names the models' types does so through their namespace from inside its own, where a declared wire
-    // type or a later component of the wire namespace of the same name as the first component would hide it; nested types
-    // check it through Unique. Returns that component, or null when the wire code names no model type or the models live in
-    // the global namespace.
-    internal static string? ModelsRoot(List<string> space, List<string> models, ICollection<string> declared, bool namesModels)
+    // A Swift namespace declares its first component as an enum of the module, which must not hide a Swift type that generated
+    // code names without qualification. Where wire code and models name each other's namespace (`role` names the side) from
+    // inside records, whose members all begin with a lowercase letter, the first component begins with an uppercase one so
+    // that no member hides it.
+    internal static void CheckSwiftNamespace(List<string> space, string text, string? role)
     {
-        if (models.Count == 0 || !namesModels) return null;
-        var root = models[0];
-        for (var index = 1; index < space.Count; index++)
-            if (space[index] == root)
-                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The component '{root}' of the wire namespace hides the models' namespace '{root}', through which the wire code names their types.");
+        if (space.Count == 0) return;
+        if (System.Array.IndexOf(SwiftReserved, space[0]) >= 0)
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The namespace '{text}' starts with '{space[0]}', the name of a Swift type that generated code uses.");
+        if (role is not null && space[0][0] is not (>= 'A' and <= 'Z'))
+            throw new GesGeneratorException(GesGeneratorException.InvalidNamespace, $"The namespace '{text}' of the {role} starts with a lowercase letter; wire code and models name each other's namespace from inside records, whose members would hide it.");
+    }
+
+    // Swift wire code that shares packed types names the models' types through their namespace from inside its own, where a
+    // declared wire type of the name of the namespace's first component would hide it.
+    internal static void CheckModelsRoot(string root, ICollection<string> declared)
+    {
         if (declared.Contains(root))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The wire type '{root}' hides the models' namespace '{root}', through which the wire code names their types.");
-        return root;
     }
 
     // The types declared beside the records must not take a name that the generated code uses for another type.

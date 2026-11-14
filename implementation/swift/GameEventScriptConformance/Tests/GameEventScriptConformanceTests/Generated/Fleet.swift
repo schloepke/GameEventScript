@@ -9,7 +9,9 @@
 import GameEventScriptRuntime
 
 /// The namespace `Generated` of generated schema types.
-enum Generated {
+enum Generated {}
+
+extension Generated {
     /// The schema `:Banner`, read and written without allocation once its storage has grown.
     final class Banner {
         /// The schema hash, independent of parameter values.

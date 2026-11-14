@@ -425,7 +425,8 @@ enum GesSwiftModelEmitter {
         code.close()
     }
 
-    private static func nested(_ value: GesModelPlanValue, _ names: inout Names, _ field: String) {
+    // The nested types that a model value declares, which the wire code's conversion checks against the wire namespace too.
+    static func nested(_ value: GesModelPlanValue, _ names: inout Names, _ field: String) {
         if !value.nested.isEmpty && value.tagSet.isEmpty { names.append((value.nested, GesSchemaPlanner.nestedTypeOrigin + "of the field " + field)) }
         if let element = value.element { nested(element, &names, field) }
         for alternative in value.alternatives { nested(alternative, &names, field) }

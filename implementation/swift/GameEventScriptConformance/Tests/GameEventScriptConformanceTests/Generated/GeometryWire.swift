@@ -9,7 +9,9 @@
 import GameEventScriptRuntime
 
 /// The namespace `GeometryWire` of generated schema types.
-enum GeometryWire {
+enum GeometryWire {}
+
+extension GeometryWire {
     /// The schema `:Reach`, read and written without allocation once its storage has grown.
     final class Reach {
         /// The schema hash, independent of parameter values.

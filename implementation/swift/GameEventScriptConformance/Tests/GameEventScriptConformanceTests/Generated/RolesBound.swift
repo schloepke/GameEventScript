@@ -9,7 +9,9 @@
 import GameEventScriptRuntime
 
 /// The namespace `RolesBound` of generated model types.
-enum RolesBound {
+enum RolesBound {}
+
+extension RolesBound {
     /// The model of the schema `:BotView`: a plain value that is never encoded.
     struct BotView: Hashable, Sendable, Codable, Identifiable {
         /// The hash of the schema `:BotView`, which wire records of it carry too; a test that compares it notices stale generated code.

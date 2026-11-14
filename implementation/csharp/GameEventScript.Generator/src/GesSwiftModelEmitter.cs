@@ -441,7 +441,8 @@ internal static class GesSwiftModelEmitter
         code.Close();
     }
 
-    private static void Nested(GesModelPlanValue value, List<(string, string)> names, string field)
+    // The nested types that a model value declares, which the wire code's conversion checks against the wire namespace too.
+    internal static void Nested(GesModelPlanValue value, List<(string, string)> names, string field)
     {
         if (value.Nested.Length > 0 && value.TagSet.Length == 0) names.Add((value.Nested, GesSchemaPlanner.NestedTypeOrigin + "of the field " + field));
         if (value.Element is not null) Nested(value.Element, names, field);

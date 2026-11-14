@@ -8,7 +8,9 @@
 import GameEventScriptRuntime
 
 /// The namespace `TreeWire` of generated schema types.
-enum TreeWire {
+enum TreeWire {}
+
+extension TreeWire {
     /// The schema `:Bind`, read and written without allocation once its storage has grown.
     final class Bind {
         /// The schema hash, independent of parameter values.

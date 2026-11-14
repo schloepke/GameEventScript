@@ -11,7 +11,9 @@
 import GameEventScriptRuntime
 
 /// The namespace `PackedWire` of generated schema types.
-enum PackedWire {
+enum PackedWire {}
+
+extension PackedWire {
     /// The wire members of the packed record `:Cell`, a wire root whose type the models declare: its bytes are its word, little-endian.
     enum CellWire {
         /// The hash over the schema hash and the parameter values this code was generated with.

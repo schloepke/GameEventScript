@@ -17,7 +17,9 @@ import GameEventScriptRuntime
 #endif
 
 /// The namespace `ComputedWire` of generated schema types.
-enum ComputedWire {
+enum ComputedWire {}
+
+extension ComputedWire {
     /// The schema `:Cell`, read and written without allocation.
     struct Cell: Sendable {
         /// The schema hash, independent of parameter values.

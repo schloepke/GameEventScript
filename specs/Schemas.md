@@ -1758,14 +1758,22 @@ split files, and name wire and model types so that neither hides the other. `--m
 type in the shorter one, else `generate.nameCollision`: a type that the wire code declares, including its `<Name>Wire`
 types but not the packed types that the models declare, or a type of any model group, since the wire code converts to the
 models of every group and their namespace holds them all; a `<Name>Wire` that another type of the generation already names
-is `generate.nameCollision` too. Swift wire code that shares packed types or converts records names the models' types
-through their namespace from inside its own, so there the first component of a non-global models' namespace must not be
-the name of a type that the wire code declares, of a type nested in a wire record or of a later component of the wire
-namespace, all of which would hide it (`generate.nameCollision`); C# qualifies them with `global::`. Swift declares each namespace component as an enum, so two generations of one module whose
-namespaces share leading components must declare them once: wire code extends the components it shares with the models'
-namespace (`extension Game { enum Wire { … } }` beside models in `Game.Model`), and `--extend-namespace <A>`
+is `generate.nameCollision` too. A Swift file declares its namespace components as enums, extending those that another
+generation of the module declares, and then extends the whole namespace with its declarations (`enum Wire {}` then
+`extension Wire { … }`), as split files do; there Swift finds neither the members of an enclosing component nor a later
+component of the namespace. Swift wire code that shares packed types names the models' types through their namespace
+from inside the wire namespace, a conversion names the models' and the wire namespace from an extension of its record at
+file scope, and a model's `init(wire:)` names the wire namespace from an extension of the model. So the first component
+of a non-global models' namespace must not be the name of a type that the wire code declares where it shares packed types,
+nor of a type nested in a wire record that names it, and the first component of the wire namespace not that of a type
+nested in a model that a conversion extends, else `generate.nameCollision`; C# qualifies them with `global::`. Members
+begin with a lowercase letter, so the namespaces of Swift wire code with `--models` and of its models begin with an
+uppercase one (`generate.invalidNamespace`), and the first component of any Swift namespace must not be the name of a
+Swift type that generated code names without qualification (`generate.nameCollision`). Two generations of one module
+whose namespaces share leading components must declare them once: wire code extends the components it shares with the
+models' namespace (`extension Game { enum Wire {} }` beside models in `Game.Model`), and `--extend-namespace <A>`
 (`ExtendNamespace`) makes any generation extend the leading part `A` of its namespace, which another generation declares:
-`Game` for `Game.Panels` writes `extension Game { enum Panels { … } }`, and `Game` for `Game` writes `extension Game { … }`.
+`Game` for `Game.Panels` writes `extension Game { enum Panels {} }`, and `Game` for `Game` declares no enum.
 A part that does not lead the namespace is `generate.usage`, and C# generation, whose namespaces merge, rejects it with
 `generate.usage` too. The conversion members take the wire code's `--access` and name the models' types, so the models need the same
 `--access`, or a broader one. `--models` is

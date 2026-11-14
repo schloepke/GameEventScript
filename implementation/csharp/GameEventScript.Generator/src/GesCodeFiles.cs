@@ -52,38 +52,76 @@ internal static class GesCodeFiles
         var code = new GesSchemaPlanner.Code();
         code.Raw(document.Header);
         code.Raw(document.Prologue);
+        var inside = document.Units.FindAll(unit => !unit.Outside);
         if (document.Swift)
-            OpenSwiftNamespace(code, document);
-        else if (document.Space.Count > 0)
+            SwiftNamespace(code, document, inside);
+        else
         {
-            code.Line("namespace " + string.Join(".", document.Space));
-            code.Open("{");
+            if (document.Space.Count > 0)
+            {
+                code.Line("namespace " + string.Join(".", document.Space));
+                code.Open("{");
+            }
+
+            Units(code, inside);
+            if (document.Space.Count > 0) code.Close();
         }
 
-        var first = true;
-        foreach (var unit in document.Units)
-        {
-            if (unit.Outside) continue;
-            if (!first) code.Blank();
-            first = false;
-            code.Raw(Render(unit, code.Depth));
-        }
-
-        if (document.Swift)
-            for (var index = document.Extended > 0 ? document.Extended - 1 : 0; index < document.Space.Count; index++) code.Close();
-        else if (document.Space.Count > 0) code.Close();
         Outside(code, document.Units);
         return code.ToString();
     }
 
-    // Opens the Swift namespace: an extension of the components another generation declares, then an enum per component.
-    private static void OpenSwiftNamespace(GesSchemaPlanner.Code code, GesCodeDocument document)
+    // The Swift namespace and the units in it. Its components are declared as enums, an extension of those that another
+    // generation of the module declares, and the units extend the whole namespace as split files do: inside an extension of
+    // the full path, Swift finds neither the members of an enclosing component nor a later component, so a qualified name of
+    // the models resolves from the module as the generator checks it.
+    private static void SwiftNamespace(GesSchemaPlanner.Code code, GesCodeDocument document, List<GesCodeUnit> inside)
     {
-        if (document.Extended > 0) code.Open($"extension {string.Join(".", document.Space.GetRange(0, document.Extended))} {{");
-        for (var index = document.Extended; index < document.Space.Count; index++)
+        if (document.Space.Count == 0)
         {
-            code.Line($"/// The namespace `{document.Space[index]}` of generated {document.Holds} types.");
-            code.Open($"{document.Access}enum {document.Space[index]} {{");
+            Units(code, inside);
+            return;
+        }
+
+        var declared = document.Extended < document.Space.Count;
+        if (declared)
+        {
+            var opened = 0;
+            if (document.Extended > 0)
+            {
+                code.Open($"extension {string.Join(".", document.Space.GetRange(0, document.Extended))} {{");
+                opened++;
+            }
+
+            for (var index = document.Extended; index < document.Space.Count; index++)
+            {
+                var part = document.Space[index];
+                code.Line($"/// The namespace `{part}` of generated {document.Holds} types.");
+                if (index + 1 < document.Space.Count)
+                {
+                    code.Open($"{document.Access}enum {part} {{");
+                    opened++;
+                }
+                else code.Line($"{document.Access}enum {part} {{}}");
+            }
+
+            for (var index = 0; index < opened; index++) code.Close();
+        }
+
+        if (inside.Count == 0) return;
+        if (declared) code.Blank();
+        code.Open($"extension {string.Join(".", document.Space)} {{");
+        Units(code, inside);
+        code.Close();
+    }
+
+    // Units separated by one blank line, at the depth of their place.
+    private static void Units(GesSchemaPlanner.Code code, List<GesCodeUnit> units)
+    {
+        for (var index = 0; index < units.Count; index++)
+        {
+            if (index > 0) code.Blank();
+            code.Raw(Render(units[index], code.Depth));
         }
     }
 
@@ -185,39 +223,21 @@ internal static class GesCodeFiles
         var code = new GesSchemaPlanner.Code();
         code.Raw(Header(document));
         code.Raw(document.Prologue);
-        var opened = 0;
-        if (document.Swift && (document.Extended < document.Space.Count || inside.Count > 0) && document.Extended > 0)
-        {
-            code.Open($"extension {string.Join(".", document.Space.GetRange(0, document.Extended))} {{");
-            opened++;
-        }
-
         if (document.Swift)
-            for (var index = document.Extended; index < document.Space.Count; index++)
+            SwiftNamespace(code, document, inside);
+        else
+        {
+            var space = document.Space.Count > 0 && inside.Count > 0;
+            if (space)
             {
-                var part = document.Space[index];
-                code.Line($"/// The namespace `{part}` of generated {document.Holds} types.");
-                if (index + 1 < document.Space.Count || inside.Count > 0)
-                {
-                    code.Open($"{document.Access}enum {part} {{");
-                    opened++;
-                }
-                else code.Line($"{document.Access}enum {part} {{}}");
+                code.Line("namespace " + string.Join(".", document.Space));
+                code.Open("{");
             }
-        else if (document.Space.Count > 0 && inside.Count > 0)
-        {
-            code.Line("namespace " + string.Join(".", document.Space));
-            code.Open("{");
-            opened++;
+
+            Units(code, inside);
+            if (space) code.Close();
         }
 
-        for (var index = 0; index < inside.Count; index++)
-        {
-            if (index > 0) code.Blank();
-            code.Raw(Render(inside[index], code.Depth));
-        }
-
-        for (var index = 0; index < opened; index++) code.Close();
         Outside(code, outside);
         return code.ToString();
     }

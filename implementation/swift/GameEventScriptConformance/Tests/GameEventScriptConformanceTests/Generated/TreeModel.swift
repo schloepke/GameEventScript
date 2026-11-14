@@ -8,7 +8,9 @@
 import GameEventScriptRuntime
 
 /// The namespace `TreeModel` of generated model types.
-enum TreeModel {
+enum TreeModel {}
+
+extension TreeModel {
     /// The model of the schema `:Bind`: a plain value that is never encoded.
     struct Bind: Hashable, Sendable, Codable {
         /// The hash of the schema `:Bind`, which wire records of it carry too; a test that compares it notices stale generated code.

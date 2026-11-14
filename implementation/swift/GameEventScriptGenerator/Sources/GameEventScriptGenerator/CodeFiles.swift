@@ -36,33 +36,60 @@ enum GesCodeFiles {
         var code = GesSchemaPlanner.Code()
         code.raw(document.header)
         code.raw(document.prologue)
+        let inside = document.units.filter { !$0.outside }
         if document.swift {
-            openSwiftNamespace(&code, document)
-        } else if !document.space.isEmpty {
-            code.line("namespace " + document.space.joined(separator: "."))
-            code.open("{")
-        }
-        var first = true
-        for unit in document.units where !unit.outside {
-            if !first { code.blank() }
-            first = false
-            code.raw(try render(unit, code.depth))
-        }
-        if document.swift {
-            for _ in (document.extended > 0 ? document.extended - 1 : 0)..<document.space.count { code.close() }
-        } else if !document.space.isEmpty {
-            code.close()
+            try swiftNamespace(&code, document, inside)
+        } else {
+            if !document.space.isEmpty {
+                code.line("namespace " + document.space.joined(separator: "."))
+                code.open("{")
+            }
+            try units(&code, inside)
+            if !document.space.isEmpty { code.close() }
         }
         try outside(&code, document.units)
         return code.text
     }
 
-    // Opens the Swift namespace: an extension of the components another generation declares, then an enum per component.
-    private static func openSwiftNamespace(_ code: inout GesSchemaPlanner.Code, _ document: GesCodeDocument) {
-        if document.extended > 0 { code.open("extension \(document.space[0..<document.extended].joined(separator: ".")) {") }
-        for part in document.space[document.extended...] {
-            code.line("/// The namespace `\(part)` of generated \(document.holds) types.")
-            code.open("\(document.access)enum \(part) {")
+    // The Swift namespace and the units in it. Its components are declared as enums, an extension of those that another
+    // generation of the module declares, and the units extend the whole namespace as split files do: inside an extension of
+    // the full path, Swift finds neither the members of an enclosing component nor a later component, so a qualified name of
+    // the models resolves from the module as the generator checks it.
+    private static func swiftNamespace(_ code: inout GesSchemaPlanner.Code, _ document: GesCodeDocument, _ inside: [GesCodeUnit]) throws {
+        if document.space.isEmpty {
+            try units(&code, inside)
+            return
+        }
+        let declared = document.extended < document.space.count
+        if declared {
+            var opened = 0
+            if document.extended > 0 {
+                code.open("extension \(document.space[0..<document.extended].joined(separator: ".")) {")
+                opened += 1
+            }
+            for (index, part) in document.space.enumerated() where index >= document.extended {
+                code.line("/// The namespace `\(part)` of generated \(document.holds) types.")
+                if index + 1 < document.space.count {
+                    code.open("\(document.access)enum \(part) {")
+                    opened += 1
+                } else {
+                    code.line("\(document.access)enum \(part) {}")
+                }
+            }
+            for _ in 0..<opened { code.close() }
+        }
+        if inside.isEmpty { return }
+        if declared { code.blank() }
+        code.open("extension \(document.space.joined(separator: ".")) {")
+        try units(&code, inside)
+        code.close()
+    }
+
+    // Units separated by one blank line, at the depth of their place.
+    private static func units(_ code: inout GesSchemaPlanner.Code, _ units: [GesCodeUnit]) throws {
+        for (index, unit) in units.enumerated() {
+            if index > 0 { code.blank() }
+            code.raw(try render(unit, code.depth))
         }
     }
 
@@ -154,31 +181,17 @@ enum GesCodeFiles {
         var code = GesSchemaPlanner.Code()
         code.raw(header(document))
         code.raw(document.prologue)
-        var opened = 0
-        if document.swift && (document.extended < document.space.count || !inside.isEmpty) && document.extended > 0 {
-            code.open("extension \(document.space[0..<document.extended].joined(separator: ".")) {")
-            opened += 1
-        }
         if document.swift {
-            for (index, part) in document.space.enumerated() where index >= document.extended {
-                code.line("/// The namespace `\(part)` of generated \(document.holds) types.")
-                if index + 1 < document.space.count || !inside.isEmpty {
-                    code.open("\(document.access)enum \(part) {")
-                    opened += 1
-                } else {
-                    code.line("\(document.access)enum \(part) {}")
-                }
+            try swiftNamespace(&code, document, inside)
+        } else {
+            let space = !document.space.isEmpty && !inside.isEmpty
+            if space {
+                code.line("namespace " + document.space.joined(separator: "."))
+                code.open("{")
             }
-        } else if !document.space.isEmpty && !inside.isEmpty {
-            code.line("namespace " + document.space.joined(separator: "."))
-            code.open("{")
-            opened += 1
+            try self.units(&code, inside)
+            if space { code.close() }
         }
-        for (index, unit) in inside.enumerated() {
-            if index > 0 { code.blank() }
-            code.raw(try render(unit, code.depth))
-        }
-        for _ in 0..<opened { code.close() }
         try self.outside(&code, outside)
         return code.text
     }

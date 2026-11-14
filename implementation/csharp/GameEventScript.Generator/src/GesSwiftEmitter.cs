@@ -30,7 +30,7 @@ internal static partial class GesSwiftEmitter
         "schemaHash", "bindingHash", "maxByteCount", "write", "read", "readKey", "encoded", "encodedByteCount", "writeDelta", "deltaEncoded", "deltaEncodedByteCount", "readDelta", "wireEquals", "copy", "quantize"
     ];
 
-    internal static GesCodeDocument Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options, GesModelLayout? packed, GesModelLayout? modelLayout, int extended)
+    internal static GesCodeDocument Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options, GesModelLayout? packed, GesModelLayout? modelLayout, int extended, HashSet<string>? declared)
     {
         var access = options.Access == GesSchemaAccess.Public ? "public " : "";
         var prologue = new GesSchemaPlanner.Code();
@@ -65,15 +65,14 @@ internal static partial class GesSwiftEmitter
         foreach (var type in types)
             foreach (var field in type.Fields) GesSchemaPlanner.QualifyPacked(field.Value, models);
         var space = string.Concat(document.Space.ConvertAll(part => part + "."));
-        // The wire code names model types where it shares packed types or converts records to models.
-        var namesModels = modelSpace is not null && types.Exists(type => type.Layout.PackedWidth > 0);
+        var conversions = new List<(GesPlanType Type, GesModelType Model)>();
         if (modelLayout is not null)
         {
             var conversion = context.Models = new ModelConversion(modelLayout, models, space);
             foreach (var type in types)
                 if (type.Kind == GesSchemaKind.Schema && type.Layout.PackedWidth == 0 && conversion.Type(type.Name) is { } model)
                 {
-                    namesModels = true;
+                    conversions.Add((type, model));
                     document.Units.Add(new GesCodeUnit(type.Name, code => ModelConversionUnit(code, type, model, access, conversion), outside: true));
                 }
         }
@@ -103,11 +102,30 @@ internal static partial class GesSwiftEmitter
         if (modelSpace is not null)
         {
             GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
-            // The models declare the packed types, which the wire namespace therefore does not hold.
-            var declared = new HashSet<string>(context.TopLevel, System.StringComparer.Ordinal);
-            foreach (var type in types)
-                if (type.Layout.PackedWidth > 0) declared.Remove(type.Name);
-            context.ModelsRoot = GesSchemaPlanner.ModelsRoot(document.Space, modelSpace, declared, namesModels);
+            var modelsRoot = modelSpace.Count > 0 ? modelSpace[0] : null;
+            var wireRoot = document.Space.Count > 0 ? document.Space[0] : null;
+            // Records and the `<Name>Wire` members name shared packed types inside the wire namespace, where the wire types are
+            // in scope; a conversion extends its record at file scope, where only the record's nested types are, and names both
+            // namespaces; the model's init(wire:) names the wire namespace beside the model's nested types.
+            if (modelsRoot is not null && types.Exists(type => type.Layout.PackedWidth > 0))
+            {
+                GesSchemaPlanner.CheckModelsRoot(modelsRoot, declared!);
+                context.Inside.Add(modelsRoot);
+            }
+
+            if (modelsRoot is not null) context.Converted.Add(modelsRoot);
+            if (wireRoot is not null)
+            {
+                context.Converted.Add(wireRoot);
+                foreach (var (type, model) in conversions)
+                {
+                    var names = new List<(string, string)>();
+                    foreach (var field in GesModelPlanner.Fields(model)) GesSwiftModelEmitter.Nested(field.Value, names, field.Field.Name);
+                    foreach (var (name, origin) in names)
+                        if (name == wireRoot)
+                            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In the model '{model.Name}', {origin} is generated as '{name}', which hides the wire namespace through which its conversion names '{type.Name}'.");
+                }
+            }
         }
 
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: true);
@@ -139,9 +157,11 @@ internal static partial class GesSwiftEmitter
         // The records and tag sets declared beside each other, which a record's nested type must not hide.
         internal HashSet<string> TopLevel { get; set; } = null!;
 
-        // The first component of the models' namespace through which the wire code names their types, which a record's nested
-        // type must not hide either; null when it names none that way.
-        internal string? ModelsRoot { get; set; }
+        // The first components of the namespaces that a record names inside the wire namespace (Inside) and that a converted
+        // record's conversion names (Converted), which the record's nested types must not hide.
+        internal List<string> Inside { get; } = [];
+
+        internal List<string> Converted { get; } = [];
 
         // The attribute of a class's stored properties: without exclusivity checks unless they are asked for.
         internal string Stored(bool isClass) => isClass && !checkedExclusivity ? "@exclusivity(unchecked) " : "";
@@ -180,7 +200,7 @@ internal static partial class GesSwiftEmitter
         if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: true, names);
         var model = type.IsItem || type.Kind != GesSchemaKind.Schema ? null : context.Models?.Type(type.Name);
         if (model is not null) names.Add(("toModel", "the generated member toModel"));
-        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel, context.ModelsRoot);
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel, model is not null ? context.Converted : context.Inside);
 
         code.Line(type.IsItem ? "/// An element of the list." : $"/// The {Kind(type)} `:{type.Name}`, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.");
         code.Open(type.IsClass ? $"{access}final class {type.Name} {{" : $"{access}struct {type.Name}: Sendable {{");
@@ -546,7 +566,7 @@ internal static partial class GesSwiftEmitter
         if (context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var member in type.Members) names.Add((GesSchemaPlanner.Camel(member), "the member " + member));
-        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel, context.ModelsRoot);
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
         var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);
         var last = ((ulong)type.Members.Count - 1).ToString(CultureInfo.InvariantCulture);
         code.Line($"/// The message set `:{type.Name}`: one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.");

@@ -11,7 +11,9 @@
 import GameEventScriptRuntime
 
 /// The namespace `PackedOwn` of generated schema types.
-enum PackedOwn {
+enum PackedOwn {}
+
+extension PackedOwn {
     /// The model of the packed schema `:Cell`: one 16-bit word, whose fields lie at their bits from the least significant
     /// bit in declared order, as the record's wire bytes hold them.
     struct Cell: Hashable, Sendable, Codable {

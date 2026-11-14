@@ -64,7 +64,11 @@ public enum GesSchemaGenerator {
         let wireSpace = try GesSchemaPlanner.namespace(options.namespace, keywords)
         var modelSpace: [String]?
         if let models = options.models { modelSpace = try GesSchemaPlanner.namespace(models, keywords) }
-        let extended = try checkExtendNamespace(options, wireSpace)
+        let extended = try checkExtendNamespace(options)
+        if options.language == .swift {
+            try GesSchemaPlanner.checkSwiftNamespace(wireSpace, options.namespace, role: modelSpace == nil ? nil : "wire code")
+            if let modelSpace { try GesSchemaPlanner.checkSwiftNamespace(modelSpace, options.models ?? "", role: "models") }
+        }
         // Wire records and models of one schema share its name, so they need different namespaces.
         if let models = options.models, let modelSpace, modelSpace == wireSpace {
             throw GesGeneratorError(
@@ -84,20 +88,20 @@ public enum GesSchemaGenerator {
         }
         let models = !modelRoots.isEmpty ? try GesModelLayoutBuilder.build(set, roots: modelRoots) : nil
         // Where one namespace continues the other, its next component must not take the name of a type in the shorter one. The
-        // models' namespace holds the types of every model group, since the wire code converts to the models of any of them,
-        // and the wire namespace also holds the `<Name>Wire` members of its packed roots, which the models declare.
+        // models' namespace holds every type of every model group, since the wire code converts to the models of any of them;
+        // the wire namespace holds the wire types without the packed ones, which the models declare, and instead the
+        // `<Name>Wire` members of packed roots and the helper of computed fields.
+        var wireNames: Set<String>?
         if let modelSpace {
-            // The models declare the packed types, so the wire namespace holds only the `<Name>Wire` members of packed roots.
-            var wireNames = GesSchemaPlanner.topLevel(types, GesSchemaPlanner.tagSets(types, ""))
+            var names = GesSchemaPlanner.topLevel(types, GesSchemaPlanner.tagSets(types, ""))
             for name in packed {
-                wireNames.remove(name)
-                if layout.roots.contains(name) { wireNames.insert(name + "Wire") }
+                names.remove(name)
+                if layout.roots.contains(name) { names.insert(name + "Wire") }
             }
-            var modelNames = Set(packed)
-            if let models {
-                for type in models.types { modelNames.insert(type.name) }
-                for tagSet in GesModelPlanner.tagSets(models) { modelNames.insert(tagSet.name) }
-            }
+            if !wireSpace.isEmpty && layout.types.contains(where: { !$0.computed.isEmpty }) { names.insert(GesComputedEmitter.helper(options.namespace, "")) }
+            wireNames = names
+            var modelNames = models.map { GesModelPlanner.topLevel($0, swift: options.language == .swift) } ?? []
+            for name in packed { modelNames.insert(name) }
             var common = 0
             while common < wireSpace.count && common < modelSpace.count && wireSpace[common] == modelSpace[common] { common += 1 }
             if common == modelSpace.count && common < wireSpace.count && modelNames.contains(wireSpace[common]) {
@@ -106,7 +110,7 @@ public enum GesSchemaGenerator {
                     "The namespace '\(options.namespace)' of the wire code continues the models' namespace with '\(wireSpace[common])', the name of a model type there."
                 )
             }
-            if common == wireSpace.count && common < modelSpace.count && wireNames.contains(modelSpace[common]) {
+            if common == wireSpace.count && common < modelSpace.count && names.contains(modelSpace[common]) {
                 throw GesGeneratorError(
                     GesGeneratorError.nameCollision,
                     "The namespace '\(options.models ?? "")' of the models continues the wire code's namespace with '\(modelSpace[common])', the name of a wire type there."
@@ -115,7 +119,7 @@ public enum GesSchemaGenerator {
         }
         let document =
             options.language == .csharp
-            ? try GesCSharpEmitter.emit(layout, types, options, shared, models) : try GesSwiftEmitter.emit(layout, types, options, shared, models, extended: extended)
+            ? try GesCSharpEmitter.emit(layout, types, options, shared, models) : try GesSwiftEmitter.emit(layout, types, options, shared, models, extended: extended, declared: wireNames)
         return (document, layout)
     }
 
@@ -182,6 +186,7 @@ public enum GesSchemaGenerator {
     private static func models(_ set: GesSchemaSet, _ roots: [String], _ options: GesSchemaGenerateOptions) throws -> (document: GesCodeDocument, layout: GesModelLayout) {
         if options.checkedExclusivity { throw GesGeneratorError(GesGeneratorError.usage, "Checked exclusivity concerns wire code, not models.") }
         let extended = try checkExtendNamespace(options)
+        if options.language == .swift { try GesSchemaPlanner.checkSwiftNamespace(try GesSchemaPlanner.namespace(options.namespace, GesSwiftEmitter.keywords), options.namespace, role: nil) }
         if options.models != nil {
             throw GesGeneratorError(GesGeneratorError.usage, "Models concern wire code, which shares their types; models do not name another namespace.")
         }
@@ -243,14 +248,13 @@ public enum GesSchemaGenerator {
     }
 
     // How many leading components of the namespace another generation declares: those of extendNamespace, which is Swift's
-    // alone, whose namespaces are enums, and must lead the namespace, which wire passes already parsed.
-    private static func checkExtendNamespace(_ options: GesSchemaGenerateOptions, _ parsed: [String]? = nil) throws(GesGeneratorError) -> Int {
+    // alone, whose namespaces are enums, and must lead the namespace.
+    private static func checkExtendNamespace(_ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> Int {
         guard let extend = options.extendNamespace else { return 0 }
         if options.language == .csharp {
             throw GesGeneratorError(GesGeneratorError.usage, "Extending namespace components concerns Swift, whose namespaces are enums; C# merges namespaces.")
         }
-        let space: [String]
-        if let parsed { space = parsed } else { space = try GesSchemaPlanner.namespace(options.namespace, GesSwiftEmitter.keywords) }
+        let space = try GesSchemaPlanner.namespace(options.namespace, GesSwiftEmitter.keywords)
         let extended = try GesSchemaPlanner.namespace(extend, GesSwiftEmitter.keywords)
         if extended.isEmpty || extended.count > space.count || Array(space[0..<extended.count]) != extended {
             throw GesGeneratorError(GesGeneratorError.usage, "'\(extend)' is no leading part of the namespace '\(options.namespace)', which the generation would extend.")

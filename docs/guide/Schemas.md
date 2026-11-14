@@ -647,7 +647,7 @@ let copy = Model.MapTrack(wire: wire)
 In C# the same is `wire.CopyFrom(track)`, `wire.ToBytes()` and `wire.ToModel()`. Swift declares each namespace component
 as an enum, so generations of one target that share a leading component declare it once: wire code with `--models`
 extends the components it shares with the models (`--namespace Game.Wire --models Game.Model` writes
-`extension Game { enum Wire { … } }`), and `--extend-namespace Game` makes any other generation extend `Game`, such as a
+`extension Game { enum Wire {} }` and then `extension Game.Wire { … }`), and `--extend-namespace Game` makes any other generation extend `Game`, such as a
 second group in `Game.Panels`. C# merges namespaces and needs neither. Avoid `toValue()` on such records: it
 builds one GES value per point. Scripts and `.gesd` documents see a packed record as an ordinary Record.
 

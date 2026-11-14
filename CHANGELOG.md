@@ -306,6 +306,20 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - `ges schema generate --models <namespace>` (`GesSchemaGenerateOptions.Models`): wire code shares the packed types of
   model code in that namespace and converts every wire record with a model directly to and from it, without GES values:
   C# `ToModel()`/`CopyFrom(model)`, Swift `toModel()`/`read(model:)`/`init(wire:)`, guarded by the schema hash.
+- Swift wire code generated with `--namespace` and `--models` converts to and from models at file scope, also in split
+  files, and names wire and model types so that neither hides the other. A packed wire root shared with the models gets
+  its wire members as static members of an enum `<Name>Wire` in the wire namespace, as C# does with its class, so that
+  several wire generations of a module can share the model, with `copy` and `quantize` as in C#. A Swift file declares its
+  namespace enums and then extends the whole namespace, as split files do, so that names of enclosing namespaces cannot
+  hide the other side's. `--models` naming the wire namespace itself, a namespace that continues the other side's with the
+  name of a type there (a `<Name>Wire` or a type of any model group included), a `<Name>Wire` that another type already
+  names, a namespace starting with a Swift type name that generated code uses and, in Swift, a wire type or nested type
+  that would hide a namespace the code names are `generate.nameCollision`; Swift namespaces of wire code with models and of
+  its models start with an uppercase letter (`generate.invalidNamespace`).
+- Swift wire code with `--models` extends the namespace components it shares with the models' namespace instead of
+  declaring them again, and `ges schema generate --extend-namespace <A>` (`GesSchemaGenerateOptions.ExtendNamespace`)
+  makes any Swift generation extend the leading part `A` of its namespace that another generation declares, so
+  generations such as `Game.World` and `Game.Panels`, or two in `Game`, can share one module.
 - Both CLIs have `bench`, an in-process benchmark of a compiled program: it loads the program once, warms it up and
   times every further run of the entry message, then reports min, median, mean, p95, max and standard deviation, a
   checksum of the console output, and on .NET the allocations and collections per run and the tiering settings, as
@@ -824,6 +838,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   code.
 - The Conformance runner scales its batch deadline with the selected cases and prints how long a batch took.
 - Workflow container images are pinned by digest and every job has a timeout.
+- Generated Swift setters of packed fields shift the field after subtracting its lower bound; they ORed every field into
+  the lowest bits.
+- The DLLs in the C# packages carry the time of the packed commit, or the current time for uncommitted changes, instead
+  of a fixed date, so MSBuild's copy into a build output replaces the DLL of an older package version of the same size.
+- A unary intrinsic with a parenthesized operand, such as `floor(x)`, and an intrinsic call such as `atan2(y, x)` are power
+  bases in both ports: `floor(x) ^ 2` is `(floor x) ^ 2`. C# rejected both, and Swift accepted `-x² ^ 2` and `floor x² ^ 2`,
+  which are syntax errors.
 
 ## [0.4.0] — 2026-10-11
 
@@ -887,25 +908,6 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Fixed
 
-- Swift wire code generated with `--namespace` and `--models` now places the conversion to and from models at file
-  scope, also in split files, and names wire and model types so that a model and a wire record of the same name, such as
-  with `--models ""`, cannot hide each other. A packed wire root shared with the models gets its wire members as static
-  members of an enum `<Name>Wire` in the wire namespace, as C# does with its class, so that several wire generations of a
-  module can share the model, with `copy` and `quantize` as in C#; `--models` naming the wire namespace itself, a
-  namespace that continues the other side's with the name of a type there (a `<Name>Wire` or a type of any model group
-  included), a `<Name>Wire` that another type already names and, in Swift, a wire type, nested type or later wire
-  namespace component that would hide the models' namespace are `generate.nameCollision`.
-- Swift wire code with `--models` extends the namespace components it shares with the models' namespace instead of
-  declaring them again, and the new `ges schema generate --extend-namespace <A>` (`GesSchemaGenerateOptions.ExtendNamespace`)
-  makes any Swift generation extend the leading part `A` of its namespace that another generation declares, so
-  generations such as `Game.World` and `Game.Panels`, or two in `Game`, can share one module.
-- Generated Swift setters of packed fields shift the field after subtracting its lower bound; they ORed every field into
-  the lowest bits.
-- The DLLs in the C# packages carry the time of the packed commit, or the current time for uncommitted changes, instead
-  of a fixed date, so MSBuild's copy into a build output replaces the DLL of an older package version of the same size.
-- A unary intrinsic with a parenthesized operand, such as `floor(x)`, and an intrinsic call such as `atan2(y, x)` are power
-  bases in both ports: `floor(x) ^ 2` is `(floor x) ^ 2`. C# rejected both, and Swift accepted `-x² ^ 2` and `floor x² ^ 2`,
-  which are syntax errors.
 - C# distribution smoke tests use fresh build and restore directories, preventing
   stale reproducible DLLs from a prior version contaminating package validation.
 - Program validation rejects internal VM values escaping into script-visible

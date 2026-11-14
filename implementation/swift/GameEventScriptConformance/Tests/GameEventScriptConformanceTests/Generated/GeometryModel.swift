@@ -9,7 +9,9 @@
 import GameEventScriptRuntime
 
 /// The namespace `GeometryModel` of generated model types.
-enum GeometryModel {
+enum GeometryModel {}
+
+extension GeometryModel {
     /// The model of the schema `:Reach`: a plain value that is never encoded.
     struct Reach: Hashable, Sendable, Codable {
         /// The hash of the schema `:Reach`, which wire records of it carry too; a test that compares it notices stale generated code.

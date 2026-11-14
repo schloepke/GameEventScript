@@ -90,7 +90,13 @@ public static class GesSchemaGenerator
         var keywords = options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Keywords : GesSwiftEmitter.Keywords;
         var wireSpace = GesSchemaPlanner.Namespace(options.Namespace, keywords);
         var modelSpace = options.Models is null ? null : GesSchemaPlanner.Namespace(options.Models, keywords);
-        var extended = CheckExtendNamespace(options, wireSpace);
+        var extended = CheckExtendNamespace(options);
+        if (options.Language == GesSchemaLanguage.Swift)
+        {
+            GesSchemaPlanner.CheckSwiftNamespace(wireSpace, options.Namespace, modelSpace is null ? null : "wire code");
+            if (modelSpace is not null) GesSchemaPlanner.CheckSwiftNamespace(modelSpace, options.Models!, "models");
+        }
+
         // Wire records and models of one schema share its name, so they need different namespaces.
         if (modelSpace is not null && string.Join(".", modelSpace) == string.Join(".", wireSpace))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The models live in the namespace of the wire code ('{options.Models}'), where a wire record and the model of its schema would share a name; generate them into different namespaces.");
@@ -106,24 +112,22 @@ public static class GesSchemaGenerator
                 if (schema.ModelGroup is not null) modelRoots.Add(schema.Name);
         var models = modelRoots.Count > 0 ? GesModelLayoutBuilder.Build(set, modelRoots) : null;
         // Where one namespace continues the other, its next component must not take the name of a type in the shorter one. The
-        // models' namespace holds the types of every model group, since the wire code converts to the models of any of them,
-        // and the wire namespace also holds the `<Name>Wire` members of its packed roots, which the models declare.
+        // models' namespace holds every type of every model group, since the wire code converts to the models of any of them;
+        // the wire namespace holds the wire types without the packed ones, which the models declare, and instead the
+        // `<Name>Wire` members of packed roots and the helper of computed fields.
+        HashSet<string>? wireNames = null;
         if (modelSpace is not null)
         {
-            // The models declare the packed types, so the wire namespace holds only the `<Name>Wire` members of packed roots.
-            var wireNames = GesSchemaPlanner.TopLevel(types, GesSchemaPlanner.TagSets(types, ""));
+            wireNames = GesSchemaPlanner.TopLevel(types, GesSchemaPlanner.TagSets(types, ""));
             foreach (var name in packed)
             {
                 wireNames.Remove(name);
                 if (layout.Roots.Contains(name)) wireNames.Add(name + "Wire");
             }
-            var modelNames = new HashSet<string>(packed, StringComparer.Ordinal);
-            if (models is not null)
-            {
-                foreach (var type in models.Types) modelNames.Add(type.Name);
-                foreach (var (name, _) in GesModelPlanner.TagSets(models)) modelNames.Add(name);
-            }
 
+            if (wireSpace.Count > 0 && layout.Types.Exists(type => type.Computed.Length > 0)) wireNames.Add(GesComputedEmitter.Helper(options.Namespace, ""));
+            var modelNames = models is null ? new HashSet<string>(StringComparer.Ordinal) : GesModelPlanner.TopLevel(models, options.Language == GesSchemaLanguage.Swift);
+            foreach (var name in packed) modelNames.Add(name);
             var common = 0;
             while (common < wireSpace.Count && common < modelSpace.Count && wireSpace[common] == modelSpace[common]) common++;
             if (common == modelSpace.Count && common < wireSpace.Count && modelNames.Contains(wireSpace[common]))
@@ -132,7 +136,7 @@ public static class GesSchemaGenerator
                 throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The namespace '{options.Models}' of the models continues the wire code's namespace with '{modelSpace[common]}', the name of a wire type there.");
         }
 
-        return options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Emit(layout, types, options, shared, models) : GesSwiftEmitter.Emit(layout, types, options, shared, models, extended);
+        return options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Emit(layout, types, options, shared, models) : GesSwiftEmitter.Emit(layout, types, options, shared, models, extended, wireNames);
     }
 
     /// <summary>
@@ -215,13 +219,13 @@ public static class GesSchemaGenerator
     }
 
     // How many leading components of the namespace another generation declares: those of ExtendNamespace, which is Swift's
-    // alone, whose namespaces are enums, and must lead the namespace, which Wire passes already parsed.
-    private static int CheckExtendNamespace(GesSchemaGenerateOptions options, List<string>? space = null)
+    // alone, whose namespaces are enums, and must lead the namespace.
+    private static int CheckExtendNamespace(GesSchemaGenerateOptions options)
     {
         if (options.ExtendNamespace is null) return 0;
         if (options.Language == GesSchemaLanguage.CSharp)
             throw new GesGeneratorException(GesGeneratorException.Usage, "Extending namespace components concerns Swift, whose namespaces are enums; C# merges namespaces.");
-        space ??= GesSchemaPlanner.Namespace(options.Namespace, GesSwiftEmitter.Keywords);
+        var space = GesSchemaPlanner.Namespace(options.Namespace, GesSwiftEmitter.Keywords);
         var extended = GesSchemaPlanner.Namespace(options.ExtendNamespace, GesSwiftEmitter.Keywords);
         var leading = extended.Count > 0 && extended.Count <= space.Count;
         for (var index = 0; leading && index < extended.Count; index++) leading = extended[index] == space[index];
@@ -234,6 +238,7 @@ public static class GesSchemaGenerator
     {
         if (options.CheckedExclusivity) throw new GesGeneratorException(GesGeneratorException.Usage, "Checked exclusivity concerns wire code, not models.");
         var extended = CheckExtendNamespace(options);
+        if (options.Language == GesSchemaLanguage.Swift) GesSchemaPlanner.CheckSwiftNamespace(GesSchemaPlanner.Namespace(options.Namespace, GesSwiftEmitter.Keywords), options.Namespace, null);
         if (options.Models is not null) throw new GesGeneratorException(GesGeneratorException.Usage, "Models concern wire code, which shares their types; models do not name another namespace.");
         layout = GesModelLayoutBuilder.Build(set, roots);
         // Reading documents converts through the plain values.

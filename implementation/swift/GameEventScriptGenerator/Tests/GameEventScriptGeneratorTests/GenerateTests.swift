@@ -70,30 +70,43 @@ final class GenerateTests: XCTestCase {
         }
         // The wire namespace holds the `<Name>Wire` members of packed roots, which a models' namespace continuing it cannot name.
         XCTAssertEqual(wire(.swift, "Game", "Game.CellWire"), "generate.nameCollision")
-        // Swift wire code names model types through the models' namespace, which no wire type, nested type or later wire
-        // namespace component may hide; C# qualifies with global:: and is not affected.
+        // Swift wire code names model types through the models' namespace and its conversions name the wire namespace. Inside
+        // the wire namespace a wire type hides the models' first component, inside a record its nested types, inside a model
+        // the model's nested types hide the wire's, and a lowercase component is hidden by members; the first component of a
+        // namespace must not hide a Swift type either. C# qualifies with global:: and is not affected.
         let hiding = try GesSchemaSet(parsing: "wire(w) model(m) packed schema :Cell as { level: :Number integer between 0 and 9 }\nwire(w) schema :Model as { cell: :Cell }\nwire(w) schema :Holder as { cell: :Cell\n  model: :Flags(#a, #b) }\n")
-        for (space, modelSpace, hidingRoots) in [("Wire", "Model", ["Cell", "Model"]), ("Wire.Model", "Model", ["Cell"]), ("Wire", "ModelFlags", ["Cell", "Holder"])] {
-            XCTAssertEqual(
-                code { try GesSchemaGenerator.generate(hiding, roots: hidingRoots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: space, models: modelSpace)) },
-                "generate.nameCollision",
-                space + " " + modelSpace
-            )
-            let csharp = try GesSchemaGenerator.generate(hiding, roots: hidingRoots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .csharp, namespace: space, models: modelSpace))
-            XCTAssertTrue(csharp.contains("global::\(modelSpace).Cell"))
+        let converted = try GesSchemaSet(parsing: "wire(w) model(m) schema :Model as { a: :Boolean }\nwire(w) model(m) schema :Holder as { net: :Flags(#a, #b) }\n")
+        let rejected: [(GesSchemaSet, [String], String, String, String, String)] = [
+            (hiding, ["Cell", "Model"], "Wire", "Model", "generate.nameCollision", "The wire type 'Model' hides"),
+            (hiding, ["Cell", "Holder"], "Wire", "ModelFlags", "generate.nameCollision", "hides the namespace 'ModelFlags'"),
+            (converted, ["Holder"], "NetFlags", "Game", "generate.nameCollision", "hides the wire namespace"),
+            (set, roots, "Wire", "Swift.Models", "generate.nameCollision", "the name of a Swift type"),
+            (set, roots, "Wire", "model", "generate.invalidNamespace", "lowercase"),
+            (set, roots, "wire", "Model", "generate.invalidNamespace", "lowercase"),
+        ]
+        for (rejectedSet, rejectedRoots, space, modelSpace, expected, message) in rejected {
+            do {
+                _ = try GesSchemaGenerator.generate(rejectedSet, roots: rejectedRoots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: space, models: modelSpace))
+                XCTFail("\(space) \(modelSpace) is accepted.")
+            } catch let error as GesGeneratorError {
+                XCTAssertEqual(error.code, expected, space + " " + modelSpace)
+                XCTAssertTrue(error.message.contains(message), error.message)
+            }
         }
-        do {
-            _ = try GesSchemaGenerator.generate(hiding, roots: ["Cell", "Holder"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Wire", models: "ModelFlags"))
-            XCTFail("A nested type hides the models' namespace.")
-        } catch let error as GesGeneratorError {
-            XCTAssertTrue(error.message.contains("hides the models' namespace"), error.message)
-        }
-        // Only the first component counts, only where the wire code names model types, and the packed types the models
-        // declare are no wire types; nor is the namespace subject to the names reserved for types.
+        let csharp = try GesSchemaGenerator.generate(hiding, roots: ["Cell", "Model"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .csharp, namespace: "Wire", models: "Model"))
+        XCTAssertTrue(csharp.contains("global::Model.Cell"))
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "String")) }, "generate.nameCollision")
+        // Accepted: a later wire component, which the code extending the full namespace does not see; the first component only;
+        // a wire type named like the models' namespace where only file-scope conversions or nothing names it; model types of
+        // an enclosing namespace, which the extension of the full namespace does not see either; and namespaces whose names
+        // only resemble those reserved for types.
         let accepted: [(GesSchemaSet, [String], String, String)] = [
+            (hiding, ["Cell"], "Wire.Model", "Model"),
             (hiding, ["Cell", "Model"], "Wire", "Game.Model"),
+            (converted, ["Model"], "Wire", "Model"),
             (try GesSchemaSet(parsing: "wire(w) schema :Model as { a: :Boolean }\n"), ["Model"], "Wire", "Model"),
             (set, roots, "Game", "Game.Cell"),
+            (set, roots, "Cell.Net", "Cell"),
             (set, roots, "Wire", "GesModels"),
         ]
         for (acceptedSet, acceptedRoots, space, modelSpace) in accepted {

@@ -27,6 +27,9 @@ internal sealed class GesCodeDocument
     internal List<string> Space = [];
     internal bool Swift;
 
+    // How many leading Swift namespace components another generation of the module declares, which this one extends.
+    internal int Extended;
+
     // The Swift access keyword with its space, which declares the namespace enums.
     internal string Access = "";
 
@@ -50,11 +53,7 @@ internal static class GesCodeFiles
         code.Raw(document.Header);
         code.Raw(document.Prologue);
         if (document.Swift)
-            foreach (var part in document.Space)
-            {
-                code.Line($"/// The namespace `{part}` of generated {document.Holds} types.");
-                code.Open($"{document.Access}enum {part} {{");
-            }
+            OpenSwiftNamespace(code, document);
         else if (document.Space.Count > 0)
         {
             code.Line("namespace " + string.Join(".", document.Space));
@@ -71,10 +70,21 @@ internal static class GesCodeFiles
         }
 
         if (document.Swift)
-            foreach (var _ in document.Space) code.Close();
+            for (var index = document.Extended > 0 ? document.Extended - 1 : 0; index < document.Space.Count; index++) code.Close();
         else if (document.Space.Count > 0) code.Close();
         Outside(code, document.Units);
         return code.ToString();
+    }
+
+    // Opens the Swift namespace: an extension of the components another generation declares, then an enum per component.
+    private static void OpenSwiftNamespace(GesSchemaPlanner.Code code, GesCodeDocument document)
+    {
+        if (document.Extended > 0) code.Open($"extension {string.Join(".", document.Space.GetRange(0, document.Extended))} {{");
+        for (var index = document.Extended; index < document.Space.Count; index++)
+        {
+            code.Line($"/// The namespace `{document.Space[index]}` of generated {document.Holds} types.");
+            code.Open($"{document.Access}enum {document.Space[index]} {{");
+        }
     }
 
     // The files of split code, ordered by name, and the manifest last.
@@ -170,14 +180,20 @@ internal static class GesCodeFiles
     {
         var inside = units.FindAll(unit => !unit.Outside);
         var outside = units.FindAll(unit => unit.Outside);
-        var declares = document.Swift && document.Space.Count > 0;
+        var declares = document.Swift && document.Space.Count > document.Extended;
         if (inside.Count == 0 && outside.Count == 0 && !declares) return null;
         var code = new GesSchemaPlanner.Code();
         code.Raw(Header(document));
         code.Raw(document.Prologue);
         var opened = 0;
+        if (document.Swift && (document.Extended < document.Space.Count || inside.Count > 0) && document.Extended > 0)
+        {
+            code.Open($"extension {string.Join(".", document.Space.GetRange(0, document.Extended))} {{");
+            opened++;
+        }
+
         if (document.Swift)
-            for (var index = 0; index < document.Space.Count; index++)
+            for (var index = document.Extended; index < document.Space.Count; index++)
             {
                 var part = document.Space[index];
                 code.Line($"/// The namespace `{part}` of generated {document.Holds} types.");

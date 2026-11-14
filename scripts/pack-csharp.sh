@@ -32,11 +32,12 @@ dotnet pack implementation/csharp/GameEventScript.Generator/src/GameEventScript.
 
 # The packaged files take the commit time, so a newer build's DLLs are newer and a copy that compares date and size replaces
 # them; packing one commit stays byte-identical. Uncommitted changes take the current time instead, since the commit time
-# would not change with them; untracked files do not count, since they are no part of the packages. SOURCE_DATE_EPOCH
-# overrides both.
+# would not change with them. Untracked files count only below implementation/csharp, where a new source file joins a
+# package by its project's glob. SOURCE_DATE_EPOCH overrides both.
 if [ -n "${SOURCE_DATE_EPOCH:-}" ]; then
     source_date=$SOURCE_DATE_EPOCH
-elif [ -n "$(git -C "$repository_root" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+elif [ -n "$(git -C "$repository_root" status --porcelain --untracked-files=no 2>/dev/null)" ] \
+    || [ -n "$(git -C "$repository_root" ls-files --others --exclude-standard -- implementation/csharp 2>/dev/null)" ]; then
     source_date=$(date +%s)
 else
     source_date=$(git -C "$repository_root" log -1 --format=%ct 2>/dev/null || echo 946684800)

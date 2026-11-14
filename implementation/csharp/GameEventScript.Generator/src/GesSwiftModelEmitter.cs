@@ -36,6 +36,7 @@ internal static class GesSwiftModelEmitter
             Access = access,
             Holds = "model"
         };
+        document.Extended = GesSchemaPlanner.Extended(document.Space, options.ExtendNamespace, null);
         var computed = GesModelPlanner.Computed(layout, GesComputedEmitter.Helper(options.Namespace, suffix), swift: true);
         var documents = options.Documents ? "__GesModelDocuments" + suffix : null;
         var documentType = options.Documents ? GesModelPlanner.DocumentType(layout, document.Space) : "";

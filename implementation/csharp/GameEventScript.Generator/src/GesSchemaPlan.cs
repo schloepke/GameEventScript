@@ -674,7 +674,17 @@ internal static class GesSchemaPlanner
     // Names of the form Ges and a capital letter belong to the runtime types that generated code names without qualification.
     private static bool IsRuntimeName(string name) => name.Length > 3 && name.StartsWith("Ges", System.StringComparison.Ordinal) && name[3] is >= 'A' and <= 'Z';
 
-    // The types declared beside the records must not take a name that the generated code uses for another type.
+    // How many leading Swift namespace components another generation declares, which this one extends: all but the last with
+    // ExtendNamespace, and those that the wire code shares with the models' namespace.
+    internal static int Extended(List<string> space, bool extendNamespace, List<string>? models)
+    {
+        var extended = extendNamespace ? System.Math.Max(0, space.Count - 1) : 0;
+        if (models is null) return extended;
+        var common = 0;
+        while (common < space.Count && common < models.Count && space[common] == models[common]) common++;
+        return System.Math.Max(extended, common);
+    }
+
     // Reserves the `<Name>Wire` type of every packed wire root that the models declare, which holds its wire members beside the
     // records, so that no record or tag set takes that name.
     internal static void ReserveSharedRoots(GesSchemaLayout layout, List<GesPlanType> types, HashSet<string> names)
@@ -687,6 +697,7 @@ internal static class GesSchemaPlanner
         }
     }
 
+    // The types declared beside the records must not take a name that the generated code uses for another type.
     internal static void CheckTopLevel(ICollection<string> names, bool swift)
     {
         var sorted = new List<string>(names);

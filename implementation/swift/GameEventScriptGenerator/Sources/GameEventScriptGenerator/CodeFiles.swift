@@ -16,6 +16,8 @@ struct GesCodeDocument {
     var prologue = ""
     var space: [String] = []
     var swift = false
+    // How many leading Swift namespace components another generation of the module declares, which this one extends.
+    var extended = 0
     // The Swift access keyword with its space, which declares the namespace enums.
     var access = ""
     // What the namespace holds, "schema" or "model", for the documentation of Swift namespace enums.
@@ -35,10 +37,7 @@ enum GesCodeFiles {
         code.raw(document.header)
         code.raw(document.prologue)
         if document.swift {
-            for part in document.space {
-                code.line("/// The namespace `\(part)` of generated \(document.holds) types.")
-                code.open("\(document.access)enum \(part) {")
-            }
+            openSwiftNamespace(&code, document)
         } else if !document.space.isEmpty {
             code.line("namespace " + document.space.joined(separator: "."))
             code.open("{")
@@ -50,12 +49,21 @@ enum GesCodeFiles {
             code.raw(try render(unit, code.depth))
         }
         if document.swift {
-            for _ in document.space { code.close() }
+            for _ in (document.extended > 0 ? document.extended - 1 : 0)..<document.space.count { code.close() }
         } else if !document.space.isEmpty {
             code.close()
         }
         try outside(&code, document.units)
         return code.text
+    }
+
+    // Opens the Swift namespace: an extension of the components another generation declares, then an enum per component.
+    private static func openSwiftNamespace(_ code: inout GesSchemaPlanner.Code, _ document: GesCodeDocument) {
+        if document.extended > 0 { code.open("extension \(document.space[0..<document.extended].joined(separator: ".")) {") }
+        for part in document.space[document.extended...] {
+            code.line("/// The namespace `\(part)` of generated \(document.holds) types.")
+            code.open("\(document.access)enum \(part) {")
+        }
     }
 
     // The files of split code, ordered by name, and the manifest last.
@@ -141,14 +149,18 @@ enum GesCodeFiles {
     private static func sharedText(_ document: GesCodeDocument, _ units: [GesCodeUnit]) throws -> String? {
         let inside = units.filter { !$0.outside }
         let outside = units.filter(\.outside)
-        let declares = document.swift && !document.space.isEmpty
+        let declares = document.swift && document.space.count > document.extended
         if inside.isEmpty && outside.isEmpty && !declares { return nil }
         var code = GesSchemaPlanner.Code()
         code.raw(header(document))
         code.raw(document.prologue)
         var opened = 0
+        if document.swift && (document.extended < document.space.count || !inside.isEmpty) && document.extended > 0 {
+            code.open("extension \(document.space[0..<document.extended].joined(separator: ".")) {")
+            opened += 1
+        }
         if document.swift {
-            for (index, part) in document.space.enumerated() {
+            for (index, part) in document.space.enumerated() where index >= document.extended {
                 code.line("/// The namespace `\(part)` of generated \(document.holds) types.")
                 if index + 1 < document.space.count || !inside.isEmpty {
                     code.open("\(document.access)enum \(part) {")

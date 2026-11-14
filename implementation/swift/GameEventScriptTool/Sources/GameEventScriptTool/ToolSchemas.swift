@@ -19,7 +19,8 @@ extension ToolHelp {
           ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                               [--param <name>=<literal> ...]
                               --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                              [--checked-exclusivity] [--bindings] [--documents] [-o <file> | -d <dir> [--split schema|file]] [--check]
+                              [--checked-exclusivity] [--bindings] [--documents] [--models <namespace>] [--extend-namespace]
+                              [-o <file> | -d <dir> [--split schema|file]] [--check]
 
         Commands:
           check      Read schemas and report the first error with its line and column.
@@ -40,6 +41,8 @@ extension ToolHelp {
           --access <level>          The visibility of the generated types: public (default) or internal.
           --values                  Also convert generated records and models to and from GES values and messages.
           --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
+          --extend-namespace        Extend the enclosing components of the Swift namespace, which another generation of the
+                                    module declares, instead of declaring them; wire code with --models does so for shared ones.
           --bindings                Also offer generated model types to scripts as external types; only with --model.
           --documents               Also read model roots from GES document text; includes --values, only with --model.
           --models <namespace>      Share the packed types of the model code in that namespace ("" for the global one) and
@@ -74,6 +77,7 @@ extension Tool {
         var check = false
         var withValues = false
         var checkedExclusivity = false
+        var extendNamespace = false
         var bindings = false
         var documents = false
         var models: String?
@@ -104,6 +108,8 @@ extension Tool {
                 withValues = true
             } else if argument == "--checked-exclusivity" && command == "generate" {
                 checkedExclusivity = true
+            } else if argument == "--extend-namespace" && command == "generate" {
+                extendNamespace = true
             } else if argument == "--bindings" && command == "generate" {
                 bindings = true
             } else if argument == "--documents" && command == "generate" {
@@ -207,7 +213,8 @@ extension Tool {
                         bindings: bindings,
                         documents: documents,
                         split: outDir == nil ? .none : split == "file" ? .file : .schema,
-                        models: models
+                        models: models,
+                        extendNamespace: extendNamespace
                     )
                 if let group = wireGroup ?? modelGroup {
                     roots = wireGroup != nil ? GesSchemaGenerator.wireRoots(set, group: group) : GesSchemaGenerator.modelRoots(set, group: group)

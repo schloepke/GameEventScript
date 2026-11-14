@@ -1754,9 +1754,12 @@ Swift as static members of an enum `<Name>Wire` that take the record (`Wire.MapP
 to and from GES values through its model's `--values` conversion, which gives the same Record. The conversion of wire
 records and the wire members of a packed root that wire code declares itself extend their types at file scope, also in
 split files, and name wire and model types so that neither hides the other. `--models` must name another namespace than
-`--namespace` and, in Swift, whose namespace components are enums, another first component, else
-`generate.nameCollision`; a `<Name>Wire` that another type of the generation already names is `generate.nameCollision`
-too. The conversion members take the wire code's `--access` and name the models' types, so the models need the same
+`--namespace`, and a namespace that begins in the global namespace of the other side must not start with the name of a
+type there, else `generate.nameCollision`; a `<Name>Wire` that another type of the generation already names is
+`generate.nameCollision` too. Swift declares each namespace component as an enum, so two generations of one module whose
+namespaces share leading components must declare them once: wire code extends the components it shares with the models'
+namespace (`extension Game { enum Wire { … } }` beside models in `Game.Model`), and `--extend-namespace`
+(`ExtendNamespace`) makes any generation extend all of its enclosing components, which another generation declares. The conversion members take the wire code's `--access` and name the models' types, so the models need the same
 `--access`, or a broader one. `--models` is
 only for wire code and is a usage error with `--model`.
 

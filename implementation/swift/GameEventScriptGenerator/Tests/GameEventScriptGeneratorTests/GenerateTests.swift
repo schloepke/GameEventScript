@@ -37,9 +37,17 @@ final class GenerateTests: XCTestCase {
             XCTAssertEqual(wire(language, "Wire", "", ["CellWire"]), "generate.nameCollision")
             XCTAssertEqual(wire(language, "Wire", ""), "")
         }
-        // Swift namespace components are enums, which two generations of one module cannot both declare.
-        XCTAssertEqual(wire(.swift, "Game.Wire", "Game.Model"), "generate.nameCollision")
+        // Swift namespace components are enums: wire code extends those it shares with the models' namespace.
+        let extended = try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire", models: "Game.Model"))
+        XCTAssertTrue(extended.contains("extension Game {\n    /// The namespace `Wire` of generated schema types.\n    public enum Wire {"))
         XCTAssertEqual(wire(.csharp, "Game.Wire", "Game.Model"), "")
+        let panels = try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Panels", extendNamespace: true))
+        XCTAssertTrue(panels.contains("extension Game {\n    /// The namespace `Panels` of generated model types.\n    public enum Panels {"))
+        // A namespace that starts in the global one of the other side must not take the name of a type there.
+        XCTAssertEqual(wire(.swift, "Grid.Wire", ""), "generate.nameCollision")
+        XCTAssertEqual(wire(.csharp, "", "Grid.Model"), "generate.nameCollision")
+        // An invalid namespace reports itself first.
+        XCTAssertEqual(wire(.swift, ".Wire", ".Wire"), "generate.invalidNamespace")
     }
 
     func testTheDocumentTypeTakesNoGeneratedName() throws {

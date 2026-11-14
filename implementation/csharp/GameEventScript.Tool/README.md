@@ -708,9 +708,11 @@ removes the ones no longer generated and leaves other files alone with a warning
 changed, missing and surplus file.
 `--models <namespace>` lets wire code share the packed types of model code generated into that namespace (`""` for
 the global one) and convert each wire record with a model directly to and from it (`ToModel()`, `CopyFrom(model)`); it is
-a usage error with `--model`. The models need another namespace than the wire code, in Swift also another first
-component, since each component is an enum (`generate.nameCollision` otherwise), and the same `--access`, since the
-conversion uses the models' types in members of the wire code's access. A packed wire root that the models declare gets
+a usage error with `--model`. The models need another namespace than the wire code (`generate.nameCollision` otherwise),
+and the same `--access` or a broader one, since the conversion uses the models' types in members of the wire code's
+access. Swift declares each namespace component as an enum: wire code extends the components it shares with the models'
+namespace, and `--extend-namespace` makes any generation extend its enclosing components, which another generation of the
+module declares (`Game.World` beside `Game.Panels`). A packed wire root that the models declare gets
 its wire members as `<Name>Wire` in the wire namespace: C# extension methods, Swift static members such as
 `Wire.MapPointWire.encoded(point)`.
 

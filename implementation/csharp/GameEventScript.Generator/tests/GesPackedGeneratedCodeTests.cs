@@ -75,11 +75,19 @@ public sealed class GesPackedGeneratedCodeTests
                 Assert.AreEqual("generate.nameCollision", error.Code);
             }
 
-        // Swift namespace components are enums, which two generations of one module cannot both declare.
+        // Swift namespace components are enums: the wire code extends the one it shares with the models, which declare it.
         var prefix = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Namespace = "Game.Wire", Models = "Game.Model" };
-        Assert.AreEqual("generate.nameCollision", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), prefix)).Code);
-        prefix.Language = GesSchemaLanguage.CSharp;
-        Assert.IsFalse(string.IsNullOrEmpty(GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), prefix)));
+        StringAssert.Contains(GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), prefix), "extension Game {\n    /// The namespace `Wire` of generated schema types.\n    public enum Wire {");
+        var models = GesSchemaGenerator.GenerateModels(set, GesSchemaGenerator.ModelRoots(set, "packed"), new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Namespace = "Game.Panels", ExtendNamespace = true });
+        StringAssert.Contains(models, "extension Game {\n    /// The namespace `Panels` of generated model types.\n    public enum Panels {");
+        // A namespace that starts in the global one of the other side must not take the name of a type there.
+        var global = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Namespace = "Grid.Wire", Models = "" };
+        Assert.AreEqual("generate.nameCollision", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), global)).Code);
+        global = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp, Namespace = "", Models = "Grid.Model" };
+        Assert.AreEqual("generate.nameCollision", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), global)).Code);
+        // An invalid namespace reports itself first.
+        var invalid = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Namespace = ".Wire", Models = ".Wire" };
+        Assert.AreEqual("generate.invalidNamespace", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), invalid)).Code);
         // The wire members of a shared packed root take the name <Name>Wire, which no schema may have.
         var taken = GesSchemaSet.Parse("wire model packed schema :Cell as { a: :Boolean }\nwire schema :CellWire as { b: :Boolean }\n");
         var shared = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp, Namespace = "Wire", Models = "" };

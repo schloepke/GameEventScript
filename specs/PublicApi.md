@@ -768,7 +768,7 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 | models | `ModelLayout(set, roots)`, `GenerateModels(set, roots, options)` | `modelLayout(_:roots:)`, `generateModels(_:roots:options:)` |
 | split files | `GenerateFiles(set, roots, parameters, options)`, `GenerateModelFiles(set, roots, options)`, returning `IReadOnlyList<GesGeneratedFile>` | `generateFiles(_:roots:parameters:options:)`, `generateModelFiles(_:roots:options:)`, returning `[GesGeneratedFile]` |
 | generated file | `sealed class GesGeneratedFile` with `Path`, `Text` | `struct GesGeneratedFile` with `path`, `text` |
-| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Split`, `Models` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:)` and the same properties |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Split`, `Models`, `ExtendNamespace` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:extendNamespace:)` and the same properties |
 | split | `enum GesSchemaSplit` with `None`, `Schema`, `File` | `enum GesSchemaSplit` with `none`, `schema`, `file` |
 | target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
 | access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |

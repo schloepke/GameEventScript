@@ -71,6 +71,9 @@ enum GesSwiftEmitter {
             holds: "schema",
             parameters: !layout.parameters.isEmpty
         )
+        var modelParts: [String]?
+        if let modelSpace = options.models { modelParts = try GesSchemaPlanner.namespace(modelSpace, keywords) }
+        document.extended = GesSchemaPlanner.extended(spaceParts, options.extendNamespace, modelParts)
         if let conversion = context.models {
             for type in types where type.kind == .schema && type.layout.packedWidth == 0 {
                 guard let model = conversion.type(type.name) else { continue }

@@ -4,11 +4,11 @@
 
 """Isolated 0.3.0 consumer upgrade smoke tests; never publishes packages or tags. Each version builds the consumer
 source committed with it, so breaking pre-1.0 API changes are checked as the documented migration."""
-import os
 import argparse
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess

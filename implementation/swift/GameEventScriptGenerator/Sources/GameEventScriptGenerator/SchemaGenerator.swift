@@ -59,22 +59,17 @@ public enum GesSchemaGenerator {
     private static func wire(_ set: GesSchemaSet, _ roots: [String], _ parameters: GesSchemaParameters, _ options: GesSchemaGenerateOptions) throws -> (document: GesCodeDocument, layout: GesSchemaLayout) {
         if options.bindings { throw GesGeneratorError(GesGeneratorError.usage, "Bindings concern model code; wire code converts through Values.") }
         if options.documents { throw GesGeneratorError(GesGeneratorError.usage, "Documents concern model code; wire code converts through Values.") }
+        // Both namespaces are checked first, so that an invalid one reports itself rather than a collision.
+        let keywords = options.language == .csharp ? GesCSharpEmitter.keywords : GesSwiftEmitter.keywords
+        let wireSpace = try GesSchemaPlanner.namespace(options.namespace, keywords)
+        var modelSpace: [String]?
+        if let models = options.models { modelSpace = try GesSchemaPlanner.namespace(models, keywords) }
         // Wire records and models of one schema share its name, so they need different namespaces.
-        if let models = options.models, models == options.namespace {
+        if let models = options.models, let modelSpace, modelSpace == wireSpace {
             throw GesGeneratorError(
                 GesGeneratorError.nameCollision,
                 "The models live in the namespace of the wire code ('\(models)'), where a wire record and the model of its schema would share a name; generate them into different namespaces."
             )
-        }
-        // Swift declares each namespace component as an enum, so two generations of one module cannot share the first one.
-        if options.language == .swift, let models = options.models, !models.isEmpty, !options.namespace.isEmpty {
-            let first = options.namespace.split(separator: ".", omittingEmptySubsequences: false)[0]
-            if models.split(separator: ".", omittingEmptySubsequences: false)[0] == first {
-                throw GesGeneratorError(
-                    GesGeneratorError.nameCollision,
-                    "The Swift namespaces '\(options.namespace)' and '\(models)' of wire code and models start alike, so both would declare the enum '\(first)'; give them different first components."
-                )
-            }
         }
         let layout = try GesSchemaLayoutBuilder.build(set, roots: roots, parameters: parameters)
         let types = try GesSchemaPlanner.plan(layout)
@@ -87,6 +82,27 @@ public enum GesSchemaGenerator {
             for schema in set.schemas where schema.modelGroup != nil { modelRoots.append(schema.name) }
         }
         let models = !modelRoots.isEmpty ? try GesModelLayoutBuilder.build(set, roots: modelRoots) : nil
+        // A namespace that starts in the global one of the other side must not take the name of a type there.
+        if let modelSpace {
+            let wireNames = GesSchemaPlanner.topLevel(types, GesSchemaPlanner.tagSets(types, ""))
+            var modelNames = Set(packed)
+            if let models {
+                for type in models.types { modelNames.insert(type.name) }
+                for set in GesModelPlanner.tagSets(models) { modelNames.insert(set.name) }
+            }
+            if modelSpace.isEmpty, let first = wireSpace.first, modelNames.contains(first) {
+                throw GesGeneratorError(
+                    GesGeneratorError.nameCollision,
+                    "The namespace '\(options.namespace)' of the wire code starts with '\(first)', the name of a model type in the global namespace."
+                )
+            }
+            if wireSpace.isEmpty, let first = modelSpace.first, wireNames.contains(first) {
+                throw GesGeneratorError(
+                    GesGeneratorError.nameCollision,
+                    "The namespace '\(options.models ?? "")' of the models starts with '\(first)', the name of a wire type in the global namespace."
+                )
+            }
+        }
         let document =
             options.language == .csharp
             ? try GesCSharpEmitter.emit(layout, types, options, shared, models) : try GesSwiftEmitter.emit(layout, types, options, shared, models)

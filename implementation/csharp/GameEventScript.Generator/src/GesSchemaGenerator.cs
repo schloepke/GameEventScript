@@ -86,13 +86,13 @@ public static class GesSchemaGenerator
     {
         if (options.Bindings) throw new GesGeneratorException(GesGeneratorException.Usage, "Bindings concern model code; wire code converts through Values.");
         if (options.Documents) throw new GesGeneratorException(GesGeneratorException.Usage, "Documents concern model code; wire code converts through Values.");
+        // Both namespaces are checked first, so that an invalid one reports itself rather than a collision.
+        var keywords = options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Keywords : GesSwiftEmitter.Keywords;
+        var wireSpace = GesSchemaPlanner.Namespace(options.Namespace, keywords);
+        var modelSpace = options.Models is null ? null : GesSchemaPlanner.Namespace(options.Models, keywords);
         // Wire records and models of one schema share its name, so they need different namespaces.
-        if (options.Models is not null && options.Models == options.Namespace)
+        if (modelSpace is not null && string.Join(".", modelSpace) == string.Join(".", wireSpace))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The models live in the namespace of the wire code ('{options.Models}'), where a wire record and the model of its schema would share a name; generate them into different namespaces.");
-        // Swift declares each namespace component as an enum, so two generations of one module cannot share the first one.
-        if (options.Language == GesSchemaLanguage.Swift && options.Models is { Length: > 0 } && options.Namespace.Length > 0
-            && options.Models.Split('.')[0] == options.Namespace.Split('.')[0])
-            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The Swift namespaces '{options.Namespace}' and '{options.Models}' of wire code and models start alike, so both would declare the enum '{options.Namespace.Split('.')[0]}'; give them different first components.");
         layout = GesSchemaLayoutBuilder.Build(set, roots, parameters);
         var types = GesSchemaPlanner.Plan(layout);
         // Packed records are model types over one word, which wire code declares itself unless it shares those of models.
@@ -104,6 +104,24 @@ public static class GesSchemaGenerator
             foreach (var schema in set.Schemas)
                 if (schema.ModelGroup is not null) modelRoots.Add(schema.Name);
         var models = modelRoots.Count > 0 ? GesModelLayoutBuilder.Build(set, modelRoots) : null;
+        // A namespace that starts in the global one of the other side must not take the name of a type there.
+        if (modelSpace is not null)
+        {
+            var wireNames = GesSchemaPlanner.TopLevel(types, GesSchemaPlanner.TagSets(types, ""));
+            var modelNames = new HashSet<string>(StringComparer.Ordinal);
+            if (models is not null)
+            {
+                foreach (var type in models.Types) modelNames.Add(type.Name);
+                foreach (var (name, _) in GesModelPlanner.TagSets(models)) modelNames.Add(name);
+            }
+
+            foreach (var name in packed) modelNames.Add(name);
+            if (modelSpace.Count == 0 && wireSpace.Count > 0 && modelNames.Contains(wireSpace[0]))
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The namespace '{options.Namespace}' of the wire code starts with '{wireSpace[0]}', the name of a model type in the global namespace.");
+            if (wireSpace.Count == 0 && modelSpace.Count > 0 && wireNames.Contains(modelSpace[0]))
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The namespace '{options.Models}' of the models starts with '{modelSpace[0]}', the name of a wire type in the global namespace.");
+        }
+
         return options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Emit(layout, types, options, shared, models) : GesSwiftEmitter.Emit(layout, types, options, shared, models);
     }
 
@@ -213,6 +231,7 @@ public static class GesSchemaGenerator
         json.Boolean("bindings", options.Bindings);
         if (options.Documents) json.Boolean("documents", true);
         json.Boolean("checkedExclusivity", options.CheckedExclusivity);
+        if (options.ExtendNamespace) json.Boolean("extendNamespace", true);
         json.BeginArray("roots");
         foreach (var root in roots)
         {

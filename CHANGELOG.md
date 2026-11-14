@@ -891,7 +891,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   scope, also in split files, and names wire and model types so that a model and a wire record of the same name, such as
   with `--models ""`, cannot hide each other. A packed wire root shared with the models gets its wire members as static
   members of an enum `<Name>Wire` in the wire namespace, as C# does with its class, so that several wire generations of a
-  module can share the model; `--models` naming the wire namespace itself is `generate.nameCollision`.
+  module can share the model, with `copy` and `quantize` as in C#; `--models` naming the wire namespace itself, a
+  namespace starting with the name of a type of the other side's global namespace and a `<Name>Wire` that another type
+  already names are `generate.nameCollision`.
+- Swift wire code with `--models` extends the namespace components it shares with the models' namespace instead of
+  declaring them again, and the new `ges schema generate --extend-namespace` (`GesSchemaGenerateOptions.ExtendNamespace`)
+  makes any Swift generation extend its enclosing components, so generations such as `Game.World` and `Game.Panels` can
+  share one module.
 - Generated Swift setters of packed fields shift the field after subtracting its lower bound; they ORed every field into
   the lowest bits.
 - The DLLs in the C# packages carry the time of the packed commit, or the current time for uncommitted changes, instead

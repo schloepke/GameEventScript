@@ -57,6 +57,7 @@ internal static partial class GesSwiftEmitter
             Holds = "schema",
             Parameters = layout.Parameters.Count > 0
         };
+        document.Extended = GesSchemaPlanner.Extended(document.Space, options.ExtendNamespace, options.Models is null ? null : GesSchemaPlanner.Namespace(options.Models, Keywords));
         context.Layout = layout;
         // Packed records are the model types over one word, the shared ones of the model namespace or declared here.
         var models = options.Models is { } modelSpace ? string.Concat(GesSchemaPlanner.Namespace(modelSpace, Keywords).ConvertAll(part => part + ".")) : "";

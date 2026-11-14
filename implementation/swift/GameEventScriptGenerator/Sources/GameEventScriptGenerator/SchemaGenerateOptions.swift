@@ -76,6 +76,11 @@ public struct GesSchemaGenerateOptions: Sendable {
     /// each wire record directly to and from the model of the same schema that a model root of any group reaches. An empty
     /// string is the global namespace. Only wire generation takes it.
     public var models: String?
+    /// Whether the enclosing components of a Swift namespace are declared by another generation of the module, so that this
+    /// one extends them instead of declaring them again: with `Game.Panels` it writes `extension Game { enum Panels { … } }`
+    /// beside a generation that declares `enum Game`. Wire code with `models` extends the components it shares with the
+    /// models' namespace on its own. C# merges namespaces, so this does not change C# output.
+    public var extendNamespace: Bool
 
     /// Creates options.
     /// - Parameters:
@@ -88,6 +93,7 @@ public struct GesSchemaGenerateOptions: Sendable {
     ///   - documents: Whether generated model roots also read GES document text.
     ///   - split: How the code is divided into files.
     ///   - models: The namespace of the model code that wire code shares types with, or nil for none.
+    ///   - extendNamespace: Whether another generation of the module declares the enclosing Swift namespace components.
     public init(
         language: GesSchemaLanguage = .csharp,
         namespace: String = "",
@@ -97,7 +103,8 @@ public struct GesSchemaGenerateOptions: Sendable {
         bindings: Bool = false,
         documents: Bool = false,
         split: GesSchemaSplit = .none,
-        models: String? = nil
+        models: String? = nil,
+        extendNamespace: Bool = false
     ) {
         self.language = language
         self.namespace = namespace
@@ -108,6 +115,7 @@ public struct GesSchemaGenerateOptions: Sendable {
         self.documents = documents
         self.split = split
         self.models = models
+        self.extendNamespace = extendNamespace
     }
 }
 

@@ -39,7 +39,12 @@ PACKED = ROOT / "conformance/fixtures/SchemaGeneration/packed.gess"
 # root in its own namespace, and the models gain one init(wire:) per wire namespace.
 PACKED_SPLITS = ((["--model", "packed", "--values"], "", "PackedSplitModel", "file"),
                  (["--wire", "packed", "--values", "--models", ""], "PackedSplit", "PackedSplitWire", "file"),
-                 (["--wire", "packed", "--values", "--models", ""], "PackedSchemaSplit", "PackedSchemaSplitWire", "schema"))
+                 (["--wire", "packed", "--values", "--models", ""], "PackedSchemaSplit", "PackedSchemaSplitWire", "schema"),
+                 # Namespaces that share their first component: the models declare `Game`, the wire code extends it as it
+                 # shares it with the models, and a second model generation extends it as asked.
+                 (["--model", "packed", "--values"], "Game.Model", "GameModel", "schema"),
+                 (["--wire", "packed", "--values", "--models", "Game.Model"], "Game.Wire", "GameWire", "file"),
+                 (["--model", "packed", "--extend-namespace"], "Game.Copy", "GameCopy", "file"))
 # Split output of the role fixture: each split once for wire code and once for models, so that the files of one generation
 # reach each other's types and helpers and the shared file declares the namespace, nested for two of them.
 SPLITS = (("schema", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "SchemaSplit.Wire"),

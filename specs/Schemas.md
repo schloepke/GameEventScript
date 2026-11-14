@@ -446,7 +446,8 @@ schema :SoundMade as {
   record and of its schema fields (`main.power`), the computed fields declared before it, `+ - * /`, unary `-`, `abs`,
   `< <= > >= = <>`, `and`, `or`, `not`, `value when condition, …, otherwise fallback`, `min of a and b …`,
   `max of …`, `clamp x between a and b`, `default`, `has value`, and over a list field `[:count]`, `[:sum]` and
-  `[:sum item => value]`. A line break may follow an operator, a keyword, a comma or `by`.
+  `[:sum item => value]`; [spatial values](#computed-spatial-values) add their constructors, parts and arithmetic. A line
+  break may follow an operator, a keyword, a comma or `by`.
 - **Functions and powers** (*Since: 0.5.0*) are those of GES with its spellings: `sqrt` or `√`, `cbrt` or `∛`, `sin`,
   `cos`, `tan`, `asin`, `acos`, `atan`, `exp`, `ln`, `floor`, `ceil`, `truncate`, `round half even`, `round half up`,
   `round half down`, `rad` and `deg` before their operand, as `sqrt area` or `sqrt (a * a)`; `atan2(y, x)` and
@@ -463,8 +464,9 @@ schema :SoundMade as {
   operations take the [same-unit and derivation rules](Language.md#quantities): `energy / duration` gives watts, `2N + 3J`
   is `schema.unitMismatch`. A percentage scales a number on its left (`x + 10%` is `x * 1.1`) or combines with another
   percentage; on the left of a number it is `schema.invalidExpression`. The expression gives exactly the field's type and
-  unit. The field is a `:Number`, `:Quantity`, `:Percentage` or `:Boolean` without constraints, never a `key`, and takes no
-  `default`. A function reads a number or a percentage, whose ratio it takes, and gives a number: `sqrt` and `cbrt` give
+  unit. The field is a `:Number`, `:Quantity`, `:Percentage` or `:Boolean` without constraints, or a [spatial
+  value](#computed-spatial-values) without an axis block or `max`, never a `key`, and takes no `default`.
+  A function reads a number or a percentage, whose ratio it takes, and gives a number: `sqrt` and `cbrt` give
   the root of a unit that is a square or cube in the derivation table (`sqrt` of `m²` is `m`), and of another unit, such
   as `m` or `m³` for `sqrt`, they are `schema.unitMismatch`; `sin`, `cos` and `tan` read radians as a plain number or
   degrees as `°`; `asin`, `acos`, `atan`, `exp` and `ln` read plain numbers, and the inverse functions and `atan2` give
@@ -507,14 +509,66 @@ schema :SoundMade as {
 - **Not encoded.** The wire, deltas, the largest encoding and the binding hash ignore computed fields, and a document that
   sets one fails with `document.unknownField`. Decoding a [value](#record-values) adds them, encoding ignores them, and
   they belong to the [canonical form](#canonical-form) and the schema hash, since both sides derive the same values.
-- **Not included:** the vector and point functions of GES, such as `distance`, `dot` or `normalize`, `wrap degree` and
-  `chance`; the index of a tag in its set, which a script cannot compute; text; and functions with parameters, such as a
-  bearing at a given time, which are a possible next step.
+- **Not included:** the vector and point functions of GES other than `abs`, such as `distance`, `dot`, `normalize`,
+  `cross` or `angle between`, and the functions `:geometry.*` of boxes, discs and polygons, such as `contains`; `wrap
+  degree` and `chance`; the index of a tag in its set, which a script cannot compute; text; and functions with parameters,
+  such as a bearing at a given time, which are a possible next step.
 
 The rules come from the virtual machine, which is the reference: `scripts/test-computed-fields.py` turns every corpus record
 with computed fields into a script record and requires both virtual machines to print the bits that the value paths of both
 runtimes and the generated code of both languages give, within the ULPs a corpus case allows for the functions of the
-platform's math library.
+platform's math library. Records with spatial values need the geometry library, which the CLIs do not register; the corpus
+suite `runtime.computed-spatial-records` runs their expressions as script records on both virtual machines instead.
+
+#### Computed spatial values
+
+> **Since: 0.5.0**
+
+A computed field may be a `:Vector`, `:Point`, `:Box`, `:Disc` or `:Poly`, with or without a unit, such as the extent of a
+map that a server and its clients both need:
+
+```gess
+schema :Ground as {
+  arena: :Arena
+  size: :Vector(m) computed by
+    :Vector(x: (arena.columns - 1) * arena.spacing, y: (arena.rows - 1) * arena.spacing, z: 0m)
+  bounds: :Box(m) computed by :Box(lower: :Point(x: 0m, y: 0m, z: 0m), upper: :Point(x: size.x, y: size.y, z: 0m))
+  area: :Quantity(m²) computed by size.x * size.y
+}
+```
+
+- **Values.** A Vector or Point has three binary64 components, as in a script: a whole number becomes binary64, a component
+  that is NaN, such as `0 / 0`, makes the whole value nothing, and a zero is +0. A Box, Disc or Poly is the geometry
+  library's value: a box orders its corners, a disc keeps its radius's magnitude, and a polygon keeps its points in order,
+  also off the plane z = 0, which makes it invalid as the runtime's `GesPoly` is. Every part of one value has one unit, the
+  field's.
+- **Constructors**, with the spellings of scripts: `:Vector(x: a, y: b, z: c)` and `:Point(...)` take their components as a
+  labeled run without gaps or as two or three positional ones, and an omitted component is the integer 0 in the unit of the
+  others, so `:Vector(x: a, y: b)` lies in the plane; `:Vector()` is the unitless zero. Each component is a number of one
+  unit; a percentage, Boolean or spatial value is `schema.invalidExpression`, a component of another unit
+  `schema.unitMismatch`. `:Box(lower: p, upper: q)` takes two corners, `:Box(center: p, size: v)` a centre and a size and
+  spans half the size to each side; `:Disc(center: p, radius: r)` takes a centre and a radius, `:Disc(radius: r)` a radius
+  around the origin. `:Poly(points: [p, q, …])` takes at least one point, `:Poly(points: list)` a list field of Points, and
+  `:Poly(points: list[:select item => point])` projects each element of a list field to a point, which reads the list as a
+  sum does. Another set of labels is `schema.invalidExpression`, parts of different units `schema.unitMismatch`. Any part
+  that is nothing makes the value nothing.
+- **Parts.** `.x`, `.y` and `.z` read a component of a Vector or Point; a Box has `.lower`, `.upper` and `.center` (Points)
+  and `.size` (a Vector); a Disc has `.center` and `.radius`; and `shape.points[:count]` counts a polygon's points. Parts
+  read stored fields, earlier computed fields and any spatial expression, as `around.size.x`. A part that is NaN, such as a
+  corner of a box whose infinite centre and size cancel, is nothing; another name is `schema.unknownName`.
+- **Arithmetic** follows the virtual machine: vectors add and subtract, `point + vector` and `point - vector` move a point,
+  `point - point` gives a vector, and a vector times or divided by a number takes the product or quotient unit
+  (`size / 2s` of `m` is `m/s`), or by a percentage scales it and keeps its unit. The scalar must be finite and a divisor
+  also not zero, else the value is nothing. `-vector` negates it, and `abs vector` is its length in its unit: the correctly
+  rounded square root of `x * x + y * y + z * z`, added from left to right, so its bits are the same everywhere, and it
+  overflows to infinity where a square does, unlike `hypot`. A point does not scale or negate, and spatial values are not
+  compared; such an expression is `schema.invalidExpression`.
+- **Choices, fallbacks and absence** take spatial values of one type and unit, as numbers do: `p + d when d has value,
+  otherwise p`, `p + d default p`. A required spatial field that may read an absent optional field without a guard is
+  `schema.computedMayBeAbsent`.
+- **Canonical form.** Constructors, parts and spatial arithmetic have a prefix form, such as `(vector (field a) (field a)
+  (quantity meter 0e0))`, `(boxAround …)` or `(part x (field size))`, and the field's type keeps its unit, as `computed v
+  Vector(meter)`.
 
 ### Recursion
 
@@ -1920,7 +1974,12 @@ argument.
   property would need an allocating view; a program reads shared fields on models. *Since: 0.5.0.*
 - **Computed fields.** A [computed field](#computed-fields) is a read-only property of models and wire records alike,
   derived on each read: `Double` (C# `double`) for a number or percentage ratio, `Double?` when it is `optional`, and
-  `Bool` for a Boolean; a required number that gives nothing reads as NaN. Binding knows each operand's kind, unit,
+  `Bool` for a Boolean; a required number that gives nothing reads as NaN. A spatial field is the runtime's `GesVector`,
+  `GesPoint`, `GesBox`, `GesDisc` or `GesPoly`, optional when the field is; a required one that gives nothing reads with NaN
+  components, NaN corners, a NaN centre and radius, or a polygon without points. Spatial fields and the numbers that read
+  their parts keep the dynamic form, whose `GesComputed` helpers, such as `Vector`, `MovePoint`, `Scale`, `Length`,
+  `BoxAround` or `Radius`, repeat the virtual machine on the runtime's types, nothing being `nil`; the checked-in code of
+  `conformance/fixtures/SchemaGeneration/spatial.gess` pins them. Binding knows each operand's kind, unit,
   optionality and declared range, so a field is one expression in the language's own operators, such as
   `var power: Double { duration <= 0.0 ? 0.0 : energy / duration }`, with every unit and percentage decision made when the
   code is generated. It gives the virtual machine's bits because binary64 `+ - * /` round correctly and the evaluation order

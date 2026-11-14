@@ -338,6 +338,13 @@ public names and byte-identical compiler output.
   `schema.computedMayBeAbsent`. Generated code is plain binary64 and Boolean code in the language's own operators, such as
   `duration <= 0.0 ? 0.0 : energy / duration`, with a small `GesComputed` helper type for the rules plain code lacks;
   only a field where whole numbers beyond 2^53 could meet keeps the exact-value helpers.
+- Computed fields may be spatial: `:Vector`, `:Point`, `:Box`, `:Disc` and `:Poly`, built with the constructors of scripts,
+  as in `size: :Vector(m) computed by :Vector(x: (arena.columns - 1) * arena.spacing, y: (arena.rows - 1) * arena.spacing)`
+  or `bounds: :Box(m) computed by :Box(lower: origin, upper: origin + size)`. Later fields read their parts (`size.x`,
+  `bounds.center`, `zone.radius`, `shape.points[:count]`), vectors and points take the arithmetic of the virtual machine,
+  `abs` of a vector is its correctly rounded length, and `:Poly(points:)` takes a list of points, a list field of Points or
+  a projection `list[:select item => point]`. Generated models and wire records give them as `GesVector`, `GesPoint`,
+  `GesBox`, `GesDisc` and `GesPoly` properties.
 - A schema union may span lines: a `|` may end a line or start the next one, with comments and blank lines between the
   alternatives, in fields, arguments and List elements. `ges schema format` breaks a union before each further
   alternative once it no longer fits 100 columns or holds an axis block.

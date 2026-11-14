@@ -30,7 +30,21 @@ final class GesResolvedComputed {
         self.lets = lets
     }
 
-    var type: GesComputedType { kind == .boolean ? .boolean : kind == .percentage ? .percentage : .number }
+    var type: GesComputedType { kind == .boolean ? .boolean : kind == .percentage ? .percentage : Self.spatial(kind) ?? .number }
+
+    /// The computed type of a spatial schema type, or nil for another one.
+    static func spatial(_ kind: GesSchemaTypeKind) -> GesComputedType? {
+        switch kind {
+        case .vector: .vector
+        case .point: .point
+        case .box: .box
+        case .disc: .disc
+        case .poly: .poly
+        default: nil
+        }
+    }
+
+    var isSpatial: Bool { Self.spatial(kind) != nil }
 }
 
 extension GesFileScope {
@@ -70,10 +84,15 @@ extension GesFileScope {
             if !names.insert(entry.name).inserted { throw scope.error(Code.duplicateName, entry.offset, "'\(entry.name)' is declared twice in '\(declaration.name)'.") }
             let type = syntax.alternatives
             let constraints = type[0].constraints
-            if type.count != 1 || ![.number, .quantity, .percentage, .boolean].contains(type[0].kind)
+            if type.count != 1 || ![.number, .quantity, .percentage, .boolean, .vector, .point, .box, .disc, .poly].contains(type[0].kind)
                 || constraints.integer || constraints.lower != nil || constraints.step != nil || constraints.delta != nil
+                || type[0].axes != nil || type[0].max != nil || !type[0].maxName.isEmpty
             {
-                throw scope.error(Code.invalidExpression, entry.offset, "A computed field is a Number, Quantity, Percentage or Boolean without constraints.")
+                throw scope.error(
+                    Code.invalidExpression,
+                    entry.offset,
+                    "A computed field is a Number, Quantity, Percentage, Boolean, Vector, Point, Box, Disc or Poly without constraints, axes or max."
+                )
             }
             if syntax.marker == .key { throw scope.error(Code.invalidExpression, entry.offset, "A computed field is no key.") }
             if entry.isOptional && entry.kind == .boolean {
@@ -88,6 +107,13 @@ extension GesFileScope {
             if entry.type == .number && result.unit != entry.unit {
                 let declared = entry.unit == .none ? "Number" : "Quantity(\(entry.unit.rawValue))"
                 throw scope.error(Code.unitMismatch, expression.offset, "The expression gives a \(describe(result)), but '\(entry.name)' is a \(declared).")
+            }
+            if entry.isSpatial && result.unit != entry.unit {
+                throw scope.error(
+                    Code.unitMismatch,
+                    expression.offset,
+                    "The expression gives a \(describe(result)), but '\(entry.name)' is a \(describeSpatial(entry.type, entry.unit))."
+                )
             }
             try scope.checkAlone(expression, result, true)
             guardReads(result, [])
@@ -135,7 +161,7 @@ extension GesFileScope {
             guardReads(children[0], present)
             guardReads(children[1], present)
             node.mayBeAbsent = children[1].mayBeAbsent
-        case .sum:
+        case .sum, .polyOf:
             // A projection reads the element afresh, so no proof about an element carries into it.
             guardReads(children[0], present)
             if children.count > 1 {
@@ -164,8 +190,13 @@ extension GesFileScope {
         case .number: node.unit == .none ? "Number" : "Quantity(\(node.unit.rawValue))"
         case .list: "List"
         case .record: "record"
+        case .vector, .point, .box, .disc, .poly: describeSpatial(node.type, node.unit)
         default: node.type.rawValue
         }
+    }
+
+    private static func describeSpatial(_ type: GesComputedType, _ unit: GesQuantityUnit) -> String {
+        type.rawValue + (unit == .none ? "" : "(\(unit.rawValue))")
     }
 
     /// A sum of quantities or percentages is the unitless 0 for an empty list, which only the final conversion of the field
@@ -204,6 +235,7 @@ extension GesFileScope {
             return try name(syntax, context)
         case .member:
             let target = try check(children[0], context)
+            if target.node.type.isSpatial { return try part(syntax, target.node) }
             guard target.node.op == .field || target.node.op == .item, let record = target.record else {
                 throw error(Code.invalidExpression, syntax.offset, "'.\(syntax.name)' reads a field of a schema, which this is not.")
             }
@@ -221,7 +253,10 @@ extension GesFileScope {
             return reached
         case .negate, .abs:
             let operand = try value(children[0], context)
-            if operand.type != .number && operand.type != .percentage { throw mismatch(syntax, "a number or percentage", operand) }
+            if operand.type == .vector {
+                return syntax.kind == .negate ? Self.node(.negate, .vector, operand.unit, [operand]) : Self.node(.abs, .number, operand.unit, [operand])
+            }
+            if operand.type != .number && operand.type != .percentage { throw mismatch(syntax, "a number, percentage or vector", operand) }
             return Self.node(syntax.kind == .negate ? .negate : .abs, operand.type, operand.unit, [operand])
         case .not:
             let operand = try value(children[0], context)
@@ -265,6 +300,12 @@ extension GesFileScope {
             return try aggregate(syntax, context)
         case .function:
             return try function(syntax, context)
+        case .construct:
+            return try construct(syntax, context)
+        case .list:
+            throw error(Code.invalidExpression, syntax.offset, "A list in a computed expression holds the points of a :Poly.")
+        case .select:
+            throw error(Code.invalidExpression, syntax.offset, "A projection with :select gives the points of a :Poly.")
         }
     }
 
@@ -353,6 +394,10 @@ extension GesFileScope {
     private func aggregate(_ syntax: GesSchemaExpressionSyntax, _ context: Context) throws -> Checked {
         let children = syntax.children
         let source = try check(children[0], context)
+        if source.node.op == .part {
+            if syntax.kind != .count { throw error(Code.invalidExpression, syntax.offset, "The points of a Poly take only [:count].") }
+            return Self.node(.pointCount, .number, .none, [source.node.children[0]])
+        }
         if source.node.type != .list { throw error(Code.invalidExpression, children[0].offset, "An aggregate reads a list field.") }
         if source.optional { throw error(Code.invalidExpression, children[0].offset, "An aggregate reads a list that is no optional field and lies in none.") }
         if syntax.kind == .count { return Self.node(.count, .number, .none, [source.node]) }
@@ -413,7 +458,7 @@ extension GesFileScope {
     }
 
     private static func reach(_ field: GesResolvedComputed, _ op: GesComputedOp, _ path: [String]) -> Checked {
-        let node = GesComputedNode(op, field.type, unit: field.kind == .quantity ? field.unit : .none, path: path)
+        let node = GesComputedNode(op, field.type, unit: field.kind == .quantity || field.isSpatial ? field.unit : .none, path: path)
         node.optionalSteps = [field.isOptional]
         return Checked(node: node, optional: field.isOptional)
     }
@@ -424,9 +469,10 @@ extension GesFileScope {
         case .quantity: return (GesComputedNode(op, .number, unit: type.unit, path: path), nil, nil)
         case .percentage: return (GesComputedNode(op, .percentage, path: path), nil, nil)
         case .boolean: return (GesComputedNode(op, .boolean, path: path), nil, nil)
+        case .vector, .point, .box, .disc, .poly: return (GesComputedNode(op, GesResolvedComputed.spatial(type.kind)!, unit: type.unit, path: path), nil, nil)
         case .list where type.element != nil: return (GesComputedNode(op, .list, path: path), nil, type.element)
         case .reference where type.reference?.kind == .schema: return (GesComputedNode(op, .record, path: path), type.reference, nil)
-        // Text, tags, spatial values and other types are not read; only has value may name them, and it rejects them.
+        // Text, tags and other types are not read; only has value may name them, and it rejects them.
         default: return (GesComputedNode(op, .record, path: path), nil, nil)
         }
     }
@@ -460,6 +506,7 @@ extension GesFileScope {
         let a = left.unit
         let b = right.unit
         let numeric = { (node: GesComputedNode) in node.type == .number || node.type == .percentage }
+        if left.type.isSpatial || right.type.isSpatial { return try spatialBinary(syntax, left, right) }
         switch syntax.binary {
         case .add, .subtract:
             if left.type == .number && right.type == .number && a != b { throw units(syntax, left, right) }
@@ -529,6 +576,214 @@ extension GesFileScope {
             }
             return Self.flags(op, .boolean, .none, left, right, true, false, false)
         }
+    }
+
+    /// The arithmetic of vectors and points as the virtual machine has it: vectors add and subtract, a point moves by a vector,
+    /// two points subtract to a vector, and a vector scales by a number, with the product or quotient unit, or a percentage.
+    private func spatialBinary(_ syntax: GesSchemaExpressionSyntax, _ left: GesComputedNode, _ right: GesComputedNode) throws -> Checked {
+        let spelled = "\(Self.describe(left)) \(GesSchemaFormatter.symbol(syntax.binary)) \(Self.describe(right)) has no value"
+        switch syntax.binary {
+        case .add, .subtract:
+            let subtract = syntax.binary == .subtract
+            let result: GesComputedType?
+            switch (left.type, right.type) {
+            case (.vector, .vector): result = .vector
+            case (.point, .vector): result = .point
+            case (.point, .point) where subtract: result = .vector
+            default: result = nil
+            }
+            guard let result else {
+                throw error(
+                    Code.invalidExpression,
+                    syntax.offset,
+                    "\(spelled); vectors add and subtract, a point moves by a vector and two points subtract to a vector."
+                )
+            }
+            if left.unit != right.unit { throw units(syntax, left, right) }
+            return Self.node(subtract ? .subtract : .add, result, left.unit, [left, right])
+        case .multiply, .divide:
+            let divide = syntax.binary == .divide
+            let scaled = left.type == .vector ? left : right
+            let scalar = left.type == .vector ? right : left
+            if scaled.type != .vector || (scalar.type != .number && scalar.type != .percentage) || (divide && left.type != .vector) {
+                throw error(Code.invalidExpression, syntax.offset, "\(spelled); a vector scales by a number or percentage, and a point does not scale.")
+            }
+            let unit: GesQuantityUnit
+            if scalar.type == .percentage {
+                if !scaled.unit.acceptsPercentage { throw error(Code.unitMismatch, syntax.offset, "A percentage does not scale a decibel level.") }
+                unit = scaled.unit
+            } else {
+                let derived =
+                    divide
+                    ? Self.quotientUnit(scaled.unit, scalar.unit) : left.type == .vector ? Self.productUnit(scaled.unit, scalar.unit) : Self.productUnit(scalar.unit, scaled.unit)
+                guard let derived else { throw units(syntax, left, right) }
+                unit = derived
+            }
+            return Self.node(divide ? .divide : .multiply, .vector, unit, [left, right])
+        default:
+            throw error(Code.invalidExpression, syntax.offset, "\(spelled); spatial values are not compared.")
+        }
+    }
+
+    /// A part of a spatial value: an axis of a vector or point, the corners, centre and size of a box, the centre and radius
+    /// of a disc, or the points of a polygon, which only [:count] reads.
+    private func part(_ syntax: GesSchemaExpressionSyntax, _ target: GesComputedNode) throws -> Checked {
+        let name = syntax.name
+        let type: GesComputedType
+        switch (target.type, name) {
+        case (.vector, "x"), (.vector, "y"), (.vector, "z"), (.point, "x"), (.point, "y"), (.point, "z"): type = .number
+        case (.box, "lower"), (.box, "upper"), (.box, "center"): type = .point
+        case (.box, "size"): type = .vector
+        case (.disc, "center"): type = .point
+        case (.disc, "radius"): type = .number
+        case (.poly, "points"): type = .list
+        default:
+            let parts: String
+            switch target.type {
+            case .box: parts = "a Box has lower, upper, center and size."
+            case .disc: parts = "a Disc has center and radius."
+            case .poly: parts = "a Poly has points."
+            default: parts = "it has x, y and z."
+            }
+            throw error(Code.unknownName, syntax.offset, "'\(name)' is no part of a \(Self.describe(target)); " + parts)
+        }
+        return Checked(node: GesComputedNode(.part, type, unit: target.unit, children: [target], path: [name]))
+    }
+
+    /// A spatial value built with the constructor of its type, as a script record builds it.
+    private func construct(_ syntax: GesSchemaExpressionSyntax, _ context: Context) throws -> Checked {
+        let children = syntax.children
+        let labels = syntax.labels.joined(separator: ",")
+        switch syntax.name {
+        case "Vector", "Point":
+            let axes = ["x", "y", "z"]
+            var start = 0
+            if !children.isEmpty && !syntax.labels[0].isEmpty {
+                start = axes.firstIndex(of: syntax.labels[0]) ?? -1
+                for index in 0..<children.count where start < 0 || start + index >= 3 || syntax.labels[index] != axes[start + index] {
+                    throw error(
+                        Code.invalidExpression,
+                        children[index].offset,
+                        "The components of :\(syntax.name) are labeled as a run of x, y and z without gaps, or all positional."
+                    )
+                }
+            } else {
+                for index in 0..<children.count where !syntax.labels[index].isEmpty {
+                    throw error(Code.invalidExpression, children[index].offset, "The components of :\(syntax.name) are all labeled or all positional.")
+                }
+                if children.count == 1 || children.count > 3 {
+                    throw error(Code.invalidExpression, syntax.offset, ":\(syntax.name) takes two or three positional components.")
+                }
+            }
+            var components: [GesComputedNode?] = [nil, nil, nil]
+            var unit: GesQuantityUnit?
+            for index in 0..<children.count {
+                let component = try value(children[index], context)
+                if component.type != .number { throw mismatch(children[index], "a number", component) }
+                if let first = unit, component.unit != first {
+                    throw error(
+                        Code.unitMismatch,
+                        children[index].offset,
+                        "The components of :\(syntax.name) have one unit, but a \(Self.describe(component)) meets a \(Self.describe(components[start]!))."
+                    )
+                }
+                unit = component.unit
+                components[start + index] = component
+            }
+            let resolved = unit ?? GesQuantityUnit.none
+            let parts = components.map { $0 ?? Self.zero(resolved) }
+            let point = syntax.name == "Point"
+            return Self.node(point ? .point : .vector, point ? .point : .vector, resolved, parts)
+        case "Box" where labels == "lower,upper" || labels == "center,size":
+            let around = labels == "center,size"
+            let first = try value(children[0], context)
+            let second = try value(children[1], context)
+            if first.type != .point { throw mismatch(children[0], "a Point", first) }
+            if second.type != (around ? .vector : .point) { throw mismatch(children[1], around ? "a Vector" : "a Point", second) }
+            if first.unit != second.unit {
+                throw error(Code.unitMismatch, children[1].offset, "The parts of a :Box have one unit, but a \(Self.describe(second)) meets a \(Self.describe(first)).")
+            }
+            return Self.node(around ? .boxAround : .box, .box, first.unit, [first, second])
+        case "Disc" where labels == "center,radius" || labels == "radius":
+            let radius = try value(children[children.count - 1], context)
+            if radius.type != .number { throw mismatch(children[children.count - 1], "a number", radius) }
+            if children.count == 1 { return Self.node(.discAround, .disc, radius.unit, [radius]) }
+            let center = try value(children[0], context)
+            if center.type != .point { throw mismatch(children[0], "a Point", center) }
+            if center.unit != radius.unit {
+                throw error(
+                    Code.unitMismatch,
+                    children[1].offset,
+                    "The centre and radius of a :Disc have one unit, but a \(Self.describe(radius)) meets a \(Self.describe(center))."
+                )
+            }
+            return Self.node(.disc, .disc, center.unit, [center, radius])
+        case "Poly" where labels == "points":
+            return try poly(children[0], context)
+        default:
+            let message: String
+            switch syntax.name {
+            case "Box": message = ":Box takes lower: and upper:, or center: and size:."
+            case "Disc": message = ":Disc takes center: and radius:, or radius:."
+            default: message = ":Poly takes points:."
+            }
+            throw error(Code.invalidExpression, syntax.offset, message)
+        }
+    }
+
+    /// The points of a :Poly: a list of point expressions, a list field of Points, or a projection of a list field to Points.
+    private func poly(_ syntax: GesSchemaExpressionSyntax, _ context: Context) throws -> Checked {
+        if syntax.kind == .list {
+            var points: [GesComputedNode] = []
+            for child in syntax.children {
+                let point = try value(child, context)
+                if point.type != .point { throw mismatch(child, "a Point", point) }
+                if let first = points.first, point.unit != first.unit {
+                    throw error(Code.unitMismatch, child.offset, "The points of a :Poly have one unit, but a \(Self.describe(point)) meets a \(Self.describe(first)).")
+                }
+                points.append(point)
+            }
+            return Self.node(.poly, .poly, points[0].unit, points)
+        }
+        let select = syntax.kind == .select
+        let sourceSyntax = select ? syntax.children[0] : syntax
+        let source = try check(sourceSyntax, context)
+        guard source.node.type == .list, let elements = source.element else {
+            throw error(
+                Code.invalidExpression,
+                sourceSyntax.offset,
+                "The points of a :Poly are a list of points, a list field of Points or a projection of a list field with :select."
+            )
+        }
+        if source.optional { throw error(Code.invalidExpression, sourceSyntax.offset, "The points of a :Poly read a list that is no optional field and lies in none.") }
+        if elements.count != 1 { throw error(Code.invalidExpression, sourceSyntax.offset, "The points of a :Poly read a list without a union.") }
+        let item = try element(elements[0], sourceSyntax.offset)
+        if !select {
+            if item.node.type != .point {
+                throw error(
+                    Code.invalidExpression,
+                    sourceSyntax.offset,
+                    "A list field gives the points of a :Poly when it holds Points; project other elements with :select."
+                )
+            }
+            return Self.node(.polyOf, .poly, item.node.unit, [source.node])
+        }
+        if !context.variable.isEmpty { throw error(Code.invalidExpression, syntax.offset, "A projection does not contain another one.") }
+        if Self.isTaken(context, syntax.name) { throw error(Code.duplicateName, syntax.offset, "'\(syntax.name)' already names a field or let; the variable needs another name.") }
+        context.variable = syntax.name
+        context.element = item
+        defer {
+            context.variable = ""
+            context.element = nil
+        }
+        let projection = try value(syntax.children[1], context)
+        if projection.type != .point { throw mismatch(syntax.children[1], "a Point", projection) }
+        return Self.node(.polyOf, .poly, projection.unit, [source.node, projection])
+    }
+
+    /// The zero of an omitted component, in the unit of the others.
+    private static func zero(_ unit: GesQuantityUnit) -> GesComputedNode {
+        GesComputedNode(.literal, .number, unit: unit, literal: .of(integer: 0), decimal: GesSchemaDecimal(0, 0))
     }
 
     private static func productUnit(_ a: GesQuantityUnit, _ b: GesQuantityUnit) -> GesQuantityUnit? {

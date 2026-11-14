@@ -954,7 +954,10 @@ enum GesSchemaCanonical {
             for declared in declaration.lets { output += "let \(declared.name) \(letKind(declared)) \(declared.value.canonical)\n" }
             for field in declaration.fields { writeField("field ", field, &output) }
             for computed in declaration.computed {
-                output += "computed \(computed.name) " + (computed.kind == .quantity ? "Quantity(\(computed.unit.rawValue))" : computed.kind.rawValue)
+                let spelled =
+                    computed.kind == .quantity || (computed.isSpatial && computed.unit != .none)
+                    ? "\(computed.kind.rawValue)(\(computed.unit.rawValue))" : computed.kind.rawValue
+                output += "computed \(computed.name) " + spelled
                 if computed.isOptional { output += " optional" }
                 output += " "
                 GesComputedCanonical.write(computed.expression, &output)

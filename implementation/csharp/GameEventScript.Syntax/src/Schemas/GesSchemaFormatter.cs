@@ -302,9 +302,30 @@ internal static class GesSchemaFormatter
                 Expression(children[0], 10, builder);
                 builder.Append("[:count]");
                 break;
+            case GesSchemaExpressionKind.Construct:
+                builder.Append(':').Append(expression.Name).Append('(');
+                for (var index = 0; index < children.Length; index++)
+                {
+                    if (index > 0) builder.Append(", ");
+                    if (expression.Labels[index].Length > 0) builder.Append(expression.Labels[index]).Append(": ");
+                    Expression(children[index], 0, builder);
+                }
+
+                builder.Append(')');
+                break;
+            case GesSchemaExpressionKind.List:
+                builder.Append('[');
+                for (var index = 0; index < children.Length; index++)
+                {
+                    if (index > 0) builder.Append(", ");
+                    Expression(children[index], 0, builder);
+                }
+
+                builder.Append(']');
+                break;
             default:
                 Expression(children[0], 10, builder);
-                builder.Append("[:sum");
+                builder.Append(expression.Kind == GesSchemaExpressionKind.Select ? "[:select" : "[:sum");
                 if (children.Length > 1)
                 {
                     builder.Append(' ').Append(expression.Name).Append(" => ");

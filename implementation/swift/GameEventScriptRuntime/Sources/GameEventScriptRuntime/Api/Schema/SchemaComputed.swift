@@ -107,6 +107,26 @@
     case rad
     /// `deg`.
     case deg
+    /// `:Vector(…)`.
+    case vector
+    /// `:Point(…)`.
+    case point
+    /// `:Box(lower:, upper:)`.
+    case box
+    /// `:Box(center:, size:)`.
+    case boxAround
+    /// `:Disc(center:, radius:)`.
+    case disc
+    /// `:Disc(radius:)`.
+    case discAround
+    /// `:Poly(points: [a, b, …])`.
+    case poly
+    /// `:Poly(points: list)` or `:Poly(points: list[:select item => point])`.
+    case polyOf
+    /// A part of a spatial value, such as `.x`, `.center` or `.radius`.
+    case part
+    /// `.points[:count]` of a Poly.
+    case pointCount
 
     /// The name in the canonical form and the layouts.
     @_spi(Generator) public var name: String {
@@ -158,6 +178,16 @@
         case .roundHalfDown: "roundHalfDown"
         case .rad: "rad"
         case .deg: "deg"
+        case .vector: "vector"
+        case .point: "point"
+        case .box: "box"
+        case .boxAround: "boxAround"
+        case .disc: "disc"
+        case .discAround: "discAround"
+        case .poly: "poly"
+        case .polyOf: "polyOf"
+        case .part: "part"
+        case .pointCount: "pointCount"
         }
     }
 
@@ -172,8 +202,8 @@
     }
 }
 
-/// The static type of a node: a number with a unit, a percentage, a Boolean, or a record or list that only a path,
-/// `has value` or an aggregate reads.
+/// The static type of a node: a number with a unit, a percentage, a Boolean, a spatial value with a unit, or a record or list
+/// that only a path, `has value` or an aggregate reads.
 @_spi(Generator) public enum GesComputedType: String, Sendable {
     /// A number with its unit.
     case number = "Number"
@@ -185,6 +215,19 @@
     case record = "Record"
     /// A list.
     case list = "List"
+    /// A Vector with its unit.
+    case vector = "Vector"
+    /// A Point with its unit.
+    case point = "Point"
+    /// A Box with its unit.
+    case box = "Box"
+    /// A Disc with its unit.
+    case disc = "Disc"
+    /// A Poly with its unit.
+    case poly = "Poly"
+
+    /// Whether the type is a spatial value.
+    @_spi(Generator) public var isSpatial: Bool { self == .vector || self == .point || self == .box || self == .disc || self == .poly }
 }
 
 /// The kinds of a computed scalar.
@@ -201,10 +244,21 @@
     case `false`
     /// True.
     case `true`
+    /// A Vector.
+    case vector
+    /// A Point.
+    case point
+    /// A Box.
+    case box
+    /// A Disc.
+    case disc
+    /// A Poly.
+    case poly
 }
 
-/// A GES scalar as computed fields see it: an exact Int64, a binary64, a percentage ratio, a Boolean, or nothing. Units are
-/// static, so the value carries none.
+/// A GES value as computed fields see it: an exact Int64, a binary64, a percentage ratio, a Boolean, a spatial value, or
+/// nothing. Units are static, so the value carries none. A Vector or Point never holds NaN, which makes it nothing, and holds
+/// zero as +0, as the virtual machine stores them; a Box, Disc or Poly holds the geometry library's value.
 @_spi(Generator) public struct GesComputedValue: Sendable {
     /// The kind.
     @_spi(Generator) public let kind: GesComputedKind
@@ -212,8 +266,60 @@
     @_spi(Generator) public let integer: Int64
     /// The binary64 of a float, or the ratio of a percentage.
     @_spi(Generator) public let number: Double
+    /// The spatial value.
+    let shape: Shape?
+
+    /// The spatial value of a computed value.
+    enum Shape: Sendable {
+        case vector(GesVector)
+        case point(GesPoint)
+        case box(GesBox)
+        case disc(GesDisc)
+        case poly(GesPoly)
+    }
+
+    init(kind: GesComputedKind, integer: Int64, number: Double, shape: Shape? = nil) {
+        self.kind = kind
+        self.integer = integer
+        self.number = number
+        self.shape = shape
+    }
 
     static let nothing = GesComputedValue(kind: .nothing, integer: 0, number: 0)
+
+    var vector: GesVector {
+        guard case .vector(let vector) = shape else { preconditionFailure("The value is no Vector.") }
+        return vector
+    }
+
+    var point: GesPoint {
+        guard case .point(let point) = shape else { preconditionFailure("The value is no Point.") }
+        return point
+    }
+
+    /// The components of a Vector or Point.
+    var components: GesVector {
+        if case .point(let point) = shape { return GesVector(x: point.x, y: point.y, z: point.z) }
+        return vector
+    }
+
+    static func of(vector x: Double, _ y: Double, _ z: Double) -> GesComputedValue {
+        if x.isNaN || y.isNaN || z.isNaN { return nothing }
+        let vector = GesVector(x: GesNumber.canonicalZero(x), y: GesNumber.canonicalZero(y), z: GesNumber.canonicalZero(z))
+        return GesComputedValue(kind: .vector, integer: 0, number: 0, shape: .vector(vector))
+    }
+
+    static func of(point x: Double, _ y: Double, _ z: Double) -> GesComputedValue {
+        if x.isNaN || y.isNaN || z.isNaN { return nothing }
+        let point = GesPoint(x: GesNumber.canonicalZero(x), y: GesNumber.canonicalZero(y), z: GesNumber.canonicalZero(z))
+        return GesComputedValue(kind: .point, integer: 0, number: 0, shape: .point(point))
+    }
+
+    static func of(box: GesBox) -> GesComputedValue { GesComputedValue(kind: .box, integer: 0, number: 0, shape: .box(box)) }
+
+    static func of(disc: GesDisc) -> GesComputedValue { GesComputedValue(kind: .disc, integer: 0, number: 0, shape: .disc(disc)) }
+
+    static func of(poly: GesPoly) -> GesComputedValue { GesComputedValue(kind: .poly, integer: 0, number: 0, shape: .poly(poly)) }
 
     var isNothing: Bool { kind == .nothing }
     var isNumeric: Bool { kind == .integer || kind == .float || kind == .percentage }
@@ -262,7 +368,8 @@
     @_spi(Generator) public let literal: GesComputedValue
     /// The exact decimal of a literal, which the canonical form writes.
     @_spi(Generator) public let decimal: GesSchemaDecimal
-    /// The field names from the record, or from the element for an item; for sum and count, the list.
+    /// The field names from the record, or from the element for an item; for sum and count, the list; for a part, the part's
+    /// name.
     @_spi(Generator) public let path: [String]
     /// The first unit check.
     @_spi(Generator) public let first: Bool
@@ -500,6 +607,100 @@ enum GesComputedMath {
     }
 }
 
+/// The spatial operations of the GES virtual machine and the geometry library on computed values: components are binary64, a
+/// NaN component makes a Vector or Point nothing, a scalar must be finite and a divisor finite and not zero. The unit checks
+/// are made at binding.
+enum GesComputedSpatial {
+    static func vector(_ x: GesComputedValue, _ y: GesComputedValue, _ z: GesComputedValue, point: Bool) -> GesComputedValue {
+        if x.isNothing || y.isNothing || z.isNothing { return .nothing }
+        return point ? .of(point: x.numeric, y.numeric, z.numeric) : .of(vector: x.numeric, y.numeric, z.numeric)
+    }
+
+    /// vector + vector, point + vector; with subtract also point - point, which gives a vector.
+    static func add(_ a: GesComputedValue, _ b: GesComputedValue, subtract: Bool) -> GesComputedValue {
+        if a.isNothing || b.isNothing { return .nothing }
+        let left = a.components
+        let right = b.components
+        let x = subtract ? left.x - right.x : left.x + right.x
+        let y = subtract ? left.y - right.y : left.y + right.y
+        let z = subtract ? left.z - right.z : left.z + right.z
+        return a.kind == .point && b.kind == .vector ? .of(point: x, y, z) : .of(vector: x, y, z)
+    }
+
+    /// A vector times a finite number or a percentage's ratio.
+    static func scale(_ vector: GesComputedValue, _ scalar: GesComputedValue) -> GesComputedValue {
+        if vector.isNothing || scalar.isNothing { return .nothing }
+        let s = scalar.numeric
+        if !s.isFinite { return .nothing }
+        let v = vector.vector
+        return .of(vector: v.x * s, v.y * s, v.z * s)
+    }
+
+    /// A vector divided by a finite number or percentage ratio other than zero.
+    static func divide(_ vector: GesComputedValue, _ scalar: GesComputedValue) -> GesComputedValue {
+        if vector.isNothing || scalar.isNothing { return .nothing }
+        let s = scalar.numeric
+        if !s.isFinite || s == 0 { return .nothing }
+        let v = vector.vector
+        return .of(vector: v.x / s, v.y / s, v.z / s)
+    }
+
+    static func negate(_ vector: GesComputedValue) -> GesComputedValue {
+        if vector.isNothing { return .nothing }
+        let v = vector.vector
+        return .of(vector: -v.x, -v.y, -v.z)
+    }
+
+    /// `abs` of a vector: its length, the correctly rounded square root of the summed squares.
+    static func length(_ vector: GesComputedValue) -> GesComputedValue {
+        if vector.isNothing { return .nothing }
+        let v = vector.vector
+        return .of(float: (v.x * v.x + v.y * v.y + v.z * v.z).squareRoot())
+    }
+
+    static func box(_ a: GesComputedValue, _ b: GesComputedValue, around: Bool) -> GesComputedValue {
+        if a.isNothing || b.isNothing { return .nothing }
+        return .of(box: around ? GesBox(center: a.point, size: b.vector) : GesBox(a.point, b.point))
+    }
+
+    static func disc(_ center: GesComputedValue, _ radius: GesComputedValue) -> GesComputedValue {
+        if center.isNothing || radius.isNothing { return .nothing }
+        return .of(disc: GesDisc(center: center.point, radius: radius.numeric))
+    }
+
+    static func disc(_ radius: GesComputedValue) -> GesComputedValue { radius.isNothing ? .nothing : .of(disc: GesDisc(radius: radius.numeric)) }
+
+    /// A part of a spatial value as a script reads it: an axis, a corner, centre or size of a box, or a centre or radius of a
+    /// disc. A NaN part is nothing.
+    static func part(_ value: GesComputedValue, _ name: String) -> GesComputedValue {
+        switch value.shape {
+        case .vector, .point:
+            let v = value.components
+            return .of(float: name == "x" ? v.x : name == "y" ? v.y : v.z)
+        case .box(let box):
+            switch name {
+            case "lower": return .of(point: box.min.x, box.min.y, box.min.z)
+            case "upper": return .of(point: box.max.x, box.max.y, box.max.z)
+            case "center":
+                let center = box.center
+                return .of(point: center.x, center.y, center.z)
+            default:
+                let size = box.size
+                return .of(vector: size.x, size.y, size.z)
+            }
+        case .disc(let disc):
+            return name == "center" ? .of(point: disc.center.x, disc.center.y, disc.center.z) : .of(float: disc.radius)
+        default:
+            return .nothing
+        }
+    }
+
+    static func pointCount(_ poly: GesComputedValue) -> GesComputedValue {
+        guard case .poly(let value) = poly.shape else { return .nothing }
+        return .of(integer: Int64(value.points.count))
+    }
+}
+
 /// What an expression reads: the fields of a record, and the elements of its lists. An element that is a number reads with
 /// an empty path.
 protocol GesComputedScope {
@@ -522,12 +723,58 @@ enum GesComputedEvaluation {
             return scope.read(node.path, percentage: node.type == .percentage)
         case .item:
             return item!.read(node.path, percentage: node.type == .percentage)
+        case .negate where node.type == .vector:
+            return GesComputedSpatial.negate(evaluate(children[0], scope, item))
         case .negate:
             return GesComputedMath.negate(evaluate(children[0], scope, item))
         case .not:
             return GesComputedMath.not(evaluate(children[0], scope, item))
+        case .abs where children[0].type == .vector:
+            return GesComputedSpatial.length(evaluate(children[0], scope, item))
         case .abs:
             return GesComputedMath.abs(evaluate(children[0], scope, item))
+        case .add where node.type == .vector || node.type == .point, .subtract where node.type == .vector || node.type == .point:
+            return GesComputedSpatial.add(evaluate(children[0], scope, item), evaluate(children[1], scope, item), subtract: node.op == .subtract)
+        case .multiply where node.type == .vector:
+            let a = evaluate(children[0], scope, item)
+            let b = evaluate(children[1], scope, item)
+            return children[0].type == .vector ? GesComputedSpatial.scale(a, b) : GesComputedSpatial.scale(b, a)
+        case .divide where node.type == .vector:
+            return GesComputedSpatial.divide(evaluate(children[0], scope, item), evaluate(children[1], scope, item))
+        case .vector, .point:
+            return GesComputedSpatial.vector(evaluate(children[0], scope, item), evaluate(children[1], scope, item), evaluate(children[2], scope, item), point: node.op == .point)
+        case .box, .boxAround:
+            return GesComputedSpatial.box(evaluate(children[0], scope, item), evaluate(children[1], scope, item), around: node.op == .boxAround)
+        case .disc:
+            return GesComputedSpatial.disc(evaluate(children[0], scope, item), evaluate(children[1], scope, item))
+        case .discAround:
+            return GesComputedSpatial.disc(evaluate(children[0], scope, item))
+        case .poly:
+            var points: [GesPoint] = []
+            points.reserveCapacity(children.count)
+            for child in children {
+                let point = evaluate(child, scope, item)
+                if point.isNothing { return .nothing }
+                points.append(point.point)
+            }
+            return .of(poly: GesPoly(points))
+        case .polyOf:
+            let source = children[0]
+            let list = source.op == .item ? item! : scope
+            let count = list.count(source.path)
+            var points: [GesPoint] = []
+            points.reserveCapacity(count)
+            for index in 0..<count {
+                let element = list.element(source.path, index)
+                let point = children.count > 1 ? evaluate(children[1], scope, element) : element.read([], percentage: false)
+                if point.isNothing { return .nothing }
+                points.append(point.point)
+            }
+            return .of(poly: GesPoly(points))
+        case .part:
+            return GesComputedSpatial.part(evaluate(children[0], scope, item), node.path[0])
+        case .pointCount:
+            return GesComputedSpatial.pointCount(evaluate(children[0], scope, item))
         case .add, .subtract:
             let a = evaluate(children[0], scope, item)
             let b = evaluate(children[1], scope, item)
@@ -610,6 +857,9 @@ enum GesComputedCanonical {
         case .field, .item:
             output += node.op == .field ? "field" : "item"
             for name in node.path { output += " " + name }
+        case .part:
+            output += "part " + node.path[0] + " "
+            write(node.children[0], &output)
         default:
             output += node.op.name
             for child in node.children {

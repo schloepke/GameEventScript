@@ -96,14 +96,29 @@ def computed_names(sources, root):
     return []
 
 
+def bits(text):
+    return format(struct.unpack(">Q", struct.pack(">d", float(text)))[0], "016x")
+
+
 def property_text(value):
-    """A computed property as the harness prints it: the bits of a binary64, a Boolean, or nothing."""
+    """A computed property as the harness prints it: the bits of a binary64, a Boolean, nothing, or the kind of a spatial
+    value with the bits of its parts in one word."""
     kind = value["type"]
     if kind == ":Nothing":
         return "nothing"
     if kind == ":Boolean":
         return "true" if value["value"] in (True, "true") else "false"
-    return format(struct.unpack(">Q", struct.pack(">d", float(value["value"])))[0], "016x")
+    if kind in (":Vector", ":Point"):
+        return f"{kind[1:].lower()}:{bits(value['x'])},{bits(value['y'])},{bits(value['z'])}"
+    if kind == ":Box":
+        corners = [value[corner][axis] for corner in ("lower", "upper") for axis in ("x", "y", "z")]
+        return "box:" + ",".join(bits(part) for part in corners)
+    if kind == ":Disc":
+        center = value["center"]
+        return "disc:" + ",".join(bits(part) for part in (center["x"], center["y"], center["z"], value["radius"]))
+    if kind == ":Poly":
+        return "poly:" + ";".join(",".join(bits(point[axis]) for axis in ("x", "y", "z")) for point in value["points"])
+    return bits(value["value"])
 
 
 def ulps(case):
@@ -117,6 +132,8 @@ def close(want, got, tolerance):
     if want == got:
         return True
     words = ("true", "false", "nothing", "7ff0000000000000", "fff0000000000000")
+    if ":" in want or ":" in got:
+        return False
     if tolerance == 0 or want in words or got in words or len(got) != 16:
         return False
 
@@ -256,11 +273,21 @@ def member(name, owner, swift=False):
 
 
 def csharp_program(entries):
-    lines = ["using System;", "", "internal static class Harness", "{",
+    lines = ["using System;", "using GameEventScript.Api;", "", "internal static class Harness", "{",
              "    private static string Hex(ReadOnlySpan<byte> bytes) { var text = new System.Text.StringBuilder(); foreach (var b in bytes) text.Append(b.ToString(\"x2\")); return text.ToString(); }",
              "    private static string P(double value) => double.IsNaN(value) ? \"nothing\" : ((ulong)BitConverter.DoubleToInt64Bits(value)).ToString(\"x16\");",
              "    private static string P(double? value) => value is { } present ? P(present) : \"nothing\";",
              "    private static string P(bool value) => value ? \"true\" : \"false\";",
+             "    private static string B(double value) => ((ulong)BitConverter.DoubleToInt64Bits(value)).ToString(\"x16\");",
+             "    private static string P(GesVector value) => double.IsNaN(value.X) ? \"nothing\" : \"vector:\" + B(value.X) + \",\" + B(value.Y) + \",\" + B(value.Z);",
+             "    private static string P(GesVector? value) => value is { } present ? P(present) : \"nothing\";",
+             "    private static string P(GesPoint value) => double.IsNaN(value.X) ? \"nothing\" : \"point:\" + B(value.X) + \",\" + B(value.Y) + \",\" + B(value.Z);",
+             "    private static string P(GesPoint? value) => value is { } present ? P(present) : \"nothing\";",
+             "    private static string P(GesBox value) => double.IsNaN(value.Min.X) ? \"nothing\" : \"box:\" + B(value.Min.X) + \",\" + B(value.Min.Y) + \",\" + B(value.Min.Z) + \",\" + B(value.Max.X) + \",\" + B(value.Max.Y) + \",\" + B(value.Max.Z);",
+             "    private static string P(GesBox? value) => value is { } present ? P(present) : \"nothing\";",
+             "    private static string P(GesDisc value) => double.IsNaN(value.Radius) && double.IsNaN(value.Center.X) ? \"nothing\" : \"disc:\" + B(value.Center.X) + \",\" + B(value.Center.Y) + \",\" + B(value.Center.Z) + \",\" + B(value.Radius);",
+             "    private static string P(GesDisc? value) => value is { } present ? P(present) : \"nothing\";",
+             "    private static string P(GesPoly? value) => value is null ? \"nothing\" : \"poly:\" + string.Join(\";\", System.Linq.Enumerable.Select(value.Points, point => B(point.X) + \",\" + B(point.Y) + \",\" + B(point.Z)));",
              "    private static string Run(int schema, string operation, byte[] data, byte[] second, long limit)", "    {", "        switch (schema)", "        {"]
     for index, root, key, _, delta, conversion, computed, model in entries:
         name = f"Gen.Case{index}.{root}"
@@ -308,6 +335,17 @@ def swift_program(entries):
              "func p(_ value: Double) -> String { value.isNaN ? \"nothing\" : String(value.bitPattern, radix: 16).leftPadded() }",
              "func p(_ value: Double?) -> String { value.map { p($0) } ?? \"nothing\" }",
              "func p(_ value: Bool) -> String { value ? \"true\" : \"false\" }",
+             "func b(_ value: Double) -> String { String(value.bitPattern, radix: 16).leftPadded() }",
+             "func p(_ value: GesVector) -> String { value.x.isNaN ? \"nothing\" : \"vector:\" + [value.x, value.y, value.z].map(b).joined(separator: \",\") }",
+             "func p(_ value: GesVector?) -> String { value.map { p($0) } ?? \"nothing\" }",
+             "func p(_ value: GesPoint) -> String { value.x.isNaN ? \"nothing\" : \"point:\" + [value.x, value.y, value.z].map(b).joined(separator: \",\") }",
+             "func p(_ value: GesPoint?) -> String { value.map { p($0) } ?? \"nothing\" }",
+             "func p(_ value: GesBox) -> String { value.min.x.isNaN ? \"nothing\" : \"box:\" + [value.min.x, value.min.y, value.min.z, value.max.x, value.max.y, value.max.z].map(b).joined(separator: \",\") }",
+             "func p(_ value: GesBox?) -> String { value.map { p($0) } ?? \"nothing\" }",
+             "func p(_ value: GesDisc) -> String { value.radius.isNaN && value.center.x.isNaN ? \"nothing\" : \"disc:\" + [value.center.x, value.center.y, value.center.z, value.radius].map(b).joined(separator: \",\") }",
+             "func p(_ value: GesDisc?) -> String { value.map { p($0) } ?? \"nothing\" }",
+             "func p(_ value: GesPoly) -> String { \"poly:\" + value.points.map { [$0.x, $0.y, $0.z].map(b).joined(separator: \",\") }.joined(separator: \";\") }",
+             "func p(_ value: GesPoly?) -> String { value.map { p($0) } ?? \"nothing\" }",
              "extension String { func leftPadded() -> String { String(repeating: \"0\", count: Swift.max(0, 16 - count)) + self } }", "",
              "func run(_ schema: Int, _ operation: Substring, _ data: [UInt8], _ second: [UInt8], _ limit: Int) throws(GesWireError) -> String {", "    switch schema {"]
     for index, root, key, is_class, delta, conversion, computed, model in entries:
@@ -377,6 +415,10 @@ def self_test():
     assert verdict(("computed", half + " true", 0), f"ok {below} true", "")
     assert verdict(("computed", half + " true", 4), f"ok {below} false", "")
     assert verdict(("computed", half, 4), "ok nothing", "")
+    vector = property_text({"type": ":Vector", "x": "0.5", "y": "0", "z": "-1"})
+    assert verdict(("computed", vector, 0), f"ok {vector}", "") is None
+    assert verdict(("computed", vector, 4), "ok " + vector.replace(half, below), "")
+    assert verdict(("computed", vector, 0), "ok nothing", "")
     assert verdict(("error", "wire.truncated", "x"), "error wire.truncated x", "") is None
     assert verdict(("error", "wire.truncated", "x"), "error wire.truncated y", "")
     assert verdict(("error", "wire.truncated", ""), "error wire.truncated ", "") is None

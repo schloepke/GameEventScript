@@ -55,7 +55,7 @@ internal static class GesSwiftModelEmitter
 
         if (options.Bindings || options.Values) document.Units.Add(new GesCodeUnit("", code => Support(code, support)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: true, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)))));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: true, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)), GesComputedEmitter.UsesSpatial(layout.Types.ConvertAll(type => type.Computed)))));
         return document;
     }
 
@@ -705,6 +705,10 @@ internal static class GesSwiftModelEmitter
                     GesSchemaTypeKind.Boolean => $"try! .init(name: {name}, kind: .boolean)",
                     GesSchemaTypeKind.Percentage => $"try! .init(name: {name}, kind: .percentage)",
                     GesSchemaTypeKind.Quantity => $"try! .init(name: {name}, kind: .float, unit: .{field.Unit.ToTypeName()})",
+                    GesSchemaTypeKind.Vector or GesSchemaTypeKind.Point => field.Unit == GesQuantityUnit.UnitNone
+                        ? $"try! .init(name: {name}, kind: .{GesSchemaPlanner.Camel(field.Kind.ToString())})"
+                        : $"try! .init(name: {name}, kind: .{GesSchemaPlanner.Camel(field.Kind.ToString())}, unit: .{field.Unit.ToTypeName()})",
+                    GesSchemaTypeKind.Box or GesSchemaTypeKind.Disc or GesSchemaTypeKind.Poly => $"try! .init(name: {name}, typeName: {GesSchemaPlanner.Literal(field.Kind.ToString(), true)})",
                     _ => $"try! .init(name: {name}, kind: .float)"
                 });
             }
@@ -723,7 +727,7 @@ internal static class GesSwiftModelEmitter
             code.Line("switch name {");
             foreach (var field in fields) code.Line($"case {GesSchemaPlanner.Literal(field.Field.Name, true)}: {Encode(field.Value, type.Name, "record." + Member(field.Base), "GesTypes", support)}");
             foreach (var field in type.Computed)
-                code.Line($"case {GesSchemaPlanner.Literal(field.Name, true)}: {computed.HelperName}.gesValue({computed.ValueOf("record", type.Name, field)}, .{(field.Kind == GesSchemaTypeKind.Quantity ? field.Unit.ToTypeName() : "none")})");
+                code.Line($"case {GesSchemaPlanner.Literal(field.Name, true)}: {computed.HelperName}.gesValue({computed.ValueOf("record", type.Name, field)}, .{(field.Kind == GesSchemaTypeKind.Quantity || field.IsSpatial ? field.Unit.ToTypeName() : "none")})");
             code.Line($"case \"fields\": .map(keys: Self.names, values: [{string.Join(", ", fields.ConvertAll(field => $"try field({GesSchemaPlanner.Literal(field.Field.Name, true)})!"))}])");
             code.Line("default: nil");
             code.Line("}");
@@ -864,7 +868,7 @@ internal static class GesSwiftModelEmitter
             code.Line($".record(typeName: {typeLiteral}, keys: {keys}, values: [");
             foreach (var field in fields) code.Line("    " + Encode(field.Value, type.Name, "record." + Member(field.Base), name, support, plain: true) + ",");
             foreach (var field in type.Computed)
-                code.Line($"    {computed.HelperName}.gesValue({computed.ValueOf("record", type.Name, field)}, .{(field.Kind == GesSchemaTypeKind.Quantity ? field.Unit.ToTypeName() : "none")}),");
+                code.Line($"    {computed.HelperName}.gesValue({computed.ValueOf("record", type.Name, field)}, .{(field.Kind == GesSchemaTypeKind.Quantity || field.IsSpatial ? field.Unit.ToTypeName() : "none")}),");
             code.Line("])");
             code.Close();
             code.Blank();

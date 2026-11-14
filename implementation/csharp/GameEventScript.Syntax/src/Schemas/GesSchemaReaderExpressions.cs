@@ -253,7 +253,8 @@ internal sealed partial class GesSchemaSourceReader
     private GesSchemaExpressionSyntax Function(string name, int offset, params GesSchemaExpressionSyntax[] arguments)
         => Checked(new GesSchemaExpressionSyntax { Kind = GesSchemaExpressionKind.Function, Name = name, Children = arguments, Offset = offset });
 
-    // Member access `record.field` and the list aggregates `list[:sum]`, `list[:sum item => value]` and `list[:count]`.
+    // Member access `record.field`, the list aggregates `list[:sum]`, `list[:sum item => value]` and `list[:count]`, and the
+    // projection `list[:select item => value]`.
     private GesSchemaExpressionSyntax ReadPostfix()
     {
         var value = ReadPrimary();
@@ -280,8 +281,8 @@ internal sealed partial class GesSchemaSourceReader
                 continue;
             }
 
-            if (selector != "sum") throw new SyntaxFailure(start, "A computed expression takes the list selectors :sum and :count.");
-            if (Consume(']'))
+            if (selector is not ("sum" or "select")) throw new SyntaxFailure(start, "A computed expression takes the list selectors :sum, :count and :select.");
+            if (selector == "sum" && Consume(']'))
             {
                 value = Node(GesSchemaExpressionKind.Sum, start, value);
                 continue;
@@ -297,7 +298,7 @@ internal sealed partial class GesSchemaSourceReader
             Expect(']');
             value = Checked(new GesSchemaExpressionSyntax
             {
-                Kind = GesSchemaExpressionKind.Sum,
+                Kind = selector == "sum" ? GesSchemaExpressionKind.Sum : GesSchemaExpressionKind.Select,
                 Name = variable,
                 Children = [value, projection],
                 Depth = System.Math.Max(value.Depth, projection.Depth) + 1,
@@ -318,6 +319,27 @@ internal sealed partial class GesSchemaSourceReader
             SkipContinuation();
             Expect(')');
             return inner;
+        }
+
+        if (At(":") && _position + 1 < _text.Length && _text[_position + 1] is >= 'A' and <= 'Z') return ReadConstruct();
+        if (Consume('['))
+        {
+            SkipContinuation();
+            var items = new List<GesSchemaExpressionSyntax>();
+            if (!Consume(']'))
+            {
+                while (true)
+                {
+                    items.Add(ReadExpression());
+                    SkipContinuation();
+                    if (Consume(']')) break;
+                    Expect(',');
+                    SkipContinuation();
+                }
+            }
+
+            if (items.Count == 0) throw new SyntaxFailure(offset, "A list in a computed expression holds at least one item.", Code.InvalidExpression);
+            return Node(GesSchemaExpressionKind.List, offset, items.ToArray());
         }
 
         if (Consume('$')) return new GesSchemaExpressionSyntax { Kind = GesSchemaExpressionKind.Constant, Name = ReadName(GesText.IsConstantName, "constant name"), Offset = offset };
@@ -418,6 +440,56 @@ internal sealed partial class GesSchemaSourceReader
         return new GesSchemaValueSyntax { Value = value.Value.Value, Unit = value.Value.Unit, IsPercent = value.Value.IsPercent, Text = _text.Substring(offset, end - offset), Offset = offset };
     }
 
+    // A spatial value built with the constructor of its type, as in a script: `:Vector(x: 1m, y: 2m)`, `:Point(1m, 2m)`,
+    // `:Box(lower: a, upper: b)`, `:Disc(radius: r)` or `:Poly(points: [a, b, c])`. Each argument is labeled or positional.
+    private GesSchemaExpressionSyntax ReadConstruct()
+    {
+        var offset = _position++;
+        var type = ReadName(name => name.Length > 0 && name[0] is >= 'A' and <= 'Z', "type name");
+        if (type is not ("Vector" or "Point" or "Box" or "Disc" or "Poly"))
+            throw new SyntaxFailure(offset, $"A computed expression constructs :Vector, :Point, :Box, :Disc or :Poly, not :{type}.", Code.InvalidExpression);
+        SkipSpaces();
+        Expect('(');
+        SkipContinuation();
+        var arguments = new List<GesSchemaExpressionSyntax>();
+        var labels = new List<string>();
+        if (!Consume(')'))
+        {
+            while (true)
+            {
+                var start = _position;
+                var label = "";
+                if (_position < _text.Length && GesText.IsAsciiLower(_text[_position]))
+                {
+                    var word = ReadWord();
+                    SkipSpaces();
+                    if (Consume(':')) label = word;
+                    else _position = start;
+                }
+
+                SkipContinuation();
+                arguments.Add(ReadExpression());
+                labels.Add(label);
+                SkipContinuation();
+                if (Consume(')')) break;
+                Expect(',');
+                SkipContinuation();
+            }
+        }
+
+        var depth = 0;
+        foreach (var argument in arguments) depth = System.Math.Max(depth, argument.Depth);
+        return Checked(new GesSchemaExpressionSyntax
+        {
+            Kind = GesSchemaExpressionKind.Construct,
+            Name = type,
+            Children = arguments.ToArray(),
+            Labels = labels.ToArray(),
+            Depth = depth + 1,
+            Offset = offset
+        });
+    }
+
     // A name in backticks, which may be a word that GES reserves, such as `length` or `e`: a field or let of that name.
     private string ReadQuotedName()
     {
@@ -469,6 +541,7 @@ internal sealed partial class GesSchemaSourceReader
             Boolean = node.Boolean,
             Name = node.Name,
             Children = node.Children,
+            Labels = node.Labels,
             Depth = depth + 1,
             Offset = node.Offset
         };

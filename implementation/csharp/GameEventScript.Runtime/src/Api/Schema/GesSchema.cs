@@ -309,10 +309,12 @@ public sealed class GesSchemaComputedFieldInfo
     public string Name { get; }
 
     /// <summary>Gets the type: <see cref="GesSchemaTypeKind.Number"/>, <see cref="GesSchemaTypeKind.Quantity"/>,
-    /// <see cref="GesSchemaTypeKind.Percentage"/> or <see cref="GesSchemaTypeKind.Boolean"/>.</summary>
+    /// <see cref="GesSchemaTypeKind.Percentage"/>, <see cref="GesSchemaTypeKind.Boolean"/>, or a spatial
+    /// <see cref="GesSchemaTypeKind.Vector"/>, <see cref="GesSchemaTypeKind.Point"/>, <see cref="GesSchemaTypeKind.Box"/>,
+    /// <see cref="GesSchemaTypeKind.Disc"/> or <see cref="GesSchemaTypeKind.Poly"/>.</summary>
     public GesSchemaTypeKind Kind { get; }
 
-    /// <summary>Gets the unit of a Quantity.</summary>
+    /// <summary>Gets the unit of a Quantity or a spatial value.</summary>
     public GesQuantityUnit Unit { get; }
 
     /// <summary>Gets whether the value may be absent, which generated code then gives an optional type.</summary>

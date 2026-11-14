@@ -57,11 +57,43 @@ internal sealed partial class GesComputedEmitter
         }
     }
 
-    // The type of a computed field's property: binary64 for numbers and percentage ratios, optional when the field is.
+    // The type of a computed field's property: binary64 for numbers and percentage ratios, the runtime's type for a spatial
+    // value, optional when the field is.
     internal static string PropertyType(GesResolvedComputed field, bool swift)
     {
         if (field.Kind == GesSchemaTypeKind.Boolean) return swift ? "Bool" : "bool";
+        if (SpatialType(field.Kind) is { } spatial) return spatial + (field.Optional ? "?" : "");
         return (swift ? "Double" : "double") + (field.Optional ? "?" : "");
+    }
+
+    // The runtime type of a spatial schema type, or null for another one.
+    internal static string? SpatialType(GesSchemaTypeKind kind) => kind switch
+    {
+        GesSchemaTypeKind.Vector => "GesVector",
+        GesSchemaTypeKind.Point => "GesPoint",
+        GesSchemaTypeKind.Box => "GesBox",
+        GesSchemaTypeKind.Disc => "GesDisc",
+        GesSchemaTypeKind.Poly => "GesPoly",
+        _ => null
+    };
+
+    // Whether any computed field of the types holds or reads a spatial value, which the spatial helpers serve.
+    internal static bool UsesSpatial(IEnumerable<GesResolvedComputed[]> types)
+    {
+        foreach (var computed in types)
+            foreach (var field in computed)
+                if (field.IsSpatial || Spatial(field.Expression)) return true;
+        return false;
+    }
+
+    // Whether an expression holds a spatial value anywhere.
+    internal static bool Spatial(GesComputedNode node)
+    {
+        if (node.Type is GesComputedType.Vector or GesComputedType.Point or GesComputedType.Box or GesComputedType.Disc or GesComputedType.Poly
+            || node.Op is GesComputedOp.Part or GesComputedOp.PointCount) return true;
+        foreach (var child in node.Children)
+            if (Spatial(child)) return true;
+        return false;
     }
 
     // Whether any computed field of the types needs the exact values of the dynamic form.
@@ -103,7 +135,9 @@ internal sealed partial class GesComputedEmitter
 
     private static string Absent(GesResolvedComputed field) => field.Kind == GesSchemaTypeKind.Boolean
         ? "false where the expression gives nothing, as a script record reads it"
-        : field.Optional ? "absent where the expression gives nothing" : "NaN where the expression gives nothing";
+        : field.Optional ? "absent where the expression gives nothing"
+        : field.Kind == GesSchemaTypeKind.Poly ? "without points where the expression gives nothing"
+        : field.IsSpatial ? "with NaN parts where the expression gives nothing" : "NaN where the expression gives nothing";
 
     // The source spelling of the expression, as the formatter prints it.
     private static string Spelling(GesResolvedComputed field) => GesSchemaFormatter.Expression(field.Syntax.Computed!);

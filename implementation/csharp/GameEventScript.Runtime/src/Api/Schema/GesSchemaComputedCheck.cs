@@ -36,8 +36,21 @@ internal sealed class GesResolvedComputed
     {
         GesSchemaTypeKind.Boolean => GesComputedType.Boolean,
         GesSchemaTypeKind.Percentage => GesComputedType.Percentage,
-        _ => GesComputedType.Number
+        _ => Spatial(Kind) ?? GesComputedType.Number
     };
+
+    // The computed type of a spatial schema type, or null for another one.
+    internal static GesComputedType? Spatial(GesSchemaTypeKind kind) => kind switch
+    {
+        GesSchemaTypeKind.Vector => GesComputedType.Vector,
+        GesSchemaTypeKind.Point => GesComputedType.Point,
+        GesSchemaTypeKind.Box => GesComputedType.Box,
+        GesSchemaTypeKind.Disc => GesComputedType.Disc,
+        GesSchemaTypeKind.Poly => GesComputedType.Poly,
+        _ => null
+    };
+
+    internal bool IsSpatial => Spatial(Kind) is not null;
 }
 
 internal sealed partial class GesFileScope
@@ -81,9 +94,11 @@ internal sealed partial class GesFileScope
             var syntax = entry.Syntax;
             if (!names.Add(entry.Name)) throw scope.Error(Code.DuplicateName, entry.Offset, $"'{entry.Name}' is declared twice in '{declaration.Name}'.");
             var type = syntax.Alternatives;
-            if (type.Length != 1 || type[0].Kind is not (GesSchemaTypeKind.Number or GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Boolean)
-                || type[0].Constraints is { } constraints && (constraints.Integer || constraints.Lower is not null || constraints.Step is not null || constraints.Delta is not null))
-                throw scope.Error(Code.InvalidExpression, entry.Offset, "A computed field is a Number, Quantity, Percentage or Boolean without constraints.");
+            if (type.Length != 1 || type[0].Kind is not (GesSchemaTypeKind.Number or GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Boolean
+                    or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Point or GesSchemaTypeKind.Box or GesSchemaTypeKind.Disc or GesSchemaTypeKind.Poly)
+                || type[0].Constraints is { } constraints && (constraints.Integer || constraints.Lower is not null || constraints.Step is not null || constraints.Delta is not null)
+                || type[0].Axes is not null || type[0].Max is not null || type[0].MaxName.Length > 0)
+                throw scope.Error(Code.InvalidExpression, entry.Offset, "A computed field is a Number, Quantity, Percentage, Boolean, Vector, Point, Box, Disc or Poly without constraints, axes or max.");
             if (syntax.Marker == GesSchemaFieldMarker.Key) throw scope.Error(Code.InvalidExpression, entry.Offset, "A computed field is no key.");
             if (entry.Optional && entry.Kind == GesSchemaTypeKind.Boolean)
                 throw scope.Error(Code.InvalidExpression, entry.Offset, "A computed Boolean is never absent, as a record reads nothing as false; it is not optional.");
@@ -94,6 +109,8 @@ internal sealed partial class GesFileScope
                 throw scope.Error(Code.InvalidExpression, syntax.Computed!.Offset, $"The expression gives a {Describe(result)}, but '{entry.Name}' is a {entry.Kind}.");
             if (expected == GesComputedType.Number && result.Unit != entry.Unit)
                 throw scope.Error(Code.UnitMismatch, syntax.Computed!.Offset, $"The expression gives a {Describe(result)}, but '{entry.Name}' is a {(entry.Unit == GesQuantityUnit.UnitNone ? "Number" : "Quantity(" + entry.Unit.ToSuffix() + ")")}.");
+            if (entry.IsSpatial && result.Unit != entry.Unit)
+                throw scope.Error(Code.UnitMismatch, syntax.Computed!.Offset, $"The expression gives a {Describe(result)}, but '{entry.Name}' is a {DescribeSpatial(expected, entry.Unit)}.");
             scope.CheckAlone(syntax.Computed!, result, alone: true);
             Guard(result, []);
             if (result.MayBeAbsent && !entry.Optional)
@@ -149,7 +166,7 @@ internal sealed partial class GesFileScope
                 Guard(children[1], present);
                 node.MayBeAbsent = children[1].MayBeAbsent;
                 return;
-            case GesComputedOp.Sum:
+            case GesComputedOp.Sum or GesComputedOp.PolyOf:
             {
                 // A projection reads the element afresh, so no proof about an element carries into it.
                 Guard(children[0], present);
@@ -200,8 +217,14 @@ internal sealed partial class GesFileScope
         GesComputedType.Number => node.Unit == GesQuantityUnit.UnitNone ? "Number" : "Quantity(" + node.Unit.ToSuffix() + ")",
         GesComputedType.List => "List",
         GesComputedType.Record => "record",
+        GesComputedType.Vector or GesComputedType.Point or GesComputedType.Box or GesComputedType.Disc or GesComputedType.Poly => DescribeSpatial(node.Type, node.Unit),
         _ => node.Type.ToString()
     };
+
+    private static string DescribeSpatial(GesComputedType type, GesQuantityUnit unit)
+        => type + (unit == GesQuantityUnit.UnitNone ? "" : "(" + unit.ToSuffix() + ")");
+
+    private static bool IsSpatial(GesComputedType type) => type is GesComputedType.Vector or GesComputedType.Point or GesComputedType.Box or GesComputedType.Disc or GesComputedType.Poly;
 
     // A sum of quantities or percentages is the unitless 0 for an empty list, which only the final conversion of the field
     // turns into a value of the field's type. So such a sum stands alone: as the expression, a value of a choice, or a side
@@ -243,6 +266,7 @@ internal sealed partial class GesFileScope
             case GesSchemaExpressionKind.Member:
             {
                 var target = CheckExpression(children[0], context);
+                if (IsSpatial(target.Node.Type)) return Part(syntax, target.Node);
                 if (target.Node.Op is not (GesComputedOp.Field or GesComputedOp.Item) || target.Record is null)
                     throw Error(Code.InvalidExpression, syntax.Offset, $"'.{syntax.Name}' reads a field of a schema, which this is not.");
                 var field = Array.Find(target.Record.Fields, candidate => candidate.Name == syntax.Name);
@@ -261,7 +285,11 @@ internal sealed partial class GesFileScope
             case GesSchemaExpressionKind.Negate or GesSchemaExpressionKind.Abs:
             {
                 var operand = Value(children[0], context);
-                if (operand.Type is not (GesComputedType.Number or GesComputedType.Percentage)) throw Mismatch(syntax, "a number or percentage", operand);
+                if (operand.Type == GesComputedType.Vector)
+                    return syntax.Kind == GesSchemaExpressionKind.Negate
+                        ? Node(GesComputedOp.Negate, GesComputedType.Vector, operand.Unit, operand)
+                        : Node(GesComputedOp.Abs, GesComputedType.Number, operand.Unit, operand);
+                if (operand.Type is not (GesComputedType.Number or GesComputedType.Percentage)) throw Mismatch(syntax, "a number, percentage or vector", operand);
                 return Node(syntax.Kind == GesSchemaExpressionKind.Negate ? GesComputedOp.Negate : GesComputedOp.Abs, operand.Type, operand.Unit, operand);
             }
             case GesSchemaExpressionKind.Not:
@@ -305,6 +333,12 @@ internal sealed partial class GesFileScope
             }
             case GesSchemaExpressionKind.Function:
                 return Function(syntax, context);
+            case GesSchemaExpressionKind.Construct:
+                return Construct(syntax, context);
+            case GesSchemaExpressionKind.List:
+                throw Error(Code.InvalidExpression, syntax.Offset, "A list in a computed expression holds the points of a :Poly.");
+            case GesSchemaExpressionKind.Select:
+                throw Error(Code.InvalidExpression, syntax.Offset, "A projection with :select gives the points of a :Poly.");
             case GesSchemaExpressionKind.HasValue:
             {
                 var operand = CheckExpression(children[0], context);
@@ -331,6 +365,12 @@ internal sealed partial class GesFileScope
     {
         var children = syntax.Children;
         var source = CheckExpression(children[0], context);
+        if (source.Node.Op == GesComputedOp.Part)
+        {
+            if (syntax.Kind != GesSchemaExpressionKind.Count) throw Error(Code.InvalidExpression, syntax.Offset, "The points of a Poly take only [:count].");
+            return Node(GesComputedOp.PointCount, GesComputedType.Number, GesQuantityUnit.UnitNone, source.Node.Children[0]);
+        }
+
         if (source.Node.Type != GesComputedType.List) throw Error(Code.InvalidExpression, children[0].Offset, "An aggregate reads a list field.");
         if (source.Optional) throw Error(Code.InvalidExpression, children[0].Offset, "An aggregate reads a list that is no optional field and lies in none.");
         if (syntax.Kind == GesSchemaExpressionKind.Count) return Node(GesComputedOp.Count, GesComputedType.Number, GesQuantityUnit.UnitNone, source.Node);
@@ -392,7 +432,7 @@ internal sealed partial class GesFileScope
     }
 
     private static Checked Reach(GesResolvedComputed field, GesComputedOp op, string[] path)
-        => new(new GesComputedNode { Op = op, Type = field.Type, Unit = field.Kind == GesSchemaTypeKind.Quantity ? field.Unit : GesQuantityUnit.UnitNone, Path = path, OptionalSteps = [field.Optional] }, optional: field.Optional);
+        => new(new GesComputedNode { Op = op, Type = field.Type, Unit = field.Kind == GesSchemaTypeKind.Quantity || field.IsSpatial ? field.Unit : GesQuantityUnit.UnitNone, Path = path, OptionalSteps = [field.Optional] }, optional: field.Optional);
 
     private GesComputedNode TypeNode(GesResolvedType type, GesComputedOp op, string[] path, int offset, out GesResolvedDeclaration? record, out GesResolvedType[]? element)
     {
@@ -408,6 +448,8 @@ internal sealed partial class GesFileScope
                 return new GesComputedNode { Op = op, Type = GesComputedType.Percentage, Path = path };
             case GesSchemaTypeKind.Boolean:
                 return new GesComputedNode { Op = op, Type = GesComputedType.Boolean, Path = path };
+            case GesSchemaTypeKind.Vector or GesSchemaTypeKind.Point or GesSchemaTypeKind.Box or GesSchemaTypeKind.Disc or GesSchemaTypeKind.Poly:
+                return new GesComputedNode { Op = op, Type = GesResolvedComputed.Spatial(type.Kind)!.Value, Unit = type.Unit, Path = path };
             case GesSchemaTypeKind.List when type.Element is { } alternatives:
                 element = alternatives;
                 return new GesComputedNode { Op = op, Type = GesComputedType.List, Path = path };
@@ -415,7 +457,7 @@ internal sealed partial class GesFileScope
                 record = reference;
                 return new GesComputedNode { Op = op, Type = GesComputedType.Record, Path = path };
             default:
-                // Text, tags, spatial values and other types are not read; only has value may name them, and it rejects them.
+                // Text, tags and other types are not read; only has value may name them, and it rejects them.
                 return new GesComputedNode { Op = op, Type = GesComputedType.Record, Path = path };
         }
     }
@@ -457,6 +499,7 @@ internal sealed partial class GesFileScope
         var b = right.Unit;
         var number = GesComputedType.Number;
         var percentage = GesComputedType.Percentage;
+        if (IsSpatial(left.Type) || IsSpatial(right.Type)) return SpatialBinary(syntax, left, right);
         switch (syntax.Operator)
         {
             case GesSchemaBinaryOperator.Add or GesSchemaBinaryOperator.Subtract:
@@ -533,6 +576,203 @@ internal sealed partial class GesFileScope
             }
         }
     }
+
+    // The arithmetic of vectors and points as the virtual machine has it: vectors add and subtract, a point moves by a vector,
+    // two points subtract to a vector, and a vector scales by a number, with the product or quotient unit, or a percentage.
+    private Checked SpatialBinary(GesSchemaExpressionSyntax syntax, GesComputedNode left, GesComputedNode right)
+    {
+        var vector = GesComputedType.Vector;
+        var point = GesComputedType.Point;
+        switch (syntax.Operator)
+        {
+            case GesSchemaBinaryOperator.Add or GesSchemaBinaryOperator.Subtract:
+            {
+                var subtract = syntax.Operator == GesSchemaBinaryOperator.Subtract;
+                GesComputedType? result = (left.Type, right.Type) switch
+                {
+                    (GesComputedType.Vector, GesComputedType.Vector) => vector,
+                    (GesComputedType.Point, GesComputedType.Vector) => point,
+                    (GesComputedType.Point, GesComputedType.Point) when subtract => vector,
+                    _ => null
+                };
+                if (result is null) throw Error(Code.InvalidExpression, syntax.Offset, $"{Describe(left)} {GesSchemaFormatter.Symbol(syntax.Operator)} {Describe(right)} has no value; vectors add and subtract, a point moves by a vector and two points subtract to a vector.");
+                if (left.Unit != right.Unit) throw Units(syntax, left, right);
+                return Node(subtract ? GesComputedOp.Subtract : GesComputedOp.Add, result.Value, left.Unit, left, right);
+            }
+            case GesSchemaBinaryOperator.Multiply or GesSchemaBinaryOperator.Divide:
+            {
+                var divide = syntax.Operator == GesSchemaBinaryOperator.Divide;
+                var scaled = left.Type == vector ? left : right;
+                var scalar = left.Type == vector ? right : left;
+                if (scaled.Type != vector || scalar.Type is not (GesComputedType.Number or GesComputedType.Percentage) || divide && left.Type != vector)
+                    throw Error(Code.InvalidExpression, syntax.Offset, $"{Describe(left)} {GesSchemaFormatter.Symbol(syntax.Operator)} {Describe(right)} has no value; a vector scales by a number or percentage, and a point does not scale.");
+                GesQuantityUnit unit;
+                if (scalar.Type == GesComputedType.Percentage)
+                {
+                    if (!scaled.Unit.AcceptsPercentage()) throw Error(Code.UnitMismatch, syntax.Offset, "A percentage does not scale a decibel level.");
+                    unit = scaled.Unit;
+                }
+                else
+                {
+                    unit = (divide ? QuotientUnit(scaled.Unit, scalar.Unit) : left.Type == vector ? ProductUnit(scaled.Unit, scalar.Unit) : ProductUnit(scalar.Unit, scaled.Unit))
+                        ?? throw Units(syntax, left, right);
+                }
+
+                return Node(divide ? GesComputedOp.Divide : GesComputedOp.Multiply, vector, unit, left, right);
+            }
+            default:
+                throw Error(Code.InvalidExpression, syntax.Offset, $"{Describe(left)} {GesSchemaFormatter.Symbol(syntax.Operator)} {Describe(right)} has no value; spatial values are not compared.");
+        }
+    }
+
+    // A part of a spatial value: an axis of a vector or point, the corners, centre and size of a box, the centre and radius of
+    // a disc, or the points of a polygon, which only [:count] reads.
+    private Checked Part(GesSchemaExpressionSyntax syntax, GesComputedNode target)
+    {
+        var name = syntax.Name;
+        var (type, unit) = (target.Type, name) switch
+        {
+            (GesComputedType.Vector or GesComputedType.Point, "x" or "y" or "z") => (GesComputedType.Number, target.Unit),
+            (GesComputedType.Box, "lower" or "upper" or "center") => (GesComputedType.Point, target.Unit),
+            (GesComputedType.Box, "size") => (GesComputedType.Vector, target.Unit),
+            (GesComputedType.Disc, "center") => (GesComputedType.Point, target.Unit),
+            (GesComputedType.Disc, "radius") => (GesComputedType.Number, target.Unit),
+            (GesComputedType.Poly, "points") => (GesComputedType.List, target.Unit),
+            _ => throw Error(Code.UnknownName, syntax.Offset, $"'{name}' is no part of a {Describe(target)}; " + target.Type switch
+            {
+                GesComputedType.Box => "a Box has lower, upper, center and size.",
+                GesComputedType.Disc => "a Disc has center and radius.",
+                GesComputedType.Poly => "a Poly has points.",
+                _ => "it has x, y and z."
+            })
+        };
+        return new Checked(new GesComputedNode { Op = GesComputedOp.Part, Type = type, Unit = unit, Path = [name], Children = [target] });
+    }
+
+    // A spatial value built with the constructor of its type, as a script record builds it.
+    private Checked Construct(GesSchemaExpressionSyntax syntax, ComputedContext context)
+    {
+        var children = syntax.Children;
+        var labels = string.Join(",", syntax.Labels);
+        switch (syntax.Name)
+        {
+            case "Vector" or "Point":
+            {
+                var axes = new[] { "x", "y", "z" };
+                var start = 0;
+                if (children.Length > 0 && syntax.Labels[0].Length > 0)
+                {
+                    start = Array.IndexOf(axes, syntax.Labels[0]);
+                    for (var index = 0; index < children.Length; index++)
+                        if (start < 0 || start + index >= 3 || syntax.Labels[index] != axes[start + index])
+                            throw Error(Code.InvalidExpression, children[index].Offset, $"The components of :{syntax.Name} are labeled as a run of x, y and z without gaps, or all positional.");
+                }
+                else
+                {
+                    for (var index = 0; index < children.Length; index++)
+                        if (syntax.Labels[index].Length > 0) throw Error(Code.InvalidExpression, children[index].Offset, $"The components of :{syntax.Name} are all labeled or all positional.");
+                    if (children.Length is 1 or > 3) throw Error(Code.InvalidExpression, syntax.Offset, $":{syntax.Name} takes two or three positional components.");
+                }
+
+                var components = new GesComputedNode?[3];
+                var unit = (GesQuantityUnit?)null;
+                for (var index = 0; index < children.Length; index++)
+                {
+                    var component = Value(children[index], context);
+                    if (component.Type != GesComputedType.Number) throw Mismatch(children[index], "a number", component);
+                    if (unit is { } first && component.Unit != first)
+                        throw Error(Code.UnitMismatch, children[index].Offset, $"The components of :{syntax.Name} have one unit, but a {Describe(component)} meets a {Describe(components[start])}.");
+                    unit = component.Unit;
+                    components[start + index] = component;
+                }
+
+                var resolved = unit ?? GesQuantityUnit.UnitNone;
+                var parts = new GesComputedNode[3];
+                for (var index = 0; index < 3; index++) parts[index] = components[index] ?? Zero(resolved);
+                var point = syntax.Name == "Point";
+                return Node(point ? GesComputedOp.Point : GesComputedOp.Vector, point ? GesComputedType.Point : GesComputedType.Vector, resolved, parts);
+            }
+            case "Box" when labels is "lower,upper" or "center,size":
+            {
+                var around = labels == "center,size";
+                var first = Value(children[0], context);
+                var second = Value(children[1], context);
+                if (first.Type != GesComputedType.Point) throw Mismatch(children[0], "a Point", first);
+                if (second.Type != (around ? GesComputedType.Vector : GesComputedType.Point)) throw Mismatch(children[1], around ? "a Vector" : "a Point", second);
+                if (first.Unit != second.Unit) throw Error(Code.UnitMismatch, children[1].Offset, $"The parts of a :Box have one unit, but a {Describe(second)} meets a {Describe(first)}.");
+                return Node(around ? GesComputedOp.BoxAround : GesComputedOp.Box, GesComputedType.Box, first.Unit, first, second);
+            }
+            case "Disc" when labels is "center,radius" or "radius":
+            {
+                var radius = Value(children[^1], context);
+                if (radius.Type != GesComputedType.Number) throw Mismatch(children[^1], "a number", radius);
+                if (children.Length == 1) return Node(GesComputedOp.DiscAround, GesComputedType.Disc, radius.Unit, radius);
+                var center = Value(children[0], context);
+                if (center.Type != GesComputedType.Point) throw Mismatch(children[0], "a Point", center);
+                if (center.Unit != radius.Unit) throw Error(Code.UnitMismatch, children[1].Offset, $"The centre and radius of a :Disc have one unit, but a {Describe(radius)} meets a {Describe(center)}.");
+                return Node(GesComputedOp.Disc, GesComputedType.Disc, center.Unit, center, radius);
+            }
+            case "Poly" when labels == "points":
+                return Poly(children[0], context);
+            default:
+                throw Error(Code.InvalidExpression, syntax.Offset, syntax.Name switch
+                {
+                    "Box" => ":Box takes lower: and upper:, or center: and size:.",
+                    "Disc" => ":Disc takes center: and radius:, or radius:.",
+                    _ => ":Poly takes points:."
+                });
+        }
+    }
+
+    // The points of a :Poly: a list of point expressions, a list field of Points, or a projection of a list field to Points.
+    private Checked Poly(GesSchemaExpressionSyntax syntax, ComputedContext context)
+    {
+        if (syntax.Kind == GesSchemaExpressionKind.List)
+        {
+            var points = new GesComputedNode[syntax.Children.Length];
+            for (var index = 0; index < points.Length; index++)
+            {
+                points[index] = Value(syntax.Children[index], context);
+                if (points[index].Type != GesComputedType.Point) throw Mismatch(syntax.Children[index], "a Point", points[index]);
+                if (points[index].Unit != points[0].Unit) throw Error(Code.UnitMismatch, syntax.Children[index].Offset, $"The points of a :Poly have one unit, but a {Describe(points[index])} meets a {Describe(points[0])}.");
+            }
+
+            return Node(GesComputedOp.Poly, GesComputedType.Poly, points[0].Unit, points);
+        }
+
+        var select = syntax.Kind == GesSchemaExpressionKind.Select;
+        var sourceSyntax = select ? syntax.Children[0] : syntax;
+        var source = CheckExpression(sourceSyntax, context);
+        if (source.Node.Type != GesComputedType.List || source.Element is null) throw Error(Code.InvalidExpression, sourceSyntax.Offset, "The points of a :Poly are a list of points, a list field of Points or a projection of a list field with :select.");
+        if (source.Optional) throw Error(Code.InvalidExpression, sourceSyntax.Offset, "The points of a :Poly read a list that is no optional field and lies in none.");
+        if (source.Element.Length != 1) throw Error(Code.InvalidExpression, sourceSyntax.Offset, "The points of a :Poly read a list without a union.");
+        var item = Element(source.Element[0], sourceSyntax.Offset);
+        if (!select)
+        {
+            if (item.Node.Type != GesComputedType.Point) throw Error(Code.InvalidExpression, sourceSyntax.Offset, "A list field gives the points of a :Poly when it holds Points; project other elements with :select.");
+            return Node(GesComputedOp.PolyOf, GesComputedType.Poly, item.Node.Unit, source.Node);
+        }
+
+        if (context.Variable.Length > 0) throw Error(Code.InvalidExpression, syntax.Offset, "A projection does not contain another one.");
+        if (IsTaken(context, syntax.Name)) throw Error(Code.DuplicateName, syntax.Offset, $"'{syntax.Name}' already names a field or let; the variable needs another name.");
+        context.Variable = syntax.Name;
+        context.Element = item;
+        try
+        {
+            var projection = Value(syntax.Children[1], context);
+            if (projection.Type != GesComputedType.Point) throw Mismatch(syntax.Children[1], "a Point", projection);
+            return Node(GesComputedOp.PolyOf, GesComputedType.Poly, projection.Unit, source.Node, projection);
+        }
+        finally
+        {
+            context.Variable = "";
+            context.Element = null;
+        }
+    }
+
+    // The zero of an omitted component, in the unit of the others.
+    private static GesComputedNode Zero(GesQuantityUnit unit)
+        => new() { Op = GesComputedOp.Literal, Type = GesComputedType.Number, Unit = unit, Literal = GesComputedValue.OfInteger(0), Decimal = new GesSchemaDecimal(0, 0) };
 
     // A number or percentage, which functions and powers read through its numeric view: a percentage as its ratio.
     private void Numeric(GesSchemaExpressionSyntax syntax, GesComputedNode node)

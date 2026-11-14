@@ -86,10 +86,34 @@ final class GesComputedEmitter {
         }
     }
 
-    /// The type of a computed field's property: binary64 for numbers and percentage ratios, optional when the field is.
+    /// The type of a computed field's property: binary64 for numbers and percentage ratios, the runtime's type for a spatial
+    /// value, optional when the field is.
     static func propertyType(_ field: GesSchemaComputedFieldInfo, swift: Bool) -> String {
         if field.kind == .boolean { return swift ? "Bool" : "bool" }
+        if let spatial = spatialType(field.kind) { return spatial + (field.isOptional ? "?" : "") }
         return (swift ? "Double" : "double") + (field.isOptional ? "?" : "")
+    }
+
+    /// The runtime type of a spatial schema type, or nil for another one.
+    static func spatialType(_ kind: GesSchemaTypeKind) -> String? {
+        switch kind {
+        case .vector: "GesVector"
+        case .point: "GesPoint"
+        case .box: "GesBox"
+        case .disc: "GesDisc"
+        case .poly: "GesPoly"
+        default: nil
+        }
+    }
+
+    /// Whether any computed field of the types holds or reads a spatial value, which the spatial helpers serve.
+    static func usesSpatial(_ types: [[GesSchemaComputedFieldInfo]]) -> Bool {
+        types.contains { $0.contains { $0.isSpatial || spatial($0.tree) } }
+    }
+
+    /// Whether an expression holds a spatial value anywhere.
+    static func spatial(_ node: GesComputedNode) -> Bool {
+        node.type.isSpatial || node.op == .part || node.op == .pointCount || node.children.contains { spatial($0) }
     }
 
     /// Whether any computed field of the types needs the exact values of the dynamic form.
@@ -128,9 +152,10 @@ final class GesComputedEmitter {
     }
 
     static func absent(_ field: GesSchemaComputedFieldInfo) -> String {
-        field.kind == .boolean
-            ? "false where the expression gives nothing, as a script record reads it"
-            : field.isOptional ? "absent where the expression gives nothing" : "NaN where the expression gives nothing"
+        if field.kind == .boolean { return "false where the expression gives nothing, as a script record reads it" }
+        if field.isOptional { return "absent where the expression gives nothing" }
+        if field.kind == .poly { return "without points where the expression gives nothing" }
+        return field.isSpatial ? "with NaN parts where the expression gives nothing" : "NaN where the expression gives nothing"
     }
 
     static func escape(_ text: String) -> String {

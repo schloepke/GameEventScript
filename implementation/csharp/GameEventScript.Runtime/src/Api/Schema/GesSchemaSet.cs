@@ -1088,6 +1088,7 @@ internal static class GesSchemaCanonical
                     builder.Append("computed ").Append(computed.Name).Append(' ').Append(computed.Kind switch
                     {
                         GesSchemaTypeKind.Quantity => "Quantity(" + computed.Unit.ToTypeName() + ")",
+                        _ when computed.IsSpatial && computed.Unit != GesQuantityUnit.UnitNone => computed.Kind + "(" + computed.Unit.ToTypeName() + ")",
                         _ => computed.Kind.ToString()
                     });
                     if (computed.Optional) builder.Append(" optional");

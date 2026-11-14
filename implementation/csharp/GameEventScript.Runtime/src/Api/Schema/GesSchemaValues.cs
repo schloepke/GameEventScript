@@ -578,6 +578,11 @@ public static class GesSchemaValues
                 GesComputedKind.Float => GesValue.GesFloat(value.Number, field.Unit),
                 GesComputedKind.Percentage => GesValue.GesPercentage(value.Number),
                 GesComputedKind.True or GesComputedKind.False => GesValue.GesBoolean(value.Kind == GesComputedKind.True),
+                GesComputedKind.Vector => value.Vector.ToValue(field.Unit),
+                GesComputedKind.Point => value.Point.ToValue(field.Unit),
+                GesComputedKind.Box => ((GesBox)value.Shape!).ToValue(field.Unit),
+                GesComputedKind.Disc => ((GesDisc)value.Shape!).ToValue(field.Unit),
+                GesComputedKind.Poly => ((GesPoly)value.Shape!).ToValue(field.Unit),
                 _ => default
             });
         }
@@ -607,7 +612,15 @@ public static class GesSchemaValues
                 GesBytecodeTypeKind.Float => GesComputedValue.OfFloat(value.FloatValue),
                 GesBytecodeTypeKind.Percentage => GesComputedValue.OfPercentage(value.FloatValue),
                 GesBytecodeTypeKind.Boolean => GesComputedValue.OfBoolean(value.IsTrue),
-                _ => GesComputedValue.Nothing
+                GesBytecodeTypeKind.Vector => GesComputedValue.OfVector(value.X, value.Y, value.Z),
+                GesBytecodeTypeKind.Point => GesComputedValue.OfPoint(value.X, value.Y, value.Z),
+                _ => value.ExternalValue switch
+                {
+                    GesGeometryLibrary.BoxValue box => GesComputedValue.OfBox(box.Box),
+                    GesGeometryLibrary.DiscValue disc => GesComputedValue.OfDisc(disc.Disc),
+                    GesGeometryLibrary.PolyValue poly => GesComputedValue.OfPoly(poly.Poly),
+                    _ => GesComputedValue.Nothing
+                }
             };
         }
 

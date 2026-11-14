@@ -59,6 +59,12 @@ extension GesComputedEmitter {
     func analyze(_ owner: String, _ field: GesSchemaComputedFieldInfo) -> Facts? {
         let key = owner + "\u{0}" + field.name
         if analyzed.contains(key) { return fields[key] }
+        if field.isSpatial || Self.spatial(field.tree) {
+            // Spatial values keep the dynamic form, whose helpers repeat the virtual machine on the runtime's types.
+            analyzed.insert(key)
+            fields[key] = nil
+            return nil
+        }
         let analysis = Analysis(owner)
         let facts = analyze(field.tree, analysis)
         var result: Facts?

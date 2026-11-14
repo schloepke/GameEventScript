@@ -52,6 +52,13 @@ internal sealed partial class GesComputedEmitter
     private Facts? Analyze(string owner, GesResolvedComputed field)
     {
         if (_fields.TryGetValue((owner, field.Name), out var known)) return known;
+        if (field.IsSpatial || Spatial(field.Expression))
+        {
+            // Spatial values keep the dynamic form, whose helpers repeat the virtual machine on the runtime's types.
+            _fields[(owner, field.Name)] = null;
+            return null;
+        }
+
         var analysis = new Analysis(owner);
         var facts = Analyze(field.Expression, analysis);
         Facts? result = null;

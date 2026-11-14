@@ -105,7 +105,7 @@ internal static class GesSchemaLayoutJson
                 json.String("value", node.Type == GesComputedType.Boolean ? node.Literal.Kind == GesComputedKind.True ? "true" : "false" : node.Decimal.Canonical);
                 json.Boolean("integer", node.Literal.Kind == GesComputedKind.Integer);
                 break;
-            case GesComputedOp.Field or GesComputedOp.Item:
+            case GesComputedOp.Field or GesComputedOp.Item or GesComputedOp.Part:
                 json.Strings("path", node.Path);
                 break;
             case GesComputedOp.Add or GesComputedOp.Subtract or GesComputedOp.Multiply or GesComputedOp.Divide:

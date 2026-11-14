@@ -8,11 +8,12 @@
 /// resolved when the code is generated. Functions and powers add the math helpers, which only a generation that uses them
 /// holds. Both generators write identical text.
 enum GesComputedLibrary {
-    static func write(_ code: inout GesSchemaPlanner.Code, _ helper: String, swift: Bool, values: Bool, math: Bool) {
+    static func write(_ code: inout GesSchemaPlanner.Code, _ helper: String, swift: Bool, values: Bool, math: Bool, spatial: Bool = false) {
         var text = (swift ? swiftHead : csharpHead) + (swift ? swiftStatic : csharpStatic)
         if math { text += "\n" + (swift ? swiftMath : csharpMath) }
         if values { text += "\n" + (swift ? swiftValues : csharpValues) }
         if values && math { text += "\n" + (swift ? swiftMathValues : csharpMathValues) }
+        if spatial { text += "\n" + (swift ? swiftSpatial : csharpSpatial) }
         text += "}"
         for line in GesComputedEmitter.replace(text, "@HELPER@", helper).split(separator: "\n", omittingEmptySubsequences: false) { code.line(String(line)) }
     }
@@ -827,6 +828,321 @@ enum GesComputedLibrary {
             static func radians(_ a: Value) -> Value { a.kind == 0 ? nothing : float(radians(a.numeric)) }
 
             static func degrees(_ a: Value) -> Value { a.kind == 0 ? nothing : float(degrees(a.numeric)) }
+
+        """
+
+    private static let csharpSpatial = """
+            /// <summary>A Vector of three components, nothing where one is nothing or NaN.</summary>
+            internal static GesVector? Vector(Value x, Value y, Value z) => x.Kind == 0 || y.Kind == 0 || z.Kind == 0 ? null : Vector(x.Numeric, y.Numeric, z.Numeric);
+
+            /// <summary>A Point of three components, nothing where one is nothing or NaN.</summary>
+            internal static GesPoint? Point(Value x, Value y, Value z) => x.Kind == 0 || y.Kind == 0 || z.Kind == 0 ? null : Point(x.Numeric, y.Numeric, z.Numeric);
+
+            private static GesVector? Vector(double x, double y, double z)
+                => double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z) ? null : new GesVector(PositiveZero(x), PositiveZero(y), PositiveZero(z));
+
+            private static GesPoint? Point(double x, double y, double z)
+                => double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z) ? null : new GesPoint(PositiveZero(x), PositiveZero(y), PositiveZero(z));
+
+            internal static GesVector? AddVectors(GesVector? a, GesVector? b) => a is { } l && b is { } r ? Vector(l.X + r.X, l.Y + r.Y, l.Z + r.Z) : null;
+
+            internal static GesVector? SubtractVectors(GesVector? a, GesVector? b) => a is { } l && b is { } r ? Vector(l.X - r.X, l.Y - r.Y, l.Z - r.Z) : null;
+
+            /// <summary>A point moved by a vector.</summary>
+            internal static GesPoint? MovePoint(GesPoint? point, GesVector? by) => point is { } l && by is { } r ? Point(l.X + r.X, l.Y + r.Y, l.Z + r.Z) : null;
+
+            /// <summary>A point moved back by a vector.</summary>
+            internal static GesPoint? MovePointBack(GesPoint? point, GesVector? by) => point is { } l && by is { } r ? Point(l.X - r.X, l.Y - r.Y, l.Z - r.Z) : null;
+
+            /// <summary>The vector from the second point to the first.</summary>
+            internal static GesVector? PointDifference(GesPoint? a, GesPoint? b) => a is { } l && b is { } r ? Vector(l.X - r.X, l.Y - r.Y, l.Z - r.Z) : null;
+
+            /// <summary>A vector times a finite number or a percentage's ratio.</summary>
+            internal static GesVector? Scale(GesVector? vector, Value scalar)
+            {
+                if (vector is not { } v || scalar.Kind == 0) return null;
+                var s = scalar.Numeric;
+                return double.IsInfinity(s) ? null : Vector(v.X * s, v.Y * s, v.Z * s);
+            }
+
+            /// <summary>A vector divided by a finite number or percentage ratio other than zero.</summary>
+            internal static GesVector? ScaleDown(GesVector? vector, Value scalar)
+            {
+                if (vector is not { } v || scalar.Kind == 0) return null;
+                var s = scalar.Numeric;
+                return double.IsInfinity(s) || s == 0 ? null : Vector(v.X / s, v.Y / s, v.Z / s);
+            }
+
+            internal static GesVector? NegateVector(GesVector? vector) => vector is { } v ? Vector(-v.X, -v.Y, -v.Z) : null;
+
+            /// <summary>The length of a vector: the correctly rounded square root of its summed squares.</summary>
+            internal static Value Length(GesVector? vector) => vector is { } v ? Float(global::System.Math.Sqrt(Product(v.X, v.X) + Product(v.Y, v.Y) + Product(v.Z, v.Z))) : Nothing;
+
+            /// <summary>An axis of a vector: 0 x, 1 y, 2 z.</summary>
+            internal static Value Axis(GesVector? vector, int axis) => vector is { } v ? Float(axis == 0 ? v.X : axis == 1 ? v.Y : v.Z) : Nothing;
+
+            /// <summary>An axis of a point: 0 x, 1 y, 2 z.</summary>
+            internal static Value Axis(GesPoint? point, int axis) => point is { } v ? Float(axis == 0 ? v.X : axis == 1 ? v.Y : v.Z) : Nothing;
+
+            /// <summary>The box between two corners, which it orders.</summary>
+            internal static GesBox? Box(GesPoint? corner, GesPoint? opposite) => corner is { } a && opposite is { } b ? new GesBox(a, b) : null;
+
+            /// <summary>The box around a centre with a size.</summary>
+            internal static GesBox? BoxAround(GesPoint? center, GesVector? size)
+            {
+                if (center is not { } c || size is not { } s) return null;
+                var x = Product(s.X, 0.5);
+                var y = Product(s.Y, 0.5);
+                var z = Product(s.Z, 0.5);
+                return new GesBox(new GesPoint(c.X - x, c.Y - y, c.Z - z), new GesPoint(c.X + x, c.Y + y, c.Z + z));
+            }
+
+            internal static GesPoint? BoxLower(GesBox? box) => box is { } b ? Point(b.Min.X, b.Min.Y, b.Min.Z) : null;
+
+            internal static GesPoint? BoxUpper(GesBox? box) => box is { } b ? Point(b.Max.X, b.Max.Y, b.Max.Z) : null;
+
+            internal static GesPoint? BoxCenter(GesBox? box) => box is { } b ? Point((b.Min.X + b.Max.X) * 0.5, (b.Min.Y + b.Max.Y) * 0.5, (b.Min.Z + b.Max.Z) * 0.5) : null;
+
+            internal static GesVector? BoxSize(GesBox? box) => box is { } b ? Vector(b.Max.X - b.Min.X, b.Max.Y - b.Min.Y, b.Max.Z - b.Min.Z) : null;
+
+            /// <summary>The disc around a centre, with the radius's magnitude.</summary>
+            internal static GesDisc? Disc(GesPoint? center, Value radius) => center is { } c && radius.Kind != 0 ? new GesDisc(c, radius.Numeric) : null;
+
+            /// <summary>The disc around the origin, with the radius's magnitude.</summary>
+            internal static GesDisc? DiscAround(Value radius) => radius.Kind != 0 ? new GesDisc(radius.Numeric) : null;
+
+            internal static GesPoint? DiscCenter(GesDisc? disc) => disc is { } d ? Point(d.Center.X, d.Center.Y, d.Center.Z) : null;
+
+            internal static Value Radius(GesDisc? disc) => disc is { } d ? Float(d.Radius) : Nothing;
+
+            /// <summary>The polygon of the points in order, nothing where one is.</summary>
+            internal static GesPoly? Poly(params GesPoint?[] points)
+            {
+                var list = new GesPoint[points.Length];
+                for (var index = 0; index < points.Length; index++)
+                {
+                    if (points[index] is not { } point) return null;
+                    list[index] = point;
+                }
+
+                return new GesPoly(list);
+            }
+
+            internal static Value PointCount(GesPoly? poly) => poly is { } p ? Integer(p.Points.Count) : Nothing;
+
+            /// <summary>The polygon of a wire record's points.</summary>
+            internal static GesPoly ReadPoly(List<GesPoint> points) => new GesPoly(points);
+
+            internal static GesPoly? ReadPoly(GesPoly? poly) => poly;
+
+            /// <summary>A required Vector, with NaN axes where the expression gives nothing.</summary>
+            internal static GesVector RequiredVector(GesVector? vector) => vector ?? new GesVector(double.NaN, double.NaN, double.NaN);
+
+            /// <summary>A required Point, with NaN axes where the expression gives nothing.</summary>
+            internal static GesPoint RequiredPoint(GesPoint? point) => point ?? new GesPoint(double.NaN, double.NaN, double.NaN);
+
+            /// <summary>A required Box, with NaN corners where the expression gives nothing.</summary>
+            internal static GesBox RequiredBox(GesBox? box) => box ?? new GesBox(new GesPoint(double.NaN, double.NaN, double.NaN), new GesPoint(double.NaN, double.NaN, double.NaN));
+
+            /// <summary>A required Disc, with a NaN centre and radius where the expression gives nothing.</summary>
+            internal static GesDisc RequiredDisc(GesDisc? disc) => disc ?? new GesDisc(new GesPoint(double.NaN, double.NaN, double.NaN), double.NaN);
+
+            /// <summary>A required Poly, without points where the expression gives nothing.</summary>
+            internal static GesPoly RequiredPoly(GesPoly? poly) => poly ?? new GesPoly(global::System.Array.Empty<GesPoint>());
+
+            internal static global::GameEventScript.Runtime.Values.GesValue ToGesValue(GesVector? vector, GesQuantityUnit unit) => vector is { } v ? v.ToValue(unit) : global::GameEventScript.Runtime.Values.GesValue.GesNothing();
+
+            internal static global::GameEventScript.Runtime.Values.GesValue ToGesValue(GesPoint? point, GesQuantityUnit unit) => point is { } v ? v.ToValue(unit) : global::GameEventScript.Runtime.Values.GesValue.GesNothing();
+
+            internal static global::GameEventScript.Runtime.Values.GesValue ToGesValue(GesBox? box, GesQuantityUnit unit) => box is { } v ? v.ToValue(unit) : global::GameEventScript.Runtime.Values.GesValue.GesNothing();
+
+            internal static global::GameEventScript.Runtime.Values.GesValue ToGesValue(GesDisc? disc, GesQuantityUnit unit) => disc is { } v ? v.ToValue(unit) : global::GameEventScript.Runtime.Values.GesValue.GesNothing();
+
+            internal static global::GameEventScript.Runtime.Values.GesValue ToGesValue(GesPoly? poly, GesQuantityUnit unit) => poly is { } v ? v.ToValue(unit) : global::GameEventScript.Runtime.Values.GesValue.GesNothing();
+
+        """
+
+    private static let swiftSpatial = """
+            /// A Vector of three components, nothing where one is nothing or NaN.
+            static func vector(_ x: Value, _ y: Value, _ z: Value) -> GesVector? { x.kind == 0 || y.kind == 0 || z.kind == 0 ? nil : vector(x.numeric, y.numeric, z.numeric) }
+
+            /// A Point of three components, nothing where one is nothing or NaN.
+            static func point(_ x: Value, _ y: Value, _ z: Value) -> GesPoint? { x.kind == 0 || y.kind == 0 || z.kind == 0 ? nil : point(x.numeric, y.numeric, z.numeric) }
+
+            private static func vector(_ x: Double, _ y: Double, _ z: Double) -> GesVector? {
+                x.isNaN || y.isNaN || z.isNaN ? nil : GesVector(x: positiveZero(x), y: positiveZero(y), z: positiveZero(z))
+            }
+
+            private static func point(_ x: Double, _ y: Double, _ z: Double) -> GesPoint? {
+                x.isNaN || y.isNaN || z.isNaN ? nil : GesPoint(x: positiveZero(x), y: positiveZero(y), z: positiveZero(z))
+            }
+
+            static func addVectors(_ a: GesVector?, _ b: GesVector?) -> GesVector? {
+                guard let a, let b else { return nil }
+                return vector(a.x + b.x, a.y + b.y, a.z + b.z)
+            }
+
+            static func subtractVectors(_ a: GesVector?, _ b: GesVector?) -> GesVector? {
+                guard let a, let b else { return nil }
+                return vector(a.x - b.x, a.y - b.y, a.z - b.z)
+            }
+
+            /// A point moved by a vector.
+            static func movePoint(_ point: GesPoint?, _ by: GesVector?) -> GesPoint? {
+                guard let point, let by else { return nil }
+                return self.point(point.x + by.x, point.y + by.y, point.z + by.z)
+            }
+
+            /// A point moved back by a vector.
+            static func movePointBack(_ point: GesPoint?, _ by: GesVector?) -> GesPoint? {
+                guard let point, let by else { return nil }
+                return self.point(point.x - by.x, point.y - by.y, point.z - by.z)
+            }
+
+            /// The vector from the second point to the first.
+            static func pointDifference(_ a: GesPoint?, _ b: GesPoint?) -> GesVector? {
+                guard let a, let b else { return nil }
+                return vector(a.x - b.x, a.y - b.y, a.z - b.z)
+            }
+
+            /// A vector times a finite number or a percentage's ratio.
+            static func scale(_ vector: GesVector?, _ scalar: Value) -> GesVector? {
+                guard let vector, scalar.kind != 0 else { return nil }
+                let s = scalar.numeric
+                return s.isInfinite ? nil : self.vector(vector.x * s, vector.y * s, vector.z * s)
+            }
+
+            /// A vector divided by a finite number or percentage ratio other than zero.
+            static func scaleDown(_ vector: GesVector?, _ scalar: Value) -> GesVector? {
+                guard let vector, scalar.kind != 0 else { return nil }
+                let s = scalar.numeric
+                return s.isInfinite || s == 0 ? nil : self.vector(vector.x / s, vector.y / s, vector.z / s)
+            }
+
+            static func negateVector(_ vector: GesVector?) -> GesVector? {
+                guard let vector else { return nil }
+                return self.vector(-vector.x, -vector.y, -vector.z)
+            }
+
+            /// The length of a vector: the correctly rounded square root of its summed squares.
+            static func length(_ vector: GesVector?) -> Value {
+                guard let vector else { return nothing }
+                return float((vector.x * vector.x + vector.y * vector.y + vector.z * vector.z).squareRoot())
+            }
+
+            /// An axis of a vector: 0 x, 1 y, 2 z.
+            static func axis(_ vector: GesVector?, _ axis: Int) -> Value {
+                guard let vector else { return nothing }
+                return float(axis == 0 ? vector.x : axis == 1 ? vector.y : vector.z)
+            }
+
+            /// An axis of a point: 0 x, 1 y, 2 z.
+            static func axis(_ point: GesPoint?, _ axis: Int) -> Value {
+                guard let point else { return nothing }
+                return float(axis == 0 ? point.x : axis == 1 ? point.y : point.z)
+            }
+
+            /// The box between two corners, which it orders.
+            static func box(_ corner: GesPoint?, _ opposite: GesPoint?) -> GesBox? {
+                guard let corner, let opposite else { return nil }
+                return GesBox(corner, opposite)
+            }
+
+            /// The box around a centre with a size.
+            static func boxAround(_ center: GesPoint?, _ size: GesVector?) -> GesBox? {
+                guard let center, let size else { return nil }
+                let x = size.x * 0.5
+                let y = size.y * 0.5
+                let z = size.z * 0.5
+                return GesBox(GesPoint(x: center.x - x, y: center.y - y, z: center.z - z), GesPoint(x: center.x + x, y: center.y + y, z: center.z + z))
+            }
+
+            static func boxLower(_ box: GesBox?) -> GesPoint? {
+                guard let box else { return nil }
+                return point(box.min.x, box.min.y, box.min.z)
+            }
+
+            static func boxUpper(_ box: GesBox?) -> GesPoint? {
+                guard let box else { return nil }
+                return point(box.max.x, box.max.y, box.max.z)
+            }
+
+            static func boxCenter(_ box: GesBox?) -> GesPoint? {
+                guard let box else { return nil }
+                return point((box.min.x + box.max.x) * 0.5, (box.min.y + box.max.y) * 0.5, (box.min.z + box.max.z) * 0.5)
+            }
+
+            static func boxSize(_ box: GesBox?) -> GesVector? {
+                guard let box else { return nil }
+                return vector(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z)
+            }
+
+            /// The disc around a centre, with the radius's magnitude.
+            static func disc(_ center: GesPoint?, _ radius: Value) -> GesDisc? {
+                guard let center, radius.kind != 0 else { return nil }
+                return GesDisc(center: center, radius: radius.numeric)
+            }
+
+            /// The disc around the origin, with the radius's magnitude.
+            static func discAround(_ radius: Value) -> GesDisc? { radius.kind == 0 ? nil : GesDisc(radius: radius.numeric) }
+
+            static func discCenter(_ disc: GesDisc?) -> GesPoint? {
+                guard let disc else { return nil }
+                return point(disc.center.x, disc.center.y, disc.center.z)
+            }
+
+            static func radius(_ disc: GesDisc?) -> Value {
+                guard let disc else { return nothing }
+                return float(disc.radius)
+            }
+
+            /// The polygon of the points in order, nothing where one is.
+            static func poly(_ points: GesPoint?...) -> GesPoly? {
+                var list: [GesPoint] = []
+                list.reserveCapacity(points.count)
+                for point in points {
+                    guard let point else { return nil }
+                    list.append(point)
+                }
+                return GesPoly(list)
+            }
+
+            static func pointCount(_ poly: GesPoly?) -> Value {
+                guard let poly else { return nothing }
+                return integer(Int64(poly.points.count))
+            }
+
+            /// The polygon of a wire record's points.
+            static func readPoly(_ points: [GesPoint]) -> GesPoly { GesPoly(points) }
+
+            static func readPoly(_ poly: GesPoly) -> GesPoly { poly }
+
+            static func readPoly(_ poly: GesPoly?) -> GesPoly? { poly }
+
+            /// A required Vector, with NaN axes where the expression gives nothing.
+            static func requiredVector(_ vector: GesVector?) -> GesVector { vector ?? GesVector(x: .nan, y: .nan, z: .nan) }
+
+            /// A required Point, with NaN axes where the expression gives nothing.
+            static func requiredPoint(_ point: GesPoint?) -> GesPoint { point ?? GesPoint(x: .nan, y: .nan, z: .nan) }
+
+            /// A required Box, with NaN corners where the expression gives nothing.
+            static func requiredBox(_ box: GesBox?) -> GesBox { box ?? GesBox(GesPoint(x: .nan, y: .nan, z: .nan), GesPoint(x: .nan, y: .nan, z: .nan)) }
+
+            /// A required Disc, with a NaN centre and radius where the expression gives nothing.
+            static func requiredDisc(_ disc: GesDisc?) -> GesDisc { disc ?? GesDisc(center: GesPoint(x: .nan, y: .nan, z: .nan), radius: .nan) }
+
+            /// A required Poly, without points where the expression gives nothing.
+            static func requiredPoly(_ poly: GesPoly?) -> GesPoly { poly ?? GesPoly([]) }
+
+            static func gesValue(_ vector: GesVector?, _ unit: GesQuantityUnit) -> GesValue { vector?.value(unit: unit) ?? .nothing }
+
+            static func gesValue(_ point: GesPoint?, _ unit: GesQuantityUnit) -> GesValue { point?.value(unit: unit) ?? .nothing }
+
+            static func gesValue(_ box: GesBox?, _ unit: GesQuantityUnit) -> GesValue { box?.value(unit: unit) ?? .nothing }
+
+            static func gesValue(_ disc: GesDisc?, _ unit: GesQuantityUnit) -> GesValue { disc?.value(unit: unit) ?? .nothing }
+
+            static func gesValue(_ poly: GesPoly?, _ unit: GesQuantityUnit) -> GesValue { poly?.value(unit: unit) ?? .nothing }
 
         """
 }

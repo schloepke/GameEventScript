@@ -153,9 +153,10 @@ public struct GesSchemaFieldInfo: Sendable {
 public struct GesSchemaComputedFieldInfo: Sendable {
     /// The name.
     public let name: String
-    /// The type: `.number`, `.quantity`, `.percentage` or `.boolean`.
+    /// The type: `.number`, `.quantity`, `.percentage`, `.boolean`, or a spatial `.vector`, `.point`, `.box`, `.disc` or
+    /// `.poly`.
     public let kind: GesSchemaTypeKind
-    /// The unit of a Quantity.
+    /// The unit of a Quantity or a spatial value.
     public let unit: GesQuantityUnit
     /// Whether the value may be absent, which generated code then gives an optional type.
     public let isOptional: Bool
@@ -165,6 +166,10 @@ public struct GesSchemaComputedFieldInfo: Sendable {
     @_spi(Generator) public let tree: GesComputedNode
     /// The expression as its source spells it, on one line.
     @_spi(Generator) public let spelling: String
+    /// The computed type of the field, which is spatial for a Vector, Point, Box, Disc or Poly.
+    @_spi(Generator) public var type: GesComputedType { kind == .boolean ? .boolean : kind == .percentage ? .percentage : GesResolvedComputed.spatial(kind) ?? .number }
+    /// Whether the field holds a Vector, Point, Box, Disc or Poly.
+    @_spi(Generator) public var isSpatial: Bool { GesResolvedComputed.spatial(kind) != nil }
 
     init(_ field: GesResolvedComputed) {
         name = field.name

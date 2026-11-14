@@ -134,7 +134,7 @@ internal static partial class GesSwiftEmitter
         var shared = options.Split != GesSchemaSplit.None;
         if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, shared), outside: true));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: true, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))), GesComputedEmitter.UsesMath(types.ConvertAll(type => type.Layout.Computed)))));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: true, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))), GesComputedEmitter.UsesMath(types.ConvertAll(type => type.Layout.Computed)), GesComputedEmitter.UsesSpatial(types.ConvertAll(type => type.Layout.Computed)))));
         return document;
     }
 

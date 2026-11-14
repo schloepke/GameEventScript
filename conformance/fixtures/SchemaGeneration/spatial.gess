@@ -1,0 +1,52 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The fixture of the checked-in spatial computed code: vectors, points, boxes, discs and polygons built with their
+// constructors, their parts and arithmetic, optional fields, guards and fallbacks, and a polygon over a list field.
+wire(spatial) model(spatial) schema :Arena as {
+  columns: :Number integer between 1 and 1000
+  rows: :Number integer between 1 and 1000
+  spacing: :Quantity(m) between 0m and 10m step 1cm
+}
+
+wire(spatial) model(spatial) schema :Ground as {
+  arena: :Arena
+  origin: :Point(m) {
+    x between -100m and 100m step 1cm
+    y between -100m and 100m step 1cm
+  }
+  drift: :Vector(m) {
+    x between -10m and 10m step 1cm
+    y between -10m and 10m step 1cm
+  } optional
+  marks: :List(:Point(m) {
+    x between 0m and 100m step 1m
+    y between 0m and 100m step 1m
+  }) max 8
+  posts: :List(:Post) max 8
+  size: :Vector(m) computed by
+    :Vector(x: (arena.columns - 1) * arena.spacing, y: (arena.rows - 1) * arena.spacing, z: 0m)
+  bounds: :Box(m) computed by :Box(lower: origin, upper: origin + size)
+  middle: :Point(m) computed by bounds.center
+  area: :Quantity(m²) computed by size.x * size.y
+  diagonal: :Quantity(m) computed by abs size
+  shifted: :Point(m) optional computed by origin + drift
+  moved: :Point(m) computed by origin + drift default origin
+  drifting: :Boolean computed by drift has value
+  half: :Vector(m) computed by size / 2
+  back: :Vector(m) computed by -(size * 50%)
+  span: :Vector(m) computed by bounds.upper - bounds.lower
+  around: :Box(m) computed by :Box(center: middle, size: span)
+  zone: :Disc(m) computed by :Disc(center: middle, radius: diagonal / 2)
+  ring: :Disc(m) computed by :Disc(radius: 3m)
+  reach: :Quantity(m) computed by zone.radius
+  outline: :Poly(m) computed by :Poly(points: [origin, :Point(x: size.x, y: 0m), :Point(size.x, size.y)])
+  path: :Poly(m) computed by :Poly(points: marks)
+  fence: :Poly(m) computed by :Poly(points: posts[:select post => :Point(x: post.x, y: post.y)])
+  corners: :Number computed by outline.points[:count]
+  pick: :Vector(m) computed by size when arena.columns > 1, otherwise half
+}
+
+schema :Post as {
+  x: :Quantity(m) between 0m and 100m step 1m
+  y: :Quantity(m) between 0m and 100m step 1m
+}

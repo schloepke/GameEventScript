@@ -257,6 +257,32 @@ the same bits everywhere; trigonometry, `exp`, `ln` and other powers come from e
 in their last bits between a server and its clients, so a decision both must agree on, such as whether a target is in a
 cone, belongs in a stored field.
 
+> **Since: 0.5.0** — spatial computed fields
+
+A computed field may also be a vector, point, box, disc or polygon, built with the constructors of scripts:
+
+```gess
+schema :Arena as {
+  columns: :Number integer between 1 and 1000
+  rows: :Number integer between 1 and 1000
+  spacing: :Quantity(m) between 0m and 10m step 1cm
+}
+
+schema :Ground as {
+  arena: :Arena
+  size: :Vector(m) computed by
+    :Vector(x: (arena.columns - 1) * arena.spacing, y: (arena.rows - 1) * arena.spacing, z: 0m)
+  bounds: :Box(m) computed by :Box(lower: :Point(x: 0m, y: 0m, z: 0m), upper: :Point(x: size.x, y: size.y, z: 0m))
+  area: :Quantity(m²) computed by size.x * size.y
+  diagonal: :Quantity(m) computed by abs size
+}
+```
+
+Later fields read the parts, such as `size.x`, `bounds.center` or `zone.radius`, and vectors and points take the
+arithmetic of scripts: `origin + size`, `size / 2`, `size * 50%`. `abs` of a vector is its length. Generated code gives
+`size` as a `GesVector` and `bounds` as a `GesBox`, so neither a server nor a client builds them by hand. See
+[computed spatial values](../../specs/Schemas.md#computed-spatial-values).
+
 ## 5. Find the object with a key
 
 `key` marks the first field of a schema as the identity of the object, like `id` of `Player`. It

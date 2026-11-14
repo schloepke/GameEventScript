@@ -534,7 +534,7 @@ public enum GesSchemaValues {
     /// Adds the computed fields in order, each reading the fields and the computed fields before it, as a script record does.
     private static func derive(_ computed: [GesSchemaComputedFieldInfo], _ keys: inout [String], _ values: inout [GesValue]) {
         for field in computed {
-            let type: GesComputedType = field.kind == .boolean ? .boolean : field.kind == .percentage ? .percentage : .number
+            let type: GesComputedType = field.kind == .boolean ? .boolean : field.kind == .percentage ? .percentage : GesResolvedComputed.spatial(field.kind) ?? .number
             let value = GesComputedMath.cast(GesComputedEvaluation.evaluate(field.tree, GesRecordScope(keys: keys, values: values), nil), type)
             keys.append(field.name)
             switch value.kind {
@@ -543,6 +543,15 @@ public enum GesSchemaValues {
             case .percentage: values.append(.percentage(value.number))
             case .true, .false: values.append(.boolean(value.kind == .true))
             case .nothing: values.append(.nothing)
+            case .vector: values.append(value.vector.value(unit: field.unit))
+            case .point: values.append(value.point.value(unit: field.unit))
+            case .box, .disc, .poly:
+                switch value.shape {
+                case .box(let box): values.append(box.value(unit: field.unit))
+                case .disc(let disc): values.append(disc.value(unit: field.unit))
+                case .poly(let poly): values.append(poly.value(unit: field.unit))
+                default: values.append(.nothing)
+                }
             }
         }
     }
@@ -640,7 +649,15 @@ private struct GesRecordScope: GesComputedScope {
         case .float: return .of(float: found.floatValue!)
         case .percentage: return .of(percentage: found.floatValue!)
         case .boolean: return .of(boolean: found.asBoolean)
-        default: return .nothing
+        case .vector: return .of(vector: found.x, found.y, found.z)
+        case .point: return .of(point: found.x, found.y, found.z)
+        default:
+            switch found.externalValue {
+            case let box as GesGeometryLibrary.BoxValue: return .of(box: box.box)
+            case let disc as GesGeometryLibrary.DiscValue: return .of(disc: disc.disc)
+            case let poly as GesGeometryLibrary.PolyValue: return .of(poly: poly.poly)
+            default: return .nothing
+            }
         }
     }
 

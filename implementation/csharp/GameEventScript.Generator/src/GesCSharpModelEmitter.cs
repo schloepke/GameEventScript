@@ -69,7 +69,7 @@ internal static class GesCSharpModelEmitter
         var geometry = GesModelPlanner.UsesGeometry(layout);
         document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || options.Values, geometry)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: false, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)))));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: false, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)), GesComputedEmitter.UsesSpatial(layout.Types.ConvertAll(type => type.Computed)))));
         return document;
     }
 
@@ -1044,6 +1044,10 @@ internal static class GesCSharpModelEmitter
         GesSchemaTypeKind.Boolean => $"new GesExternalTypeFieldDefinition({GesSchemaPlanner.Literal(field.Name, false)}, GesBytecodeTypeKind.Boolean)",
         GesSchemaTypeKind.Percentage => $"new GesExternalTypeFieldDefinition({GesSchemaPlanner.Literal(field.Name, false)}, GesBytecodeTypeKind.Percentage)",
         GesSchemaTypeKind.Quantity => $"new GesExternalTypeFieldDefinition({GesSchemaPlanner.Literal(field.Name, false)}, GesBytecodeTypeKind.Float, {UnitName(field.Unit.ToTypeName())})",
+        GesSchemaTypeKind.Vector or GesSchemaTypeKind.Point => field.Unit == GesQuantityUnit.UnitNone
+            ? $"new GesExternalTypeFieldDefinition({GesSchemaPlanner.Literal(field.Name, false)}, GesBytecodeTypeKind.{field.Kind})"
+            : $"new GesExternalTypeFieldDefinition({GesSchemaPlanner.Literal(field.Name, false)}, GesBytecodeTypeKind.{field.Kind}, {UnitName(field.Unit.ToTypeName())})",
+        GesSchemaTypeKind.Box or GesSchemaTypeKind.Disc or GesSchemaTypeKind.Poly => $"new GesExternalTypeFieldDefinition({GesSchemaPlanner.Literal(field.Name, false)}, {GesSchemaPlanner.Literal(field.Kind.ToString(), false)})",
         _ => $"new GesExternalTypeFieldDefinition({GesSchemaPlanner.Literal(field.Name, false)}, GesBytecodeTypeKind.Float)"
     };
 
@@ -1083,7 +1087,7 @@ internal static class GesCSharpModelEmitter
             for (var index = 0; index < type.Computed.Length; index++)
             {
                 var field = type.Computed[index];
-                var unit = UnitName(field.Kind == GesSchemaTypeKind.Quantity ? field.Unit.ToTypeName() : "none");
+                var unit = UnitName(field.Kind == GesSchemaTypeKind.Quantity || field.IsSpatial ? field.Unit.ToTypeName() : "none");
                 code.Line($"values[{Depth(fields.Count + index)}] = {computed.HelperName}.ToGesValue({computed.ValueOf("record", type.Name, field)}, {unit});");
             }
 
@@ -1264,7 +1268,7 @@ internal static class GesCSharpModelEmitter
             code.Open("{");
             foreach (var field in fields) code.Line($"{GesSchemaPlanner.Literal(field.Field.Name, false)} => {Encode(field.Value, type.Name, "Record." + field.Base, qualifier, support)},");
             foreach (var field in type.Computed)
-                code.Line($"{GesSchemaPlanner.Literal(field.Name, false)} => {computed.HelperName}.ToGesValue({computed.ValueOf("Record", type.Name, field)}, {UnitName(field.Kind == GesSchemaTypeKind.Quantity ? field.Unit.ToTypeName() : "none")}),");
+                code.Line($"{GesSchemaPlanner.Literal(field.Name, false)} => {computed.HelperName}.ToGesValue({computed.ValueOf("Record", type.Name, field)}, {UnitName(field.Kind == GesSchemaTypeKind.Quantity || field.IsSpatial ? field.Unit.ToTypeName() : "none")}),");
             code.Line($"\"fields\" => {support}.Fields(Names, this),");
             code.Line("_ => null");
             code.Close("};");

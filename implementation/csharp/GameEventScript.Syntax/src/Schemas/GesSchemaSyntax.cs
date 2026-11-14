@@ -176,7 +176,10 @@ internal enum GesSchemaExpressionKind : byte
     HasValue,
     Sum,
     Count,
-    Function
+    Function,
+    Construct,
+    List,
+    Select
 }
 
 internal enum GesSchemaBinaryOperator : byte
@@ -199,7 +202,9 @@ internal enum GesSchemaBinaryOperator : byte
 // An expression of a computed field, a subset of GES expressions with their spellings. A Member reads Name from its one
 // child; a Choice holds value and condition pairs and then the fallback; Sum holds its list and, with a variable in Name,
 // the projection; Clamp holds the value and both bounds; a Function holds its arguments and the function's ASCII spelling in
-// Name, such as `sqrt`, `round half up` or `atan2`.
+// Name, such as `sqrt`, `round half up` or `atan2`. A Construct builds the spatial type in Name (`Vector`, `Point`, `Box`,
+// `Disc` or `Poly`) from its arguments, each with its label in Labels or an empty one for a positional argument; a List holds
+// the items of a list literal; Select holds its list and the projection, with its variable in Name.
 internal sealed class GesSchemaExpressionSyntax
 {
     internal GesSchemaExpressionKind Kind { get; init; }
@@ -213,6 +218,9 @@ internal sealed class GesSchemaExpressionSyntax
     internal string Name { get; init; } = "";
 
     internal GesSchemaExpressionSyntax[] Children { get; init; } = [];
+
+    // The label of each argument of a Construct, empty for a positional one.
+    internal string[] Labels { get; init; } = [];
 
     // The depth of the tree below and including this node, which the reader limits.
     internal int Depth { get; init; } = 1;

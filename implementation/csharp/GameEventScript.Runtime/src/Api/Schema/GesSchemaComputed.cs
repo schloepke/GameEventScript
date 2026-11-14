@@ -57,18 +57,33 @@ internal enum GesComputedOp : byte
     RoundHalfUp,
     RoundHalfDown,
     Rad,
-    Deg
+    Deg,
+    Vector,
+    Point,
+    Box,
+    BoxAround,
+    Disc,
+    DiscAround,
+    Poly,
+    PolyOf,
+    Part,
+    PointCount
 }
 
-// The static type of a node: a number with a unit, a percentage, a Boolean, or a record or list that only a path, `has value`
-// or an aggregate reads.
+// The static type of a node: a number with a unit, a percentage, a Boolean, a spatial value with a unit, or a record or list
+// that only a path, `has value` or an aggregate reads.
 internal enum GesComputedType : byte
 {
     Number,
     Percentage,
     Boolean,
     Record,
-    List
+    List,
+    Vector,
+    Point,
+    Box,
+    Disc,
+    Poly
 }
 
 // A checked expression. Units are resolved at binding: each node knows its static type and unit, and an operation knows the
@@ -92,7 +107,7 @@ internal sealed class GesComputedNode
     // The literal as an exact decimal, which the canonical form writes.
     internal GesSchemaDecimal Decimal { get; init; }
 
-    // The field names from the record, or from the element for Item; for Sum and Count, the list.
+    // The field names from the record, or from the element for Item; for Sum and Count, the list; for Part, the part's name.
     internal string[] Path { get; init; } = [];
 
     // For a path: whether each field on it is optional, and how many of its leading fields `has value` around the read
@@ -118,18 +133,25 @@ internal enum GesComputedKind : byte
     Float,
     Percentage,
     False,
-    True
+    True,
+    Vector,
+    Point,
+    Box,
+    Disc,
+    Poly
 }
 
-// A GES scalar as computed fields see it: an exact Int64, a binary64, a percentage ratio, a Boolean, or nothing. Units are
-// static, so the value carries none.
+// A GES value as computed fields see it: an exact Int64, a binary64, a percentage ratio, a Boolean, a spatial value, or
+// nothing. Units are static, so the value carries none. A Vector or Point never holds NaN, which makes it nothing, and holds
+// zero as +0, as the virtual machine stores them; a Box, Disc or Poly holds the geometry library's value.
 internal readonly struct GesComputedValue
 {
-    private GesComputedValue(GesComputedKind kind, long integer, double number)
+    private GesComputedValue(GesComputedKind kind, long integer, double number, object? shape = null)
     {
         Kind = kind;
         Integer = integer;
         Number = number;
+        Shape = shape;
     }
 
     internal static GesComputedValue Nothing => default;
@@ -166,6 +188,27 @@ internal readonly struct GesComputedValue
     }
 
     internal static GesComputedValue OfBoolean(bool value) => new(value ? GesComputedKind.True : GesComputedKind.False, 0, 0);
+
+    // The spatial value: a GesVector, GesPoint, GesBox, GesDisc or GesPoly.
+    internal object? Shape { get; }
+
+    internal GesVector Vector => (GesVector)Shape!;
+
+    internal GesPoint Point => (GesPoint)Shape!;
+
+    internal static GesComputedValue OfVector(double x, double y, double z)
+        => double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z) ? Nothing
+            : new GesComputedValue(GesComputedKind.Vector, 0, 0, new GesVector(GesNumber.CanonicalizeZero(x), GesNumber.CanonicalizeZero(y), GesNumber.CanonicalizeZero(z)));
+
+    internal static GesComputedValue OfPoint(double x, double y, double z)
+        => double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z) ? Nothing
+            : new GesComputedValue(GesComputedKind.Point, 0, 0, new GesPoint(GesNumber.CanonicalizeZero(x), GesNumber.CanonicalizeZero(y), GesNumber.CanonicalizeZero(z)));
+
+    internal static GesComputedValue OfBox(GesBox box) => new(GesComputedKind.Box, 0, 0, box);
+
+    internal static GesComputedValue OfDisc(GesDisc disc) => new(GesComputedKind.Disc, 0, 0, disc);
+
+    internal static GesComputedValue OfPoly(GesPoly poly) => new(GesComputedKind.Poly, 0, 0, poly);
 
     // A rounded number: an Int64, saturated at its bounds as the virtual machine rounds.
     internal static GesComputedValue OfRounded(double value) => OfInteger(GesNumber.ToIntegerSaturated(value));
@@ -392,6 +435,122 @@ internal static class GesComputedMath
     }
 }
 
+// The spatial operations of the GES virtual machine and the geometry library on computed values: components are binary64, a
+// NaN component makes a Vector or Point nothing, a scalar must be finite and a divisor finite and not zero. The unit checks
+// are made at binding.
+internal static class GesComputedSpatial
+{
+    internal static GesComputedValue Vector(GesComputedValue x, GesComputedValue y, GesComputedValue z, bool point)
+    {
+        if (x.IsNothing || y.IsNothing || z.IsNothing) return GesComputedValue.Nothing;
+        return point ? GesComputedValue.OfPoint(x.Numeric, y.Numeric, z.Numeric) : GesComputedValue.OfVector(x.Numeric, y.Numeric, z.Numeric);
+    }
+
+    // vector + vector, point + vector; with subtract also point - point, which gives a vector.
+    internal static GesComputedValue Add(GesComputedValue a, GesComputedValue b, bool subtract)
+    {
+        if (a.IsNothing || b.IsNothing) return GesComputedValue.Nothing;
+        var left = a.Kind == GesComputedKind.Point ? a.Point.X : a.Vector.X;
+        var leftY = a.Kind == GesComputedKind.Point ? a.Point.Y : a.Vector.Y;
+        var leftZ = a.Kind == GesComputedKind.Point ? a.Point.Z : a.Vector.Z;
+        var right = b.Kind == GesComputedKind.Point ? b.Point.X : b.Vector.X;
+        var rightY = b.Kind == GesComputedKind.Point ? b.Point.Y : b.Vector.Y;
+        var rightZ = b.Kind == GesComputedKind.Point ? b.Point.Z : b.Vector.Z;
+        var x = subtract ? left - right : left + right;
+        var y = subtract ? leftY - rightY : leftY + rightY;
+        var z = subtract ? leftZ - rightZ : leftZ + rightZ;
+        return a.Kind == GesComputedKind.Point && b.Kind == GesComputedKind.Vector ? GesComputedValue.OfPoint(x, y, z) : GesComputedValue.OfVector(x, y, z);
+    }
+
+    // A vector times a finite number or a percentage's ratio.
+    internal static GesComputedValue Scale(GesComputedValue vector, GesComputedValue scalar)
+    {
+        if (vector.IsNothing || scalar.IsNothing) return GesComputedValue.Nothing;
+        var s = scalar.Numeric;
+        if (!double.IsFinite(s)) return GesComputedValue.Nothing;
+        var v = vector.Vector;
+        return GesComputedValue.OfVector(v.X * s, v.Y * s, v.Z * s);
+    }
+
+    // A vector divided by a finite number or percentage ratio other than zero.
+    internal static GesComputedValue Divide(GesComputedValue vector, GesComputedValue scalar)
+    {
+        if (vector.IsNothing || scalar.IsNothing) return GesComputedValue.Nothing;
+        var s = scalar.Numeric;
+        if (!double.IsFinite(s) || s == 0d) return GesComputedValue.Nothing;
+        var v = vector.Vector;
+        return GesComputedValue.OfVector(v.X / s, v.Y / s, v.Z / s);
+    }
+
+    internal static GesComputedValue Negate(GesComputedValue vector)
+    {
+        if (vector.IsNothing) return GesComputedValue.Nothing;
+        var v = vector.Vector;
+        return GesComputedValue.OfVector(-v.X, -v.Y, -v.Z);
+    }
+
+    // `abs` of a vector: its length, the correctly rounded square root of the summed squares.
+    internal static GesComputedValue Length(GesComputedValue vector)
+    {
+        if (vector.IsNothing) return GesComputedValue.Nothing;
+        var v = vector.Vector;
+        return GesComputedValue.OfFloat(Math.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z));
+    }
+
+    internal static GesComputedValue Box(GesComputedValue a, GesComputedValue b, bool around)
+    {
+        if (a.IsNothing || b.IsNothing) return GesComputedValue.Nothing;
+        return GesComputedValue.OfBox(around ? GesBox.FromCenter(a.Point, b.Vector) : new GesBox(a.Point, b.Point));
+    }
+
+    internal static GesComputedValue Disc(GesComputedValue center, GesComputedValue radius)
+    {
+        if (center.IsNothing || radius.IsNothing) return GesComputedValue.Nothing;
+        return GesComputedValue.OfDisc(new GesDisc(center.Point, radius.Numeric));
+    }
+
+    internal static GesComputedValue Disc(GesComputedValue radius) => radius.IsNothing ? GesComputedValue.Nothing : GesComputedValue.OfDisc(new GesDisc(radius.Numeric));
+
+    // A part of a spatial value as a script reads it: an axis, a corner, centre or size of a box, or a centre or radius of a
+    // disc. A NaN part is nothing.
+    internal static GesComputedValue Part(GesComputedValue value, string name)
+    {
+        switch (value.Kind)
+        {
+            case GesComputedKind.Vector or GesComputedKind.Point:
+            {
+                var v = value.Kind == GesComputedKind.Point ? new GesVector(value.Point.X, value.Point.Y, value.Point.Z) : value.Vector;
+                return GesComputedValue.OfFloat(name == "x" ? v.X : name == "y" ? v.Y : v.Z);
+            }
+            case GesComputedKind.Box:
+            {
+                var box = (GesBox)value.Shape!;
+                switch (name)
+                {
+                    case "lower": return GesComputedValue.OfPoint(box.Min.X, box.Min.Y, box.Min.Z);
+                    case "upper": return GesComputedValue.OfPoint(box.Max.X, box.Max.Y, box.Max.Z);
+                    case "center":
+                        var center = box.Center;
+                        return GesComputedValue.OfPoint(center.X, center.Y, center.Z);
+                    default:
+                        var size = box.Size;
+                        return GesComputedValue.OfVector(size.X, size.Y, size.Z);
+                }
+            }
+            case GesComputedKind.Disc:
+            {
+                var disc = (GesDisc)value.Shape!;
+                return name == "center" ? GesComputedValue.OfPoint(disc.Center.X, disc.Center.Y, disc.Center.Z) : GesComputedValue.OfFloat(disc.Radius);
+            }
+            default:
+                return GesComputedValue.Nothing;
+        }
+    }
+
+    internal static GesComputedValue PointCount(GesComputedValue poly)
+        => poly.Kind == GesComputedKind.Poly ? GesComputedValue.OfInteger(((GesPoly)poly.Shape!).Points.Count) : GesComputedValue.Nothing;
+}
+
 // What an expression reads: the fields of a record, and the elements of its lists. An element that is a number reads with an
 // empty path.
 internal abstract class GesComputedScope
@@ -418,12 +577,66 @@ internal static class GesComputedEvaluation
                 return scope.Read(node.Path, node.Type == GesComputedType.Percentage);
             case GesComputedOp.Item:
                 return item!.Read(node.Path, node.Type == GesComputedType.Percentage);
+            case GesComputedOp.Negate when node.Type == GesComputedType.Vector:
+                return GesComputedSpatial.Negate(Evaluate(children[0], scope, item));
             case GesComputedOp.Negate:
                 return GesComputedMath.Negate(Evaluate(children[0], scope, item));
             case GesComputedOp.Not:
                 return GesComputedMath.Not(Evaluate(children[0], scope, item));
+            case GesComputedOp.Abs when children[0].Type == GesComputedType.Vector:
+                return GesComputedSpatial.Length(Evaluate(children[0], scope, item));
             case GesComputedOp.Abs:
                 return GesComputedMath.Abs(Evaluate(children[0], scope, item));
+            case GesComputedOp.Add or GesComputedOp.Subtract when node.Type is GesComputedType.Vector or GesComputedType.Point:
+                return GesComputedSpatial.Add(Evaluate(children[0], scope, item), Evaluate(children[1], scope, item), node.Op == GesComputedOp.Subtract);
+            case GesComputedOp.Multiply when node.Type == GesComputedType.Vector:
+            {
+                var a = Evaluate(children[0], scope, item);
+                var b = Evaluate(children[1], scope, item);
+                return children[0].Type == GesComputedType.Vector ? GesComputedSpatial.Scale(a, b) : GesComputedSpatial.Scale(b, a);
+            }
+            case GesComputedOp.Divide when node.Type == GesComputedType.Vector:
+                return GesComputedSpatial.Divide(Evaluate(children[0], scope, item), Evaluate(children[1], scope, item));
+            case GesComputedOp.Vector or GesComputedOp.Point:
+                return GesComputedSpatial.Vector(Evaluate(children[0], scope, item), Evaluate(children[1], scope, item), Evaluate(children[2], scope, item), node.Op == GesComputedOp.Point);
+            case GesComputedOp.Box or GesComputedOp.BoxAround:
+                return GesComputedSpatial.Box(Evaluate(children[0], scope, item), Evaluate(children[1], scope, item), node.Op == GesComputedOp.BoxAround);
+            case GesComputedOp.Disc:
+                return GesComputedSpatial.Disc(Evaluate(children[0], scope, item), Evaluate(children[1], scope, item));
+            case GesComputedOp.DiscAround:
+                return GesComputedSpatial.Disc(Evaluate(children[0], scope, item));
+            case GesComputedOp.Poly:
+            {
+                var points = new GesPoint[children.Length];
+                for (var index = 0; index < children.Length; index++)
+                {
+                    var point = Evaluate(children[index], scope, item);
+                    if (point.IsNothing) return GesComputedValue.Nothing;
+                    points[index] = point.Point;
+                }
+
+                return GesComputedValue.OfPoly(new GesPoly(points));
+            }
+            case GesComputedOp.PolyOf:
+            {
+                var source = children[0];
+                var list = source.Op == GesComputedOp.Item ? item! : scope;
+                var count = list.Count(source.Path);
+                var points = new GesPoint[count];
+                for (var index = 0; index < count; index++)
+                {
+                    var element = list.Element(source.Path, index);
+                    var point = children.Length > 1 ? Evaluate(children[1], scope, element) : element.Read([], false);
+                    if (point.IsNothing) return GesComputedValue.Nothing;
+                    points[index] = point.Point;
+                }
+
+                return GesComputedValue.OfPoly(new GesPoly(points));
+            }
+            case GesComputedOp.Part:
+                return GesComputedSpatial.Part(Evaluate(children[0], scope, item), node.Path[0]);
+            case GesComputedOp.PointCount:
+                return GesComputedSpatial.PointCount(Evaluate(children[0], scope, item));
             case GesComputedOp.Add or GesComputedOp.Subtract:
             {
                 var a = Evaluate(children[0], scope, item);
@@ -519,6 +732,10 @@ internal static class GesComputedCanonical
                 builder.Append(node.Op == GesComputedOp.Field ? "field" : "item");
                 foreach (var name in node.Path) builder.Append(' ').Append(name);
                 break;
+            case GesComputedOp.Part:
+                builder.Append("part ").Append(node.Path[0]).Append(' ');
+                Write(node.Children[0], builder);
+                break;
             case GesComputedOp.Sum or GesComputedOp.Count:
                 builder.Append(node.Op == GesComputedOp.Sum ? "sum" : "count");
                 foreach (var child in node.Children)
@@ -590,6 +807,16 @@ internal static class GesComputedCanonical
         GesComputedOp.RoundHalfDown => "roundHalfDown",
         GesComputedOp.Rad => "rad",
         GesComputedOp.Deg => "deg",
+        GesComputedOp.Vector => "vector",
+        GesComputedOp.Point => "point",
+        GesComputedOp.Box => "box",
+        GesComputedOp.BoxAround => "boxAround",
+        GesComputedOp.Disc => "disc",
+        GesComputedOp.DiscAround => "discAround",
+        GesComputedOp.Poly => "poly",
+        GesComputedOp.PolyOf => "polyOf",
+        GesComputedOp.Part => "part",
+        GesComputedOp.PointCount => "pointCount",
         _ => "literal"
     };
 }

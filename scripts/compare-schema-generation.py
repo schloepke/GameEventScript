@@ -171,6 +171,7 @@ GOLDEN_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
 ROLES = ROOT / "conformance/fixtures/SchemaGeneration/roles"
 TREE_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/tree.gess"
 COMPUTED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/computed.gess"
+SPATIAL_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/spatial.gess"
 GEOMETRY_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/geometry.gess"
 PACKED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/packed.gess"
 ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
@@ -193,6 +194,10 @@ GOLDENS = (
     (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--wire", "computed", "--values"], "swift", "ComputedWire", SWIFT_GENERATED / "ComputedWire.swift"),
     (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--model", "computed", "--values"], "csharp", "GameEventScript.Tests.Generator.Computed.Model", CSHARP_GENERATED / "ComputedModel.g.cs"),
     (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--model", "computed", "--values"], "swift", "ComputedModel", SWIFT_GENERATED / "ComputedModel.swift"),
+    (SPATIAL_FIXTURE.parent, [SPATIAL_FIXTURE.name], ["--wire", "spatial", "--values"], "csharp", "GameEventScript.Tests.Generator.Spatial.Wire", CSHARP_GENERATED / "SpatialWire.g.cs"),
+    (SPATIAL_FIXTURE.parent, [SPATIAL_FIXTURE.name], ["--wire", "spatial", "--values"], "swift", "SpatialWire", SWIFT_GENERATED / "SpatialWire.swift"),
+    (SPATIAL_FIXTURE.parent, [SPATIAL_FIXTURE.name], ["--model", "spatial", "--values", "--bindings"], "csharp", "GameEventScript.Tests.Generator.Spatial.Model", CSHARP_GENERATED / "SpatialModel.g.cs"),
+    (SPATIAL_FIXTURE.parent, [SPATIAL_FIXTURE.name], ["--model", "spatial", "--values", "--bindings"], "swift", "SpatialModel", SWIFT_GENERATED / "SpatialModel.swift"),
     (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--wire", "geometry", "--values"], "csharp", "GameEventScript.Tests.Generator.Geometry.Wire", CSHARP_GENERATED / "GeometryWire.g.cs"),
     (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--wire", "geometry", "--values"], "swift", "GeometryWire", SWIFT_GENERATED / "GeometryWire.swift"),
     (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--model", "geometry", "--bindings", "--documents"], "csharp", "GameEventScript.Tests.Generator.Geometry.Model", CSHARP_GENERATED / "GeometryModel.g.cs"),

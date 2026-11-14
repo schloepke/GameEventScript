@@ -82,7 +82,7 @@ enum GesSchemaLayoutJson {
         case .literal:
             json.string("value", node.type == .boolean ? (node.literal.kind == .true ? "true" : "false") : node.decimal.canonical)
             json.boolean("integer", node.literal.kind == .integer)
-        case .field, .item:
+        case .field, .item, .part:
             json.strings("path", node.path)
         case .add, .subtract, .multiply, .divide:
             json.boolean("first", node.first)

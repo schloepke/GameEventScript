@@ -194,7 +194,8 @@ extension GesSchemaSourceReader {
         return value
     }
 
-    /// Member access `record.field` and the list aggregates `list[:sum]`, `list[:sum item => value]` and `list[:count]`.
+    /// Member access `record.field`, the list aggregates `list[:sum]`, `list[:sum item => value]` and `list[:count]`, and the
+    /// projection `list[:select item => value]`.
     private mutating func readPostfix() throws -> GesSchemaExpressionSyntax {
         var value = try readPrimary()
         while true {
@@ -217,8 +218,10 @@ extension GesSchemaSourceReader {
                 value = try node(.count, start, [value])
                 continue
             }
-            if selector != "sum" { throw Failure(offset: start, message: "A computed expression takes the list selectors :sum and :count.") }
-            if consume(93) {
+            if selector != "sum" && selector != "select" {
+                throw Failure(offset: start, message: "A computed expression takes the list selectors :sum, :count and :select.")
+            }
+            if selector == "sum" && consume(93) {
                 value = try node(.sum, start, [value])
                 continue
             }
@@ -230,7 +233,7 @@ extension GesSchemaSourceReader {
             let projection = try readExpression()
             skipTrivia()
             try expect(93)
-            value = try checked(GesSchemaExpressionSyntax(.sum, offset: start, name: variable, children: [value, projection]))
+            value = try checked(GesSchemaExpressionSyntax(selector == "sum" ? .sum : .select, offset: start, name: variable, children: [value, projection]))
         }
     }
 
@@ -244,6 +247,24 @@ extension GesSchemaSourceReader {
             skipTrivia()
             try expect(41)
             return inner
+        }
+        if at(":") && position + 1 < bytes.count && GesNames.upper(bytes[position + 1]) { return try readConstruct() }
+        if consume(91) {
+            skipTrivia()
+            var items: [GesSchemaExpressionSyntax] = []
+            if !consume(93) {
+                while true {
+                    items.append(try readExpression())
+                    skipTrivia()
+                    if consume(93) { break }
+                    try expect(44)
+                    skipTrivia()
+                }
+            }
+            if items.isEmpty {
+                throw Failure(offset: offset, message: "A list in a computed expression holds at least one item.", code: GesSchemaDiagnostic.invalidExpression)
+            }
+            return try node(.list, offset, items)
         }
         if consume(36) { return GesSchemaExpressionSyntax(.constant, offset: offset, name: try name(GesNames.plain, "constant name")) }
         for written in ["true", "false"] where atWord(written) {
@@ -352,6 +373,45 @@ extension GesSchemaSourceReader {
         let byte = bytes[index]
         if byte == 45 { return !(index > 1 && (bytes[index - 1] == 101 || bytes[index - 1] == 69) && bytes[index - 2] >= 48 && bytes[index - 2] <= 57) }
         return isLiteralEnd(index) || byte == 91 || byte == 93 || byte == 43 || byte == 42 || byte == 60 || byte == 62 || byte == 61
+    }
+
+    /// A spatial value built with the constructor of its type, as in a script: `:Vector(x: 1m, y: 2m)`, `:Point(1m, 2m)`,
+    /// `:Box(lower: a, upper: b)`, `:Disc(radius: r)` or `:Poly(points: [a, b, c])`. Each argument is labeled or positional.
+    private mutating func readConstruct() throws -> GesSchemaExpressionSyntax {
+        let offset = position
+        position += 1
+        let type = try name({ !$0.isEmpty && GesNames.upper($0.utf8.first!) }, "type name")
+        if type != "Vector" && type != "Point" && type != "Box" && type != "Disc" && type != "Poly" {
+            throw Failure(
+                offset: offset,
+                message: "A computed expression constructs :Vector, :Point, :Box, :Disc or :Poly, not :\(type).",
+                code: GesSchemaDiagnostic.invalidExpression
+            )
+        }
+        skipSpaces()
+        try expect(40)
+        skipTrivia()
+        var arguments: [GesSchemaExpressionSyntax] = []
+        var labels: [String] = []
+        if !consume(41) {
+            while true {
+                let start = position
+                var label = ""
+                if position < bytes.count && GesNames.lower(bytes[position]) {
+                    let written = word()
+                    skipSpaces()
+                    if consume(58) { label = written } else { position = start }
+                }
+                skipTrivia()
+                arguments.append(try readExpression())
+                labels.append(label)
+                skipTrivia()
+                if consume(41) { break }
+                try expect(44)
+                skipTrivia()
+            }
+        }
+        return try checked(GesSchemaExpressionSyntax(.construct, offset: offset, name: type, children: arguments, labels: labels))
     }
 
     /// A name in backticks, which may be a word that GES reserves, such as `length` or `e`: a field or let of that name.

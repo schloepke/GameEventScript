@@ -80,7 +80,8 @@ enum GesCSharpModelEmitter {
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
             let values = options.bindings || options.values || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
             let math = GesComputedEmitter.usesMath(layout.types.map(\.computed))
-            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: false, values: values, math: math) })
+            let spatial = GesComputedEmitter.usesSpatial(layout.types.map(\.computed))
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: false, values: values, math: math, spatial: spatial) })
         }
         return document
     }
@@ -927,6 +928,11 @@ enum GesCSharpModelEmitter {
         case .boolean: return "new GesExternalTypeFieldDefinition(\(name), GesBytecodeTypeKind.Boolean)"
         case .percentage: return "new GesExternalTypeFieldDefinition(\(name), GesBytecodeTypeKind.Percentage)"
         case .quantity: return "new GesExternalTypeFieldDefinition(\(name), GesBytecodeTypeKind.Float, \(unitName(field.unit.rawValue)))"
+        case .vector, .point:
+            return field.unit == .none
+                ? "new GesExternalTypeFieldDefinition(\(name), GesBytecodeTypeKind.\(field.kind.rawValue))"
+                : "new GesExternalTypeFieldDefinition(\(name), GesBytecodeTypeKind.\(field.kind.rawValue), \(unitName(field.unit.rawValue)))"
+        case .box, .disc, .poly: return "new GesExternalTypeFieldDefinition(\(name), \(literal(field.kind.rawValue)))"
         default: return "new GesExternalTypeFieldDefinition(\(name), GesBytecodeTypeKind.Float)"
         }
     }
@@ -1080,7 +1086,7 @@ enum GesCSharpModelEmitter {
 
             // A value also carries the computed fields, as decoding the record's bytes gives them; reading ignores them.
             for (index, field) in type.computed.enumerated() {
-                let unit = unitName(field.kind == .quantity ? field.unit.rawValue : "none")
+                let unit = unitName(field.kind == .quantity || field.isSpatial ? field.unit.rawValue : "none")
                 code.line("values[\(fields.count + index)] = \(computed.helper).ToGesValue(\(computed.valueOf("record", type.name, field)), \(unit));")
             }
             let keyNames = fields.map { literal($0.field.name) } + type.computed.map { literal($0.name) }
@@ -1267,7 +1273,7 @@ enum GesCSharpModelEmitter {
             code.open("{")
             for field in fields { code.line("\(literal(field.field.name)) => \(encode(field.value, type.name, "Record." + field.base, qualifier, support)),") }
             for field in type.computed {
-                let unit = unitName(field.kind == .quantity ? field.unit.rawValue : "none")
+                let unit = unitName(field.kind == .quantity || field.isSpatial ? field.unit.rawValue : "none")
                 code.line("\(literal(field.name)) => \(computed.helper).ToGesValue(\(computed.valueOf("Record", type.name, field)), \(unit)),")
             }
             code.line("\"fields\" => \(support).Fields(Names, this),")

@@ -9,6 +9,8 @@ program prints each computed field. Both CLIs run it on their virtual machine, a
 the corpus expectation, which the value path of both runtimes and the generated code of both languages already meet. A case
 that compares binary64 within a number of ULPs, for functions of the platform's math library such as `sin` or `exp`, is
 compared within that tolerance; square roots, rounding and arithmetic stay bit-exact.
+Records with spatial fields are counted apart: the CLIs register no geometry library, so the corpus suite
+runtime.computed-spatial-records runs their expressions as script records on both virtual machines instead.
 --self-test qualifies the comparison with negative controls.
 """
 import argparse
@@ -162,20 +164,32 @@ def tolerance(case):
     return config.get("maxUlps", 0) if config.get("mode") == "ulp" else 0
 
 
-def cases(paths):
+SPATIAL = re.compile(r":(?:Vector|Point|Box|Disc|Poly)\b")
+
+
+def spatial(sources):
+    """Whether a schema holds a spatial value, which the script records of this check cannot translate."""
+    return any(SPATIAL.search(text) for text in sources)
+
+
+def cases(paths, skipped=None):
     result = []
     for case in read_corpus(paths):
         api = case.metadata.get("schemaApi") if case.kind == "schemaApi" else None
         decoded = ((case.expected or {}).get("schema") or {}).get("decoded") or {}
         if not isinstance(api, dict) or "computed by" not in "".join(api.get("sources") or []) or "value" not in decoded or "encode" not in api:
             continue
+        if spatial(api["sources"]):
+            if skipped is not None:
+                skipped.append(case.id)
+            continue
         result.append((case.id, api["sources"], api["root"], api["encode"], decoded["value"], tolerance(case)))
     return result
 
 
-def check(csharp, swift):
+def check(csharp, swift, skipped=None):
     failures = []
-    items = cases(sorted((ROOT / "conformance/suites").rglob("*.md")))
+    items = cases(sorted((ROOT / "conformance/suites").rglob("*.md")), skipped)
     for case_id, sources, root, value, decoded, ulps in items:
         with tempfile.TemporaryDirectory() as temporary:
             work = Path(temporary)
@@ -223,6 +237,8 @@ def self_test():
     assert literal({"type": ":Number.binary64", "value": "5e-324"}) == '("5e-324" as :Number)'
     assert literal({"type": ":Quantity.binary64", "value": "-Infinity", "unit": ":meter"}) == "(-infinity * 1m)"
     assert record_type(":Quantity(W) between 0W and 1kW step 1W") == ":Quantity(W)"
+    assert spatial(["schema :S as {\n  v: :Vector(m) computed by :Vector(x: 1m, y: 1m)\n}\n"])
+    assert not spatial(["schema :S as {\n  vectorX: :Number\n}\n"])
     declared = schemas("schema :S as {\n  a: :Number\n  b: :Number computed by a * 2\n}\n")
     assert declared == {"S": [("a", ":Number", None), ("b", ":Number", "a * 2")]}
     print("Computed field comparison controls passed.")
@@ -237,10 +253,12 @@ def main():
     if args.self_test:
         self_test()
         return 0
-    count, failures = check(["dotnet", str(args.csharp)], [str(args.swift)])
+    skipped = []
+    count, failures = check(["dotnet", str(args.csharp)], [str(args.swift)], skipped)
     for line in failures:
         print(line)
     print(f"{count} records with computed fields on both virtual machines: {len(failures)} differences")
+    print(f"{len(skipped)} records with spatial fields left to runtime.computed-spatial-records")
     return 1 if failures else 0
 
 

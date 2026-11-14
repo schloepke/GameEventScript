@@ -221,6 +221,12 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case count
     /// A function with its arguments and its ASCII spelling in `name`, such as `sqrt`, `round half up` or `atan2`.
     case function
+    /// A spatial constructor such as `:Vector(x: 1m, y: 2m)`, with the type in `name` and its arguments.
+    case construct
+    /// A list literal `[a, b, …]` with its items.
+    case list
+    /// `[:select item => value]`.
+    case select
 }
 
 /// The binary operators of computed expressions.
@@ -256,7 +262,9 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
 /// An expression of a computed field, a subset of GES expressions with their spellings. A member reads `name` from its one
 /// child; a choice holds value and condition pairs and then the fallback; a sum holds its list and, with a variable in
 /// `name`, the projection; a clamp holds the value and both bounds; a function holds its arguments and the function's ASCII
-/// spelling in `name`.
+/// spelling in `name`. A construct builds the spatial type in `name` (`Vector`, `Point`, `Box`, `Disc` or `Poly`) from its
+/// arguments, each with its label in `labels` or an empty one for a positional argument; a list holds the items of a list
+/// literal; a select holds its list and the projection, with its variable in `name`.
 @_spi(Syntax) public final class GesSchemaExpressionSyntax: Sendable {
     @_spi(Syntax) public let kind: GesSchemaExpressionKind
     @_spi(Syntax) public let binary: GesSchemaBinaryOperator
@@ -264,6 +272,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public let boolean: Bool
     @_spi(Syntax) public let name: String
     @_spi(Syntax) public let children: [GesSchemaExpressionSyntax]
+    /// The label of each argument of a construct, empty for a positional one.
+    @_spi(Syntax) public let labels: [String]
     /// The depth of the tree below and including this node, which the reader limits.
     @_spi(Syntax) public let depth: Int
     @_spi(Syntax) public let offset: Int
@@ -275,7 +285,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
         literal: GesSchemaValueSyntax? = nil,
         boolean: Bool = false,
         name: String = "",
-        children: [GesSchemaExpressionSyntax] = []
+        children: [GesSchemaExpressionSyntax] = [],
+        labels: [String] = []
     ) {
         self.kind = kind
         self.binary = binary
@@ -283,6 +294,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
         self.boolean = boolean
         self.name = name
         self.children = children
+        self.labels = labels
         depth = (children.map(\.depth).max() ?? 0) + 1
         self.offset = offset
     }

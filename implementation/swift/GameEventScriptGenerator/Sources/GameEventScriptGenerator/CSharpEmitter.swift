@@ -106,7 +106,8 @@ enum GesCSharpEmitter {
             let computed = context.computed
             let values = computed.needsValues(types.map { ($0.name, $0.layout.computed) })
             let math = GesComputedEmitter.usesMath(types.map(\.layout.computed))
-            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: false, values: values, math: math) })
+            let spatial = GesComputedEmitter.usesSpatial(types.map(\.layout.computed))
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: false, values: values, math: math, spatial: spatial) })
         }
         return document
     }

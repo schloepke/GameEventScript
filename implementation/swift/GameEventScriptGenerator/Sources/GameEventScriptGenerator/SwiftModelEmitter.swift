@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Generator) import GameEventScriptRuntime
+
 // Writes Swift models: a Hashable, Sendable and Codable struct per schema with stored properties in declared order and a
 // memberwise initializer, an enum per closed Tag and per union, and the runtime's GesPoint and GesVector for spatial fields.
 enum GesSwiftModelEmitter {
@@ -61,7 +63,8 @@ enum GesSwiftModelEmitter {
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
             let values = options.bindings || options.values || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
             let math = GesComputedEmitter.usesMath(layout.types.map(\.computed))
-            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: true, values: values, math: math) })
+            let spatial = GesComputedEmitter.usesSpatial(layout.types.map(\.computed))
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: true, values: values, math: math, spatial: spatial) })
         }
         return document
     }
@@ -712,6 +715,12 @@ enum GesSwiftModelEmitter {
                 case .boolean: definitions.append("try! .init(name: \(name), kind: .boolean)")
                 case .percentage: definitions.append("try! .init(name: \(name), kind: .percentage)")
                 case .quantity: definitions.append("try! .init(name: \(name), kind: .float, unit: .\(field.unit.rawValue))")
+                case .vector, .point:
+                    let kind = GesSchemaPlanner.camel(field.kind.rawValue)
+                    definitions.append(
+                        field.unit == .none ? "try! .init(name: \(name), kind: .\(kind))" : "try! .init(name: \(name), kind: .\(kind), unit: .\(field.unit.rawValue))"
+                    )
+                case .box, .disc, .poly: definitions.append("try! .init(name: \(name), typeName: \(literal(field.kind.rawValue)))")
                 default: definitions.append("try! .init(name: \(name), kind: .float)")
                 }
             }
@@ -729,7 +738,7 @@ enum GesSwiftModelEmitter {
             code.line("switch name {")
             for field in fields { code.line("case \(literal(field.field.name)): \(encode(field.value, type.name, "record." + member(field.base), "GesTypes", support))") }
             for field in type.computed {
-                let unit = field.kind == .quantity ? field.unit.rawValue : "none"
+                let unit = field.kind == .quantity || field.isSpatial ? field.unit.rawValue : "none"
                 code.line("case \(literal(field.name)): \(computed.helper).gesValue(\(computed.valueOf("record", type.name, field)), .\(unit))")
             }
             code.line("case \"fields\": .map(keys: Self.names, values: [\(fields.map { "try field(\(literal($0.field.name)))!" }.joined(separator: ", "))])")
@@ -833,7 +842,7 @@ enum GesSwiftModelEmitter {
             code.line(".record(typeName: \(typeLiteral), keys: \(keys), values: [")
             for field in fields { code.line("    " + encode(field.value, type.name, "record." + member(field.base), name, support, plain: true) + ",") }
             for field in type.computed {
-                code.line("    \(computed.helper).gesValue(\(computed.valueOf("record", type.name, field)), .\(field.kind == .quantity ? field.unit.rawValue : "none")),")
+                code.line("    \(computed.helper).gesValue(\(computed.valueOf("record", type.name, field)), .\(field.kind == .quantity || field.isSpatial ? field.unit.rawValue : "none")),")
             }
             code.line("])")
             code.close()

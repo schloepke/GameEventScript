@@ -165,9 +165,24 @@
         case .count:
             expression(children[0], 10, &output)
             output += "[:count]"
-        case .sum:
+        case .construct:
+            output += ":" + node.name + "("
+            for (index, child) in children.enumerated() {
+                if index > 0 { output += ", " }
+                if !node.labels[index].isEmpty { output += node.labels[index] + ": " }
+                expression(child, 0, &output)
+            }
+            output += ")"
+        case .list:
+            output += "["
+            for (index, child) in children.enumerated() {
+                if index > 0 { output += ", " }
+                expression(child, 0, &output)
+            }
+            output += "]"
+        case .sum, .select:
             expression(children[0], 10, &output)
-            output += "[:sum"
+            output += node.kind == .select ? "[:select" : "[:sum"
             if children.count > 1 {
                 output += " \(node.name) => "
                 expression(children[1], 0, &output)

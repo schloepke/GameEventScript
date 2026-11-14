@@ -32,7 +32,7 @@ final class GeneratedPackedCodeTests: XCTestCase {
 
     func testEveryPackedFieldLandsAtItsBits() {
         // delta -3 is index 5 at bit 0, gear 12 index 2 at bit 4, lift 0.5m index 3 at bit 6, high index 2 at bit 9.
-        let expected = UInt16(5 | (2 << 4) | (3 << 6) | (2 << 9))
+        let expected: UInt16 = 5 | (2 << 4) | (3 << 6) | (2 << 9)
         XCTAssertEqual(expected, PackedModel.Offset(delta: -3, gear: 12, lift: 0.5, kind: .high).rawValue)
         var offset = PackedModel.Offset(delta: 7, gear: 13, lift: 1, kind: .low)
         offset.delta = -3
@@ -66,7 +66,8 @@ final class GeneratedPackedCodeTests: XCTestCase {
     func testPackedRecordIsOneWordWithCheckedFields() {
         let cell = PackedModel.Cell(level: 7, open: true, kind: .water, slope: 0.34, marks: .held)
         // level 7 at bit 0, open at 4, water (2) at 5, slope 3 tenths at 7, held (2) at 11.
-        XCTAssertEqual(UInt16(7 | (1 << 4) | (2 << 5) | (3 << 7) | (2 << 11)), cell.rawValue)
+        let expected: UInt16 = 7 | (1 << 4) | (2 << 5) | (3 << 7) | (2 << 11)
+        XCTAssertEqual(expected, cell.rawValue)
         XCTAssertEqual(0.3, cell.slope, accuracy: 1e-12)
         XCTAssertEqual(MemoryLayout<UInt16>.stride, MemoryLayout<PackedModel.Cell>.stride)
         XCTAssertEqual(cell, PackedModel.Cell(rawValue: cell.rawValue))

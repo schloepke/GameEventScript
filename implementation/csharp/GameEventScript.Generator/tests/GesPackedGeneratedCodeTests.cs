@@ -123,6 +123,20 @@ public sealed class GesPackedGeneratedCodeTests
             StringAssert.Contains(GesSchemaGenerator.Generate(hiding, roots, new GesSchemaParameters(), options), $"global::{modelSpace}.Cell");
         }
 
+        var nestedHiding = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Namespace = "Wire", Models = "ModelFlags" };
+        StringAssert.Contains(Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(hiding, ["Cell", "Holder"], new GesSchemaParameters(), nestedHiding)).Message, "hides the models' namespace");
+        // Only the first component counts, only where the wire code names model types, and the packed types the models
+        // declare are no wire types; nor is the namespace subject to the names reserved for types.
+        var accepted = new (GesSchemaSet Set, IReadOnlyList<string> Roots, string Space, string Models)[]
+        {
+            (hiding, ["Cell", "Model"], "Wire", "Game.Model"),
+            (GesSchemaSet.Parse("wire(w) schema :Model as { a: :Boolean }\n"), ["Model"], "Wire", "Model"),
+            (set, GesSchemaGenerator.WireRoots(set, "packed"), "Game", "Game.Cell"),
+            (set, GesSchemaGenerator.WireRoots(set, "packed"), "Wire", "GesModels")
+        };
+        foreach (var (acceptedSet, acceptedRoots, space, modelSpace) in accepted)
+            GesSchemaGenerator.Generate(acceptedSet, acceptedRoots, new GesSchemaParameters(), new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Namespace = space, Models = modelSpace });
+
         // Wire generation also extends only a leading part, and the larger of that part and the one shared with the models.
         var wireNotLeading = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Namespace = "Game.Wire", ExtendNamespace = "Wire" };
         Assert.AreEqual("generate.usage", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), wireNotLeading)).Code);

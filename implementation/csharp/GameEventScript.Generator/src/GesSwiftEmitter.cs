@@ -65,12 +65,17 @@ internal static partial class GesSwiftEmitter
         foreach (var type in types)
             foreach (var field in type.Fields) GesSchemaPlanner.QualifyPacked(field.Value, models);
         var space = string.Concat(document.Space.ConvertAll(part => part + "."));
+        // The wire code names model types where it shares packed types or converts records to models.
+        var namesModels = modelSpace is not null && types.Exists(type => type.Layout.PackedWidth > 0);
         if (modelLayout is not null)
         {
             var conversion = context.Models = new ModelConversion(modelLayout, models, space);
             foreach (var type in types)
                 if (type.Kind == GesSchemaKind.Schema && type.Layout.PackedWidth == 0 && conversion.Type(type.Name) is { } model)
+                {
+                    namesModels = true;
                     document.Units.Add(new GesCodeUnit(type.Name, code => ModelConversionUnit(code, type, model, access, conversion), outside: true));
+                }
         }
         foreach (var type in types)
         {
@@ -98,7 +103,11 @@ internal static partial class GesSwiftEmitter
         if (modelSpace is not null)
         {
             GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
-            GesSchemaPlanner.ReserveModelsRoot(document.Space, modelSpace, context.TopLevel);
+            // The models declare the packed types, which the wire namespace therefore does not hold.
+            var declared = new HashSet<string>(context.TopLevel, System.StringComparer.Ordinal);
+            foreach (var type in types)
+                if (type.Layout.PackedWidth > 0) declared.Remove(type.Name);
+            context.ModelsRoot = GesSchemaPlanner.ModelsRoot(document.Space, modelSpace, declared, namesModels);
         }
 
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: true);
@@ -129,6 +138,10 @@ internal static partial class GesSwiftEmitter
 
         // The records and tag sets declared beside each other, which a record's nested type must not hide.
         internal HashSet<string> TopLevel { get; set; } = null!;
+
+        // The first component of the models' namespace through which the wire code names their types, which a record's nested
+        // type must not hide either; null when it names none that way.
+        internal string? ModelsRoot { get; set; }
 
         // The attribute of a class's stored properties: without exclusivity checks unless they are asked for.
         internal string Stored(bool isClass) => isClass && !checkedExclusivity ? "@exclusivity(unchecked) " : "";
@@ -167,7 +180,7 @@ internal static partial class GesSwiftEmitter
         if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: true, names);
         var model = type.IsItem || type.Kind != GesSchemaKind.Schema ? null : context.Models?.Type(type.Name);
         if (model is not null) names.Add(("toModel", "the generated member toModel"));
-        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel, context.ModelsRoot);
 
         code.Line(type.IsItem ? "/// An element of the list." : $"/// The {Kind(type)} `:{type.Name}`, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.");
         code.Open(type.IsClass ? $"{access}final class {type.Name} {{" : $"{access}struct {type.Name}: Sendable {{");
@@ -533,7 +546,7 @@ internal static partial class GesSwiftEmitter
         if (context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var member in type.Members) names.Add((GesSchemaPlanner.Camel(member), "the member " + member));
-        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel, context.ModelsRoot);
         var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);
         var last = ((ulong)type.Members.Count - 1).ToString(CultureInfo.InvariantCulture);
         code.Line($"/// The message set `:{type.Name}`: one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.");

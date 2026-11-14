@@ -1755,11 +1755,12 @@ to and from GES values through its model's `--values` conversion, which gives th
 records and the wire members of a packed root that wire code declares itself extend their types at file scope, also in
 split files, and name wire and model types so that neither hides the other. `--models` must name another namespace than
 `--namespace`, and where one of the two namespaces continues the other, its next component must not be the name of a
-type in the shorter one, else `generate.nameCollision`: a type of the wire code including its `<Name>Wire` types, or a
-type of any model group, since the wire code converts to the models of every group and their namespace holds them all; a
-`<Name>Wire` that another type of the generation already names is `generate.nameCollision` too. Swift wire code names the
-models' types through their namespace from inside its own, so there the first component of a non-global models'
-namespace must not be the name of a wire type, of a type nested in a wire record or of a later component of the wire
+type in the shorter one, else `generate.nameCollision`: a type that the wire code declares, including its `<Name>Wire`
+types but not the packed types that the models declare, or a type of any model group, since the wire code converts to the
+models of every group and their namespace holds them all; a `<Name>Wire` that another type of the generation already names
+is `generate.nameCollision` too. Swift wire code that shares packed types or converts records names the models' types
+through their namespace from inside its own, so there the first component of a non-global models' namespace must not be
+the name of a type that the wire code declares, of a type nested in a wire record or of a later component of the wire
 namespace, all of which would hide it (`generate.nameCollision`); C# qualifies them with `global::`. Swift declares each namespace component as an enum, so two generations of one module whose
 namespaces share leading components must declare them once: wire code extends the components it shares with the models'
 namespace (`extension Game { enum Wire { … } }` beside models in `Game.Model`), and `--extend-namespace <A>`

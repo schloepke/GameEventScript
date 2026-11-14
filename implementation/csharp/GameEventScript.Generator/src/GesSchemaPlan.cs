@@ -649,13 +649,15 @@ internal static class GesSchemaPlanner
         return names;
     }
 
-    internal static void Unique(string scope, List<(string Name, string Origin)> names, ICollection<string> topLevel)
+    internal static void Unique(string scope, List<(string Name, string Origin)> names, ICollection<string> topLevel, string? modelsRoot = null)
     {
         Unique(scope, names);
         foreach (var (name, origin) in names)
         {
             if (origin.StartsWith(NestedTypeOrigin, System.StringComparison.Ordinal) && topLevel.Contains(name))
                 throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{scope}', {origin} is generated as '{name}', which hides the top-level type of that name.");
+            if (origin.StartsWith(NestedTypeOrigin, System.StringComparison.Ordinal) && name == modelsRoot)
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{scope}', {origin} is generated as '{name}', which hides the models' namespace through which the wire code names their types.");
             if (IsRuntimeName(name))
                 throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{scope}', {origin} is generated as '{name}', a name of the runtime types that generated code uses.");
         }
@@ -696,17 +698,20 @@ internal static class GesSchemaPlanner
         }
     }
 
-    // Swift wire code names the models' types through their namespace from inside its own, where a wire type, a type nested in
-    // a record or a later component of the wire namespace of the same name as the first component would hide it. Reserving
-    // that name among the top-level ones also makes nested types of that name fail.
-    internal static void ReserveModelsRoot(List<string> space, List<string> models, HashSet<string> names)
+    // Swift wire code that names the models' types does so through their namespace from inside its own, where a declared wire
+    // type or a later component of the wire namespace of the same name as the first component would hide it; nested types
+    // check it through Unique. Returns that component, or null when the wire code names no model type or the models live in
+    // the global namespace.
+    internal static string? ModelsRoot(List<string> space, List<string> models, ICollection<string> declared, bool namesModels)
     {
-        if (models.Count == 0) return;
+        if (models.Count == 0 || !namesModels) return null;
+        var root = models[0];
         for (var index = 1; index < space.Count; index++)
-            if (space[index] == models[0])
-                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The component '{space[index]}' of the wire namespace hides the models' namespace '{models[0]}', through which the wire code names their types.");
-        if (!names.Add(models[0]))
-            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The wire type '{models[0]}' hides the models' namespace '{models[0]}', through which the wire code names their types.");
+            if (space[index] == root)
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The component '{root}' of the wire namespace hides the models' namespace '{root}', through which the wire code names their types.");
+        if (declared.Contains(root))
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The wire type '{root}' hides the models' namespace '{root}', through which the wire code names their types.");
+        return root;
     }
 
     // The types declared beside the records must not take a name that the generated code uses for another type.

@@ -64,7 +64,7 @@ public enum GesSchemaGenerator {
         let wireSpace = try GesSchemaPlanner.namespace(options.namespace, keywords)
         var modelSpace: [String]?
         if let models = options.models { modelSpace = try GesSchemaPlanner.namespace(models, keywords) }
-        let extended = try checkExtendNamespace(options)
+        let extended = try checkExtendNamespace(options, wireSpace)
         // Wire records and models of one schema share its name, so they need different namespaces.
         if let models = options.models, let modelSpace, modelSpace == wireSpace {
             throw GesGeneratorError(
@@ -87,8 +87,12 @@ public enum GesSchemaGenerator {
         // models' namespace holds the types of every model group, since the wire code converts to the models of any of them,
         // and the wire namespace also holds the `<Name>Wire` members of its packed roots, which the models declare.
         if let modelSpace {
+            // The models declare the packed types, so the wire namespace holds only the `<Name>Wire` members of packed roots.
             var wireNames = GesSchemaPlanner.topLevel(types, GesSchemaPlanner.tagSets(types, ""))
-            for name in packed where layout.roots.contains(name) { wireNames.insert(name + "Wire") }
+            for name in packed {
+                wireNames.remove(name)
+                if layout.roots.contains(name) { wireNames.insert(name + "Wire") }
+            }
             var modelNames = Set(packed)
             if let models {
                 for type in models.types { modelNames.insert(type.name) }
@@ -239,13 +243,14 @@ public enum GesSchemaGenerator {
     }
 
     // How many leading components of the namespace another generation declares: those of extendNamespace, which is Swift's
-    // alone, whose namespaces are enums, and must lead the namespace.
-    private static func checkExtendNamespace(_ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> Int {
+    // alone, whose namespaces are enums, and must lead the namespace, which wire passes already parsed.
+    private static func checkExtendNamespace(_ options: GesSchemaGenerateOptions, _ parsed: [String]? = nil) throws(GesGeneratorError) -> Int {
         guard let extend = options.extendNamespace else { return 0 }
         if options.language == .csharp {
             throw GesGeneratorError(GesGeneratorError.usage, "Extending namespace components concerns Swift, whose namespaces are enums; C# merges namespaces.")
         }
-        let space = try GesSchemaPlanner.namespace(options.namespace, GesSwiftEmitter.keywords)
+        let space: [String]
+        if let parsed { space = parsed } else { space = try GesSchemaPlanner.namespace(options.namespace, GesSwiftEmitter.keywords) }
         let extended = try GesSchemaPlanner.namespace(extend, GesSwiftEmitter.keywords)
         if extended.isEmpty || extended.count > space.count || Array(space[0..<extended.count]) != extended {
             throw GesGeneratorError(GesGeneratorError.usage, "'\(extend)' is no leading part of the namespace '\(options.namespace)', which the generation would extend.")

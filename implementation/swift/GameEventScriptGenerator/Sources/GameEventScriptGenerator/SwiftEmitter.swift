@@ -53,19 +53,29 @@ enum GesSwiftEmitter {
         let spaceParts = try GesSchemaPlanner.namespace(options.namespace, keywords)
         let space = spaceParts.map { $0 + "." }.joined()
         var topLevel = GesSchemaPlanner.topLevel(types, sets)
+        let conversion = modelLayout.map { ModelConversion($0, models, space) }
+        var modelsRoot: String?
         if let modelParts {
             try GesSchemaPlanner.reserveSharedRoots(layout, types, &topLevel)
-            try GesSchemaPlanner.reserveModelsRoot(spaceParts, modelParts, &topLevel)
+            // The wire code names model types where it shares packed types or converts records to models.
+            let namesModels =
+                types.contains { $0.layout.packedWidth > 0 }
+                || types.contains { $0.kind == .schema && $0.layout.packedWidth == 0 && conversion?.type($0.name) != nil }
+            // The models declare the packed types, which the wire namespace therefore does not hold.
+            var declared = topLevel
+            for type in types where type.layout.packedWidth > 0 { declared.remove(type.name) }
+            modelsRoot = try GesSchemaPlanner.modelsRoot(spaceParts, modelParts, declared, namesModels: namesModels)
         }
         let context = Context(
             layout: layout,
-            models: modelLayout.map { ModelConversion($0, models, space) },
+            models: conversion,
             elements: GesSchemaPlanner.keyedElements(types),
             values: options.values,
             holder: holder,
             checkedExclusivity: options.checkedExclusivity,
             computed: computed,
-            topLevel: topLevel
+            topLevel: topLevel,
+            modelsRoot: modelsRoot
         )
         var document = GesCodeDocument(
             header: header,
@@ -130,6 +140,9 @@ enum GesSwiftEmitter {
         let computed: GesComputedEmitter
         // The records and tag sets declared beside each other, which a record's nested type must not hide.
         let topLevel: Set<String>
+        // The first component of the models' namespace through which the wire code names their types, which a record's nested
+        // type must not hide either; nil when it names none that way.
+        let modelsRoot: String?
 
         // The attribute of a class's stored properties: without exclusivity checks unless they are asked for.
         func stored(_ isClass: Bool) -> String { isClass && !checkedExclusivity ? "@exclusivity(unchecked) " : "" }
@@ -166,7 +179,7 @@ enum GesSwiftEmitter {
         if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: true, &names) }
         let model = type.isItem || type.kind != .schema ? nil : context.models?.type(type.name)
         if model != nil { names.append(("toModel", "the generated member toModel")) }
-        try GesSchemaPlanner.unique(type.name, names, context.topLevel)
+        try GesSchemaPlanner.unique(type.name, names, context.topLevel, modelsRoot: context.modelsRoot)
 
         code.line(type.isItem ? "/// An element of the list." : "/// The \(kind(type)) `:\(type.name)`, read and written without allocation\(type.isClass ? " once its storage has grown" : "").")
         code.open(type.isClass ? "\(access)final class \(type.name) {" : "\(access)struct \(type.name): Sendable {")
@@ -501,7 +514,7 @@ enum GesSwiftEmitter {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
         for member in type.members { names.append((GesSchemaPlanner.camel(member), "the member " + member)) }
-        try GesSchemaPlanner.unique(type.name, names, context.topLevel)
+        try GesSchemaPlanner.unique(type.name, names, context.topLevel, modelsRoot: context.modelsRoot)
         let width = String(type.layout.memberWidth)
         let last = String(UInt64(type.members.count) - 1)
         code.line("/// The message set `:\(type.name)`: one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "").")

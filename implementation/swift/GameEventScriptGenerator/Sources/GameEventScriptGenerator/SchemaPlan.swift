@@ -559,11 +559,17 @@ enum GesSchemaPlanner {
         return names
     }
 
-    static func unique(_ scope: String, _ names: [(name: String, origin: String)], _ topLevel: Set<String>) throws(GesGeneratorError) {
+    static func unique(_ scope: String, _ names: [(name: String, origin: String)], _ topLevel: Set<String>, modelsRoot: String? = nil) throws(GesGeneratorError) {
         try unique(scope, names)
         for (name, origin) in names {
             if origin.hasPrefix(nestedTypeOrigin) && topLevel.contains(name) {
                 throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(scope)', \(origin) is generated as '\(name)', which hides the top-level type of that name.")
+            }
+            if origin.hasPrefix(nestedTypeOrigin) && name == modelsRoot {
+                throw GesGeneratorError(
+                    GesGeneratorError.nameCollision,
+                    "In '\(scope)', \(origin) is generated as '\(name)', which hides the models' namespace through which the wire code names their types."
+                )
             }
             if isRuntimeName(name) {
                 throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(scope)', \(origin) is generated as '\(name)', a name of the runtime types that generated code uses.")
@@ -608,23 +614,25 @@ enum GesSchemaPlanner {
         }
     }
 
-    // Swift wire code names the models' types through their namespace from inside its own, where a wire type, a type nested in
-    // a record or a later component of the wire namespace of the same name as the first component would hide it. Reserving
-    // that name among the top-level ones also makes nested types of that name fail.
-    static func reserveModelsRoot(_ space: [String], _ models: [String], _ names: inout Set<String>) throws(GesGeneratorError) {
-        guard let root = models.first else { return }
+    // Swift wire code that names the models' types does so through their namespace from inside its own, where a declared wire
+    // type or a later component of the wire namespace of the same name as the first component would hide it; nested types
+    // check it through unique. Returns that component, or nil when the wire code names no model type or the models live in
+    // the global namespace.
+    static func modelsRoot(_ space: [String], _ models: [String], _ declared: Set<String>, namesModels: Bool) throws(GesGeneratorError) -> String? {
+        guard let root = models.first, namesModels else { return nil }
         for part in space.dropFirst() where part == root {
             throw GesGeneratorError(
                 GesGeneratorError.nameCollision,
-                "The component '\(part)' of the wire namespace hides the models' namespace '\(root)', through which the wire code names their types."
+                "The component '\(root)' of the wire namespace hides the models' namespace '\(root)', through which the wire code names their types."
             )
         }
-        if !names.insert(root).inserted {
+        if declared.contains(root) {
             throw GesGeneratorError(
                 GesGeneratorError.nameCollision,
                 "The wire type '\(root)' hides the models' namespace '\(root)', through which the wire code names their types."
             )
         }
+        return root
     }
 
     // The types declared beside the records must not take a name that the generated code uses for another type.

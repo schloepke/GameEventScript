@@ -82,6 +82,23 @@ final class GenerateTests: XCTestCase {
             let csharp = try GesSchemaGenerator.generate(hiding, roots: hidingRoots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .csharp, namespace: space, models: modelSpace))
             XCTAssertTrue(csharp.contains("global::\(modelSpace).Cell"))
         }
+        do {
+            _ = try GesSchemaGenerator.generate(hiding, roots: ["Cell", "Holder"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Wire", models: "ModelFlags"))
+            XCTFail("A nested type hides the models' namespace.")
+        } catch let error as GesGeneratorError {
+            XCTAssertTrue(error.message.contains("hides the models' namespace"), error.message)
+        }
+        // Only the first component counts, only where the wire code names model types, and the packed types the models
+        // declare are no wire types; nor is the namespace subject to the names reserved for types.
+        let accepted: [(GesSchemaSet, [String], String, String)] = [
+            (hiding, ["Cell", "Model"], "Wire", "Game.Model"),
+            (try GesSchemaSet(parsing: "wire(w) schema :Model as { a: :Boolean }\n"), ["Model"], "Wire", "Model"),
+            (set, roots, "Game", "Game.Cell"),
+            (set, roots, "Wire", "GesModels"),
+        ]
+        for (acceptedSet, acceptedRoots, space, modelSpace) in accepted {
+            _ = try GesSchemaGenerator.generate(acceptedSet, roots: acceptedRoots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: space, models: modelSpace))
+        }
         // Wire generation also extends only a leading part, and the larger of that part and the one shared with the models.
         XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire", extendNamespace: "Wire")) }, "generate.usage")
         let deeper = try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire.Packed", models: "Game.Model", extendNamespace: "Game.Wire"))

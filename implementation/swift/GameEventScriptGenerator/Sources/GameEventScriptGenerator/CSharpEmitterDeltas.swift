@@ -4,9 +4,12 @@
 // Wire values, comparison, copying, quantization and deltas of generated C# types. Comparison and deltas use wire values:
 // indices and stored bits, never raw doubles. Local names carry the node of their value, since C# forbids shadowing.
 extension GesCSharpEmitter {
+    // The level argument that a recursive List's own helpers take.
+    static func level(_ value: GesPlanValue) -> String { value.depth > 0 ? ", level" : "" }
+
     static func isScalar(_ value: GesPlanValue) -> Bool {
         switch value.encoding.kind {
-        case .boolean, .integer, .quantized, .float, .tag: true
+        case .boolean, .integer, .quantized, .float, .tag, .flags: true
         default: false
         }
     }
@@ -15,6 +18,10 @@ extension GesCSharpEmitter {
     static func scalars(_ value: GesPlanValue) -> [GesPlanValue] {
         var result: [GesPlanValue] = isScalar(value) ? [value] : []
         result += value.axes
+        for corner in value.corners {
+            if isScalar(corner) { result.append(corner) }
+            result += corner.axes
+        }
         for alternative in value.alternatives { result += scalars(alternative) }
         if value.item == nil, let element = value.element { result += scalars(element) }
         return result
@@ -28,7 +35,7 @@ extension GesCSharpEmitter {
             for value in scalars(field.value) { helpers(&code, value) }
         }
         code.blank()
-        code.line("internal \(selfModifier)bool __Same(\(parameter) other, string[] paths, int at)")
+        code.line("internal \(selfModifier)bool __Same(\(parameter) other, string[] paths, int at\(levelParameter(type)))")
         code.open("{")
         for field in type.fields {
             if field.optional {
@@ -59,7 +66,7 @@ extension GesCSharpEmitter {
             code.close()
         }
         code.blank()
-        code.line("internal void __Quantize(string[] paths, int at)")
+        code.line("internal void __Quantize(string[] paths, int at\(levelParameter(type)))")
         code.open("{")
         for field in type.fields {
             if field.optional {
@@ -118,7 +125,10 @@ extension GesCSharpEmitter {
         case .float:
             code.line("if (double.IsNaN(value)) \(fail("NotRepresentable", value))")
             if encoding.range { code.line("if (value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
-            code.line("return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));")
+            code.line("return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));")
+        case .flags:
+            if encoding.width < 64 { code.line("if ((ulong)value > \(unsigned(full(encoding.width)))) \(fail("UnknownTag", value))") }
+            code.line("return (ulong)value;")
         default:
             code.line("if ((ulong)value > \(unsigned(UInt64(encoding.tags.count) - 1))) \(fail("UnknownTag", value))")
             code.line("return (ulong)value;")
@@ -129,11 +139,16 @@ extension GesCSharpEmitter {
         code.open("{")
         code.line("var wire = reader.Read(\(width), \(path(value)));")
         if encoding.kind == .float {
-            code.line("var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));")
+            code.line("var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));")
             code.line("if (double.IsNaN(value) || wire == 0x8000000000000000UL\(encoding.range ? " || double.IsInfinity(value)" : "")) \(fail("InvalidNumber", value))")
             if encoding.range { code.line("if (value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
         } else if encoding.kind != .boolean {
-            let largest = encoding.kind == .tag ? UInt64(encoding.tags.count) - 1 : encoding.maxIndex
+            let largest =
+                switch encoding.kind {
+                case .tag: UInt64(encoding.tags.count) - 1
+                case .flags: full(encoding.width)
+                default: encoding.maxIndex
+                }
             if largest < full(encoding.width) { code.line("if (wire > \(unsigned(largest))) \(fail("InvalidIndex", value))") }
         }
         code.line("return wire;")
@@ -145,7 +160,7 @@ extension GesCSharpEmitter {
         case .integer: code.line("private static long __Value\(node)(ulong wire) => unchecked((long)(\(unsigned(UInt64(bitPattern: encoding.lower))) + wire));")
         case .quantized:
             code.line("private static double __Value\(node)(ulong wire) => GesWireRules.QuantizedValue(wire, \(long(encoding.lower)), \(long(encoding.numerator)), \(double(encoding.tenPower)));")
-        case .float: code.line("private static double __Value\(node)(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));")
+        case .float: code.line("private static double __Value\(node)(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));")
         default: code.line("private static \(type) __Value\(node)(ulong wire) => (\(type))wire;")
         }
     }
@@ -164,25 +179,31 @@ extension GesCSharpEmitter {
         switch value.encoding.kind {
         case .boolean:
             code.line("if (\(a) != \(b)) return false;")
-        case .integer, .quantized, .float, .tag:
+        case .integer, .quantized, .float, .tag, .flags:
             code.line("if (__Wire\(node)(\(a), paths, at) != __Wire\(node)(\(b), paths, at)) return false;")
-        case .text:
+        case .text, .bytes:
             code.line("if (!\(text(value, prefix(a))).SequenceEqual(\(text(value, prefix(b))))) return false;")
         case .point, .vector:
             for axis in value.axes { same(&code, axis, a + "." + axis.base, b + "." + axis.base) }
+        case .box, .disc:
+            for corner in value.corners { same(&code, corner, a + "." + corner.base, b + "." + corner.base) }
+        case .schema where value.packed != nil:
+            code.line("if (\(a).RawValue != \(b).RawValue) return false;")
         case .schema:
-            code.line("if (!\(a).__Same(\(b), paths, at + \(value.node + 1))) return false;")
+            code.line("if (!\(a).__Same(\(b), paths, at + \(value.node + 1)\(nextLevel(value)))) return false;")
         case .list:
+            if value.depth > 0 { openLevels(&code, value, "\(a).Count + \(b).Count") }
             code.line("if (\(a).Count != \(b).Count) return false;")
             code.line("for (var index\(node) = 0; index\(node) < \(a).Count; index\(node)++)")
             code.open("{")
             let element = value.element!
             if value.item != nil {
-                code.line("if (!\(a)[index\(node)].__Same(\(b)[index\(node)], paths, at + \(element.node))) return false;")
+                code.line("if (!\(a)[index\(node)].__Same(\(b)[index\(node)], paths, at + \(element.node)\(itemLevel(element)))) return false;")
             } else {
                 same(&code, element, "\(a)[index\(node)]", "\(b)[index\(node)]")
             }
             code.close()
+            if value.depth > 0 { code.close() }
         case .union:
             code.line("if (\(a) != \(b)) return false;")
             code.line("switch (\(a))")
@@ -206,7 +227,7 @@ extension GesCSharpEmitter {
     static func sharing(_ code: inout Code, _ type: GesPlanType) {
         code.blank()
         code.line(checkSharing)
-        if type.kind == .schema && !type.isItem { code.line("[ThreadStatic] private static HashSet<object>? __SharingLists;") }
+        if type.kind == .schema && !type.isItem { code.line("[global::System.ThreadStatic] private static HashSet<object>? __SharingLists;") }
         code.line("internal bool __Busy;")
         code.blank()
         if !type.fields.contains(where: { GesSchemaPlanner.holdsStorage($0.value, lists: true) }) {
@@ -271,8 +292,8 @@ extension GesCSharpEmitter {
     private static func copy(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String) {
         let node = String(value.node)
         switch value.encoding.kind {
-        case .text:
-            code.line("Set\(value.base)Utf8(\(text(value, prefix(b))));")
+        case .text, .bytes:
+            code.line("Set\(value.base)\(value.encoding.kind == .text ? "Utf8" : "")(\(text(value, prefix(b))));")
         case .schema where value.isClass:
             code.line("\(a).CopyFrom(\(b));")
         case .list where value.element!.isClass:
@@ -318,20 +339,41 @@ extension GesCSharpEmitter {
             code.line("\(target) = __Value\(node)(__Wire\(node)(\(target), paths, at));")
         case .point, .vector:
             for axis in value.axes { quantize(&code, axis, target + "." + axis.base) }
+        case .box where quantized(value):
+            // A box is immutable: its corners are quantized as Points and make a new box, still in order.
+            code.open("{")
+            for corner in value.corners {
+                code.line("var \(corner.label)\(node) = \(target).\(corner.base);")
+                quantize(&code, corner, corner.label + node)
+            }
+            code.line("\(target) = new GesBox(lower\(node), upper\(node));")
+            code.close()
+        case .disc where quantized(value):
+            // A disc is immutable: its centre and radius are quantized and make a new disc.
+            code.open("{")
+            code.line("var center\(node) = \(target).Center;")
+            code.line("var radius\(node) = \(target).Radius;")
+            for part in value.corners { quantize(&code, part, part.label + node) }
+            code.line("\(target) = new GesDisc(center\(node), radius\(node));")
+            code.close()
+        case .schema where value.packed != nil:
+            break
         case .schema:
-            code.line("\(target).__Quantize(paths, at + \(value.node + 1));")
-        case .list where quantized(value.element!):
+            code.line("\(target).__Quantize(paths, at + \(value.node + 1)\(nextLevel(value)));")
+        case .list where quantized(value):
             let element = value.element!
+            if value.depth > 0 { openLevels(&code, value, target + ".Count") }
             code.line("for (var index\(node) = 0; index\(node) < \(target).Count; index\(node)++)")
             code.open("{")
             if element.isClass {
-                code.line("\(target)[index\(node)].__Quantize(paths, at + \(value.item != nil ? element.node : element.node + 1));")
+                code.line("\(target)[index\(node)].__Quantize(paths, at + \(value.item != nil ? element.node : element.node + 1)\(nextLevel(element))\(itemLevel(element)));")
             } else {
                 code.line("var item\(node) = \(target)[index\(node)];")
-                if value.item != nil { code.line("item\(node).__Quantize(paths, at + \(element.node));") } else { quantize(&code, element, "item\(node)") }
+                if value.item != nil { code.line("item\(node).__Quantize(paths, at + \(element.node)\(itemLevel(element)));") } else { quantize(&code, element, "item\(node)") }
                 code.line("\(target)[index\(node)] = item\(node);")
             }
             code.close()
+            if value.depth > 0 { code.close() }
         case .union where value.alternatives.contains(where: quantized):
             code.line("switch (\(target))")
             code.open("{")
@@ -348,11 +390,16 @@ extension GesCSharpEmitter {
         }
     }
 
+    // A Point without axes, the centre of a Disc whose block names only the radius, which transmits nothing.
+    private static func empty(_ value: GesPlanValue) -> Bool { value.encoding.kind == .point && value.axes.isEmpty }
+
     // Whether a value holds a quantized number that Quantize changes; schemas always forward, as theirs may.
     private static func quantized(_ value: GesPlanValue) -> Bool {
         switch value.encoding.kind {
-        case .quantized, .schema: true
+        case .schema: value.packed == nil
+        case .quantized: true
         case .point, .vector: value.axes.contains(where: quantized)
+        case .box, .disc: value.corners.contains(where: quantized)
         case .union: value.alternatives.contains(where: quantized)
         case .list: value.item.map { quantized($0.fields[0].value) } ?? quantized(value.element!)
         default: false
@@ -370,25 +417,42 @@ extension GesCSharpEmitter {
         code.line("public \(selfModifier)int WriteDelta(\(parameter) baseline, Span<byte> buffer)")
         code.open("{")
         code.line("var writer = new GesBitWriter(buffer);")
+        var body: [String] = []
         if let key {
-            code.line("var paths = __paths;")
-            code.line("const int at = 0;")
-            code.line("var key = __Wire0(\(key.base), paths, at);")
-            code.line("if (key != __Wire0(baseline.\(key.base), paths, at)) throw new GesWireException(GesWireException.KeyMismatch, paths[0]);")
-            code.line("writer.Write(key, \(key.value.encoding.width));")
+            body.append("var paths = __paths;")
+            body.append("const int at = 0;")
+            body.append("var key = __Wire0(\(key.base), paths, at);")
+            body.append("if (key != __Wire0(baseline.\(key.base), paths, at)) throw new GesWireException(GesWireException.KeyMismatch, paths[0]);")
+            body.append("writer.Write(key, \(key.value.encoding.width));")
         }
-        code.line("__WriteDelta(baseline, ref writer, __paths, 0, true);")
-        code.line("return writer.Finish();")
+        body.append("__WriteDelta(baseline, ref writer, __paths, 0, true);")
+        body.append("return writer.Finish();")
+        for line in body { code.line(line) }
         code.close()
         code.blank()
-        code.line("/// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>")
+        code.line("/// <summary>Counts the bytes that <see cref=\"WriteDelta\"/> writes against a baseline, without writing them.</summary>")
+        code.line("/// <param name=\"baseline\">The baseline, another instance.</param>")
+        code.line("/// <returns>The exact byte count.</returns>")
+        code.line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the keys differ.</exception>")
+        code.line("public \(selfModifier)int DeltaByteCount(\(parameter) baseline)")
+        code.open("{")
+        code.line("var writer = GesBitWriter.Counting();")
+        for line in body { code.line(line) }
+        code.close()
+        code.blank()
+        code.line("/// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the")
+        code.line("/// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>")
         code.line("/// <param name=\"baseline\">The baseline, another instance.</param>")
         code.line("/// <returns>The bytes.</returns>")
         code.line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the keys differ.</exception>")
         code.line("public \(selfModifier)byte[] ToDeltaBytes(\(parameter) baseline)")
         code.open("{")
-        code.line("var buffer = new byte[MaxByteCount];")
-        code.line("return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();")
+        code.line("var writer = GesBitWriter.Counting();")
+        for line in body.dropLast() { code.line(line) }
+        code.line("writer.Finish();")
+        code.line("var buffer = new byte[writer.RequiredByteCount];")
+        code.line("var count = WriteDelta(baseline, buffer);")
+        code.line("return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();")
         code.close()
         code.blank()
         code.line("/// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>")
@@ -433,7 +497,7 @@ extension GesCSharpEmitter {
         let count = String(type.fields.count)
         let counted = key == nil ? count : "top ? \(type.fields.count - 1) : \(count)"
         code.blank()
-        code.line("internal \(selfModifier)bool __WriteDelta(\(parameter) baseline, ref GesBitWriter writer, string[] paths, int at, bool top)")
+        code.line("internal \(selfModifier)bool __WriteDelta(\(parameter) baseline, ref GesBitWriter writer, string[] paths, int at, bool top\(levelParameter(type)))")
         code.open("{")
         if type.fields.isEmpty {
             // A schema without fields has no change bits and never changes.
@@ -444,7 +508,7 @@ extension GesCSharpEmitter {
             return
         }
         code.line("var first = writer.BitPosition;")
-        code.line("for (var left = \(counted); left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));")
+        code.line("for (var left = \(counted); left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));")
         code.line("var changed = false;")
         code.line("var ordinal = 0;")
         for field in type.fields {
@@ -464,7 +528,7 @@ extension GesCSharpEmitter {
         code.line("return changed;")
         code.close()
         code.blank()
-        code.line("internal bool __ReadDelta(\(parameter) baseline, ref GesBitReader reader, string[] paths, int at, bool top)")
+        code.line("internal bool __ReadDelta(\(parameter) baseline, ref GesBitReader reader, string[] paths, int at, bool top\(levelParameter(type)))")
         code.open("{")
         code.line("var fieldCount = \(counted);")
         code.line("reader.Require(fieldCount, at == 0 ? \"\" : paths[at - 1]);")
@@ -531,7 +595,7 @@ extension GesCSharpEmitter {
         switch encoding.kind {
         case .boolean:
             code.line("if (\(a) != \(b)) \(set) = true;")
-        case .integer, .quantized, .float, .tag:
+        case .integer, .quantized, .float, .tag, .flags:
             code.open("{")
             code.line("var value\(node) = __Wire\(node)(\(a), paths, at);")
             code.line("var held\(node) = __Wire\(node)(\(b), paths, at);")
@@ -546,9 +610,9 @@ extension GesCSharpEmitter {
             code.close()
             code.close()
         case .list where encoding.keyed:
-            code.line("if (__WriteKeyed\(node)(baseline, ref writer, paths, at)) \(set) = true;")
-        case .text, .list:
-            code.line("if (!__Same\(node)(baseline, paths, at))")
+            code.line("if (__WriteKeyed\(node)(baseline, ref writer, paths, at\(level(value)))) \(set) = true;")
+        case .text, .bytes, .list:
+            code.line("if (!__Same\(node)(baseline, paths, at\(level(value))))")
             code.open("{")
             write(&code, value, a)
             code.line("\(set) = true;")
@@ -568,12 +632,44 @@ extension GesCSharpEmitter {
                 code.close()
                 code.close()
             }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("if (\(a).\(axis) != 0) \(fail("TypeMismatch", value))") }
             code.line("if (!\(set)) writer.Rewind(first\(node));")
+            code.close()
+        case .box, .disc:
+            // A nested delta of the corners, each one of a Point, or of a disc's centre and radius.
+            code.open("{")
+            code.line("var first\(node) = writer.BitPosition;")
+            code.line("writer.Write(0, \(value.corners.count));")
+            for (index, corner) in value.corners.enumerated() {
+                if empty(corner) {
+                    // A centre without axes transmits nothing: its change bit stays clear, and it must lie at the origin.
+                    for axis in GesSchemaPlanner.omitted(corner) { code.line("if (\(a).\(corner.base).\(axis) != 0) \(fail("TypeMismatch", corner))") }
+                    continue
+                }
+                code.open("{")
+                code.line("var set\(corner.node) = false;")
+                deltaPayload(&code, corner, a + "." + corner.base, b + "." + corner.base, "set\(corner.node)")
+                code.line("if (set\(corner.node))")
+                code.open("{")
+                code.line("writer.SetBit(first\(node) + \(index));")
+                code.line("\(set) = true;")
+                code.close()
+                code.close()
+            }
+            if value.encoding.kind == .disc && value.corners.count == 1 { code.line("if (\(a).Radius != 0) \(fail("TypeMismatch", value))") }
+            code.line("if (!\(set)) writer.Rewind(first\(node));")
+            code.close()
+        case .schema where value.packed != nil:
+            // A packed record changes as a whole: its word follows the change bit.
+            code.line("if (\(a).RawValue != \(b).RawValue)")
+            code.open("{")
+            packedWrite(&code, value, a)
+            code.line("\(set) = true;")
             code.close()
         case .schema:
             code.open("{")
             code.line("var start\(node) = writer.BitPosition;")
-            code.line("if (\(a).__WriteDelta(\(b), ref writer, paths, at + \(value.node + 1), false)) \(set) = true;")
+            code.line("if (\(a).__WriteDelta(\(b), ref writer, paths, at + \(value.node + 1), false\(nextLevel(value)))) \(set) = true;")
             code.line("else writer.Rewind(start\(node));")
             code.close()
         case .union:
@@ -634,7 +730,7 @@ extension GesCSharpEmitter {
         switch encoding.kind {
         case .boolean:
             code.line("\(a) = !\(b);")
-        case .integer where encoding.deltaRange == 0, .quantized where encoding.deltaRange == 0, .float, .tag:
+        case .integer where encoding.deltaRange == 0, .quantized where encoding.deltaRange == 0, .float, .tag, .flags:
             code.open("{")
             code.line("var held\(node) = __Wire\(node)(\(b), paths, at);")
             code.line("var value\(node) = __Read\(node)(ref reader, paths, at);")
@@ -646,10 +742,10 @@ extension GesCSharpEmitter {
                 "\(a) = __Value\(node)(GesWireRules.ReadDeltaRange(ref reader, __Wire\(node)(\(b), paths, at), \(unsigned(encoding.maxIndex)), \(encoding.wrapping ? "true" : "false"), \(unsigned(encoding.deltaRange)), \(encoding.deltaWidth), \(width), \(path(value))));"
             )
         case .list where encoding.keyed:
-            code.line("__ReadKeyed\(node)(baseline, ref reader, paths, at);")
-        case .text, .list:
+            code.line("__ReadKeyed\(node)(baseline, ref reader, paths, at\(level(value)));")
+        case .text, .bytes, .list:
             read(&code, value, a)
-            code.line("if (__Same\(node)(baseline, paths, at)) \(fail("InvalidDelta", value))")
+            code.line("if (__Same\(node)(baseline, paths, at\(level(value)))) \(fail("InvalidDelta", value))")
         case .point, .vector:
             code.open("{")
             code.line("reader.Require(\(value.axes.count), \(path(value)));")
@@ -671,10 +767,51 @@ extension GesCSharpEmitter {
                 code.line("else \(a).\(axis.base) = \(b).\(axis.base);")
                 code.close()
             }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("\(a).\(axis) = 0;") }
             code.line("if (!changed\(node)) \(fail("InvalidDelta", value))")
             code.close()
+        case .box, .disc:
+            // The corners start as the baseline's; the box orders what the delta changes. A disc takes its centre and radius
+            // likewise.
+            code.open("{")
+            code.line("reader.Require(\(value.corners.count), \(path(value)));")
+            code.line("var bits\(node) = reader.BitPosition;")
+            code.line("reader.Seek(bits\(node) + \(value.corners.count));")
+            code.line("var changed\(node) = false;")
+            for (index, corner) in value.corners.enumerated() {
+                let cornerNode = String(corner.node)
+                code.line("var \(corner.label)\(node) = \(b).\(corner.base);")
+                if empty(corner) {
+                    // A centre without axes never changes, so its change bit must be clear in the canonical delta.
+                    code.open("{")
+                    code.line("var payload\(cornerNode) = reader.BitPosition;")
+                    code.line("reader.Seek(bits\(node) + \(index));")
+                    code.line("if (reader.Read(1, \(path(corner))) == 1) \(fail("InvalidDelta", corner))")
+                    code.line("reader.Seek(payload\(cornerNode));")
+                    code.close()
+                    continue
+                }
+                code.open("{")
+                code.line("var payload\(cornerNode) = reader.BitPosition;")
+                code.line("reader.Seek(bits\(node) + \(index));")
+                code.line("var set\(cornerNode) = reader.Read(1, \(path(corner))) == 1;")
+                code.line("reader.Seek(payload\(cornerNode));")
+                code.line("if (set\(cornerNode))")
+                code.open("{")
+                readDeltaPayload(&code, corner, corner.label + node, b + "." + corner.base)
+                code.line("changed\(node) = true;")
+                code.close()
+                code.close()
+            }
+            code.line("if (!changed\(node)) \(fail("InvalidDelta", value))")
+            if value.encoding.kind == .disc && value.corners.count == 1 { code.line("var radius\(node) = 0d;") }
+            code.line(value.encoding.kind == .disc ? "\(a) = new GesDisc(center\(node), radius\(node));" : "\(a) = new GesBox(lower\(node), upper\(node));")
+            code.close()
+        case .schema where value.packed != nil:
+            packedRead(&code, value, a)
+            code.line("if (\(a).RawValue == \(b).RawValue) \(fail("InvalidDelta", value))")
         case .schema:
-            code.line("if (!\(a).__ReadDelta(\(b), ref reader, paths, at + \(value.node + 1), false)) \(fail("InvalidDelta", value))")
+            code.line("if (!\(a).__ReadDelta(\(b), ref reader, paths, at + \(value.node + 1), false\(nextLevel(value)))) \(fail("InvalidDelta", value))")
         case .union:
             code.open("{")
             code.line("var choice\(node) = reader.Read(\(width), \(path(value)));")
@@ -718,9 +855,9 @@ extension GesCSharpEmitter {
     }
 
     private static func sameHelper(_ code: inout Code, _ value: GesPlanValue, _ parameter: String, _ isClass: Bool) {
-        if value.encoding.kind == .text || value.encoding.kind == .list {
+        if value.encoding.kind == .text || value.encoding.kind == .bytes || value.encoding.kind == .list {
             code.blank()
-            code.line("private \(isClass ? "" : "readonly ")bool __Same\(value.node)(\(parameter) baseline, string[] paths, int at)")
+            code.line("private \(isClass ? "" : "readonly ")bool __Same\(value.node)(\(parameter) baseline, string[] paths, int at\(value.depth > 0 ? ", int level" : ""))")
             code.open("{")
             same(&code, value, value.base, "baseline." + value.base)
             code.line("return true;")

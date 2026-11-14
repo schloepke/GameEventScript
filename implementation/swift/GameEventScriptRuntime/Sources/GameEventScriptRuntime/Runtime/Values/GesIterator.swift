@@ -26,6 +26,7 @@ class GesIterator {
         case .floatRange: return GesFloatRangeIterator(source.floatRangeValue!)
         case .list: return GesListIterator(source.listValue!)
         case .dice: return GesIntIterator(source.diceRolls!)
+        case .bytes: return GesBytesIterator(source.bytesValue!)
         case .map, .record: return GesMapValueIterator(source.asMap!)
         case .vector, .point: return GesTripletIterator(x: source.x, y: source.y, z: source.z)
         case .text, .tag: return GesStringIterator(source.textValue!)
@@ -181,6 +182,41 @@ final class GesMapValueIterator: GesIterator {
     override func close() {
         super.close()
         entries = []
+    }
+}
+
+/// Yields each byte as an Int64 number from 0 to 255.
+final class GesBytesIterator: GesIterator {
+    private var values: [UInt8]
+    private var index = 0
+
+    init(_ values: [UInt8]) {
+        self.values = values
+        super.init(patternSequence: false, integerRange: false)
+    }
+
+    override func next() -> GesValue? {
+        guard !exhausted, index < values.count else {
+            exhausted = true
+            return nil
+        }
+        defer { index += 1 }
+        return .integer(Int64(values[index]))
+    }
+
+    override func next(into output: GesRegisterOutput) -> Bool {
+        guard !exhausted, index < values.count else {
+            exhausted = true
+            return false
+        }
+        output.integer(Int64(values[index]), unit: .none)
+        index += 1
+        return true
+    }
+
+    override func close() {
+        super.close()
+        values = []
     }
 }
 

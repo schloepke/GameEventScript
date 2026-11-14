@@ -12,17 +12,23 @@ final class CompilerStackDepthTests: XCTestCase {
     private static func repeated(_ text: String, _ count: Int) -> String { String(repeating: text, count: count) }
 
     // The deepest forms of the recursive parser and compiler passes, each with the nesting count that reaches the
-    // limit: calls in nested blocks, labeled constructors, selector pipelines, lists, a predicate of nested sums.
+    // limit as C# counts it (a message argument adds one level): calls in nested blocks, labeled constructors, selector pipelines, lists, a predicate of nested sums.
     private static let deepestForms: [(name: String, limit: Int, source: @Sendable (Int) -> String)] = [
         (
-            "calls in blocks", 31,
+            "calls in blocks", 30,
             { n in "function f(_ x) be x\non Start(a) {\n" + repeated("if a > 1 {\n", 31) + "emit Out(" + repeated("f(", n) + "a" + repeated(")", n) + ")\n" + repeated("}\n", 31) + "}" }
         ),
-        ("vectors", 31, { n in "on Start() { emit Out(" + repeated(":Vector(x: ", n) + "1" + repeated(", y: 1)", n) + ") }" }),
+        ("vectors", 30, { n in "on Start() { emit Out(" + repeated(":Vector(x: ", n) + "1" + repeated(", y: 1)", n) + ") }" }),
         ("pipelines", 31, { n in "on Start(a) { emit Out(" + (0..<n).map { "a[:select x\($0) => " }.joined() + "1" + repeated("]", n) + ") }" }),
-        ("lists", 31, { n in "on Start() { emit Out(" + repeated("[", n) + "1" + repeated("]", n) + ") }" }),
+        ("lists", 30, { n in "on Start() { emit Out(" + repeated("[", n) + "1" + repeated("]", n) + ") }" }),
         ("predicate", 10, { n in "function f(_ x) be x\npredicate blocked(_ x) be " + repeated("f(x + (", n) + "x" + repeated("))", n) + " > 1\non Start(a) { emit Out(blocked(a)) }" }),
         ("blocks", 32, { n in "on Start(a) {\n" + repeated("if a > 1 {\n", n) + "emit Out(a)\n" + repeated("}\n", n) + "}" }),
+        // Iterative chains inside arguments and items count too: a call or list is one level deeper than its deepest
+        // argument or item, so nesting them cannot grow without bound.
+        ("chain in a call", 31, { n in "function f(_ x) be x\non Start(a) {\nlet x be f(" + Array(repeating: "a", count: n).joined(separator: " + ") + ")\nemit Out(x)\n}" }),
+        ("chain in a list", 31, { n in "on Start(a) {\nlet x be [" + Array(repeating: "a", count: n).joined(separator: " + ") + "]\nemit Out(x)\n}" }),
+        ("member chain in a call", 31, { n in "function f(_ x) be x\non Start(a) {\nlet x be f(a" + repeated(".x", n - 1) + ")\nemit Out(x)\n}" }),
+        ("sums in calls", 15, { n in "function f(_ x) be x\non Start(a) {\nlet x be " + repeated("f(", n) + "a" + repeated(" + a)", n) + "\nemit Out(x)\n}" }),
     ]
 
     func testSourcesAtTheNestingLimitsCompileOnASmallStack() {

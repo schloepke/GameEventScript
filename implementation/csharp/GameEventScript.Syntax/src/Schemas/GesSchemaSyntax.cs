@@ -19,7 +19,8 @@ internal enum GesSchemaDeclarationKind : byte
     Parameter,
     Schema,
     Message,
-    Messages
+    Messages,
+    TagSet
 }
 
 /// <summary>An exact decimal in lowest terms: no trailing zero in the significand, and zero is 0e0.</summary>
@@ -42,8 +43,8 @@ internal readonly struct GesSchemaDecimal : IEquatable<GesSchemaDecimal>
 
     internal int Exponent { get; }
 
-    // The canonical spelling of the schema hash.
-    internal string Canonical => $"{Significand}e{Exponent}";
+    // The canonical spelling of the schema hash, with ASCII signs whatever the current culture.
+    internal string Canonical => Significand.ToString(System.Globalization.CultureInfo.InvariantCulture) + "e" + Exponent.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     public bool Equals(GesSchemaDecimal other) => Significand == other.Significand && Exponent == other.Exponent;
 
@@ -52,7 +53,7 @@ internal readonly struct GesSchemaDecimal : IEquatable<GesSchemaDecimal>
     public override int GetHashCode() => (Significand.GetHashCode() * 31) ^ Exponent;
 }
 
-/// <summary>A literal, a constant or a parameter in a bound, step or delta range.</summary>
+/// <summary>A literal, a constant, or a name of a let or parameter in a bound, step, delta range or let.</summary>
 internal sealed class GesSchemaValueSyntax
 {
     internal GesSchemaDecimal Value { get; init; }
@@ -64,10 +65,10 @@ internal sealed class GesSchemaValueSyntax
     // The spelling of a literal, which formatting keeps.
     internal string Text { get; init; } = "";
 
-    // The name of a constant or parameter; empty for a literal.
+    // The name of a constant, or a lowercase name of a let of the schema or a parameter of the file; empty for a literal.
     internal string Constant { get; init; } = "";
 
-    internal string Parameter { get; init; } = "";
+    internal string Name { get; init; } = "";
 
     internal int Offset { get; init; }
 }
@@ -89,7 +90,8 @@ internal sealed class GesSchemaConstraintsSyntax
 
 internal sealed class GesSchemaAxisSyntax
 {
-    internal char Axis { get; init; }
+    // x, y, z, or the radius of a Disc.
+    internal string Axis { get; init; } = "";
 
     internal GesSchemaConstraintsSyntax Constraints { get; init; } = new();
 
@@ -107,17 +109,31 @@ internal sealed class GesSchemaTypeSyntax
 
     internal string[]? Tags { get; init; }
 
-    // The written maximum of Text and List.
+    // The written maximum of Text and List, or the let that holds it, and where that name starts.
     internal long? Max { get; init; }
+
+    internal string MaxName { get; init; } = "";
+
+    internal int MaxOffset { get; init; }
 
     // The alternatives of a List's element.
     internal GesSchemaTypeSyntax[]? Element { get; init; }
+
+    // The written `depth` of a List whose element is the schema that declares it, and where it starts; 0 without one.
+    internal int Depth { get; init; }
+
+    internal int DepthOffset { get; init; }
 
     internal GesSchemaConstraintsSyntax Constraints { get; init; } = new();
 
     internal GesSchemaAxisSyntax[]? Axes { get; init; }
 
     internal int Offset { get; init; }
+
+    // The label of a union alternative, such as `bind` in `bind: :Loadout_UnitBind`, or empty, and where it starts.
+    internal string Label { get; set; } = "";
+
+    internal int LabelOffset { get; set; }
 }
 
 internal sealed class GesSchemaFieldSyntax
@@ -129,6 +145,133 @@ internal sealed class GesSchemaFieldSyntax
     internal GesSchemaTypeSyntax[] Alternatives { get; init; } = [];
 
     internal GesSchemaFieldMarker Marker { get; init; }
+
+    internal GesSchemaDefaultSyntax? Default { get; init; }
+
+    // The expression of a field written `computed by`, which is never encoded.
+    internal GesSchemaExpressionSyntax? Computed { get; init; }
+
+    // The index of the entry among all fields, lets and withs of its schema, which orders computed and taken fields.
+    internal int Sequence { get; set; }
+
+    internal int Offset { get; init; }
+}
+
+internal enum GesSchemaExpressionKind : byte
+{
+    Literal,
+    Boolean,
+    Constant,
+    Name,
+    Member,
+    Negate,
+    Not,
+    Abs,
+    Binary,
+    Choice,
+    Min,
+    Max,
+    Clamp,
+    Default,
+    HasValue,
+    Sum,
+    Count,
+    Function
+}
+
+internal enum GesSchemaBinaryOperator : byte
+{
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Less,
+    LessOrEqual,
+    Greater,
+    GreaterOrEqual,
+    Equal,
+    NotEqual,
+    And,
+    Or,
+    Power
+}
+
+// An expression of a computed field, a subset of GES expressions with their spellings. A Member reads Name from its one
+// child; a Choice holds value and condition pairs and then the fallback; Sum holds its list and, with a variable in Name,
+// the projection; Clamp holds the value and both bounds; a Function holds its arguments and the function's ASCII spelling in
+// Name, such as `sqrt`, `round half up` or `atan2`.
+internal sealed class GesSchemaExpressionSyntax
+{
+    internal GesSchemaExpressionKind Kind { get; init; }
+
+    internal GesSchemaBinaryOperator Operator { get; init; }
+
+    internal GesSchemaValueSyntax? Literal { get; init; }
+
+    internal bool Boolean { get; init; }
+
+    internal string Name { get; init; } = "";
+
+    internal GesSchemaExpressionSyntax[] Children { get; init; } = [];
+
+    // The depth of the tree below and including this node, which the reader limits.
+    internal int Depth { get; init; } = 1;
+
+    internal int Offset { get; init; }
+}
+
+// The value a field takes when a value or document leaves it out: `default` with a number, a constant, a let or a sibling field
+// (both in Value), `true` or `false`, a tag, or a record literal such as `[:]` or `[efficiency: 90%]`.
+internal sealed class GesSchemaDefaultSyntax
+{
+    internal GesSchemaValueSyntax? Value { get; init; }
+
+    internal bool? Boolean { get; init; }
+
+    internal string? Tag { get; init; }
+
+    // The named fields of a record literal in written order, empty for `[:]`; null for every other default.
+    internal GesSchemaRecordEntrySyntax[]? Record { get; init; }
+
+    internal int Offset { get; init; }
+}
+
+// One `name: value` of a record literal; the value is again a number, a constant, `true`, `false`, a tag or a record literal.
+internal sealed class GesSchemaRecordEntrySyntax
+{
+    internal string Name { get; init; } = "";
+
+    internal GesSchemaDefaultSyntax Value { get; init; } = null!;
+
+    internal int Offset { get; init; }
+}
+
+// A constant of a schema, `let name be value`, which its fields can name.
+internal sealed class GesSchemaLetSyntax
+{
+    internal string Name { get; init; } = "";
+
+    internal GesSchemaValueSyntax Value { get; init; } = null!;
+
+    internal int Offset { get; init; }
+}
+
+// `with :Name all optional without (a, b)` inside a schema: the fields of another schema, copied where it stands.
+internal sealed class GesSchemaWithSyntax
+{
+    internal string Name { get; init; } = "";
+
+    internal bool AllOptional { get; init; }
+
+    internal string[] Without { get; init; } = [];
+
+    internal int[] WithoutOffsets { get; init; } = [];
+
+    // The number of the schema's own fields declared before it.
+    internal int Position { get; init; }
+
+    // The index of the entry among all fields, lets and withs of its schema.
+    internal int Sequence { get; init; }
 
     internal int Offset { get; init; }
 }
@@ -148,11 +291,33 @@ internal sealed class GesSchemaDeclarationSyntax
 
     internal GesSchemaFieldSyntax[] Fields { get; init; } = [];
 
+    internal GesSchemaLetSyntax[] Lets { get; init; } = [];
+
+    internal GesSchemaWithSyntax[] Withs { get; init; } = [];
+
+    // The fields written `computed by`, in declared order; Fields holds the others.
+    internal GesSchemaFieldSyntax[] Computed { get; init; } = [];
+
+    // An abstract schema only lends its fields with `with`.
+    internal bool Abstract { get; set; }
+
+    // A packed schema is one machine word; its width is 8, 16, 32 or 64 when written as `packed(width)`, else 0.
+    internal bool Packed { get; set; }
+
+    internal int PackedWidth { get; set; }
+
+    internal int PackedOffset { get; set; }
+
     internal string[] Tags { get; init; } = [];
 
     internal string[] Members { get; init; } = [];
 
     internal int[] MemberOffsets { get; init; } = [];
+
+    // The group of a wire or model root, or null when the declaration has no such role.
+    internal string? WireGroup { get; set; }
+
+    internal string? ModelGroup { get; set; }
 }
 
 internal sealed class GesSchemaDiagnostic
@@ -171,6 +336,14 @@ internal sealed class GesSchemaDiagnostic
     internal const string InvalidBound = "schema.invalidBound";
     internal const string TooWide = "schema.tooWide";
     internal const string TooLarge = "schema.tooLarge";
+    internal const string InvalidRole = "schema.invalidRole";
+    internal const string DuplicateRole = "schema.duplicateRole";
+    internal const string InvalidDefault = "schema.invalidDefault";
+    internal const string InvalidAbstract = "schema.invalidAbstract";
+    internal const string PackedField = "schema.packedField";
+    internal const string PackedTooWide = "schema.packedTooWide";
+    internal const string InvalidExpression = "schema.invalidExpression";
+    internal const string ComputedMayBeAbsent = "schema.computedMayBeAbsent";
 
     internal GesSchemaDiagnostic(string code, string text, int offset, string message)
     {

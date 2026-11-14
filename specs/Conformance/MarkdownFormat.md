@@ -292,8 +292,8 @@ sequence means no debug segments. Its default is all three values.
 written as canonical `.gesb`, read again, and only then used by the test.
 Enabling it implicitly requires the core capability `program-binary`.
 
-`runtimeLimits` uses the exact portable names `maxProcessedEventsPerRun`,
-`maxQueuedMessagesPerRun`, `maxExecutionSteps`, `maxRegisterValues`,
+`runtimeLimits` uses the exact portable names `maxProcessedMessagesPerRun`,
+`maxQueuedMessages`, `maxExecutionSteps`, `maxRegisterValues`,
 `maxLoopIterations`, `maxCallDepth`, `maxRandomScopeDepth`, `maxRangeItems`,
 `maxGeneratedCollectionItems`, `maxDiceCount`, and `maxDiceSides`. Values are
 positive integers. Omitted fields use Core defaults.
@@ -679,6 +679,7 @@ Values use the existing portable conformance shape:
 | `:List` | ordered `items` value sequence |
 | `:Map` | `entries`, an ordered sequence of `{ key, value }` |
 | `:Dice` | ordered Int32 `rolls` |
+| `:Bytes` | `value`: lowercase hexadecimal Text with two digits per byte |
 | `:Range.int64`, `:Range.binary64` | numeric strings `from`, `to`, `step`; the variant fixes all three storage kinds |
 | `:Message` | nested `message` |
 | any declared custom type | ordered `entries` sequence |

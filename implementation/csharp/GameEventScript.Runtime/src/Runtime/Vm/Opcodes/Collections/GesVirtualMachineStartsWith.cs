@@ -84,11 +84,26 @@ internal partial class GesVirtualMachine
             return;
         }
 
+        if (leftRange is not null && rightRange is not null)
+        {
+            SetBoolean(dst, IntegerRangeAffix(leftRange, a.CollectionCount, rightRange, b.CollectionCount, suffix: false));
+            return;
+        }
+
+        // Between two Ranges every compared pair charges the loop budget (specs/HostRuntime.md#iterator-and-generated-collection-limits).
+        var chargeItems = (leftRange is not null || leftFloatRange is not null) && (rightRange is not null || rightFloatRange is not null);
+
         var leftInteger = leftRange?.From ?? 0;
         var rightInteger = rightRange?.From ?? 0;
 
         for (var i = 0L; i < b.CollectionCount; i++)
         {
+            if (chargeItems && !ChargeRangeItem())
+            {
+                SetNothing(dst);
+                return;
+            }
+
             var left = new GesValue();
             if (leftList is not null) left = leftList[i];
             else if (leftDice is not null) left.SetInteger(leftDice[i]);
@@ -121,5 +136,14 @@ internal partial class GesVirtualMachine
         }
 
         SetBoolean(dst, true);
+    }
+
+    // Two integer Ranges compare without visiting items: the first (or last) terms and, beyond one item, the steps decide.
+    private static bool IntegerRangeAffix(GesIntegerRange left, long leftCount, GesIntegerRange right, long rightCount, bool suffix)
+    {
+        if (rightCount == 0) return true;
+        var leftTerm = suffix ? GesRangeMath.GetTerm(left.From, left.To, left.Step, leftCount) : left.From;
+        var rightTerm = suffix ? GesRangeMath.GetTerm(right.From, right.To, right.Step, rightCount) : right.From;
+        return leftTerm == rightTerm && (rightCount == 1 || left.Step == right.Step);
     }
 }

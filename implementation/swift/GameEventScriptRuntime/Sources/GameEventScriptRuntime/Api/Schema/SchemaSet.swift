@@ -26,9 +26,12 @@ public struct GesSchemaSource: Sendable {
 /// values within one session.
 public final class GesSchemaSet: @unchecked Sendable {
     private static let maximumNesting = 32
+    // A Flags field holds its members in one 64-bit mask.
+    static let maximumFlagCount = 64
 
     private var declarations: [String: GesResolvedDeclaration] = [:]
     private var ordered: [GesResolvedDeclaration] = []
+    private var tagSetSources: [String: String] = [:]
 
     /// The sources as given, which generated code embeds to convert to and from GES values.
     @_spi(Generator) public let sources: [GesSchemaSource]
@@ -43,19 +46,49 @@ public final class GesSchemaSet: @unchecked Sendable {
             if let error = syntax.error { throw GesSchemaError(code: error.code, sourceName: source.name, line: error.line, column: error.column, message: error.message) }
             files.append(GesFileScope(source, syntax))
         }
-        for file in files { try file.declareNames(&declarations, &ordered) }
-        for file in files { try file.resolve(declarations) }
+        var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
+        for file in files {
+            try file.declareNames(&declarations, &ordered, &tagSets)
+            for name in tagSets.keys where tagSetSources[name] == nil { tagSetSources[name] = file.sourceName }
+        }
+        for file in files { try file.resolve(declarations, tagSets) }
+        var composed: Set<ObjectIdentifier> = []
+        for declaration in ordered where declaration.kind == .schema {
+            var path: [GesResolvedDeclaration] = []
+            try compose(declaration, &path, &composed)
+        }
         var visited: [ObjectIdentifier: Int] = [:]
         for declaration in ordered {
             var path: [GesResolvedDeclaration] = []
             try Self.checkNesting(declaration, &path, &visited)
         }
+        for file in files { try file.resolveRecordDefaults() }
+        for declaration in ordered where declaration.isPacked { try GesSchemaBinder.checkPacked(declaration) }
+        for declaration in ordered where declaration.syntax.wireGroup != nil { try GesSchemaBinder.checkEncodable(declaration) }
         schemas = ordered.map { declaration in
             let schema = GesSchema(declaration)
             declaration.schema = schema
             return schema
         }
         for schema in schemas { try schema.complete() }
+    }
+
+    /// Composes the schemas a schema takes before it, so that it copies their complete fields; `with` must not form a cycle.
+    private func compose(_ declaration: GesResolvedDeclaration, _ path: inout [GesResolvedDeclaration], _ composed: inout Set<ObjectIdentifier>) throws {
+        if composed.contains(ObjectIdentifier(declaration)) { return }
+        path.append(declaration)
+        for with in declaration.syntax.withs {
+            guard let source = declarations[with.name], source.kind == .schema else {
+                throw declaration.scope.error(Code.unknownName, with.offset, "Schema '\(with.name)' is not declared.")
+            }
+            if path.contains(where: { $0 === source }) {
+                throw declaration.scope.error(Code.cycle, with.offset, "'\(declaration.name)' takes the fields of '\(with.name)', which takes its own.")
+            }
+            try compose(source, &path, &composed)
+        }
+        path.removeLast()
+        try declaration.scope.compose(declaration, declarations)
+        composed.insert(ObjectIdentifier(declaration))
     }
 
     /// Reads and validates one source named `schema.gess`.
@@ -99,6 +132,9 @@ public final class GesSchemaSet: @unchecked Sendable {
 
     static func check(_ syntax: GesDocumentSyntax, _ schema: GesResolvedDeclaration, _ parameters: GesSchemaParameters?) throws {
         if schema.kind != .schema { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "'\(schema.name)' is no schema.") }
+        if schema.isAbstract {
+            throw GesSchemaError(code: Code.invalidAbstract, sourceName: "", line: 0, column: 0, message: "'\(schema.name)' is abstract and describes no document.")
+        }
         try GesSchemaDocumentCheck.check(syntax, schema, parameters)
     }
 
@@ -111,7 +147,8 @@ public final class GesSchemaSet: @unchecked Sendable {
             }
         }
         var root: GesResolvedDeclaration?
-        for declaration in ordered where declaration.scope.sourceName == source && declaration.kind == .schema && !referenced.contains(ObjectIdentifier(declaration)) {
+        for declaration in ordered
+        where declaration.scope.sourceName == source && declaration.kind == .schema && !declaration.isAbstract && !referenced.contains(ObjectIdentifier(declaration)) {
             if root != nil { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "The schema source '\(source)' has more than one root schema.") }
             root = declaration
         }
@@ -124,12 +161,17 @@ public final class GesSchemaSet: @unchecked Sendable {
         for alternative in type.element ?? [] { collectReferences(alternative, &referenced) }
     }
 
+    /// The name of the source that declares a schema, message, message set or tag set, which places its generated code in
+    /// split output. The name must be declared.
+    @_spi(Generator) public func sourceName(of name: String) -> String {
+        declarations[name]?.scope.sourceName ?? tagSetSources[name]!
+    }
+
     func declaration(_ root: String) throws -> GesResolvedDeclaration {
         guard let found = declarations[root] else { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "'\(root)' is not declared.") }
         return found
     }
 
-    // Reference cycles and too deep nesting, along every path from the declaration.
     // Reference cycles and too deep nesting. A declaration already finished at this depth or deeper holds no error, so
     // the check stays polynomial however often schemas refer to each other.
     private static func checkNesting(_ declaration: GesResolvedDeclaration, _ path: inout [GesResolvedDeclaration], _ visited: inout [ObjectIdentifier: Int]) throws {
@@ -140,14 +182,17 @@ public final class GesSchemaSet: @unchecked Sendable {
         visited[ObjectIdentifier(declaration)] = path.count
         path.append(declaration)
         for field in declaration.fields {
-            for type in field.alternatives { try checkNesting(type, &path, &visited) }
+            for type in field.alternatives { try checkNesting(type, declaration, &path, &visited) }
         }
         path.removeLast()
     }
 
-    private static func checkNesting(_ type: GesResolvedType, _ path: inout [GesResolvedDeclaration], _ visited: inout [ObjectIdentifier: Int]) throws {
+    private static func checkNesting(_ type: GesResolvedType, _ holder: GesResolvedDeclaration, _ path: inout [GesResolvedDeclaration], _ visited: inout [ObjectIdentifier: Int]) throws {
         if let reference = type.reference { try checkNesting(reference, &path, &visited) }
-        for alternative in type.element ?? [] { try checkNesting(alternative, &path, &visited) }
+        // A List with depth in the schema it holds is a limited recursion; where `with` copies it into another schema, it is
+        // an ordinary List of the declaring schema.
+        if let recursion = type.recursion, recursion === holder { return }
+        for alternative in type.element ?? [] { try checkNesting(alternative, holder, &path, &visited) }
     }
 }
 
@@ -160,6 +205,17 @@ struct GesResolvedValue {
     var isParameter: Bool { !parameter.isEmpty }
 }
 
+/// A constant of a schema: its kind, Number, Percentage or Quantity, its unit and its exact value.
+struct GesResolvedLet {
+    var name = ""
+    var kind = GesSchemaTypeKind.number
+    var unit = GesQuantityUnit.none
+    var value = GesSchemaDecimal(0, 0)
+    /// A whole unitless value within Int64; any other is a binary64 in base units.
+    var integer = false
+    var offset = 0
+}
+
 struct GesResolvedConstraints {
     var integer = false
     var wrapping = false
@@ -170,8 +226,19 @@ struct GesResolvedConstraints {
 }
 
 struct GesResolvedAxis {
+    // x, y, z, or the radius of a Disc.
     let axis: String
     let constraints: GesResolvedConstraints
+
+    // The order of the axes in a block: x, y, z, then the radius.
+    static func order(_ axis: String) -> Int {
+        switch axis {
+        case "x": 0
+        case "y": 1
+        case "z": 2
+        default: 3
+        }
+    }
 }
 
 final class GesResolvedType {
@@ -184,10 +251,29 @@ final class GesResolvedType {
     let axes: [GesResolvedAxis]?
     let reference: GesResolvedDeclaration?
     let referenceName: String
+    // The named tag set a Tag takes its members from, or empty.
+    let tagSet: String
     let offset: Int
+    // The label of a union alternative, or empty.
+    var label = ""
+    // The `depth` of a List whose element is the schema that declares it: how many records of it nest; 0 without one.
+    var depth = 0
+    // The schema a List with depth holds itself through: its element, alone or as the one schema alternative of a union.
+    var recursion: GesResolvedDeclaration? { depth > 0 ? element?.first { $0.kind == .reference }?.reference : nil }
 
-    init(kind: GesSchemaTypeKind, unit: GesQuantityUnit, tags: [String]?, max: Int64?, element: [GesResolvedType]?, constraints: GesResolvedConstraints, axes: [GesResolvedAxis]?, reference: GesResolvedDeclaration?, referenceName: String, offset: Int)
-    {
+    init(
+        kind: GesSchemaTypeKind,
+        unit: GesQuantityUnit,
+        tags: [String]?,
+        max: Int64?,
+        element: [GesResolvedType]?,
+        constraints: GesResolvedConstraints,
+        axes: [GesResolvedAxis]?,
+        reference: GesResolvedDeclaration?,
+        referenceName: String,
+        tagSet: String = "",
+        offset: Int
+    ) {
         self.kind = kind
         self.unit = unit
         self.tags = tags
@@ -197,6 +283,7 @@ final class GesResolvedType {
         self.axes = axes
         self.reference = reference
         self.referenceName = referenceName
+        self.tagSet = tagSet
         self.offset = offset
     }
 }
@@ -207,6 +294,27 @@ struct GesResolvedField {
     let alternatives: [GesResolvedType]
     let marker: GesSchemaFieldMarker
     let offset: Int
+    var defaultValue: GesResolvedDefault?
+    /// The file that declares the field, whose constants, parameters and positions it uses, also where `with` takes it.
+    let scope: GesFileScope
+}
+
+/// The default of a field: an exact number in base units, a Boolean, a tag, the name of a sibling field, or a record literal.
+struct GesResolvedDefault: Sendable {
+    var kind = GesSchemaDefaultKind.number
+    var value = GesSchemaDecimal(0, 0)
+    var boolean = false
+    /// The tag without `#`, or the sibling field.
+    var name = ""
+    /// The fields a record literal names, which every copy of the field taken with `with` shares.
+    var record: GesResolvedRecord?
+    var offset = 0
+}
+
+/// A field a record literal names, with its default-like value: a number, a Boolean, a tag, or again a record literal.
+struct GesResolvedRecordEntry {
+    let field: GesResolvedField
+    let value: GesResolvedDefault
 }
 
 final class GesResolvedDeclaration {
@@ -217,7 +325,17 @@ final class GesResolvedDeclaration {
     let syntax: GesSchemaDeclarationSyntax
     let tags: [String]
     var fields: [GesResolvedField] = []
+    var lets: [GesResolvedLet] = []
+    /// The schemas it takes with `with`, in declared order, each with its `with`.
+    var takes: [(schema: GesResolvedDeclaration, with: GesSchemaWithSyntax)] = []
     var members: [GesResolvedDeclaration] = []
+    /// The fields written `computed by`, own and taken, in the order their expressions may read each other.
+    var computed: [GesResolvedComputed] = []
+    var isAbstract: Bool { syntax.isAbstract }
+    // A packed schema's machine word: the declared width or the smallest of 8, 16, 32 and 64 that holds its bits.
+    var isPacked: Bool { syntax.isPacked }
+    var packedBits = 0
+    var packedWidth = 0
     // The public description, which exists once all declarations are resolved. It holds this declaration, so this side is weak.
     weak var schema: GesSchema?
 
@@ -235,8 +353,13 @@ final class GesResolvedDeclaration {
 final class GesFileScope {
     private let source: GesSchemaSource
     private let syntax: GesSchemaSourceSyntax
-    private var constants: [String: GesSchemaValueSyntax] = [:]
+    private(set) var constants: [String: GesSchemaValueSyntax] = [:]
     private var own: [GesResolvedDeclaration] = []
+    private var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
+    /// The lets of the schema being resolved, which its fields can name.
+    private var lets: [String: GesResolvedLet] = [:]
+    /// Record literals of fields, resolved once every schema is composed, since they name the fields of another schema.
+    private var records: [(record: GesResolvedRecord, schema: GesResolvedDeclaration, syntax: GesSchemaDefaultSyntax)] = []
     private(set) var parameters: [String: GesSchemaTypeSyntax] = [:]
     var sourceName: String { source.name }
 
@@ -250,9 +373,21 @@ final class GesFileScope {
         return GesSchemaError(code: code, sourceName: source.name, line: line, column: column, message: message)
     }
 
-    func declareNames(_ all: inout [String: GesResolvedDeclaration], _ ordered: inout [GesResolvedDeclaration]) throws {
+    func declareNames(_ all: inout [String: GesResolvedDeclaration], _ ordered: inout [GesResolvedDeclaration], _ tagSets: inout [String: GesSchemaDeclarationSyntax]) throws {
         for declaration in syntax.declarations {
             switch declaration.kind {
+            case .tagSet:
+                if GesSchemaTypeNames.isBuiltIn(declaration.name) {
+                    throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
+                }
+                if all[declaration.name] != nil || tagSets[declaration.name] != nil {
+                    throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.")
+                }
+                tagSets[declaration.name] = declaration
+                var members: Set<String> = []
+                for tag in declaration.tags where !members.insert(tag).inserted {
+                    throw error(Code.duplicateName, declaration.offset, "Tag '#\(tag)' is listed twice.")
+                }
             case .constant:
                 if constants[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "Constant '\(declaration.name)' is declared twice.") }
                 constants[declaration.name] = declaration.value
@@ -265,7 +400,9 @@ final class GesFileScope {
                 if GesSchemaTypeNames.isBuiltIn(declaration.name) {
                     throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
                 }
-                if all[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.") }
+                if all[declaration.name] != nil || tagSets[declaration.name] != nil {
+                    throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.")
+                }
                 all[declaration.name] = resolved
                 ordered.append(resolved)
                 own.append(resolved)
@@ -273,7 +410,8 @@ final class GesFileScope {
         }
     }
 
-    func resolve(_ all: [String: GesResolvedDeclaration]) throws {
+    func resolve(_ all: [String: GesResolvedDeclaration], _ tagSets: [String: GesSchemaDeclarationSyntax]) throws {
+        self.tagSets = tagSets
         for declaration in own {
             let syntax = declaration.syntax
             if declaration.kind == .messages {
@@ -288,13 +426,261 @@ final class GesFileScope {
             var tags: Set<String> = []
             for tag in syntax.tags where !tags.insert(tag).inserted { throw error(Code.duplicateName, syntax.offset, "Tag '#\(tag)' is listed twice.") }
             var names: Set<String> = []
+            declaration.lets = try resolveLets(syntax, &names)
+            var recursive = false
             for (index, field) in syntax.fields.enumerated() {
-                if !names.insert(field.name).inserted { throw error(Code.duplicateName, field.offset, "Field '\(field.name)' is declared twice.") }
-                declaration.fields.append(try resolveField(field, index, declaration.kind, all))
+                if !names.insert(field.name).inserted { throw error(Code.duplicateName, field.offset, "'\(field.name)' is declared twice in '\(declaration.name)'.") }
+                let resolved = try resolveField(field, index, declaration.kind, all)
+                declaration.fields.append(resolved)
+                try checkDepth(field.alternatives, resolved.alternatives, declaration, top: true)
+                if resolved.alternatives[0].depth == 0 { continue }
+                if recursive { throw error(Code.invalidConstraint, field.alternatives[0].depthOffset, "A schema holds at most one List with depth.") }
+                recursive = true
             }
         }
         // A declaration holds its scope, so the scope lets go of them once they are resolved.
         own = []
+        self.tagSets = [:]
+        lets = [:]
+    }
+
+    /// A let is a literal or a file constant. Its name differs from the fields and other lets of its schema and from the
+    /// parameters of its file, since a bound names either.
+    private func resolveLets(_ syntax: GesSchemaDeclarationSyntax, _ names: inout Set<String>) throws -> [GesResolvedLet] {
+        lets = [:]
+        var result: [GesResolvedLet] = []
+        for declared in syntax.lets {
+            if !names.insert(declared.name).inserted { throw error(Code.duplicateName, declared.offset, "'\(declared.name)' is declared twice in '\(syntax.name)'.") }
+            if parameters[declared.name] != nil { throw error(Code.duplicateName, declared.offset, "'\(declared.name)' is a parameter of this file.") }
+            var literal = declared.value
+            if !literal.constant.isEmpty {
+                guard let constant = constants[literal.constant] else {
+                    throw error(Code.unknownName, declared.value.offset, "Constant '$\(declared.value.constant)' is not declared in this file.")
+                }
+                literal = constant
+            }
+            let kind: GesSchemaTypeKind = literal.isPercent ? .percentage : literal.unit != .none ? .quantity : .number
+            var resolved = GesResolvedLet(name: declared.name, kind: kind, unit: literal.unit, value: literal.value, offset: declared.offset)
+            resolved.integer = try GesSchemaBinder.checkLet(self, resolved)
+            result.append(resolved)
+            lets[declared.name] = resolved
+        }
+        return result
+    }
+
+    /// Copies the fields that `with` takes in place, after every schema it takes is composed, then resolves the defaults,
+    /// which may name a taken field. The taken fields keep their file and their defaults, unless `all optional` drops them.
+    func compose(_ declaration: GesResolvedDeclaration, _ all: [String: GesResolvedDeclaration]) throws {
+        let own = declaration.fields
+        var merged: [GesResolvedField] = []
+        var origins: [Int] = []
+        var takes: [(schema: GesResolvedDeclaration, with: GesSchemaWithSyntax)] = []
+        for index in 0...own.count {
+            for with in declaration.syntax.withs where with.position == index {
+                let source = all[with.name]!
+                takes.append((source, with))
+                for (excluded, name) in with.without.enumerated()
+                where !source.fields.contains(where: { $0.name == name }) && !source.computed.contains(where: { $0.name == name }) {
+                    throw error(Code.unknownName, with.withoutOffsets[excluded], "'\(name)' is no field of '\(source.name)'.")
+                }
+                for field in source.fields where !with.without.contains(field.name) {
+                    var marker = field.marker
+                    if with.allOptional {
+                        marker = field.alternatives.count > 1 && field.alternatives.contains(where: { $0.kind == .nothing }) ? .none : .optional
+                    }
+                    merged.append(
+                        GesResolvedField(
+                            name: field.name,
+                            unlabeled: field.unlabeled,
+                            alternatives: field.alternatives,
+                            marker: marker,
+                            offset: field.offset,
+                            defaultValue: with.allOptional ? nil : field.defaultValue,
+                            scope: field.scope
+                        )
+                    )
+                    origins.append(with.offset)
+                }
+            }
+            if index == own.count { break }
+            merged.append(own[index])
+            origins.append(-1)
+        }
+        var names = Set(declaration.lets.map(\.name))
+        for (index, field) in merged.enumerated() {
+            let offset = origins[index] >= 0 ? origins[index] : field.offset
+            if !names.insert(field.name).inserted { throw error(Code.duplicateName, offset, "'\(field.name)' is declared twice in '\(declaration.name)'.") }
+            if field.marker == .key && index != 0 {
+                throw error(Code.invalidKey, offset, "A key is the first field of a schema, an integer or a Tag with a set, without delta within or a union.")
+            }
+        }
+        for (index, field) in merged.enumerated() where origins[index] >= 0 {
+            if let fallback = field.defaultValue, fallback.kind == .field, !merged.contains(where: { $0.name == fallback.name }) {
+                throw error(Code.invalidDefault, origins[index], "'\(field.name)' defaults to '\(fallback.name)', which 'without' leaves out.")
+            }
+        }
+        declaration.fields = merged
+        declaration.takes = takes
+        declaration.computed = try Self.resolveComputed(declaration, computedEntries(declaration, all), &names)
+        lets = Dictionary(uniqueKeysWithValues: declaration.lets.map { ($0.name, $0) })
+        defer { lets = [:] }
+        try resolveDefaults(declaration)
+    }
+
+    /// The computed fields in written order: own ones, and those of a schema taken by `with` where the `with` stands, without
+    /// the names it leaves out; `all optional` makes taken numbers optional.
+    private func computedEntries(_ declaration: GesResolvedDeclaration, _ all: [String: GesResolvedDeclaration]) -> [GesResolvedComputed] {
+        var entries: [GesResolvedComputed] = []
+        let syntax = declaration.syntax
+        var withIndex = 0
+        var ownIndex = 0
+        while withIndex < syntax.withs.count || ownIndex < syntax.computed.count {
+            if ownIndex == syntax.computed.count || (withIndex < syntax.withs.count && syntax.withs[withIndex].sequence < syntax.computed[ownIndex].sequence) {
+                let with = syntax.withs[withIndex]
+                withIndex += 1
+                for taken in all[with.name]!.computed where !with.without.contains(taken.name) {
+                    entries.append(
+                        GesResolvedComputed(
+                            name: taken.name,
+                            kind: taken.kind,
+                            unit: taken.unit,
+                            isOptional: taken.isOptional || (with.allOptional && taken.kind != .boolean),
+                            offset: taken.offset,
+                            scope: taken.scope,
+                            syntax: taken.syntax,
+                            lets: taken.lets
+                        )
+                    )
+                }
+                continue
+            }
+            let field = syntax.computed[ownIndex]
+            ownIndex += 1
+            entries.append(
+                GesResolvedComputed(
+                    name: field.name,
+                    kind: field.alternatives[0].kind,
+                    unit: field.alternatives[0].unit,
+                    isOptional: field.marker == .optional,
+                    offset: field.offset,
+                    scope: self,
+                    syntax: field,
+                    lets: declaration.lets
+                )
+            )
+        }
+        return entries
+    }
+
+    /// A default is a number, a Boolean or a tag of the field's single type, or a sibling field of the same type whose value it
+    /// takes; chains resolve in dependency order and must not form a cycle.
+    private func resolveDefaults(_ declaration: GesResolvedDeclaration) throws {
+        for field in declaration.syntax.fields {
+            guard let written = field.defaultValue else { continue }
+            let index = declaration.fields.firstIndex { $0.name == field.name && $0.scope === self && $0.offset == field.offset }!
+            let resolved = declaration.fields[index]
+            if resolved.marker == .key { throw error(Code.invalidDefault, written.offset, "A key takes no default.") }
+            let name = written.value?.name ?? ""
+            if !name.isEmpty && declaration.computed.contains(where: { $0.name == name }) {
+                throw error(Code.invalidDefault, written.offset, "'\(name)' is computed; a default names a stored field.")
+            }
+            if !name.isEmpty, let sibling = declaration.fields.first(where: { $0.name == name }) {
+                guard let type = GesSchemaCanonical.defaultType(resolved.alternatives) else {
+                    throw error(Code.invalidDefault, written.offset, "The type of '\(resolved.name)' belongs to it alone, as a union, Flags or a closed Tag written in place does; a tag set can be shared.")
+                }
+                if type != GesSchemaCanonical.defaultType(sibling.alternatives) { throw error(Code.invalidDefault, written.offset, "'\(name)' has another type than '\(resolved.name)'.") }
+                if (sibling.marker == .optional) != (resolved.marker == .optional) {
+                    throw error(Code.invalidDefault, written.offset, "A field and the field it defaults to are both optional or both not.")
+                }
+                declaration.fields[index].defaultValue = GesResolvedDefault(kind: .field, name: name, offset: written.offset)
+                continue
+            }
+            if !name.isEmpty && lets[name] == nil { throw error(Code.unknownName, written.value!.offset, "'\(name)' is neither a field nor a let of '\(declaration.name)'.") }
+            if resolved.marker == .optional { throw error(Code.invalidDefault, written.offset, "An optional field takes its default only from another optional field.") }
+            if resolved.alternatives.count != 1 { throw error(Code.invalidDefault, written.offset, "A union takes its default only from another field.") }
+            declaration.fields[index].defaultValue = try resolveDefault(resolved.alternatives[0], written)
+        }
+        for field in declaration.fields {
+            var seen: Set<String> = []
+            var current = field
+            while let fallback = current.defaultValue, fallback.kind == .field {
+                if !seen.insert(current.name).inserted { throw error(Code.cycle, field.defaultValue!.offset, "The defaults of '\(field.name)' form a cycle.") }
+                current = declaration.fields.first { $0.name == fallback.name }!
+            }
+        }
+    }
+
+    private func resolveDefault(_ type: GesResolvedType, _ written: GesSchemaDefaultSyntax) throws -> GesResolvedDefault {
+        switch type.kind {
+        case .boolean where written.boolean != nil:
+            return GesResolvedDefault(kind: .boolean, boolean: written.boolean!, offset: written.offset)
+        case .tag where written.tag != nil:
+            let tag = written.tag!
+            if let tags = type.tags, !tags.contains(tag) { throw error(Code.invalidDefault, written.offset, "'#\(tag)' is no tag of the field.") }
+            if let max = type.max, tag.utf8.count > max { throw error(Code.invalidDefault, written.offset, "'#\(tag)' is longer than \(max) bytes.") }
+            return GesResolvedDefault(kind: .tag, name: tag, offset: written.offset)
+        case .number, .percentage, .quantity:
+            guard let value = written.value else { break }
+            let resolved = try resolveValue(value, type.unit, type.kind == .percentage, bound: false)!
+            try GesSchemaBinder.checkDefault(self, type.constraints, resolved.value, written.offset, nil)
+            return GesResolvedDefault(kind: .number, value: resolved.value, offset: written.offset)
+        case .reference where written.record != nil:
+            let record = GesResolvedRecord()
+            records.append((record, type.reference!, written))
+            return GesResolvedDefault(kind: .record, record: record, offset: written.offset)
+        default:
+            break
+        }
+        throw error(Code.invalidDefault, written.offset, "A \(type.kind.rawValue) field takes no such default; a sibling field of its type can be one.")
+    }
+
+    func resolveRecordDefaults() throws {
+        for (record, schema, written) in records { record.entries = try resolveRecord(schema, written) }
+    }
+
+    /// The fields a record literal names, in the field order of its schema. Each name is a stored field, at most once, whose
+    /// value is checked as its own default would be; a required field it leaves out has a default or accepts nothing.
+    private func resolveRecord(_ schema: GesResolvedDeclaration, _ written: GesSchemaDefaultSyntax) throws -> [GesResolvedRecordEntry] {
+        var resolved = [GesResolvedDefault?](repeating: nil, count: schema.fields.count)
+        for entry in written.record! {
+            guard let index = schema.fields.firstIndex(where: { $0.name == entry.name }) else {
+                throw error(Code.invalidDefault, entry.offset, "'\(entry.name)' is no stored field of '\(schema.name)'.")
+            }
+            if resolved[index] != nil { throw error(Code.invalidDefault, entry.offset, "The record literal names '\(entry.name)' twice.") }
+            let field = schema.fields[index]
+            let value = entry.value
+            if let name = value.value?.name, !name.isEmpty { throw error(Code.invalidDefault, entry.offset, "A record literal names no let, parameter or field.") }
+            if field.alternatives.count != 1 { throw error(Code.invalidDefault, entry.offset, "'\(entry.name)' is a union, which a record literal leaves out.") }
+            let type = field.alternatives[0]
+            if type.kind == .reference && value.record != nil {
+                let record = GesResolvedRecord()
+                record.entries = try resolveRecord(type.reference!, value)
+                resolved[index] = GesResolvedDefault(kind: .record, record: record, offset: entry.offset)
+                continue
+            }
+            let takes: Bool
+            switch type.kind {
+            case .boolean: takes = value.boolean != nil
+            case .tag: takes = value.tag != nil
+            case .number, .percentage, .quantity: takes = value.value != nil
+            default: takes = false
+            }
+            if !takes {
+                throw error(Code.invalidDefault, entry.offset, "'\(entry.name)' is a \(type.kind.rawValue) field, which takes no such value in a record literal.")
+            }
+            var scalar = value
+            scalar.offset = entry.offset
+            resolved[index] = try resolveDefault(type, scalar)
+        }
+        var result: [GesResolvedRecordEntry] = []
+        for (index, field) in schema.fields.enumerated() {
+            if let value = resolved[index] {
+                result.append(GesResolvedRecordEntry(field: field, value: value))
+            } else if field.defaultValue == nil && field.marker != .optional && !field.alternatives.contains(where: { $0.kind == .nothing }) {
+                throw error(Code.invalidDefault, written.offset, "The record literal leaves out '\(field.name)' of '\(schema.name)', which has no default.")
+            }
+        }
+        return result
     }
 
     private func resolveField(_ field: GesSchemaFieldSyntax, _ index: Int, _ owner: GesSchemaKind, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedField {
@@ -302,41 +688,73 @@ final class GesFileScope {
         if field.marker == .key {
             let first = alternatives[0]
             let keyable = first.constraints.integer || (first.kind == .tag && first.tags != nil)
-            if owner != .schema || index != 0 || alternatives.count != 1 || !keyable || first.constraints.delta != nil {
+            if owner != .schema || alternatives.count != 1 || !keyable || first.constraints.delta != nil {
                 throw error(Code.invalidKey, field.offset, "A key is the first field of a schema, an integer or a Tag with a set, without delta within or a union.")
             }
         }
         if field.marker == .optional && alternatives.count > 1 && alternatives.contains(where: { $0.kind == .nothing }) {
             throw error(Code.invalidUnion, field.offset, "A union with Nothing already holds an absent value; it is not optional as well.")
         }
-        return GesResolvedField(name: field.name, unlabeled: field.unlabeled, alternatives: alternatives, marker: field.marker, offset: field.offset)
+        return GesResolvedField(name: field.name, unlabeled: field.unlabeled, alternatives: alternatives, marker: field.marker, offset: field.offset, scope: self)
     }
 
     private func resolveUnion(_ alternatives: [GesSchemaTypeSyntax], _ all: [String: GesResolvedDeclaration]) throws -> [GesResolvedType] {
         var result: [GesResolvedType] = []
         var seen: Set<String> = []
+        var labels: Set<String> = []
         for alternative in alternatives {
-            result.append(try resolveType(alternative, all))
+            let resolved = try resolveType(alternative, all)
+            result.append(resolved)
+            if !alternative.label.isEmpty {
+                if alternatives.count == 1 { throw error(Code.invalidUnion, alternative.labelOffset, "A label names an alternative of a union.") }
+                if resolved.kind == .nothing { throw error(Code.invalidUnion, alternative.labelOffset, "A :Nothing alternative holds no value to label.") }
+                resolved.label = alternative.label
+            }
             if alternatives.count == 1 { continue }
-            // The type name decides: a unit does not distinguish alternatives.
-            let name = alternative.kind == .reference ? ":" + alternative.name : alternative.kind.rawValue
+            // The type name decides: a unit does not distinguish alternatives, and a named tag set is a Tag.
+            let name = resolved.kind == .reference ? ":" + alternative.name : resolved.kind.rawValue
             if !seen.insert(name).inserted { throw error(Code.invalidUnion, alternative.offset, "A union repeats a type name; a unit does not distinguish alternatives.") }
             if alternative.constraints.delta != nil { throw error(Code.invalidUnion, alternative.offset, "A union alternative has no delta within.") }
+            // Generated code names an alternative after its label or its type, so both must stay apart.
+            var label = resolved.kind == .reference ? alternative.name : resolved.kind.rawValue
+            if !alternative.label.isEmpty { label = alternative.label.prefix(1).uppercased() + alternative.label.dropFirst() }
+            if !labels.insert(label).inserted {
+                throw error(Code.duplicateName, alternative.label.isEmpty ? alternative.offset : alternative.labelOffset, "Two alternatives are both named '\(label)'.")
+            }
         }
         return result
     }
 
     private func resolveType(_ type: GesSchemaTypeSyntax, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedType {
+        // A named tag set stands for a Tag with its members; only its name differs, which belongs to no hash.
+        if type.kind == .reference, let tagSet = tagSets[type.name] {
+            return GesResolvedType(
+                kind: .tag,
+                unit: .none,
+                tags: tagSet.tags,
+                max: nil,
+                element: nil,
+                constraints: GesResolvedConstraints(),
+                axes: nil,
+                reference: nil,
+                referenceName: "",
+                tagSet: tagSet.name,
+                offset: type.offset
+            )
+        }
         var reference: GesResolvedDeclaration?
         if type.kind == .reference {
             guard let found = all[type.name], found.kind == .schema else { throw error(Code.unknownName, type.offset, "Schema '\(type.name)' is not declared.") }
+            if found.isAbstract { throw error(Code.invalidAbstract, type.offset, "'\(type.name)' is abstract; only 'with' takes its fields.") }
             reference = found
         }
         if let tags = type.tags {
             var seen: Set<String> = []
             for tag in tags where !seen.insert(tag).inserted { throw error(Code.duplicateName, type.offset, "Tag '#\(tag)' is listed twice.") }
+            if type.kind == .flags && tags.count > GesSchemaSet.maximumFlagCount { throw error(Code.tooWide, type.offset, "Flags have at most \(GesSchemaSet.maximumFlagCount) members.") }
         }
-        if let max = type.max, max <= 0 { throw error(Code.invalidConstraint, type.offset, "A maximum is positive.") }
+        let max = type.maxName.isEmpty ? type.max : try letMax(type)
+        if let max, max <= 0 { throw error(Code.invalidConstraint, type.offset, "A maximum is positive.") }
         if type.kind == .dice && (type.constraints.integer || type.constraints.wrapping || type.constraints.step != nil || type.constraints.delta != nil) {
             throw error(Code.invalidConstraint, type.offset, "A Dice has only a range.")
         }
@@ -348,17 +766,17 @@ final class GesFileScope {
                 if !seen.insert(axis.axis).inserted { throw error(Code.duplicateName, axis.offset, "Axis '\(axis.axis)' is declared twice.") }
                 list.append(GesResolvedAxis(axis: axis.axis, constraints: try resolveConstraints(axis.constraints, type.unit, false, axis.offset)))
             }
-            axes = list.sorted { $0.axis < $1.axis }
+            axes = list.sorted { GesResolvedAxis.order($0.axis) < GesResolvedAxis.order($1.axis) }
         }
         var element: [GesResolvedType]?
         if let written = type.element { element = try resolveUnion(written, all) }
         let constraints = try resolveConstraints(type.constraints, type.unit, type.kind == .percentage, type.offset)
         if type.kind == .dice { try GesSchemaBinder.checkDice(self, constraints, type.offset, nil) }
-        return GesResolvedType(
+        let resolved = GesResolvedType(
             kind: type.kind,
             unit: type.unit,
             tags: type.tags,
-            max: type.max,
+            max: max,
             element: element,
             constraints: constraints,
             axes: axes,
@@ -366,6 +784,53 @@ final class GesFileScope {
             referenceName: type.name,
             offset: type.offset
         )
+        resolved.depth = type.depth
+        return resolved
+    }
+
+    // The element of a recursive List: the declaring schema alone, or a union of it and scalars, which hold no schema and no
+    // elements, so that the recursion has one path and every alternative but one keeps its size at every level.
+    private static func selfElement(_ element: [GesResolvedType], _ owner: GesResolvedDeclaration) -> Bool {
+        var count = 0
+        for alternative in element {
+            if alternative.kind == .reference && alternative.reference === owner {
+                count += 1
+            } else if [.reference, .list, .dice, .poly].contains(alternative.kind) {
+                return false
+            }
+        }
+        return count == 1
+    }
+
+    // `depth` stands only on a field's List of the schema that declares the field, which may then hold itself that many
+    // levels deep; every other cycle stays an error.
+    private func checkDepth(_ written: [GesSchemaTypeSyntax], _ resolved: [GesResolvedType], _ owner: GesResolvedDeclaration, top: Bool) throws {
+        for (index, type) in resolved.enumerated() {
+            if type.depth > 0 && !(top && written.count == 1 && Self.selfElement(type.element ?? [], owner)) {
+                throw error(
+                    Code.invalidConstraint,
+                    written[index].depthOffset,
+                    "depth stands on a field's List whose element is the schema that declares it, alone or as the one schema of a union of scalars."
+                )
+            }
+            if type.depth == 1 {
+                throw error(Code.invalidConstraint, written[index].depthOffset, "A depth of 1 leaves the List always empty; it counts the records that nest, at least 2.")
+            }
+            if let elements = written[index].element { try checkDepth(elements, type.element!, owner, top: false) }
+        }
+    }
+
+    /// A maximum that names a let takes its whole unitless value, which has at most 12 digits like a written one.
+    private func letMax(_ type: GesSchemaTypeSyntax) throws -> Int64 {
+        guard let declared = lets[type.maxName] else { throw error(Code.unknownName, type.maxOffset, "'\(type.maxName)' is no let of this schema.") }
+        if declared.kind != .number { throw error(Code.unitMismatch, type.maxOffset, "Let '\(type.maxName)' has a unit; a maximum is a whole number.") }
+        let significand = declared.value.significand
+        if !declared.integer || significand <= 0 || declared.value.exponent + String(significand).count > 12 {
+            throw error(Code.invalidConstraint, type.maxOffset, "Let '\(type.maxName)' is no positive whole number of at most 12 digits.")
+        }
+        var value = significand
+        for _ in 0..<declared.value.exponent { value *= 10 }
+        return value
     }
 
     private func resolveConstraints(_ constraints: GesSchemaConstraintsSyntax, _ unit: GesQuantityUnit, _ percentage: Bool, _ offset: Int) throws -> GesResolvedConstraints {
@@ -377,20 +842,28 @@ final class GesFileScope {
         var resolved = GesResolvedConstraints()
         resolved.integer = constraints.integer
         resolved.wrapping = constraints.wrapping
-        resolved.lower = try resolveValue(constraints.lower, unit, percentage)
-        resolved.upper = try resolveValue(constraints.upper, unit, percentage)
-        resolved.step = try resolveValue(constraints.step, unit, percentage)
-        resolved.delta = try resolveValue(constraints.delta, unit, percentage)
+        resolved.lower = try resolveValue(constraints.lower, unit, percentage, bound: true)
+        resolved.upper = try resolveValue(constraints.upper, unit, percentage, bound: true)
+        resolved.step = try resolveValue(constraints.step, unit, percentage, bound: false)
+        resolved.delta = try resolveValue(constraints.delta, unit, percentage, bound: false)
         try GesSchemaBinder.checkLiterals(self, resolved)
         return resolved
     }
 
-    private func resolveValue(_ value: GesSchemaValueSyntax?, _ unit: GesQuantityUnit, _ percentage: Bool) throws -> GesResolvedValue? {
+    /// A name is a let of the schema and, only in a bound, a parameter of the file; a let is replaced by its value.
+    private func resolveValue(_ value: GesSchemaValueSyntax?, _ unit: GesQuantityUnit, _ percentage: Bool, bound: Bool) throws -> GesResolvedValue? {
         guard let value else { return nil }
-        if !value.parameter.isEmpty {
-            guard let parameter = parameters[value.parameter] else { throw error(Code.unknownName, value.offset, "Parameter '\(value.parameter)' is not declared in this file.") }
-            if parameter.unit != unit || (parameter.kind == .percentage) != percentage { throw error(Code.unitMismatch, value.offset, "Parameter '\(value.parameter)' has another kind or unit than its field.") }
-            return GesResolvedValue(parameter: value.parameter, offset: value.offset)
+        if !value.name.isEmpty {
+            if let declared = lets[value.name] {
+                if declared.unit != unit || (declared.kind == .percentage) != percentage {
+                    throw error(Code.unitMismatch, value.offset, "Let '\(value.name)' has another kind or unit than its field.")
+                }
+                return GesResolvedValue(value: declared.value, offset: value.offset)
+            }
+            if !bound { throw error(Code.unknownName, value.offset, "'\(value.name)' is no let of this schema; a step and a delta range never name a parameter.") }
+            guard let parameter = parameters[value.name] else { throw error(Code.unknownName, value.offset, "'\(value.name)' is neither a let of this schema nor a parameter of this file.") }
+            if parameter.unit != unit || (parameter.kind == .percentage) != percentage { throw error(Code.unitMismatch, value.offset, "Parameter '\(value.name)' has another kind or unit than its field.") }
+            return GesResolvedValue(parameter: value.name, offset: value.offset)
         }
         var literal = value
         if !value.constant.isEmpty {
@@ -434,7 +907,7 @@ enum GesSchemaCanonical {
         if !seen.insert(ObjectIdentifier(declaration)).inserted { return }
         declarations.append(declaration)
         for field in declaration.fields {
-            for type in field.alternatives { try reach(type, declaration.scope, &seen, &declarations, &parameters) }
+            for type in field.alternatives { try reach(type, field.scope, &seen, &declarations, &parameters) }
         }
         for member in declaration.members { try reach(member, &seen, &declarations, &parameters) }
     }
@@ -464,11 +937,29 @@ enum GesSchemaCanonical {
         }
     }
 
+    static func letKind(_ declared: GesResolvedLet) -> String {
+        switch declared.kind {
+        case .percentage: "Percentage"
+        case .quantity: "Quantity(\(declared.unit.rawValue))"
+        default: "Number"
+        }
+    }
+
     private static func write(_ declaration: GesResolvedDeclaration, _ output: inout String) {
         switch declaration.kind {
         case .schema:
-            output += "schema \(declaration.name)\n"
+            output += "schema \(declaration.name)"
+            if declaration.isPacked { output += " packed \(declaration.packedWidth)" }
+            output += "\n"
+            for declared in declaration.lets { output += "let \(declared.name) \(letKind(declared)) \(declared.value.canonical)\n" }
             for field in declaration.fields { writeField("field ", field, &output) }
+            for computed in declaration.computed {
+                output += "computed \(computed.name) " + (computed.kind == .quantity ? "Quantity(\(computed.unit.rawValue))" : computed.kind.rawValue)
+                if computed.isOptional { output += " optional" }
+                output += " "
+                GesComputedCanonical.write(computed.expression, &output)
+                output += "\n"
+            }
         case .message:
             output += "message \(declaration.name)"
             if !declaration.tags.isEmpty { output += " tags " + declaration.tags.map { "#" + $0 }.joined(separator: " ") }
@@ -486,7 +977,87 @@ enum GesSchemaCanonical {
         output += field.name + " "
         writeUnion(field.alternatives, &output)
         if field.marker == .optional { output += " optional" } else if field.marker == .key { output += " key" }
+        if let fallback = field.defaultValue {
+            output += " default "
+            switch fallback.kind {
+            case .number: output += fallback.value.canonical
+            case .boolean: output += fallback.boolean ? "true" : "false"
+            case .tag: output += "#" + fallback.name
+            case .field: output += "field " + fallback.name
+            case .record: output += recordText(fallback)
+            }
+        }
         output += "\n"
+    }
+
+    /// `[:]`, or `[name: value, ...]` in the field order of the record's schema.
+    private static func recordText(_ fallback: GesResolvedDefault) -> String {
+        let entries = fallback.record?.entries ?? []
+        if entries.isEmpty { return "[:]" }
+        var output = "["
+        for (index, entry) in entries.enumerated() {
+            if index > 0 { output += ", " }
+            output += entry.field.name + ": "
+            switch entry.value.kind {
+            case .number: output += entry.value.value.canonical
+            case .boolean: output += entry.value.boolean ? "true" : "false"
+            case .tag: output += "#" + entry.value.name
+            default: output += recordText(entry.value)
+            }
+        }
+        return output + "]"
+    }
+
+    /// The canonical type of a field that a sibling may default to, without delta ranges, which constrain no value, and with
+    /// the tag set a Tag takes its members from, since generated code names the type after it. Nil for a union, Flags, a
+    /// closed Tag written in place and a List of one of them: generated code gives each such field a type of its own.
+    static func defaultType(_ alternatives: [GesResolvedType]) -> String? {
+        var output = ""
+        return defaultType(alternatives, &output) ? output : nil
+    }
+
+    private static func defaultType(_ alternatives: [GesResolvedType], _ output: inout String) -> Bool {
+        guard alternatives.count == 1 else { return false }
+        let type = alternatives[0]
+        switch type.kind {
+        case .flags: return false
+        case .tag where type.tags != nil:
+            if type.tagSet.isEmpty { return false }
+            output += ":" + type.tagSet
+            return true
+        case .list where type.element != nil:
+            output += "List("
+            if !defaultType(type.element!, &output) { return false }
+            output += ")"
+            if let max = type.max { output += " max \(max)" }
+            if type.depth > 0 { output += " depth \(type.depth)" }
+            return true
+        case .number, .percentage, .quantity, .dice, .point, .vector, .box, .poly, .disc:
+            var constraints = type.constraints
+            constraints.delta = nil
+            let axes = type.axes?.map { axis in
+                var constraints = axis.constraints
+                constraints.delta = nil
+                return GesResolvedAxis(axis: axis.axis, constraints: constraints)
+            }
+            let plain = GesResolvedType(
+                kind: type.kind,
+                unit: type.unit,
+                tags: nil,
+                max: type.max,
+                element: nil,
+                constraints: constraints,
+                axes: axes,
+                reference: nil,
+                referenceName: "",
+                offset: type.offset
+            )
+            writeType(plain, &output)
+            return true
+        default:
+            writeType(type, &output)
+            return true
+        }
     }
 
     private static func writeUnion(_ alternatives: [GesResolvedType], _ output: inout String) {
@@ -504,8 +1075,9 @@ enum GesSchemaCanonical {
         case .number, .percentage:
             output += type.kind.rawValue
             writeConstraints(type.constraints, &output)
-        case .point, .vector:
+        case .point, .vector, .box, .poly, .disc:
             output += "\(type.kind.rawValue)(\(type.unit == .none ? "none" : type.unit.rawValue))"
+            if let max = type.max { output += " max \(max)" }
             if let axes = type.axes {
                 output += " {"
                 for (index, axis) in axes.enumerated() {
@@ -519,8 +1091,10 @@ enum GesSchemaCanonical {
             output += "Tag"
             if let tags = type.tags { output += "(" + tags.map { "#" + $0 }.joined(separator: " ") + ")" }
             if let max = type.max { output += " max \(max)" }
-        case .text:
-            output += "Text"
+        case .flags:
+            output += "Flags(" + (type.tags ?? []).map { "#" + $0 }.joined(separator: " ") + ")"
+        case .text, .bytes:
+            output += type.kind.rawValue
             if let max = type.max { output += " max \(max)" }
         case .dice:
             output += "Dice"
@@ -534,6 +1108,7 @@ enum GesSchemaCanonical {
                 output += ")"
             }
             if let max = type.max { output += " max \(max)" }
+            if type.depth > 0 { output += " depth \(type.depth)" }
         case .reference: output += type.referenceName
         default: output += type.kind.rawValue
         }

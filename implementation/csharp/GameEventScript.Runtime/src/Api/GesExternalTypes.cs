@@ -10,20 +10,26 @@ using GameEventScript.Syntax;
 namespace GameEventScript.Api;
 
 /// <summary>
-/// Defines the contract for i game event script external type registry.
+/// Resolves the host's external type constructors for the constructor imports of a Program while
+/// <c>Host.Load</c> links it; it is not consulted per call.
 /// </summary>
 public interface IGesExternalTypeRegistry
 {
     /// <summary>
-    /// Resolves the value.
+    /// Returns the constructor bound to a normalized type name and argument signature. Equal references must
+    /// resolve consistently during one load.
     /// </summary>
-    /// <param name="reference">The reference value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="reference">The normalized type name and argument labels of the imported constructor.</param>
+    /// <returns>
+    /// The constructor, or <see langword="null"/> when none is registered. Absence, or a constructor whose
+    /// <see cref="IGesExternalTypeConstructor.Definition"/> does not match the import exactly, fails the link.
+    /// </returns>
     IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference);
 }
 
 /// <summary>
-/// Defines the contract for i game event script external type catalog.
+/// Declarative compile-time description of the external types a host offers: names, fields and constructor
+/// signatures, without constructors, field accessors or host instances.
 /// </summary>
 public interface IGesExternalTypeCatalog
 {
@@ -33,15 +39,17 @@ public interface IGesExternalTypeCatalog
     IReadOnlyList<GesExternalTypeDefinition> Types { get; }
 
     /// <summary>
-    /// Resolves the value.
+    /// Looks up the definition of one external type.
     /// </summary>
-    /// <param name="typeName">The type name value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="typeName">The type name, with or without a leading <c>:</c>.</param>
+    /// <returns>The definition, or <see langword="null"/> when the catalog does not declare the type.</returns>
     GesExternalTypeDefinition? Resolve(string typeName);
 }
 
 /// <summary>
-/// Defines the contract for i game event script external value.
+/// A host object exposed to scripts as a value of a declared external type. The runtime keeps no field values:
+/// every script field read calls <see cref="GetField(string)"/> again, and every conversion to Map, JSON or schema
+/// encoding reads all declared fields in declaration order.
 /// </summary>
 public interface IGesExternalValue
 {
@@ -51,24 +59,28 @@ public interface IGesExternalValue
     GesExternalTypeDefinition Definition { get; }
 
     /// <summary>
-    /// Gets the field.
+    /// Reads the current value of one declared field. The read must be synchronous and deterministic for an unchanged
+    /// object during one handler; between handlers the value may change. The runtime converts the result to the
+    /// field's declared type.
     /// </summary>
-    /// <param name="fieldName">The field name value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="fieldName">The declared field name.</param>
+    /// <returns>The field value, or <see langword="null"/> when the field has no value; such a field is left out of a materialized Map.</returns>
     GesValue? GetField(string fieldName);
 }
 
 /// <summary>
-/// Represents a game event script external type catalog.
+/// Immutable external type catalog built from a fixed list of definitions.
 /// </summary>
 public sealed class GesDeclaredExternalTypeCatalog : IGesExternalTypeCatalog
 {
     private readonly Dictionary<string, GesExternalTypeDefinition> _typesByName;
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script External Type Catalog.
+    /// Creates a catalog from definitions, copying them in their given order.
     /// </summary>
-    /// <param name="types">The types value.</param>
+    /// <param name="types">The type definitions in declaration order.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="types"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The sequence contains <see langword="null"/> or declares a type name more than once.</exception>
     public GesDeclaredExternalTypeCatalog(IEnumerable<GesExternalTypeDefinition> types)
     {
         _ = types ?? throw new ArgumentNullException(nameof(types));
@@ -91,10 +103,11 @@ public sealed class GesDeclaredExternalTypeCatalog : IGesExternalTypeCatalog
     public IReadOnlyList<GesExternalTypeDefinition> Types { get; }
 
     /// <summary>
-    /// Resolves the value.
+    /// Looks up the definition of one external type by its normalized name, compared ordinally.
     /// </summary>
-    /// <param name="typeName">The type name value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="typeName">The type name, with or without a leading <c>:</c>.</param>
+    /// <returns>The definition, or <see langword="null"/> when the catalog does not declare the type.</returns>
+    /// <exception cref="ArgumentException"><paramref name="typeName"/> is not a valid type name.</exception>
     public GesExternalTypeDefinition? Resolve(string typeName)
     {
         var normalized = GesExternalTypeNames.NormalizeTypeName(typeName);
@@ -103,24 +116,27 @@ public sealed class GesDeclaredExternalTypeCatalog : IGesExternalTypeCatalog
 }
 
 /// <summary>
-/// Defines the contract for i game event script external type constructor.
+/// Host implementation of one declared external type constructor.
 /// </summary>
 public interface IGesExternalTypeConstructor
 {
     /// <summary>
-    /// Gets the definition.
+    /// Gets the declarative constructor signature this callback implements; linking requires it to match the
+    /// Program's import exactly.
     /// </summary>
     GesExternalTypeConstructorDefinition Definition { get; }
 
     /// <summary>
-    /// Performs the invoke operation.
+    /// Constructs a value synchronously: reads the borrowed arguments and sets an external value or Nothing on the
+    /// call. Setting no result yields Nothing. The call object and its arguments must not be retained.
     /// </summary>
-    /// <param name="call">The call value.</param>
+    /// <param name="call">The reusable call holding the arguments and receiving the result.</param>
     void Invoke(GesExternalTypeConstructorCall call);
 }
 
 /// <summary>
-/// Represents a ges external type constructor call.
+/// Reusable call-scoped adapter passed to <see cref="IGesExternalTypeConstructor.Invoke"/>: it lends the arguments
+/// and receives the constructed value. It must not be retained beyond the callback.
 /// </summary>
 public sealed class GesExternalTypeConstructorCall
 {
@@ -132,28 +148,28 @@ public sealed class GesExternalTypeConstructorCall
     private bool _hasResult;
 
     /// <summary>
-    /// Initializes a new instance of Ges External Type Constructor Call.
+    /// Creates a call without arguments whose result is Nothing.
     /// </summary>
     public GesExternalTypeConstructorCall()
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of Ges External Type Constructor Call.
+    /// Creates a call over the given arguments whose result is Nothing, for invoking a constructor outside a host.
     /// </summary>
-    /// <param name="arguments">The arguments value.</param>
+    /// <param name="arguments">The constructor arguments in declared parameter order.</param>
     public GesExternalTypeConstructorCall(GesValueArguments arguments)
     {
         _arguments = arguments;
     }
 
     /// <summary>
-    /// Gets the arguments.
+    /// Gets the borrowed constructor arguments in declared parameter order.
     /// </summary>
     public GesValueArguments Arguments => _arguments;
 
     /// <summary>
-    /// Gets the result.
+    /// Gets the constructed value, or Nothing when no result was set.
     /// </summary>
     public GesValue Result => _hasResult ? _result : GesValue.GesNothing();
 
@@ -180,7 +196,7 @@ public sealed class GesExternalTypeConstructorCall
     }
 
     /// <summary>
-    /// Sets the nothing.
+    /// Sets the result to Nothing, which rejects the construction without raising a script error.
     /// </summary>
     public void SetNothing()
     {
@@ -196,9 +212,12 @@ public sealed class GesExternalTypeConstructorCall
     }
 
     /// <summary>
-    /// Sets the external value.
+    /// Sets the constructed external value as the result. When the value's declared type differs from the type
+    /// the constructor builds, the result becomes Nothing and the runtime raises
+    /// <c>runtime.invalidExternalTypeBinding</c>.
     /// </summary>
-    /// <param name="value">The value value.</param>
+    /// <param name="value">The constructed value.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
     public void SetExternalValue(IGesExternalValue value)
     {
         _ = value ?? throw new ArgumentNullException(nameof(value));
@@ -217,16 +236,23 @@ public sealed class GesExternalTypeConstructorCall
 }
 
 /// <summary>
-/// Represents a game event script external type definition.
+/// Immutable declarative description of one external type: its name, ordered unique fields and ordered unique
+/// constructor signatures.
 /// </summary>
 public sealed class GesExternalTypeDefinition
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script External Type Definition.
+    /// Creates a definition, copying the field and constructor sequences. Creation validates and sorts the fields,
+    /// so all values of a type should share one definition.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <param name="fields">The fields value.</param>
-    /// <param name="constructors">The constructors value.</param>
+    /// <param name="name">The type name, with or without a leading <c>:</c>.</param>
+    /// <param name="fields">The fields in declaration order.</param>
+    /// <param name="constructors">The constructor signatures in declaration order.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="fields"/> or <paramref name="constructors"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">
+    /// The name is invalid, or a sequence contains <see langword="null"/>, a duplicate field name or a duplicate
+    /// constructor signature, or a constructor builds another type or has a parameter that is not a declared field.
+    /// </exception>
     public GesExternalTypeDefinition(string name, IEnumerable<GesExternalTypeFieldDefinition> fields, IEnumerable<GesExternalTypeConstructorDefinition> constructors)
     {
         Name = GesExternalTypeNames.NormalizeTypeName(name);
@@ -250,7 +276,7 @@ public sealed class GesExternalTypeDefinition
     }
 
     /// <summary>
-    /// Gets the name.
+    /// Gets the normalized type name without the leading <c>:</c>.
     /// </summary>
     public string Name { get; }
 
@@ -385,15 +411,17 @@ public sealed class GesExternalTypeDefinition
 }
 
 /// <summary>
-/// Represents a game event script external type field definition.
+/// Immutable description of one external type field: its name and declared type. Field values are converted to
+/// the declared builtin type before a script sees them; Nothing stays Nothing.
 /// </summary>
 public sealed class GesExternalTypeFieldDefinition
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script External Type Field Definition.
+    /// Creates a field from a type name, which may name a builtin type such as <c>:Quantity(W)</c> or a custom type.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <param name="typeName">The type name value.</param>
+    /// <param name="name">The field name, a lower-case-initial ASCII identifier.</param>
+    /// <param name="typeName">The declared type name, with or without a leading <c>:</c>.</param>
+    /// <exception cref="ArgumentException">The name or type name is invalid.</exception>
     public GesExternalTypeFieldDefinition(string name, string typeName)
     {
         Name = GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
@@ -404,21 +432,24 @@ public sealed class GesExternalTypeFieldDefinition
     }
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script External Type Field Definition.
+    /// Creates a field of a builtin kind without a unit constraint.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <param name="kind">The kind value.</param>
+    /// <param name="name">The field name, a lower-case-initial ASCII identifier.</param>
+    /// <param name="kind">The builtin kind of the field.</param>
+    /// <exception cref="ArgumentException">The name is invalid.</exception>
     public GesExternalTypeFieldDefinition(string name, GesBytecodeTypeKind kind)
         : this(name, kind, unit: null)
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script External Type Field Definition.
+    /// Creates a field of a builtin kind with a unit. A non-none unit on a Vector or Point overrides the supplied
+    /// value's unit without rescaling its components.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <param name="kind">The kind value.</param>
-    /// <param name="unit">The unit value.</param>
+    /// <param name="name">The field name, a lower-case-initial ASCII identifier.</param>
+    /// <param name="kind">The builtin kind of the field.</param>
+    /// <param name="unit">The declared unit.</param>
+    /// <exception cref="ArgumentException">The name is invalid, or the unit is a numeric unit and the kind is not <see cref="GesBytecodeTypeKind.Float"/>, <see cref="GesBytecodeTypeKind.Vector"/> or <see cref="GesBytecodeTypeKind.Point"/>.</exception>
     public GesExternalTypeFieldDefinition(string name, GesBytecodeTypeKind kind, GesQuantityUnit unit)
         : this(name, kind, (GesQuantityUnit?)unit)
     {
@@ -435,17 +466,17 @@ public sealed class GesExternalTypeFieldDefinition
     }
 
     /// <summary>
-    /// Gets the name.
+    /// Gets the normalized field name.
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// Gets the type name.
+    /// Gets the normalized declared type name without the leading <c>:</c>, including a unit where one is declared.
     /// </summary>
     public string TypeName { get; }
 
     /// <summary>
-    /// Gets the kind.
+    /// Gets the builtin kind, or <see langword="null"/> when the field is declared with a custom type name.
     /// </summary>
     public GesBytecodeTypeKind? Kind { get; }
 
@@ -456,15 +487,18 @@ public sealed class GesExternalTypeFieldDefinition
 }
 
 /// <summary>
-/// Represents a game event script external type parameter definition.
+/// Immutable description of one external constructor parameter: its argument label, which must name a declared
+/// field, and its declared type. Arguments are converted to the declared builtin type before the constructor
+/// sees them; Nothing stays Nothing.
 /// </summary>
 public sealed class GesExternalTypeParameterDefinition
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script External Type Parameter Definition.
+    /// Creates a parameter from a type name, which may name a builtin type such as <c>:Quantity(W)</c> or a custom type.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <param name="typeName">The type name value.</param>
+    /// <param name="name">The argument label, a lower-case-initial ASCII identifier.</param>
+    /// <param name="typeName">The declared type name, with or without a leading <c>:</c>.</param>
+    /// <exception cref="ArgumentException">The name or type name is invalid.</exception>
     public GesExternalTypeParameterDefinition(string name, string typeName)
     {
         Name = GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
@@ -475,21 +509,24 @@ public sealed class GesExternalTypeParameterDefinition
     }
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script External Type Parameter Definition.
+    /// Creates a parameter of a builtin kind without a unit constraint.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <param name="kind">The kind value.</param>
+    /// <param name="name">The argument label, a lower-case-initial ASCII identifier.</param>
+    /// <param name="kind">The builtin kind of the parameter.</param>
+    /// <exception cref="ArgumentException">The name is invalid.</exception>
     public GesExternalTypeParameterDefinition(string name, GesBytecodeTypeKind kind)
         : this(name, kind, unit: null)
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script External Type Parameter Definition.
+    /// Creates a parameter of a builtin kind with a unit. A non-none unit on a Vector or Point overrides the supplied
+    /// argument's unit without rescaling its components.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <param name="kind">The kind value.</param>
-    /// <param name="unit">The unit value.</param>
+    /// <param name="name">The argument label, a lower-case-initial ASCII identifier.</param>
+    /// <param name="kind">The builtin kind of the parameter.</param>
+    /// <param name="unit">The declared unit.</param>
+    /// <exception cref="ArgumentException">The name is invalid, or the unit is a numeric unit and the kind is not <see cref="GesBytecodeTypeKind.Float"/>, <see cref="GesBytecodeTypeKind.Vector"/> or <see cref="GesBytecodeTypeKind.Point"/>.</exception>
     public GesExternalTypeParameterDefinition(string name, GesBytecodeTypeKind kind, GesQuantityUnit unit)
         : this(name, kind, (GesQuantityUnit?)unit)
     {
@@ -506,17 +543,17 @@ public sealed class GesExternalTypeParameterDefinition
     }
 
     /// <summary>
-    /// Gets the name.
+    /// Gets the normalized argument label.
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// Gets the type name.
+    /// Gets the normalized declared type name without the leading <c>:</c>, including a unit where one is declared.
     /// </summary>
     public string TypeName { get; }
 
     /// <summary>
-    /// Gets the kind.
+    /// Gets the builtin kind, or <see langword="null"/> when the parameter is declared with a custom type name.
     /// </summary>
     public GesBytecodeTypeKind? Kind { get; }
 
@@ -527,15 +564,17 @@ public sealed class GesExternalTypeParameterDefinition
 }
 
 /// <summary>
-/// Represents a game event script external type constructor definition.
+/// Immutable declarative signature of one external type constructor: the type it builds and its parameters.
 /// </summary>
 public sealed class GesExternalTypeConstructorDefinition
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script External Type Constructor Definition.
+    /// Creates a constructor signature, copying the parameter sequence and deriving <see cref="SignatureId"/>.
     /// </summary>
-    /// <param name="typeName">The type name value.</param>
-    /// <param name="parameters">The parameters value.</param>
+    /// <param name="typeName">The type the constructor builds, with or without a leading <c>:</c>.</param>
+    /// <param name="parameters">The parameters in declaration order.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="parameters"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The type name is invalid, or the sequence contains <see langword="null"/> or a repeated parameter name.</exception>
     public GesExternalTypeConstructorDefinition(string typeName, IEnumerable<GesExternalTypeParameterDefinition> parameters)
     {
         TypeName = GesExternalTypeNames.NormalizeTypeName(typeName);
@@ -552,7 +591,7 @@ public sealed class GesExternalTypeConstructorDefinition
     }
 
     /// <summary>
-    /// Gets the type name.
+    /// Gets the normalized name of the type the constructor builds, without the leading <c>:</c>.
     /// </summary>
     public string TypeName { get; }
 
@@ -562,7 +601,8 @@ public sealed class GesExternalTypeConstructorDefinition
     public IReadOnlyList<GesExternalTypeParameterDefinition> Parameters { get; }
 
     /// <summary>
-    /// Gets the signature id.
+    /// Gets the canonical signature <c>TypeName(label,...)</c> formed by
+    /// <see cref="GesExternalTypeConstructorReference.CreateSignatureId"/> from the parameter names.
     /// </summary>
     public string SignatureId { get; }
 
@@ -623,10 +663,11 @@ public sealed class GesExternalTypeConstructorDefinition
 public sealed class GesExternalTypeConstructorReference
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script External Type Constructor Reference.
+    /// Creates a reference, normalizing the type name and copying the argument labels in ordinal order.
     /// </summary>
-    /// <param name="typeName">The type name value.</param>
-    /// <param name="argumentLabels">The argument labels value.</param>
+    /// <param name="typeName">The type name, with or without a leading <c>:</c>.</param>
+    /// <param name="argumentLabels">The argument labels; <see langword="null"/> means none.</param>
+    /// <exception cref="ArgumentException">The type name or a label is invalid.</exception>
     public GesExternalTypeConstructorReference(string typeName, IEnumerable<string?>? argumentLabels)
     {
         TypeName = GesExternalTypeNames.NormalizeTypeName(typeName);
@@ -635,7 +676,7 @@ public sealed class GesExternalTypeConstructorReference
     }
 
     /// <summary>
-    /// Gets the type name.
+    /// Gets the normalized type name without the leading <c>:</c>.
     /// </summary>
     public string TypeName { get; }
 
@@ -645,16 +686,18 @@ public sealed class GesExternalTypeConstructorReference
     public IReadOnlyList<string> ArgumentLabels { get; }
 
     /// <summary>
-    /// Gets the signature id.
+    /// Gets the canonical signature formed by <see cref="CreateSignatureId"/>.
     /// </summary>
     public string SignatureId { get; }
 
     /// <summary>
-    /// Creates a signature id.
+    /// Formats the canonical constructor signature <c>TypeName(label,...)</c>: the normalized type name followed by
+    /// the normalized labels in ordinal order, separated by commas. The function is pure.
     /// </summary>
-    /// <param name="typeName">The type name value.</param>
-    /// <param name="argumentLabels">The argument labels value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="typeName">The type name, with or without a leading <c>:</c>.</param>
+    /// <param name="argumentLabels">The argument labels in any order; <see langword="null"/> means none.</param>
+    /// <returns>The canonical signature, for example <c>Turret(power,range)</c>.</returns>
+    /// <exception cref="ArgumentException">The type name or a label is invalid.</exception>
     public static string CreateSignatureId(string typeName, IEnumerable<string?>? argumentLabels)
     {
         var normalizedTypeName = GesExternalTypeNames.NormalizeTypeName(typeName);

@@ -8,8 +8,8 @@ public final class GesContext {
     public let random: GesRandomGenerator
     /// Execution and resource limits configured on the owning host.
     public let runtimeLimits: GesRuntimeLimits
-    /// The optional host extension resolver.
-    public let extensionRegistry: (any GesExtensionRegistry)?
+    /// The host's extension resolver; a host without one has an empty registry that resolves nothing, never nil.
+    public let extensionRegistry: any GesExtensionRegistry
 
     func send(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64) -> Bool { host?.send(message, publish: publish, microseconds: microseconds) ?? false }
 
@@ -20,7 +20,7 @@ public final class GesContext {
         self.host = host
         self.random = random
         runtimeLimits = limits
-        extensionRegistry = extensions
+        extensionRegistry = extensions ?? GesEmptyExtensionRegistry()
         self.observer = observer
     }
 
@@ -56,5 +56,23 @@ public final class GesContext {
         return fault
     }
 
-    func reportLimit(_ name: String, _ limit: Int) { observer?.runtimeLimitReached(name, detail: "Runtime limit reached", limit: limit) }
+    func reportLimit(_ name: String, _ limit: Int) { observer?.runtimeLimitReached(name, detail: Self.limitDetail(name), limit: limit) }
+
+    // What a limit stops, as the C# Runtime words it, so that both CLIs explain a reached limit.
+    static func limitDetail(_ name: String) -> String {
+        switch name {
+        case "MaxProcessedMessagesPerRun": "Message processing limit reached before the host became idle."
+        case "MaxQueuedMessages": "Message queue limit reached."
+        case "MaxExecutionSteps": "Execution exceeds the configured step limit."
+        case "MaxLoopIterations": "Loop iterations exceed the configured limit."
+        case "MaxRangeItems": "Range exceeds the configured item limit."
+        case "MaxGeneratedCollectionItems": "Generated collection exceeds the configured item limit."
+        case "MaxDiceCount": "Dice count exceeds the configured limit."
+        case "MaxDiceSides": "Dice side count exceeds the configured limit."
+        case "MaxRandomScopeDepth": "Random scopes nest deeper than the configured limit."
+        case "MaxValueDepth": "Value nesting exceeds the configured depth."
+        case "MaxLiteralInputScalars": "Literal input exceeds the scalar limit."
+        default: "Literal parsing exceeds the resource limit."
+        }
+    }
 }

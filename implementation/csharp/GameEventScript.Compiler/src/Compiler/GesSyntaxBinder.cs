@@ -111,7 +111,10 @@ internal sealed partial class GesSyntaxBinder
 
         internal readonly bool Is(GesTokenKind kind) => IsOwnToken && _tokens[_position].Kind == kind;
 
-        internal readonly bool IsWord(string word) => Is(Identifier) && string.Equals(_tokens[_position].Text, word, StringComparison.Ordinal);
+        internal readonly bool IsWord(string word) => IsOwnToken && _tokens[_position].IsWord(word);
+
+        // A record field name, which may be one of the keyword-like words of an argument label.
+        internal GesToken ExpectFieldName() => IsOwnToken && GesSyntaxParser.IsArgumentLabelKind(_tokens[_position].Kind) ? Advance() : throw Mismatch(_position);
 
         internal readonly bool IsSelector(string text) => Is(Selector) && string.Equals(_tokens[_position].Text, text, StringComparison.Ordinal);
 
@@ -302,7 +305,7 @@ internal sealed partial class GesSyntaxBinder
         var start = c.Current;
         var unlabeled = c.Match(Underscore);
         if (unlabeled) c.SkipNewLines();
-        var name = c.Expect(Identifier).Text;
+        var name = c.ExpectFieldName().Text;
         c.Expect(Colon);
         c.SkipNewLines();
         var typeName = BindTypeName(c.TakeNode(NodeKind.TypeReference));
@@ -463,6 +466,7 @@ internal sealed partial class GesSyntaxBinder
         "List" => "list",
         "Map" => "map",
         "Dice" => "dice",
+        "Bytes" => "bytes",
         _ => typeName
     };
 
@@ -530,7 +534,9 @@ internal sealed partial class GesSyntaxBinder
                 var start = c.Advance();
                 var kind = start.Kind == Emit ? GesPublishStatementKind.Emit : GesPublishStatementKind.Publish;
                 c.SkipNewLines();
-                if (c.IsNode(NodeKind.SendExpression))
+                // A statement's delayed send starts at `after`; a send expression as the sent value, as in
+                // `emit emit Done()`, starts with its own keyword and binds as an ordinary value.
+                if (c.IsNode(NodeKind.SendExpression) && c.Current.Kind is not (Emit or Publish))
                 {
                     var send = BindSend(c.TakeNode(), kind, start);
                     return Set(new GesExpressionStatementNode(send), start, c.Previous);

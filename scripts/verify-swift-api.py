@@ -63,19 +63,21 @@ def command_failure(message, log, output):
 
 
 def build_options(package, reuse_local_builds):
-    """Refresh existing Release products or retain the independent default build."""
+    """Refresh the products test-swift.sh built, in their configuration, or retain the independent default build."""
+    configuration = "debug"
     if reuse_local_builds:
-        owner, directory = {
-            "GameEventScriptSwiftBridge": ("GameEventScriptSwiftBridge", "swiftbridge"),
-            "GameEventScriptSyntax": ("GameEventScriptSyntax", "syntax"),
-            "GameEventScriptGenerator": ("GameEventScriptGenerator", "generator"),
-        }.get(package, ("GameEventScriptConformance", "conformance"))
+        # test-swift.sh tests these packages in Debug and builds the Conformance package in Release.
+        owner, directory, configuration = {
+            "GameEventScriptSwiftBridge": ("GameEventScriptSwiftBridge", "swiftbridge", "debug"),
+            "GameEventScriptSyntax": ("GameEventScriptSyntax", "syntax", "debug"),
+            "GameEventScriptGenerator": ("GameEventScriptGenerator", "generator", "debug"),
+        }.get(package, ("GameEventScriptConformance", "conformance", "release"))
         scratch = ROOT / "artifacts/swift" / directory
     else:
         owner, scratch = package, ARTIFACTS / package
     return ["--package-path", str(ROOT / "implementation/swift" / owner),
             "--scratch-path", str(scratch), "--disable-build-manifest-caching",
-            "--configuration", "release" if reuse_local_builds else "debug"]
+            "--configuration", configuration]
 
 
 def dump_graphs(swift, package, reuse_local_builds=False, built_paths=None):
@@ -230,7 +232,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--update", action="store_true", help="approve the current declarations after review")
     parser.add_argument("--reuse-local-builds", action="store_true",
-                        help="refresh and reuse local Release conformance/highlighter builds for extraction")
+                        help="refresh and reuse the local builds of test-swift.sh for extraction")
     arguments = parser.parse_args()
     swift = shutil.which("swift")
     if not swift:

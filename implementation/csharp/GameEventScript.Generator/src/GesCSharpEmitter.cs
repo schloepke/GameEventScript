@@ -12,7 +12,7 @@ namespace GameEventScript.Generator;
 // fields in wire order, Write and Read over the bit primitives, and constants inlined as literals or bit patterns.
 internal static partial class GesCSharpEmitter
 {
-    private static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
+    internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
         "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class", "const", "continue",
         "decimal", "default", "delegate", "do", "double", "else", "enum", "event", "explicit", "extern", "false", "finally",
@@ -29,47 +29,77 @@ internal static partial class GesCSharpEmitter
     // Members every generated type declares, and those every C# object inherits.
     private static readonly string[] Reserved =
     [
-        "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "WriteDelta", "ToDeltaBytes", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals", "GetHashCode",
+        "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "ByteCount", "WriteDelta", "ToDeltaBytes", "DeltaByteCount", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals", "GetHashCode",
         "ToString", "GetType"
     ];
 
-    internal static string Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options)
+    internal static GesCodeDocument Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options, GesModelLayout? packed, GesModelLayout? modelLayout)
     {
         var access = options.Access == GesSchemaAccess.Public ? "public" : "internal";
         var space = GesSchemaPlanner.Namespace(options.Namespace, Keywords);
-        var code = new GesSchemaPlanner.Code();
-        code.Raw(GesSchemaPlanner.Header(layout));
-        code.Blank();
-        code.Line("#nullable enable");
-        code.Blank();
-        code.Line("using System;");
-        code.Line("using System.Collections.Generic;");
-        code.Line("using GameEventScript.Api;");
-        code.Blank();
-        if (space.Count > 0)
+        var prologue = new GesSchemaPlanner.Code();
+        prologue.Blank();
+        prologue.Line("#nullable enable");
+        prologue.Blank();
+        prologue.Line("using System;");
+        prologue.Line("using System.Collections.Generic;");
+        prologue.Line("using GameEventScript.Api;");
+        prologue.Blank();
+        var header = GesSchemaPlanner.Header(layout);
+        var holder = "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
+        var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder)
         {
-            code.Line("namespace " + string.Join(".", space));
-            code.Open("{");
-        }
-
-        var holder = "__GesSchemas" + GesSchemaPlanner.Hash(GesSchemaPlanner.Header(layout));
-        var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder);
-        for (var index = 0; index < types.Count; index++)
+            Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(options.Namespace, GesSchemaPlanner.Suffix(header, options)), swift: false)
+        };
+        context.Layout = layout;
+        var document = new GesCodeDocument { Header = header, Prologue = prologue.ToString(), Space = space, Parameters = layout.Parameters.Count > 0 };
+        // Packed records are the model types over one word, the shared ones of the model namespace or declared here.
+        var models = options.Models is { } shared ? "global::" + string.Concat(GesSchemaPlanner.Namespace(shared, Keywords).ConvertAll(part => part + ".")) : context.Global;
+        foreach (var type in types)
+            foreach (var field in type.Fields) GesSchemaPlanner.QualifyPacked(field.Value, models);
+        if (modelLayout is not null) context.Models = new ModelConversion(modelLayout, models);
+        foreach (var type in types)
         {
-            if (index > 0) code.Blank();
-            if (types[index].Kind == GesSchemaKind.Messages) MessageSet(code, types[index], access, context);
-            else Record(code, types[index], access, context);
+            if (type.Layout.PackedWidth > 0)
+            {
+                var root = layout.Roots.Contains(type.Name);
+                if (packed is not null)
+                    document.Units.Add(new GesCodeUnit(type.Name, code => GesCSharpModelEmitter.PackedType(code, packed, type.Name, access, context.Global, root ? members => PackedRoot(members, type, context) : null)));
+                else if (root)
+                    document.Units.Add(new GesCodeUnit(type.Name, code =>
+                    {
+                        // A root shared with models gets its wire members as extension methods of the model's struct.
+                        code.Line($"/// <summary>The wire members of the packed record <c>:{type.Name}</c>, a wire root whose type the models declare: its bytes are its word, little-endian.</summary>");
+                        code.Line($"{access} static class {type.Name}Wire");
+                        code.Open("{");
+                        PackedRoot(code, type, context, models + type.Name);
+                        code.Close();
+                    }));
+                continue;
+            }
+
+            document.Units.Add(new GesCodeUnit(type.Name, code =>
+            {
+                if (type.Kind == GesSchemaKind.Messages) MessageSet(code, type, access, context);
+                else Record(code, type, access, context);
+            }));
         }
-
-        if (options.Values) ValuesHolder(code, layout, holder);
-
-        if (space.Count > 0) code.Close();
-        return code.ToString();
+        var sets = GesSchemaPlanner.TagSets(types, context.Global);
+        foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
+        context.TopLevel = GesSchemaPlanner.TopLevel(types, sets);
+        if (options.Models is not null) GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
+        GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: false);
+        if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));
+        if (layout.Types.Exists(type => type.Computed.Length > 0))
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: false, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))), GesComputedEmitter.UsesMath(types.ConvertAll(type => type.Layout.Computed)))));
+        return document;
     }
 
     // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.
     private sealed class Context(HashSet<string> elements, string global, bool values, string holder)
     {
+        internal GesSchemaLayout Layout { get; set; } = null!;
+
         internal HashSet<string> Elements { get; } = elements;
 
         internal string Global { get; } = global;
@@ -78,6 +108,14 @@ internal static partial class GesCSharpEmitter
         internal bool Values { get; } = values;
 
         internal string Holder { get; } = holder;
+
+        internal GesComputedEmitter Computed { get; set; } = null!;
+
+        // The records and tag sets declared beside each other, which a record's nested type must not hide.
+        internal HashSet<string> TopLevel { get; set; } = null!;
+
+        // The models that records convert to and from directly, null without `--models`.
+        internal ModelConversion? Models { get; set; }
     }
 
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
@@ -95,10 +133,17 @@ internal static partial class GesCSharpEmitter
             if (field.Optional) names.Add(("Has" + field.Base, "the presence of " + field.Layout.Name));
             if (field.Optional && Plain(field.Value)) names.Add((field.Base + "Optional", "the optional value of " + field.Layout.Name));
             Nested(field.Value, names, field.Layout.Name);
+            if (IsPooledList(field)) names.Add(("Set" + field.Base + "Count", "the element count of " + field.Layout.Name));
+            if (IsTextList(field)) names.Add((field.Base + "Values", "the texts of " + field.Layout.Name));
         }
 
         foreach (var (tag, name, _) in type.Tags) names.Add((name, "the tag #" + tag));
-        GesSchemaPlanner.Unique(type.Name, names);
+        if (!type.IsItem)
+            foreach (var constant in type.Layout.Constants) names.Add((GesSchemaPlanner.Pascal(constant.Name), "the let " + constant.Name));
+        if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: false, names);
+        var model = type.IsItem || type.Kind != GesSchemaKind.Schema ? null : context.Models?.Type(type.Name);
+        if (model is not null) names.Add(("ToModel", "the generated member ToModel"));
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
 
         var visibility = type.IsItem ? "public" : access;
         code.Line(type.IsItem ? "/// <summary>An element of the list.</summary>" : $"/// <summary>The {Kind(type)} <c>:{type.Name}</c>, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.</summary>");
@@ -128,12 +173,15 @@ internal static partial class GesCSharpEmitter
             code.Line($"public bool {name};");
         }
 
+        foreach (var field in type.Fields) ListAccess(code, field);
+        if (!type.IsItem) context.Computed.Members(code, type.Name, type.Layout.Computed, "public");
         Methods(code, type);
         if (type.IsClass && (type.Kind == GesSchemaKind.Schema || type.IsItem)) Sharing(code, type);
         var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;
         if (deltas) SameHelpers(code, type, context.Global);
         Extras(code, type, deltas, context.Elements.Contains(type.Name));
         if (context.Values && !type.IsItem) ValueMembers(code, type, context.Holder);
+        if (model is not null) ModelMembers(code, type, model, context.Models!);
         foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
     }
@@ -148,24 +196,40 @@ internal static partial class GesCSharpEmitter
         code.Blank();
         code.Line("/// <summary>The size of the largest encoding in bytes.</summary>");
         code.Line($"public const int MaxByteCount = {layout.MaxByteCount.ToString(CultureInfo.InvariantCulture)};");
+        Lets(code, layout.Constants);
+    }
+
+    // The lets of a schema, in base units; a Percentage holds its ratio.
+    internal static void Lets(GesSchemaPlanner.Code code, List<GesLayoutConstant> constants)
+    {
+        foreach (var constant in constants)
+        {
+            code.Blank();
+            code.Line($"/// <summary><c>{GesSchemaPlanner.ConstantSource(constant)}</c></summary>");
+            code.Line($"public const {(constant.Integer ? "long" : "double")} {GesSchemaPlanner.Pascal(constant.Name)} = {GesSchemaPlanner.ConstantValue(constant)};");
+        }
     }
 
     // Whether an optional value also has a nullable view: a value type without storage.
-    private static bool Plain(GesPlanValue value) => !value.IsClass && value.Encoding.Kind is not (GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.List);
+    private static bool Plain(GesPlanValue value) => !value.IsClass && value.Encoding.Kind is not (GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List);
 
     // The nested types and members a value declares, for the collision check.
     private static void Nested(GesPlanValue value, List<(string, string)> names, string field)
     {
         var name = NestedName(value);
-        if (name.Length > 0) names.Add((name, "the type of " + field));
+        if (name.Length > 0 && value.TagType.Length == 0) names.Add((name, GesSchemaPlanner.NestedTypeOrigin + "of " + field));
         switch (value.Encoding.Kind)
         {
             case GesLayoutKind.Text:
                 names.Add((value.Base + "Utf8", "the UTF-8 bytes of " + field));
                 names.Add(("Set" + value.Base + "Utf8", "the UTF-8 setter of " + field));
                 break;
+            case GesLayoutKind.Bytes:
+                names.Add(("Set" + value.Base, "the setter of " + field));
+                break;
             case GesLayoutKind.List:
-                if (value.Item is not null) names.Add((value.Item.Name, "the element type of " + field));
+                if (value.Encoding.Poly) names.Add((value.Base + "Poly", "the polygon view of " + field));
+                if (value.Item is not null) names.Add((value.Item.Name, GesSchemaPlanner.NestedTypeOrigin + "of the elements of " + field));
                 else Nested(value.Element!, names, field);
                 break;
             case GesLayoutKind.Union:
@@ -181,9 +245,8 @@ internal static partial class GesCSharpEmitter
 
     private static string NestedName(GesPlanValue value) => value.Encoding.Kind switch
     {
-        GesLayoutKind.Tag => value.Base + "Tag",
-        GesLayoutKind.Point => value.Base + "Point",
-        GesLayoutKind.Vector => value.Base + "Vector",
+        GesLayoutKind.Tag => value.TagType.Length > 0 ? value.TagType : value.Base + "Tag",
+        GesLayoutKind.Flags => value.Base + "Flags",
         GesLayoutKind.Union => value.Base + "Alternative",
         _ => ""
     };
@@ -193,8 +256,13 @@ internal static partial class GesCSharpEmitter
         GesLayoutKind.Boolean => "bool",
         GesLayoutKind.Integer => "long",
         GesLayoutKind.Quantized or GesLayoutKind.Float => "double",
-        GesLayoutKind.Schema => value.Encoding.Schema,
+        GesLayoutKind.Schema => value.Packed?.Type ?? value.Encoding.Schema,
         GesLayoutKind.Text => "string",
+        GesLayoutKind.Bytes => "byte[]",
+        GesLayoutKind.Point => "GesPoint",
+        GesLayoutKind.Vector => "GesVector",
+        GesLayoutKind.Box => "GesBox",
+        GesLayoutKind.Disc => "GesDisc",
         GesLayoutKind.List => $"List<{ElementName(value)}>",
         _ => NestedName(value)
     };
@@ -208,6 +276,27 @@ internal static partial class GesCSharpEmitter
         GesLayoutKind.List => $" = new List<{ElementName(value)}>();",
         _ => ";"
     };
+
+    // A Bytes value grows its storage as a Text does, without UTF-8 conveniences.
+    private static void BytesMember(GesSchemaPlanner.Code code, GesPlanValue value, string summary)
+    {
+        var storage = "__" + value.Base;
+        var max = value.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture);
+        code.Line($"private byte[] {storage} = global::System.Array.Empty<byte>();");
+        code.Line($"private int {storage}Length;");
+        code.Blank();
+        code.Line($"/// <summary>{summary}, at most {max} bytes.</summary>");
+        code.Line($"public ReadOnlySpan<byte> {value.Base} => new ReadOnlySpan<byte>({storage}, 0, {storage}Length);");
+        code.Blank();
+        code.Line($"/// <summary>Sets {summary.Substring(0, 1).ToLowerInvariant() + summary.Substring(1)}; its length is checked when the record is written.</summary>");
+        code.Line("/// <param name=\"bytes\">The bytes.</param>");
+        code.Line($"public void Set{value.Base}(ReadOnlySpan<byte> bytes)");
+        code.Open("{");
+        code.Line($"if ({storage}.Length < bytes.Length) global::System.Array.Resize(ref {storage}, global::System.Math.Max(bytes.Length, global::System.Math.Min({max}, {storage}.Length * 2)));");
+        code.Line($"bytes.CopyTo({storage});");
+        code.Line($"{storage}Length = bytes.Length;");
+        code.Close();
+    }
 
     private static void Members(GesSchemaPlanner.Code code, GesPlanField field, bool first)
     {
@@ -248,16 +337,26 @@ internal static partial class GesCSharpEmitter
     // Declares the member that stores a value, with its storage and conveniences.
     private static void Member(GesSchemaPlanner.Code code, GesPlanValue value, string summary)
     {
+        if (value.Encoding.Kind == GesLayoutKind.Bytes)
+        {
+            BytesMember(code, value, summary);
+            return;
+        }
+
         if (value.Encoding.Kind != GesLayoutKind.Text)
         {
             code.Line($"/// <summary>{summary}{Description(value)}.</summary>");
             code.Line($"public {TypeName(value)} {value.Base}{Initializer(value)}");
+            if (!value.Encoding.Poly) return;
+            code.Blank();
+            code.Line($"/// <summary>{summary} as a polygon; reading it allocates.</summary>");
+            code.Line($"public GesPoly {value.Base}Poly => new GesPoly({value.Base});");
             return;
         }
 
         var storage = "__" + value.Base;
         var max = value.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture);
-        code.Line($"private byte[] {storage} = Array.Empty<byte>();");
+        code.Line($"private byte[] {storage} = global::System.Array.Empty<byte>();");
         code.Line($"private int {storage}Length;");
         code.Blank();
         code.Line($"/// <summary>{summary} as UTF-8 bytes{(value.Encoding.TagName ? ", a tag name without #" : "")}.</summary>");
@@ -267,7 +366,7 @@ internal static partial class GesCSharpEmitter
         code.Line("/// <param name=\"utf8\">The bytes.</param>");
         code.Line($"public void Set{value.Base}Utf8(ReadOnlySpan<byte> utf8)");
         code.Open("{");
-        code.Line($"if ({storage}.Length < utf8.Length) Array.Resize(ref {storage}, Math.Max(utf8.Length, Math.Min({max}, {storage}.Length * 2)));");
+        code.Line($"if ({storage}.Length < utf8.Length) global::System.Array.Resize(ref {storage}, global::System.Math.Max(utf8.Length, global::System.Math.Min({max}, {storage}.Length * 2)));");
         code.Line($"utf8.CopyTo({storage});");
         code.Line($"{storage}Length = utf8.Length;");
         code.Close();
@@ -275,8 +374,8 @@ internal static partial class GesCSharpEmitter
         code.Line($"/// <summary>{summary} as a string; reading and setting it allocate.</summary>");
         code.Line($"public string {value.Base}");
         code.Open("{");
-        code.Line($"get => System.Text.Encoding.UTF8.GetString({storage}, 0, {storage}Length);");
-        code.Line($"set => Set{value.Base}Utf8(System.Text.Encoding.UTF8.GetBytes(value));");
+        code.Line($"get => global::System.Text.Encoding.UTF8.GetString({storage}, 0, {storage}Length);");
+        code.Line($"set => Set{value.Base}Utf8(global::System.Text.Encoding.UTF8.GetBytes(value));");
         code.Close();
     }
 
@@ -286,7 +385,8 @@ internal static partial class GesCSharpEmitter
         return encoding.Kind switch
         {
             GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Integer when encoding.Unit != "none" => $", in {encoding.Unit}",
-            GesLayoutKind.Point or GesLayoutKind.Vector when encoding.Unit != "none" => $", in {encoding.Unit}",
+            GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Box or GesLayoutKind.Disc when encoding.Unit != "none" => $", in {encoding.Unit}",
+            GesLayoutKind.List when encoding.Poly => $", the points of a polygon{(encoding.Unit != "none" ? " in " + encoding.Unit : "")}, at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}",
             GesLayoutKind.Union => ", the selected alternative",
             GesLayoutKind.List => $", at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)} elements",
             _ => ""
@@ -321,7 +421,7 @@ internal static partial class GesCSharpEmitter
         }
 
         code.Blank();
-        code.Line($"internal {self}void __WriteFields(ref GesBitWriter writer, string[] paths, int at)");
+        code.Line($"internal {self}void __WriteFields(ref GesBitWriter writer, string[] paths, int at{LevelParameter(type)})");
         code.Open("{");
         foreach (var field in type.Fields)
         {
@@ -340,7 +440,7 @@ internal static partial class GesCSharpEmitter
         foreach (var (_, name, _) in type.Tags) code.Line($"writer.Write({name} ? 1UL : 0UL, 1);");
         code.Close();
         code.Blank();
-        code.Line("internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)");
+        code.Line($"internal void __ReadFields(ref GesBitReader reader, string[] paths, int at{LevelParameter(type)})");
         code.Open("{");
         foreach (var field in type.Fields)
         {
@@ -373,13 +473,24 @@ internal static partial class GesCSharpEmitter
         code.Line("return writer.Finish();");
         code.Close();
         code.Blank();
-        code.Line($"/// <summary>Writes this {what} into a new array of its exact size.</summary>");
+        code.Line($"/// <summary>Counts the bytes that <see cref=\"Write\"/> writes for this {what}, without writing them.</summary>");
+        code.Line("/// <returns>The exact byte count.</returns>");
+        code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>");
+        code.Line($"public {self}int ByteCount()");
+        code.Open("{");
+        code.Line("var writer = GesBitWriter.Counting();");
+        foreach (var line in write) code.Line(line);
+        code.Line("return writer.Finish();");
+        code.Close();
+        code.Blank();
+        code.Line($"/// <summary>Writes this {what} into a new array of its exact size, which <see cref=\"ByteCount\"/> counts first.</summary>");
         code.Line("/// <returns>The bytes.</returns>");
         code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>");
         code.Line($"public {self}byte[] ToBytes()");
         code.Open("{");
-        code.Line("var buffer = new byte[MaxByteCount];");
-        code.Line("return buffer.AsSpan(0, Write(buffer)).ToArray();");
+        code.Line("var buffer = new byte[ByteCount()];");
+        code.Line("Write(buffer);");
+        code.Line("return buffer;");
         code.Close();
         code.Blank();
         code.Line($"/// <summary>Reads a {what} from untrusted data into this instance. After an error its values are unspecified.</summary>");
@@ -397,12 +508,12 @@ internal static partial class GesCSharpEmitter
 
     private static void MessageSet(GesSchemaPlanner.Code code, GesPlanType type, string access, Context context)
     {
-        var names = new List<(string, string)> { (type.Name, "the type itself"), ("Selected", "the selected member"), ("Member", "the member type") };
+        var names = new List<(string, string)> { (type.Name, "the type itself"), ("Selected", "the selected member"), ("Member", GesSchemaPlanner.NestedTypeOrigin + "of the members") };
         foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
         if (context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var member in type.Members) names.Add((member, "the member " + member));
-        GesSchemaPlanner.Unique(type.Name, names);
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
         var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);
         var last = Unsigned((ulong)type.Members.Count - 1);
         code.Line($"/// <summary>The message set <c>:{type.Name}</c>: one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.</summary>");
@@ -450,6 +561,27 @@ internal static partial class GesCSharpEmitter
 
     private static string Path(GesPlanValue value) => $"paths[at + {value.Node.ToString(CultureInfo.InvariantCulture)}]";
 
+    // A recursive schema's methods take the level of the record, 1 where a caller enters the recursion.
+    private static string LevelParameter(GesPlanType type) => type.Depth > 0 ? ", int level = 1" : "";
+
+    // The level argument of a call into a record: one deeper for the element of a recursive List.
+    private static string NextLevel(GesPlanValue value) => value.Recursive ? ", level + 1" : "";
+
+    // The level that the item of a recursive union takes: that of the record holding the List.
+    private static string ItemLevel(GesPlanValue element) => element.PassesLevel ? ", level" : "";
+
+    // Opens the levels of a recursive List that hold elements; at its depth the List holds nothing, so data there is deeper.
+    private static void OpenLevels(GesSchemaPlanner.Code code, GesPlanValue value, string count)
+    {
+        var depth = value.Depth.ToString(CultureInfo.InvariantCulture);
+        code.Line($"if (level >= {depth})");
+        code.Open("{");
+        code.Line($"if ({count} > 0) throw new GesWireException(GesWireException.TooDeep, {Path(value)}, \"deeper than depth {depth}\");");
+        code.Close();
+        code.Line("else");
+        code.Open("{");
+    }
+
     private static string Throw(string code, GesPlanValue value) => $"throw new GesWireException(GesWireException.{code}, {Path(value)});";
 
     // Writes the value in `target`, which the caller has validated as present.
@@ -482,35 +614,53 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Float:
                 code.Line($"if (double.IsNaN({target})) {Throw("NotRepresentable", value)}");
                 if (encoding.Range) code.Line($"if ({target} < {Bits(encoding.LowerValue)} || {target} > {Bits(encoding.UpperValue)}) {Throw("OutOfRange", value)}");
-                code.Line($"writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits({target} == 0 ? 0d : {target})), 64);");
+                code.Line($"writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits({target} == 0 ? 0d : {target})), 64);");
                 break;
             case GesLayoutKind.Tag:
                 code.Line($"if ((ulong){target} > {Unsigned((ulong)encoding.Tags.Count - 1)}) {Throw("UnknownTag", value)}");
                 code.Line($"writer.Write((ulong){target}, {width});");
                 break;
-            case GesLayoutKind.Text:
+            case GesLayoutKind.Flags:
+                if (encoding.Width < 64) code.Line($"if ((ulong){target} > {Unsigned(Full(encoding.Width))}) {Throw("UnknownTag", value)}");
+                code.Line($"writer.Write((ulong){target}, {width});");
+                break;
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 code.Open("{");
                 code.Line($"var text = new ReadOnlySpan<byte>(__{value.Base}, 0, __{value.Base}Length);");
                 code.Line($"if (text.Length > {max}) {Throw("TooLong", value)}");
-                code.Line(encoding.TagName ? $"if (!GesWireRules.IsTagName(text)) {Throw("InvalidTag", value)}" : $"if (!GesWireRules.IsValidUtf8(text)) {Throw("InvalidText", value)}");
+                if (encoding.Kind == GesLayoutKind.Text)
+                    code.Line(encoding.TagName ? $"if (!GesWireRules.IsTagName(text)) {Throw("InvalidTag", value)}" : $"if (!GesWireRules.IsValidUtf8(text)) {Throw("InvalidText", value)}");
                 code.Line($"writer.Write((ulong)text.Length, {width});");
                 code.Line("writer.WriteBytes(text);");
                 code.Close();
                 break;
             case GesLayoutKind.List:
+                if (value.Depth > 0) OpenLevels(code, value, target + ".Count");
                 code.Line($"if ({target}.Count > {max}) {Throw("TooLong", value)}");
                 code.Line($"writer.Write((ulong){target}.Count, {width});");
                 code.Line($"foreach (var item in {target})");
                 code.Open("{");
-                if (value.Item is not null) code.Line($"item.__WriteFields(ref writer, paths, at + {value.Element!.Node.ToString(CultureInfo.InvariantCulture)});");
+                if (value.Item is not null) code.Line($"item.__WriteFields(ref writer, paths, at + {value.Element!.Node.ToString(CultureInfo.InvariantCulture)}{ItemLevel(value.Element)});");
                 else Write(code, value.Element!, "item");
                 code.Close();
+                if (value.Depth > 0) code.Close();
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Write(code, axis, target + "." + axis.Base);
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"if ({target}.{axis} != 0) {Throw("TypeMismatch", value)}");
+                break;
+            case GesLayoutKind.Box:
+                foreach (var corner in value.Corners) Write(code, corner, target + "." + corner.Base);
+                break;
+            case GesLayoutKind.Disc:
+                foreach (var part in value.Corners) Write(code, part, target + "." + part.Base);
+                if (value.Corners.Count == 1) code.Line($"if ({target}.Radius != 0) {Throw("TypeMismatch", value)}");
+                break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                PackedWrite(code, value, target);
                 break;
             case GesLayoutKind.Schema:
-                code.Line($"{target}.__WriteFields(ref writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)});");
+                code.Line($"{target}.__WriteFields(ref writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)});");
                 break;
             case GesLayoutKind.Union:
                 code.Line($"switch ({target})");
@@ -549,6 +699,9 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Integer when !encoding.Range:
                 code.Line($"{target} = unchecked((long)reader.Read(64, {Path(value)}));");
                 break;
+            case GesLayoutKind.Flags:
+                code.Line($"{target} = ({NestedName(value)})reader.Read({width}, {Path(value)});");
+                break;
             case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Tag:
                 code.Open("{");
                 code.Line($"var index = reader.Read({width}, {Path(value)});");
@@ -565,32 +718,47 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Float:
                 code.Open("{");
                 code.Line($"var bits = reader.Read(64, {Path(value)});");
-                code.Line("var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));");
+                code.Line("var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));");
                 code.Line($"if (double.IsNaN(value) || bits == 0x8000000000000000UL{(encoding.Range ? " || double.IsInfinity(value)" : "")}) {Throw("InvalidNumber", value)}");
                 if (encoding.Range) code.Line($"if (value < {Bits(encoding.LowerValue)} || value > {Bits(encoding.UpperValue)}) {Throw("OutOfRange", value)}");
                 code.Line($"{target} = value;");
                 code.Close();
                 break;
-            case GesLayoutKind.Text:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 var storage = "__" + value.Base;
                 code.Open("{");
                 code.Line($"var count = (int)reader.Read({width}, {Path(value)});");
                 code.Line($"if (count > {max}) {Throw("InvalidCount", value)}");
                 code.Line($"reader.Require(count * 8L, {Path(value)});");
-                code.Line($"if ({storage}.Length < count) Array.Resize(ref {storage}, Math.Max(count, Math.Min({max}, {storage}.Length * 2)));");
+                code.Line($"if ({storage}.Length < count) global::System.Array.Resize(ref {storage}, global::System.Math.Max(count, global::System.Math.Min({max}, {storage}.Length * 2)));");
                 code.Line($"var text = new Span<byte>({storage}, 0, count);");
                 code.Line($"reader.ReadBytes(text, {Path(value)});");
-                code.Line(encoding.TagName ? $"if (!GesWireRules.IsTagName(text)) {Throw("InvalidTag", value)}" : $"if (!GesWireRules.IsValidUtf8(text)) {Throw("InvalidText", value)}");
+                if (encoding.Kind == GesLayoutKind.Text)
+                    code.Line(encoding.TagName ? $"if (!GesWireRules.IsTagName(text)) {Throw("InvalidTag", value)}" : $"if (!GesWireRules.IsValidUtf8(text)) {Throw("InvalidText", value)}");
                 code.Line($"{storage}Length = count;");
                 code.Close();
                 break;
             case GesLayoutKind.List:
                 var element = value.Element!;
                 var name = ElementName(value);
+                if (value.Depth > 0)
+                {
+                    // The deepest level reads no count, since its List takes no bits.
+                    code.Line($"if (level >= {value.Depth.ToString(CultureInfo.InvariantCulture)}) {target}.Clear();");
+                    code.Line("else");
+                }
+
                 code.Open("{");
                 code.Line($"var count = (int)reader.Read({width}, {Path(value)});");
                 code.Line($"if (count > {max}) {Throw("InvalidCount", value)}");
                 code.Line($"{target}.Clear();");
+                if (element.Packed is not null)
+                {
+                    PackedList(code, value, target, "count");
+                    code.Close();
+                    break;
+                }
+
                 code.Line("for (var position = 0; position < count; position++)");
                 code.Open("{");
                 if (element.IsClass)
@@ -600,7 +768,7 @@ internal static partial class GesCSharpEmitter
                 }
                 else if (value.Item is not null || element.Encoding.Kind is GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Schema) code.Line($"var item = new {name}();");
                 else code.Line($"{name} item;");
-                if (value.Item is not null) code.Line($"item.__ReadFields(ref reader, paths, at + {element.Node.ToString(CultureInfo.InvariantCulture)});");
+                if (value.Item is not null) code.Line($"item.__ReadFields(ref reader, paths, at + {element.Node.ToString(CultureInfo.InvariantCulture)}{ItemLevel(element)});");
                 else Read(code, element, "item");
                 code.Line($"{target}.Add(item);");
                 code.Close();
@@ -608,9 +776,34 @@ internal static partial class GesCSharpEmitter
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Read(code, axis, target + "." + axis.Base);
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"{target}.{axis} = 0;");
+                break;
+            case GesLayoutKind.Box:
+                // The corners arrive as two Points; the box orders them.
+                code.Open("{");
+                foreach (var corner in value.Corners)
+                {
+                    code.Line($"var {corner.Label}{N(value.Node)} = new GesPoint();");
+                    Read(code, corner, corner.Label + N(value.Node));
+                }
+
+                code.Line($"{target} = new GesBox(lower{N(value.Node)}, upper{N(value.Node)});");
+                code.Close();
+                break;
+            case GesLayoutKind.Disc:
+                // The centre and the radius, which a block can leave out; the disc takes the radius's magnitude.
+                code.Open("{");
+                code.Line($"var center{N(value.Node)} = new GesPoint();");
+                code.Line($"var radius{N(value.Node)} = 0d;");
+                foreach (var part in value.Corners) Read(code, part, part.Label + N(value.Node));
+                code.Line($"{target} = new GesDisc(center{N(value.Node)}, radius{N(value.Node)});");
+                code.Close();
+                break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                PackedRead(code, value, target);
                 break;
             case GesLayoutKind.Schema:
-                code.Line($"{target}.__ReadFields(ref reader, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)});");
+                code.Line($"{target}.__ReadFields(ref reader, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)});");
                 break;
             case GesLayoutKind.Union:
                 code.Open("{");
@@ -642,6 +835,7 @@ internal static partial class GesCSharpEmitter
         switch (value.Encoding.Kind)
         {
             case GesLayoutKind.Tag:
+                if (value.TagType.Length > 0) break;
                 code.Blank();
                 code.Line("/// <summary>The tags of the field, in declared order.</summary>");
                 code.Line($"public enum {name} : {Underlying(value.Encoding.Tags.Count)}");
@@ -654,19 +848,8 @@ internal static partial class GesCSharpEmitter
 
                 code.Close();
                 break;
-            case GesLayoutKind.Point or GesLayoutKind.Vector:
-                code.Blank();
-                code.Line($"/// <summary>The transmitted axes of the {(value.Encoding.Kind == GesLayoutKind.Point ? "Point" : "Vector")}.</summary>");
-                code.Line($"public struct {name}");
-                code.Open("{");
-                for (var index = 0; index < value.Axes.Count; index++)
-                {
-                    if (index > 0) code.Blank();
-                    code.Line($"/// <summary>The {value.Axes[index].Label} axis.</summary>");
-                    code.Line($"public double {value.Axes[index].Base};");
-                }
-
-                code.Close();
+            case GesLayoutKind.Flags:
+                FlagsDeclaration(code, name, value.Encoding.Tags);
                 break;
             case GesLayoutKind.Union:
                 code.Blank();
@@ -701,6 +884,85 @@ internal static partial class GesCSharpEmitter
 
     private static string Underlying(int count) => count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint";
 
+    // A named tag set, declared once beside the records that use it.
+    internal static void TagSetDeclaration(GesSchemaPlanner.Code code, string name, List<string> tags, string access)
+    {
+        code.Blank();
+        code.Line($"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>");
+        code.Line($"{access} enum {name} : {Underlying(tags.Count)}");
+        code.Open("{");
+        foreach (var tag in tags)
+        {
+            code.Line($"/// <summary>The tag <c>#{tag}</c>.</summary>");
+            code.Line(GesSchemaPlanner.Pascal(tag) + ",");
+        }
+
+        code.Close();
+    }
+
+    // A required list whose elements are classes the record reuses.
+    internal static bool IsPooledList(GesPlanField field) => !field.Optional && field.Value.Encoding.Kind == GesLayoutKind.List && field.Value.Element!.IsClass;
+
+    // A pooled list of Text or open Tag elements, whose element type holds one text.
+    internal static bool IsTextList(GesPlanField field) => IsPooledList(field) && field.Value.Item is not null && field.Value.Element!.Encoding.Kind == GesLayoutKind.Text;
+
+    // Sets a pooled list to a count of reused elements, as a read does, and for texts offers them as strings.
+    private static void ListAccess(GesSchemaPlanner.Code code, GesPlanField field)
+    {
+        if (!IsPooledList(field)) return;
+        var value = field.Value;
+        code.Blank();
+        code.Line($"/// <summary>Sets <c>{field.Layout.Name}</c> to <paramref name=\"count\"/> elements that the record reuses, as a read does; their fields keep earlier values until they are set.</summary>");
+        code.Line("/// <param name=\"count\">The element count.</param>");
+        code.Line($"public void Set{value.Base}Count(int count)");
+        code.Open("{");
+        code.Line("if (count < 0) throw new global::System.ArgumentOutOfRangeException(nameof(count));");
+        code.Line($"{value.Base}.Clear();");
+        code.Line("for (var position = 0; position < count; position++)");
+        code.Open("{");
+        code.Line($"if (position == __{value.Base}Pool.Count) __{value.Base}Pool.Add(new {ElementName(value)}());");
+        code.Line($"{value.Base}.Add(__{value.Base}Pool[position]);");
+        code.Close();
+        code.Close();
+        if (!IsTextList(field)) return;
+        var text = value.Item!.Fields[0].Base;
+        code.Blank();
+        code.Line($"/// <summary>The elements of <c>{field.Layout.Name}</c> as strings; reading and setting allocate, and setting reuses the elements.</summary>");
+        code.Line($"public string[] {value.Base}Values");
+        code.Open("{");
+        code.Line("get");
+        code.Open("{");
+        code.Line($"var values = new string[{value.Base}.Count];");
+        code.Line($"for (var index = 0; index < values.Length; index++) values[index] = {value.Base}[index].{text};");
+        code.Line("return values;");
+        code.Close();
+        code.Blank();
+        code.Line("set");
+        code.Open("{");
+        code.Line("if (value is null) throw new global::System.ArgumentNullException(nameof(value));");
+        code.Line($"Set{value.Base}Count(value.Length);");
+        code.Line($"for (var index = 0; index < value.Length; index++) {value.Base}[index].{text} = value[index];");
+        code.Close();
+        code.Close();
+    }
+
+    // One bit per member in declared order, so the enum value is the wire mask; the empty value needs no name.
+    internal static void FlagsDeclaration(GesSchemaPlanner.Code code, string name, List<string> members)
+    {
+        code.Blank();
+        code.Line("/// <summary>The members of the field, one bit each in declared order.</summary>");
+        code.Line("[global::System.Flags]");
+        code.Line($"public enum {name} : ulong");
+        code.Open("{");
+        for (var index = 0; index < members.Count; index++)
+        {
+            code.Line($"/// <summary>The member <c>#{members[index]}</c>.</summary>");
+            code.Line($"{GesSchemaPlanner.Pascal(members[index])} = 1UL << {index.ToString(CultureInfo.InvariantCulture)},");
+        }
+
+        code.Close();
+    }
+
     private static ulong Full(int width) => width >= 64 ? ulong.MaxValue : (1UL << width) - 1;
 
     private static string Long(long value) => value == long.MinValue ? "long.MinValue" : value.ToString(CultureInfo.InvariantCulture) + "L";
@@ -710,7 +972,7 @@ internal static partial class GesCSharpEmitter
     // An integral binary64 such as 10^k or p, exact as a literal.
     private static string Double(long value) => value.ToString(CultureInfo.InvariantCulture) + "d";
 
-    private static string Bits(double value) => $"BitConverter.Int64BitsToDouble(unchecked((long)0x{GesSchemaLayoutJson.Hex((ulong)BitConverter.DoubleToInt64Bits(value))}UL))";
+    private static string Bits(double value) => $"global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x{GesSchemaLayoutJson.Hex((ulong)global::System.BitConverter.DoubleToInt64Bits(value))}UL))";
 
     private static string Quote(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 }

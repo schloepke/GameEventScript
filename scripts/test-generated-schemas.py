@@ -7,7 +7,7 @@ The schemaApi cases with literal parameters name a root and give bytes to decode
 delta to encode or decode. For every such schema the C# CLI generates C# and Swift, which compile into one C# program
 (C# 9, warnings as errors) and one Swift executable (Swift 6 language mode, warnings as errors). Each program decodes the
 given bytes with the generated type and writes the record again: an expected error must have the same code and path, a
-valid record the same byte count and the same bytes. A delta is encoded from the decoded record and baseline, and decoded
+valid record the same byte count and the same bytes, or the encoded bytes of the case where it also encodes a value. A delta is encoded from the decoded record and baseline, and decoded
 against the baseline into the expected record. Operations on types without delta methods are counted as skipped.
 The programs check shared baselines (GES_CHECK_SHARING); the unchecked form of release builds also compiles in both
 languages, and a small C# program holds its remaining guarantee on the fleet fixture, qualified by a control without the
@@ -17,6 +17,7 @@ import argparse
 from pathlib import Path
 import re
 import shutil
+import struct
 import subprocess
 import sys
 
@@ -28,6 +29,40 @@ CSHARP_CLI = ROOT / "artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.To
 WORK = ROOT / "artifacts/generated-schemas"
 CODE = re.compile(r"error ([a-z]+\.[A-Za-z]+)")
 FLEET_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
+GENERATED_CSHARP = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
+ROLES = ROOT / "conformance/fixtures/SchemaGeneration/roles"
+ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
+PACKED = ROOT / "conformance/fixtures/SchemaGeneration/packed.gess"
+# Split wire code in a namespace beside split models in the global namespace, which share packed types and convert directly:
+# their extensions must stand at file scope, and a wire record and a model of one name must not hide each other.
+# A second wire generation, split by schema, shares the same models: each declares the wire members of a shared packed
+# root in its own namespace, and the models gain one init(wire:) per wire namespace.
+PACKED_SPLITS = ((["--model", "packed", "--values"], "", "PackedSplitModel", "file"),
+                 (["--wire", "packed", "--values", "--models", ""], "PackedSplit", "PackedSplitWire", "file"),
+                 (["--wire", "packed", "--values", "--models", ""], "PackedSchemaSplit", "PackedSchemaSplitWire", "schema"),
+                 # Namespaces that share their first component: the models declare `Game`, the wire code extends it as it
+                 # shares it with the models, and a second model generation extends it as asked.
+                 (["--model", "packed", "--values"], "Game.Model", "GameModel", "schema"),
+                 (["--wire", "packed", "--values", "--models", "Game.Model"], "Game.Wire", "GameWire", "file"),
+                 (["--model", "packed", "--extend-namespace", "Game"], "Game.Copy", "GameCopy", "file"),
+                 # Wire code whose whole namespace the models' namespace begins with extends `Game` itself.
+                 (["--wire", "packed", "--values", "--models", "Game.Model"], "Game", "GameRoot", "schema"))
+# Single Swift files whose names Swift lookup must not confuse, each group in a target of its own: wire code in a namespace
+# that continues the models' one beside the model type Cell, a later wire component named like the models' namespace, and
+# with models in the global namespace a later wire component named like the packed type that the wire code names bare.
+HIDING = (("HidingPrefix", ((["--model", "packed"], "Cell"),
+                            (["--wire", "packed", "--models", "Cell"], "Cell.Net"),
+                            (["--model", "packed"], "Shared"),
+                            (["--wire", "packed", "--models", "Shared"], "Net.Shared"))),
+          ("HidingGlobal", ((["--model", "packed"], ""),
+                            (["--wire", "packed", "--models", ""], "Wire.Cell"))))
+# Split output of the role fixture: each split once for wire code and once for models, so that the files of one generation
+# reach each other's types and helpers and the shared file declares the namespace, nested for two of them.
+SPLITS = (("schema", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "SchemaSplit.Wire"),
+          ("file", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "FileSplitWire"),
+          ("schema", ["--model", "view", "--bindings", "--values"], "SchemaSplitModel"),
+          ("file", ["--model", "view", "--values"], "FileSplit.Model"))
+GENERATED_SWIFT = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
 UNCHECKED_PROGRAM = """using System;
 using Unchecked;
 
@@ -52,6 +87,46 @@ return 0;
 """
 
 
+def computed_names(sources, root):
+    """The computed fields of the root schema, in declared order, read from its source."""
+    for text in sources:
+        match = re.search(r"schema :" + re.escape(root) + r" as \{(.*?)\n\}", text, re.S) or re.search(r"schema :" + re.escape(root) + r" as \{([^\n]*)\}", text)
+        if match:
+            return [name for name in re.findall(r"(?:^|[\n,{])\s*([a-z][A-Za-z0-9]*): [^\n,]*? computed by", match.group(1))]
+    return []
+
+
+def property_text(value):
+    """A computed property as the harness prints it: the bits of a binary64, a Boolean, or nothing."""
+    kind = value["type"]
+    if kind == ":Nothing":
+        return "nothing"
+    if kind == ":Boolean":
+        return "true" if value["value"] in (True, "true") else "false"
+    return format(struct.unpack(">Q", struct.pack(">d", float(value["value"])))[0], "016x")
+
+
+def ulps(case):
+    """The ULPs a case allows for binary64, 0 for its default exact comparison, as the runner reads them."""
+    config = (case.metadata.get("comparison") or {}).get("binary64") or {"mode": "exact"}
+    return config.get("maxUlps", 0) if config.get("mode") == "ulp" else 0
+
+
+def close(want, got, tolerance):
+    """Whether a printed property matches: exactly, or as finite binary64 within the tolerance, for platform math."""
+    if want == got:
+        return True
+    words = ("true", "false", "nothing", "7ff0000000000000", "fff0000000000000")
+    if tolerance == 0 or want in words or got in words or len(got) != 16:
+        return False
+
+    def ordered(word):
+        value = int(word, 16)
+        return (~value & (2**64 - 1)) if value >> 63 else value | (1 << 63)
+
+    return abs(ordered(want) - ordered(got)) <= tolerance
+
+
 def failure(error):
     return ("error", error["code"], error.get("path"))
 
@@ -74,7 +149,16 @@ def cases(paths):
                 operations.append(("decode", api["decode"], "", limit, failure(decoded["error"])))
             elif "value" in decoded:
                 size = decoded.get("byteCount")
-                operations.append(("decode", api["decode"], "", limit, ("ok", size if size is not None else len(api["decode"]) // 2)))
+                # A case that also encodes a value gives the bytes the decoded record writes, which differ only where the value
+                # orders its parts, as a Box its corners.
+                written = (expected.get("encoded") or {}).get("bytes")
+                outcome = ("ok", size if size is not None else len(api["decode"]) // 2) + ((written,) if isinstance(written, str) else ())
+                operations.append(("decode", api["decode"], "", limit, outcome))
+                names = computed_names(api["sources"], api["root"])
+                if names:
+                    entries = {entry["key"]: entry["value"] for entry in decoded["value"].get("entries", [])}
+                    expect = ("computed", " ".join(property_text(entries[name]) for name in names), ulps(case))
+                    operations.append(("computed", api["decode"], "", limit, expect))
         encoded = expected.get("encoded")
         if isinstance(encoded, dict) and isinstance(encoded.get("bytes"), str) and "baseline" not in api:
             operations.append(("decode", encoded["bytes"], "", None, ("ok", len(encoded["bytes"]) // 2)))
@@ -114,6 +198,7 @@ schema :Second as {
 """
 
 def generate(directory, sources, root, parameters, language, space, more=()):
+    directory.mkdir(parents=True, exist_ok=True)
     files = []
     for number, text in enumerate(sources):
         path = directory / f"s{number}.gess"
@@ -128,26 +213,63 @@ def generate(directory, sources, root, parameters, language, space, more=()):
     return run.stdout.decode("utf-8"), None
 
 
+def with_model_role(sources, root):
+    """The sources with the root marked as a model root, or None when its declaration has roles or another form."""
+    pattern = re.compile(rf"(?m)^schema :{re.escape(root)} as\b")
+    if sum(len(pattern.findall(text)) for text in sources) != 1:
+        return None
+    return [pattern.sub(f"model schema :{root} as", text) for text in sources]
+
+
+def generate_models(directory, sources, language, space):
+    """Model code of the default group, or None when the schemas do not generate as models."""
+    directory.mkdir(parents=True, exist_ok=True)
+    files = []
+    for number, text in enumerate(sources):
+        path = directory / f"s{number}.gess"
+        path.write_text(text, encoding="utf-8")
+        files.append(path.name)
+    run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", *files, "--model", "default", "--language", language, "--namespace", space],
+                         cwd=directory, capture_output=True, check=False)
+    return run.stdout.decode("utf-8") if run.returncode == 0 else None
+
+
 def declares(code, root, member):
     """Whether the generated C# root type declares a member, within its own declaration."""
-    start = code.find(f" {root}\n    {{")
-    end = code.find("\n    }\n", start)
-    return start >= 0 and member in code[start:end]
+    found = re.search(rf" {re.escape(root)}( : [^\n]*)?\n    {{", code)
+    if found is None:
+        return False
+    end = code.find("\n    }\n", found.start())
+    return member in code[found.start():end]
 
 
 def has_delta(code, root):
     return declares(code, root, "public int ReadDelta(")
 
 
+def member(name, owner, swift=False):
+    """The property of a computed field: its name in Pascal case, with Value when it equals its type, and camel case in Swift."""
+    pascal = name[0].upper() + name[1:]
+    if pascal == owner:
+        pascal += "Value"
+    return pascal[0].lower() + pascal[1:] if swift else pascal
+
+
 def csharp_program(entries):
     lines = ["using System;", "", "internal static class Harness", "{",
              "    private static string Hex(ReadOnlySpan<byte> bytes) { var text = new System.Text.StringBuilder(); foreach (var b in bytes) text.Append(b.ToString(\"x2\")); return text.ToString(); }",
+             "    private static string P(double value) => double.IsNaN(value) ? \"nothing\" : ((ulong)BitConverter.DoubleToInt64Bits(value)).ToString(\"x16\");",
+             "    private static string P(double? value) => value is { } present ? P(present) : \"nothing\";",
+             "    private static string P(bool value) => value ? \"true\" : \"false\";",
              "    private static string Run(int schema, string operation, byte[] data, byte[] second, long limit)", "    {", "        switch (schema)", "        {"]
-    for index, root, key, _, delta, conversion in entries:
+    for index, root, key, _, delta, conversion, computed, model in entries:
         name = f"Gen.Case{index}.{root}"
         lines += [f"            case {index}:", "            {"]
         lines += [f"                if (operation == \"key\") return \"ok \" + ((long){name}.ReadKey(data)).ToString();" if key else "                if (operation == \"key\") return \"none\";"]
         lines += [f"                var record = new {name}();"]
+        if computed:
+            values = ", ".join(f"P(record.{member(field, root)})" for field in computed)
+            lines += ["                if (operation == \"computed\")", "                {", "                    record.Read(data, limit);", f"                    return \"ok \" + string.Join(\" \", new[] {{ {values} }});", "                }"]
         if delta:
             lines += ["                if (operation != \"decode\")", "                {", f"                    var baseline = new {name}();", "                    baseline.Read(second);",
                       "                    if (operation == \"deltaDecode\")", "                    {", "                        var used = record.ReadDelta(data, baseline, limit);",
@@ -156,13 +278,20 @@ def csharp_program(entries):
         else:
             lines += ["                if (operation != \"decode\") return \"none\";"]
         # A decoded record converts into a GES value, through the embedded schema sources, and that value back into an equal one;
-        # equal, not the same bytes, since a Dice value orders its rolls.
+        # equal, not the same bytes, since a Dice value orders its rolls. External values such as a Box compare by identity, so
+        # two of them are alike when their JSON snapshots are.
         wrap = "" if conversion == "Value" else "GameEventScript.Runtime.Values.GesValue.GesMessage"
         lines += ["                var count = record.Read(data, limit);", f"                var copy = new {name}();", f"                var value = record.To{conversion}();",
-                  f"                copy.Read{conversion}(value);", f"                if (!{wrap}(copy.To{conversion}()).Equals({wrap}(value))) return \"value mismatch\";",
+                  f"                copy.Read{conversion}(value);", f"                if (!Same({wrap}(copy.To{conversion}()), {wrap}(value))) return \"value mismatch\";"]
+        # A record with a model converts to it and back directly, to the same bytes.
+        if model:
+            lines += [f"                var round = new {name}();", "                round.CopyFrom(record.ToModel());",
+                      "                if (Hex(round.ToBytes()) != Hex(record.ToBytes())) return \"model mismatch\";"]
+        lines += [
                   "                return \"ok \" + count + \" \" + Hex(record.ToBytes());", "            }"]
     lines += ["            default: return \"none\";", "        }", "    }", "",
               "    private static byte[] Bytes(string text) => Convert.FromHexString(text == \".\" ? \"\" : text);", "",
+              "    private static bool Same(GameEventScript.Runtime.Values.GesValue a, GameEventScript.Runtime.Values.GesValue b) => a.Equals(b) || a.ToJson() == b.ToJson();", "",
               "    private static void Main()", "    {", "        string? line;", "        while ((line = Console.ReadLine()) != null)", "        {",
               "            var parts = line.Split(' ');", "            var limit = parts[4] == \"-\" ? long.MaxValue : long.Parse(parts[4]);",
               "            try { Console.WriteLine(Run(int.Parse(parts[0]), parts[1], Bytes(parts[2]), Bytes(parts[3]), limit)); }",
@@ -176,10 +305,18 @@ def swift_program(entries):
              "func bytes(_ text: Substring) -> [UInt8] {", "    if text == \".\" { return [] }", "    var result: [UInt8] = []", "    var index = text.startIndex",
              "    while index < text.endIndex {", "        let next = text.index(index, offsetBy: 2)", "        result.append(UInt8(text[index..<next], radix: 16)!)",
              "        index = next", "    }", "    return result", "}", "",
+             "func p(_ value: Double) -> String { value.isNaN ? \"nothing\" : String(value.bitPattern, radix: 16).leftPadded() }",
+             "func p(_ value: Double?) -> String { value.map { p($0) } ?? \"nothing\" }",
+             "func p(_ value: Bool) -> String { value ? \"true\" : \"false\" }",
+             "extension String { func leftPadded() -> String { String(repeating: \"0\", count: Swift.max(0, 16 - count)) + self } }", "",
              "func run(_ schema: Int, _ operation: Substring, _ data: [UInt8], _ second: [UInt8], _ limit: Int) throws(GesWireError) -> String {", "    switch schema {"]
-    for index, root, key, is_class, delta, conversion in entries:
+    for index, root, key, is_class, delta, conversion, computed, model in entries:
         binding = "let" if is_class else "var"
         lines += [f"    case {index}:"]
+        if computed:
+            values = ", ".join(f"p(record.{member(field, root, swift=True)})" for field in computed)
+            lines += ["        if operation == \"computed\" {", f"            {binding} record = Case{index}.{root}()", "            _ = try record.read(from: data, byteLimit: limit)",
+                      f"            return \"ok \" + [{values}].joined(separator: \" \")", "        }"]
         if key:
             lines += ["        if operation == \"key\" {", "            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: max(data.count, 1), alignment: 8)",
                       "            defer { buffer.deallocate() }", "            buffer.copyBytes(from: data)",
@@ -197,8 +334,12 @@ def swift_program(entries):
         label = conversion.lower()
         lines += ["        let count = try record.read(from: data, byteLimit: limit)", "        do {", f"            {binding} copy = Case{index}.{root}()",
                   f"            let value = try record.to{conversion}()", f"            try copy.read({label}: value)",
-                  f"            if try copy.to{conversion}() != value {{ return \"value mismatch\" }}",
-                  "        } catch {", "            return \"value error \\(error)\"", "        }", "        return \"ok \\(count) \" + hex(try record.encoded())"]
+                  f"            if try copy.to{conversion}() != value, try copy.to{conversion}().json() != value.json() {{ return \"value mismatch\" }}",
+                  "        } catch {", "            return \"value error \\(error)\"", "        }"]
+        if model:
+            lines += [f"        {binding} round = Case{index}.{root}()", "        round.read(model: record.toModel())",
+                      "        if try round.encoded() != record.encoded() { return \"model mismatch\" }"]
+        lines += ["        return \"ok \\(count) \" + hex(try record.encoded())"]
     lines += ["    default:", "        return \"none\"", "    }", "}", "",
               "while let line = readLine() {", "    let parts = line.split(separator: \" \", omittingEmptySubsequences: false)",
               "    let limit = parts[4] == \"-\" ? Int.max : Int(parts[4])!", "    do {",
@@ -217,20 +358,33 @@ def verdict(expected, observed, data):
         return None if parts[:2] == ["ok", str(expected[1])] else f"expected key {expected[1]}, got {observed!r}"
     if expected[0] == "delta":
         return None if parts == ["ok", expected[1]] else f"expected delta {expected[1]}, got {observed!r}"
+    if expected[0] == "computed":
+        wanted = expected[1].split(" ")
+        seen = parts[1:] if parts[0] == "ok" else []
+        same = len(seen) == len(wanted) and all(close(a, b, expected[2] if len(expected) > 2 else 0) for a, b in zip(wanted, seen))
+        return None if same else f"expected computed {expected[1]}, got {observed!r}"
     if expected[0] == "record":
         return None if parts == ["ok", str(expected[2]), expected[1]] else f"expected record {expected[1]} after {expected[2]} bytes, got {observed!r}"
     if parts[0] != "ok" or int(parts[1]) != expected[1]:
         return f"expected {expected[1]} bytes, got {observed!r}"
-    return None if parts[2] == data[:2 * expected[1]] else f"wrote {parts[2]} instead of {data[:2 * expected[1]]}"
+    written = expected[2] if len(expected) > 2 else data[:2 * expected[1]]
+    return None if parts[2] == written else f"wrote {parts[2]} instead of {written}"
 
 
 def self_test():
+    half, below = property_text({"type": ":Number.binary64", "value": "0.5"}), property_text({"type": ":Number.binary64", "value": "0.49999999999999994"})
+    assert verdict(("computed", half + " true", 4), f"ok {below} true", "") is None
+    assert verdict(("computed", half + " true", 0), f"ok {below} true", "")
+    assert verdict(("computed", half + " true", 4), f"ok {below} false", "")
+    assert verdict(("computed", half, 4), "ok nothing", "")
     assert verdict(("error", "wire.truncated", "x"), "error wire.truncated x", "") is None
     assert verdict(("error", "wire.truncated", "x"), "error wire.truncated y", "")
     assert verdict(("error", "wire.truncated", ""), "error wire.truncated ", "") is None
     assert verdict(("error", "wire.truncated", None), "error wire.truncated x", "") is None
     assert verdict(("error", "wire.truncated", None), "error wire.invalidIndex x", "")
     assert verdict(("ok", 2), "ok 2 0a0b", "0a0b0c") is None
+    assert verdict(("ok", 2, "0b0a"), "ok 2 0b0a", "0a0b0c") is None
+    assert verdict(("ok", 2, "0b0a"), "ok 2 0a0b", "0a0b0c")
     assert verdict(("ok", 2), "ok 2 0a0c", "0a0b0c")
     assert verdict(("ok", 2), "ok 3 0a0b0c", "0a0b0c")
     assert verdict(("ok", 2), "error wire.truncated x", "0a0b")
@@ -270,11 +424,24 @@ def main():
             skipped[error] = skipped.get(error, 0) + len(operations)
             continue
         swift_code, _ = generate(directory, sources, root, parameters, "swift", f"Case{index}")
+        conversion = "Value" if declares(code, root, " ToValue(") else "Message"
+        # A record root that also generates as a model converts to it directly: the wire code shares the models' namespace.
+        model = False
+        marked = with_model_role(sources, root) if conversion == "Value" else None
+        if marked is not None:
+            models = {language: generate_models(directory / f"models-{language}", marked, language, space)
+                      for language, space in (("csharp", f"Gen.Case{index}M"), ("swift", f"Case{index}M"))}
+            if all(text is not None for text in models.values()):
+                wired = {language: generate(directory / f"wired-{language}", marked, root, parameters, language, space, ["--models", models_space])[0]
+                         for language, space, models_space in (("csharp", f"Gen.Case{index}", f"Gen.Case{index}M"), ("swift", f"Case{index}", f"Case{index}M"))}
+                if all(text is not None for text in wired.values()):
+                    code, swift_code, model = wired["csharp"], wired["swift"], True
+                    (csharp / f"Case{index}M.g.cs").write_text(models["csharp"], encoding="utf-8")
+                    (swift / f"Case{index}M.swift").write_text(models["swift"], encoding="utf-8")
         (csharp / f"Case{index}.g.cs").write_text(code, encoding="utf-8")
         (swift / f"Case{index}.swift").write_text(swift_code, encoding="utf-8")
         delta = has_delta(code, root)
-        conversion = "Value" if declares(code, root, " ToValue(") else "Message"
-        entries.append((index, root, declares(code, root, " ReadKey("), f"final class {root} {{" in swift_code, delta, conversion))
+        entries.append((index, root, declares(code, root, " ReadKey("), f"final class {root} {{" in swift_code, delta, conversion, computed_names(sources, root), model))
         for case_id, operation, data, second, limit, expected in operations:
             if operation.startswith("delta") and not delta:
                 skipped["no delta methods"] = skipped.get("no delta methods", 0) + 1
@@ -288,6 +455,33 @@ def main():
         if code is None:
             raise SystemExit(f"The gate schema does not generate: {error}")
         target.write_text(code, encoding="utf-8")
+    # The checked-in wire and model code of the role fixture, which compare-schema-generation.py keeps current, compiles
+    # under the same rules: models of every field type and spatial wire fields in 2D and 3D.
+    for name in ("RolesWire", "RolesModel", "RolesBound"):
+        shutil.copy(GENERATED_CSHARP / f"{name}.g.cs", csharp / f"{name}.g.cs")
+        shutil.copy(GENERATED_SWIFT / f"{name}.swift", swift / f"{name}.swift")
+    for split, selection, space in SPLITS:
+        for language, target in (("csharp", csharp), ("swift", swift)):
+            run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", *ROLE_FILES, *selection, "--language", language, "--namespace", space,
+                                  "--access", "internal", "--out-dir", str(target / space), "--split", split], cwd=ROLES, capture_output=True, check=False)
+            if run.returncode != 0:
+                raise SystemExit(f"The role fixture does not generate split by {split}: {run.stderr.decode('utf-8', 'replace').strip()}")
+    for selection, space, directory, split in PACKED_SPLITS:
+        for language, target in (("csharp", csharp), ("swift", swift)):
+            # C# merges namespaces, so extending them is Swift's alone.
+            if language == "csharp" and "--extend-namespace" in selection:
+                continue
+            run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", PACKED.name, *selection, "--language", language, "--namespace", space,
+                                  "--access", "internal", "--out-dir", str(target / directory), "--split", split], cwd=PACKED.parent, capture_output=True, check=False)
+            if run.returncode != 0:
+                raise SystemExit(f"The packed fixture does not generate split: {run.stderr.decode('utf-8', 'replace').strip()}")
+    for target, generations in HIDING:
+        for index, (selection, space) in enumerate(generations):
+            (WORK / "swift/Sources" / target).mkdir(parents=True, exist_ok=True)
+            run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", PACKED.name, *selection, "--language", "swift", "--namespace", space,
+                                  "--access", "internal", "-o", str(WORK / "swift/Sources" / target / f"Generation{index}.swift")], cwd=PACKED.parent, capture_output=True, check=False)
+            if run.returncode != 0:
+                raise SystemExit(f"The packed fixture does not generate for {target}: {run.stderr.decode('utf-8', 'replace').strip()}")
     (csharp / "Harness.cs").write_text(csharp_program(entries), encoding="utf-8")
     (csharp / "Harness.csproj").write_text(f"""<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -318,6 +512,16 @@ let package = Package(
             dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
             swiftSettings: [.unsafeFlags(["-warnings-as-errors"]), .define("GES_CHECK_SHARING")]
         ),
+        .target(
+            name: "HidingPrefix",
+            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
+            swiftSettings: [.unsafeFlags(["-warnings-as-errors"])]
+        ),
+        .target(
+            name: "HidingGlobal",
+            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
+            swiftSettings: [.unsafeFlags(["-warnings-as-errors"])]
+        ),
         // The same sources without the check, as release builds of users compile them; one build shares the Runtime.
         .executableTarget(
             name: "Unchecked",
@@ -340,7 +544,7 @@ let package = Package(
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="{csharp}/*.g.cs" />
+    <Compile Include="{csharp}/**/*.g.cs" />
     <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj'}" />
   </ItemGroup>
 </Project>
@@ -408,7 +612,7 @@ let package = Package(
                 failures += 1
                 print(f"{port} {case_id} {operation}: {problem}")
     skipped_text = ", ".join(f"{count} {code}" for code, count in sorted(skipped.items()))
-    print(f"{len(entries)} generated schemas, {len(requests)} operations in each port: {failures} failures; skipped {skipped_text or 'none'}")
+    print(f"{len(entries)} generated schemas ({sum(1 for entry in entries if entry[-1])} with models), {len(requests)} operations in each port: {failures} failures; skipped {skipped_text or 'none'}")
     return 1 if failures else 0
 
 

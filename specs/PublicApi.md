@@ -26,12 +26,21 @@ The optional build-time Generator package writes typed schema code; see
 The portable product modules and independent verification tooling are separated as follows:
 
 ```text
+GameEventScript Syntax
+  lossless lexer and parser, source validation, documents, schema declarations, highlighting
+  -> depends on no GES module
+
 GameEventScript Runtime
-  values, messages, program, binary codec, validation, host, VM, literal parsing
+  values, messages, program, binary codec, validation, host, VM, literal parsing, schemas
+  -> depends only on GameEventScript Syntax
 
 GameEventScript Compiler
-  source builder, lexer, parser, validation, optimizer, bytecode generation
-  -> depends only on GameEventScript Runtime
+  source builder, binding, validation, optimizer, bytecode generation
+  -> depends only on GameEventScript Runtime and Syntax
+
+GameEventScript Generator (build-time)
+  schema generation layout and C#/Swift emitters
+  -> depends only on GameEventScript Syntax and Runtime; no Runtime or Compiler depends on it
 
 Independent Conformance runner (Python, repository tooling)
   Markdown parser, normalized test model, assertions, reports, received output
@@ -42,7 +51,8 @@ Independent Conformance runner (Python, repository tooling)
 Runtime must load and execute precompiled Programs without a source compiler.
 Shared value semantics, text/number conversions, runtime literal parsing, Program
 validation, and declarative external-type definitions remain in Runtime. There
-is no additional shared Core module. Compiler uses these Runtime contracts;
+is no additional shared Core module; Syntax holds only what both source tools and the Runtime read from text. Compiler
+uses these Runtime contracts;
 Runtime never references Compiler or Conformance. Compiler never references
 Conformance or language-specific adapters. Both portable modules remain
 synchronous and independent of filesystem, network, threads, and test frameworks.
@@ -95,8 +105,8 @@ within a compatible major line.
 
 Native naming, value/reference representation and error transport may differ
 between languages as specified below; each published language binding retains
-its own source API compatibility. There is no requirement for identical symbol
-names across languages. Native object layout and compiler-generated ABI are not
+its own source API compatibility. Corresponding types and members use the same names in both ports, apart from the
+language-idiomatic mappings that [PortConventions](../implementation/PortConventions.md) lists. Native object layout and compiler-generated ABI are not
 the portable binary interchange contract; `.gesb` compatibility is owned by
 [Binary format](BinaryFormat.md#release-and-format-compatibility).
 
@@ -216,7 +226,8 @@ builder defaults. Ports may choose either builder setters or one options object,
 provided there is one unambiguous resolved configuration. Compilation never
 modifies an earlier Program.
 
-An empty builder produces the valid empty Program named `EmptyModule`.
+An empty builder produces a valid empty Program with the derived anonymous name that
+[Language](Language.md) defines for a compilation without a module name.
 Malformed source fails with one or more structured diagnostics.
 The fixed source nesting limits in [Language](Language.md#source-nesting-limits)
 apply to every compilation. Exceeding them produces the Parse diagnostic
@@ -257,8 +268,11 @@ The Program exposes:
 | `DebugSymbols`, `SourceMap`, `SourceArchive`, `BuildMetadata` | Independent optional known segments. Absence is represented explicitly. |
 | `OpaqueSections` | Immutable retained unknown optional sections in original relative order. |
 
-All segment entry order, duplicate string constants, instruction bits, source
-bytes, and opaque payload bytes are meaningful immutable data. Resolving a
+Segments and sections are read-only: they have no public constructors, because
+only the Compiler and the binary Reader create Programs
+([Program model](ProgramModel.md)). All segment entry order, duplicate string
+constants, instruction bits, source bytes, and opaque payload bytes are
+meaningful immutable data. Resolving a
 string or index list returns a decoded value/view without mutating Program.
 Out-of-range access fails as an argument/index error for direct low-level API
 use; Reader, Writer, Validator, and Host must report structured format/link
@@ -461,6 +475,8 @@ struct or another compact representation. Public factory operations create:
 - Vector and Point;
 - IntegerRange and FloatRange;
 - Dice from ordered roll values;
+- Bytes from a byte sequence (C# `GesBytes(ReadOnlySpan<byte>)` copies it, Swift `bytes(_:)` shares the
+  copy-on-write array);
 - immutable List and Map;
 - Handler signature and Message;
 - immutable Record by type name and ordered fields;
@@ -502,10 +518,33 @@ Each port spells these with the language's own means, without another library.
 
 `ValueKind`, `ValueUnit`, `HasValue`, `IsNothing`, `IsNumeric`, `HasUnit`,
 `Length`, `CustomTypeName`, coordinate/range/message/handler views, and typed
-read operations expose the active value. A typed `As...` operation on an
-incompatible kind follows the public value conversion contract and must never
-expose uninitialized native storage. `AsList` and `AsMap` return immutable
-views; `AsDice` returns an independent ordered copy in the C# mapping.
+read operations expose the active value. A typed `As...` operation never fails and never exposes uninitialized
+native storage; on another kind it applies the following conversion, which both ports share:
+
+| Read | Integer, Dice | Float, Percentage | Boolean | Text, Tag | other kinds |
+| --- | --- | --- | --- | --- | --- |
+| `AsInteger` | the value; a Dice its roll sum | truncated toward zero and saturated to Int64; NaN gives 0 | 1 or 0 | 0 | 0 |
+| `AsNumber` | the value as binary64; a Dice its roll sum | the value; a Percentage its ratio, so 50% is 0.5 | 1 or 0 | NaN | NaN |
+| `AsBoolean` | not 0; a Dice is false | not 0 | the value | a Text `1` or ASCII case-insensitive `true`; a Tag is false | false; a Vector or Point is true when a component is not 0 |
+| `AsText` | the language text | the language text | the language text | the text, or the bare tag name | the language text |
+
+The language text is the representation of `as :Text`, the same as `ToString()` / `description`. Units are not part of
+these reads; `ValueUnit` reports them. A read that must not convert checks the kind first: Swift offers kind-strict
+optionals (`integerValue`, `floatValue`, `textValue`, `listValue`, `bytesValue`, `diceRolls`, `integerRangeValue`,
+`floatRangeValue`), and C# compares `ValueKind` before calling an `As...` read or uses the nullable views
+(`IntegerRange`, `FloatRange`, `ExternalValue`, `Message`, `Handler`), since GES has no public `Try...` contracts.
+
+`ValueKind` uses the bytecode type kinds of [Bytecode](Bytecode.md) on purpose: the language's `is` checks, casts and the
+`.gesb` type operands use the same numbering, so a host compares a value's kind with the same constants as a Program.
+A host observes only Nothing, Boolean, Integer, Float, Percentage, Text, Tag, Vector, Point, Range, Dice, Bytes, List,
+Map, Handler, Message and Custom; the builder and iterator kinds exist only inside the VM's registers and never reach a
+value a host receives. Range covers both range storages and Custom both Records and external values, as the language
+does; `IntegerRange` / `integerRangeValue` and `FloatRange` / `floatRangeValue` tell the ranges apart, and
+`ExternalValue` / `externalValue` tells an external value from a Record. Renumbering these kinds is therefore a
+change of the bytecode format and of this API alike. `AsList` and `AsMap` return immutable
+views; `AsDice` returns an independent ordered copy in the C# mapping. C#
+`AsBytes()` returns a read-only span over the stored bytes without copying; Swift
+`bytesValue` and `asBytes` return the stored array.
 
 Numeric register storage is a numeric projection only. Boolean stores 0/1 and Dice
 stores its exact Int64 roll sum (zero for empty Dice). Nonnumeric values have no
@@ -527,6 +566,94 @@ operation that supplied its backing storage.
 `IntegerRange` and `FloatRange` are immutable triples `(from, to, step)`; they do
 not enumerate by themselves. Range termination and overflow behavior belong to
 the deterministic language semantics.
+
+#### Spatial values
+
+> **Since: Unreleased**
+
+`GesPoint` and `GesVector` are the native counterparts of the language's [Point and Vector](Language.md#vector-and-point):
+plain values with three Binary64 components `x`, `y` and `z`, where a 2D value has `z` 0, and with no unit. Generated
+schema code uses them for every spatial field, so hosts in both ports compute with one pair of types.
+
+- A point moves by a vector (`point + vector`, `point - vector`) and two points give the vector between them
+  (`end - start`); a vector adds, subtracts, negates, scales and divides by a scalar; a point does not scale.
+- `length` and `distance(to:)` (C# `Length`, `DistanceTo`) compute the square root of the summed squares, as the
+  language's `length` and `distance` do, so hosts and scripts agree bit for bit; `lengthSquared`, `dot`, `cross` (three
+  dimensions) and `isFinite` follow. `normalized` is absent for a zero or non-finite vector, as `normalize` gives `nothing`.
+  `zero` is the origin.
+- Equality compares components with Binary64 equality, so 0 and -0 are equal and hash alike. C# values are mutable structs
+  with settable components, like Unity's `Vector3`; Swift values are `Hashable`, `Sendable` and `Codable` with `var`
+  components.
+- **Units.** The schema or host fixes the unit, so the types carry none. Converting to a `GesValue` takes the unit
+  (`ToValue(unit)`, Swift `value(unit:)`) and yields `nothing` when a component is NaN, as the language does. Converting
+  back takes the expected unit (`FromValue(value, unit)`, Swift `init?(_:unit:)`) and gives absence for a value of another
+  kind or another unit: units never convert.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| types | `struct GesPoint`, `struct GesVector` with `X`, `Y`, `Z` | `struct GesPoint`, `struct GesVector` with `x`, `y`, `z` |
+| operations | `Zero`, `IsFinite`, `Length`, `LengthSquared`, `Normalized`, `Dot`, `Cross`, `DistanceTo`, operators and the compound assignments C# derives from them | `zero`, `init()`, `isFinite`, `length`, `lengthSquared`, `normalized`, `dot(_:)`, `cross(_:)`, `distance(to:)`, operators, `+=`, `-=`, `*=`, `/=` |
+| conversion | `ToValue(unit)`, `static FromValue(value, unit)` returning a nullable value | `value(unit:)`, `init?(_:unit:)` |
+
+#### Geometry library
+
+> **Since: Unreleased**
+
+`GesBox`, `GesPoly` and `GesDisc` are unitless shapes built on the spatial values, the same in both ports, and
+`GesGeometryLibrary` offers them to scripts as external types with a standard extension library, so that a host and its scripts compute alike.
+Game logic, such as rounded hulls, bearings or sensor sectors, stays in hosts.
+
+- **`GesBox`** is an axis-aligned box. It is created from two corners in any order (C# `new GesBox(a, b)`, Swift
+  `GesBox(_:_:)`), from a centre and a size (`FromCenter`, `init(center:size:)`), whose negative components count as
+  their magnitude, or from the origin to a size (`FromSize`, `init(size:)`), where a negative component spans the negative
+  side, so `min` is never above `max`. `MinX` through `MaxZ` (Swift `minX` through `maxZ`) read the corners' components for
+  host code; they are no script fields. It is 2D when `z` is 0 on both corners. `size`, `center`,
+  `contains(point)` and `intersects(box)` include the boundary; `union` encloses both; `inset(by:)` moves the sides of x and
+  y, and in 3D also of z, inward or outward for a negative distance, and is absent when the sides would cross or the
+  distance is not finite; `clamp` returns the nearest point of the box. Equality compares the corners.
+- **`GesPoly`** is a closed polygon in the plane z = 0: its points in order, the last connecting to the first (C# a sealed
+  class with `Points`, Swift a `Hashable`, `Sendable`, `Codable` struct with `points`). It is valid with at least three
+  finite points with `z` 0, no edge of zero length, no two edges that cross, touch or fold back over each other, and an area
+  other than 0. An invalid polygon exists, but `area` (signed: positive counterclockwise), `bounds`, `centroid`,
+  `contains(point)` (the outline counts as inside), `distance(to:)` (to the outline, for points inside and outside) and
+  `intersects(poly)` (crossing or touching outlines, or one inside the other) are absent, as GES operations give `nothing`
+  for a domain failure. Equality compares the points in order.
+- **`GesDisc`** is a filled circle in the plane z = 0: a centre and a radius (C# a readonly struct with `Center` and
+  `Radius`, Swift a `Hashable`, `Sendable`, `Codable` struct with `center` and `radius`). It is created from a centre and a
+  radius (C# `new GesDisc(center, radius)`, Swift `GesDisc(center:radius:)`) or from a radius around the origin
+  (`new GesDisc(radius)`, `GesDisc(radius:)`), and keeps the radius's magnitude, also when decoded. It is valid with a
+  finite centre whose `z` is 0 and a finite radius; an invalid disc exists, but its operations are absent. `area` is π·r²;
+  `bounds` is the 2D box around it; `contains(point)` includes the outline and is false for a point off the plane;
+  `distance(to:)` is the distance to the outline, for points inside and outside; `clamp` (Swift `clamp(_:)`) returns the
+  nearest point of the disc; `inset(by:)` shrinks the radius, grows it for a negative distance and is absent when the radius
+  would turn negative or the distance is not finite. `intersects` takes a disc (the centres within both radii), a box,
+  which must be 2D and finite, and is met at its point nearest to the centre, or a polygon, which holds the centre or whose
+  outline comes within the radius. Equality compares centre and radius.
+- All three convert to and from a `GesValue` like the spatial values, with an explicit unit, as the external values `:Box`,
+  `:Poly` and `:Disc` of the library; another value or unit converts to absence.
+- **`GesGeometryLibrary`** provides `Catalog(next)` for the compiler and `ExternalTypes(next)` and `Extensions(next)` for
+  the host (Swift `catalog(next:)`, `externalTypes(next:)`, `extensions(next:)`), each resolving the library first and
+  everything else through `next`. Registering it takes the type names `Box`, `Poly` and `Disc`.
+  - `:Box(lower: p, upper: q)` takes two corners and `:Box(center: p, size: v)` a centre and a size, all of one unit, which
+    the value keeps; its fields are `lower`, `upper`, `center` and `size`. `:Poly(points: [...])` takes a list of Points of
+    one unit and has the field `points`. `:Disc(center: p, radius: r)` takes a centre and a radius of one unit and
+    `:Disc(radius: r)` a radius around the origin, whose unit the origin takes; its fields are `center` and `radius`. The
+    radius follows its declared Number type, so a Percentage is its unitless ratio, as for any external constructor. Another
+    kind or a mixed unit constructs `nothing`. `min` and `max` are GES keywords,
+    so the corner fields are `lower` and `upper`.
+  - The functions are `:geometry.size`, `center`, `union(_, _)`, `inset(_, by:)` and `nearest(_, point)` of boxes
+    (`clamp` is a GES keyword); `bounds`, `area`, `distance(_, point)` and `centroid` of polygons, where `bounds` of a box is
+    the box; `center`, `bounds`, `area`, `distance(_, point)`, `inset(_, by:)` and `nearest(_, point)` of discs; and
+    `contains(_, point)` and `intersects(_, _)` of all, where a 2D box meets a polygon as the polygon of its outline and a disc
+    meets each shape as `GesDisc.intersects` does, in either order. `area` is unitless, like `dot`; `distance` and a disc's
+    `radius` have the unit. Another kind, another unit or an invalid polygon or disc gives `nothing`. The functions have no purity contract, so the compiler treats them as effectful like every host call.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| box | `readonly struct GesBox` with `Min`, `Max`, `Is2D`, `IsFinite`, `Size`, `Center`, `Contains`, `Intersects`, `Union`, `Inset`, `Clamp`, `ToValue`, `FromValue` | `struct GesBox` with `min`, `max`, `is2D`, `isFinite`, `size`, `center`, `contains(_:)`, `intersects(_:)`, `union(_:)`, `inset(by:)`, `clamp(_:)`, `value(unit:)`, `init?(_:unit:)` |
+| polygon | `sealed class GesPoly` with `Points`, `IsValid`, `Area`, `Bounds`, `Centroid`, `Contains`, `DistanceTo`, `Intersects`, `ToValue`, `FromValue` | `struct GesPoly` with `points`, `isValid`, `area`, `bounds`, `centroid`, `contains(_:)`, `distance(to:)`, `intersects(_:)`, `value(unit:)`, `init?(_:unit:)` |
+| disc | `readonly struct GesDisc` with `Center`, `Radius`, `IsValid`, `Area`, `Bounds`, `Contains`, `DistanceTo`, `Clamp`, `Inset`, `Intersects`, `ToValue`, `FromValue` | `struct GesDisc` with `center`, `radius`, `isValid`, `area`, `bounds`, `contains(_:)`, `distance(to:)`, `clamp(_:)`, `inset(by:)`, `intersects(_:)`, `value(unit:)`, `init?(_:unit:)` |
+| library | `static class GesGeometryLibrary` with `Namespace`, `Types`, `Catalog`, `ExternalTypes`, `Extensions` | `enum GesGeometryLibrary` with `namespace`, `types`, `catalog(next:)`, `externalTypes(next:)`, `extensions(next:)` |
 
 #### Literal parsing
 
@@ -566,14 +693,15 @@ with an optional schema reference, read from and printed to `.gesd` text.
 | schema reference | `sealed record GesDocumentSchema(GesDocumentSchemaKind Kind, string Name)` | `struct GesDocumentSchema` with `kind`, `name`, `.type(_:)`, `.file(_:)` |
 | schema kind | `enum GesDocumentSchemaKind { Type, File }` | `enum GesDocumentSchemaKind { case type, file }` |
 | layout options | `sealed record GesDocumentFormat` with `Indentation`, `LineWidth`, `PrefixedUnits` | `struct GesDocumentFormat` with `indentation`, `lineWidth`, `prefixedUnits` |
-| reading error | `GesDocumentException` with `Code`, `Line`, `Column`, `LimitName`, `Limit` | `GesDocumentError` with `code`, `line`, `column`, `limitName`, `limit`, `message` |
+| reading error | `GesDocumentException` with `Code`, `Line`, `Column`, `LimitName`, `Limit`, `Path` | `GesDocumentError` with `code`, `line`, `column`, `limitName`, `limit`, `path`, `message` |
 | single-value printer | `string GesValue.Format(GesDocumentFormat? format = null)` | `GesValue.formatted(_:) throws -> String` |
 
 Building a document validates the root and schema as owned by the document
 specification; C# throws `ArgumentException` and Swift `GesApiError.invalidArgument`.
 A schema reference validates its name the same way. Reading throws only the
 document error, whose `Code` is one of the stable `document.*` codes; C# also
-rejects a null text and unpaired surrogates like `ParseLiteral`. Printing never
+rejects a null text and unpaired surrogates like `ParseLiteral`. `Path` (Swift `path`) is empty for a reading error and names the field of a schema check or model error, as
+`GesSchemaDocument` reports them. Printing never
 fails: documents cannot contain values without literal text. The single-value
 printer rejects the same values as the document constructor: External values,
 Dice rolls below 1 and Records whose type name is not a `TypeName`. Indentation is
@@ -595,22 +723,32 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 | schema set | `sealed class GesSchemaSet` with `static Parse(params GesSchemaSource[])`, `static Parse(string)` | `final class GesSchemaSet` with `init(sources:) throws`, `init(parsing:) throws` |
 | declarations | `Schemas`, `Schema(name)` | `schemas`, `schema(_:)` |
 | document check by header | `CheckDocument(text, parameters)` | `checkDocument(_:parameters:)` |
-| description | `sealed class GesSchema` with `Name`, `Kind`, `Hash`, `CanonicalForm`, `Parameters`, `Fields`, `Tags`, `Members`, `Bind(parameters)`, `CheckDocument(text, parameters)` | `final class GesSchema` with `name`, `kind`, `hash`, `canonicalForm`, `parameters`, `fields`, `tags`, `members`, `bind(parameters:)`, `checkDocument(_:parameters:)` |
-| description parts | `enum GesSchemaKind`, `GesSchemaTypeKind`; `sealed class GesSchemaParameterInfo`, `GesSchemaFieldInfo`, `GesSchemaType`, `GesSchemaAxisInfo`; `readonly struct GesSchemaBound` with `ToDouble()` | `enum GesSchemaKind`, `GesSchemaTypeKind`; `struct GesSchemaParameterInfo`, `GesSchemaFieldInfo`, `GesSchemaType`, `GesSchemaAxisInfo`, `GesSchemaBound` with `doubleValue` |
+| document read as a model reads it | `sealed class GesSchemaDocument` with `static Read(schemas, text, params expected)`, `Schema`, `Value`, `Locate(GesWireException)` and the constant `SchemaMismatch` | `struct GesSchemaDocument` with `init(_:schemas:expected:) throws(GesDocumentError)`, `schema`, `value`, `error(for:)` and the constant `schemaMismatch` |
+| description | `sealed class GesSchema` with `Name`, `Kind`, `WireGroup`, `ModelGroup`, `IsAbstract`, `PackedWidth`, `PackedBits`, `Takes`, `Hash`, `CanonicalForm`, `Parameters`, `Fields`, `ComputedFields`, `Constants`, `Tags`, `Members`, `Bind(parameters)`, `CheckDocument(text, parameters)` | `final class GesSchema` with `name`, `kind`, `wireGroup`, `modelGroup`, `isAbstract`, `packedWidth`, `packedBits`, `takes`, `hash`, `canonicalForm`, `parameters`, `fields`, `computedFields`, `constants`, `tags`, `members`, `bind(parameters:)`, `checkDocument(_:parameters:)` |
+| description parts | `enum GesSchemaKind`, `GesSchemaTypeKind`, `GesSchemaDefaultKind`; `sealed class GesSchemaParameterInfo`, `GesSchemaConstantInfo` (a `let` with `Name`, `Kind`, `Unit`, `IsInteger` and `Value`), `GesSchemaFieldInfo` (with `Default`), `GesSchemaDefaultInfo` (a field's `default` with `Kind`, `Number`, `Boolean`, `Name` and `Entries`, the fields of a record literal), `GesSchemaDefaultEntryInfo` (with `Name` and `Value`), `GesSchemaTakeInfo` (a `with` with `Schema`, `IsAllOptional`, `Without` and `IsUnchanged`), `GesSchemaComputedFieldInfo` (a field written `computed by` with `Name`, `Kind`, `Unit`, `IsOptional` and `Expression`, the prefix form of the canonical form), `GesSchemaType` (with `TagSet`, the name of a declared tag set, `Label`, the label of a union alternative, and `Depth`, the depth of a recursive List or 0), `GesSchemaAxisInfo`; `readonly struct GesSchemaBound` with `ToDouble()` | `enum GesSchemaKind`, `GesSchemaTypeKind`, `GesSchemaDefaultKind`; `struct GesSchemaParameterInfo`, `GesSchemaConstantInfo` (with `name`, `kind`, `unit`, `isInteger` and `value`), `GesSchemaFieldInfo` (with `defaultValue`), `GesSchemaDefaultInfo` (with `kind`, `number`, `boolean`, `name` and `entries`), `GesSchemaDefaultEntryInfo` (with `name` and `value`), `GesSchemaTakeInfo` (with `schema`, `isAllOptional`, `without` and `isUnchanged`), `GesSchemaComputedFieldInfo` (with `name`, `kind`, `unit`, `isOptional` and `expression`), `GesSchemaType` (with `tagSet`, `label` and `depth`), `GesSchemaAxisInfo`, `GesSchemaBound` with `doubleValue` |
 | parameters | `sealed class GesSchemaParameters` with `With(name, literal)`, `With(name, long, unit)`, `With(name, double, unit)` | `final class GesSchemaParameters` with `with(_:literal:)`, `with(_:_:unit:)` |
 | bound schema | `sealed class GesBoundSchema` with `Schema`, `Name`, `MaxByteCount`, `Hash`, `BindingHash`, `HasKey`, `Field(path)`, `Member(name)`, `MemberIndex(name)` | `final class GesBoundSchema` with `schema`, `name`, `maxByteCount`, `hash`, `bindingHash`, `hasKey`, `field(_:)`, `member(_:)`, `memberIndex(_:)` |
 | field handle | `readonly struct GesSchemaField` with `Path` | `struct GesSchemaField` with `path` |
-| writer | `ref struct GesSchemaWriter(schema, Span<byte>)`: `SelectMember`, `SelectAlternative`, `WriteBoolean`, `WriteInteger`, `WriteNumber`, `WriteIndex`, `WriteTag`, `WriteText`, `BeginList`, `BeginNested`, `WriteAbsent`, `Finish` | `struct GesSchemaWriter(_:into:)` over an `UnsafeMutableRawBufferPointer`, with the same operations |
-| reader | `ref struct GesSchemaReader(schema, ReadOnlySpan<byte>, byteLimit)`: `ReadMember`, `ReadAlternative`, `ReadKey`, `ReadPresence`, `ReadBoolean`, `ReadInteger`, `ReadNumber`, `ReadIndex`, `ReadTag`, `ReadText`, `BeginList`, `BeginNested`, `Finish` | `struct GesSchemaReader(_:data:byteLimit:)` over an `UnsafeRawBufferPointer`, with the same operations |
+| writer | `ref struct GesSchemaWriter(schema, Span<byte>)`: `SelectMember`, `SelectAlternative`, `WriteBoolean`, `WriteInteger`, `WriteNumber`, `WriteIndex`, `WriteTag`, `WriteFlags`, `WriteText`, `WriteBytes`, `BeginList`, `BeginNested`, `WriteAbsent`, `Finish` | `struct GesSchemaWriter(_:into:)` over an `UnsafeMutableRawBufferPointer`, with the same operations |
+| reader | `ref struct GesSchemaReader(schema, ReadOnlySpan<byte>, byteLimit)`: `ReadMember`, `ReadAlternative`, `ReadKey`, `ReadPresence`, `ReadBoolean`, `ReadInteger`, `ReadNumber`, `ReadIndex`, `ReadTag`, `ReadFlags`, `ReadText`, `ReadBytes`, `BeginList`, `BeginNested`, `Finish` | `struct GesSchemaReader(_:data:byteLimit:)` over an `UnsafeRawBufferPointer`, with the same operations |
 | dump | `static GesSchemaDump.Read(schema, data)` returning `GesSchemaDumpResult` with `Text`, `IsValid` | `GesSchemaDump.read(_:data:)` returning `GesSchemaDumpResult` with `text`, `isValid` |
 | source and binding error | `GesSchemaException` with `Code`, `SourceName`, `Line`, `Column` | `GesSchemaError` with `code`, `sourceName`, `line`, `column`, `message` |
-| wire error | `GesWireException(code, path)` with `Code`, `Path` and a public constant per `wire.*` code | `GesWireError(code:path:)` with `code`, `path` and a static constant per code |
-| bit writer | `ref struct GesBitWriter(Span<byte>)`: `BitPosition`, `Write(value, width)`, `WriteBytes`, `SetBit`, `Rewind`, `Finish` | `struct GesBitWriter(into:)`: `bitPosition`, `write(_:width:)`, `writeBytes(_:)`, `setBit(_:)`, `rewind(to:)`, `finish()` |
-| bit reader | `ref struct GesBitReader(ReadOnlySpan<byte>, byteLimit)`: `BitPosition`, `Read(width, path)`, `ReadBytes`, `Require`, `Seek`, `Finish` | `struct GesBitReader(data:byteLimit:)`: `bitPosition`, `read(_:path:)`, `readBytes(into:path:)`, `require(_:path:)`, `seek(to:)`, `finish()` |
+| wire error | `GesWireException(code, path)` and `GesWireException(code, path, detail)` with `Code`, `Path`, `Detail` (informative, empty unless a code gives one, such as `deeper than depth 3` for `wire.tooDeep`) and a public constant per `wire.*` code | `GesWireError(code:path:)` and `GesWireError(code:path:detail:)` with `code`, `path`, `detail` and a static constant per code |
+| bit writer | `ref struct GesBitWriter(Span<byte>)`, `GesBitWriter.Counting()`: `BitPosition`, `RequiredByteCount`, `Write(value, width)`, `WriteBytes`, `SetBit`, `Rewind`, `Finish` | `struct GesBitWriter(into:)`, `GesBitWriter.counting()`: `bitPosition`, `requiredByteCount`, `write(_:width:)`, `writeBytes(_:)` over a raw buffer or a `[UInt8]`, `setBit(_:)`, `rewind(to:)`, `finish()` |
+| bit reader | `ref struct GesBitReader(ReadOnlySpan<byte>, byteLimit)`: `BitPosition`, `RemainingBits`, `Read(width, path)`, `ReadBytes`, `Require`, `Seek`, `Finish` | `struct GesBitReader(data:byteLimit:)`: `bitPosition`, `remainingBits`, `read(_:path:)`, `readBytes(into:path:)`, `readBytes(_:into:path:)` into a `[UInt8]` that keeps its capacity, `require(_:path:)`, `seek(to:)`, `finish()` |
 | wire rules | `static class GesWireRules`: `IsValidUtf8`, `IsTagName`, `QuantizedIndex`, `WrappedQuantizedIndex`, `QuantizedValue`, `WrappedIndex`, `WriteDeltaRange`, `ReadDeltaRange` | `enum GesWireRules`: `isValidUTF8(_:)`, `isTagName(_:)`, `quantizedIndex(_:lowerValue:upperValue:tenPower:numerator:lower:path:)`, `wrappedQuantizedIndex(_:tenPower:numerator:lower:period:path:)`, `quantizedValue(_:lower:numerator:tenPower:)`, `wrappedIndex(_:lower:period:)`, `writeDeltaRange(_:index:held:maxIndex:wrapping:deltaRange:deltaWidth:width:)`, `readDeltaRange(_:held:maxIndex:wrapping:deltaRange:deltaWidth:width:path:)` |
 | deltas | `static GesSchemaDelta.Encode(schema, record, baseline, buffer)`, `Decode(schema, delta, baseline, buffer, byteLimit)` returning `GesSchemaDeltaDecoded` with `ByteCount`, `DeltaByteCount` | `GesSchemaDelta.encode(_:record:baseline:into:)`, `decode(_:delta:baseline:into:byteLimit:)` returning `GesSchemaDeltaDecoded` with `byteCount`, `deltaByteCount` |
 | value path (Runtime) | `static GesSchemaValues.Encode`, `Decode` returning `GesSchemaDecoded`, `ReadKey`, each `Encode` and `Decode` also with a baseline value | `GesSchemaValues.encode`, `decode` returning `GesSchemaDecoded`, `readKey`, each `encode` and `decode` also with `baseline:` |
 | dump | `static GesSchemaDump.Read(schema, data)`, also with a baseline record | `GesSchemaDump.read(_:data:)`, also with `baseline:` |
+
+`GesSchemaDocument` reads a document as [generated models](Schemas.md#model-documents) do: its header must name one of the
+expected schemas, or the error is `document.schemaMismatch` at line 1, column 1, naming both; so is an expected name that
+names no concrete `schema` of the set, such as an abstract schema or a message; the document is then checked
+against that schema, whose error carries its `document.*` code, position and field path. `Value` is the Record of the
+document's entries, with a Box, Poly or Disc written as their corners, points or centre and radius turned into the geometry
+library's values.
+`Locate` places a `GesWireException` of converting it into a model at the deepest entry its path names, a List for an
+element, and keeps its code and path.
 
 `GesSyntaxLanguage` adds `Gess` (Swift `.gess`) for highlighting schema sources.
 
@@ -627,7 +765,12 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 | Concept | C# | Swift |
 | --- | --- | --- |
 | generator | `static class GesSchemaGenerator` with `Layout(set, roots, parameters)` and `Generate(set, roots, parameters, options)`, returning the text | `enum GesSchemaGenerator` with `layout(_:roots:parameters:)` and `generate(_:roots:parameters:options:)`, throwing and returning the text |
-| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:)` and the same properties |
+| roles | `WireRoots(set, group)`, `ModelRoots(set, group)` | `wireRoots(_:group:)`, `modelRoots(_:group:)` |
+| models | `ModelLayout(set, roots)`, `GenerateModels(set, roots, options)` | `modelLayout(_:roots:)`, `generateModels(_:roots:options:)` |
+| split files | `GenerateFiles(set, roots, parameters, options)`, `GenerateModelFiles(set, roots, options)`, returning `IReadOnlyList<GesGeneratedFile>` | `generateFiles(_:roots:parameters:options:)`, `generateModelFiles(_:roots:options:)`, returning `[GesGeneratedFile]` |
+| generated file | `sealed class GesGeneratedFile` with `Path`, `Text` | `struct GesGeneratedFile` with `path`, `text` |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Split`, `Models`, `ExtendNamespace` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:extendNamespace:)` and the same properties |
+| split | `enum GesSchemaSplit` with `None`, `Schema`, `File` | `enum GesSchemaSplit` with `none`, `schema`, `file` |
 | target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
 | access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
 | generation error | `GesGeneratorException` with `Code` | `GesGeneratorError` with `code`, `message` |
@@ -638,6 +781,23 @@ codes and types (`GesSchemaException`, `GesSchemaError`), so a root that names n
 `schema.unknownName`; a request that cannot be generated fails with a `generate.*` code. The options default to C#, no namespace, public access, no value conversion and
 unchecked exclusivity in Swift classes, as the CLI's defaults do. Equal inputs give identical text in every
 port.
+
+> **Since: Unreleased** — roles and models
+
+`WireRoots` and `ModelRoots` list the [roots of a group](Schemas.md#roles) in declaration order, empty when it has none.
+`ModelLayout` and `GenerateModels` write the [model layout](Schemas.md#model-layout) and the
+[model types](Schemas.md#model-types) of schema roots, where `Values` adds their plain values; a root that is no schema
+fails with `generate.usage`, and so do the wire-only options `CheckedExclusivity` and `Models`; `Generate` rejects the model-only options
+`Bindings` and `Documents` with `generate.usage`. A reached type without a model type fails with `generate.unsupported`.
+
+> **Since: Unreleased** — split files
+
+`GenerateFiles` and `GenerateModelFiles` return the [split output](Schemas.md#split-output) of `Generate` and
+`GenerateModels` as files, `Split` choosing one per declaration (`Schema`) or per schema source (`File`): each file's name
+relative to the output directory and its text, ordered by name, with the manifest `.ges-generated.json` last. They write
+nothing; the CLI owns the directory. `Split` stays `None` for `Generate` and `GenerateModels`, and the file methods need
+`Schema` or `File`; otherwise they fail with `generate.usage`. File names that differ only in ASCII case fail with
+`generate.nameCollision`.
 
 ## Host construction and lifecycle API
 
@@ -656,7 +816,7 @@ reentrancy requirements of those callbacks.
 | `WithRandomSeed(seed)` | Selects the complete signed-64 deterministic seed and clears a prior entropy or sequence configuration. |
 | `WithRandomEntropy(entropy)` | Folds a non-empty entropy byte span into the deterministic seed with the portable mixing function and clears a prior direct seed or sequence configuration. |
 | `WithRandomSequence(values, fallbackSeed?)` | Copies a finite Binary64 start sequence, optionally selects a deterministic fallback seed, and clears a prior direct seed. Exhaustion continues with the private fallback generator. |
-| `WithRegistry(registry)` | Selects the extension registry. Absence is represented by an empty registry, not null. |
+| `WithExtensionRegistry(registry)` | Selects the extension registry. Absence is represented by an empty registry, not null. |
 | `WithExternalTypeRegistry(registry)` | Selects the runtime external-constructor registry. |
 | `WithPublishSink(sink)` | Selects the single outbound sink. Not calling it means no sink. |
 | `WithProfiler(profiler)` | Selects optional synchronous opcode instrumentation; omission disables it. See [opcode instrumentation](#opcode-instrumentation). |
@@ -667,15 +827,16 @@ reentrancy requirements of those callbacks.
 ### RuntimeLimits
 
 `RuntimeLimits` is a configuration snapshot with the following signed integer
-settings: processed events per RunToCompletion call, queued logical
+settings: processed events per ordinary pump call (Start completes its whole
+initial group regardless), queued logical
 messages, execution steps per handler, register values, loop iterations, call
-depth, random scope depth, range items, generated collection items, dice count,
-and dice sides. The exact defaults are part of the public versioned API.
+depth, random scope depth, range items, generated collection items, value
+nesting depth, dice count, and dice sides. The exact defaults are part of the public versioned API.
 
 | Setting | Default |
 | --- | ---: |
-| `MaxProcessedEventsPerRun` | 64 |
-| `MaxQueuedMessagesPerRun` | 0 (unlimited) |
+| `MaxProcessedMessagesPerRun` | 64 |
+| `MaxQueuedMessages` | 0 (unlimited) |
 | `MaxExecutionSteps` | 100,000 |
 | `MaxRegisterValues` | 512 |
 | `MaxLoopIterations` | 100,000 |
@@ -683,11 +844,12 @@ and dice sides. The exact defaults are part of the public versioned API.
 | `MaxRandomScopeDepth` | 16 |
 | `MaxRangeItems` | 10,000 |
 | `MaxGeneratedCollectionItems` | 10,000 |
+| `MaxValueDepth` | 64 |
 | `MaxDiceCount` | 1,000 |
 | `MaxDiceSides` | 1,000,000 |
 
 A nonpositive value disables the processed-event, queue, execution-step, loop,
-range, generated-item, dice-count, or dice-side limit. A nonpositive register
+range, generated-item, value-depth, dice-count, or dice-side limit. A nonpositive register
 limit selects the portable default capacity of 512. Call depth is clamped to the
 encoded `u16` range for linking; zero permits only root handlers. Random scope
 depth alone must be in `0...65535` and is validated at Build. Host.Load checks
@@ -707,8 +869,8 @@ rules are in [Host runtime](HostRuntime.md).
 | `Load(program, priority = 0)` | Validates, links and atomically registers one instance with an initialization snapshot when present. During initial loading it joins the Start group; on a ready host it joins the ordinary FIFO. |
 | `Start()` | Synchronously initializes the initial group without processing ordinary messages and returns StartResult. Repeated calls return the original result. |
 | `IsReady` | True after successful initial Start; later instance failures and queued messages do not reset it. |
-| `Subscribe(signature, handler, requiredTags?, excludedTags?, priority = 0)` | Adds one exact-signature native subscription and returns a Subscription. Inputs are copied/retained as immutable registration data. |
-| `SubscribeMessageName(name, handler, requiredTags?, excludedTags?, priority = 0)` | Adds a native subscription matching every signature of that normalized message name. |
+| `Subscribe(signature, handler, matchingTags?, withoutTags?, priority = 0)` | Adds one exact-signature native subscription and returns a Subscription. Inputs are copied/retained as immutable registration data. |
+| `SubscribeMessageName(name, handler, matchingTags?, withoutTags?, priority = 0)` | Adds a native subscription matching every signature of that normalized message name. |
 | `Receive(message)` | Captures current matching subscriptions and attempts to enqueue the logical message locally. Returns whether accepted. Before Start succeeds it returns false. It never pumps and never publishes outbound. |
 | `ExecuteFrame(opcodeBudget)` | Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a runtime limit/error ends the call. Budget must be positive and the host must be ready. |
 | `RunToCompletion()` | Synchronously pumps until idle, only future messages remain, or a runtime limit/error terminates this pump call. The host must be ready. It creates no worker thread. |
@@ -829,8 +991,7 @@ above.
 > **Since: Unreleased**
 
 `WithProfiler` / `withProfiler` selects an optional synchronous
-`IGesProfiler` / `GesProfiler` factory. Swift also accepts
-`profiler` in its Host initializer. The Host calls
+`IGesProfiler` / `GesProfiler` factory. The Host calls
 `CreateProgramProfiler(program)` / `createProgramProfiler(program)` once per linked
 load instance, before execution. The result implements
 `IGesProgramProfiler` / `GesProgramProfiler` and remains
@@ -955,6 +1116,12 @@ Exactly one result may be selected through `SetNothing`, `SetValue`,
 the last setter call is the effective result. Omitting a result produces Nothing.
 
 The callback must not retain the call, arguments, Context, or borrowed values.
+An argument view borrowed from the VM's registers ends with its call: reading a
+retained view afterwards fails instead of returning another handler's register
+contents (C# throws `InvalidOperationException`; Swift reports `count` 0 and
+`nothing` for every index). The extension result is written to its destination
+register once the callback returns, so a destination that is also an argument
+keeps the argument's value while the callback reads it.
 Setters are invalid outside an active invocation. Implementations should reuse
 the adapter and must not allocate it per hot-path invocation after warmup.
 Invoke may throw `ExtensionFaultException` or an unanticipated exception; see
@@ -972,10 +1139,12 @@ unit, or custom type name. `ExternalTypeConstructorDefinition` contains type nam
 ordered unique parameters, and derived SignatureId.
 
 A Vector or Point declaration without a unit constraint preserves the supplied
-spatial value's unit. An explicit non-none unit overrides that unit without
-rescaling components. This applies equally to constructor arguments, direct
-field reads, and fields materialized by conversion to Map. A missing spatial
-unit constraint must never silently strip an existing unit.
+spatial value's unit, and a Number declaration (`Float` without a unit, or with
+the unit none) preserves a Quantity's unit while it makes the value binary64. An
+explicit non-none unit overrides that unit without rescaling components. This
+applies equally to constructor arguments, direct field reads, and fields
+materialized by conversion to Map. A missing unit constraint must never silently
+strip an existing unit.
 
 Constructor arguments and field values follow their declared builtin type before
 a constructor or script sees them. This applies equally to direct field reads
@@ -1156,9 +1325,9 @@ immutable arrays. Their `Iterator` yields `GesMessageArgument` pairs
 without creating an intermediate pair array. Returned arrays retain Swift
 copy-on-write semantics; caller mutations cannot change a message.
 
-The Swift mapping separates the `GameEventScriptRuntime`,
-`GameEventScriptCompiler`, and `GameEventScriptConformance` SwiftPM packages.
-Compiler depends only on Runtime; Conformance depends on both. Runtime has no
+The Swift mapping separates the `GameEventScriptSyntax`, `GameEventScriptRuntime`,
+`GameEventScriptCompiler`, `GameEventScriptGenerator` and `GameEventScriptConformance` SwiftPM packages, with the
+dependencies of the diagram above; Conformance depends on Runtime and Compiler. Runtime has no
 dependency on Compiler, a test framework, or Conformance.
 
 `GesProgramBuilder.addScript(_:sourceName:)` accepts source text and assigns
@@ -1182,6 +1351,17 @@ sink and registries. Every `build()` creates an independent Host; the Host
 initializer is internal. `GesProgramBuilder()` or
 `GameEventScriptProgram.makeBuilder()` creates a compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
 and `runToCompletion` retain the host contracts above. The mutable VM is host-private.
+
+`GesValue` and `GameEventScriptMessage` are deliberately not `Sendable`. A value
+may hold an External value, which is a live object of one host whose getters
+read mutable embedding state on every access (see the External types section).
+Declaring them `Sendable` would
+promise a thread safety that the embedding's objects cannot give. To forward a
+published Message to a host in another isolation domain, send its
+`json()` snapshot and rebuild it there with `GameEventScriptMessage(json:)`:
+the snapshot turns External values into Record snapshots and is plain text.
+The C# port has no compile-time equivalent; the same rule applies to its
+objects.
 
 `GameEventScriptProgram` is a `final`, `Sendable` reference type. Passing it to
 multiple hosts shares one immutable instance rather than copying the Program
@@ -1241,6 +1421,8 @@ value for each normalized label. Ordered tuple inputs support positional labels.
 `GesBridgeValueConvertible` defines explicit native conversion.
 Built-in conformances cover Boolean, Text, signed and unsigned fixed-width Swift
 integers, Float/Double, Optional, Array, String-keyed Dictionary and GesValue.
+`[UInt8]` converts to and from Bytes rather than a List, as C# `byte[]` does in
+extension parameters, results and external fields.
 Native decoding checks kind and units, rejects fractional or out-of-range integer
 conversion and floating-point precision loss. These conversions do not invoke
 source-language casts. Native integer encoding and decoding are bounded by both
@@ -1295,6 +1477,66 @@ portable descriptor name/signature validation still occurs when the throwing
 factory executes. Manual descriptors remain available for foreign/generic types
 and throwing getters. Macro expansion adds no GES syntax or portable behavior.
 
+The C# `GesBridgeExternalTypeRegistry.Create(types)` reads `[GesType]`, `[GesField]`, `[GesConstruct]` and `[GesParam]`
+through Reflection and decides each member's conversion from its CLR type at registration, as the Swift macros and type
+checker do at compile time. A field may hold `GesValue`, `bool`, `string`, `byte[]`, `double`, `float`, `long`, `int`,
+`short`, `byte`, `GesPoint`, `GesVector`, `GesBox`, `GesPoly`, `GesDisc` (with the declared unit), a Message, a Handler signature, a
+nullable form of a value type, or a class with `[GesType]`; a constructor parameter the same types except Message and
+Handler signature. Any other type, such as `decimal` or an enum, and an external class that the same registry does not
+register fail `Create` with `ArgumentException`. A constructor argument converts strictly as for
+extensions below; one that does not, such as `2.7` for an `int` or a value outside its range, is a fault of the call
+(`runtime.externalConstructorFailed`), as a throwing Swift conversion is. The runtime has already constructed nothing
+for a `nothing` argument without calling the constructor. A factory may return an instance of a derived class, which
+takes the binding of its nearest registered base class.
+
+> **Since: Unreleased** — extensions declared with macros and attributes
+
+`@GesExtension(namespace)` on an enum, struct or final class generates `gesExtensions()`, the `GesBridgeExtension` list of
+its methods marked `@GesFunction(name, unit:, units:)` or `@GesPredicate(name, units:)`, for a `GesBridgeExtensionRegistry`.
+The C# Bridge reads the same declarations from `[GesExtension]`, `[GesFunction]`, `[GesPredicate]` and `[GesParam]` through
+Reflection, and both follow one set of rules:
+
+- **Signature.** The namespace comes from the type's annotation and the name from the function's, by default the Swift
+  method name. Swift takes the argument labels from the Swift labels, `_` for an unlabeled argument; C# from each
+  `[GesParam(name, ...)]`. A predicate has one parameter, a `Bool`/`bool` or optional Boolean result, and is registered with
+  one unlabeled argument, as `value is :namespace.name` calls it. The generated or reflected signatures and the code cannot
+  drift apart.
+- **Conversion.** An argument converts strictly to the parameter's type, in both bridges alike: an integer only from an
+  Integer or an integral Float in its range, a binary64 only from a Float or an Integer it represents exactly, a Boolean
+  only from a Boolean, and Nothing only to an Optional (C# nullable value type), which receives nil or null; neither a
+  Boolean nor a Percentage converts to a number. The types are numbers, Booleans, Text, `GesPoint`, `GesVector`,
+  `GesBox`, `GesPoly` and `GesDisc`, Optionals (C# nullable value types), and in Swift every `GesBridgeValueConvertible`; a `GesValue`
+  parameter receives the raw argument. A declared parameter unit (Swift `units: ["distance": .meter]`, since Swift has no
+  attributes on parameters; C# `[GesParam(name, kind, unit)]`) must match exactly and is removed; without one the argument
+  must be unitless. The result converts back; a declared result unit (`unit:`, C# `[GesFunction(name, kind, unit)]` or
+  `[GesFunction(name, unit)]`) is attached to a numeric, spatial or shape result, and an absent Optional or null result is
+  `nothing`.
+- **Random generator.** A function may take the host's random generator: a parameter of type `GesRandomGenerator`
+  receives the call's generator (Swift `call.random`, C# `GesExtensionCall.Random`) instead of an argument. It is no script
+  argument: it has no label, does not count toward the signature's labels or arity, takes no unit (Swift `units:`) and no
+  `[GesParam]`, and does not count toward the C# limit of four script parameters. A function has at most one, in any
+  position; a second one is a macro diagnostic (Swift) or fails registration (C#). A predicate takes none. Draws advance the
+  host's stream and follow its random scopes, so seeded runs stay deterministic. `@GesFunction func spawnSpots(count: Int,
+  margin: Double, spacing: Double, random: GesRandomGenerator) -> GesValue?` registers
+  `:arena.spawnSpots(count:margin:spacing:)` with three script parameters. The Swift macro recognizes the parameter by its
+  written type, `GesRandomGenerator` or `GameEventScriptRuntime.GesRandomGenerator`, not through a type alias. A C#
+  method may still take a leading `GesExtensionCall` for the whole call context.
+- **Failures.** An argument that does not convert, or another argument count, gives `nothing`, as GES operations do for a
+  domain failure; an error the method throws stays an extension fault (`runtime.extensionCallFailed`, or the declared fault).
+- **Instances.** Instance methods need an instance: Swift generates an instance `gesExtensions()` that also lists the static
+  ones, and C# registers them with `GesBridgeExtensionRegistryBuilder.AddInstance(instance)`. The registry retains the
+  instance (Swift copies a struct and references a class) and calls the methods on it, so a host can expose game state.
+- **Purity.** GES has no purity contract for host calls, so these functions are effectful like every extension; no
+  annotation claims otherwise.
+
+The macros need approval in Xcode like the type macros; command-line builds pass `-skipMacroValidation`. Hosts that write
+closures keep working unchanged. C# registration uses Reflection, so IL2CPP code stripping must preserve the annotated
+types (a `link.xml` entry or `[Preserve]`). It also builds its typed adapters with `MakeGenericType` over value types,
+which needs generic sharing for value types at run time: IL2CPP with full generic sharing (Unity 2022 and later) or a
+JIT; NativeAOT and older IL2CPP versions are not supported. A C# attributed function takes at most four script
+parameters; a longer one fails at registration, while Swift has no such limit. A
+[source generator](../BACKLOG.md#language) would remove both limits.
+
 `GesBridgeHostRunner` is an optional synchronized embedding adapter.
 It takes exclusive ownership through Swift 6 sending parameters and serializes
 Host access and lifecycle operations with one recursive lock. Transferred Host,
@@ -1308,9 +1550,12 @@ ownership transfer. Recursive receives only enqueue; recursive pumping fails.
 Automatic pumps continue scheduling while ready queued work remains.
 `lastResult` is a synchronized snapshot of the most recent completed pump.
 `isReady` reports the startup barrier; a registration's `startResult` reports its
-instance initialization. C# exposes the same outcome through runner.GetStartResult(instance).
-Runner-owned handles use stable registration IDs, retain their runner and detach
-idempotently under its lock. Closing rejects further work, detaches owned
+instance initialization. Both runners return a runner-owned `GesBridgeHostRunnerRegistration` from loading and
+subscribing (C# `RegistrationId`, `IsAttached`, `StartResult`, `Detach()`), never the host's own handles, whose
+methods would bypass the lock; both subscribe by exact signature with optional tag filters, and C# also by name and
+labels. Runner-owned handles use stable registration IDs, retain their runner and detach
+idempotently under its lock. A pending delayed wake-up also retains its runner, so delayed work is delivered after
+the last outside reference is gone, as immediate work is. Closing rejects further work, detaches owned
 registrations and releases the Host; an already executing pump may finish.
 Blocking on another caller while inside a callback is outside this contract.
 
@@ -1399,8 +1644,8 @@ input representation, not a promise of unnormalized internal storage.
 
 > **Since: 0.3.0**
 
-C# Host and CSharpHostRunner expose `long? IdleDurationMicroseconds`; Swift Host
-and SwiftHostRunner expose `Int64? idleDurationMicroseconds`. These are read-only
+The C# Host and `GesBridgeHostRunner` expose `long? IdleDurationMicroseconds`; the Swift Host
+and `GesBridgeHostRunner` expose `Int64? idleDurationMicroseconds`. These are read-only
 observations using the configured monotonic clock. Their lifecycle, reset and
 absence rules are owned by [Host Runtime](HostRuntime.md#idle-duration-observation).
 Runner reads are serialized through the ownership gate; a disposed/closed runner
@@ -1415,6 +1660,5 @@ The public bytecode opcode enumeration assigns `Cartesian` the stable value
 Iterator modes and component output reuse existing instruction words and the
 UInt16 list pool; no mutable iterator is added to the portable Program API.
 
-The numeric instruction flag (bit `0x40` of `UnitAndFlags`) applies to Move, Add, Subtract,
-Multiply, Divide, Power, IntegerDivide, Modulo, Remainder, Min, Max, Negate, Abs and Clamp only. The same bit retains WithTags semantics on result-bearing sends;
-interpret flags by opcode.
+The meaning of instruction flag bits, such as the numeric flag of `UnitAndFlags`, depends on the opcode and is owned by
+[Bytecode](Bytecode.md); interpret flags by opcode.

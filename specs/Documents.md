@@ -70,7 +70,7 @@ key        = LowerName | quoted Text
   of the text is a key-only entry with the value `true`, as in Map literals.
 - Every value is one complete data literal as recognized by `parse`:
   `nothing`, Booleans, Numbers, Percentages, Quantities including prefixed unit
-  spellings, quoted Text, Tags, Lists, Maps, Dice, Vector, Point and the
+  spellings, quoted Text, Tags, Lists, Maps, Dice, Bytes, Vector, Point and the
   [explicit data forms](Semantics/Text.md#explicit-data-forms). Explicit forms
   construct their values with the same rules as `parse`, except that a failed
   construction is an error rather than `nothing` (see [Strictness](#strictness)).
@@ -195,7 +195,9 @@ when it starts with an optional sign and a decimal digit, or a sign or `.`
 followed by a decimal digit, and its longest numeric prefix
 `[+-]? (Digits ["." [Digits]] | "." Digits) [("e" | "E") [+-]? Digits]`, where
 `Digits` is a decimal digit followed by digits or `_`, is followed by an ASCII
-letter, `°` or `/`. An explicit form whose arguments are themselves valid but do
+letter, `°` or `/`. A token that starts with an optional sign and `0x` is never
+a number with a unit; an invalid one such as `0x10m` or `0x` is
+`document.invalidLiteral`. An explicit form whose arguments are themselves valid but do
 not form a valid constructor call, such as a Vector with mixed units, reports
 `document.invalidLiteral` at the `:` of the form; an invalid nested argument
 reports its own error first.

@@ -6,6 +6,8 @@
 enum GesCallbacks {
     static func convert(_ value: GesValue, to name: String, _ c: GesContext) throws -> GesValue {
         if name == "numeric" { return GesCasts.number(value) }
+        // A number keeps its unit for a declaration without one; the declared type then makes it binary64.
+        if name == "Number", value.kind == .integer || value.kind == .float { return value }
         let kind: GesBytecodeTypeKind
         switch name {
         case "Nothing": kind = .nothing
@@ -22,6 +24,7 @@ enum GesCallbacks {
         case "List": kind = .list
         case "Map": kind = .map
         case "Dice": kind = .dice
+        case "Bytes": kind = .bytes
         default:
             // Unit names are checked only after the built-in type names. `Quantity(...)` takes any quantity type name;
             // a bare name is a portable unit type name such as `meter`.

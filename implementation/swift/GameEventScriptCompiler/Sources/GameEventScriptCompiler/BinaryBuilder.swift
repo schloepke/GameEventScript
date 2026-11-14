@@ -14,6 +14,8 @@ final class GesBinaryBuilder {
     var stringIDs: [[UInt32]: Int] = [:], listIDs: [[UInt16]: Int] = [:]
     var numericLimitExceeded = false
     var imports: [String: Int] = [:], recordIDs: [String: Int] = [:]
+    // The next ID of each binding kind among the imports, counted as C# does instead of filtered per binding.
+    var importIDs: [GesBinaryBindKind: Int] = [:]
     var routines: [GesRoutine] = []
     // Operand slot layouts per opcode shape, shared by every routine of this compilation.
     var operandLayouts: [Int: OperandSlots] = [:]
@@ -71,7 +73,8 @@ final class GesBinaryBuilder {
             numericLimitExceeded = true
             return 0
         }
-        let id = bindings.filter { $0.kind == kind }.count
+        let id = importIDs[kind, default: 0]
+        importIDs[kind] = id + 1
         bindings.append(.init(kind: kind, name: UInt16(truncatingIfNeeded: text(name)), argumentNames: labels.map { UInt16(truncatingIfNeeded: text($0)) }, id: UInt16(truncatingIfNeeded: id)))
         imports[key] = id
         return id
@@ -188,6 +191,8 @@ final class GesBinaryBuilder {
         var maxRegs = 0
         var maxDepth = 0
         var executable: [GesBindingSegment.Entry] = []
+        // The next ID of each executable binding kind, counted as C# does instead of filtered per routine.
+        var executableIDs: [GesBinaryBindKind: Int] = [:]
         for r in routines {
             let d = r.definition
             let offset = code.count
@@ -229,7 +234,7 @@ final class GesBinaryBuilder {
             } else if d.kind == "record" {
                 id = recordIDs[d.name]!
             } else {
-                id = executable.filter { $0.kind == kind }.count
+                id = executableIDs[kind, default: 0]
             }
             let (registers, depth) = try requirements(r.key)
             if registers > 65535 || depth > 65535 { throw compileError("compile.numericLimitExceeded", d.location, phase: .compile) }
@@ -237,11 +242,12 @@ final class GesBinaryBuilder {
                 maxRegs = max(maxRegs, registers)
                 maxDepth = max(maxDepth, depth)
             }
+            executableIDs[kind, default: 0] += 1
             executable.append(
                 .init(
                     kind: kind,
                     name: UInt16(text(d.name)),
-                    argumentNames: d.parameters.map { UInt16(text(d.argumentName($0))) },
+                    argumentNames: d.parameters.map { UInt16(text(d.bindingLabel($0))) },
                     entryAddress: UInt16(offset),
                     id: UInt16(id),
                     requiredTags: d.required.map { UInt16(text($0)) },

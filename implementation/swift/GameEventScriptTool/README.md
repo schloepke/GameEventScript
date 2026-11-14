@@ -33,7 +33,7 @@ ges --version
 ges --help
 ```
 
-The installer builds all Swift packages in Release and installs a standalone
+The installer builds the CLI package and its dependencies in Release and installs a standalone
 executable in `$HOME/.local/bin`. Add that directory to `PATH`. Run the same
 script after changing or pulling sources to update it. It does not run tests.
 An installation can be relocated without any resource bundle or repository;
@@ -170,7 +170,7 @@ suites. Portable language behavior continues to use that shared corpus.
 Optional direct C#/Swift CLI interoperability verification:
 
 ```sh
-python3 scripts/test-swift-tool.py artifacts/swift/tool/release/ges \
+python3 scripts/test-swift-tool.py artifacts/swift/tool/debug/ges \
   --reference artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll
 ```
 
@@ -232,6 +232,9 @@ unsaved editor drafts; clean file-backed programs are reread from disk. Save ref
 file changes and existing scratch destinations. Unload refuses unsaved drafts.
 EOF with unsaved drafts reports a failure for redirected input; terminal EOF
 keeps the prompt open. Use :quit! to discard explicitly.
+EOF waits for scheduled delayed messages before it exits; :quit discards them.
+:save writes UTF-8 without a BOM through a symbolic link to its target and keeps the
+file permissions.
 
 Editor selection uses GES_EDITOR, then VISUAL, then EDITOR (blank values are skipped).
 Without configuration, the default is nano on macOS/Linux and notepad.exe on Windows.
@@ -290,3 +293,12 @@ profiles on the same machine and use unprofiled benchmarks for overall speed.
 A wall-clock-sensitive script may observe different delayed-message readiness
 under instrumentation. Counts after an opcode fault can differ from the Host's
 completed-opcode counter. The report measures neither allocations nor CPU time.
+
+## In-process benchmark
+
+> **Since: Unreleased**
+
+`ges bench workload.gesb` measures the steady state of a compiled program inside one process, with the same flags,
+statistics, text and JSON output as `dotnet ges bench`. The [C# CLI README](../../csharp/GameEventScript.Tool/README.md#in-process-benchmark)
+holds the contract for both. Swift reports the .NET memory counters and tiering settings as absent and accepts
+`--gc-between` without effect.

@@ -156,6 +156,13 @@ internal enum GesTokenKind
 // token stays small: the unit of a UnitNumber follows from its spelling.
 internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, int FullStart = 0, int Start = 0, int End = 0)
 {
+    // A name written in backticks: its spelling is its value between two backticks. Only the `°` spelling of `degree` is
+    // another identifier whose spelling differs from its value, and it is shorter.
+    public bool IsQuotedName => Kind == GesTokenKind.Identifier && End - Start == Text.Length + 2;
+
+    // A contextual word such as `from` or `where`: a plain identifier with this value. A name in backticks is never one.
+    public bool IsWord(string word) => Kind == GesTokenKind.Identifier && string.Equals(Text, word, StringComparison.Ordinal) && !IsQuotedName;
+
     public override string ToString() => $"{Kind}('{Text}', {Line}:{Column}-{EndLine}:{EndColumn})";
 }
 
@@ -202,6 +209,14 @@ internal sealed class GesLexer
 
             switch (Current)
             {
+                // Inside parentheses and brackets a line break separates nothing and is leading trivia.
+                case '\r' or '\n' when InGroup:
+                {
+                    var carriageReturn = Current == '\r';
+                    Advance();
+                    if (carriageReturn && !IsAtEnd && Current == '\n') Advance();
+                    continue;
+                }
                 case '\r':
                 {
                     var newlineLine = _line;
@@ -236,6 +251,7 @@ internal sealed class GesLexer
                 case ':' when GesText.IsAsciiLower(Peek()): return ReadSelectorToken(startLine, startColumn);
                 case '#' when GesText.IsAsciiLower(Peek()): return ReadTagToken(startLine, startColumn);
                 case '$' when GesText.IsAsciiLower(Peek()): return ReadConstantReferenceToken(startLine, startColumn);
+                case '`': return ReadQuotedNameToken(startLine, startColumn);
                 default: return ReadOperatorToken(startLine, startColumn);
             }
         }
@@ -300,8 +316,43 @@ internal sealed class GesLexer
     private GesToken CreateToken(GesTokenKind kind, string text, int startLine, int startColumn) => Finish(new(kind, text, startLine, startColumn, _line, _column));
 
     // Attaches the source offsets; the next token's leading trivia starts where this token ends.
+    // Open groups: `(` and `[` make line breaks trivia, `{` makes them statement separators again
+    // (specs/Language.md#lexical-rules). A closer also ends the unclosed groups inside it, but never one outside the
+    // innermost open block, so an unclosed `(` cannot swallow the line breaks after its block.
+    private readonly List<char> _groups = [];
+
+    private bool InGroup => _groups.Count > 0 && _groups[^1] != '{';
+
+    private void Track(GesTokenKind kind)
+    {
+        switch (kind)
+        {
+            case GesTokenKind.LeftParen: _groups.Add('('); break;
+            case GesTokenKind.LeftBracket: _groups.Add('['); break;
+            case GesTokenKind.LeftBrace: _groups.Add('{'); break;
+            case GesTokenKind.RightParen: Close('('); break;
+            case GesTokenKind.RightBracket: Close('['); break;
+            case GesTokenKind.RightBrace: Close('{'); break;
+        }
+    }
+
+    private void Close(char opener)
+    {
+        for (var index = _groups.Count - 1; index >= 0; index--)
+        {
+            if (_groups[index] == opener)
+            {
+                _groups.RemoveRange(index, _groups.Count - index);
+                return;
+            }
+
+            if (_groups[index] == '{') return;
+        }
+    }
+
     private GesToken Finish(GesToken token)
     {
+        Track(token.Kind);
         _tokenEnd = _index;
         return token with { FullStart = _fullStart, Start = _start, End = _index };
     }
@@ -423,6 +474,41 @@ internal sealed class GesLexer
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
 
+    // A name in backticks, such as `length` in backticks, is an identifier whose value is the inner name: a lower name,
+    // which may be any keyword word, optionally with a binding's derivation suffix (specs/Language.md#lexical-rules).
+    // Other content up to the closing backtick on the same line is one illegal token; an unclosed backtick alone is one.
+    private GesToken ReadQuotedNameToken(int line, int column)
+    {
+        var start = _index;
+        var close = start + 1;
+        while (close < _length && _input[close] is not ('`' or '\r' or '\n')) close++;
+        if (close >= _length || _input[close] != '`')
+        {
+            Advance();
+            return CreateToken(GesTokenKind.Illegal, "`", line, column);
+        }
+
+        while (_index <= close) Advance();
+        var name = _input.Substring(start + 1, close - start - 1);
+        return IsQuotableName(name)
+            ? CreateToken(GesTokenKind.Identifier, name, line, column)
+            : CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+    }
+
+    // A lowercase ASCII letter, then ASCII letters or digits, then optionally `_0` or `_` with digits without a leading zero.
+    private static bool IsQuotableName(string name)
+    {
+        if (name.Length == 0 || !GesText.IsAsciiLower(name[0])) return false;
+        var index = 1;
+        while (index < name.Length && (GesText.IsAsciiLetter(name[index]) || GesText.IsAsciiDigit(name[index]))) index++;
+        if (index == name.Length) return true;
+        if (name[index++] != '_' || index == name.Length) return false;
+        if (name[index] == '0') return index + 1 == name.Length;
+        for (; index < name.Length; index++)
+            if (!GesText.IsAsciiDigit(name[index])) return false;
+        return true;
+    }
+
     private bool ReadValidIdentifierSuffix()
     {
         if (IsAtEnd || !GesText.IsAsciiDigit(Current)) return false;
@@ -518,6 +604,7 @@ internal sealed class GesLexer
     private GesToken ReadNumberLikeToken(int line, int column)
     {
         var start = _index;
+        if (Current == '0' && Peek() == 'x') return ReadHexadecimalToken(start, line, column);
         ReadNumberDigits();
         if (!IsAtEnd && Current == '.' && GesText.IsAsciiDigit(Peek()))
         {
@@ -560,6 +647,19 @@ internal sealed class GesLexer
         if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateToken(GesTokenKind.Float, text, line, column);
         while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
+        return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+    }
+
+    // A hexadecimal integer such as `0xff_88_00` is a number token without unit or percentage; missing digits, other
+    // attached characters and values above Int64.MaxValue make the whole word illegal.
+    private GesToken ReadHexadecimalToken(int start, int line, int column)
+    {
+        Advance();
+        Advance();
+        while (!IsAtEnd && (GesNumberLiteral.HexDigit(Current) >= 0 || Current == '_' && GesNumberLiteral.HexDigit(Peek()) >= 0)) Advance();
+        if ((IsAtEnd || GesText.IsTokenWhitespace(Current) || IsStructuralBoundary(Current)) && GesNumberLiteral.Read(_input, start, _index - start).IsValid)
+            return CreateToken(GesTokenKind.Float, _input[start.._index], line, column);
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
 

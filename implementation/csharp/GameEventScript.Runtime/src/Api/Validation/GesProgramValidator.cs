@@ -92,6 +92,7 @@ internal static class GesProgramValidator
         var predicateSignatures = new HashSet<string>(StringComparer.Ordinal);
         var functionNames = new HashSet<string>(StringComparer.Ordinal);
         var predicateNames = new HashSet<string>(StringComparer.Ordinal);
+        var recordNames = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < program.Bindings.Entries.Count; index++)
         {
             var bind = program.Bindings.Entries[index];
@@ -113,6 +114,9 @@ internal static class GesProgramValidator
                     Throw(GesProgramFormatErrorCode.InvalidProgram, $"Callable signature '{signature}' is duplicated.", (ushort)GesSectionType.Bindings, index);
                 names.Add(name);
             }
+            // Casts and `parse` find a Record constructor by its name, so each name has exactly one indexed binding.
+            if (bind.Kind == Record && (bind.Id == ushort.MaxValue || !recordNames.Add(program.StringConstants.Resolve(bind.Name))))
+                Throw(GesProgramFormatErrorCode.InvalidProgram, "Record binding names must be unique and carry an ID.", (ushort)GesSectionType.Bindings, index);
             var bindingId = bind.Kind is MessageHandler or MessageNameHandler
                 ? (1UL << 63) | ((ulong)(byte)bind.Kind << 32) | ((ulong)bind.Name << 16) | bind.Id
                 : ((ulong)(byte)bind.Kind << 16) | bind.Id;
@@ -161,16 +165,19 @@ internal static class GesProgramValidator
     private static void ValidateCode(GameEventScriptProgram program, HashSet<ulong> indexedBindingIds)
     {
         if (program.Code.Count > ushort.MaxValue) Throw(GesProgramFormatErrorCode.TooManyEntries, "CodeSegment exceeds 65535 instructions.");
+        var lists = new Dictionary<int, HashSet<ushort>?>();
+        // A tag or type name shared by many instructions is checked once, so that a long name cannot make validation quadratic.
+        var checkedNames = new HashSet<int>();
         for (var index = 0; index < program.Code.Count; index++)
         {
             var instruction = program.Code[index];
             if (!GesProgramEnumValidation.IsDefined(instruction.OpCode))
                 Throw(GesProgramFormatErrorCode.InvalidOpcode, $"Unknown opcode 0x{(byte)instruction.OpCode:X2}.", (ushort)GesSectionType.Code, index);
-            ValidateInstructionOperands(program, indexedBindingIds, instruction, index);
+            ValidateInstructionOperands(program, indexedBindingIds, instruction, index, lists, checkedNames);
         }
     }
 
-    private static void ValidateInstructionOperands(GameEventScriptProgram program, HashSet<ulong> indexedBindingIds, GesBytecodeInstruction instruction, int instructionIndex)
+    private static void ValidateInstructionOperands(GameEventScriptProgram program, HashSet<ulong> indexedBindingIds, GesBytecodeInstruction instruction, int instructionIndex, Dictionary<int, HashSet<ushort>?> lists, HashSet<int> checkedNames)
     {
         var encodedUnit = instruction.UnitAndFlags & 0x1F;
         var encodedFlags = instruction.UnitAndFlags & 0xE0;
@@ -238,16 +245,19 @@ internal static class GesProgramValidator
             {
                 var stringIndex = operand == GesOpcodePrinter.OperandPart.CustomTypeName ? instruction.SecondaryStringIndex : instruction.StringIndex;
                 if (stringIndex >= program.StringConstants.Slices.Count) Throw(GesProgramFormatErrorCode.InvalidStringIndex, "Instruction references a missing string.", (ushort)GesSectionType.Code, instructionIndex);
+                var checkedName = stringIndex << 1 | (operand == GesOpcodePrinter.OperandPart.Tag ? 0 : 1);
+                if (operand is GesOpcodePrinter.OperandPart.Tag or GesOpcodePrinter.OperandPart.CustomTypeName && checkedNames.Contains(checkedName)) continue;
                 if (operand == GesOpcodePrinter.OperandPart.Tag && !IsPortablePlainName(program.StringConstants, stringIndex)) InvalidOperand("Tag constants must use the portable lowercase ASCII name grammar.", instructionIndex);
                 if (operand == GesOpcodePrinter.OperandPart.CustomTypeName && !IsPortableTypeName(program.StringConstants, stringIndex))
                     InvalidOperand("Custom type names must use the portable lowercase ASCII type-name grammar.", instructionIndex);
+                if (operand is GesOpcodePrinter.OperandPart.Tag or GesOpcodePrinter.OperandPart.CustomTypeName) checkedNames.Add(checkedName);
                 continue;
             }
             if (IsListOperand(operand))
             {
                 var listIndex = ReadListOperand(instruction, operand);
                 if (listIndex >= program.UInt16IndexLists.Slices.Count) Throw(GesProgramFormatErrorCode.InvalidListIndex, "Instruction references a missing list.", (ushort)GesSectionType.Code, instructionIndex);
-                ValidateInstructionList(program, listIndex, operand, instructionIndex);
+                ValidateInstructionList(program, listIndex, operand, instructionIndex, lists);
                 continue;
             }
             if (operand == GesOpcodePrinter.OperandPart.TypeKind && !GesProgramEnumValidation.IsDefined(instruction.TypeKind)) InvalidOperand("Instruction contains an unknown type kind.", instructionIndex);
@@ -268,6 +278,7 @@ internal static class GesProgramValidator
         {
             var type = program.StringConstants.Resolve(instruction.StringIndex);
             var names = program.UInt16IndexLists.Resolve(instruction.AU);
+            if (names.Length > GameEventScript.Syntax.GesLiteralForms.MaxParameters) InvalidOperand("Invalid data constructor type or argument shape.", instructionIndex);
             var labels = new string[names.Length];
             for (var index = 0; index < labels.Length; index++) labels[index] = program.StringConstants.Resolve(names[index]);
             if (type is "vector" or "point" || !GameEventScript.Runtime.GesDataConstruction.IsType(type) || GameEventScript.Runtime.GesDataConstruction.Positions(type, labels) is null || names.Length != program.UInt16IndexLists.Resolve(instruction.ListIndex).Length)
@@ -279,7 +290,7 @@ internal static class GesProgramValidator
         => part != GesOpcodePrinter.OperandPart.OutboundMessage &&
            (part is >= GesOpcodePrinter.OperandPart.TargetRegister and <= GesOpcodePrinter.OperandPart.AuxDRegister || part == GesOpcodePrinter.OperandPart.FaceRegister);
 
-    internal static void ValidateInstructionFrame(GameEventScriptProgram program, GesBytecodeInstruction instruction, int instructionIndex, int frameLength)
+    internal static void ValidateInstructionFrame(GameEventScriptProgram program, GesBytecodeInstruction instruction, int instructionIndex, int frameLength, GesProgramListMembers lists)
     {
         var operands = GesOpcodePrinter.PrintInstruction(instruction);
         for (var index = 0; index < operands.Length; index++)
@@ -288,9 +299,7 @@ internal static class GesProgramValidator
             if (IsRegisterOperand(operand) && ReadRegisterOperand(instruction, operand, index) >= frameLength)
                 InvalidOperand("Instruction references a register outside its active frame.", instructionIndex);
             if (!IsListOperand(operand) || operand is GesOpcodePrinter.OperandPart.MessageShapeList or GesOpcodePrinter.OperandPart.ArgumentNameList or GesOpcodePrinter.OperandPart.KeyNameList) continue;
-            var list = program.UInt16IndexLists.Resolve(ReadListOperand(instruction, operand));
-            for (var element = 0; element < list.Length; element++)
-                if (list[element] >= frameLength) InvalidOperand("Instruction list references a register outside its active frame.", instructionIndex);
+            if (lists.Max(ReadListOperand(instruction, operand)) >= frameLength) InvalidOperand("Instruction list references a register outside its active frame.", instructionIndex);
         }
     }
 
@@ -344,24 +353,37 @@ internal static class GesProgramValidator
             _ => instruction.ListIndex
         };
 
-    private static void ValidateInstructionList(GameEventScriptProgram program, ushort listIndex, GesOpcodePrinter.OperandPart role, int instructionIndex)
+    // A list is validated once per role; later references only check what depends on their instruction, so many
+    // instructions sharing one long list stay linear (specs/ProgramModel.md: validation is linear in the Program size).
+    private static void ValidateInstructionList(GameEventScriptProgram program, ushort listIndex, GesOpcodePrinter.OperandPart role, int instructionIndex, Dictionary<int, HashSet<ushort>?> lists)
+    {
+        var key = listIndex << 8 | (int)role;
+        if (!lists.TryGetValue(key, out var members))
+        {
+            members = ValidateListContents(program, listIndex, role, instructionIndex);
+            lists.Add(key, members);
+        }
+
+        if (members is not null && members.Contains(program.Code[instructionIndex].XRegister))
+            InvalidOperand("Iterator output cannot overwrite its iterator.", instructionIndex);
+    }
+
+    private static HashSet<ushort>? ValidateListContents(GameEventScriptProgram program, ushort listIndex, GesOpcodePrinter.OperandPart role, int instructionIndex)
     {
         var list = program.UInt16IndexLists.Resolve(listIndex);
         if (role == GesOpcodePrinter.OperandPart.SourceRegisterList && list.Length < 2 ||
             role == GesOpcodePrinter.OperandPart.TargetRegisterList && list.Length == 0)
             InvalidOperand("Iterator register list has an invalid arity.", instructionIndex);
+        HashSet<ushort>? members = null;
         if (role == GesOpcodePrinter.OperandPart.TargetRegisterList)
         {
+            members = new HashSet<ushort>();
             for (var index = 0; index < list.Length; index++)
-            {
-                if (list[index] == program.Code[instructionIndex].XRegister)
-                    InvalidOperand("Iterator output cannot overwrite its iterator.", instructionIndex);
-                for (var previous = 0; previous < index; previous++)
-                    if (list[index] == list[previous]) InvalidOperand("Iterator output registers must be distinct.", instructionIndex);
-            }
+                if (!members.Add(list[index])) InvalidOperand("Iterator output registers must be distinct.", instructionIndex);
         }
         var textIndexes = role is GesOpcodePrinter.OperandPart.MessageShapeList or GesOpcodePrinter.OperandPart.ArgumentNameList or GesOpcodePrinter.OperandPart.KeyNameList;
         var validateUniqueArgumentNames = role is GesOpcodePrinter.OperandPart.MessageShapeList or GesOpcodePrinter.OperandPart.ArgumentNameList;
+        HashSet<string>? names = validateUniqueArgumentNames ? new HashSet<string>(StringComparer.Ordinal) : null;
         for (var index = 0; index < list.Length; index++)
         {
             if (textIndexes && list[index] >= program.StringConstants.Slices.Count)
@@ -371,18 +393,17 @@ internal static class GesProgramValidator
             if (role == GesOpcodePrinter.OperandPart.MessageShapeList && index == 0)
             {
                 if (!IsPortableTypeName(program.StringConstants, list[index])) InvalidOperand("Message shape names must be segments of ASCII letters or digits that start uppercase, joined by single underscores.", instructionIndex);
-            }
-            else if (!IsPortableUnlabeled(program.StringConstants, list[index]) && !IsPortablePlainName(program.StringConstants, list[index]))
-            {
-                InvalidOperand("Argument and key names must use the portable lowercase ASCII identifier grammar.", instructionIndex);
+                continue;
             }
 
-            if (!validateUniqueArgumentNames || (role == GesOpcodePrinter.OperandPart.MessageShapeList && index == 0) || IsPortableUnlabeled(program.StringConstants, list[index])) continue;
-            var firstArgumentIndex = role == GesOpcodePrinter.OperandPart.MessageShapeList ? 1 : 0;
-            for (var previous = firstArgumentIndex; previous < index; previous++)
-                if (!IsPortableUnlabeled(program.StringConstants, list[previous]) && StringConstantEquals(program.StringConstants, list[previous], list[index]))
-                    InvalidOperand("Message argument name occurs more than once.", instructionIndex);
+            if (IsPortableUnlabeled(program.StringConstants, list[index])) continue;
+            if (!IsPortablePlainName(program.StringConstants, list[index]))
+                InvalidOperand("Argument and key names must use the portable lowercase ASCII identifier grammar.", instructionIndex);
+            if (names is not null && !names.Add(program.StringConstants.Resolve(list[index])))
+                InvalidOperand("Message argument name occurs more than once.", instructionIndex);
         }
+
+        return members;
     }
 
     private static void ValidateBindingText(GameEventScriptProgram program, GesBindingSegment.Entry bind, int bindingIndex)
@@ -404,31 +425,21 @@ internal static class GesProgramValidator
         ValidateBindingNameList(program, bind.ExcludedTags, bindingIndex, allowUnlabeled: false, "Excluded tag");
     }
 
+    // Argument labels are plain names: the `_number` suffix belongs to local variables only (specs/Semantics/Text.md),
+    // and a message-name handler records the fixed label `message`.
     private static void ValidateBindingNameList(GameEventScriptProgram program, GesReadOnlyArray<ushort> indexes, int bindingIndex, bool allowUnlabeled, string role)
     {
+        HashSet<string>? names = null;
         for (var index = 0; index < indexes.Count; index++)
         {
-            var valid = allowUnlabeled
-                ? IsPortableUnlabeled(program.StringConstants, indexes[index]) || IsPortableIdentifier(program.StringConstants, indexes[index])
-                : IsPortablePlainName(program.StringConstants, indexes[index]);
-            if (!valid)
+            var unlabeled = allowUnlabeled && IsPortableUnlabeled(program.StringConstants, indexes[index]);
+            if (!unlabeled && !IsPortablePlainName(program.StringConstants, indexes[index]))
                 Throw(GesProgramFormatErrorCode.InvalidProgram, $"{role} does not use the portable ASCII grammar.", (ushort)GesSectionType.Bindings, bindingIndex);
-            if (!allowUnlabeled || IsPortableUnlabeled(program.StringConstants, indexes[index])) continue;
-            for (var previous = 0; previous < index; previous++)
-                if (!IsPortableUnlabeled(program.StringConstants, indexes[previous]) && StringConstantEquals(program.StringConstants, indexes[previous], indexes[index]))
-                    Throw(GesProgramFormatErrorCode.InvalidProgram, $"{role} occurs more than once.", (ushort)GesSectionType.Bindings, bindingIndex);
+            if (!allowUnlabeled || unlabeled) continue;
+            names ??= new HashSet<string>(StringComparer.Ordinal);
+            if (!names.Add(program.StringConstants.Resolve(indexes[index])))
+                Throw(GesProgramFormatErrorCode.InvalidProgram, $"{role} occurs more than once.", (ushort)GesSectionType.Bindings, bindingIndex);
         }
-    }
-
-    private static bool StringConstantEquals(GesStringConstantSegment strings, ushort leftIndex, ushort rightIndex)
-    {
-        var left = strings.Slices[leftIndex];
-        var right = strings.Slices[rightIndex];
-        if (left.Length != right.Length) return false;
-        var data = strings.Data.AsSpan();
-        for (var offset = 0; offset < left.Length; offset++)
-            if (data[left.Start + offset] != data[right.Start + offset]) return false;
-        return true;
     }
 
     private static bool IsPortableMessageName(GesStringConstantSegment strings, ushort stringIndex)
@@ -440,9 +451,6 @@ internal static class GesProgramValidator
             return MatchesAscii(strings, stringIndex, "initialization") || MatchesAscii(strings, stringIndex, "undeliverable");
         return IsPortableTypeName(strings, stringIndex);
     }
-
-    private static bool IsPortableIdentifier(GesStringConstantSegment strings, ushort stringIndex)
-        => IsPortableName(strings, stringIndex, allowNumericSuffix: true);
 
     private static bool IsPortablePlainName(GesStringConstantSegment strings, ushort stringIndex)
         => IsPortableName(strings, stringIndex, allowNumericSuffix: false);

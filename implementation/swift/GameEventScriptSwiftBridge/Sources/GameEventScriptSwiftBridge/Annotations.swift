@@ -23,3 +23,30 @@ public macro GesField(_ name: String? = nil, typeName: String? = nil, unit: GesQ
 /// Throwing constructors retain normal external-callback error classification. Unmarked constructors remain inaccessible to scripts.
 @attached(peer)
 public macro GesConstruct() = #externalMacro(module: "GameEventScriptSwiftBridgeMacros", type: "GesConstructMacro")
+
+/// Generates `gesExtensions()` on an enum, struct or final class: the `GesBridgeExtension` list of its `@GesFunction` and
+/// `@GesPredicate` methods in the extension namespace `namespace`, so that signature and implementation cannot drift apart.
+/// Static methods yield `static func gesExtensions() throws -> [GesBridgeExtension]`; instance methods yield an instance
+/// `func gesExtensions() throws -> [GesBridgeExtension]` with the static ones as well, whose closures retain the instance (a
+/// struct is copied, a class referenced) for as long as the registry holds them. Arguments convert strictly through
+/// `GesBridgeValueConvertible`, and an argument that does not convert, or another argument count, gives `nothing`, as GES
+/// operations do for a domain failure; a thrown Swift error stays an extension fault.
+@attached(member, names: named(gesExtensions))
+public macro GesExtension(_ namespace: String) = #externalMacro(module: "GameEventScriptSwiftBridgeMacros", type: "GesExtensionMacro")
+
+/// Exposes a method of an enclosing `@GesExtension` as `:namespace.name(...)`; the name defaults to the Swift name, and the
+/// argument labels are the Swift labels, `_` for an unlabeled argument. `unit` is attached to a numeric or spatial result,
+/// and `units` maps Swift parameter names to the units their arguments must have, which are checked and removed; Swift has
+/// no attributes on parameters, so they are named here. A `GesValue` parameter receives the raw argument, and an `Optional`
+/// result returns `nothing` for nil. At most one `GesRandomGenerator` parameter, in any position, receives the host's generator
+/// (`GesExtensionCall.random`); it is no script argument, so it has no label, does not count toward the signature and takes no
+/// unit. GES has no purity contract for host calls, so scripts treat the function as effectful.
+@attached(peer)
+public macro GesFunction(_ name: String? = nil, unit: GesQuantityUnit = .none, units: [String: GesQuantityUnit] = [:]) =
+    #externalMacro(module: "GameEventScriptSwiftBridgeMacros", type: "GesFunctionMacro")
+
+/// Exposes a method of an enclosing `@GesExtension` with one parameter and a `Bool` or `Bool?` result as the predicate of
+/// `value is :namespace.name`, registered with one unlabeled argument whatever its Swift label; nil gives `nothing`.
+@attached(peer)
+public macro GesPredicate(_ name: String? = nil, units: [String: GesQuantityUnit] = [:]) =
+    #externalMacro(module: "GameEventScriptSwiftBridgeMacros", type: "GesFunctionMacro")

@@ -25,6 +25,89 @@ struct GesLayoutParameter {
     var literal: String
 }
 
+/// The default of a field: its kind, `number`, `boolean`, `tag`, `field` or `record`, and its value, a canonical decimal in
+/// base units, a Boolean, a tag without `#` or a sibling field's name; a record lists the fields it names with their defaults.
+struct GesLayoutDefault {
+    var kind = GesSchemaDefaultKind.number
+    var value = ""
+    var boolean = false
+    var entries: [GesLayoutDefaultEntry] = []
+
+    static func of(_ field: GesSchemaFieldInfo) -> GesLayoutDefault? { field.defaultValue.map(of) }
+
+    private static func of(_ fallback: GesSchemaDefaultInfo) -> GesLayoutDefault {
+        GesLayoutDefault(
+            kind: fallback.kind,
+            value: fallback.number.map { "\($0.significand)e\($0.exponent)" } ?? fallback.name,
+            boolean: fallback.boolean,
+            entries: fallback.entries.map { GesLayoutDefaultEntry(name: $0.name, value: of($0.value)) }
+        )
+    }
+
+    func write(_ json: inout GesSchemaLayoutJson.Writer) {
+        json.key("default")
+        json.beginValueObject()
+        let kind =
+            switch self.kind {
+            case .number: "number"
+            case .boolean: "boolean"
+            case .tag: "tag"
+            case .field: "field"
+            case .record: "record"
+            }
+        json.string("kind", kind)
+        if self.kind == .record {
+            json.beginArray("entries")
+            for entry in entries {
+                json.beginObject()
+                json.string("name", entry.name)
+                entry.value.write(&json)
+                json.endObject()
+            }
+            json.endArray()
+        } else if self.kind == .boolean {
+            json.boolean("value", boolean)
+        } else {
+            json.string("value", value)
+        }
+        json.endObject()
+    }
+}
+
+/// A field a record default names, with its value.
+struct GesLayoutDefaultEntry {
+    var name: String
+    var value: GesLayoutDefault
+}
+
+/// A `let` of a schema: its kind, unit, exact value in base units and whether it is a whole Number within Int64.
+struct GesLayoutConstant {
+    var name = ""
+    var type = ""
+    var unit = ""
+    var significand: Int64 = 0
+    var exponent = 0
+    var integer = false
+    /// The unit symbol or `%` that a literal of it ends with, for generated documentation; not part of the JSON.
+    var suffix = ""
+
+    var value: String { "\(significand)e\(exponent)" }
+
+    static func of(_ schema: GesSchema) -> [GesLayoutConstant] {
+        schema.constants.map { constant in
+            GesLayoutConstant(
+                name: constant.name,
+                type: constant.kind.rawValue,
+                unit: GesSchemaLayoutBuilder.unitName(constant.kind, constant.unit),
+                significand: constant.value.significand,
+                exponent: constant.value.exponent,
+                integer: constant.isInteger,
+                suffix: constant.kind == .percentage ? "%" : constant.kind == .quantity ? constant.unit.suffix : ""
+            )
+        }
+    }
+}
+
 struct GesLayoutType {
     var name = ""
     var kind = GesSchemaKind.schema
@@ -34,9 +117,16 @@ struct GesLayoutType {
     var maxByteCount = 0
     var maxByteCountDepends: [String] = []
     var fields: [GesLayoutField] = []
+    var constants: [GesLayoutConstant] = []
+    /// The fields written `computed by`, which are never encoded, with their checked expressions.
+    var computed: [GesSchemaComputedFieldInfo] = []
     var tags: [String] = []
     var members: [String] = []
     var memberWidth = 0
+
+    // A packed schema's word: its width of 8, 16, 32 or 64 bits and the bits its fields take; 0 for other types.
+    var packedWidth = 0
+    var packedBits = 0
 }
 
 struct GesLayoutField {
@@ -45,6 +135,7 @@ struct GesLayoutField {
     var optional = false
     var key = false
     var unlabeled = false
+    var defaultValue: GesLayoutDefault?
     var encoding = GesLayoutEncoding()
 }
 
@@ -55,12 +146,16 @@ enum GesLayoutKind {
     case float
     case tag
     case text
+    case bytes
     case list
     case point
     case vector
+    case box
     case schema
     case union
     case nothing
+    case flags
+    case disc
 }
 
 // A class, because a list's element and a union's alternatives nest encodings.
@@ -75,6 +170,9 @@ final class GesLayoutEncoding {
     var lower: Int64 = 0
     var maxIndex: UInt64 = 0
     var width = 0
+
+    // The bits a field of fixed width takes on the wire: a Boolean has no layout width but takes one bit.
+    var bits: Int { kind == .boolean ? 1 : width }
     var numerator: Int64 = 0
     var tenPower: Int64 = 0
     var lowerValue = 0.0
@@ -83,17 +181,24 @@ final class GesLayoutEncoding {
     var deltaWidth = 0
     var depends: [String] = []
 
-    // Tag sets, Texts and lists.
+    // Tag sets, Texts and lists. A Tag of a named tag set carries its name.
     var tags: [String] = []
+    var tagSet = ""
     var tagName = false
     var maxCount: Int64 = 0
     var dice = false
+    var poly = false
     var keyed = false
     var positionWidth = 0
     var element: GesLayoutField?
 
-    // Point and Vector axes, union alternatives and schema references.
+    // A recursive List: how many records of its schema nest at most, and 0 for every other List.
+    var depth = 0
+
+    // Point and Vector axes, the corners lower and upper of a Box or the centre and the radius of a Disc, union alternatives
+    // and schema references. A Disc whose block leaves out the radius has the centre alone.
     var axes: [GesLayoutField] = []
+    var corners: [GesLayoutField] = []
     var alternatives: [GesLayoutField] = []
     var schema = ""
 }
@@ -155,6 +260,8 @@ enum GesSchemaLayoutBuilder {
         type.hash = bound.hash
         type.bindingHash = bound.bindingHash
         type.maxByteCount = bound.maxByteCount
+        type.packedWidth = schema.packedWidth
+        type.packedBits = schema.packedBits
         type.bindingHashDepends = schema.parameters.map(\.name)
         var depends = Set<String>()
         if schema.kind == .messages {
@@ -165,6 +272,8 @@ enum GesSchemaLayoutBuilder {
             }
         } else {
             type.fields = fields(schema, bound)
+            type.constants = GesLayoutConstant.of(schema)
+            type.computed = schema.computedFields
             for field in type.fields { collect(field, &depends) }
             type.tags = schema.tags
         }
@@ -178,6 +287,7 @@ enum GesSchemaLayoutBuilder {
         for info in schema.fields {
             var field = field(bound, &index, info.name, info.alternatives)
             field.unlabeled = info.isUnlabeled
+            field.defaultValue = GesLayoutDefault.of(info)
             fields.append(field)
         }
         return fields
@@ -206,7 +316,7 @@ enum GesSchemaLayoutBuilder {
         index += 1
         for alternative in alternatives {
             let path = bound.infos[index].path
-            let label = String(path[path.index(after: path.lastIndex(of: ":")!)...])
+            let label = alternative.label.isEmpty ? String(path[path.index(after: path.lastIndex(of: ":")!)...]) : alternative.label
             let encoding: GesLayoutEncoding
             if alternative.kind == .nothing {
                 index += 1
@@ -222,6 +332,7 @@ enum GesSchemaLayoutBuilder {
     }
 
     private static func encoding(_ bound: GesBoundSchema, _ index: inout Int, _ type: GesSchemaType) -> GesLayoutEncoding {
+        let start = index
         let node = bound.nodes[index]
         let encoding = GesLayoutEncoding()
         switch type.kind {
@@ -232,6 +343,15 @@ enum GesSchemaLayoutBuilder {
         case .tag where node.kind == .tag:
             encoding.kind = .tag
             encoding.tags = bound.infos[index].tags
+            encoding.tagSet = bound.infos[index].tagSet
+            encoding.width = node.width
+        case .flags:
+            encoding.kind = .flags
+            encoding.tags = bound.infos[index].tags
+            encoding.width = node.width
+        case .bytes:
+            encoding.kind = .bytes
+            encoding.maxCount = node.maxCount
             encoding.width = node.width
         case .tag, .text:
             encoding.kind = .text
@@ -240,6 +360,7 @@ enum GesSchemaLayoutBuilder {
             encoding.width = node.width
         case .list:
             list(node, encoding)
+            encoding.depth = type.depth
             index += 1
             encoding.element = field(bound, &index, "[]", type.element)
             return encoding
@@ -256,15 +377,38 @@ enum GesSchemaLayoutBuilder {
             encoding.kind = type.kind == .point ? .point : .vector
             encoding.unit = unitName(type.kind, type.unit)
             index += 1
-            var axis = 0
-            while axis < 3 && index < node.next {
-                let bounds = type.axes.isEmpty ? nil : type.axes[axis]
-                let axisEncoding = GesLayoutEncoding()
-                number(bound.nodes[index], .number, .none, bounds?.lower, bounds?.upper, axisEncoding)
-                encoding.axes.append(GesLayoutField(name: bound.infos[index].name, path: bound.infos[index].path, encoding: axisEncoding))
+            axes(bound, &index, start, type, encoding)
+            return encoding
+        case .box:
+            // Two corners, each a Point of the block's axes.
+            encoding.kind = .box
+            encoding.unit = unitName(type.kind, type.unit)
+            index += 1
+            encoding.corners.append(corner(bound, &index, type))
+            encoding.corners.append(corner(bound, &index, type))
+            return encoding
+        case .disc:
+            // The centre, a Point of the block's axes x and y, then the radius, unless the block leaves it out.
+            encoding.kind = .disc
+            encoding.unit = unitName(type.kind, type.unit)
+            let disc = index
+            index += 1
+            encoding.corners.append(corner(bound, &index, type))
+            if index < bound.nodes[disc].next {
+                let radius = GesLayoutEncoding()
+                let bounds = type.axes.last { $0.name == "radius" }
+                number(bound.nodes[index], .number, .none, bounds?.lower, bounds?.upper, radius)
+                encoding.corners.append(GesLayoutField(name: bound.infos[index].name, path: bound.infos[index].path, encoding: radius))
                 index += 1
-                axis += 1
             }
+            return encoding
+        case .poly:
+            // A List of Points with the axes x and y.
+            list(node, encoding)
+            encoding.poly = true
+            encoding.unit = unitName(type.kind, type.unit)
+            index += 1
+            encoding.element = corner(bound, &index, type)
             return encoding
         case .reference:
             encoding.kind = .schema
@@ -277,6 +421,29 @@ enum GesSchemaLayoutBuilder {
         }
         index += 1
         return encoding
+    }
+
+    // The axes of a Point, a Box corner or a Poly point, whose group node ends at `group`'s next.
+    private static func axes(_ bound: GesBoundSchema, _ index: inout Int, _ group: Int, _ type: GesSchemaType, _ encoding: GesLayoutEncoding) {
+        var axis = 0
+        while axis < 3 && index < bound.nodes[group].next {
+            let bounds = type.axes.isEmpty ? nil : type.axes[axis]
+            let axisEncoding = GesLayoutEncoding()
+            number(bound.nodes[index], .number, .none, bounds?.lower, bounds?.upper, axisEncoding)
+            encoding.axes.append(GesLayoutField(name: bound.infos[index].name, path: bound.infos[index].path, encoding: axisEncoding))
+            index += 1
+            axis += 1
+        }
+    }
+
+    private static func corner(_ bound: GesBoundSchema, _ index: inout Int, _ type: GesSchemaType) -> GesLayoutField {
+        let group = index
+        let corner = GesLayoutEncoding()
+        corner.kind = .point
+        corner.unit = unitName(type.kind, type.unit)
+        index += 1
+        axes(bound, &index, group, type, corner)
+        return GesLayoutField(name: bound.infos[group].name, path: bound.infos[group].path, encoding: corner)
     }
 
     private static func list(_ node: GesSchemaNode, _ encoding: GesLayoutEncoding) {
@@ -328,7 +495,7 @@ enum GesSchemaLayoutBuilder {
         return kind == .quantity && unit != .none ? value + unit.suffix : value
     }
 
-    private static func unitName(_ kind: GesSchemaTypeKind, _ unit: GesQuantityUnit) -> String {
-        (kind == .quantity || kind == .point || kind == .vector) && unit != .none ? unit.rawValue : "none"
+    static func unitName(_ kind: GesSchemaTypeKind, _ unit: GesQuantityUnit) -> String {
+        (kind == .quantity || kind == .point || kind == .vector || kind == .box || kind == .poly || kind == .disc) && unit != .none ? unit.rawValue : "none"
     }
 }

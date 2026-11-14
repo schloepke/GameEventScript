@@ -28,7 +28,7 @@ internal static class ApiObservations
             }
         }
         var program = AdapterCompiler.Compile(test);
-        var builder = GameEventScriptHost.CreateBuilder().WithRegistry(new RuntimeFixtures()).WithRuntimeLimits(RuntimeObservations.CreateLimits(input.GetProperty("limits")));
+        var builder = GameEventScriptHost.CreateBuilder().WithExtensionRegistry(GesGeometryLibrary.Extensions(new RuntimeFixtures())).WithRuntimeLimits(RuntimeObservations.CreateLimits(input.GetProperty("limits")));
         switch (input.GetProperty("externalTypeRegistry").GetString())
         {
             case "environment": builder.WithExternalTypeRegistry(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Registry); break;

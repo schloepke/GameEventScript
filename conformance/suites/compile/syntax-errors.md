@@ -2340,3 +2340,306 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: a power after a unary operation without parentheses
+
+A power applies to a power base; a unary operator or an intrinsic without parentheses ends with its operand, so a second
+power after `x²` has no base, as after `x²` alone.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: power-after-unary-operation
+kind: compileError
+level: atomic
+sources:
+  - name: "a power after a unary operation without parentheses.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(x) {
+  let y be floor x² ^ 2
+  emit Done(value: y)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 21
+```
+
+---
+
+## Test: a call's parenthesis on the next line
+
+A line break outside brackets separates statements, so a parenthesis on the next line does not call the name before it:
+`twice` stands alone and is no variable.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: call-parenthesis-next-line
+kind: compileError
+level: atomic
+sources:
+  - name: "a call's parenthesis on the next line.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function twice(x) be x * 2
+on Start(x) {
+  let y be twice
+  (x)
+  emit Done(value: y)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.unresolvedVariable"
+  line: 3
+  column: 12
+```
+
+---
+
+## Test: a power after a negated square
+
+As for an intrinsic without parentheses, unary minus ends with its operand `x²`, which takes no second power.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: power-after-negated-square
+kind: compileError
+level: atomic
+sources:
+  - name: "a power after a negated square.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(x) {
+  let y be -x² ^ 2
+  emit Done(value: y)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 16
+```
+
+---
+
+## Test: a hexadecimal literal without digits
+
+A `0x` prefix requires at least one hexadecimal digit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hex-literal-1
+kind: compileError
+level: atomic
+sources:
+  - name: "a hexadecimal literal without digits.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 0x)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 20
+```
+
+---
+
+## Test: a hexadecimal literal above the Int64 range
+
+A hexadecimal literal denotes an exact integer of at most `0x7fff_ffff_ffff_ffff`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hex-literal-2
+kind: compileError
+level: atomic
+sources:
+  - name: "a hexadecimal literal above the Int64 range.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 0x8000_0000_0000_0000)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 20
+```
+
+---
+
+## Test: a hexadecimal literal with a unit suffix
+
+A hexadecimal literal has no unit suffix.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hex-literal-3
+kind: compileError
+level: atomic
+sources:
+  - name: "a hexadecimal literal with a unit suffix.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 0x10m)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 20
+```
+
+---
+
+## Test: a hexadecimal literal with a leading separator
+
+An underscore may only separate adjacent hexadecimal digits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hex-literal-4
+kind: compileError
+level: atomic
+sources:
+  - name: "a hexadecimal literal with a leading separator.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 0x_1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 20
+```
+
+---
+
+## Test: a hexadecimal literal with a non-hexadecimal letter
+
+A letter after hexadecimal digits makes the whole word illegal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hex-literal-5
+kind: compileError
+level: atomic
+sources:
+  - name: "a hexadecimal literal with a non-hexadecimal letter.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 0x1g)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 20
+```

@@ -124,6 +124,94 @@ steps:
 
 ---
 
+## Test: due messages are delivered by deadline and then by scheduling order
+
+Delayed emits scheduled with falling and equal deadlines are delivered in deadline order once due, and entries with the same deadline keep the order in which they were scheduled.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: due-order-by-deadline-then-schedule
+sources:
+  - name: order.ges
+    program: main
+stepActions:
+  due:
+    - advanceMicroseconds: "3000000"
+```
+
+### Source code under test
+
+```ges
+module main
+on Work { emit after 3s Late(n: 1); emit after 2s Late(n: 2); emit after 2s Late(n: 3); emit after 1s Late(n: 4); emit after 2s Late(n: 5) }
+on Late(n) { emit Seen(n: n) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| begin | Work | completion | |
+| due | Unknown | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  begin:
+    waiting: true
+    local:
+      - name: Late
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "1" }
+      - name: Late
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "2" }
+      - name: Late
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "3" }
+      - name: Late
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "4" }
+      - name: Late
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "5" }
+  due:
+    accepted: false
+    waiting: false
+    local:
+      - name: Seen
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "4" }
+      - name: Seen
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "2" }
+      - name: Seen
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "3" }
+      - name: Seen
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "5" }
+      - name: Seen
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
 ## Test: delayed emit without recipients is not scheduled
 
 A delayed emit whose recipient snapshot is empty behaves exactly like the instant emit: the script result is true, the emit is observed as not queued, it reports send ID 0 and leaves no delayed work.
@@ -266,7 +354,7 @@ sources:
   - name: zero-full.ges
     program: main
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 ```
 
 ### Source code under test
@@ -292,7 +380,7 @@ steps:
     local: [{ name: Ping }]
     runtimeLimits:
       include:
-        - name: MaxQueuedMessagesPerRun
+        - name: MaxQueuedMessages
           limit: 1
     trace:
       - event: dispatchStarted
@@ -309,7 +397,7 @@ steps:
         message: { name: Ping }
         accepted: true
       - event: runtimeLimit
-        runtimeLimit: { name: MaxQueuedMessagesPerRun, limit: 1 }
+        runtimeLimit: { name: MaxQueuedMessages, limit: 1 }
       - event: dispatchCompleted
         id: "1"
         message: { name: Start }
@@ -332,7 +420,7 @@ sources:
     program: main
 publishSink: accept
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 stepActions:
   due:
     - advanceMicroseconds: "1000000"
@@ -364,7 +452,7 @@ steps:
     waiting: false
     runtimeLimits:
       include:
-        - name: MaxQueuedMessagesPerRun
+        - name: MaxQueuedMessages
           limit: 1
     trace:
       - event: dispatchStarted
@@ -377,7 +465,7 @@ steps:
         deadline: "1000000"
         publish: true
       - event: runtimeLimit
-        runtimeLimit: { name: MaxQueuedMessagesPerRun, limit: 1 }
+        runtimeLimit: { name: MaxQueuedMessages, limit: 1 }
       - event: dispatchCompleted
         id: "1"
         message: { name: Start }
@@ -574,6 +662,80 @@ initialization:
       id: "4"
     - event: discarded
       id: "3"
+steps:
+  idle:
+    accepted: false
+    waiting: false
+    trace: []
+```
+
+---
+
+## Test: failed initialization discards a sink-only publish
+
+A Publish of a failing initialization waits for the sink; when it has no local recipient, its send ID is reported as discarded after the other discards, so every send ID reaches the observer.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: failed-initialization-discards-sink-only-publish
+sources:
+  - name: failed-publish.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on initialization { publish Telemetry(); emit after 1s Leak(); let outcome be :test.declaredFault() }
+on Leak {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| idle | Unknown | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  hostReady: false
+  programStarts: { main: runtimeError }
+  local: [{ name: Leak }]
+  diagnostics:
+    - phase: runtime
+      code: test.declaredFault
+      programName: main
+      handlerName: initialization()
+  trace:
+    - event: dispatchStarted
+      id: "1"
+      message: { name: initialization }
+      signatureId: "initialization()"
+    - event: scheduled
+      id: "3"
+      message: { name: Leak }
+      deadline: "1000000"
+      publish: false
+    - event: emit
+      id: "3"
+      message: { name: Leak }
+      accepted: true
+    - event: diagnostic
+      diagnostic: { phase: runtime, code: test.declaredFault, programName: main, handlerName: initialization() }
+    - event: dispatchCompleted
+      id: "1"
+      message: { name: initialization }
+      signatureId: "initialization()"
+    - event: discarded
+      id: "3"
+    - event: discarded
+      id: "2"
 steps:
   idle:
     accepted: false

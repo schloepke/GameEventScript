@@ -15,6 +15,29 @@ public sealed class GesSchemaGenerateTests
 
     private static string Code(Action action) => Assert.ThrowsExactly<GesGeneratorException>(action).Code;
 
+    private static string Models(string source, string space) => GesSchemaGenerator.GenerateModels(GesSchemaSet.Parse(source), ["Document"], new GesSchemaGenerateOptions { Namespace = space, Documents = true });
+
+    [TestMethod]
+    public void TheDocumentTypeTakesNoGeneratedName()
+    {
+        // In a namespace the reading type is Document, which a model root of that name would also be.
+        Assert.AreEqual("generate.nameCollision", Code(() => Models("schema :Document as { a: :Boolean }\n", "Game.Units")));
+        StringAssert.Contains(Models("schema :Document as { a: :Boolean }\n", ""), "abstract class ModelDocument");
+    }
+
+    [TestMethod]
+    public void TheValuesOfRecordDefaultsTakeNoTypeName()
+    {
+        // The values of the record defaults of :S are held by SDefaults, which the schema of that name would also be.
+        var set = GesSchemaSet.Parse("schema :C as { a: :Number default 1 }\nschema :SDefaults as { b: :Boolean }\nschema :S as {\n  c: :C default [:]\n  d: :SDefaults\n}\n");
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, ["S"], new GesSchemaGenerateOptions { Language = language, Values = true })));
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, ["S"], new GesSchemaGenerateOptions { Language = language, Bindings = true })));
+            StringAssert.Contains(GesSchemaGenerator.GenerateModels(set, ["S"], new GesSchemaGenerateOptions { Language = language }), "SDefaults");
+        }
+    }
+
     [TestMethod]
     public void NamesFollowTheLanguage()
     {
@@ -41,7 +64,90 @@ public sealed class GesSchemaGenerateTests
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  quantize: :Boolean\n}\n", "S", GesSchemaLanguage.Swift)));
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  state: :Tag(#a)\n  stateTag: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp)));
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  heat: :Boolean optional\n  hasHeat: :Boolean\n}\n", "S", GesSchemaLanguage.Swift)));
+        Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  mode: :Flags(#rawValue, #other)\n}\n", "S", GesSchemaLanguage.Swift)));
+        StringAssert.Contains(Generate("schema :S as {\n  mode: :Flags(#rawValue, #other)\n}\n", "S", GesSchemaLanguage.CSharp), "RawValue = 1UL << 0,");
         StringAssert.Contains(Generate("schema :S as {\n  s: :Boolean\n}\n", "S", GesSchemaLanguage.Swift), "public var sValue: Bool = false");
+    }
+
+    [TestMethod]
+    public void ModelsBoundedByParametersDescribeTheirNames()
+    {
+        // A parameter's name may hold an e, which a canonical decimal also holds.
+        var set = GesSchemaSet.Parse("parameter worldHeight: :Quantity(m)\nmodel schema :Spot as { y: :Quantity(m) between 0m and worldHeight step 1cm }\n");
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+            StringAssert.Contains(GesSchemaGenerator.GenerateModels(set, ["Spot"], new GesSchemaGenerateOptions { Language = language }), "worldHeight");
+    }
+
+    [TestMethod]
+    public void GeneratedCodeIsTheSameInEveryCulture()
+    {
+        // Canonical decimals, hashes and code use ASCII signs also where the culture's minus sign is U+2212.
+        var set = GesSchemaSet.Parse("wire schema :S as { x: :Quantity(m) between -5m and 5m step 1cm }\n");
+        var invariant = GesSchemaGenerator.Generate(set, ["S"], new GesSchemaParameters(), new GesSchemaGenerateOptions());
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("sv-SE");
+            Assert.AreEqual(invariant, GesSchemaGenerator.Generate(set, ["S"], new GesSchemaParameters(), new GesSchemaGenerateOptions()));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+        }
+    }
+
+    [TestMethod]
+    public void LentFieldsKeepOneNameInTheirInterfaceAndEveryTypeTakingThem()
+    {
+        // A field named like the lending schema, or like a schema that takes it, is renamed alike everywhere it is lent.
+        var lent = new[]
+        {
+            ("abstract schema :Base as { base: :Number }\nmodel schema :Child as {\n  with :Base\n  b: :Boolean\n}\n", "BaseValue", "baseValue"),
+            ("abstract schema :Base as { child: :Number }\nmodel schema :Child as {\n  with :Base\n  b: :Boolean\n}\n", "ChildValue", "childValue")
+        };
+        foreach (var (source, csharp, swift) in lent)
+        {
+            var set = GesSchemaSet.Parse(source);
+            var roots = GesSchemaGenerator.ModelRoots(set, "default");
+            var code = GesSchemaGenerator.GenerateModels(set, roots, new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp });
+            StringAssert.Contains(code, $"double {csharp} {{ get; }}");
+            StringAssert.Contains(code, $"public double {csharp} {{ get; set; }}");
+            code = GesSchemaGenerator.GenerateModels(set, roots, new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift });
+            StringAssert.Contains(code, $"var {swift}: Double {{ get }}");
+            StringAssert.Contains(code, $"public var {swift}: Double");
+        }
+    }
+
+    [TestMethod]
+    public void CSharpModelMembersDoNotTakeTheNameOfTheirType()
+    {
+        // C# rejects a member named like its type: a record FromValue with values, and a document class Value or FromDocument
+        // beside the document type's members. Swift takes all of them.
+        foreach (var (source, options) in new[]
+        {
+            ("model schema :FromValue as { a: :Boolean }\n", new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp, Values = true }),
+            ("model schema :Value as { a: :Boolean }\n", new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp, Documents = true }),
+            ("model schema :FromDocument as { a: :Boolean }\n", new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp, Documents = true })
+        })
+        {
+            var set = GesSchemaSet.Parse(source);
+            var roots = GesSchemaGenerator.ModelRoots(set, "default");
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, roots, options)), source);
+            options.Language = GesSchemaLanguage.Swift;
+            GesSchemaGenerator.GenerateModels(set, roots, options);
+        }
+    }
+
+    [TestMethod]
+    public void SwiftModelsEscapeKeywordsOnlyWhereSwiftNeedsIt()
+    {
+        var set = GesSchemaSet.Parse("model schema :S as {\n  default: :Text\n  in: :Boolean\n  var: :Boolean\n}\n");
+        var options = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Values = true, Bindings = true };
+        var swift = GesSchemaGenerator.GenerateModels(set, GesSchemaGenerator.ModelRoots(set, "default"), options);
+        StringAssert.Contains(swift, "var `default`: String");
+        StringAssert.Contains(swift, "init(default: String, in: Bool, `var`: Bool)");
+        StringAssert.Contains(swift, "self.`default` = `default`");
+        StringAssert.Contains(swift, "S(default: field0, in: field1, var: field2)");
     }
 
     [TestMethod]
@@ -142,5 +248,110 @@ public sealed class GesSchemaGenerateTests
         Assert.HasCount(2, text.Split("partial struct Inner"));
         StringAssert.Contains(text, "from the roots A, B.");
         StringAssert.Contains(text, "\"i.a\",");
+    }
+    [TestMethod]
+    public void SplitOutputPlacesEachDeclarationInTheFileOfItsDeclaration()
+    {
+        var set = GesSchemaSet.Parse(
+            new GesSchemaSource("maps/world.gess", "tags :Side as (#left, #right)\nschema :World as {\n  bot: :Bot\n  side: :Side\n}\n"),
+            new GesSchemaSource("bots.gess", "schema :Bot as {\n  names: :List(:Text max 4) max 2\n}\n"));
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            var extension = language == GesSchemaLanguage.Swift ? ".swift" : ".g.cs";
+            var options = new GesSchemaGenerateOptions { Language = language, Namespace = "Game.Wire", Values = true, Split = GesSchemaSplit.Schema };
+            var files = GesSchemaGenerator.GenerateFiles(set, ["World"], new GesSchemaParameters(), options);
+            CollectionAssert.AreEqual(new[] { "Game.Wire.Bot", "Game.Wire.Side", "Game.Wire.World", "_Game.Wire", ".ges-generated" },
+                files.Select(file => file.Path.Replace(extension, "", StringComparison.Ordinal).Replace(".json", "", StringComparison.Ordinal)).ToArray());
+            StringAssert.Contains(files[0].Text, "NamesItem");
+            Assert.IsFalse(files[2].Text.Contains("NamesItem", StringComparison.Ordinal));
+            StringAssert.Contains(files[3].Text, "__GesSchemas");
+            StringAssert.Contains(files[4].Text, "\"split\": \"schema\"");
+            StringAssert.Contains(files[4].Text, "\"files\": [\n    \"Game.Wire.Bot" + extension);
+            options.Split = GesSchemaSplit.File;
+            files = GesSchemaGenerator.GenerateFiles(set, ["World"], new GesSchemaParameters(), options);
+            CollectionAssert.AreEqual(new[] { "Game.Wire.bots" + extension, "Game.Wire.world" + extension, "_Game.Wire" + extension, ".ges-generated.json" }, files.Select(file => file.Path).ToArray());
+            StringAssert.Contains(files[1].Text, "Side");
+        }
+
+        var swift = GesSchemaGenerator.GenerateFiles(set, ["World"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Namespace = "Game.Wire", Split = GesSchemaSplit.Schema });
+        StringAssert.Contains(swift[0].Text, "extension Game.Wire {\n");
+        StringAssert.Contains(swift[3].Text, "public enum Game {\n    /// The namespace `Wire` of generated schema types.\n    public enum Wire {}\n}\n");
+        Assert.IsFalse(swift[0].Text.Contains("from the root", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void SplitOutputRejectsMismatchedRequestsAndCollidingFileNames()
+    {
+        var set = GesSchemaSet.Parse("schema :S as {\n  on: :Boolean\n}\n");
+        var split = new GesSchemaGenerateOptions { Split = GesSchemaSplit.Schema };
+        Assert.AreEqual("generate.usage", Code(() => GesSchemaGenerator.Generate(set, ["S"], new GesSchemaParameters(), split)));
+        Assert.AreEqual("generate.usage", Code(() => GesSchemaGenerator.GenerateModels(set, ["S"], split)));
+        Assert.AreEqual("generate.usage", Code(() => GesSchemaGenerator.GenerateFiles(set, ["S"], new GesSchemaParameters(), new GesSchemaGenerateOptions())));
+        Assert.AreEqual("generate.usage", Code(() => GesSchemaGenerator.GenerateModelFiles(set, ["S"], new GesSchemaGenerateOptions())));
+        var cases = GesSchemaSet.Parse("schema :Ab as {\n  b: :AB\n}\nschema :AB as {\n  on: :Boolean\n}\n");
+        Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateFiles(cases, ["Ab"], new GesSchemaParameters(), split)));
+        var sources = GesSchemaSet.Parse(new GesSchemaSource("a/s.gess", "schema :A as {\n  b: :B\n}\n"), new GesSchemaSource("b/s.gess", "schema :B as {\n  on: :Boolean\n}\n"));
+        Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModelFiles(sources, ["A"], new GesSchemaGenerateOptions { Split = GesSchemaSplit.File })));
+        Assert.HasCount(4, GesSchemaGenerator.GenerateModelFiles(sources, ["A"], new GesSchemaGenerateOptions { Split = GesSchemaSplit.Schema }));
+    }
+
+    [TestMethod]
+    public void NestedTypesMustNotHideTopLevelTypes()
+    {
+        var set = GesSchemaSet.Parse("tags :ModeTag as (#p, #q, #r)\nschema :SlotsItem as {\n  a: :Boolean\n}\nschema :Squad as {\n  mode: :Tag(#a, #b)\n  other: :ModeTag\n}\nschema :Crew as {\n  slots: :List(:Text max 4 | :Number integer between 0 and 3) max 3\n  spare: :SlotsItem\n}\n");
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            var options = new GesSchemaGenerateOptions { Language = language };
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(set, ["Squad"], new GesSchemaParameters(), options)));
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(set, ["Crew"], new GesSchemaParameters(), options)));
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, ["Squad"], options)));
+        }
+    }
+
+    [TestMethod]
+    public void TypesMustNotTakeNamesThatGeneratedCodeUses()
+    {
+        var swift = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift };
+        var csharp = new GesSchemaGenerateOptions();
+        foreach (var name in new[] { "String", "Int", "Type", "Swift" })
+        {
+            var set = GesSchemaSet.Parse($"schema :{name} as {{\n  on: :Boolean\n}}\n");
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(set, [name], new GesSchemaParameters(), swift)));
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, [name], swift)));
+            GesSchemaGenerator.Generate(set, [name], new GesSchemaParameters(), csharp);
+        }
+
+        var runtime = GesSchemaSet.Parse("schema :GesValue as {\n  on: :Boolean\n}\n");
+        foreach (var options in new[] { csharp, swift })
+        {
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(runtime, ["GesValue"], new GesSchemaParameters(), options)));
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(runtime, ["GesValue"], options)));
+        }
+
+        var member = GesSchemaSet.Parse("schema :S as {\n  gesValue: :Boolean\n  gesture: :Boolean\n}\n");
+        Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(member, ["S"], new GesSchemaParameters(), csharp)));
+        GesSchemaGenerator.Generate(GesSchemaSet.Parse("schema :Gesture as {\n  gesture: :Boolean\n}\n"), ["Gesture"], new GesSchemaParameters(), csharp);
+    }
+
+    [TestMethod]
+    public void SwiftModelsReserveTheHashableMembers()
+    {
+        foreach (var field in new[] { "hashValue", "hash" })
+        {
+            var set = GesSchemaSet.Parse($"schema :Unit as {{\n  {field}: :Number integer between 0 and 9\n}}\n");
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, ["Unit"], new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift })));
+            GesSchemaGenerator.GenerateModels(set, ["Unit"], new GesSchemaGenerateOptions());
+        }
+    }
+
+    [TestMethod]
+    public void ManifestNamesTheValueConversionsThatDocumentsInclude()
+    {
+        var set = GesSchemaSet.Parse("schema :S as {\n  on: :Boolean\n}\n");
+        var documents = GesSchemaGenerator.GenerateModelFiles(set, ["S"], new GesSchemaGenerateOptions { Split = GesSchemaSplit.Schema, Documents = true });
+        var both = GesSchemaGenerator.GenerateModelFiles(set, ["S"], new GesSchemaGenerateOptions { Split = GesSchemaSplit.Schema, Documents = true, Values = true });
+        Assert.HasCount(both.Count, documents);
+        for (var index = 0; index < both.Count; index++) Assert.AreEqual(both[index].Text, documents[index].Text, both[index].Path);
+        StringAssert.Contains(documents[^1].Text, "\"values\": true");
     }
 }

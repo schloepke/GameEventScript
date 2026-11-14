@@ -105,6 +105,36 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(result.output, "")
     }
 
+    func testSchemaFormatBreaksLongUnions() throws {
+        let source = try file(
+            "union.gess",
+            "schema :Unit as {\n"
+                + "  shape: point: :Point(m) { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m }\n"
+                + "    | box: :Box(m) { x between 0m and 2000m step 0.1m }\n"
+                + "    // a comment\n"
+                + "    | id: :Text max 64 optional\n"
+                + "  name: :Text max 8 |\n"
+                + "    :Number\n"
+                + "}\n"
+        )
+        let format = run(["schema", "format", source])
+        XCTAssertEqual(format.code, 0, format.error)
+        XCTAssertEqual(
+            format.output,
+            "schema :Unit as {\n"
+                + "  shape: point: :Point(m) {\n"
+                + "      x between 0m and 2000m step 0.1m\n"
+                + "      y between 0m and 2000m step 0.1m\n"
+                + "    }\n"
+                + "    | box: :Box(m) {\n"
+                + "      x between 0m and 2000m step 0.1m\n"
+                + "    }\n"
+                + "    | id: :Text max 64 optional\n"
+                + "  name: :Text max 8 | :Number\n"
+                + "}\n"
+        )
+    }
+
     func testSchemaLayoutCoversSeveralRoots() throws {
         let nested = try file("nested.gess", "parameter width: :Quantity(m)\nschema :Inner as {\n  x: :Quantity(m) between 0m and width step 1m\n}\nschema :Outer as {\n  inner: :Inner\n}\nschema :Other as {\n  inner: :Inner\n}\n")
         let layout = run(["schema", "layout", nested, "--root", "Outer", "--root", "Other", "--param", "width=8m"])
@@ -128,6 +158,52 @@ final class ToolTests: XCTestCase {
         let missing = run(["schema", "layout", nested, "--root", "Outer"])
         XCTAssertEqual(missing.code, 1)
         XCTAssertTrue(missing.error.contains("error schema.unknownName"))
+    }
+
+    func testSchemaRolesSelectTheRootsOfAGroup() throws {
+        let world = try file("world.gess", "parameter w: :Quantity(m)\nwire(world) schema :World as {\n  at: :Point(m) { x between 0m and w step 1m }\n  badge: :Badge optional\n}\n")
+        let panels = try file("panels.gess", "wire(panels) schema :Badge as { on: :Boolean }\nwire(panels) schema :Panel as { badge: :Badge }\n")
+        let view = try file("view.gess", "model(view) schema :View as {\n  name: :Text\n  at: :Point(m)\n}\n")
+        let wire = run(["schema", "layout", world, panels, view, "--wire", "world", "--param", "w=10m"])
+        XCTAssertEqual(wire.code, 0, wire.error)
+        XCTAssertTrue(wire.output.hasPrefix("{\n  \"layout\": 1,\n  \"roots\": [\n    \"World\"\n  ],"))
+        XCTAssertTrue(wire.output.contains("\"name\": \"Badge\""))
+        XCTAssertFalse(wire.output.contains("\"Panel\""))
+        let model = run(["schema", "layout", world, panels, view, "--model", "view"])
+        XCTAssertEqual(model.code, 0, model.error)
+        XCTAssertTrue(model.output.hasPrefix("{\n  \"model\": 1,\n  \"roots\": [\n    \"View\"\n  ],"))
+        let swift = run(["schema", "generate", world, panels, view, "--model", "view", "--language", "swift"])
+        XCTAssertTrue(swift.output.contains("public struct View: Hashable, Sendable, Codable {"))
+        XCTAssertTrue(swift.output.contains("public var at: GesPoint"))
+        let csharp = run(["schema", "generate", world, panels, view, "--wire", "world", "--param", "w=10m", "--language", "csharp"])
+        XCTAssertTrue(csharp.output.contains("public GesPoint At;"))
+        let empty = run(["schema", "generate", world, panels, "--wire", "nothing", "--param", "w=10m", "--language", "csharp"])
+        XCTAssertEqual(empty.code, 1)
+        XCTAssertTrue(empty.error.contains("error generate.usage: The files have no wire root in the group 'nothing'."), empty.error)
+        XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--param", "w=10m"]).code, 1)
+        XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--wire", "world"]).code, 2)
+        XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--root", "View"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--checked-exclusivity"]).code, 2)
+        // Extending a leading part of the namespace concerns Swift alone.
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "csharp", "--namespace", "Game.View", "--extend-namespace", "Game"]).code, 2)
+        XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--extend-namespace", "Game"]).code, 2)
+        let extended = run(["schema", "generate", view, "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game"])
+        XCTAssertEqual(extended.code, 0, extended.error)
+        XCTAssertTrue(extended.output.contains("extension Game {"))
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "View"]).code, 1)
+        let extendedDirectory = directory.appendingPathComponent("ExtendedView").path
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game", "-d", extendedDirectory]).code, 0)
+        let manifest = try String(contentsOfFile: extendedDirectory + "/.ges-generated.json", encoding: .utf8)
+        XCTAssertTrue(manifest.contains("\"extendNamespace\": \"Game\""))
+        // A missing language is reported as such, not as an option that concerns Swift.
+        let noLanguage = run(["schema", "generate", view, "--model", "view", "--extend-namespace", "Game"])
+        XCTAssertEqual(noLanguage.code, 2)
+        XCTAssertTrue(noLanguage.error.contains("requires --language"), noLanguage.error)
+        XCTAssertEqual(run(["schema", "hash", view, "--model", "view"]).code, 2)
+        let bad = try file("bad.gess", "wire schema :Bad as { name: :Text }\n")
+        let check = run(["schema", "check", bad])
+        XCTAssertEqual(check.code, 1)
+        XCTAssertTrue(check.error.contains("(1,29): error schema.notEncodable"), check.error)
     }
 
     func testSchemaGenerateWritesAndChecksCode() throws {
@@ -161,6 +237,60 @@ final class ToolTests: XCTestCase {
         let invalid = run(["schema", "generate", drone, "--root", "Drone", "--language", "swift", "--namespace", "1x"])
         XCTAssertEqual(invalid.code, 1)
         XCTAssertTrue(invalid.error.contains("error generate.invalidNamespace"))
+    }
+
+    func testSchemaGenerateKeepsFilesRenamedOnlyInCase() throws {
+        // A namespace renamed only in case keeps the generated files, also where the file system ignores case.
+        let source = try file("s.gess", "model schema :Alpha as { a: :Number }\n")
+        let output = directory.appendingPathComponent("out").path
+        XCTAssertEqual(run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "game.net", "-d", output]).code, 0)
+        let renamed = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game.Net", "-d", output])
+        XCTAssertEqual(renamed.code, 0, renamed.error)
+        XCTAssertEqual(run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game.Net", "-d", output, "--check"]).code, 0)
+    }
+
+    func testSchemaGenerateOwnsItsOutputDirectory() throws {
+        let source = try file("s.gess", "model schema :Alpha as { a: :Number }\nmodel schema :Beta as { b: :Text }\n")
+        let output = directory.appendingPathComponent("out").path
+        let manager = FileManager.default
+
+        func names(_ path: String) throws -> [String] { try manager.contentsOfDirectory(atPath: path).sorted { $0.utf16.lexicographicallyPrecedes($1.utf16) } }
+
+        let write = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", output])
+        XCTAssertEqual(write.code, 0, write.error)
+        XCTAssertEqual(try names(output), [".ges-generated.json", "Game.Alpha.g.cs", "Game.Beta.g.cs", "_Game.g.cs"])
+        XCTAssertTrue(try String(contentsOfFile: output + "/.ges-generated.json", encoding: .utf8).contains("\"code\": \"model\""))
+        XCTAssertEqual(run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", output, "--check"]).code, 0)
+        let stamp = Date(timeIntervalSince1970: 1_577_836_800)
+        try manager.setAttributes([.modificationDate: stamp], ofItemAtPath: output + "/Game.Alpha.g.cs")
+        try "// mine\n".write(toFile: output + "/Mine.cs", atomically: true, encoding: .utf8)
+        try "unity\n".write(toFile: output + "/Game.Alpha.g.cs.meta", atomically: true, encoding: .utf8)
+        try "model schema :Alpha as { a: :Number }\n".write(toFile: source, atomically: true, encoding: .utf8)
+        let rewrite = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "--out-dir", output, "--split", "schema"])
+        XCTAssertEqual(rewrite.code, 0, rewrite.error)
+        XCTAssertTrue(rewrite.error.contains("warning cli.unowned: \(output)/Mine.cs is not generated and was left alone."), rewrite.error)
+        XCTAssertFalse(rewrite.error.contains(".meta"))
+        XCTAssertFalse(manager.fileExists(atPath: output + "/Game.Beta.g.cs"))
+        XCTAssertEqual(try manager.attributesOfItem(atPath: output + "/Game.Alpha.g.cs")[.modificationDate] as? Date, stamp)
+        try (try String(contentsOfFile: output + "/Game.Alpha.g.cs", encoding: .utf8) + "// edited\n").write(toFile: output + "/Game.Alpha.g.cs", atomically: true, encoding: .utf8)
+        try manager.removeItem(atPath: output + "/_Game.g.cs")
+        let check = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", output, "--check"])
+        XCTAssertEqual(check.code, 1)
+        XCTAssertTrue(check.error.contains("error cli.outdated: \(output)/Game.Alpha.g.cs differs from the generated code."), check.error)
+        XCTAssertTrue(check.error.contains("error cli.outdated: \(output)/_Game.g.cs does not exist."), check.error)
+        XCTAssertTrue(check.error.contains("error cli.outdated: \(output)/Mine.cs is not generated."), check.error)
+        let files = directory.appendingPathComponent("files").path
+        let split = run(["schema", "generate", source, "--model", "default", "--language", "swift", "-d", files, "--split", "file"])
+        XCTAssertEqual(split.code, 0, split.error)
+        XCTAssertEqual(try names(files), [".ges-generated.json", "s.swift"])
+        let both = run(["schema", "generate", source, "--model", "default", "--language", "swift", "-o", output + "/x.swift", "-d", output])
+        XCTAssertEqual(both.code, 1)
+        XCTAssertTrue(both.error.contains("error generate.usage"))
+        let lone = run(["schema", "generate", source, "--model", "default", "--language", "swift", "--split", "file"])
+        XCTAssertEqual(lone.code, 1)
+        XCTAssertTrue(lone.error.contains("error generate.usage"))
+        XCTAssertEqual(run(["schema", "generate", source, "--model", "default", "--language", "swift", "-d", output, "--split", "type"]).code, 2)
+        XCTAssertEqual(run(["schema", "layout", source, "--model", "default", "-d", output]).code, 2)
     }
 
     func testSchemaCommandsCheckHashFormatAndDump() throws {

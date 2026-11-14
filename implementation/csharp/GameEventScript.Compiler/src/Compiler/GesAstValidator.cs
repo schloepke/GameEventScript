@@ -24,7 +24,7 @@ internal static class GesAstValidator
             _constants = constants;
             foreach (var constant in constants)
             {
-                var inferredType = constant.Value is GesNothingLiteralExpressionNode ? "nothing" : InferImmutableBindingType(constant.Value, constants);
+                var inferredType = ConstantTypeName(constant.Value, constants);
                 if (inferredType is not null) _declaredTypes["$" + constant.Key] = inferredType;
             }
         }
@@ -95,7 +95,7 @@ internal static class GesAstValidator
             var predicateDefinition = parsedScript.PredicateDefinitions[predicateIndex];
             ValidateParameterTypeHints(parsedScript, "Predicate", predicateDefinition.Name, predicateDefinition.ParameterList, typeDefinitions, errors);
             ValidateExpressionReferences(parsedScript, predicateDefinition.Expression, callables, typeDefinitions, errors, BuildDeclaredTypeMap(predicateDefinition.ParameterList, constants));
-            ValidatePredicateResultExpression(parsedScript, predicateDefinition, callables, typeDefinitions, errors);
+            ValidatePredicateResultExpression(parsedScript, predicateDefinition, callables, typeDefinitions, errors, constants);
         }
 
         for (var functionIndex = 0; functionIndex < parsedScript.FunctionDefinitions.Count; functionIndex++)
@@ -151,7 +151,8 @@ internal static class GesAstValidator
                 ValidateExpressionReferences(parsedScriptContext, let.Expression, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 // A repeated binding, which the Syntax validator reports, keeps the type of the first.
                 if (scope.ContainsInCurrentScope(let.Identifier)) return;
-                scope.Declare(let.Identifier, InferImmutableBindingType(let.Expression, scope.Constants));
+                // A binding has the statically established type of its value, as a constant has that of its literal.
+                scope.Declare(let.Identifier, InferImmutableBindingType(let.Expression, scope.Constants) ?? StaticTypeName(ClassifyExpression(let.Expression, callables, typeDefinitions, scope.DeclaredTypes, new HashSet<string>(StringComparer.Ordinal))));
                 return;
 
             case GesIfStatementNode ifStatement:
@@ -275,9 +276,10 @@ internal static class GesAstValidator
         GesPredicateDefinitionNode predicateDefinition,
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
-        GesValidationErrors errors)
+        GesValidationErrors errors,
+        IReadOnlyDictionary<string, GesExpressionNode> constants)
     {
-        var parameterTypes = BuildDeclaredTypeMap(predicateDefinition.ParameterList);
+        var parameterTypes = BuildDeclaredTypeMap(predicateDefinition.ParameterList, constants);
         var result = ClassifyExpression(predicateDefinition.Expression, callables, typeDefinitions, parameterTypes, new HashSet<string>(StringComparer.Ordinal));
 
         if (result.IsPredicateCompatible) return;
@@ -291,7 +293,7 @@ internal static class GesAstValidator
             predicateDefinition.Expression);
     }
 
-    // Constants with the value `nothing` are recorded for the tag check, as callable bodies have no validation scope.
+    // Constants are recorded with the type of their literal, as callable bodies have no validation scope.
     private static IReadOnlyDictionary<string, string> BuildDeclaredTypeMap(IReadOnlyList<GesParameterNode> parameters, IReadOnlyDictionary<string, GesExpressionNode>? constants = null)
     {
         var types = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -303,8 +305,17 @@ internal static class GesAstValidator
 
         if (constants is not null)
             foreach (var constant in constants)
-                if (constant.Value is GesNothingLiteralExpressionNode) types["$" + constant.Key] = "nothing";
+                if (ConstantTypeName(constant.Value, constants) is { } constantType) types["$" + constant.Key] = constantType;
 
+        return types;
+    }
+
+    // A callee sees its declared parameter types and the program's constants, which the caller's types carry as `$name`.
+    private static IReadOnlyDictionary<string, string> CalleeTypes(IReadOnlyList<GesParameterNode> parameters, IReadOnlyDictionary<string, string> callerTypes)
+    {
+        var types = new Dictionary<string, string>(BuildDeclaredTypeMap(parameters), StringComparer.Ordinal);
+        foreach (var entry in callerTypes)
+            if (entry.Key.StartsWith("$", StringComparison.Ordinal)) types[entry.Key] = entry.Value;
         return types;
     }
 
@@ -351,6 +362,10 @@ internal static class GesAstValidator
 
             case GesNothingLiteralExpressionNode: return StaticExpressionInfo.Nothing;
 
+            // A constant is replaced by its literal, so it has that literal's type (specs/Language.md#constants).
+            case GesConstantReferenceExpressionNode constant:
+                return declaredTypes.TryGetValue("$" + constant.Name, out var constantType) ? FromDeclaredType(constantType) : StaticExpressionInfo.Other();
+
             case GesIdentifierExpressionNode identifier:
                 return declaredTypes.TryGetValue(identifier.Name, out var declaredType)
                     ? FromDeclaredType(declaredType)
@@ -360,7 +375,7 @@ internal static class GesAstValidator
 
             case GesCollectionAccessExpressionNode collectionAccess: return ClassifyCollectionAccess(collectionAccess);
 
-            case GesCallExpressionNode call: return ClassifyCall(call, callables, typeDefinitions, visitedCallables);
+            case GesCallExpressionNode call: return ClassifyCall(call, callables, typeDefinitions, declaredTypes, visitedCallables);
 
             case GesTypeCastExpressionNode typeCast: return FromDeclaredType(typeCast.TypeName);
 
@@ -396,6 +411,24 @@ internal static class GesAstValidator
             null or "" => StaticExpressionInfo.Unknown,
             _ => StaticExpressionInfo.Other(typeName)
         };
+
+    private static string? StaticTypeName(StaticExpressionInfo info) => info.Kind switch
+    {
+        StaticExpressionKind.Boolean => "boolean",
+        StaticExpressionKind.Nothing => "nothing",
+        StaticExpressionKind.Other => info.TypeName,
+        _ => null
+    };
+
+    private static readonly Dictionary<string, GesCallableDefinition> NoCallables = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, GesTypeDefinitionNode> NoTypes = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, string> NoDeclaredTypes = new(StringComparer.Ordinal);
+
+    // A constant's literal, or nothing; a negated or cast literal keeps the static type of its operand.
+    private static string? ConstantTypeName(GesExpressionNode value, IReadOnlyDictionary<string, GesExpressionNode> constants)
+        => value is GesNothingLiteralExpressionNode
+            ? "nothing"
+            : InferImmutableBindingType(value, constants) ?? StaticTypeName(ClassifyExpression(value, NoCallables, NoTypes, NoDeclaredTypes, new HashSet<string>(StringComparer.Ordinal)));
 
     private static string? InferImmutableBindingType(GesExpressionNode expression, IReadOnlyDictionary<string, GesExpressionNode> constants)
     {
@@ -476,7 +509,7 @@ internal static class GesAstValidator
             _ => StaticExpressionInfo.Unknown
         };
 
-    private static StaticExpressionInfo ClassifyCall(GesCallExpressionNode call, IReadOnlyDictionary<string, GesCallableDefinition> callables, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, ISet<string> visitedCallables)
+    private static StaticExpressionInfo ClassifyCall(GesCallExpressionNode call, IReadOnlyDictionary<string, GesCallableDefinition> callables, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, string> declaredTypes, ISet<string> visitedCallables)
     {
         var callable = GesCallableSignatures.Resolve(callables, call);
         if (callable is null) return StaticExpressionInfo.Unknown;
@@ -488,7 +521,7 @@ internal static class GesAstValidator
 
         try
         {
-            return ClassifyExpression(callable.Expression, callables, typeDefinitions, BuildDeclaredTypeMap(callable.ParameterList), visitedCallables);
+            return ClassifyExpression(callable.Expression, callables, typeDefinitions, CalleeTypes(callable.ParameterList, declaredTypes), visitedCallables);
         }
         finally
         {
@@ -981,7 +1014,7 @@ internal static class GesAstValidator
             ValidateExpressionReferences(parsedScriptContext, constructor.Arguments[argumentIndex].Expression, callables, typeDefinitions, errors, declaredTypes);
 
         if (constructor.TypeName is "__split" or "__splitWhitespace") return;
-        if (constructor.TypeName is "record" or "range" or "series" or "number" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "handler")
+        if (constructor.TypeName is "record" or "range" or "series" or "number" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "bytes" or "handler")
         {
             var labels = new string[constructor.Arguments.Count];
             for (var i = 0; i < labels.Length; i++) labels[i] = constructor.Arguments[i].Name;
@@ -1111,7 +1144,7 @@ internal static class GesAstValidator
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or
             "vector" or "point" or "boolean" or "number" or "numeric" or "series" or
-            "list" or "range" or "message" or "handler" or "map" or "dice" ||
+            "list" or "range" or "message" or "handler" or "map" or "dice" or "bytes" ||
             GesQuantityUnits.ParseQuantityTypeName(typeName) is not null;
 
     private static bool IsKnownType(string typeName, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions)

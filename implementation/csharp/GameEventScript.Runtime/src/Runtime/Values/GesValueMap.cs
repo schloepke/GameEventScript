@@ -9,7 +9,8 @@ using GameEventScript.Syntax;
 namespace GameEventScript.Runtime.Values;
 
 /// <summary>
-/// Represents a ges value map, traversed in canonical key order.
+/// The immutable Text-keyed entries of a Map or the fields of a Record, with unique keys sorted by Unicode scalar
+/// values; indexing and enumeration follow that canonical order.
 /// </summary>
 public sealed class GesValueMap : IEnumerable<KeyValuePair<string, GesValue>>
 {
@@ -41,7 +42,7 @@ public sealed class GesValueMap : IEnumerable<KeyValuePair<string, GesValue>>
     }
 
     /// <summary>
-    /// Gets the length.
+    /// Gets the number of entries.
     /// </summary>
     public int Length => _keys.Length;
 
@@ -51,10 +52,10 @@ public sealed class GesValueMap : IEnumerable<KeyValuePair<string, GesValue>>
     internal GesValue[] EntryList => _entries ??= CreateListOfEntries();
 
     /// <summary>
-    /// Gets the value.
+    /// Looks up the value of a key by binary search, matching Unicode scalars exactly.
     /// </summary>
-    /// <param name="key">The key value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="key">The key to look up.</param>
+    /// <returns>The stored value, or <see langword="null"/> when the key is absent.</returns>
     public GesValue? Get(string key)
     {
         var index = FindKeyIndex(key);
@@ -67,22 +68,24 @@ public sealed class GesValueMap : IEnumerable<KeyValuePair<string, GesValue>>
     }
 
     /// <summary>
-    /// Performs the contains key operation.
+    /// Determines whether the map has an entry for a key, matching Unicode scalars exactly.
     /// </summary>
-    /// <param name="key">The key value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="key">The key to look up.</param>
+    /// <returns><see langword="true"/> when the key is present.</returns>
     public bool ContainsKey(string key) => FindKeyIndex(key) >= 0;
     /// <summary>
-    /// Performs the key at operation.
+    /// Gets the key at a position in canonical key order.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based position, less than <see cref="Length"/>.</param>
+    /// <returns>The key.</returns>
+    /// <exception cref="IndexOutOfRangeException">Thrown when <paramref name="index"/> is out of range.</exception>
     public string KeyAt(int index) => _keys[index];
     /// <summary>
-    /// Performs the value at operation.
+    /// Gets the value at a position in canonical key order.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based position, less than <see cref="Length"/>.</param>
+    /// <returns>The value.</returns>
+    /// <exception cref="IndexOutOfRangeException">Thrown when <paramref name="index"/> is out of range.</exception>
     public GesValue ValueAt(int index) => _values[index];
 
     /// <summary>

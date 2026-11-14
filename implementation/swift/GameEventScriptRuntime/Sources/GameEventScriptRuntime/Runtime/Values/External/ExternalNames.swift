@@ -36,12 +36,13 @@ extension GesExternalTypeNames {
         case "List": .list
         case "Map": .map
         case "Dice": .dice
+        case "Bytes": .bytes
         default: nil
         }
     }
 
     static func typeName(_ kind: GesBytecodeTypeKind, _ unit: GesQuantityUnit) throws -> String {
-        guard [.nothing, .tag, .text, .percentage, .vector, .point, .float, .boolean, .series, .range, .handler, .list, .map, .dice].contains(kind), unit == .none || kind == .float || kind == .vector || kind == .point else {
+        guard [.nothing, .tag, .text, .percentage, .vector, .point, .float, .boolean, .series, .range, .handler, .list, .map, .dice, .bytes].contains(kind), unit == .none || kind == .float || kind == .vector || kind == .point else {
             throw GesApiError.invalidArgument("Unsupported external value kind or unit")
         }
         if (kind == .float || kind == .integer) && unit != .none { return "Quantity(" + unit.suffix + ")" }
@@ -57,7 +58,8 @@ extension GesExternalTypeNames {
         // Nothing marks an absent value and is never converted into a value of the declared type.
         if value.kind == .nothing { return value }
         switch kind {
-        case .float: return .float(value.asNumber, unit: unit)
+        // Without a unit constraint a Quantity keeps its unit, as an unconstrained Vector or Point does.
+        case .float: return .float(value.asNumber, unit: unit != .none ? unit : value.kind == .integer || value.kind == .float ? value.unit : .none)
         case .vector where value.spatialValue != nil: return .vector(x: value.x, y: value.y, z: value.z, unit: unit == .none ? value.unit : unit)
         case .point where value.spatialValue != nil: return .point(x: value.x, y: value.y, z: value.z, unit: unit == .none ? value.unit : unit)
         case .tag:

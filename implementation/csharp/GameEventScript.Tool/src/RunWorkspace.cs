@@ -127,12 +127,16 @@ internal sealed class RunWorkspace
         }
         foreach (var write in writes)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(write.Path)!);
-            var temporary = write.Path + ".ges-save-" + Guid.NewGuid().ToString("N");
+            // A symbolic link keeps pointing at its file: the replacement goes to the link's final target, and it keeps
+            // that file's permissions.
+            var target = File.Exists(write.Path) ? new FileInfo(write.Path).ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? write.Path : write.Path;
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            var temporary = target + ".ges-save-" + Guid.NewGuid().ToString("N");
             try
             {
                 File.WriteAllBytes(temporary, write.Bytes);
-                File.Move(temporary, write.Path, overwrite: write.Draft.Id != 0);
+                if (!OperatingSystem.IsWindows() && File.Exists(target)) File.SetUnixFileMode(temporary, File.GetUnixFileMode(target));
+                File.Move(temporary, target, overwrite: write.Draft.Id != 0);
                 write.Draft.Baseline[write.Index] = write.Bytes;
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }

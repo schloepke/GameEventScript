@@ -78,7 +78,7 @@ extension GesCompiler {
                     if !writable.contains(name) { throw assemblyFailure(line.location, "Outer bindings are read-only.", name) }
                     if assemblyResource(assemblyResultKind(line, [:])) && !locals.contains(name) { throw assemblyFailure(line.location, "Resources require a temporary.", name) }
                 case "r", "e":
-                    let reads = signature[index] == "e" ? try assemblySymbolicReads(operand, handlerTarget: line.name == "BindHandler") : [operand]
+                    let reads = signature[index] == "e" ? try assemblySymbolicReads(operand, at: line.location, handlerTarget: line.name == "BindHandler") : [operand]
                     for read in reads {
                         if case .name(let name) = read.kind {
                             if scope.get(name) == nil { throw compileError("compile.unresolvedSymbol", read.location, symbol: name, phase: .compile) }
@@ -222,7 +222,7 @@ extension GesCompiler {
             guard let state = states[index] else { continue }
             for (i, kind) in signatures[index].enumerated() {
                 if kind == "r" || kind == "e" {
-                    let reads = kind == "e" ? try assemblySymbolicReads(line.operands[i], handlerTarget: line.name == "BindHandler") : [line.operands[i]]
+                    let reads = kind == "e" ? try assemblySymbolicReads(line.operands[i], at: line.location, handlerTarget: line.name == "BindHandler") : [line.operands[i]]
                     for read in reads {
                         guard case .name(let name) = read.kind else { continue }
                         if writable.contains(name) && state[name] == nil { throw assemblyFailure(line.location, "Register is not initialized on every path.", name) }

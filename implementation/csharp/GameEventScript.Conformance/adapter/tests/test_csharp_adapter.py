@@ -175,10 +175,10 @@ class AdapterTests(unittest.TestCase):
         cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'scriptApi'
                  and ('external-types' in c.metadata.get('requires', {}).get('core', [])
                       or c.id == 'runtime.control-flow/case-0006')]
-        self.assertEqual(15, len(cases))
+        self.assertEqual(16, len(cases))
         request = requests(cases)
         observed = execute(self.command, request)
-        self.assertEqual(15, verify(cases, observed)['summary']['passed'])
+        self.assertEqual(16, verify(cases, observed)['summary']['passed'])
         queue = next(c for c in cases if c.id == 'runtime.control-flow/case-0006')
         events = observed['observations'][queue.id]['runtime']['hosts'][0]['steps']['step-0001']['trace']
         rejected = next(e for e in events if e['event'] == 'emit' and e['message']['name'] == 'C')
@@ -230,10 +230,10 @@ class AdapterTests(unittest.TestCase):
 
     def test_product_json_codec_and_exact_oracle(self):
         cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'messageApi' and ('json' in c.metadata['messageApi'] or 'roundTripJson' in c.metadata['messageApi'])]
-        self.assertEqual(48, len(cases))
+        self.assertEqual(54, len(cases))
         request = requests(cases)
         observed = execute(self.command, request)
-        self.assertEqual(48, verify(cases, observed)['summary']['passed'])
+        self.assertEqual(54, verify(cases, observed)['summary']['passed'])
         for case in cases:
             expected = case.expected['message']
             if 'json' in expected:
@@ -241,7 +241,7 @@ class AdapterTests(unittest.TestCase):
             else:
                 expected['error'] = 'message.resourceLimit' if expected['error'] != 'message.resourceLimit' else 'message.invalidJson'
         self.assertEqual(request, requests(cases))
-        self.assertEqual(48, verify(cases, observed)['summary']['failed'])
+        self.assertEqual(54, verify(cases, observed)['summary']['failed'])
         for mutate in (lambda api: api.update(json={}), lambda api: api.update(roundTripJson=1)):
             broken = requests([cases[0]])
             mutate(broken['cases'][0]['api'])
@@ -307,9 +307,9 @@ class AdapterTests(unittest.TestCase):
 
     def test_document_reading_printing_and_errors_are_checked_only_in_python(self):
         cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'documentApi']
-        self.assertEqual(100, len(cases))
+        self.assertEqual(105, len(cases))
         observed = execute(self.command, requests(cases))
-        self.assertEqual(100, verify(cases, observed)['summary']['passed'])
+        self.assertEqual(105, verify(cases, observed)['summary']['passed'])
         failure = next(c for c in cases if c.id.endswith('unquoted-text'))
         observed['observations'][failure.id]['document']['read']['error']['column'] += 1
         self.assertEqual(1, verify(cases, observed)['summary']['failed'])

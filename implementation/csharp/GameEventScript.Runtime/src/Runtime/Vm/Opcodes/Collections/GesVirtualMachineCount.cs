@@ -23,6 +23,9 @@ internal partial class GesVirtualMachine
             case Dice when source.ObjectValue is int[] dice:
                 SetInteger(destinationRegister, dice.Length);
                 return;
+            case Bytes when source.ObjectValue is byte[] bytes:
+                SetInteger(destinationRegister, bytes.Length);
+                return;
             case GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
                 SetInteger(destinationRegister, GesRangeMath.GetLength(range.From, range.To, range.Step));
                 return;

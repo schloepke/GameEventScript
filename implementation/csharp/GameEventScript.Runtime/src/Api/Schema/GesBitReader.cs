@@ -37,6 +37,10 @@ public ref struct GesBitReader
     /// <summary>Gets the position of the next bit.</summary>
     public readonly long BitPosition => _bit;
 
+    /// <summary>Gets how many bits remain before the data or its byte limit ends, for example to read many values without
+    /// checking each one.</summary>
+    public readonly long RemainingBits => _bitCount - _bit;
+
     /// <summary>Reads a value of <paramref name="width"/> bits.</summary>
     /// <param name="width">The number of bits, from 0 to 64.</param>
     /// <param name="path">The field path for an error, such as <c>position.x</c>; empty for the record as a whole.</param>

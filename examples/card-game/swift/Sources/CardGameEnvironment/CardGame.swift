@@ -72,11 +72,11 @@ public final class CardGame {
         self.players = players
         bindings = Bindings(playerCount: players.count)
         var limits = GesRuntimeLimits()
-        limits.maxQueuedMessagesPerRun = 2048
+        limits.maxQueuedMessages = 2048
         limits.maxExecutionSteps = 50_000
         limits.maxLoopIterations = 2048
         limits.maxGeneratedCollectionItems = 2048
-        host = try GameEventScriptHost.makeBuilder().withRandomSeed(seed).withRuntimeLimits(limits).withRuntimeObserver(bindings).withRegistry(bindings).build()
+        host = try GameEventScriptHost.makeBuilder().withRandomSeed(seed).withRuntimeLimits(limits).withRuntimeObserver(bindings).withExtensionRegistry(bindings).build()
         do {
             let program = try GesProgramBuilder().withDebugInfo([.symbols, .sourceMap]).addScript(rules, sourceName: "rules.ges").compile()
             hasEndRound = program.bindings.contains { binding in

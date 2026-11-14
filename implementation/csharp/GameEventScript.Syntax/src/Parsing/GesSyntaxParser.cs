@@ -357,7 +357,7 @@ internal sealed partial class GesSyntaxParser
         var isUnlabeledConstructorParameter = Match(Underscore);
         if (isUnlabeledConstructorParameter) SkipNewLines();
 
-        ExpectIdentifier();
+        ExpectFieldName();
         Role(isUnlabeledConstructorParameter ? GesSyntaxRole.UnlabeledField : GesSyntaxRole.Field);
         Expect(Colon);
         SkipNewLines();
@@ -744,7 +744,7 @@ internal sealed partial class GesSyntaxParser
             if (Match(In))
             {
                 SkipNewLines();
-                if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
+                if (Current.IsWord("from"))
                 {
                     throw new ParseException("Direct ranges are not allowed after 'in'; use 'for item from ... to ...' or iterate a range variable", Current);
                 }
@@ -792,7 +792,7 @@ internal sealed partial class GesSyntaxParser
             if (_reader.PeekSignificant(offset++).Kind != Identifier) return false;
         }
         var token = _reader.PeekSignificant(offset);
-        return token.Kind == In || token.Kind == Identifier && token.Text == "from";
+        return token.Kind == In || token.IsWord("from");
     }
 
     private void ParseSeededRandomStatement()
@@ -945,7 +945,8 @@ internal sealed partial class GesSyntaxParser
 
     private bool IsElseClauseStart() => _reader.PeekSignificant(0).Kind == Else;
 
-    private bool IsCallExpressionStart() => Current.Kind is Identifier or Message && _reader.PeekSignificant(1).Kind == LeftParen;
+    // A call's parenthesis follows its name on the same line: a line break outside brackets separates statements.
+    private bool IsCallExpressionStart() => Current.Kind is Identifier or Message && _reader.Peek(1).Kind == LeftParen;
 
     private bool IsExtensionCallStart()
         => Current.Text.StartsWith(":", StringComparison.Ordinal) && Current.Kind != TypeName &&
@@ -966,8 +967,12 @@ internal sealed partial class GesSyntaxParser
         return extensionToken;
     }
 
-    private bool IsExtensionUnaryArgumentStart()
-        => !IsPipelineSelectorStart() && Current.Kind is Identifier or Message or Tag or Selector or TypeName or ConstantReference or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or
+    private bool IsExtensionUnaryArgumentStart() => !IsPipelineSelectorStart() && IsExtensionOperandKind(Current.Kind);
+
+    // The tokens that start the single operand of an unparenthesized extension call; Swift `extensionOperandKinds` copies
+    // them, checked by scripts/verify-swift-parser-tokens.py.
+    private static bool IsExtensionOperandKind(GesTokenKind kind)
+        => kind is Identifier or Message or Tag or Selector or TypeName or ConstantReference or Float or Percentage or UnitNumber or Text or True or False or Nothing or
             MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity or
             IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
             IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
@@ -1000,6 +1005,21 @@ internal sealed partial class GesSyntaxParser
             IntrinsicSin or IntrinsicCos or IntrinsicTan or IntrinsicAsin or IntrinsicAcos or IntrinsicAtan or IntrinsicAtan2 or
             IntrinsicHypot or IntrinsicDistance or IntrinsicSquared or IntrinsicLength or IntrinsicNormalize or IntrinsicDot or IntrinsicCross or IntrinsicAngle;
 
+    // A record field name in a declaration or after `.`: a name or one of the keyword-like words of an argument label.
+    private void ExpectFieldName()
+    {
+        ThrowIfIllegalToken();
+
+        if (IsArgumentLabelKind(Current.Kind))
+        {
+            Advance();
+            return;
+        }
+
+        var token = Current;
+        throw new ParseException($"Expected Identifier but found {token.Kind}", token);
+    }
+
     private static bool IsExtensionFunctionNameKind(GesTokenKind kind)
         => kind is Identifier or
             IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
@@ -1019,7 +1039,7 @@ internal sealed partial class GesSyntaxParser
 
     private void ExpectValueWord()
     {
-        if (Current.Kind == Identifier && string.Equals(Current.Text, "value", StringComparison.Ordinal))
+        if (Current.IsWord("value"))
         {
             AdvanceKeyword();
             return;
@@ -1035,13 +1055,9 @@ internal sealed partial class GesSyntaxParser
         return true;
     }
 
-    private bool IsWord(string word) => Current.Kind == Identifier && string.Equals(Current.Text, word, StringComparison.Ordinal);
+    private bool IsWord(string word) => Current.IsWord(word);
 
-    private bool IsNextSignificantWord(string word)
-    {
-        var lookahead = _reader.PeekSignificant(1);
-        return lookahead.Kind == Identifier && string.Equals(lookahead.Text, word, StringComparison.Ordinal);
-    }
+    private bool IsNextSignificantWord(string word) => _reader.PeekSignificant(1).IsWord(word);
 
     private void ExpectWord(string word)
     {

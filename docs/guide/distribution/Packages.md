@@ -256,7 +256,7 @@ For a prerelease, select that exact version, for example
 These version numbers are examples, not a claim that they have been published.
 Use `import GameEventScriptRuntime` and optionally the Compiler/SwiftBridge imports.
 
-Swift 6.0 or newer is required. macOS is the currently CI-verified platform;
+Swift 6.0 or newer is required. CI runs the Swift port on macOS and on Linux, and builds the libraries with Swift 6.0;
 other platform support must be verified before being advertised. The root package and local
 SwiftBridge package require macOS 10.15 for the SwiftSyntax macro dependency. Consuming packages must declare this or a newer
 macOS target. This is a macOS deployment minimum, not an Apple-only restriction.
@@ -369,6 +369,11 @@ PR lists may supplement it.
 
 Swift tags and NuGet uploads are separate publication operations, not a
 transaction. A failed NuGet upload does not withdraw a Swift tag, and some NuGet
-packages may already have been accepted. Inspect the outcome before retrying;
-the script deliberately does not silently skip duplicate versions. Never move a
-published version tag or overwrite its intended release contents.
+packages may already have been accepted. Run the same workflow again to finish
+the release: before each upload, the script asks nuget.org for that package
+version and skips it only when its contents equal the verified package (apart
+from the repository signature nuget.org adds); a version with other contents
+stops the run, so a duplicate never hides a mismatch. Shortly after an upload,
+nuget.org may not list the version yet and reject the repeated push as a
+conflict; wait for indexing and run again. Never move a published version tag
+or overwrite its intended release contents.

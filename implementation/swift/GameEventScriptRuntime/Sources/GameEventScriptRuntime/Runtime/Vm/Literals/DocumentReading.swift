@@ -59,6 +59,7 @@ struct GesDocumentReading {
         case .vector: return .spatial(point: false, x: value.x, y: value.y, z: value.z, unit: value.unit)
         case .point: return .spatial(point: true, x: value.x, y: value.y, z: value.z, unit: value.unit)
         case .dice: return .dice(value.asDice)
+        case .bytes: return .bytes(value.asBytes)
         case .list:
             let items = value.asList
             return .list(items.map { node($0, start) }, offsets: [Int](repeating: start, count: items.count))
@@ -90,6 +91,7 @@ struct GesDocumentReading {
         case .number(let number): return GesTextNumberCast.value(number, sink: GesValueFactory())!
         case .spatial(let point, let x, let y, let z, let unit): return point ? .point(x: x, y: y, z: z, unit: unit) : .vector(x: x, y: y, z: z, unit: unit)
         case .dice(let rolls): return .dice(rolls)
+        case .bytes(let values): return .bytes(values)
         case .list(let items, _): return .list(items.map { value($0) })
         case .map(let keys, let values, _, _): return literal("@map", keys, values, offset: 0)
         case .form(let type, let labels, let arguments, let offset): return literal(type, labels, arguments, offset: offset)

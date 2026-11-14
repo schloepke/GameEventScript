@@ -514,6 +514,8 @@ public enum GesBytecodeTypeKind: UInt16, Sendable, CaseIterable {
     case `point` = 0x09
     /// Lazy numeric range.
     case `range` = 0x0a
+    /// Immutable sequence of bytes.
+    case `bytes` = 0x0b
     /// Message-handler signature.
     case `handler` = 0x10
     /// Message signature, arguments and tags.

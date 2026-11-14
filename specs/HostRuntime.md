@@ -109,7 +109,7 @@ Program before `Start`. `Receive` returns false before a successful Start;
 `Load` validates and links before committing registration. Validation, resource,
 link, and initialization-queue capacity failures leave registrations, queued
 messages, active execution and random state unchanged. An initialization snapshot
-reserves one queue slot under `MaxQueuedMessagesPerRun`; insufficient capacity
+reserves one queue slot under `MaxQueuedMessages`; insufficient capacity
 raises `link.initializationQueueFull`. A Program without initialization needs no
 slot. Loading is available to embedding code and native message handlers.
 Reentrant loading during active script/extension execution or the initial Start
@@ -138,7 +138,10 @@ available when any initialization emits, so its enqueue-time snapshot can includ
 another member of the group. No ordinary queued message is dispatched by Start.
 
 Every initialization uses the ordinary runtime safety limits. Exhaustion fails
-startup; the initial group never becomes partially ready. Successful Start marks
+startup; the initial group never becomes partially ready. `MaxProcessedMessagesPerRun`
+paces ordinary pumps and does not bound Start: Start completes every
+initialization snapshot of the group, however many there are, because a failed
+Start is terminal while a paced pump resumes later. Successful Start marks
 the host ready and returns `StartResult.Ready`, while emitted messages may remain
 queued. StartResult also reports initialization opcode, completed-snapshot, emit,
 and publish counters; these exclude subsequent ordinary dispatch. A runtime fault or exhausted safety limit returns `RuntimeError` or
@@ -281,7 +284,7 @@ implementation and therefore does not depend on C# reflection.
   never rolls back or corrupts local delivery. The observer sees the result.
 - Queue limits count logical messages, not handler invocations.
 - A send needs a queue slot for an instant message with local recipients and
-  for every delayed entry. When it finds `MaxQueuedMessagesPerRun` reached
+  for every delayed entry. When it finds `MaxQueuedMessages` reached
   outside initialization, an Emit or Publish statement and a native Emit or
   Publish drop the local message, report the limit to the observer and continue
   the handler. A result-bearing or delayed send instead stops its handler with
@@ -349,7 +352,7 @@ and performs no synchronization. A host is serial but not thread-affine: only
 one caller may access it at a time, while later frames may run on another thread
 when the embedding environment supplies the required happens-before handoff.
 
-The processed-message limit counts completed logical messages, after all of
+The processed-message limit counts completed logical messages of ordinary pumps, after all of
 their captured handlers have finished. After completing the configured number,
 the pump reports `RuntimeLimitReached` and one corresponding observer event only
 if another logical message remains queued. That next message stays queued and
@@ -433,11 +436,61 @@ stops the handler without returning a partial projection result. Previously
 completed effects remain observable. This is an incremental materialization
 limit, not a byte-allocation budget or a bound on existing input collections.
 
+Operations that visit the items of a Range inside one opcode charge the same
+`MaxLoopIterations` counter for each visited Range item, before visiting it:
+`:contains any` and `:contains all` for each candidate of a Range, `HasAny` and
+`HasAll` for each item of a binary64 Range, and `starts with` and `ends with`
+for each compared pair when both operands are Ranges. Against an iterator,
+`:contains any` and `:contains all` visit every Range candidate before the
+search, because the iterator is read once. Integer Ranges need no visits where
+their bounds decide the result: `HasAny` is true unless the Range is empty or
+just `0`, `HasAll` is true unless the Range contains `0` (an empty Range has
+all), and `starts with` or `ends with` between two integer Ranges compares the
+first or last terms and, beyond one item, the steps. Shuffling a Range
+materializes it, so a Range longer than `MaxRangeItems` reports that limit and
+shuffles to an empty List, as the List cast does; choosing items at random from
+a Range draws positions among the items not chosen yet and does not materialize
+it.
+
 For either limit, a nonpositive value disables that limit. An exceeded limit
 produces one structured runtime-limit observation for the failing handler and
 stops the pump with `RuntimeLimitReached`. Normal handler cleanup restores random
 boundaries and clears VM state. Remaining handlers and queued messages stay
 available for a later pump call.
+
+### Value nesting
+
+`MaxValueDepth` (default 64) bounds how deeply a handler nests the values it
+constructs. A List, Map, Record or Message is one level deeper than its deepest
+item, field or argument; every other value, including Dice, Bytes, Ranges,
+Vectors, Points and external values, has depth 0, so a List of numbers has
+depth 1 and an empty List also has depth 1. Exactly the configured depth is
+allowed. Constructing a deeper value stops the handler with this runtime limit
+before its next instruction, without returning the value; previously completed
+effects remain. Values a handler receives as arguments, and values native code
+builds through the API, are not checked until the handler nests them further.
+A nonpositive value disables the limit.
+
+The bound exists because converting, comparing, hashing and releasing a value
+walks its nesting recursively in both ports. Without it, a handler that wraps
+its accumulator once per step, or a message chain that wraps its argument once
+per message, could exhaust the native stack, which neither port can catch. With
+the default, every value a script builds converts and compares within the stack
+of a 512 KB thread, and also stays within the nesting bounds of `parse` and of
+the JSON codec. Each container records its depth when it is built, so the check
+costs no walk of its items.
+
+### Memory
+
+Runtime limits bound the work, the nesting and the collection sizes of one
+handler; they are not a memory budget. Concatenating Text, Lists, Dice or Bytes
+and converting values to Text produce values whose size can double with each
+instruction, so a few dozen instructions can request more memory than a
+process has. C# reports a failed allocation as a handler error; Swift
+terminates the process. A host that runs untrusted Programs bounds their memory
+outside the runtime, for example by running them in a separate process with an
+operating-system memory limit. A portable per-value size limit is deferred in
+`BACKLOG.md`.
 
 ## C# Automatic Runner
 
@@ -451,7 +504,8 @@ the last execution result and synchronized instance startup results.
 `CSharpBridge.GesBridgeHostRunner` serializes access
 to one host with a C# lock and schedules at most one pump job for that host on a
 shared dispatcher. Concurrent `Receive`, `Load`, subscribe, detach, and
-unsubscribe calls go through the runner. Creating a runner immediately schedules
+unsubscribe calls go through the runner: loading and subscribing return a runner-owned registration whose
+lifecycle operations take the same lock, never the host's own handles. Creating a runner immediately schedules
 one pump when its host is ready and already has pending work, including queued
 messages, late initialization, or a paused script handler. No later `Receive` or `Load` is
 required to start that work. An idle host waits for later accepted work.
@@ -530,11 +584,14 @@ ID. Without an observer, send IDs are unobservable and change no behavior.
 A message with an ID that is removed before it is dispatched reports
 `MessageDiscarded` with that ID exactly once. On initial-group failure these are
 every pending initialization in load order, then every queued message in queue
-order, then every delayed entry in deadline order. On later-instance failure
-they are the failed instance's staged outputs and every message it left without
-recipients: queued messages in queue order, then delayed entries in deadline
-order. A deferred initialization Publish is never released by a failed
-initialization, so its ID can appear only in this callback. Dispatched and due
+order, then every delayed entry in deadline order, then every deferred
+initialization Publish without a local queue entry in send-ID order. On
+later-instance failure they are the failed instance's staged outputs and every
+message it left without recipients: queued messages in queue order, then
+delayed entries in deadline order, then its deferred Publishes without a local
+queue entry in send-ID order. A deferred initialization Publish is never
+released by a failed initialization, so its ID can appear only in this
+callback; one with a local queue entry is reported once, with that entry. Dispatched and due
 messages report no discard; their ordinary callbacks follow.
 
 ## Delayed dispatch

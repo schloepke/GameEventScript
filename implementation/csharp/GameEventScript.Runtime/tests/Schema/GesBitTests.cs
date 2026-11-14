@@ -11,6 +11,32 @@ namespace GameEventScript.Tests.Native.Schema;
 public sealed class GesBitTests
 {
     [TestMethod]
+    public void ACountingWriterCountsTheBytesOfTheSameWrites()
+    {
+        var buffer = new byte[96];
+        var writer = new GesBitWriter(buffer);
+        var counting = GesBitWriter.Counting();
+        for (var index = 0; index < 40; index++)
+        {
+            writer.Write((ulong)index, 11);
+            counting.Write((ulong)index, 11);
+        }
+
+        writer.SetBit(3);
+        counting.SetBit(3);
+        writer.Rewind(10);
+        counting.Rewind(10);
+        writer.Write(5, 3);
+        counting.Write(5, 3);
+        writer.WriteBytes(new byte[13]);
+        counting.WriteBytes(new byte[13]);
+        Assert.AreEqual(writer.BitPosition, counting.BitPosition);
+        Assert.AreEqual(writer.Finish(), counting.Finish());
+        Assert.AreEqual(0, writer.RequiredByteCount);
+        Assert.AreEqual(48, counting.RequiredByteCount, "Bits that a rewind took back still needed room.");
+    }
+
+    [TestMethod]
     public void EveryWidthRoundTripsAcrossWordBoundaries()
     {
         var random = new Random(7);

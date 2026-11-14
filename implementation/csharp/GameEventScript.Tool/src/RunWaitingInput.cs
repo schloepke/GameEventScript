@@ -46,7 +46,7 @@ internal static class RunWaitingInput
         {
             Clear();
             var visible = ToolTextDisplay.ExpandTabs(text);
-            Console.Error.Write("ges> " + (color ? RunHighlighting.Render(visible) : visible).Replace("\n", "\n ... "));
+            Console.Error.Write("ges> " + (color ? RunHighlighting.Render(visible) : visible).Replace("\n", "\n     "));
             var (end, caret) = Position(text, cursor, Math.Max(10, Console.WindowWidth));
             if (end.Column == 0) Console.Error.Write(" \r");
             if (end.Row > caret.Row) Console.Error.Write($"\u001b[{end.Row - caret.Row}A");

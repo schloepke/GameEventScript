@@ -150,12 +150,12 @@ private struct GesSchemaFullCopy {
         try source.require(Int(count) * 8, index)
         if write { try target.putBits(count, node.width) }
         var text = GesSchemaUtf8Scanner()
-        var valid = !node.isTagText || count > 0
+        var valid = node.isBytes || !node.isTagText || count > 0
         var position: UInt64 = 0
         while position < count {
             let value = UInt8(truncatingIfNeeded: try source.getBits(8, index))
             if write { try target.putBits(UInt64(value), 8) }
-            if valid {
+            if valid && !node.isBytes {
                 if node.isTagText {
                     valid = (0x61...0x7A).contains(value) || (position > 0 && ((0x30...0x39).contains(value) || (0x41...0x5A).contains(value)))
                 } else {
@@ -165,7 +165,7 @@ private struct GesSchemaFullCopy {
             position += 1
         }
         if !valid { throw GesWireError(node.isTagText ? GesWireError.invalidTag : GesWireError.invalidText, path(index)) }
-        if !node.isTagText && !text.isComplete { throw GesWireError(GesWireError.invalidText, path(index)) }
+        if !node.isTagText && !node.isBytes && !text.isComplete { throw GesWireError(GesWireError.invalidText, path(index)) }
     }
 
     // The sort value of a key: an integer without a range compares with its sign, every other key by its index.
@@ -327,6 +327,7 @@ private struct GesSchemaDeltaEncoder {
 
     private let full: GesSchemaFullCopy
     private let fieldCount: Int
+    private let packed: Bool
     private var record: GesSchemaReader
     private var baseline: GesSchemaReader
     private var writer: GesSchemaWriter
@@ -334,6 +335,7 @@ private struct GesSchemaDeltaEncoder {
     init(_ schema: GesBoundSchema, _ record: UnsafeRawBufferPointer, _ baseline: UnsafeRawBufferPointer, _ buffer: UnsafeMutableRawBufferPointer) {
         full = GesSchemaFullCopy(nodes: schema.nodes, infos: schema.infos)
         fieldCount = schema.deltaFieldCount
+        packed = schema.schema.packedWidth > 0
         self.record = GesSchemaReader(schema, data: record)
         self.baseline = GesSchemaReader(schema, data: baseline)
         writer = GesSchemaWriter(schema, into: buffer)
@@ -347,10 +349,42 @@ private struct GesSchemaDeltaEncoder {
             try writer.putBits(value, full.nodes[0].width)
             start = full.nodes[0].next
         }
-        _ = try group(start, full.nodes.count, fieldCount)
+        if packed {
+            try whole()
+        } else {
+            _ = try group(start, full.nodes.count, fieldCount)
+        }
         _ = try record.finishBits()
         _ = try baseline.finishBits()
         return try writer.finishBits()
+    }
+
+    // A packed record changes as a whole, also as the root: a change bit, then its word when it differs.
+    private mutating func whole() throws(GesWireError) {
+        let recordStart = record.bitPosition
+        var index = 0
+        while index < full.nodes.count {
+            try full.fullField(&record, index, &writer, write: false)
+            index = full.nodes[index].next
+        }
+        let recordEnd = record.bitPosition
+        let baselineStart = baseline.bitPosition
+        index = 0
+        while index < full.nodes.count {
+            try full.fullField(&baseline, index, &writer, write: false)
+            index = full.nodes[index].next
+        }
+        if try GesSchemaFullCopy.equal(&record, recordStart, recordEnd, &baseline, baselineStart, baseline.bitPosition) {
+            try writer.putBits(0, 1)
+            return
+        }
+        try writer.putBits(1, 1)
+        record.seek(recordStart)
+        index = 0
+        while index < full.nodes.count {
+            try full.fullField(&record, index, &writer, write: true)
+            index = full.nodes[index].next
+        }
     }
 
     // The change bits come first and are set as the fields turn out to differ.
@@ -407,6 +441,8 @@ private struct GesSchemaDeltaEncoder {
         case .list where node.keyedElements:
             return try keyedList(index)
         case .text, .list:
+            return try whole(index)
+        case .group where node.packed:
             return try whole(index)
         case .group:
             let start = writer.bitPosition
@@ -574,6 +610,7 @@ private struct GesSchemaDeltaEncoder {
 private struct GesSchemaDeltaDecoder {
     private let full: GesSchemaFullCopy
     private let fieldCount: Int
+    private let packed: Bool
     private var delta: GesSchemaReader
     private var baseline: GesSchemaReader
     private var writer: GesSchemaWriter
@@ -581,6 +618,7 @@ private struct GesSchemaDeltaDecoder {
     init(_ schema: GesBoundSchema, _ delta: UnsafeRawBufferPointer, _ baseline: UnsafeRawBufferPointer, _ buffer: UnsafeMutableRawBufferPointer, _ byteLimit: Int) {
         full = GesSchemaFullCopy(nodes: schema.nodes, infos: schema.infos)
         fieldCount = schema.deltaFieldCount
+        packed = schema.schema.packedWidth > 0
         self.delta = GesSchemaReader(schema, data: delta, byteLimit: byteLimit)
         self.baseline = GesSchemaReader(schema, data: baseline)
         writer = GesSchemaWriter(schema, into: buffer)
@@ -596,10 +634,39 @@ private struct GesSchemaDeltaDecoder {
             try writer.putBits(value, full.nodes[0].width)
             start = full.nodes[0].next
         }
-        _ = try group(start, full.nodes.count, fieldCount, -1)
+        if packed {
+            try whole()
+        } else {
+            _ = try group(start, full.nodes.count, fieldCount, -1)
+        }
         let deltaBytes = try delta.finishBits()
         _ = try baseline.finishBits()
         return GesSchemaDeltaDecoded(byteCount: try writer.finishBits(), deltaByteCount: deltaBytes)
+    }
+
+    // A packed record's delta: its baseline when the change bit is clear, else its word, which must differ.
+    private mutating func whole() throws(GesWireError) {
+        var index = 0
+        if try delta.getBits(1, -1) == 0 {
+            while index < full.nodes.count {
+                try full.fullField(&baseline, index, &writer, write: true)
+                index = full.nodes[index].next
+            }
+            return
+        }
+        let deltaStart = delta.bitPosition
+        while index < full.nodes.count {
+            try full.fullField(&delta, index, &writer, write: true)
+            index = full.nodes[index].next
+        }
+        let deltaEnd = delta.bitPosition
+        let baselineStart = baseline.bitPosition
+        index = 0
+        while index < full.nodes.count {
+            try full.fullField(&baseline, index, &writer, write: false)
+            index = full.nodes[index].next
+        }
+        if try GesSchemaFullCopy.equal(&delta, deltaStart, deltaEnd, &baseline, baselineStart, baseline.bitPosition) { throw GesWireError(GesWireError.invalidDelta, "") }
     }
 
     private mutating func group(_ start: Int, _ end: Int, _ count: Int, _ owner: Int) throws(GesWireError) -> Bool {
@@ -657,13 +724,11 @@ private struct GesSchemaDeltaDecoder {
             } else {
                 try elementKeyedList(index)
             }
+        case .group where node.packed:
+            // A packed record changes as a whole: its word follows the change bit.
+            try wholePayload(index)
         case .text, .list:
-            let deltaStart = delta.bitPosition
-            try full.fullValue(&delta, index, &writer, write: true)
-            let deltaEnd = delta.bitPosition
-            let baselineStart = baseline.bitPosition
-            try full.fullValue(&baseline, index, &writer, write: false)
-            if try GesSchemaFullCopy.equal(&delta, deltaStart, deltaEnd, &baseline, baselineStart, baseline.bitPosition) { throw GesWireError(GesWireError.invalidDelta, full.path(index)) }
+            try wholePayload(index)
         case .group:
             if !(try group(index + 1, node.next, node.childCount, index)) { throw GesWireError(GesWireError.invalidDelta, full.path(index)) }
         case .union:
@@ -671,6 +736,16 @@ private struct GesSchemaDeltaDecoder {
         default:
             try writer.putBits(try number(index), node.width)
         }
+    }
+
+    // A field that changes as a whole: its full value, which must differ from the baseline's.
+    private mutating func wholePayload(_ index: Int) throws(GesWireError) {
+        let deltaStart = delta.bitPosition
+        try full.fullValue(&delta, index, &writer, write: true)
+        let deltaEnd = delta.bitPosition
+        let baselineStart = baseline.bitPosition
+        try full.fullValue(&baseline, index, &writer, write: false)
+        if try GesSchemaFullCopy.equal(&delta, deltaStart, deltaEnd, &baseline, baselineStart, baseline.bitPosition) { throw GesWireError(GesWireError.invalidDelta, full.path(index)) }
     }
 
     private mutating func wholeKeyedList(_ index: Int) throws(GesWireError) {

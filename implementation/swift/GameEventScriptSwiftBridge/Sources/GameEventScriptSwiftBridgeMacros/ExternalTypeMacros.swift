@@ -37,7 +37,10 @@ private func quoted(_ text: String) -> String { StringLiteralExprSyntax(content:
 private func inferredType(_ type: TypeSyntax) -> String? {
     if let optional = type.as(OptionalTypeSyntax.self) { return inferredType(optional.wrappedType) }
     if let optional = type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) { return inferredType(optional.wrappedType) }
-    if type.is(ArrayTypeSyntax.self) { return "List" }
+    if let array = type.as(ArrayTypeSyntax.self) {
+        let element = array.element.trimmedDescription
+        return element == "UInt8" || element == "Swift.UInt8" ? "Bytes" : "List"
+    }
     if type.is(DictionaryTypeSyntax.self) { return "Map" }
     let name: String
     let generics: GenericArgumentClauseSyntax?
@@ -54,7 +57,7 @@ private func inferredType(_ type: TypeSyntax) -> String? {
     case "Bool": return "Boolean"
     case "String": return "Text"
     case "Double", "Float", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64": return "Number"
-    case "Array": return "List"
+    case "Array": return generics?.arguments.first.map { ["UInt8", "Swift.UInt8"].contains($0.argument.trimmedDescription) } == true ? "Bytes" : "List"
     case "Dictionary": return "Map"
     case "Optional": return generics?.arguments.first.flatMap { inferredType($0.argument) }
     default: return nil
@@ -229,5 +232,157 @@ struct GesConstructMacro: PeerMacro {
         guard declaration.is(InitializerDeclSyntax.self) || declaration.is(FunctionDeclSyntax.self) else { throw BindingError("@GesConstruct applies only to initializers or static factories.") }
         try requireEnclosingType(context)
         return []
+    }
+}
+
+// A literal GesQuantityUnit case such as `.meter`, or nil for `.none`.
+private func unitCase(_ expression: ExprSyntax) throws -> String? {
+    guard let member = expression.as(MemberAccessExprSyntax.self),
+        member.base == nil || member.base?.trimmedDescription == "GesQuantityUnit" || member.base?.trimmedDescription == "GameEventScriptRuntime.GesQuantityUnit",
+        member.declName.baseName.text == "none" || GesTypeMacro.unitSymbols[member.declName.baseName.text] != nil
+    else { throw BindingError("GES units must be literal GesQuantityUnit cases.") }
+    return member.declName.baseName.text == "none" ? nil : member.declName.baseName.text
+}
+
+private func units(_ expression: ExprSyntax?) throws -> [String: String] {
+    guard let expression else { return [:] }
+    guard let dictionary = expression.as(DictionaryExprSyntax.self) else { throw BindingError("units must be a dictionary literal of parameter names and units.") }
+    guard case .elements(let elements) = dictionary.content else { return [:] }
+    var result: [String: String] = [:]
+    for element in elements {
+        let name = try literal(element.key)
+        guard result[name] == nil else { throw BindingError("units names the parameter \(name) twice.") }
+        if let unit = try unitCase(element.value) { result[name] = unit }
+    }
+    return result
+}
+
+// Whether a parameter receives the call's random generator; the macro cannot resolve type aliases.
+private func isRandomGenerator(_ type: TypeSyntax) -> Bool {
+    ["GesRandomGenerator", "GameEventScriptRuntime.GesRandomGenerator"].contains(type.trimmedDescription)
+}
+
+struct GesExtensionMacro: MemberMacro {
+    static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
+        guard
+            declaration.is(EnumDeclSyntax.self) || declaration.is(StructDeclSyntax.self)
+                || declaration.as(ClassDeclSyntax.self)?.modifiers.contains(where: { $0.name.text == "final" }) == true
+        else { throw BindingError("@GesExtension requires an enum, struct or final class.") }
+        guard let namespace = try stringArgument("name", in: arguments(node)) else { throw BindingError("@GesExtension requires a namespace.") }
+        var statics: [String] = []
+        var instances: [String] = []
+        var signatures: Set<String> = []
+        for member in declaration.memberBlock.members {
+            guard let function = member.decl.as(FunctionDeclSyntax.self) else { continue }
+            if function.name.text == "gesExtensions" { throw BindingError("@GesExtension reserves the member name gesExtensions.") }
+            let predicate = attribute("GesPredicate", in: function.attributes)
+            guard let annotation = attribute("GesFunction", in: function.attributes) ?? predicate else { continue }
+            guard function.genericParameterClause == nil, function.signature.effectSpecifiers?.asyncSpecifier == nil else {
+                throw BindingError("@GesFunction requires a synchronous, nongeneric method.")
+            }
+            let args = arguments(annotation)
+            let name = try stringArgument("name", in: args) ?? function.name.text
+            let resultUnit = try args["unit"].flatMap(unitCase)
+            let parameterUnits = try units(args["units"])
+            let isStatic = function.modifiers.contains { ["static", "class"].contains($0.name.text) }
+            guard let result = function.signature.returnClause?.type.trimmedDescription, result != "Void", result != "()" else {
+                throw BindingError("@GesFunction requires a result.")
+            }
+            let parameters = Array(function.signature.parameterClause.parameters)
+            if predicate != nil {
+                guard parameters.count == 1, !isRandomGenerator(parameters[0].type), ["Bool", "Bool?", "Optional<Bool>"].contains(result) else {
+                    throw BindingError("@GesPredicate requires one parameter and a Bool or Bool? result.")
+                }
+            }
+            var labels: [String] = []
+            var conditions: [String] = []
+            var values: [String] = []
+            var used: Set<String> = []
+            var hasRandom = false
+            for parameter in parameters {
+                guard parameter.ellipsis == nil, parameter.defaultValue == nil, !parameter.type.trimmedDescription.hasPrefix("inout "), parameter.modifiers.isEmpty else {
+                    throw BindingError("@GesFunction does not support variadic, defaulted, inout or ownership-qualified parameters.")
+                }
+                let external = parameter.firstName.text
+                let local = parameter.secondName?.text ?? external
+                let type = parameter.type.trimmedDescription
+                let unit = parameterUnits[local]
+                used.insert(local)
+                // The call's random generator is no script argument: it has no label and reads no argument.
+                if isRandomGenerator(parameter.type) {
+                    guard !hasRandom else { throw BindingError("@GesFunction declares more than one GesRandomGenerator parameter.") }
+                    if unit != nil { throw BindingError("A GesRandomGenerator parameter receives the call's random generator and takes no unit.") }
+                    hasRandom = true
+                    values.append((external == "_" ? "" : "\(external): ") + "call.random")
+                    continue
+                }
+                if unit != nil && type == "GesValue" { throw BindingError("A GesValue parameter receives the raw argument and takes no unit.") }
+                let index = labels.count
+                labels.append(predicate != nil ? "_" : external)
+                // A Result tells a failed conversion from a decoded nil, which an Optional parameter receives for Nothing.
+                conditions.append(
+                    "case .success(let a\(index)) = Result(catching: { try GesBridgeValueConversion.decode(call.arguments[\(index)], as: (\(type)).self, unit: .\(unit ?? "none")) })"
+                )
+                values.append((external == "_" ? "" : "\(external): ") + "a\(index)")
+            }
+            conditions.insert("call.arguments.count == \(labels.count)", at: 0)
+            if let unknown = Set(parameterUnits.keys).subtracting(used).sorted().first { throw BindingError("units names \(unknown), which is no parameter.") }
+            let signature = name + "(" + labels.joined(separator: ",") + ")"
+            guard signatures.insert(signature).inserted else { throw BindingError("@GesExtension declares :\(namespace).\(signature) twice.") }
+            let throwing = function.signature.effectSpecifiers?.throwsClause != nil
+            let target = (isStatic ? "Self." : "self.") + "`\(function.name.text)`"
+            let entry = """
+                try GesBridgeExtension(namespace: \(quoted(namespace)), name: \(quoted(name)), parameters: [\(labels.map(quoted).joined(separator: ", "))]) { call in
+                    guard \(conditions.joined(separator: ", ")) else {
+                        call.setNothing()
+                        return
+                    }
+                    let result = \(throwing ? "try " : "")\(target)(\(values.joined(separator: ", ")))
+                    call.setValue((try? GesBridgeValueConversion.encode(result, unit: .\(resultUnit ?? "none"))) ?? .nothing)
+                }
+                """
+            if isStatic { statics.append(entry) } else { instances.append(entry) }
+        }
+        let access = declaration.modifiers.contains(where: { $0.name.text == "public" }) ? "public " : declaration.modifiers.contains(where: { $0.name.text == "package" }) ? "package " : ""
+        var members: [DeclSyntax] = []
+        if !statics.isEmpty || instances.isEmpty {
+            members.append(
+                DeclSyntax(
+                    stringLiteral: """
+                        /// The extensions of the static `@GesFunction` and `@GesPredicate` methods, for a `GesBridgeExtensionRegistry`.
+                        \(access)static func gesExtensions() throws -> [GesBridgeExtension] {
+                            [\(statics.joined(separator: ",\n"))]
+                        }
+                        """
+                )
+            )
+        }
+        if !instances.isEmpty {
+            members.append(
+                DeclSyntax(
+                    stringLiteral: """
+                        /// The extensions of this instance's `@GesFunction` and `@GesPredicate` methods and the static ones; the closures
+                        /// retain this instance for as long as a registry holds them.
+                        \(access)func gesExtensions() throws -> [GesBridgeExtension] {
+                            [\((instances + statics).joined(separator: ",\n"))]
+                        }
+                        """
+                )
+            )
+        }
+        return members
+    }
+}
+
+struct GesFunctionMacro: PeerMacro {
+    static func expansion(of node: AttributeSyntax, providingPeersOf declaration: some DeclSyntaxProtocol, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
+        guard declaration.is(FunctionDeclSyntax.self) else { throw BindingError("@GesFunction and @GesPredicate apply only to methods.") }
+        for syntax in context.lexicalContext {
+            if let type = syntax.asProtocol(WithAttributesSyntax.self), syntax.is(EnumDeclSyntax.self) || syntax.is(StructDeclSyntax.self) || syntax.is(ClassDeclSyntax.self) {
+                if attribute("GesExtension", in: type.attributes) != nil { return [] }
+                break
+            }
+        }
+        throw BindingError("This annotation requires an enclosing @GesExtension declaration.")
     }
 }

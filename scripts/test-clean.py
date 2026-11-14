@@ -43,14 +43,16 @@ class CleanTests(unittest.TestCase):
             "TestResults/results.trx", "implementation/csharp/GameEventScript.Runtime/src/bin/Release/a.dll",
             "implementation/csharp/GameEventScript.Runtime/tests/obj/cache", "implementation/csharp/GameEventScript.Runtime/tests/TestResults/log",
             "implementation/swift/Runtime/.build/release/library", ".build/cache",
+            "examples/card-game/swift/.build/index-build/cache", "examples/tool/csharp/bin/Debug/a.dll",
         ]
         kept = [
             "conformance/fixtures/canonical.gesb", "implementation/swift/Runtime/.swiftpm/configuration",
+            "examples/card-game/swift/Sources/Game/main.swift", "examples/card-game/web/node_modules/pkg/.build/cache",
             "docs/example.ges", ".git/config", "implementation/csharp/GameEventScript.Runtime/src/Runtime.cs",
         ]
         for path in outputs + kept:
             self.write(path)
-        self.assertEqual(len(self.run_clean()), 9)
+        self.assertEqual(len(self.run_clean()), 11)
         for path in outputs:
             self.assertFalse((self.root / path).exists(), path)
         for path in kept:

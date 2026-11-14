@@ -343,10 +343,28 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
         // Preserve decimal source spelling metadata used to select continuous random bounds.
         if (expression is GesFloatLiteralExpressionNode or GesUnitFloatLiteralExpressionNode or GesIntegerLiteralExpressionNode or GesUnitIntegerLiteralExpressionNode) return null;
 
-        return EvaluateConstantValue(expression) is { } value
-            ? ConvertValueToLiteral(value)
-            : null;
+        if (EvaluateConstantValue(expression) is not { } value) return null;
+        var literal = ConvertValueToLiteral(value);
+        // A negated decimal literal such as `-10.0` keeps its decimal spelling (specs/Language.md#random-values).
+        if (expression is GesUnaryExpressionNode { Operator: GesUnaryOperator.Negate } negation && IsDecimalSpelling(negation.Operand))
+            literal = literal switch
+            {
+                GesIntegerLiteralExpressionNode integer => integer with { HasDecimalPoint = true },
+                GesUnitIntegerLiteralExpressionNode unitInteger => unitInteger with { HasDecimalPoint = true },
+                _ => literal
+            };
+        return literal;
     }
+
+    internal static bool IsDecimalSpelling(GesExpressionNode expression)
+        => expression switch
+        {
+            GesFloatLiteralExpressionNode or GesUnitFloatLiteralExpressionNode => true,
+            GesIntegerLiteralExpressionNode integer => integer.HasDecimalPoint,
+            GesUnitIntegerLiteralExpressionNode unitInteger => unitInteger.HasDecimalPoint,
+            GesUnaryExpressionNode { Operator: GesUnaryOperator.Negate } negation => IsDecimalSpelling(negation.Operand),
+            _ => false
+        };
 
     private GesCollectionSelectorNode OptimizeSelector(GesCollectionSelectorNode selector, ISet<string> knownTypeNames)
         => selector switch
@@ -431,8 +449,14 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             {
                 Pattern = OptimizeObjectMatchPattern(objectMatchSelector.Pattern, knownTypeNames)
             },
+            // A dice count pattern's face is an expression, folded as in Swift.
+            GesPatternSelectorNode patternSelector => patternSelector with { Pattern = OptimizeDicePattern(patternSelector.Pattern, knownTypeNames) },
+            GesTakePatternSelectorNode takePatternSelector => takePatternSelector with { Pattern = OptimizeDicePattern(takePatternSelector.Pattern, knownTypeNames) },
             _ => selector
         };
+
+    private GesDicePatternNode OptimizeDicePattern(GesDicePatternNode pattern, ISet<string> knownTypeNames)
+        => pattern is GesDiceCountPatternNode { Face: { } face } count ? count with { Face = OptimizeExpression(face, knownTypeNames) } : pattern;
 
     private GesObjectMatchPatternNode OptimizeObjectMatchPattern(GesObjectMatchPatternNode pattern, ISet<string> knownTypeNames)
         => pattern with
@@ -543,7 +567,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                 return operand.Kind is GesBytecodeTypeKind.Nothing or
                     GesBytecodeTypeKind.List or
                     GesBytecodeTypeKind.Map or
-                    GesBytecodeTypeKind.Dice
+                    GesBytecodeTypeKind.Dice or
+                    GesBytecodeTypeKind.Bytes
                     ? GesValue.GesNothing()
                     : GesValue.GesBoolean(!operand.AsBoolean());
             case GesUnaryOperator.HasValue: return GesValue.GesBoolean(operand.HasValue);
@@ -693,7 +718,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             case GesBinaryOperator.Divide when rightNumber != 0d &&
                                                (sameUnit || left.Kind != GesBytecodeTypeKind.Percentage && right.Kind != GesBytecodeTypeKind.Percentage) &&
                                                GesQuantityUnits.Quotient(left.Unit, right.Unit) is { } quotientUnit:
-                if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float) return GesValue.GesPercentage(leftNumber / rightNumber);
+                // As the VM, a percentage divided by a number or a Boolean stays a percentage.
+                if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Boolean) return GesValue.GesPercentage(leftNumber / rightNumber);
 
                 return CreateNumber(leftNumber / rightNumber, quotientUnit, false);
             case GesBinaryOperator.IntegerDivide when rightNumber != 0d && sameUnit: return CreateNumber(Math.Floor(leftNumber / rightNumber), DivideResultUnit(left.Unit), true);
@@ -747,7 +773,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
         => value.Kind is GesBytecodeTypeKind.Nothing or
             GesBytecodeTypeKind.List or
             GesBytecodeTypeKind.Map or
-            GesBytecodeTypeKind.Dice;
+            GesBytecodeTypeKind.Dice or
+            GesBytecodeTypeKind.Bytes;
 
     private static GesValue? FoldAdd(GesValue left, GesValue right, double leftNumber, double rightNumber)
     {

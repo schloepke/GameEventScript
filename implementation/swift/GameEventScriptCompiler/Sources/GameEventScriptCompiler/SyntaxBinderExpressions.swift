@@ -29,7 +29,10 @@ extension GesSyntaxBinder {
         case .identifier: return node(.name(token.text), token, token)
         default:
             guard let constant = Self.mathConstants[token.kind] else { throw Mismatch(token: 0) }
-            return node(.literal(.float(constant)), token, token)
+            // A math constant is a binary64 literal, so as a random bound it draws continuously, as in C#.
+            let result = node(.literal(.float(constant)), token, token)
+            result.decimalLiteral = true
+            return result
         }
     }
 
@@ -47,7 +50,7 @@ extension GesSyntaxBinder {
         case .memberAccessExpression: return try memberAccess(node)
         case .collectionAccessExpression: return try collectionAccess(node)
         case .typeConstructorExpression: return try typeConstructor(node)
-        case .diceLiteralExpression: return try diceLiteral(node)
+        case .diceLiteralExpression, .bytesLiteralExpression: return try diceLiteral(node)
         case .collectionFactoryExpression: return try collectionFactory(node)
         case .rangeExpression:
             var c = cursor(node)
@@ -237,7 +240,8 @@ extension GesSyntaxBinder {
             let op = try c.advance().kind
             // `strict` directly after `parse` is the mode word.
             var strict = false
-            if op == .keywordParse { strict = try c.matchWord("strict") }
+            // As the parser decides: the mode word stands on the line of `parse`.
+            if op == .keywordParse, c.current.line == c.previous.endLine { strict = try c.matchWord("strict") }
             let operation: GesUnaryOperator = op == .operatorMinus ? .negate : op == .keywordParse ? (strict ? .parseStrict : .parse) : op == .empty ? .empty : .not
             let value = try expression(&c)
             // From the operator to the last consumed token.
@@ -390,7 +394,7 @@ extension GesSyntaxBinder {
         let target = try expression(&c)
         try c.expect(.dot)
         try c.newlines()
-        return ranged(.member(target, try c.identifier()), target)
+        return ranged(.member(target, try c.fieldName()), target)
     }
 
     func collectionAccess(_ access: GesSyntaxNode) throws -> GesExpression {

@@ -64,6 +64,10 @@ internal partial class GesVirtualMachine
 
                 SetBoolean(dst, false);
                 return;
+            case Bytes when b.ObjectValue is byte[] bytes:
+                SetBoolean(dst, a.Kind is Integer && a.Unit is GesQuantityUnit.UnitNone && a.IntegerValue is >= 0 and <= 255 &&
+                                Array.IndexOf(bytes, (byte)a.IntegerValue) >= 0);
+                return;
             case Map when b.ObjectValue is GesValueMap map:
                 if (a.Kind is not (Text or Tag))
                 {

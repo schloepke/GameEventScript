@@ -11,6 +11,28 @@ namespace GameEventScript.Runtime.Vm;
 
 internal partial class GesVirtualMachine
 {
+    // Bytes are immutable, so a slice covering the whole source reuses it.
+    private static GesValue SliceBytes(in GesValue source, byte[] bytes, int start, int length)
+    {
+        if (length == bytes.Length) return source;
+        var dst = new GesValue();
+        dst.SetBytes(length == 0 ? [] : bytes.AsSpan(start, length).ToArray());
+        return dst;
+    }
+
+    // Take and drop count from 0 to the length, so a count beyond it selects everything or nothing.
+    private static int ByteCount(byte[] bytes, short count) => count <= 0 ? 0 : Math.Min(count, bytes.Length);
+
+    private static byte[] ConcatenateBytes(byte[] left, byte[] right)
+    {
+        if (left.Length == 0) return right;
+        if (right.Length == 0) return left;
+        var result = new byte[left.Length + right.Length];
+        left.CopyTo(result, 0);
+        right.CopyTo(result, left.Length);
+        return result;
+    }
+
     private static GesValue TakeFirstDice(GesVirtualMachine vm, int[] source, short count)
     {
         var dst = new GesValue();
@@ -509,6 +531,8 @@ internal partial class GesVirtualMachine
                 return 0;
             case GesBytecodeTypeKind.Boolean when right.Kind is GesBytecodeTypeKind.Boolean:
                 return left.IsTrue.CompareTo(right.IsTrue);
+            case Bytes when right.Kind is Bytes && left.ObjectValue is byte[] leftBytes && right.ObjectValue is byte[] rightBytes:
+                return Math.Sign(leftBytes.AsSpan().SequenceCompareTo(rightBytes));
             case Dice when right.Kind is Dice && left.ObjectValue is int[] leftDice && right.ObjectValue is int[] rightDice:
             {
                 var countComparison = leftDice.Length.CompareTo(rightDice.Length);
@@ -545,6 +569,7 @@ internal partial class GesVirtualMachine
             List => 11,
             Map or Custom => 12,
             Dice => 13,
+            Bytes => 14,
             _ => 8
         };
     }

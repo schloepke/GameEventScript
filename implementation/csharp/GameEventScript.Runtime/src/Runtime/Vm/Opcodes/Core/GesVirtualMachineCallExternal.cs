@@ -64,10 +64,10 @@ internal partial class GesVirtualMachine
                 return;
             }
 
-            if (!call.HasResult)
-            {
-                SetNothing(destinationRegister);
-            }
+            // The result is written once after the callback returns, so an argument register that is also the
+            // destination keeps its value while the extension reads it, as in Swift.
+            if (call.HasResult) SetValue(destinationRegister, call.Result);
+            else SetNothing(destinationRegister);
 
             ref readonly var dst = ref Register(destinationRegister);
             if (isPredicate && dst.Kind is not GesBytecodeTypeKind.Boolean && dst.IsNotNothing)

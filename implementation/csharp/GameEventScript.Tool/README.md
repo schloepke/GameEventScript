@@ -441,7 +441,7 @@ Interactive commands are:
 | `:dump @<ID>` | Select a Program by session ID, including anonymous or duplicate modules |
 | `:source <module\|ID>` | Show only embedded source documents, each with a filename heading |
 | `:show <file>` | Show a `.ges`, `.gesa`, `.gesd` or `.gess` file highlighted and mark its errors, without loading it |
-| `:quit` | End the session; EOF also exits |
+| `:quit` | End the session, discarding scheduled delayed messages; EOF also exits after delivering them, as a batch `run` does |
 
 Help, prompts, and load/unload/reload reports go to stderr. Prompts and the introductory message
 appear only when stdin is a terminal; redirected UTF-8 input is accepted without
@@ -586,15 +586,16 @@ message removed before it was dispatched, for example after a failed
 initialization. `:edit` and `:reload` replace the host instead of clearing it, so
 the queued messages they drop print no `discard` lines. No outbound sink is
 configured, so publications only reach local subscribers. Nothing is sent to an
-external service. Root Text arguments in verbose traces use JSON quoting/escaping;
-other values use the existing GES text representation. Trace rendering is distinct
+external service. Root Text arguments in verbose traces use JSON quotes; both CLIs escape only quotes, backslashes and
+control characters, so Unicode text stays readable, as do the paths of `:list`, `:source` and `:show`; other values
+use the existing GES text representation. Trace rendering is distinct
 from ConsoleOut and ConsoleErr output and defines no portable serialization format.
 
 `--seed` accepts a signed decimal Int64. The same seed and programs reproduce the
 host's random sequence. Without it, the normal host seed generation applies.
 All Programs, the scenario, and interactive inputs share this host's random generator.
 
-Runtime limits remain active. `--max-messages` sets `MaxProcessedEventsPerRun`
+Runtime limits remain active. `--max-messages` sets `MaxProcessedMessagesPerRun`
 (default 64) per pump, including initialization and native console messages.
 The initial Start phase, its subsequent ordinary-message drain, Main, and each
 interactive input are separate pumps; their message-processing limits reset
@@ -691,15 +692,39 @@ dotnet ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worl
 dotnet ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data delta.bin --baseline record.bin
 dotnet ges schema layout world.gess --root Bot --root Fleet --param worldWidth=2000m -o wire.layout.json
 dotnet ges schema generate world.gess --root Bot --param worldWidth=2000m --language csharp --namespace Game.Net -o Bot.g.cs
+dotnet ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language csharp -o Wire.g.cs
+dotnet ges schema generate world.gess view.gess --model view --language csharp --namespace Game.Model -o Model.g.cs
+dotnet ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language csharp --namespace Game.Net -d Generated/Net
+dotnet ges schema generate world.gess view.gess --model view --language csharp --namespace Game.Model -d Generated/Model --split file --check
+dotnet ges schema generate map.gess --wire map --language csharp --namespace Game.Net --models Game.Model -o MapWire.g.cs
 ```
 
 `generate` writes C# or Swift types that write and read the records of the roots without allocating;
 `--values` adds the conversion to and from GES values and messages, `--checked-exclusivity` keeps the
 dynamic exclusivity checks of generated Swift classes, and `--check` fails when the file of `-o` differs
-from the generated code.
+from the generated code. `-d <dir>` (`--out-dir`) writes one file per declaration, or per schema file with
+`--split file`, into a directory that `generate` owns: a manifest `.ges-generated.json` lists the files, a later run
+removes the ones no longer generated and leaves other files alone with a warning, and `--check` fails for every
+changed, missing and surplus file.
+`--models <namespace>` lets wire code share the packed types of model code generated into that namespace (`""` for
+the global one) and convert each wire record with a model directly to and from it (`ToModel()`, `CopyFrom(model)`); it is
+a usage error with `--model`. The models need another namespace than the wire code (`generate.nameCollision` otherwise),
+and the same `--access` or a broader one, since the conversion uses the models' types in members of the wire code's
+access. Swift declares each namespace component as an enum: wire code extends the components it shares with the models'
+namespace, and `--extend-namespace <A>` makes any Swift generation extend the leading part `A` of its namespace, which another
+generation of the module declares (`--namespace Game.Panels --extend-namespace Game` beside `Game.World`, or `Game` for both
+when two generations share `Game`); C# merges namespaces, so a C# run rejects it. A packed wire root that the models declare gets
+its wire members as `<Name>Wire` in the wire namespace: C# extension methods, Swift static members such as
+`Wire.MapPointWire.encoded(point)`.
+
+`--wire <group>` takes the roots that the schemas mark `wire(group)`, and `--model <group>` generates plain
+model types of the schemas marked `model(group)`, which are never encoded; `--bindings` also offers those models to
+scripts as external types, `--values` converts them to and from the plain values that wire records read and write, and
+`--documents` adds `FromDocument` (Swift `init(document:)`) per root and a `Document` type (`ModelDocument` without a namespace) that reads GES document
+text by its `:Schema(:Name)` header, checked against the embedded schemas, with errors at their line, column and field path.
 
 `layout` prints the language-neutral generation layout of one or more roots, or of every
-declaration with `--all-roots`, as JSON; a type that several roots share appears once. `hash` prints the schema hash and, with parameters, the binding hash. `dump` lists each field of
+declaration with `--all-roots`, as JSON, and with `--model` the model layout; a type that several roots share appears once. `hash` prints the schema hash and, with parameters, the binding hash. `dump` lists each field of
 binary data with its bit offset, width and value, and ends with the first error; with `--baseline`
 the data is a delta against that full record. Formatting drops
 comments, so input and output must differ. See [GES schemas](../../../specs/Schemas.md).
@@ -845,6 +870,9 @@ unsaved editor drafts; clean file-backed programs are reread from disk. Save ref
 file changes and existing scratch destinations. Unload refuses unsaved drafts.
 EOF with unsaved drafts reports a failure for redirected input; terminal EOF
 keeps the prompt open. Use :quit! to discard explicitly.
+EOF waits for scheduled delayed messages before it exits; :quit discards them.
+:save writes UTF-8 without a BOM through a symbolic link to its target and keeps the
+file permissions.
 
 Editor selection uses GES_EDITOR, then VISUAL, then EDITOR (blank values are skipped).
 Without configuration, the default is nano on macOS/Linux and notepad.exe on Windows.
@@ -900,3 +928,78 @@ profiles on the same machine and use unprofiled benchmarks for overall speed.
 A wall-clock-sensitive script may observe different delayed-message readiness
 under instrumentation. Counts after an opcode fault can differ from the Host's
 completed-opcode counter. The report measures neither allocations nor CPU time.
+
+## In-process benchmark
+
+> **Since: Unreleased**
+
+`bench` measures the steady state of a compiled program inside one process, the same way in both CLIs, so the Swift
+runtime, the .NET JIT and .NET NativeAOT can be compared. It is the contract for both implementations:
+
+```sh
+dotnet ges bench workload.gesb [--entry <name>] [--warmup <count>] [--iterations <count>] [--min-time <ms>]
+                               [--fresh-instance] [--gc-between] [--per-iteration] [--json]
+                               [--seed <integer>] [--max-messages <count>] [--max-steps <count>]
+ges bench workload.gesb ...
+```
+
+- **Input.** Only a compiled `.gesb`; `bench` never compiles. A source file is a usage error.
+- **Load.** Reading, decoding and validating the binary, building the Host, linking and the initialization of `Start`
+  are timed once as the load time. The Host has the console endpoints of `run`, but they record messages instead of
+  writing them, and the limits of `run` (`--max-messages`, `--max-steps`, `--seed` as there).
+- **Entry.** One run sends the entry message, by default `Main`, and pumps the Host until it is idle. The message is
+  `<entry>(args: [])` when the program handles `<entry>(args)`, otherwise `<entry>()`; a program with neither fails with
+  `cli.missingEntry`. A run must not leave delayed messages: waiting would measure sleep, not execution.
+- **Warm-up.** `--warmup` untimed runs, by default 20. With `--min-time <ms>`, warm-up continues after that count until
+  that much time has passed, which lets the .NET JIT reach its optimized tiers; the output reports the runs done.
+- **Measurement.** `--iterations` timed runs, by default 50, each timed with the platform's monotonic high-resolution
+  clock (.NET `Stopwatch.GetTimestamp`, Swift `DispatchTime.uptimeNanoseconds`). Only sending and pumping are timed;
+  recording a console message stores the message, and everything else, such as the checksum, happens between runs.
+- **Fresh instance.** With `--fresh-instance`, every run gets a new Host and instance; creating it is timed separately
+  and reported as its median, never as part of a run.
+- **Checksum.** After each timed run, the CLI folds the recorded messages into an FNV-1a 64 hash, in order, as one
+  UTF-8 line each: the message name, `:` and its arguments' texts joined without separator, as `run` prints them
+  (`ErrorCode:7`). The hash over all timed runs, 16 lowercase hexadecimal digits, shows that runtimes compute the same.
+- **Failures.** A runtime error, a reached limit, a remaining delayed message or a nonzero `ErrorCode` fails the
+  benchmark with exit code 1 and `error cli.benchFailed: <warm-up|iteration> <n>: <reason>`; usage errors exit 2.
+- **Statistics.** Milliseconds per run: minimum, median, mean, 95th percentile, maximum and the sample standard
+  deviation (n - 1; 0 for one run). Median and p95 interpolate linearly between the closest ranks of the sorted
+  samples, at position `(n - 1) * q`.
+- **Memory.** .NET reports the bytes allocated on the measuring thread per timed run (mean of
+  `GC.GetAllocatedBytesForCurrentThread` differences) and the Gen0, Gen1 and Gen2 collections over the timed phase.
+  `--gc-between` runs `GC.Collect`, `GC.WaitForPendingFinalizers` and `GC.Collect` before each run, untimed. Swift uses
+  reference counting and has no such counters: it reports them as absent and accepts `--gc-between` without effect.
+
+The text output, on stdout:
+
+```text
+Benchmark: workload.gesb, entry Main
+Runtime: dotnet-jit 8.0.22 (macos arm64)
+Tiering: TieredCompilation=true, TieredPGO=true, ReadyToRun=false
+Load: 41.210 ms
+Warm-up: 20 runs
+Iterations: 50
+Time per run (ms): min 9.812, median 10.044, mean 10.101, p95 10.733, max 11.020, stddev 0.231
+Allocated per run: 2148760 bytes; collections gen0 41, gen1 0, gen2 0
+Checksum: 9d2c4b1f0a8e7d36
+```
+
+Swift and NativeAOT print `Tiering: n/a`, Swift `Allocated per run: n/a`. `--fresh-instance` adds
+`Instance creation (median): <ms> ms` after the load line, and `--per-iteration` lists `Run <n>: <ms> ms` for every
+timed run before the statistics, which shows JIT tiering over time.
+
+`--json` prints one JSON object instead, with these members in this order: `runtime` (`swift`, `dotnet-jit` or
+`dotnet-aot`; .NET is AOT when `RuntimeFeature.IsDynamicCodeSupported` is false), `runtimeVersion`, `os` (`macos`,
+`linux` or `windows`), `arch` (`arm64` or `x64`), `script`, `entry`, `freshInstance`, `loadMs`, `instanceMedianMs`,
+`warmup`, `iterations`, `minMs`, `medianMs`, `meanMs`, `p95Ms`, `maxMs`, `stddevMs`, `allocatedBytesPerIteration`,
+`gen0Collections`, `gen1Collections`, `gen2Collections`, `tieredCompilation`, `tieredPgo`, `readyToRun`, `checksum`, and
+with `--per-iteration` `samplesMs`. Times are milliseconds with six decimals. Absent values are `null`: the memory
+counters on Swift, the tiering settings on Swift and NativeAOT, `instanceMedianMs` without `--fresh-instance`. .NET reads
+the tiering settings from the `DOTNET_TieredCompilation`, `DOTNET_TieredPGO` and `DOTNET_ReadyToRun` variables and the
+runtime configuration, and `readyToRun` also requires that the Runtime assembly contains precompiled code.
+
+**Steady state and cold start.** `bench` answers how fast a long-running client executes a warmed-up program. A
+process started per measurement, as Hyperfine does, measures process start plus the first run instead: under the .NET
+JIT that first run executes the Runtime's own code unoptimized. Use Hyperfine for cold start and `bench` for steady
+state; [the compute benchmark](../../../examples/compute-benchmark/Benchmarks.md) shows both, and
+`scripts/bench-compare.py` compares the Swift CLI and four .NET configurations in one table.

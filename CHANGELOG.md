@@ -11,6 +11,37 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- Line breaks inside any parentheses or square brackets separate nothing, so parameter lists, selectors such as
+  `[:take highest⏎1]` and parenthesized expressions may span lines in both ports; inside braces they separate
+  statements as before.
+- The Swift parser rejects what the C# reference rejects: an operator tighter than the type operation after `as`, `is`
+  or `has value` (`a as :Number + 1`), a second superscript or `^` after a power (`a²²`, `a² ^ b`), `:Numeric` as a
+  type, `5%abc` and `90°x`, `roll` without `dice`, and a dice count on the next line. Calls and lists count the
+  nesting of their arguments and items, so deeply nested chains report `parse.sourceNestingExceeded` instead of
+  exhausting the stack.
+- Program segment and section types (`GesStringConstantSegment`, `GesCodeSegment`, `GesSourceMapSegment` and the
+  others) have no public constructors and their `SliceEntry` values no public setters; Programs come only from the
+  Compiler and the Reader. Swift keeps those initializers behind `@_spi(Compiler)`.
+- Program validation rejects binding argument names with a `_number` suffix and a second Record binding of the same name
+  or a Record binding without an ID (`InvalidProgram`). A message-name handler records the label `message` whatever its
+  source binding is called.
+- The new runtime limit `MaxValueDepth` (default 64) stops a handler that nests Lists, Maps, Records or Messages more
+  than 64 levels deep, which could otherwise overflow the native stack when the value was converted, compared or
+  released. Raise it in `GesRuntimeLimits` where deeper values are needed.
+- `:contains any` and `:contains all` with a Range of candidates, `has any`/`has all` over a binary64 Range and
+  `starts with`/`ends with` between two Ranges charge `MaxLoopIterations` for every Range item they visit, and
+  shuffling a Range longer than `MaxRangeItems` reports that limit and gives an empty List, as `as :List` does.
+- `Box` and `Poly` are built-in schema types, so a schema, message or message set of that name is now
+  `schema.duplicateName`; rename it. The same now holds for `Disc`.
+- An external type's constructor parameter or field declared as a plain Number (`Float` without a unit) keeps a
+  Quantity's unit instead of dropping it, as an unconstrained Point or Vector already did: `5m` stays `5m` as binary64.
+  Declare a unit to convert, or convert the value in the host.
+- A required computed schema field that reads an optional field without `has value` or `default` is the new
+  `schema.computedMayBeAbsent` instead of giving NaN or false where the field is absent; mark it `optional`, guard the
+  read or give a fallback.
+- Swift `[UInt8]` converts to and from GES Bytes instead of a List of numbers.
+- Text such as `"0x10"` is now a hexadecimal number for `parse`, `as :Number`, `as :Percentage`,
+  documents and Message JSON instead of Text or `nothing`.
 - C# `GesValue.AsMap()` returns only stored Map and Record data, as in Swift; an external
   value gives `null`. `MaterializedMap()` reads its fields.
 - `:Vector(value)` and `:Point(value)` with one positional argument are now the cast,
@@ -214,8 +245,205 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `GesValue.mapEntries` are no longer public.
 - C# `GesValueMap.StorageLength` is removed; it always equaled `Length`. Use
   `Length` instead.
+- Attributed C# extension parameters check units: a `[GesParam]` with a unit requires exactly
+  that unit, and one without a unit a unitless argument; another unit gives `nothing`.
+- Generated schema code holds `:Point` and `:Vector` fields as the runtime's `GesPoint` and
+  `GesVector` instead of a nested struct per field, such as `PositionPoint`. Writing a record
+  or a delta whose axis outside the field's axis block is not zero fails with
+  `wire.typeMismatch`, as the value path does, and reading sets that axis to zero.
+
+- Schema generation rejects names that would break the generated code with `generate.nameCollision`: a type that a
+  record nests for a field (such as `SlotsItem` or `ModeTag`) may not take the name of a schema, message or tag set of
+  the generation, a type or C# member may not take a runtime name of the form `Ges` and an uppercase letter, a Swift
+  type may not take a name that generated Swift uses, such as `String`, `Int`, `Array`, `Type` or `Swift`, and a Swift
+  model field may not be named `hashValue` or `hash`. Such code previously failed to compile or bound the wrong type.
+- A `:Poly` whose block leaves its points without bits, such as a single wrapping axis with a period of one step, fails
+  binding with `schema.notEncodable`, as a List element without bits does, because no data would limit its count.
+
+- The C# `GesBridgeHostRunner` returns a runner-owned `GesBridgeHostRunnerRegistration` from `Load` and `Subscribe`, as
+  the Swift runner does; its `IsAttached`, `StartResult` and `Detach()` take the runner's lock. `GetStartResult`,
+  `Detach(instance)` and `Unsubscribe(subscription)` are removed, since the host's own handles bypassed the lock.
+- C# attributed extensions convert arguments strictly, as Swift does: a fraction, a Boolean or a Percentage no longer
+  converts to an integer or number parameter, and a number no longer to a `bool`; such a call gives `nothing`.
+- C# `GesBridgeExternalTypeRegistry.Create` rejects fields and constructor parameters of CLR types without a conversion,
+  such as `decimal` or enums, and external classes it does not register. A constructor argument that does not convert
+  exactly, such as `2.7` for an `int`, is now `runtime.externalConstructorFailed` instead of a truncated value.
+
+- The end of console input (EOF) delivers scheduled delayed messages before the CLI exits, as a batch `run` does, so
+  piped console scripts lose no timer or delayed `ErrorCode`; `:quit` still discards them.
+
+- Host configuration names now say what they configure, before 1.0 freezes them: `MaxProcessedEventsPerRun` is
+  `MaxProcessedMessagesPerRun`, `MaxQueuedMessagesPerRun` is `MaxQueuedMessages` (it bounds the host's persistent queue,
+  not one run), and `WithRegistry` / `withRegistry` is `WithExtensionRegistry` / `withExtensionRegistry`. Observer
+  callbacks and diagnostics report the new limit names.
+- C# removes `GesValue.AsNumeric`, which duplicated `AsNumber()`, and `GesValue.GesNumber`, an alias of `GesFloat`.
+- Swift `GesContext.extensionRegistry` is no longer optional: a host without extensions has an empty registry, as in C#.
+- C# `GesPoint` and `GesVector` compare components with binary64 equality, as Swift does, so a NaN component makes two
+  values unequal.
 
 ### Added
+
+- Schema computed fields take the script language's functions and powers: `sqrt`/`√`, `cbrt`/`∛`, `sin`, `cos`, `tan`,
+  `asin`, `acos`, `atan`, `atan2`, `hypot`, `exp`, `ln`, `^`, `²`, `³`, `floor`, `ceil`, `truncate`, `round half …`, `rad`
+  and `deg`, with the language's units (the root of m² is m). A square root is correctly rounded and bit-identical
+  everywhere; the other functions may differ in their last bits between platforms, as in scripts. A field named like a
+  GES keyword is read in backticks, such as `` `length` / 2 ``.
+- Names in backticks: any GES keyword written in backticks is a plain name wherever a name stands (bindings, parameters,
+  labels, record fields, member access, map keys), so a field named `length` or `if` can be declared and read, and a
+  backticked `e` reads a field while plain `e` stays Euler's number. Argument-label words such as `length`, `e` or `abs` also
+  name record fields and members without backticks.
+- Extension functions declared with Swift `@GesFunction` or C# `[GesFunction]` may take one `GesRandomGenerator`
+  parameter in any position, which receives the call's seeded generator; it is no script argument and does not count
+  toward labels, arity or C#'s four-parameter limit.
+- Packed schemas: `packed schema :Name` or `packed(8|16|32|64) schema :Name` declares a record of fixed-width fields
+  (integers and stepped numbers with fixed ranges, Booleans, closed Tags, Flags, other packed schemas) of at most 64
+  bits, `schema.packedField` and `schema.packedTooWide` otherwise. Its wire encoding is unchanged and equals the word in
+  little-endian order; its delta changes the word as a whole. Generated code holds it as one word: a Swift struct over
+  `rawValue` that is `Hashable`, `Sendable` and `Codable`, or a C# struct over `RawValue`, with checked field properties,
+  checked and unchecked creation from a raw word, and Lists of them as arrays of words that read and write a word at a
+  time. `GesSchema.PackedWidth`/`PackedBits` and `GesBitReader.RemainingBits` (Swift `packedWidth`, `packedBits`,
+  `remainingBits`) are new.
+- `ges schema generate --models <namespace>` (`GesSchemaGenerateOptions.Models`): wire code shares the packed types of
+  model code in that namespace and converts every wire record with a model directly to and from it, without GES values:
+  C# `ToModel()`/`CopyFrom(model)`, Swift `toModel()`/`read(model:)`/`init(wire:)`, guarded by the schema hash.
+- Swift wire code generated with `--namespace` and `--models` converts to and from models at file scope, also in split
+  files, and names wire and model types so that neither hides the other. A packed wire root shared with the models gets
+  its wire members as static members of an enum `<Name>Wire` in the wire namespace, as C# does with its class, so that
+  several wire generations of a module can share the model, with `copy` and `quantize` as in C#. A Swift file declares its
+  namespace enums and then extends the whole namespace, as split files do, so that names of enclosing namespaces cannot
+  hide the other side's. `--models` naming the wire namespace itself, a namespace that continues the other side's with the
+  name of a type there (a `<Name>Wire` or a type of any model group included), a `<Name>Wire` that another type already
+  names, a namespace starting with a Swift type name that generated code uses and, in Swift, a wire type or nested type
+  that would hide a namespace the code names are `generate.nameCollision`; Swift namespaces of wire code with models and of
+  its models start with an uppercase letter (`generate.invalidNamespace`).
+- Swift wire code with `--models` extends the namespace components it shares with the models' namespace instead of
+  declaring them again, and `ges schema generate --extend-namespace <A>` (`GesSchemaGenerateOptions.ExtendNamespace`)
+  makes any Swift generation extend the leading part `A` of its namespace that another generation declares, so
+  generations such as `Game.World` and `Game.Panels`, or two in `Game`, can share one module.
+- Both CLIs have `bench`, an in-process benchmark of a compiled program: it loads the program once, warms it up and
+  times every further run of the entry message, then reports min, median, mean, p95, max and standard deviation, a
+  checksum of the console output, and on .NET the allocations and collections per run and the tiering settings, as
+  text or JSON. `scripts/bench-compare.py` compares the Swift CLI, the .NET JIT with and without tiered compilation,
+  ReadyToRun and NativeAOT on the same binary.
+- `:Bytes`, an immutable byte sequence: literals `:Bytes[0xa0, 183]` and `:Bytes("a0b7")`, `as :Bytes`
+  from integer Lists and hexadecimal Text, `as :Text`/`parse`/documents, count, `in`, indexing,
+  iteration, equality and order, `:take`/`:drop` `first`/`last` slices, `+` concatenation and UTF-8
+  conversion with `:Bytes(utf8: text)` and `:Text(utf8: bytes)`. Message JSON writes Bytes as Base64, schemas add `:Bytes max n` with
+  generated `WriteBytes`/`ReadBytes` code, and the Bridges map C# `byte[]` and Swift `[UInt8]`.
+- `ges schema generate --model <group> --values` gives every model type `toValue()` and `init(value:)` (C# `ToValue()` and
+  `FromValue(value)`) with the plain Record that wire `--values` reads and writes, so models and wire records convert
+  through one value instead of hand-written copies. A nested field that does not convert reports its path, such as
+  `entries[].level`, as the wire value path does.
+- Schema union alternatives take labels, as in `:Text max 64 | bind: :Loadout_UnitBind`: generated code names the
+  alternative `.bind` (C# `Bind`) instead of after its type; the label changes no bytes and no hash.
+- Schema tag sets `tags :Mount as (#front, #rear)`: a field, list element or alternative of type `:Mount` is that
+  `:Tag(...)` in place, with the same bytes and hash, and generated code declares one `Mount` enum for every field of it
+  instead of one per field.
+- Schemas take the fields of another schema with `with :Unit_Common`, optionally `all optional` and
+  `without (id)`; an `abstract schema` only lends its fields. The record stays flat and hashes like written fields.
+  Generated models adopt a protocol (C# interface) per schema they take unchanged; `GesSchema.IsAbstract` and `Takes`
+  (Swift `isAbstract`, `takes`) describe it, and misuse of an abstract schema is `schema.invalidAbstract`.
+- Schema fields `computed by` an expression, as in script records: `power: :Quantity(W) computed by 0W when duration <= 0s,
+  otherwise energy / duration`. The subset reads fields, lets and constants with arithmetic and comparisons in units,
+  `when … otherwise`, `min of`, `max of`, `clamp`, `abs`, `default`, `has value` and list sums and counts; binding checks
+  types and units, and the expression belongs to the hash. Computed fields are never encoded, decoding adds them, a
+  document that sets one fails, and generated models and wire records give them as read-only properties that compute the
+  bits of the virtual machine. `GesSchema.ComputedFields` (Swift `computedFields`) describes them; mistakes are
+  `schema.invalidExpression`. Generated code is plain binary64 and Boolean code in the language's own operators, such as
+  `duration <= 0.0 ? 0.0 : energy / duration`, with a small `GesComputed` helper type for the rules plain code lacks;
+  only a field where whole numbers beyond 2^53 could meet keeps the exact-value helpers.
+- A schema union may span lines: a `|` may end a line or start the next one, with comments and blank lines between the
+  alternatives, in fields, arguments and List elements. `ges schema format` breaks a union before each further
+  alternative once it no longer fits 100 columns or holds an axis block.
+- `ges schema generate --model <group> --documents` (option `Documents`) lets models read GES document text: each root gets
+  C# `FromDocument(text)` (Swift `init(document:)`) and the generation a type that reads any root by its `:Schema(:Name)`
+  header: `Document` inside the namespace, `ModelDocument` without one. The document is checked against the embedded schemas, defaults apply, and errors carry their
+  `document.*` or `wire.*` code, line, column and field path; a missing or other header is the new
+  `document.schemaMismatch`. The Runtime's `GesSchemaDocument` does this for generated code, and `GesDocumentException.Path`
+  (Swift `GesDocumentError.path`) names the field.
+- Schema type `:Disc(unit) { x ..., y ..., radius ... }` holds the geometry library's `GesDisc`: its centre as a Point of
+  the axes x and y, then its radius, binary64 without a block. The value path, documents (`[center: ..., radius: ...]`),
+  deltas, dumps, generated wire code and models handle it like a Box.
+- Schema types `:Box(unit) { ... }` and `:Poly(unit) max n { ... }` hold the geometry library's `GesBox` and `GesPoly`
+  with per-axis constraints like `:Point`. A Box encodes its corners `lower` and `upper` as two Points and its value
+  orders them; a Poly encodes its points in the plane z = 0 as a List of x and y. The value path converts the library's
+  external values, documents write a Box as the Map of its corners and a Poly as the List of its points, generated wire code
+  holds `GesBox` and the reusable Points of a Poly with a `GesPoly` view, and models hold `GesBox` and `GesPoly`.
+- Recursive schema Lists: `units: :List(:Loadout_Bind) max 16 depth 3` in `:Loadout_Bind` holds records of that schema
+  up to three deep, so a tree needs one schema instead of one per level. The wire encoding is that of one schema per
+  level; a record deeper than the depth fails with the new `wire.tooDeep`, whose message names the depth, such as
+  `wire.tooDeep at 'units[].units[].units': deeper than depth 3` (`GesWireException.Detail`, Swift
+  `GesWireError.detail`), and a document with `document.tooDeep`. Generated code of the recursive schema takes the level
+  of each record; every other schema generates the same code as before. `GesSchemaType.Depth` (Swift `depth`) describes it.
+  The element may also be a union of scalars and the schema itself, `units: :List(id: :Text max 64 | bind: :Loadout_Bind)
+  max 16 depth 3`, so a document writes a unit as its id alone or as a bind; at the depth the List holds neither.
+- `ges schema generate -d <dir>` (`--out-dir`) writes one file per declaration, or per `.gess` with `--split file`,
+  plus a shared `_<Namespace>` file and the manifest `.ges-generated.json`; a later run removes files the manifest owns and
+  no longer needs, warns about foreign files with `cli.unowned`, and `--check` compares the whole directory.
+  `GesSchemaGenerator.GenerateFiles` and `GenerateModelFiles` (Swift `generateFiles`, `generateModelFiles`) return the
+  files for build integrations, selected by `GesSchemaGenerateOptions.Split`.
+- Schema fields take defaults, as in `efficiency: :Percentage default 100%` or `maxPower: :Quantity(W) default power`:
+  a literal, a constant, a let or a sibling field of the same type fills in what a value, model value or document leaves
+  out, while the wire still carries every field. Generated models take defaults as initializer arguments, describe them
+  and add them to the layouts; `GesSchemaFieldInfo.Default` (Swift `defaultValue`) describes them. Invalid defaults are
+  `schema.invalidDefault`.
+- A schema field whose type is a schema takes a record literal as its default, as in
+  `electricity: :Unit_Consumer default [efficiency: 90%]` or `default [:]`: the fields it names take its values, nested
+  records take nested literals, and every other field takes its own default. Each value is checked like a default of its
+  field, and a literal that leaves out a required field without a default is `schema.invalidDefault`. Generated models
+  default such a field to an initializer call (Swift `Unit_Consumer(efficiency: 0.9)`, C#
+  `new Unit_Consumer(efficiency: 0.9)`); `GesSchemaDefaultKind.Record` with `GesSchemaDefaultInfo.Entries` describes
+  it, and layouts list its entries.
+- Schemas declare constants with `let retention be 2s` inside their braces. Its fields can name a let as a bound, step,
+  delta range or `max`; generated wire and model types declare it as a static member in base units, and it belongs to
+  the hash. `GesSchema.Constants` (Swift `constants`) describes them.
+- Generated model types carry their `SchemaHash` (Swift `schemaHash`), as wire records do.
+- Generated model reading reports a required field without a key as `wire.missingField` and `nothing` where a value is
+  required as `wire.nothingValue`, as the wire value path does, instead of `wire.typeMismatch`.
+- Generated wire records fill a list of reused elements with `Set<Field>Count(count)` (Swift `set<Field>Count(_:)`), and
+  a list of Text or open Tag elements also reads and sets as strings with `<Field>Values` (Swift `<field>Values`).
+- Generated wire records count their exact size with `ByteCount()` and `DeltaByteCount(baseline)` (Swift
+  `encodedByteCount()` and `deltaEncodedByteCount(against:)`), and `ToBytes`/`encoded()` and the delta forms allocate only
+  that size instead of `MaxByteCount`: a record with a 4 MiB `:Bytes` limit that holds 1 KB allocates 1 KB. They build on
+  the new counting `GesBitWriter.Counting()` (Swift `counting()`).
+- Schema maximums accept digit separators, such as `:List(:Text max 1_024) max 10_000`.
+- Schema `:Flags(#a, #b)` with up to 64 members: one bit per member on the wire, a script flag Map such as
+  `[armed:]` in the value path and documents, `WriteFlags`/`ReadFlags` (Swift `writeFlags`/`readFlags`) masks, and
+  generated C# `[Flags]` enums and Swift `OptionSet` types.
+- Hexadecimal integer literals such as `0xff_88_00` in source, `parse`, numeric text casts and
+  documents: exact Int64 values with `_` between digits, without unit or percentage suffix.
+- Schema roles: `wire(group)` marks a schema, message or message set as a wire root and
+  `model(group)` a schema as a model root, optionally in a group (`default` without one).
+  `ges schema layout` and `generate` take `--wire <group>` and `--model <group>`, and the
+  Generator adds `WireRoots`, `ModelRoots`, `ModelLayout` and `GenerateModels`. A wire root that
+  reaches a document-only type fails reading with `schema.notEncodable`, so `ges schema check`
+  reports it; `schema.invalidRole` and `schema.duplicateRole` report misplaced roles. Roles change
+  no hash.
+- `ges schema generate --model` writes plain model types: Swift `Hashable`, `Sendable`, `Codable`
+  structs with a memberwise `init` (`Identifiable` with a key), C# 9 classes with value equality,
+  with enums for closed tags and unions, and no ranges, steps or parameters needed.
+- Swift extensions declared with macros: `@GesExtension`, `@GesFunction` and `@GesPredicate`
+  generate `gesExtensions()` with signatures from the declarations, strict conversions, declared
+  units and `nothing` for an argument that does not convert; instance methods yield an instance
+  `gesExtensions()`. The C# attributes gain `[GesPredicate]`, nullable, Text, spatial and shape
+  parameters and results, `[GesFunction(name, unit)]` and `AddInstance(instance)`.
+- `ges schema generate --model --bindings` offers generated models to scripts as external types:
+  a generated `GesTypes` catalog and registry, `ToGesValue`/`FromGesValue` (Swift `gesValue()`/
+  `init?(gesValue:)`) and a `:Name(fields: map)` constructor, without the Bridge, macros or Reflection.
+- `GesDisc` in both runtimes, a filled circle in the plane z = 0, which the geometry library offers to scripts as
+  `:Disc(center: p, radius: r)` and `:Disc(radius: r)` around the origin (a Percentage radius is its unitless ratio,
+  as the declared Number type converts it), with `center`, `bounds`, `area`, `distance`,
+  `inset`, `nearest`, `contains` and `intersects` with discs, 2D boxes and polygons.
+- `GesBox` and `GesPoly` in both runtimes, and `GesGeometryLibrary`, which offers them to
+  scripts as the external types `:Box` and `:Poly` with the functions `:geometry.size`, `center`,
+  `union`, `inset`, `nearest`, `bounds`, `area`, `distance`, `centroid`, `contains` and
+  `intersects`; an invalid polygon gives `nothing`.
+- `GesPoint` and `GesVector` in both runtimes: unitless spatial values with the language's
+  affine arithmetic, `length`, `distance`, `normalized`, `dot` and `cross`, and conversions to
+  and from `GesValue` with an explicit unit.
+- Host conveniences on the spatial values: Swift `+=`, `-=`, `*=` and `/=` on `GesPoint` and `GesVector`
+  (C# derives them from the operators), the component bounds `MinX` through `MaxZ` (Swift `minX` through `maxZ`) of
+  `GesBox`, and `GesBox.FromSize` (Swift `init(size:)`), the box from the origin to a size. Scripts are unchanged.
 - External values have three explicit read paths in both ports: `ExternalValue` returns the
   host object, `ReadField(name)` runs one getter and `MaterializedMap()` runs all of them.
   C# adds these and `GesValue.GesExternal(value)`; Swift adds `readField(_:)` and the protocol
@@ -256,7 +484,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   reader now build on these primitives, without loss in speed.
 - Schema deltas work element by element for a list whose elements have a `key`, when the keys of
   baseline and record ascend strictly; otherwise the list is replaced as a whole. The limit of
-  `MaxByteCount` rises from 1 MiB to 10 MiB. `GesSchemaDelta.Encode` uses its buffer as scratch
+  `MaxByteCount` rises from 1 MiB to 64 MiB. `GesSchemaDelta.Encode` uses its buffer as scratch
   space, so size it with `MaxByteCount`: a smaller buffer can fail with `wire.bufferTooSmall`
   even when the delta would fit.
 - Schema deltas: `GesSchemaDelta` converts between full records and deltas against a baseline
@@ -361,8 +589,31 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - C# `IGesRuntimeObserver` gives every callback an empty default implementation,
   like Swift, so an observer implements only the callbacks it needs.
 
+- Swift `GesBitWriter.writeBytes(_:)` and `GesBitReader.readBytes(_:into:path:)` take a `[UInt8]`; generated Swift
+  wire code uses them, so a counting writer skips the bytes of a Text or Bytes at once and byte-aligned reads copy them.
+
+- The C# runner subscribes by exact signature with optional tag filters, as the Swift runner does.
+- C# external-type fields and constructor parameters accept `float`, `GesPoint`, `GesVector`, `GesBox`, `GesPoly` and
+  nullable value types, and a `[GesConstruct]` factory may return an instance of a derived class.
+
+- Verbose traces and the paths of `:list`, `:source` and `:show` escape only quotes, backslashes and control characters
+  in both CLIs, so Unicode text stays readable; the C# CLI escaped all non-ASCII text and `<`, `>`, `'` before.
+- The Swift Runtime explains every Program format error and reached runtime limit with a specific message, as C#
+  does, instead of a generic one.
+
 ### Changed
 
+- A power with the exponent 0.5, as `sqrt` and `√` compute it, is now the correctly rounded square root in both virtual
+  machines, so its bits no longer depend on the platform's `pow`.
+- `Host.Load` and the writer no longer validate a Program again that the Reader, the Compiler or an earlier validation
+  already accepted, so loading one Program into many hosts costs no repeated pass. A VM reset clears only the registers
+  the last handler used instead of the whole register file.
+- C# writes an extension's result into its destination register when the call returns, as Swift does, instead of during
+  the call. `GesValueArguments` is valid only during the extension call: C# throws `InvalidOperationException` and
+  Swift reads it as empty with Nothing items when it is kept longer.
+- The `GesRuntimeLimits` documentation states what each limit counts; the unused call-depth bookkeeping of the runtime
+  budget is gone. Swift `GesValue` and `GameEventScriptMessage` document why they are not `Sendable` and how to forward
+  a message across isolation domains as a JSON snapshot.
 - Swift Syntax, Runtime and Compiler no longer use Foundation. The Card Lab
   WebAssembly module shrinks from about 71 MB to about 19 MB. Highlighting the
   shared corpus is about 20 times faster in Swift and 3.5 times faster in C#.
@@ -395,7 +646,66 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `steph.ges.compiler.swift` and version `0.1.0`, as the binary format requires
   of every port. Runtime behavior does not depend on it.
 
+- Generated C# qualifies the platform types it uses (`global::System.Math`, `Array`, `BitConverter`, `Text.Encoding`,
+  exceptions and attributes), so schemas and fields such as `:Math`, `system` or `array` compile.
+- Generated C# computed fields never add a product in the same expression: `number + percentage` and an addition or
+  subtraction of a product call the helper `Product`, so a C++ compiler under IL2CPP cannot fuse them into one rounding.
+- Swift generated wire code writes and reads the bytes of a Text or Bytes field with the bit primitives' array overloads
+  instead of one call per byte, so `encodedByteCount()` and `encoded()` no longer cost a loop over every byte.
+
 ### Fixed
+- A random scope that a handler leaves open is reported as `runtime.randomScopeImbalance` even when an earlier handler of
+  the same message failed; before, any earlier error in the frame suppressed it.
+- A publication that only an outbound sink would receive and that a failed initialization discards now reports
+  `MessageDiscarded` with its send ID, so every issued send ID reaches an observer callback.
+- The Swift parser leaves the token after a missing dice pattern unread, as C# does, so a closing brace there still ends
+  the handler, and the Swift binder accepts a line break after the `_` of an unlabeled Record field.
+- The source range of `random from … to …` starts at `random` in both ports, also when a line break follows it, so
+  diagnostics and the SourceMap point at the whole expression.
+- The Swift VM reports `runtime.invalidRecordConstructor` and `runtime.instructionPointerOutOfRange` like C#, and a
+  Publish without an outbound binding is ignored as in C# instead of raising an uncatalogued code.
+- `nothing = nothing` and `nothing <> nothing` fold to `nothing`, as the VM computes them, and C# folds dice pattern faces
+  such as `[:has pair of (1.5 + 1.5)]` as Swift does; `(50%) / (true)` folds to `50%`.
+- A negated decimal random bound such as `random from -20.0 to -10.0`, a decimal constant and `random 1 to pi` draw
+  binary64 values in both ports.
+- C# types constants in function and predicate bodies by their literal and `let` bindings by their value, as Swift does,
+  so `predicate active() be $flag` compiles and `emit after $delay` with a unitless constant is
+  `validate.invalidTypeConstructor` in both ports.
+- Swift rejects `:Record` and unknown quantity units as parameter types like C#, lowers fold seeds and unit-literal
+  indexes like C#, and reports an unresolved labeled call as `compile.unresolvedSymbol`.
+- `emit emit Done()` compiles in both ports instead of crashing the syntax binder.
+- The branch simplification inverts only exact branch pairs, so a `nothing` condition keeps its branch.
+- `compare-compiler-output.py --mutants N` compiles seeded broken variants of corpus programs with both CLIs.
+- C# compiles a call whose unlabeled first argument is followed by labeled ones, such as `scale(2, factor: 3)` for
+  `scale(_ value, factor)`, as Swift does.
+- Unparenthesized extension calls such as `:math.double pi` take the same operands in both ports.
+- Both parsers report the same positions and recover alike for broken sources; `test-syntax-roundtrip.py --mutants`
+  compares seeded broken variants of the corpus in `test-swift.sh`.
+- `on Start as incoming_1` compiles to a Program that loads; before, linking failed with an argument exception.
+- Program validation is linear in the Program size: a long register or label list shared by many instructions, many
+  source lines and many mappings no longer make C# validation take minutes to hours. `Encode()`/`ToArray()` validate
+  once, and the reader copies pools without per-element calls.
+- `parse` of a form with many labels checks them through a set instead of quadratically, in both ports.
+- The Swift Program reader rejects counts and lengths above `Int.max` on 32-bit targets such as wasm32 with the format
+  error instead of trapping.
+- `Start()` completes an initial group with more initializations than `MaxProcessedEventsPerRun` instead of failing
+  with `runtime.initializationLimitReached`; the limit paces ordinary pumps only.
+- Choosing items at random from a long Range no longer allocates one entry per Range item, and integer Ranges answer
+  `has any`, `has all`, `starts with` and `ends with` from their bounds.
+- Delayed messages are kept in a heap, so scheduling them in falling deadline order and delivering many at once no
+  longer take quadratic time; equal deadlines still keep their scheduling order.
+- C# `:distinct`, `:distinct by`, `:group by`, `:map by` and Map union index their keys once they hold sixteen, so large
+  results no longer take quadratic time.
+- Generated schema code for a List whose elements get an item type, such as `:List(:Number step 0.5 | :Text max 8)` or a
+  List of Lists of Points, quantizes its elements in `CopyFrom` and deltas instead of skipping them, and no longer fails to
+  generate for a List of Lists.
+- Generated Swift models write keyword argument labels such as `default` without backticks, which Swift warned about;
+  only a declared `var`, `let` or `inout` label keeps them.
+- The C# CLI builds with .NET SDK 10.0.404, so the Windows archives and the AOT tool packages
+  contain .NET 8.0.34 instead of 8.0.25, which had known vulnerabilities such as CVE-2026-111497.
+  The libraries keep their .NET Standard 2.1 target.
+- The CLI overview lists `ges schema layout` and `generate`, and `ges run --help` lists the
+  console commands `:edit`, `:save` and `:quit!`.
 - External field values are no longer cached, so they can change between handlers. In C#,
   a script's field read runs only that field's getter instead of all of them, so a failing
   getter affects only its own field.
@@ -491,6 +801,81 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   position: the offending token, the repeated or misnamed parameter, argument,
   condition or binding, the failing call or constructor, or the first construct
   that exceeds the nesting limit.
+- The split manifest of model code generated with `documents` records `values: true`, since that code always contains
+  the value conversions; equal code now has an equal manifest.
+- C# schema highlighting reports an error at the end of the text with length zero and one on a scalar outside the BMP
+  over both UTF-16 units, as Swift does. GES schema highlighting is now specified and compared between the ports.
+- Decoding a `:Poly` through the value path grows its point storage with the data instead of allocating by the claimed
+  count, and the C# value path allocates one scratch of the largest encoding per delta call instead of two.
+- Swift `GesBitWriter.setBit(_:)`, `rewind(to:)` and `GesBitReader.seek(to:)` trap on a negative position instead of
+  accessing memory out of bounds in release builds.
+- The specification names `wire.outOfRange` for decoding a finite binary64 outside the range of a field without a step,
+  and states that a bound member of a message set reports its set's hash and binding hash.
+- A Swift `@GesFunction` or `@GesPredicate` with an Optional parameter receives `nil` for `nothing` instead of being
+  skipped.
+- Swift encodes an empty non-byte array, such as `[String]()`, as an empty List instead of empty Bytes.
+- A Swift runner delivers delayed work after the last outside reference to it is gone, as the C# runner does.
+- The Swift console answers each piped line at once instead of waiting for 4096 bytes or the end of the input.
+- The C# CLI ends with status 1 when stdout is a closed pipe, as Swift does, instead of returning the script's code.
+- `:save` writes through a symbolic link to its target and keeps the file's permissions in both CLIs.
+- C# diagnostics no longer end in an empty `[program=]`, and an I/O error without a file has no leading colon.
+- The C# console's waiting prompt indents continuation lines without ` ... ` markers.
+- The specifications define the typed value reads (`AsInteger`, `AsNumber`, `AsBoolean`, `AsText`) of both ports, why
+  `ValueKind` uses the bytecode type kinds and which of them a host observes, the module graph with Syntax and
+  Generator, the anonymous name of an empty Program, `InvalidProgram` for duplicate callable signatures and Record
+  names, reserved section types as unknown sections, and the instruction flag bits; stale runner names and a Swift
+  Host initializer are gone.
+- The public C# Runtime types document what each member does instead of generated placeholder text.
+- Swift CI runs the Swift port on Linux in the release image of the static CLI (package tests, the supported corpus,
+  CLI process checks) and builds the libraries with the declared minimum Swift 6.0; a Linux-only Swift test that did
+  not compile is fixed.
+- Publication requires the tagged commit on main with successful C# CI and Swift CI runs, and the C# release workflow
+  also runs the zero-allocation gate and the reproducibility check.
+- An interrupted NuGet or CLI download publication can be resumed by running it again; identical published packages
+  and downloads are skipped and differing ones stop the run.
+- C# CI runs the guide examples, the timing-only performance scenarios without timing and a license header gate for
+  Swift, C, Python, GES and web sources; Swift CI runs the Swift guide examples and treats guide example edits as
+  code.
+- The Conformance runner scales its batch deadline with the selected cases and prints how long a batch took.
+- Workflow container images are pinned by digest and every job has a timeout.
+- Swift `list + value` and `zip` check MaxValueDepth like every other construction, where a deep fold crashed the Swift
+  process. C# Bytes answer `:contains any`, `:contains all`, `[:first]`, `[:last]` and `[:single]` as Swift does, and C#
+  external type constructors take Bytes parameters.
+- The C# CLI writes a script's output to a redirected file at the shared offset, so a later writer no longer overwrites
+  it, and it formats canonical decimals, schema hashes and generated code culture-invariantly, where a locale with the
+  minus sign U+2212 changed them. `bench --entry initialization` is `cli.missingEntry` instead of a crash.
+- Model generation no longer fails for a field bounded by a parameter whose name contains an `e`. Generated Swift packed
+  models throw `GesWireError` for an out-of-range value from a GES value, a document or a script instead of trapping,
+  and a wrapping packed field's `fits` matches its setter. Generated delta readers reject a set change bit of a Disc
+  centre without axes as the runtime does. A packed root's `MaxByteCount` counts its delta, a change bit and the word.
+  Computed `default` keeps its operands whole, and Swift static code no longer misreads a negative literal before a
+  method call. C# models read optional packed fields and reject packed wire roots with fields named like their wire
+  members.
+- A record written as `:Record(...)` in a schema document keeps the union alternatives the check chose. Swift compares
+  schema field, Flags and expected names by Unicode scalars, as C# does. `schema generate --out-dir` removes stale files
+  before writing, so a name changed only in case on a case-insensitive file system is kept. Validation checks a tag or
+  type name shared by many instructions once. The schema formatter keeps the operand of `sqrt ((a - b) ^ 2)` whole, and
+  the CLI example schema binds again.
+- The release gate requires the native jobs of Swift CI to have run, not only a successful run that skipped them.
+- Reading a schema document converts each union along the alternative that the document check accepted, so a List of
+  points that breaks a Poly's `max` stays the List that a later alternative takes instead of becoming a Poly. Without an
+  axis block, the points of a Poly and the centre of a Disc must lie in the plane z = 0, as encoding requires.
+- `GesSchemaDocument` accepts only a concrete schema of the set as an expected root: an abstract schema, a message or an
+  undeclared name is `document.schemaMismatch` in both ports, where C# threw `GesSchemaException` for an undeclared one.
+- Decoding a Swift `GesBox` orders its corners as creating one does.
+- Generated models give a field lent with `with` one member name in its interface or protocol and in every type taking it
+  when the field is named like one of them, and C# model generation rejects members named like their type and the
+  document roots `Value` and `FromDocument` with `generate.nameCollision` instead of emitting code that does not compile.
+- `ges schema generate --out-dir` writes the manifest after removing the files it no longer names, so a failed removal
+  keeps them owned.
+- The Swift compiler assigns binding IDs per kind with counters, as C# does, instead of in quadratic time.
+- Generated Swift setters of packed fields shift the field after subtracting its lower bound; they ORed every field into
+  the lowest bits.
+- The DLLs in the C# packages carry the time of the packed commit, or the current time for uncommitted changes, instead
+  of a fixed date, so MSBuild's copy into a build output replaces the DLL of an older package version of the same size.
+- A unary intrinsic with a parenthesized operand, such as `floor(x)`, and an intrinsic call such as `atan2(y, x)` are power
+  bases in both ports: `floor(x) ^ 2` is `(floor x) ^ 2`. C# rejected both, and Swift accepted `-x² ^ 2` and `floor x² ^ 2`,
+  which are syntax errors.
 
 ## [0.4.0] — 2026-10-11
 

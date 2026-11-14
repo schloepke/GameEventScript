@@ -32,8 +32,11 @@ with open(os.environ["GES_PUBLISH_TEST_LOG"], "a") as output:
     output.write(json.dumps(sys.argv[1:]) + "\\n")
 ''')
         fake.chmod(0o755)
+        # A local feed stands in for nuget.org, so no test contacts it.
+        self.feed = self.directory / "feed"
+        self.feed.mkdir()
         self.environment = dict(os.environ, PATH=str(self.directory) + os.pathsep + os.environ["PATH"],
-                                NUGET_API_KEY="test-only", GES_PUBLISH_TEST_LOG=str(self.log))
+                                NUGET_API_KEY="test-only", GES_PUBLISH_TEST_LOG=str(self.log), GES_NUGET_FLAT_CONTAINER=self.feed.as_uri())
         for package in (*PACKAGES, "GameEventScript.Conformance", "GameEventScript.Tool"):
             for extension in ("nupkg", "snupkg"):
                 (self.directory / f"{package}.{VERSION}.{extension}").touch()
@@ -52,6 +55,28 @@ with open(os.environ["GES_PUBLISH_TEST_LOG"], "a") as output:
              "--api-key", "test-only", "--source", "https://api.nuget.org/v3/index.json"]
             for package in PACKAGES
         ], calls)
+
+    def published(self, package, data):
+        name, version = package.lower(), VERSION.lower()
+        path = self.feed / name / version / f"{name}.{version}.nupkg"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+
+    def test_rerun_skips_packages_already_published_with_identical_contents(self):
+        for package in PACKAGES[:2]:
+            self.published(package, (self.directory / f"{package}.{VERSION}.nupkg").read_bytes())
+        result = self.publish()
+        self.assertEqual(0, result.returncode, result.stderr)
+        pushed = [json.loads(line)[2] for line in self.log.read_text().splitlines()]
+        self.assertEqual([str(self.directory / f"{package}.{VERSION}.nupkg") for package in PACKAGES[2:]], pushed)
+
+    def test_a_published_package_with_other_contents_stops_the_release(self):
+        self.published(PACKAGES[1], b"other contents")
+        result = self.publish()
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("other contents", result.stdout + result.stderr)
+        pushed = [json.loads(line)[2] for line in self.log.read_text().splitlines()]
+        self.assertEqual([str(self.directory / f"{PACKAGES[0]}.{VERSION}.nupkg")], pushed)
 
     def test_missing_artifact_prevents_any_upload(self):
         for extension in ("nupkg", "snupkg"):

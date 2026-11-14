@@ -17,9 +17,10 @@ successful library build is not full Conformance on that platform.
 
 | Product | Declared package contract | CI host and toolchain | Verification |
 | --- | --- | --- | --- |
-| C# Runtime, Compiler, CSharpBridge, Syntax | .NET Standard 2.1 | Linux x64, `ubuntu-latest`; SDK **10.0.201**, .NET **8.0.x** runtime | Full C# Conformance and native tests, allocation gate, .NET 8 package consumers, reproducibility: [C# CI](../../../.github/workflows/csharp-ci.yml), job `verify` |
+| C# Runtime, Compiler, CSharpBridge, Syntax | .NET Standard 2.1 | Linux x64, `ubuntu-latest`; SDK **10.0.404**, .NET **8.0.x** runtime | Full C# Conformance and native tests, allocation gate, .NET 8 package consumers, reproducibility: [C# CI](../../../.github/workflows/csharp-ci.yml), job `verify` |
 | Swift Runtime, Compiler, SwiftBridge, Syntax | Swift tools **6.0**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), job `native`; fresh tagged package consumers and root tests: job `distribution` |
-| Standalone Swift Syntax | Swift tools **6.0** | Linux x64, `swift:6.0` container | Syntax package tests only: Swift CI job `syntax-linux` |
+| Swift Runtime, Compiler, Generator, Syntax, SwiftBridge, CLI on Linux | Swift tools **6.0** | Linux x64, digest-pinned `swift:6.4.0-jammy` container, the image of the static Linux CLI | Native Swift Conformance of the supported corpus, Syntax, Generator and SwiftBridge tests, CLI process and terminal checks: Swift CI job `linux` |
+| Swift libraries at the minimum toolchain | Swift tools **6.0** | Linux x64, digest-pinned `swift:6.0` container | Syntax tests and builds of Runtime, Compiler and Generator: Swift CI job `linux-minimum` |
 
 The pinned .NET SDK is defined in [global.json](../../../global.json).
 Swift's package tools version is a manifest requirement, not a claim that every
@@ -29,8 +30,8 @@ Compiler and Syntax packages have no explicit Apple platform floor;
 the public root package contains the Bridge, while the CLI is a separate package. See
 [Package.swift](../../../Package.swift) for the actual distribution contract.
 
-The complete Swift corpus is currently checked on macOS ARM64; the complete C#
-corpus is checked on Linux x64. Other hosts below have narrower package/CLI
+The complete Swift corpus is checked on macOS ARM64 and Linux x64; the cross-port comparisons, which need the C#
+tools, run on macOS. The complete C# corpus is checked on Linux x64. Other hosts below have narrower package/CLI
 verification. Swift Package Index results are additional build observations,
 not substitutes for these checks. Unity, iOS, Android, Windows Swift and other
 embeddings have no dedicated full Conformance jobs and are not independently
@@ -46,8 +47,8 @@ accepts the complete set.
 
 | Implementation / target | Native verification host | Build toolchain |
 | --- | --- | --- |
-| C# `win-x64` | `windows-2022` | .NET SDK 10.0.201 |
-| C# `win-arm64` | `windows-11-arm` | .NET SDK 10.0.201 |
+| C# `win-x64` | `windows-2022` | .NET SDK 10.0.404 |
+| C# `win-arm64` | `windows-11-arm` | .NET SDK 10.0.404 |
 | Swift `osx-x64` | `macos-15-intel` | Runner-provided Swift/Xcode |
 | Swift `osx-arm64` | `macos-15` | Runner-provided Swift/Xcode |
 | Swift `linux-x64` | Plain Ubuntu 22.04 x64 container on `ubuntu-22.04` | Swift **6.4.0**, matching Static Linux SDK |
@@ -78,7 +79,7 @@ checks are separate from the standalone downloads above.
 | `osx-arm64` | `macos-15` |
 
 [C# Tool Packages](../../../.github/workflows/csharp-tool-packages.yml) uses
-SDK 10.0.201 and .NET 8.0.x, builds and consumes each target in job `package`,
+SDK 10.0.404 and .NET 8.0.x, builds and consumes each target in job `package`,
 and validates the complete release set in `verify`. Linux AOT targets are glibc
 targets, not musl/Alpine targets. Native package consumption is not a full corpus
 run on every RID.
@@ -98,8 +99,9 @@ not an automated browser support matrix. There is no distributed WASM CLI.
 For each release candidate, record the revision, workflow run links, actual
 toolchain versions and any limitations in the release validation evidence:
 
-1. Require successful **C# CI / verify** and a full **Swift CI / verify** run,
-   including `native`, `distribution` and `syntax-linux`. A documentation-only
+1. Require successful **C# CI / verify** and a full **Swift CI / verify** run on main for the release commit
+   (the publication jobs check this themselves through `scripts/require-verified-release.py`),
+   including `native`, `distribution`, `linux` and `linux-minimum`. A documentation-only
    skipped native run does not qualify a release; dispatch Swift CI manually to
    force the full checks.
 2. Run **C# Release Candidate** with publication disabled. Its package and

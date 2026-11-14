@@ -91,7 +91,9 @@ internal enum GesSchemaNodeKind : byte
     List,
     Group,
     Union,
-    Nothing
+    Nothing,
+    // One bit per member of a :Flags set, in declared order, as one mask of Width bits.
+    Flags
 }
 
 // One field of a bound layout. A subtree occupies consecutive nodes, and Next is the first node after it. After is where
@@ -106,6 +108,13 @@ internal struct GesSchemaNode
     internal bool HasRange;
     internal bool IsTagBit;
     internal bool IsTagText;
+
+    // A record of a packed schema, whose delta is its whole word.
+    internal bool Packed;
+    // A :Bytes max n: a Text on the wire whose bytes need not be UTF-8.
+    internal bool IsBytes;
+    // The `depth` of a recursive List at its deepest level, which holds no element; 0 otherwise.
+    internal int DepthLimit;
     internal int Width;
     internal int Next;
     internal int After;
@@ -119,6 +128,8 @@ internal struct GesSchemaNode
     internal string Name;
     internal string Path;
     internal string[]? Tags;
+    // The named tag set of a Tag, or null.
+    internal string? TagSet;
 
     // Integer: its lower bound. Quantized: lowerN. The largest valid index; for a wrapping field the period is one more.
     internal long Lower;
@@ -138,6 +149,9 @@ internal struct GesSchemaNode
     internal GesSchemaTypeKind ValueKind;
     internal GesQuantityUnit Unit;
     internal string SchemaName;
+
+    // The value a value or document that leaves the field out takes, for the field's first node.
+    internal GesResolvedDefault? Default;
 }
 
 /// <summary>A schema, message or message set bound to parameter values. Immutable; it can be shared between threads.</summary>
@@ -157,7 +171,14 @@ public sealed class GesBoundSchema
         Hash = hash;
         BindingHash = bindingHash;
         for (var index = 0; index < nodes.Length; index++) _fields[nodes[index].Path] = index;
+        var declarations = new List<GesResolvedDeclaration>();
+        GesSchemaCanonical.Reach(schema.Declaration, declarations, new SortedDictionary<string, GesSchemaTypeSyntax>(StringComparer.Ordinal));
+        foreach (var declaration in declarations)
+            if (declaration.Computed.Length > 0) Computed[declaration.Name] = declaration.Computed;
     }
+
+    // The computed fields of every reached schema that has any, by schema name, which decoding derives.
+    internal Dictionary<string, GesResolvedComputed[]> Computed { get; } = new(StringComparer.Ordinal);
 
     /// <summary>Gets the description this binding comes from.</summary>
     public GesSchema Schema { get; }
@@ -168,10 +189,12 @@ public sealed class GesBoundSchema
     /// <summary>Gets the size of the largest encoding in bytes, of a full record or of a delta.</summary>
     public long MaxByteCount { get; }
 
-    /// <summary>Gets the schema hash, independent of parameter values.</summary>
+    /// <summary>Gets the schema hash, independent of parameter values. A member of a bound message set carries the set's
+    /// hash, since its records exist only within the set's encoding.</summary>
     public ulong Hash { get; }
 
-    /// <summary>Gets the hash over the schema hash and the parameter values.</summary>
+    /// <summary>Gets the hash over the schema hash and the parameter values; a member of a bound message set carries the
+    /// set's.</summary>
     public ulong BindingHash { get; }
 
     /// <summary>Gets whether the first field is a key that a reader can take first.</summary>
@@ -244,7 +267,7 @@ public readonly struct GesSchemaField
 /// <summary>Builds the layout of a declaration for fixed parameter values.</summary>
 internal static class GesSchemaBinder
 {
-    internal const long MaximumByteCount = 10485760;
+    internal const long MaximumByteCount = 67108864;
     private const long LargestSteps = 1L << 50;
     private const long LargestMultiple = 1L << 53;
     private const int MaximumFractionDigits = 15;
@@ -309,6 +332,47 @@ internal static class GesSchemaBinder
         }
 
         return numeric;
+    }
+
+    // A let is an integer when it is a whole unitless number within Int64, and otherwise a binary64 in base units, which must
+    // keep its meaning there as a bound does.
+    internal static bool CheckLet(GesFileScope scope, GesResolvedLet let)
+    {
+        if (let.Kind == GesSchemaTypeKind.Number && let.Value.Exponent >= 0 && TryScale(let.Value.Significand, let.Value.Exponent, out _)) return true;
+        var binary = double.Parse(let.Value.Canonical, CultureInfo.InvariantCulture);
+        if (double.IsInfinity(binary) || (binary == 0 && let.Value.Significand != 0))
+            throw scope.Error(Code.TooWide, let.Offset, "A let lies beyond binary64.");
+        return false;
+    }
+
+    // A numeric default lies in the range, a wrapping one below its upper bound, on the step and, for an integer field, is whole
+    // within Int64; a fractional one keeps its meaning in binary64. Bounds that a parameter without a value decides stay unchecked.
+    internal static void CheckDefault(GesFileScope scope, GesResolvedConstraints constraints, GesSchemaDecimal value, int offset, Func<GesResolvedValue, GesSchemaDecimal>? parameter)
+    {
+        if (constraints.Integer)
+        {
+            if (value.Exponent < 0 || !TryScale(value.Significand, value.Exponent, out _)) throw scope.Error(Code.InvalidDefault, offset, "The default of an integer field is whole and within Int64.");
+        }
+        else
+        {
+            var binary = double.Parse(value.Canonical, CultureInfo.InvariantCulture);
+            if (double.IsInfinity(binary) || (binary == 0 && value.Significand != 0)) throw scope.Error(Code.TooWide, offset, "A default lies beyond binary64.");
+        }
+
+        GesSchemaDecimal? lower = constraints.Lower is { } l ? (l.IsParameter ? parameter?.Invoke(l) : l.Value) : null;
+        GesSchemaDecimal? upper = constraints.Upper is { } u ? (u.IsParameter ? parameter?.Invoke(u) : u.Value) : null;
+        if (lower is { } from && Compare(value, from) < 0) throw scope.Error(Code.InvalidDefault, offset, "A default lies within the field's range.");
+        if (upper is { } to && Compare(value, to) is var order && (order > 0 || (order == 0 && constraints.Wrapping)))
+            throw scope.Error(Code.InvalidDefault, offset, "A default lies within the field's range.");
+        if (constraints.Step is { } step && step.Value.Significand > 0)
+        {
+            // value / step is whole: value · 10^k is a multiple of p for the step p · 10^-k.
+            var exponent = step.Value.Exponent;
+            var k = exponent < 0 ? -exponent : 0;
+            var shift = value.Exponent + k;
+            if (!TryScale(step.Value.Significand, exponent < 0 ? 0 : exponent, out var p) || shift < 0 || !TryScale(value.Significand, shift, out var scaled) || scaled % p != 0)
+                throw scope.Error(Code.InvalidDefault, offset, "A default lies on the field's step.");
+        }
     }
 
     // A fractional field compares in binary64, so its bounds must keep their meaning there.
@@ -402,6 +466,9 @@ internal static class GesSchemaBinder
         internal readonly List<GesSchemaNode> Nodes = [];
         internal readonly GesSchemaParameters Parameters;
 
+        // How many records of each schema enclose the node being added, which a recursive List counts against its depth.
+        internal readonly Dictionary<GesResolvedDeclaration, int> Levels = [];
+
         internal Build(GesSchemaParameters parameters) => Parameters = parameters;
     }
 
@@ -421,8 +488,49 @@ internal static class GesSchemaBinder
             throw root.Scope.Error(Code.UnitMismatch, root.Offset, $"Parameter '{name}' has another kind or unit.");
     }
 
+    // A packed schema holds only fields of a fixed width that no parameter decides: integers and quantized numbers with a range,
+    // Booleans, closed Tags, Flags and packed schemas, with neither `optional`, a key nor `delta within`. Its bits, those of
+    // its record on the wire, fit its word. Nested packed schemas are checked first, since their bits count here.
+    internal static void CheckPacked(GesResolvedDeclaration declaration)
+    {
+        if (declaration.PackedWidth > 0) return;
+        var scope = declaration.Scope;
+        if (declaration.Computed.Length > 0) throw scope.Error(Code.PackedField, declaration.Computed[0].Offset, "A packed schema holds no computed field.");
+        foreach (var field in declaration.Fields)
+        {
+            if (field.Marker != GesSchemaFieldMarker.None) throw scope.Error(Code.PackedField, field.Offset, $"A packed schema holds no {(field.Marker == GesSchemaFieldMarker.Key ? "key" : "optional field")}, since its width is fixed.");
+            if (field.Alternatives.Length != 1) throw scope.Error(Code.PackedField, field.Offset, "A packed schema holds no union, since its width is fixed.");
+            var type = field.Alternatives[0];
+            var constraints = type.Constraints;
+            var fixedNumber = type.Kind is GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity
+                && constraints.Lower is { IsParameter: false } && constraints.Upper is { IsParameter: false } && constraints.Delta is null
+                && (constraints.Integer || constraints.Step is { IsParameter: false });
+            var accepted = type.Kind switch
+            {
+                GesSchemaTypeKind.Boolean or GesSchemaTypeKind.Flags => true,
+                GesSchemaTypeKind.Tag => type.Tags is not null,
+                GesSchemaTypeKind.Reference => type.Reference!.Packed,
+                _ => fixedNumber
+            };
+            if (!accepted)
+                throw scope.Error(Code.PackedField, type.Offset, "A packed field is an integer or quantized number with a range and no delta range, a Boolean, a closed Tag, Flags or a packed schema.");
+            if (type.Kind == GesSchemaTypeKind.Reference) CheckPacked(type.Reference!);
+        }
+
+        var build = new Build(new GesSchemaParameters());
+        foreach (var field in declaration.Fields) AddField(build, field.Scope, field, "", 0, top: false);
+        var bits = 0;
+        foreach (var node in build.Nodes) bits += node.Width;
+        var width = declaration.Syntax.PackedWidth;
+        if (bits > 64 || (width > 0 && bits > width))
+            throw scope.Error(Code.PackedTooWide, declaration.Syntax.PackedOffset, $"'{declaration.Name}' has {bits} bits, more than {(width > 0 ? width : 64)}.");
+        declaration.PackedBits = bits;
+        declaration.PackedWidth = width > 0 ? width : bits <= 8 ? 8 : bits <= 16 ? 16 : bits <= 32 ? 32 : 64;
+    }
+
     internal static GesBoundSchema Bind(GesResolvedDeclaration root, GesSchemaParameters parameters)
     {
+        if (root.Abstract) throw root.Scope.Error(Code.InvalidAbstract, root.Offset, $"'{root.Name}' is abstract; it is never encoded.");
         var declarations = new List<GesResolvedDeclaration>();
         var reached = new SortedDictionary<string, GesSchemaTypeSyntax>(StringComparer.Ordinal);
         GesSchemaCanonical.Reach(root, declarations, reached);
@@ -459,13 +567,15 @@ internal static class GesSchemaBinder
     private static GesBoundSchema BindNodes(GesResolvedDeclaration declaration, GesSchemaParameters parameters, ulong hash, ulong bindingHash)
     {
         var inner = new Build(parameters);
-        foreach (var field in declaration.Fields) AddField(inner, declaration.Scope, field, "", 0, top: true);
+        inner.Levels[declaration] = 1;
+        foreach (var field in declaration.Fields) AddField(inner, field.Scope, field, "", 0, top: true);
         foreach (var tag in declaration.Tags)
             inner.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Boolean, IsTagBit = true, Width = 1, Name = tag, Path = "#" + tag, Next = inner.Nodes.Count + 1, SchemaName = "" });
         var nodes = inner.Nodes.ToArray();
         Seal(nodes);
         var bits = Cost(nodes, 0, nodes.Length);
-        if (declaration.Kind == GesSchemaKind.Schema) bits = Math.Max(bits, DeltaCost(nodes));
+        // A packed record's delta is a change bit and its whole word.
+        if (declaration.Kind == GesSchemaKind.Schema) bits = Math.Max(bits, declaration.PackedWidth > 0 ? 1 + bits : DeltaCost(nodes));
         if (bits > MaximumByteCount * 8) throw declaration.Scope.Error(Code.TooLarge, declaration.Offset, $"The largest encoding of '{declaration.Name}' exceeds {MaximumByteCount} bytes.");
         var labels = new string[declaration.Fields.Length];
         for (var index = 0; index < labels.Length; index++) labels[index] = declaration.Fields[index].Unlabeled ? "_" : declaration.Fields[index].Name;
@@ -527,6 +637,8 @@ internal static class GesSchemaBinder
         {
             case GesSchemaNodeKind.Boolean or GesSchemaNodeKind.Nothing:
                 return 0;
+            case GesSchemaNodeKind.Group when node.Packed:
+                return FullCost(nodes, index);
             case GesSchemaNodeKind.Group:
                 return DeltaCost(nodes, index + 1, node.Next);
             case GesSchemaNodeKind.List when node.KeyedElements:
@@ -600,7 +712,22 @@ internal static class GesSchemaBinder
     private static void AddField(Build build, GesFileScope scope, GesResolvedField field, string prefix, int lists, bool top)
     {
         var path = prefix.Length == 0 ? field.Name : prefix + "." + field.Name;
+        var index = build.Nodes.Count;
         AddUnion(build, scope, field.Alternatives, field.Name, path, field.Marker == GesSchemaFieldMarker.Optional, top && field.Marker == GesSchemaFieldMarker.Key, lists);
+        if (field.Default is not { } fallback) return;
+        if (fallback.Kind == GesSchemaDefaultKind.Number) CheckDefault(scope, field.Alternatives[0].Constraints, fallback.Value, fallback.Offset, Bound(build));
+        else if (fallback.Kind == GesSchemaDefaultKind.Record) CheckRecord(build, scope, fallback);
+        var node = build.Nodes[index];
+        node.Default = fallback;
+        build.Nodes[index] = node;
+    }
+
+    // The numbers of a record literal against the bounds its parameters decide.
+    private static void CheckRecord(Build build, GesFileScope scope, GesResolvedDefault fallback)
+    {
+        foreach (var entry in fallback.Entries)
+            if (entry.Value.Kind == GesSchemaDefaultKind.Number) CheckDefault(scope, entry.Field.Alternatives[0].Constraints, entry.Value.Value, entry.Value.Offset, Bound(build));
+            else if (entry.Value.Kind == GesSchemaDefaultKind.Record) CheckRecord(build, scope, entry.Value);
     }
 
     private static void AddUnion(Build build, GesFileScope scope, GesResolvedType[] alternatives, string name, string path, bool optional, bool key, int lists)
@@ -660,14 +787,28 @@ internal static class GesSchemaBinder
 
                 node.Kind = GesSchemaNodeKind.Tag;
                 node.Tags = type.Tags;
+                node.TagSet = type.TagSet.Length > 0 ? type.TagSet : null;
                 node.MaxIndex = (ulong)type.Tags.Length - 1;
                 node.Width = BitLength(node.MaxIndex);
                 break;
-            case GesSchemaTypeKind.Text:
-                if (type.Max is not { } textMax) throw scope.Error(Code.NotEncodable, type.Offset, "A Text without max has no hard limit.");
+            case GesSchemaTypeKind.Flags:
+                node.Kind = GesSchemaNodeKind.Flags;
+                node.Tags = type.Tags;
+                node.Width = type.Tags!.Length;
+                node.MaxIndex = node.Width == 64 ? ulong.MaxValue : (1UL << node.Width) - 1;
+                break;
+            case GesSchemaTypeKind.Text or GesSchemaTypeKind.Bytes:
+                if (type.Max is not { } textMax) throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} without max has no hard limit.");
                 node.Kind = GesSchemaNodeKind.Text;
+                node.IsBytes = type.Kind == GesSchemaTypeKind.Bytes;
                 node.MaxCount = textMax;
                 node.Width = BitLength((ulong)textMax);
+                break;
+            case GesSchemaTypeKind.List when type.Recursion is { } recursion && build.Levels.TryGetValue(recursion, out var reached) && reached >= type.Depth:
+                // The deepest level of a recursive List holds no element: it is empty, so it takes no bits and no list nesting.
+                node.Kind = GesSchemaNodeKind.List;
+                node.DepthLimit = type.Depth;
+                build.Nodes.Add(node);
                 break;
             case GesSchemaTypeKind.List:
                 if (type.Element is not { } element || type.Max is not { } listMax) throw scope.Error(Code.NotEncodable, type.Offset, "A List without element type and max has no hard limit.");
@@ -698,23 +839,45 @@ internal static class GesSchemaBinder
             case GesSchemaTypeKind.Vector:
                 node.Kind = GesSchemaNodeKind.Group;
                 build.Nodes.Add(node);
-                if (type.Axes is { } axes)
-                {
-                    foreach (var axis in axes) AddAxis(build, scope, axis.Axis, axis.Constraints, path, type.Offset);
-                }
-                else
-                {
-                    var none = new GesResolvedConstraints();
-                    foreach (var axis in "xyz") AddAxis(build, scope, axis, none, path, type.Offset);
-                }
-
+                AddAxes(build, scope, type, path, "xyz");
+                break;
+            case GesSchemaTypeKind.Box:
+                // Two corners of the axes of the block, each a Point; the value orders them.
+                node.Kind = GesSchemaNodeKind.Group;
+                build.Nodes.Add(node);
+                AddCorner(build, scope, type, "lower", path + ".lower", "xyz");
+                AddCorner(build, scope, type, "upper", path + ".upper", "xyz");
+                break;
+            case GesSchemaTypeKind.Disc:
+                // A centre Point in the plane z = 0 and a radius, of the axes of the block.
+                node.Kind = GesSchemaNodeKind.Group;
+                build.Nodes.Add(node);
+                AddCorner(build, scope, type, "center", path + ".center", "xy");
+                AddAxes(build, scope, type, path, "radius");
+                break;
+            case GesSchemaTypeKind.Poly:
+                // A List of Points in the plane z = 0.
+                if (type.Max is not { } polyMax) throw scope.Error(Code.NotEncodable, type.Offset, "A Poly without max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                node.Kind = GesSchemaNodeKind.List;
+                node.MaxCount = polyMax;
+                node.Width = BitLength((ulong)polyMax);
+                node.PositionWidth = BitLength((ulong)polyMax - 1);
+                build.Nodes.Add(node);
+                AddCorner(build, scope, type, "[]", path + "[]", "xy");
+                if (!HasBits(build.Nodes, index + 1)) throw scope.Error(Code.NotEncodable, type.Offset, "A Poly point without bits has a count that no data limits.");
                 break;
             case GesSchemaTypeKind.Reference:
                 node.Kind = GesSchemaNodeKind.Group;
                 node.SchemaName = type.ReferenceName;
+                node.Packed = type.Reference!.Packed;
                 build.Nodes.Add(node);
                 var reference = type.Reference!;
-                foreach (var field in reference.Fields) AddField(build, reference.Scope, field, path, lists, top: false);
+                build.Levels.TryGetValue(reference, out var level);
+                build.Levels[reference] = level + 1;
+                foreach (var field in reference.Fields) AddField(build, field.Scope, field, path, lists, top: false);
+                if (level == 0) build.Levels.Remove(reference);
+                else build.Levels[reference] = level;
                 break;
             default:
                 throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} has no width and is only for documents.");
@@ -724,6 +887,118 @@ internal static class GesSchemaBinder
         var added = build.Nodes[index];
         added.Next = build.Nodes.Count;
         build.Nodes[index] = added;
+    }
+
+    // The encodability of a wire root as far as it is known without parameter values: the same conditions as binding, in
+    // the same depth-first order, so that `check` reports what binding would. Bounds that a parameter decides stay binding
+    // errors.
+    internal static void CheckEncodable(GesResolvedDeclaration root)
+    {
+        var known = new HashSet<(GesResolvedDeclaration, int, int)>();
+        var levels = new Dictionary<GesResolvedDeclaration, int>();
+        if (root.Kind == GesSchemaKind.Messages)
+        {
+            foreach (var member in root.Members) CheckEncodable(member, 0, known, levels);
+            return;
+        }
+
+        CheckEncodable(root, 0, known, levels);
+    }
+
+    private static void CheckEncodable(GesResolvedDeclaration declaration, int lists, HashSet<(GesResolvedDeclaration, int, int)> known, Dictionary<GesResolvedDeclaration, int> levels)
+    {
+        levels.TryGetValue(declaration, out var outer);
+        if (known.Add((declaration, lists, outer + 1)))
+        {
+            levels[declaration] = outer + 1;
+            foreach (var field in declaration.Fields)
+            {
+                if (field.Alternatives.Length == 1) CheckEncodable(field.Scope, field.Alternatives[0], lists, known, levels);
+                else
+                    foreach (var alternative in field.Alternatives)
+                        if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(field.Scope, alternative, lists, known, levels);
+            }
+
+            if (outer == 0) levels.Remove(declaration);
+            else levels[declaration] = outer;
+        }
+    }
+
+    private static void CheckEncodable(GesFileScope scope, GesResolvedType type, int lists, HashSet<(GesResolvedDeclaration, int, int)> known, Dictionary<GesResolvedDeclaration, int> levels)
+    {
+        switch (type.Kind)
+        {
+            case GesSchemaTypeKind.Boolean or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Disc:
+                if (type.Axes is { } axes)
+                    foreach (var axis in axes) CheckWrapping(scope, axis.Constraints, type.Offset);
+                break;
+            case GesSchemaTypeKind.Poly:
+                if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Poly without max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                if (type.Axes is { } points)
+                    foreach (var axis in points) CheckWrapping(scope, axis.Constraints, type.Offset);
+                if (type.Axes is { Length: 0 }) throw scope.Error(Code.NotEncodable, type.Offset, "A Poly point without bits has a count that no data limits.");
+                break;
+            case GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity:
+                CheckWrapping(scope, type.Constraints, type.Offset);
+                break;
+            case GesSchemaTypeKind.Tag:
+                if (type.Tags is null && type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Tag without a set or max has no hard limit.");
+                break;
+            case GesSchemaTypeKind.Flags:
+                break;
+            case GesSchemaTypeKind.Text or GesSchemaTypeKind.Bytes:
+                if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} without max has no hard limit.");
+                break;
+            case GesSchemaTypeKind.List when type.Recursion is { } recursion && levels.TryGetValue(recursion, out var level) && level >= type.Depth:
+                break;
+            case GesSchemaTypeKind.List:
+                if (type.Element is not { } element || type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A List without element type and max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                if (element.Length == 1) CheckEncodable(scope, element[0], lists + 1, known, levels);
+                else
+                    foreach (var alternative in element)
+                        if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(scope, alternative, lists + 1, known, levels);
+                if (!HasBits(element)) throw scope.Error(Code.NotEncodable, type.Offset, "A List element without bits has a count that no data limits.");
+                break;
+            case GesSchemaTypeKind.Dice:
+                if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Dice without max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                break;
+            case GesSchemaTypeKind.Reference:
+                CheckEncodable(type.Reference!, lists, known, levels);
+                break;
+            default:
+                throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} has no width and is only for documents.");
+        }
+    }
+
+    private static void CheckWrapping(GesFileScope scope, GesResolvedConstraints constraints, int offset)
+    {
+        if (constraints.Wrapping && constraints.Step is null && !constraints.Integer)
+            throw scope.Error(Code.NotEncodable, offset, "A wrapping field without a step or integer has no index and is only for documents.");
+    }
+
+    // Whether an element takes bits whatever the parameters: only a Tag of one tag, a Nothing and a schema of such fields have none.
+    private static bool HasBits(GesResolvedType[] alternatives) => alternatives.Length > 1 || HasBits(alternatives[0]);
+
+    private static bool HasBits(GesResolvedType type)
+    {
+        switch (type.Kind)
+        {
+            case GesSchemaTypeKind.Tag:
+                return type.Tags is not { Length: 1 };
+            case GesSchemaTypeKind.Nothing:
+                return false;
+            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Disc:
+                return type.Axes is not { Length: 0 };
+            case GesSchemaTypeKind.Reference:
+                foreach (var field in type.Reference!.Fields)
+                    if (field.Marker == GesSchemaFieldMarker.Optional || HasBits(field.Alternatives)) return true;
+                return false;
+            default:
+                return true;
+        }
     }
 
     // References expand into nodes, so a small source can ask for more than any encoding holds.
@@ -739,11 +1014,37 @@ internal static class GesSchemaBinder
         return false;
     }
 
-    private static void AddAxis(Build build, GesFileScope scope, char axis, GesResolvedConstraints constraints, string path, int offset)
+    // The axes of a block among `all`, the letters x, y and z or the word radius, or each of them as a binary64 without one.
+    private static void AddAxes(Build build, GesFileScope scope, GesResolvedType type, string path, string all)
+    {
+        var names = all == "radius" ? [all] : Array.ConvertAll(all.ToCharArray(), axis => axis.ToString());
+        if (type.Axes is { } axes)
+        {
+            foreach (var axis in axes)
+                if (Array.IndexOf(names, axis.Axis) >= 0) AddAxis(build, scope, axis.Axis, axis.Constraints, path, type.Offset);
+            return;
+        }
+
+        var none = new GesResolvedConstraints();
+        foreach (var axis in names) AddAxis(build, scope, axis, none, path, type.Offset);
+    }
+
+    // A corner of a Box, a point of a Poly or the centre of a Disc: a Point of the type's unit and axes.
+    private static void AddCorner(Build build, GesFileScope scope, GesResolvedType type, string name, string path, string all)
+    {
+        CheckNodeCount(build, scope, type.Offset);
+        var index = build.Nodes.Count;
+        build.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Group, Name = name, Path = path, ValueKind = GesSchemaTypeKind.Point, Unit = type.Unit, SchemaName = "" });
+        AddAxes(build, scope, type, path, all);
+        var corner = build.Nodes[index];
+        corner.Next = build.Nodes.Count;
+        build.Nodes[index] = corner;
+    }
+
+    private static void AddAxis(Build build, GesFileScope scope, string name, GesResolvedConstraints constraints, string path, int offset)
     {
         CheckNodeCount(build, scope, offset);
         var index = build.Nodes.Count;
-        var name = axis.ToString();
         var node = new GesSchemaNode { Name = name, Path = path + "." + name, ValueKind = GesSchemaTypeKind.Number, SchemaName = "", Next = index + 1 };
         Number(build, scope, constraints, offset, ref node);
         build.Nodes.Add(node);

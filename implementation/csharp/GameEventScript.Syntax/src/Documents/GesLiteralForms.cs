@@ -9,7 +9,10 @@ namespace GameEventScript.Syntax;
 // The explicit data forms such as `:Range(from: 1, to: 5)`: their lowercase type names and parameters.
 internal static class GesLiteralForms
 {
-    internal static bool IsType(string name) => name is "nothing" or "number" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "vector" or "point" or "range" or "series" or "message" or "handler" or "record";
+    internal static bool IsType(string name) => name is "nothing" or "number" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "bytes" or "vector" or "point" or "range" or "series" or "message" or "handler" or "record";
+    // The most parameters any form takes, so readers can reject longer label lists before decoding them.
+    internal const int MaxParameters = 3;
+
     // Returns parameter positions in evaluation order, without reordering evaluation of source arguments.
     internal static int[]? Positions(string type, IReadOnlyList<string> labels)
     {
@@ -41,6 +44,12 @@ internal static class GesLiteralForms
                 "value",
                 "tags"
             },
+            // `utf8` replaces `value` for the UTF-8 conversion between Text and Bytes.
+            "text" or "bytes" => new[]
+            {
+                "value",
+                "utf8"
+            },
             _ => new[]
             {
                 "value"
@@ -61,6 +70,8 @@ internal static class GesLiteralForms
 
         if (type == "record" && (!used[0] || !used[1]) || type == "range" && (labels.Count > 1 || labels[0] != "_") && (!used[0] || !used[1]))
             return null;
+        if (type is "text" or "bytes")
+            return used[0] != used[1] ? result : null;
         if (type != "nothing" && !used[0])
             return null;
         return result;

@@ -155,7 +155,8 @@ internal sealed class GesDocumentReader
             if (StartsWord(":Vector")) return ReadSpatial(depth, point: false);
             if (StartsWord(":Point")) return ReadSpatial(depth, point: true);
         }
-        if (_text[_position] == ':' && !_text.AsSpan(_position).StartsWith(":Dice[".AsSpan(), StringComparison.Ordinal))
+        if (_text[_position] == ':' && !_text.AsSpan(_position).StartsWith(":Dice[".AsSpan(), StringComparison.Ordinal) &&
+            !_text.AsSpan(_position).StartsWith(":Bytes[".AsSpan(), StringComparison.Ordinal))
         {
             var saved = _position;
             var typed = ReadTyped(depth);
@@ -163,16 +164,17 @@ internal sealed class GesDocumentReader
             _position = saved;
         }
         var dice = _text[_position] == ':' && _text.AsSpan(_position).StartsWith(":Dice".AsSpan(), StringComparison.Ordinal);
-        if (dice)
+        var bytes = _text[_position] == ':' && _text.AsSpan(_position).StartsWith(":Bytes".AsSpan(), StringComparison.Ordinal);
+        if (dice || bytes)
         {
-            _position += 5;
+            _position += dice ? 5 : 6;
             SkipWhitespace();
             if (_position == _text.Length || _text[_position] != '[') return Fail(Code.InvalidLiteral, valueStart);
         }
         if (_text[_position] == '[')
         {
             if (depth >= MaximumDepth) return Limit("MaxLiteralDepth", MaximumDepth, _position);
-            return dice ? ReadDice(valueStart) : ReadCollection(depth + 1);
+            return dice ? ReadDice(valueStart) : bytes ? ReadBytes(valueStart) : ReadCollection(depth + 1);
         }
 
         var start = _position;
@@ -207,7 +209,7 @@ internal sealed class GesDocumentReader
         SkipWhitespace();
         var open = _position;
         // `:Dice [...]` with whitespace is the Dice result literal, read after this form fails.
-        if (!Consume('(')) return builtin == "dice" ? null : Fail(Code.InvalidLiteral, formStart);
+        if (!Consume('(')) return builtin is "dice" or "bytes" ? null : Fail(Code.InvalidLiteral, formStart);
         SkipWhitespace();
         if (builtin is "handler" or "message" && _position < _text.Length && GesText.IsAsciiUpper(_text[_position]))
             return ReadMessageForm(depth + 1, builtin == "handler", formStart, open);
@@ -415,6 +417,32 @@ internal sealed class GesDocumentReader
         return null;
     }
 
+    // `:Bytes[...]` holds integer literals from 0 to 255.
+    private GesDocumentNode? ReadBytes(int formStart)
+    {
+        var open = _position;
+        _position++;
+        SkipWhitespace();
+        if (Consume(']')) return GesDocumentNode.BytesValue([]);
+        if (_position == _text.Length) return Fail(Code.UnclosedBracket, open);
+        var bytes = new List<byte>();
+        while (_position < _text.Length)
+        {
+            if (_items >= MaximumItems) return Limit("MaxLiteralItems", MaximumItems, _position);
+            _items++;
+            if (_text[_position] is < '0' or > '9') return Fail(Code.InvalidLiteral, formStart);
+            if (ReadValue(0) is not { } item) return null;
+            if (item.Kind != GesDocumentNodeKind.Number || item.Number.Kind != GesNumberLiteralKind.Integer || item.Number.Unit != GesQuantityUnit.UnitNone
+                || item.Number.IntegerValue is < 0 or > 255)
+                return Fail(Code.InvalidLiteral, formStart);
+            bytes.Add((byte)item.Number.IntegerValue);
+            var separator = Separator(']', open);
+            if (separator < 0) return null;
+            if (separator > 0) return GesDocumentNode.BytesValue(bytes.ToArray());
+        }
+        return null;
+    }
+
     private GesDocumentNode? ReadCollection(int depth)
     {
         var open = _position;
@@ -509,6 +537,8 @@ internal sealed class GesDocumentReader
     {
         var index = start;
         if (index < end && _text[index] is '+' or '-') index++;
+        // An invalid hexadecimal number has no unit suffix.
+        if (end - index >= 2 && _text[index] == '0' && _text[index + 1] == 'x') return false;
         var digits = SkipDigits(ref index, end);
         if (index < end && _text[index] == '.')
         {

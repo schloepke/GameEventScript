@@ -30,6 +30,9 @@ extension GameEventScriptProgram {
     /// - Throws: `GesProgramFormatError` with a stable code when an invariant is violated.
     public func validate() throws { try GesProgramValidator.validate(self) }
 
+    /// Validates unless a Reader or Compiler already validated this immutable instance.
+    func ensureValid() throws { if !isValidated { try validate() } }
+
     /// Dumps metadata, tables, binds and code as assembler-like GESA text.
     public func dump(includeInstructionAddresses: Bool = false) -> String { GesProgramDumper.dump(self, includeInstructionAddresses: includeInstructionAddresses) }
 }

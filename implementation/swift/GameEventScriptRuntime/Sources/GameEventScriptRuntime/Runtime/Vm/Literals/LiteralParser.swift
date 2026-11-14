@@ -85,14 +85,15 @@ struct GesLiteralParser {
         if bytes[position] != 58 { return 0 }
         if starts(":Vector") { return 3 }
         if starts(":Point") { return 4 }
-        return starts(":Dice[") ? 0 : 2
+        return starts(":Dice[") || starts(":Bytes[") ? 0 : 2
     }
 
     // Text, Dice rolls or an unquoted token; `value` dispatches Vectors and Points itself.
     private mutating func leaf(depth: Int) -> GesValue? {
         if position == bytes.count { return nil }
         if bytes[position] == 34 || bytes[position] == 39 { return quotedValue() }
-        return starts(":Dice") ? dice(depth: depth) : scalar()
+        if starts(":Bytes") { return dice(depth: depth, bytes: true) }
+        return starts(":Dice") ? dice(depth: depth, bytes: false) : scalar()
     }
 
     private mutating func quotedValue() -> GesValue? {
@@ -175,11 +176,13 @@ struct GesLiteralParser {
 
     private mutating func typedArguments(depth: Int, _ head: TypedHead, formStart: Int) -> GesValue? {
         var labels: [String] = []
+        // Labels are checked through a set: a form may hold up to the literal item limit of them.
+        var seen: Set<String> = []
         var args: [GesValue] = []
         if !consume(41) {
             while position < bytes.count {
                 if !item() { return nil }
-                guard let label = argumentLabel(labels) else { return nil }
+                guard let label = argumentLabel(&seen) else { return nil }
                 let argument: GesValue
                 if let kind = seriesKind(head.type, first: label == "kind" || (label == "_" && args.isEmpty)) {
                     argument = kind
@@ -199,7 +202,7 @@ struct GesLiteralParser {
     }
 
     // An optional `label:` before a constructor or Message argument: "_" when unlabeled, nil after a failure.
-    private mutating func argumentLabel(_ labels: [String]) -> String? {
+    private mutating func argumentLabel(_ seen: inout Set<String>) -> String? {
         let saved = position
         var label = key()
         whitespace()
@@ -208,7 +211,7 @@ struct GesLiteralParser {
             position = saved
         } else if !GesNames.plain(label!) {
             return nil
-        } else if labels.contains(label!) {
+        } else if !seen.insert(label!).inserted {
             return nil
         }
         whitespace()
@@ -246,12 +249,14 @@ struct GesLiteralParser {
     private mutating func handlerForm() -> GesValue? {
         guard let name = messageHead() else { return nil }
         var labels: [String] = []
+        // Labels are checked through a set: a form may hold up to the literal item limit of them.
+        var seen: Set<String> = []
         if !consume(41) {
             while position < bytes.count {
                 if !item() { return nil }
                 guard let label = self.name() else { return nil }
                 if label != "_" && !GesNames.plain(label) { return nil }
-                if label != "_" && labels.contains(label) { return nil }
+                if label != "_" && !seen.insert(label).inserted { return nil }
                 labels.append(label)
                 let next = separator(41)
                 if next < 0 { return nil }
@@ -267,11 +272,13 @@ struct GesLiteralParser {
     private mutating func messageArguments(depth: Int, formStart: Int) -> GesValue? {
         guard let name = messageHead() else { return nil }
         var labels: [String] = []
+        // Labels are checked through a set: a form may hold up to the literal item limit of them.
+        var seen: Set<String> = []
         var args: [GesValue] = []
         if !consume(41) {
             while position < bytes.count {
                 if !item() { return nil }
-                guard let label = argumentLabel(labels) else { return nil }
+                guard let label = argumentLabel(&seen) else { return nil }
                 guard let arg = value(depth: depth) else { return nil }
                 labels.append(label)
                 args.append(arg)
@@ -350,13 +357,33 @@ struct GesLiteralParser {
         return point ? .point(x: 0) : .vector(x: 0)
     }
 
-    // `:Dice` followed by its bracketed rolls, after the explicit `:Dice(...)` form did not apply.
-    private mutating func dice(depth: Int) -> GesValue? {
-        position += 5
+    // `:Dice` or `:Bytes` followed by its bracketed values, after the explicit `:Dice(...)` or `:Bytes(...)` form did
+    // not apply.
+    private mutating func dice(depth: Int, bytes isBytes: Bool) -> GesValue? {
+        position += isBytes ? 6 : 5
         whitespace()
         if position == bytes.count || bytes[position] != 91 { return nil }
         if depth >= 64 { return setLimit("MaxLiteralDepth") }
-        return readDice()
+        return isBytes ? readBytes() : readDice()
+    }
+
+    // `:Bytes[...]` holds integer literals from 0 to 255.
+    private mutating func readBytes() -> GesValue? {
+        position += 1
+        whitespace()
+        if consume(93) { return .bytes([]) }
+        var values: [UInt8] = []
+        while position < bytes.count {
+            if !item() { return nil }
+            if !GesNames.digit(bytes[position]) { return nil }
+            guard let item = value(depth: 0) else { return nil }
+            guard !item.hasUnit, let integer = item.integerValue, integer >= 0, integer <= 255 else { return nil }
+            values.append(UInt8(integer))
+            let next = separator(93)
+            if next < 0 { return nil }
+            if next > 0 { return .bytes(values) }
+        }
+        return nil
     }
 
     private mutating func readDice() -> GesValue? {

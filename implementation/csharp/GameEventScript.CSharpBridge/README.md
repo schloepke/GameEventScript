@@ -139,10 +139,18 @@ public static class CombatFunctions
 ```
 
 Register it on the host builder with
-`.WithRegistry(GesBridgeExtensionRegistry.Create(typeof(CombatFunctions)))`.
+`.WithExtensionRegistry(GesBridgeExtensionRegistry.Create(typeof(CombatFunctions)))`.
 The script calls `:combat.bonus(energy: 100)`. Extension registries and external
-type registries have distinct roles: `WithRegistry` installs functions;
+type registries have distinct roles: `WithExtensionRegistry` installs functions;
 `WithExternalTypeRegistry` installs native types.
+
+> **Since: Unreleased** — random generator parameters
+
+A function that draws random numbers takes the host's generator as a
+`GesRandomGenerator` parameter, in any position and without `[GesParam]`. It is
+no script argument, so `SpawnSpots([GesParam("count", ...)] int count,
+GesRandomGenerator random)` registers `:arena.spawnSpots(count:)`, and seeded
+hosts stay deterministic. A function takes at most one such parameter.
 
 ## Native messages and values
 
@@ -186,7 +194,9 @@ Start.
 The runner also schedules wakeups for delayed messages.
 
 Use the runner's API for a host it owns; do not mix it with unsynchronized raw
-host calls. Callbacks are not implicitly dispatched onto a UI thread. Keep UI
+host calls. `Load` and `Subscribe` return a `GesBridgeHostRunnerRegistration`
+whose `IsAttached`, `StartResult` and `Detach()` go through the runner's lock, so
+another thread may use them while the runner pumps. Callbacks are not implicitly dispatched onto a UI thread. Keep UI
 marshalling in the application, and dispose runners before their dispatcher.
 For lifecycle and execution-state details, see
 [Host runtime](../../../specs/HostRuntime.md#c-automatic-runner).

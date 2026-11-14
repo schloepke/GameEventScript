@@ -169,7 +169,7 @@ let extensions = try GesBridgeExtensionRegistry([
         try call.setNativeValue(number * 2)
     }
 ])
-let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withRegistry(extensions).build()
+let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withExtensionRegistry(extensions).build()
 // A loaded script can call :app.double(21).
 ```
 

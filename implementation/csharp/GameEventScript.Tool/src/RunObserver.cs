@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
-using System.Text.Json;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
+using Microsoft.Win32.SafeHandles;
 
 namespace GameEventScript.Tool;
 
@@ -72,7 +72,8 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive, Ru
         var prefix = location?.SourceName ?? fallback;
         if (location?.Line is { } line) prefix += $"({line},{location.Column ?? 1})";
         var context = new List<string>();
-        if (diagnostic.ProgramName is { } program) context.Add($"program={program}");
+        // A source without a module declaration has an empty program name, which says nothing.
+        if (diagnostic.ProgramName is { Length: > 0 } program) context.Add($"program={program}");
         if (diagnostic.HandlerName is { } handler) context.Add($"handler={handler}");
         if (diagnostic.Symbol is { } symbol) context.Add($"symbol={symbol}");
         var suffix = context.Count == 0 ? string.Empty : " [" + string.Join(", ", context) + "]";
@@ -102,7 +103,7 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive, Ru
                 if (index > 0) text.Append(", ");
                 var value = message.Arguments[index];
                 text.Append(message.Arguments.NameAt(index)).Append(": ");
-                text.Append(message.Arguments.KindAt(index) == GesBytecodeTypeKind.Text ? JsonSerializer.Serialize(value.AsText(), ToolJsonContext.Default.String) : value.ToString());
+                text.Append(message.Arguments.KindAt(index) == GesBytecodeTypeKind.Text ? ToolText.Quote(value.AsText()) : value.ToString());
             }
             text.Append(')');
         }
@@ -120,8 +121,23 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive, Ru
         }
         var text = string.Concat(values);
         if (color && error) text = RunHighlighting.Paint(text, 31);
-        Write(error ? Console.Error : Console.Out, text);
+        Write(error ? Console.Error : ScriptOutput.Value, text);
     }
+
+    // .NET's Unix console stream ignores EPIPE, so a ConsoleOut into a closed pipe would go unnoticed and the run would
+    // return the script's code. A stdout redirected to a pipe is therefore written through a file stream on descriptor 1,
+    // whose failed write raises the IOException that ends the session with failure status 1, as in the Swift CLI. A file
+    // stream on a regular file writes at its own position and never moves the offset that the shell shares with later
+    // writers, so a redirected file, which has no EPIPE, keeps Console.Out, as does a terminal, through which the
+    // interactive prompt redraws around delayed output.
+    private static readonly Lazy<TextWriter> ScriptOutput = new(() =>
+    {
+        if (OperatingSystem.IsWindows() || !Console.IsOutputRedirected) return Console.Out;
+        var stream = new FileStream(new SafeFileHandle(1, ownsHandle: false), FileAccess.Write, 1);
+        if (!stream.CanSeek) return new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true };
+        stream.Dispose();
+        return Console.Out;
+    });
 
     private static string ColorValue(GesValue value) => value.ValueKind switch
     {

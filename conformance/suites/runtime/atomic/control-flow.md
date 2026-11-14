@@ -2581,7 +2581,7 @@ sources:
   - name: "emit-delayed-queue-limit.ges"
     program: main
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 ```
 
 ### Source code under test
@@ -2609,7 +2609,7 @@ steps:
     outbound: []
     runtimeLimits:
       include:
-        - name: MaxQueuedMessagesPerRun
+        - name: MaxQueuedMessages
           limit: 1
 ```
 
@@ -2630,7 +2630,7 @@ sources:
   - name: "publish-delayed-queue-limit.ges"
     program: main
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 ```
 
 ### Source code under test
@@ -2658,7 +2658,7 @@ steps:
     outbound: []
     runtimeLimits:
       include:
-        - name: MaxQueuedMessagesPerRun
+        - name: MaxQueuedMessages
           limit: 1
 ```
 
@@ -2679,7 +2679,7 @@ sources:
   - name: "instant-result-respects-queue-limit.ges"
     program: main
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 ```
 
 ### Source code under test
@@ -2706,7 +2706,7 @@ steps:
     local: [{ name: Ping }]
     runtimeLimits:
       include:
-        - name: MaxQueuedMessagesPerRun
+        - name: MaxQueuedMessages
           limit: 1
 ```
 
@@ -2822,7 +2822,7 @@ sources:
   - name: "due-promotion-respects-message-limit.ges"
     program: main
 runtimeLimits:
-  maxProcessedEventsPerRun: 2
+  maxProcessedMessagesPerRun: 2
 nativeHandlers:
   - id: clock
     message: Advance
@@ -2854,7 +2854,7 @@ steps:
     local: [{ name: Ping }, { name: Advance }]
     runtimeLimits:
       include:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 2
   step-0002:
     accepted: false

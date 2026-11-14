@@ -188,6 +188,102 @@ binary:
 
 ---
 
+## Test: An optional section of a reserved type is retained as opaque
+
+The reserved section types have no V1 meaning, so a reader treats an optional one like any unknown
+optional section instead of rejecting it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-reserved-optional
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-valid-reserved-optional
+  resourceId: gesb-v1.valid-reserved-optional
+  relativePath: GesbV1/valid-reserved-optional.gesb
+  sha256: E25409FD8B732D03A9255884B65002576DA2675C5B58D5344DDB823740D1D520
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: true
+  derivation: "valid-opaque with the reserved signature section type 0x0040"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start(value) {
+  let result be value + 1
+  emit Done(value: result)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: E25409FD8B732D03A9255884B65002576DA2675C5B58D5344DDB823740D1D520
+  moduleName: binaryfixture
+  opaqueSectionCount: 1
+```
+
+---
+
+## Test: A Required section of a reserved type is an unknown required section
+
+A reserved type carries no V1 meaning that a reader could honor, so Required fails like any unknown
+Required section.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-reserved-required
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-reserved-required
+  resourceId: gesb-v1.invalid-reserved-required
+  relativePath: GesbV1/invalid-reserved-required.gesb
+  sha256: A4B03481F181287CCA770EF9D78F55A42DE9C531E0DE2957038B95C718FDAA78
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  derivation: "invalid-unknown-required with the reserved named custom section type 0xFFFE"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start(value) {
+  let result be value + 1
+  emit Done(value: result)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: readError
+  errorCode: UnknownRequiredSection
+  byteOffset: 337
+  sectionType: 65534
+```
+
+---
+
 ## Test: Noncanonical section order rewrites canonically
 
 This case verifies that the reader accepts a valid reversed section order while the writer restores the
@@ -3589,4 +3685,86 @@ binary:
   errorCode: InvalidOperand
   sectionType: 16
   entryIndex: 1
+```
+
+---
+
+## Test: binding-argument-suffix
+
+A handler binding argument named `amou_1` uses the `_number` suffix, which only local variables may carry, so Program validation rejects it instead of failing when a Host links the handler.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: binding-argument-suffix
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-binding-argument-suffix
+  resourceId: gesb-v1.binding-argument-suffix
+  relativePath: GesbV1/binding-argument-suffix.gesb
+  sha256: 10FE9DA98B5DA5B73AF0D98DDBAD83496A9F593E4B6AE5A7454C2384B7714407
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the handler binding argument name string `amount` with `amou_1` at file byte offset 64; retain all other bytes"
+```
+
+### Source code under test
+
+```ges
+module labelsuffix
+on Damage(amount) {}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+```
+
+---
+
+## Test: duplicate-record-name
+
+Two Record bindings named `Aaa` would let casts and `parse` pick different constructors, so Program validation rejects the second name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: duplicate-record-name
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-duplicate-record-name
+  resourceId: gesb-v1.duplicate-record-name
+  relativePath: GesbV1/duplicate-record-name.gesb
+  sha256: 45E8E0A973BFC458DCD9490E3D345959CC151398DC740CC58CE4EE2EF5061FF7
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the second Record name string `Bbb` with `Aaa` at file byte offset 89; retain all other bytes"
+```
+
+### Source code under test
+
+```ges
+module recordnames
+record :Aaa as { value: :Number }
+record :Bbb as { value: :Number }
+on Start(value) { emit Done(first: [value: value] as :Aaa, second: [value: value] as :Bbb) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
 ```

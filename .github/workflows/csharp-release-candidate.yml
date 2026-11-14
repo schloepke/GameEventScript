@@ -28,9 +28,14 @@ jobs:
     needs: upgrade
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Require the matching release tag for publication
         if: ${{ inputs.publish }}
@@ -42,6 +47,15 @@ jobs:
             exit 1
           fi
 
+      # The tag must name a main commit that the complete C# CI and Swift CI verified; this job runs only a subset.
+      - name: Require complete verification of the release commit
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/test-require-verified-release.py
+          python3 scripts/require-verified-release.py
+
       - name: Verify publication package selection
         run: python3 scripts/test-publish-csharp-packages.py
 
@@ -50,7 +64,7 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
-            10.0.201
+            10.0.404
 
       - name: Restore and test
         run: |
@@ -60,10 +74,18 @@ jobs:
       - name: Run shared corpus and managed allocation gate
         run: sh scripts/test-csharp-conformance.sh
 
+      - name: Run zero-allocation hot-path gate
+        run: dotnet test GameEventScript.sln --configuration Release --no-restore --filter "TestCategory=Allocation"
+
       - name: Prepare release candidate without publishing
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: ./scripts/release-csharp-dry-run.sh "$RELEASE_VERSION"
+
+      - name: Verify package reproducibility
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: ./scripts/verify-csharp-reproducibility.sh "$RELEASE_VERSION-repro"
 
       - name: Upload release candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -106,7 +128,7 @@ jobs:
       - name: Install .NET SDK
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.201
+          dotnet-version: 10.0.404
 
       - name: Download verified release candidate
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

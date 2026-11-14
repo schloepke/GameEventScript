@@ -48,6 +48,12 @@ internal static class GesSchemaLayoutJson
         json.Strings("bindingHashDepends", type.BindingHashDepends);
         json.Number("maxByteCount", type.MaxByteCount);
         json.Strings("maxByteCountDepends", type.MaxByteCountDepends);
+        if (type.PackedWidth > 0)
+        {
+            json.Number("packedWidth", type.PackedWidth);
+            json.Number("packedBits", type.PackedBits);
+        }
+
         if (type.Kind == GesSchemaKind.Messages)
         {
             json.Strings("members", type.Members);
@@ -58,10 +64,87 @@ internal static class GesSchemaLayoutJson
             json.BeginArray("fields");
             foreach (var field in type.Fields) Field(json, field, member: true);
             json.EndArray();
+            Constants(json, type.Constants);
+            Computed(json, type.Computed);
             if (type.Kind == GesSchemaKind.Message) json.Strings("tags", type.Tags);
         }
 
         json.EndObject();
+    }
+
+    // Only a schema with computed fields carries them: each with its type and its checked expression tree.
+    internal static void Computed(Writer json, GesResolvedComputed[] computed)
+    {
+        if (computed.Length == 0) return;
+        json.BeginArray("computed");
+        foreach (var field in computed)
+        {
+            json.BeginObject();
+            json.String("name", field.Name);
+            json.String("type", field.Kind.ToString());
+            json.String("unit", UnitName(field.Unit));
+            json.Boolean("optional", field.Optional);
+            json.Key("expression");
+            Expression(json, field.Expression, element: false);
+            json.EndObject();
+        }
+
+        json.EndArray();
+    }
+
+    private static void Expression(Writer json, GesComputedNode node, bool element)
+    {
+        if (element) json.BeginObject();
+        else json.BeginValueObject();
+        json.String("op", GesComputedCanonical.Name(node.Op));
+        json.String("type", node.Type.ToString());
+        json.String("unit", UnitName(node.Unit));
+        switch (node.Op)
+        {
+            case GesComputedOp.Literal:
+                json.String("value", node.Type == GesComputedType.Boolean ? node.Literal.Kind == GesComputedKind.True ? "true" : "false" : node.Decimal.Canonical);
+                json.Boolean("integer", node.Literal.Kind == GesComputedKind.Integer);
+                break;
+            case GesComputedOp.Field or GesComputedOp.Item:
+                json.Strings("path", node.Path);
+                break;
+            case GesComputedOp.Add or GesComputedOp.Subtract or GesComputedOp.Multiply or GesComputedOp.Divide:
+                json.Boolean("first", node.First);
+                json.Boolean("second", node.Second);
+                json.Boolean("third", node.Third);
+                break;
+        }
+
+        if (node.Children.Length > 0)
+        {
+            json.BeginArray("children");
+            foreach (var child in node.Children) Expression(json, child, element: true);
+
+            json.EndArray();
+        }
+
+        json.EndObject();
+    }
+
+    private static string UnitName(GesQuantityUnit unit) => unit == GesQuantityUnit.UnitNone ? "none" : unit.ToTypeName();
+
+    // Only a schema with lets carries them.
+    internal static void Constants(Writer json, List<GesLayoutConstant> constants)
+    {
+        if (constants.Count == 0) return;
+        json.BeginArray("constants");
+        foreach (var constant in constants)
+        {
+            json.BeginObject();
+            json.String("name", constant.Name);
+            json.String("type", constant.Type);
+            json.String("unit", constant.Unit);
+            json.String("value", constant.Value);
+            json.Boolean("integer", constant.Integer);
+            json.EndObject();
+        }
+
+        json.EndArray();
     }
 
     private static void Field(Writer json, GesLayoutField field, bool member, bool value = false)
@@ -75,6 +158,7 @@ internal static class GesSchemaLayoutJson
             json.Boolean("optional", field.Optional);
             json.Boolean("key", field.Key);
             json.Boolean("unlabeled", field.Unlabeled);
+            field.Default?.Write(json);
         }
 
         json.Key("encoding");
@@ -85,9 +169,33 @@ internal static class GesSchemaLayoutJson
     private static void Encoding(Writer json, GesLayoutEncoding encoding)
     {
         json.BeginValueObject();
-        json.String("kind", Kind(encoding.Kind));
+        json.String("kind", encoding.Poly ? "poly" : Kind(encoding.Kind));
         switch (encoding.Kind)
         {
+            case GesLayoutKind.List when encoding.Poly:
+                json.String("unit", encoding.Unit);
+                json.Number("maxCount", encoding.MaxCount);
+                json.Number("width", encoding.Width);
+                json.Key("element");
+                Field(json, encoding.Element!, member: false, value: true);
+                break;
+            case GesLayoutKind.Box:
+                json.String("unit", encoding.Unit);
+                json.BeginArray("corners");
+                foreach (var corner in encoding.Corners) Field(json, corner, member: false);
+                json.EndArray();
+                break;
+            case GesLayoutKind.Disc:
+                json.String("unit", encoding.Unit);
+                json.Key("center");
+                Field(json, encoding.Corners[0], member: false, value: true);
+                if (encoding.Corners.Count > 1)
+                {
+                    json.Key("radius");
+                    Field(json, encoding.Corners[1], member: false, value: true);
+                }
+
+                break;
             case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float:
                 json.String("type", encoding.Type);
                 json.String("unit", encoding.Unit);
@@ -116,12 +224,17 @@ internal static class GesSchemaLayoutJson
                 json.Number("deltaWidth", encoding.DeltaWidth);
                 json.Strings("depends", encoding.Depends);
                 break;
-            case GesLayoutKind.Tag:
+            case GesLayoutKind.Tag or GesLayoutKind.Flags:
                 json.Strings("tags", encoding.Tags);
+                if (encoding.TagSet.Length > 0) json.String("tagSet", encoding.TagSet);
                 json.Number("width", encoding.Width);
                 break;
             case GesLayoutKind.Text:
                 json.Boolean("tagName", encoding.TagName);
+                json.Number("maxCount", encoding.MaxCount);
+                json.Number("width", encoding.Width);
+                break;
+            case GesLayoutKind.Bytes:
                 json.Number("maxCount", encoding.MaxCount);
                 json.Number("width", encoding.Width);
                 break;
@@ -131,6 +244,7 @@ internal static class GesSchemaLayoutJson
                 json.Number("width", encoding.Width);
                 json.Boolean("keyed", encoding.Keyed);
                 json.Number("positionWidth", encoding.PositionWidth);
+                if (encoding.Depth > 0) json.Number("depth", encoding.Depth);
                 json.Key("element");
                 Field(json, encoding.Element!, member: false, value: true);
                 break;
@@ -161,10 +275,14 @@ internal static class GesSchemaLayoutJson
         GesLayoutKind.Quantized => "quantized",
         GesLayoutKind.Float => "float",
         GesLayoutKind.Tag => "tag",
+        GesLayoutKind.Flags => "flags",
         GesLayoutKind.Text => "text",
+        GesLayoutKind.Bytes => "bytes",
         GesLayoutKind.List => "list",
         GesLayoutKind.Point => "point",
         GesLayoutKind.Vector => "vector",
+        GesLayoutKind.Box => "box",
+        GesLayoutKind.Disc => "disc",
         GesLayoutKind.Schema => "schema",
         GesLayoutKind.Union => "union",
         _ => "nothing"
@@ -175,7 +293,7 @@ internal static class GesSchemaLayoutJson
     private static string Bits(double value) => "0x" + Hex((ulong)BitConverter.DoubleToInt64Bits(value));
 
     // Writes members in call order: every member or element on its own line, a container closing on its own line.
-    private sealed class Writer
+    internal sealed class Writer
     {
         private readonly StringBuilder _text = new();
         private readonly List<bool> _filled = [];
@@ -224,6 +342,12 @@ internal static class GesSchemaLayoutJson
         {
             Key(key);
             _text.Append(value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        internal void Null(string key)
+        {
+            Key(key);
+            _text.Append("null");
         }
 
         internal void Boolean(string key, bool value)

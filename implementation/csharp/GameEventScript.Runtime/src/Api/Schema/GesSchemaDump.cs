@@ -108,6 +108,14 @@ public static class GesSchemaDump
                 var tag = reader.ReadTag(field);
                 Line(builder, node.Path, offset, reader.BitPosition - offset, "#" + node.Tags![tag] + " index=" + tag.ToString(CultureInfo.InvariantCulture));
                 break;
+            case GesSchemaNodeKind.Flags:
+                var mask = reader.ReadFlags(field);
+                Line(builder, node.Path, offset, reader.BitPosition - offset, FlagMembers(node.Tags!, mask) + " mask=" + mask.ToString(CultureInfo.InvariantCulture));
+                break;
+            case GesSchemaNodeKind.Text when node.IsBytes:
+                var bytes = reader.ReadBytesValue(field);
+                Line(builder, node.Path, offset, reader.BitPosition - offset, GesBytesText.Format(bytes));
+                break;
             case GesSchemaNodeKind.Text:
                 var text = reader.ReadTextValue(field);
                 Line(builder, node.Path, offset, reader.BitPosition - offset, node.IsTagText ? "#" + text : Quoted(text));
@@ -137,6 +145,20 @@ public static class GesSchemaDump
                 Line(builder, node.Path, offset, reader.BitPosition - offset, Number(number));
                 break;
         }
+    }
+
+    // The set members of a mask in declared order, or `none`.
+    private static string FlagMembers(string[] members, ulong mask)
+    {
+        var builder = new StringBuilder();
+        for (var index = 0; index < members.Length; index++)
+        {
+            if ((mask >> index & 1) == 0) continue;
+            if (builder.Length > 0) builder.Append(' ');
+            builder.Append('#').Append(members[index]);
+        }
+
+        return builder.Length == 0 ? "none" : builder.ToString();
     }
 
     // A Text stays on its line, whatever the data holds.

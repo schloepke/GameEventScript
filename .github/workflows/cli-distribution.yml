@@ -40,6 +40,7 @@ env:
 jobs:
   controls:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Verify release selection and archive safety
@@ -76,7 +77,7 @@ jobs:
       - if: matrix.implementation == 'csharp'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.201
+          dotnet-version: 10.0.404
       - name: Build standalone archive
         run: python3 scripts/package-cli.py '${{ matrix.implementation }}' "$CLI_VERSION" '${{ matrix.target }}'
       - name: Verify relocated archive on its native platform
@@ -114,7 +115,7 @@ jobs:
             '
       - name: Verify Linux download without Swift or .NET installed
         run: |
-          docker run --rm -v "$PWD:/repo" -w /repo -e CLI_VERSION ubuntu:22.04 bash -euc '
+          docker run --rm -v "$PWD:/repo" -w /repo -e CLI_VERSION ubuntu:22.04@sha256:74b12b11ffa550fba1929ad4d8d16533c34f6612728469671afba1b03b66881c bash -euc '
             apt-get update -qq
             apt-get install -y -qq python3 binutils
             python3 scripts/verify-cli-archive.py swift "$CLI_VERSION" "${{ matrix.target }}" --directory "artifacts/cli/$CLI_VERSION"
@@ -131,6 +132,7 @@ jobs:
     needs: [controls, native, swift-linux]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Require every native target to pass
         env:
@@ -158,11 +160,20 @@ jobs:
     needs: verify
     if: github.event_name == 'workflow_dispatch' && inputs.publish
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: cli-release
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      # The tag must name a main commit that the complete C# CI and Swift CI verified.
+      - name: Require complete verification of the release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/require-verified-release.py
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: cli-release

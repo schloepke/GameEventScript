@@ -62,6 +62,8 @@ public sealed class GesSubscription
     /// </summary>
     public bool IsSubscribed => _host.IsSubscriptionRegistered(_registrationId);
 
+    internal long RegistrationId => _registrationId;
+
     /// <summary>
     /// Idempotently removes this handler from future message snapshots.
     /// </summary>

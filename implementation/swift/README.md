@@ -11,7 +11,7 @@
 | `GameEventScriptRuntime` | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types, GES documents and schemas | Syntax, Swift standard library and platform math library |
 | `GameEventScriptCompiler` | Binding of the Syntax tree, validation across sources, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime and Syntax |
 | [`GameEventScriptSwiftBridge`](GameEventScriptSwiftBridge/README.md) | Native closure adapters, typed value conversion, KeyPath/external-type bindings and an optional synchronized Host runner | Runtime; Foundation for the runner |
-| [`GameEventScriptSyntax`](GameEventScriptSyntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting with UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | Swift standard library |
+| [`GameEventScriptSyntax`](GameEventScriptSyntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting of whole documents with UTF-16 spans and ANSI rendering | Swift standard library |
 | [`GameEventScriptGenerator`](GameEventScriptGenerator/README.md) | Generation layout and typed C# and Swift code for `.gess` schemas, used at build time | Runtime, Syntax and Swift standard library |
 | `GameEventScriptConformance` | Internal observation adapter, codec probes and native implementation tests | Runtime and Compiler |
 | `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, Syntax, Generator, Foundation and POSIX |
@@ -107,7 +107,7 @@ invoked by absolute path from another working directory:
 | `python3 scripts/test-swift-spacing.py` | Verify syntax-aware declaration spacing and preservation of comments/strings |
 | `./scripts/test-swift-tool.sh` | Verify CLI adapters, real process I/O and terminal editing without .NET |
 | `./scripts/test-swift-bridge.sh` | Verify native Swift adapters and Compiler/Runtime binding integration without .NET |
-| `./scripts/install-swift-tool.sh` | Build all packages and install/update the native `ges` CLI |
+| `./scripts/install-swift-tool.sh` | Build the CLI package and install/update the native `ges` CLI |
 | `./scripts/uninstall-swift-tool.sh` | Remove the owned Swift CLI installation |
 | `./scripts/test-swift.sh` | Export C# interoperability fixtures, run native tests, strict shared Conformance and bidirectional numeric text roundtrips |
 | `python3 scripts/test-number-text-roundtrip.py` | Verify exact C# ↔ Swift Number/Quantity/Percentage text exchange with deterministic inputs |

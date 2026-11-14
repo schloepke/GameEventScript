@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using System;
 using System.Collections.Generic;
+using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 using GameEventScript.Runtime.Vm;
@@ -47,6 +48,16 @@ internal static class GesDataConstruction
             if (number.Unit != GesQuantityUnit.UnitNone && number.Unit != unit)
                 return default;
             return number.Kind == Integer ? GesValue.GesInteger(number.IntegerValue, unit) : GesValue.GesFloat(number.FloatValue, unit);
+        }
+
+        // `utf8:` converts between Text and its UTF-8 Bytes; invalid UTF-8 and other kinds give nothing.
+        if (positions[0] == 1 && type is "text" or "bytes")
+        {
+            var input = values[1];
+            if (type == "bytes")
+                return input.Kind is Text or Tag ? GesValue.GesBytes(Encoding.UTF8.GetBytes(input.TextValue)) : default;
+            var bytes = input.AsBytes();
+            return input.Kind == Bytes && GesWireRules.IsValidUtf8(bytes) ? GesValue.GesText(Encoding.UTF8.GetString(bytes)) : default;
         }
 
         if (type == "record")
@@ -107,6 +118,7 @@ internal static class GesDataConstruction
             "list" => List,
             "map" => Map,
             "dice" => Dice,
+            "bytes" => Bytes,
             "range" => GesBytecodeTypeKind.Range,
             "series" => Series,
             "message" => Message,

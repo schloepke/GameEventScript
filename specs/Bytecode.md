@@ -195,11 +195,13 @@ shared program validator enforces this for compiler output and loaded binaries.
 ```text
 bits 0..4  UnitId        0..31
 bits 5     NormalizeResultAsPredicate
-bits 6     WithTags (result-bearing sends only)
+bits 6     WithTags on result-bearing sends; Numeric on Move and the arithmetic opcodes; Strict on ParseLiteral
 bits 7     Indirect (result-bearing sends only)
 ```
 
-Flag meanings are opcode-specific. Result-bearing sends reject bit 5; instructions other than iterator creation reject bits 6 and 7. Iterator creation
+Flag meanings are opcode-specific. Result-bearing sends reject bit 5. Bit 6 is defined only for result-bearing sends,
+Move, the arithmetic opcodes that the opcode table marks Numeric (0x40) and ParseLiteral (Strict, 0x40); bit 7 only for
+result-bearing sends; other instructions except iterator creation reject both. Iterator creation
 uses bits 5..7 as the mode field defined below; IteratorNext uses bit 5 for
 component output. Iterator instructions require zero UnitId. Undefined flag combinations are invalid.
 
@@ -516,8 +518,10 @@ entries subscribe by `MessageName` and tag filters only; the runtime invokes
 them with a single direct `:Message` argument. Message-name handlers count as
 normal delivery and therefore prevent `undeliverable` fallback when their tag
 filters match. For `MessageNameHandler` entries, `SignatureId` still records the
-synthetic message parameter signature such as `Damage(message)`, but it is
-metadata and not the dispatch key.
+synthetic message parameter signature `Damage(message)`, but it is metadata
+and not the dispatch key. The label is always `message`; the name a source
+handler binds the message to, such as `incoming_1` in `on Damage as incoming_1`,
+is a local variable and is not encoded in the binding.
 
 System endpoint entries use reserved lowercase names outside normal message
 casing. Only handler entries may use them: an `OutboundMessage` entry and the
@@ -599,7 +603,8 @@ for `pc`-based execution.
 - `CheckInteger dst src`
 - `CheckFractional dst src`
 
-`Cast` and `CheckType` use `TypeOperand` as `GesBytecodeTypeKind`.
+`Cast` and `CheckType` use `TypeOperand` as `GesBytecodeTypeKind`. Bytes are
+kind `0x0B`; `Cast :Bytes` converts as [Bytes](Language.md#bytes) defines.
 Built-in types are direct kind operands. Custom/external record types use
 `CastCustom`/`CheckCustomType` with `TypeOperand` as the type-name `StringPool` index.
 Units are not declared type kinds: unit casts and checks use

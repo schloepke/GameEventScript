@@ -18,6 +18,9 @@ internal partial class GesVirtualMachine
             case List when source.ObjectValue is GesValue[] list:
                 result = DropLastList(list, count);
                 break;
+            case Bytes when source.ObjectValue is byte[] bytes:
+                result = SliceBytes(in source, bytes, 0, bytes.Length - ByteCount(bytes, count));
+                break;
             case Dice when source.ObjectValue is int[] dice:
                 result = DropLastDice(dice, count);
                 break;

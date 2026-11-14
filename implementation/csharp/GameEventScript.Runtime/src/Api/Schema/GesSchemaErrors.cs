@@ -83,6 +83,9 @@ public sealed class GesWireException : Exception
     /// <summary>The code <c>wire.tooLong</c>: a Text, Tag, List or Dice exceeds its <c>max</c>.</summary>
     public const string TooLong = "wire.tooLong";
 
+    /// <summary>The code <c>wire.tooDeep</c>: a recursive List holds records deeper than its <c>depth</c>.</summary>
+    public const string TooDeep = "wire.tooDeep";
+
     /// <summary>The code <c>wire.bufferTooSmall</c>: the caller's buffer is too small.</summary>
     public const string BufferTooSmall = "wire.bufferTooSmall";
 
@@ -107,9 +110,23 @@ public sealed class GesWireException : Exception
         Path = path;
     }
 
+    /// <summary>Creates an error with a stable code, a field path and an explanation for people.</summary>
+    /// <param name="code">The stable <c>wire.*</c> code, one of the constants of this type.</param>
+    /// <param name="path">The path of the field; empty for the record as a whole.</param>
+    /// <param name="detail">What the data breaks, such as <c>deeper than depth 3</c>; informative text.</param>
+    public GesWireException(string code, string path, string detail) : base($"{code} at '{path}': {detail}")
+    {
+        Code = code;
+        Path = path;
+        Detail = detail;
+    }
+
     /// <summary>Gets the stable <c>wire.*</c> code.</summary>
     public string Code { get; }
 
     /// <summary>Gets the path of the field, such as <c>position.x</c>; empty for the record as a whole.</summary>
     public string Path { get; }
+
+    /// <summary>Gets what the data breaks, such as <c>deeper than depth 3</c>, or an empty string; informative text, not a portable comparison value.</summary>
+    public string Detail { get; } = "";
 }

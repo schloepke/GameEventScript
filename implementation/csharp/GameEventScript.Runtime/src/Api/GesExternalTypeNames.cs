@@ -34,6 +34,7 @@ internal static class GesExternalTypeNames
             GesBytecodeTypeKind.List => "List",
             GesBytecodeTypeKind.Map => "Map",
             GesBytecodeTypeKind.Dice => "Dice",
+            GesBytecodeTypeKind.Bytes => "Bytes",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown GameEventScript value kind.")
         };
     }
@@ -61,6 +62,7 @@ internal static class GesExternalTypeNames
             "List" => (GesBytecodeTypeKind.List, null),
             "Map" => (GesBytecodeTypeKind.Map, null),
             "Dice" => (GesBytecodeTypeKind.Dice, null),
+            "Bytes" => (GesBytecodeTypeKind.Bytes, null),
             _ => (null, null)
         };
     }

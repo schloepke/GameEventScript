@@ -90,9 +90,17 @@ schema :Tank as {
   roll takes 31 bits. A Dice value always holds its rolls sorted, whatever their order in the data.
 - `optional` adds one presence bit. An absent value reads as `nothing`.
 - `:Point` and `:Vector` list the axes they transmit. An axis left out is not sent and must be zero.
-- `:Weapon` refers to another schema, whose fields follow inline. References cannot form a cycle.
+- `:Box(m) { ... }` holds an axis-aligned box as its corners `lower` and `upper`, `:Poly(m) max 16 { x ..., y ... }`
+  a polygon of up to 16 points in the plane z = 0, and `:Disc(m) { x ..., y ..., radius ... }` a filled circle in that plane
+  as its `center` and `radius`. Code reads them as the runtime's `GesBox`, `GesPoly` and `GesDisc`, and scripts as `:Box`,
+  `:Poly` and `:Disc` of the geometry library.
+- `:Weapon` refers to another schema, whose fields follow inline. References cannot form a cycle, except through
+  a recursive List, shown below.
 
-A boolean flag is simply a `:Boolean` field and takes one bit.
+A single switch is a `:Boolean` field and takes one bit. Several switches fit one field,
+`:Flags(#armed, #cloaked, #docked)`, with one bit per member. Code and scripts write it as a flag Map such as
+`[armed:, docked:]`, and generated code holds it as a C# `[Flags]` enum or a Swift `OptionSet`. `:Bytes max 16`
+stores a count and raw bytes, such as a hash or an identifier.
 
 A field can also hold one of several types. Such a union stores the index of the alternative, then
 its value. The kind of a value selects the alternative, so alternatives must differ in their type name:
@@ -107,6 +115,34 @@ schema :Target as {
 `facing` takes 1 + 9 bits for an angle and 1 + 1 bits for a tag. `:Nothing` takes no bits of its own, so
 `note` may be left out like an `optional` field, and this also works for list elements:
 `:List(:Text max 8 | :Nothing) max 4`.
+
+A tag set that several fields share gets a name once:
+
+```gess
+tags :Mount as (#front, #right, #rear, #left)
+
+schema :Turret as {
+  mount: :Mount
+  covers: :List(:Mount) max 4
+}
+```
+
+`:Mount` behaves exactly like `:Tag(#front, #right, #rear, #left)` written in place, with the same bytes and
+hash. Generated code declares one `Mount` type that both fields use.
+
+A tree of records holds itself through one List with a `depth`:
+
+```gess
+schema :Bind as {
+  name: :Text max 16
+  units: :List(:Bind) max 8 depth 3
+}
+```
+
+A `:Bind` holds up to 8 binds, each of them up to 8 more, and those hold none: at most three records nest. The
+bytes are those of three schemas, one per level, and the deepest List takes no bits. A tree that goes deeper fails to
+encode with `wire.tooDeep`, whose message names the depth, such as
+`wire.tooDeep at 'units[].units[].units': deeper than depth 3`. See [recursion](../../specs/Schemas.md#recursion).
 
 ## 4. Share values with constants and parameters
 
@@ -131,6 +167,95 @@ ges schema hash game.gess --root Bot --param worldSize=5000m
 Each binding fixes all widths, here 19 bits for `x` and `y`. You can bind one schema several
 times with different values, for two zones of different size in one session. The wire does not
 say which binding a record uses, so choose it from your own context, such as the connection.
+
+A constant and a parameter stay in their file. When both sides of a connection need a value, declare it
+with `let` inside the schema instead:
+
+```gess
+schema :SoundView as {
+  let retention be 2s
+  let maximumSources be 16
+  sources: :List(:Text max 32) max maximumSources
+}
+```
+
+The fields of the schema can name it, and generated code gets it as a static member in base units:
+`SoundView.retention` is `2.0` seconds in Swift, and `SoundView.MaximumSources` is `16` in C#. A `let`
+is never sent, but it belongs to the hash, so both sides agree on it.
+
+A field with `default` may be left out of a value or document, and then takes a literal, a `let`, or the
+value of another field of the same type:
+
+```gess
+schema :DriveUnit as {
+  power: :Quantity(W) between 0W and 5kW default 0W
+  maxPower: :Quantity(W) between 0W and 5kW default power
+  efficiency: :Percentage between 0% and 100% default 100%
+}
+```
+
+A `.gesd` file can leave out `efficiency` and `maxPower`, and a generated model takes them as default
+arguments: `DriveUnit(power: 2000)` has a `maxPower` of `2000`. The wire still carries every field, so
+defaults cost no bits and no presence flags. Rules that reject data, such as `power <= maxPower`, stay in
+your code; a default only fills in.
+
+A field whose type is another schema takes a record literal as its default. It names the fields that differ,
+and every other field keeps its own default; `[:]` names none:
+
+```gess
+schema :Unit_Consumer as {
+  power: :Quantity(W) between 0W and 1_000_000W default 0W
+  efficiency: :Percentage between 0% and 100% default 100%
+}
+
+schema :DriveUnit as { electricity: :Unit_Consumer default [:] }
+schema :WeaponUnit as { electricity: :Unit_Consumer default [efficiency: 90%] }
+```
+
+A generated Swift model then declares `electricity: Unit_Consumer = Unit_Consumer(efficiency: 0.9)`. The literal
+applies only when the whole record is left out; a record that is given, even partly, fills in from its own schema.
+
+Fields that many schemas share are declared once in an `abstract` schema and taken with `with`:
+
+```gess
+abstract schema :Unit_Common as {
+  id: :Text max 64
+  weight: :Quantity(kg) between 0kg and 1t
+}
+
+schema :DriveUnit as {
+  with :Unit_Common
+  maxSpeed: :Quantity(m/s) between 0m/s and 100m/s step 1m/s
+}
+```
+
+`DriveUnit` has the fields `id`, `weight` and `maxSpeed`, on the wire and in documents, as if written there.
+Generated models of it adopt the protocol `Unit_Common` (C# `IUnit_Common`), so code that reads the shared
+fields once works for every unit. `with :GameMap all optional without (id)` takes the fields of a plain
+schema as optional ones and leaves `id` out, for files that override some values.
+
+A value that both sides derive from others is written once, as a computed field, with the expressions of
+[script records](../../specs/Language.md#records-and-custom-types):
+
+```gess
+schema :SoundMade as {
+  energy: :Quantity(J) between 0J and 1MJ step 1J
+  duration: :Quantity(s) between 0s and 60s step 1ms
+  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration
+}
+```
+
+`power` is never sent. Decoding a value adds it, and generated code in every language gives it as a property that
+computes the same bits as a script, units and integer rules included; `ges schema check` rejects an expression whose
+units do not fit, such as `energy + duration`. See [computed fields](../../specs/Schemas.md#computed-fields).
+
+> **Since: Unreleased** — functions in computed fields
+
+The functions of GES work there too, such as `sqrt area`, `sin heading`, `deg atan2(dy, dx)`, `hypot(dx, dy)` or
+`side²`, and a field named with a word that GES reserves is read in backticks, as `` `length` / 2 ``. A square root has
+the same bits everywhere; trigonometry, `exp`, `ln` and other powers come from each platform's math library and may differ
+in their last bits between a server and its clients, so a decision both must agree on, such as whether a target is in a
+cone, belongs in a stored field.
 
 ## 5. Find the object with a key
 
@@ -228,7 +353,7 @@ if (reader.ReadMember() == combat.MemberIndex("Hit"))
 ```
 
 `stackalloc` suits a small schema like this one, whose largest encoding takes a few bytes. `MaxByteCount`
-can reach 10 MiB, more than a thread's stack holds, so for large schemas keep one buffer per connection
+can reach 64 MiB, more than a thread's stack holds, so for large schemas keep one buffer per connection
 or take it from a pool.
 
 And the same in Swift, which follows the same steps with its own spelling:
@@ -429,6 +554,105 @@ files in and add `--check` to your build, so that a schema change cannot leave s
 The generated code needs Runtime only. To generate from your own build tool rather than the CLI, use
 the Generator package (`GameEventScript.Generator`, Swift `GameEventScriptGenerator`), which your game
 does not ship. See [Tools](../../specs/Schemas.md#tools) for the exact shape.
+
+## 14. Mark roots and generate models
+
+> **Since: Unreleased**
+
+Instead of repeating `--root` in a build script, mark the roots in the schemas. A role belongs to a group, so one set of
+files can feed several generations:
+
+```gess
+wire(world) schema :World as { tick: :Number integer between 0 and 1000000, bots: :List(:World_Bot) max 64 }
+schema :World_Bot as { id: :Number integer between 0 and 255 key, position: :Point(m) { x between 0m and 2km step 1cm, y between 0m and 2km step 1cm } }
+
+model(view) schema :WorldView as { tick: :Number integer, bots: :List(:BotView) }
+schema :BotView as { bot: :Number integer key, name: :Text, position: :Point(m) }
+```
+
+```bash
+ges schema generate *.gess --wire world --language swift --namespace Wire -o Wire.swift
+ges schema generate *.gess --model view --language swift --namespace Model -o Model.swift
+```
+
+Large sets compile faster and give readable diffs as one file per schema: `-d Generated/Wire` writes
+`Wire.World.swift`, `Wire.World_Bot.swift` and a shared `_Wire.swift` into a directory that `generate` owns, and
+`--split file` writes one file per `.gess` instead. A manifest `.ges-generated.json` lists the files, so the next run
+removes the ones a schema no longer needs and leaves your own files alone; `--check` compares the whole directory.
+
+A schema without a role is generated when a root reaches it. `ges schema check` already rejects a wire root that cannot be
+encoded, such as a `:Text` without `max`; roles change no hash. A model is the data your program keeps rather than sends,
+such as a client's view of the world: a Swift struct that is `Hashable`, `Sendable` and `Codable`, or a C# class that compares
+by value, with no ranges or steps needed. Spatial fields in wire and model code alike are the runtime's `GesPoint` and
+`GesVector`, which add, subtract and measure like Points and Vectors in scripts:
+
+```swift
+let bot = Model.BotView(bot: 1, name: "Ada", position: GesPoint(x: 10, y: 20))
+let target = GesPoint(x: 40, y: 60)
+let heading = (target - bot.position).normalized // GesVector(x: 0.6, y: 0.8)
+```
+
+A model and a wire record of the same schema meet in a plain GES value. Generate both with `--values`, and the model
+gains `toValue()` and `init(value:)` (C# `ToValue()` and `FromValue(value)`), which read and write the same Record as the
+wire record's `toValue()` and `read(value:)`:
+
+```swift
+let wire = Wire.Panel_Report()
+try wire.read(value: report.toValue())             // fails like a write for a text above its max
+let copy = try Model.Panel_Report(value: wire.toValue())
+```
+
+See [Roles](../../specs/Schemas.md#roles) and [Model types](../../specs/Schemas.md#model-types).
+
+## 15. Pack dense data into words
+
+> **Since: Unreleased**
+
+A map of millions of points needs neither a class per point nor a GES value per point. Mark a schema of small fixed-width
+fields `packed`, and generated code holds each record as one machine word:
+
+```gess
+wire(map) model(map) packed schema :MapPoint as {
+  height: :Number integer between 0 and 4095
+  surface: :Number integer between 0 and 15
+  wear: :Number integer between 0 and 15
+  flags: :Flags(#impassable, #blocksLineOfSight, #indestructible, #reserved)
+}
+
+wire(map) model(map) schema :MapTrack as { points: :List(:MapPoint) max 1000000 }
+```
+
+The fields take 12 + 4 + 4 + 4 = 24 bits, so `MapPoint` is a 32-bit word; `packed(64)` would ask for a wider one. Only
+integers and stepped numbers with fixed ranges, Booleans, closed Tags, Flags and other packed schemas fit; `ges schema check`
+names any other field. The word is exactly the record's wire encoding, so the word's bytes are what the wire carries.
+
+Generate the models first and point the wire code at them, so both share `MapPoint` and convert directly:
+
+```bash
+ges schema generate map.gess --model map --language swift --namespace Model -o Model.swift
+ges schema generate map.gess --wire map --language swift --namespace Wire --models Model -o Wire.swift
+```
+
+```swift
+var point = Model.MapPoint(height: 812, surface: 3, wear: 0, flags: [.impassable])
+point.wear = 2                                      // a precondition checks the range
+let track = Model.MapTrack(points: Array(repeating: point, count: 1_000_000))
+
+let wire = Wire.MapTrack()
+wire.read(model: track)                             // shares the array of words
+let bytes = try wire.encoded()                      // about 4 MB, a word at a time
+let copy = Model.MapTrack(wire: wire)
+```
+
+In C# the same is `wire.CopyFrom(track)`, `wire.ToBytes()` and `wire.ToModel()`. Swift declares each namespace component
+as an enum, so generations of one target that share a leading component declare it once: wire code with `--models`
+extends the components it shares with the models (`--namespace Game.Wire --models Game.Model` writes
+`extension Game { enum Wire {} }` and then `extension Game.Wire { … }`), and `--extend-namespace Game` makes any other generation extend `Game`, such as a
+second group in `Game.Panels`. C# merges namespaces and needs neither. Avoid `toValue()` on such records: it
+builds one GES value per point. Scripts and `.gesd` documents see a packed record as an ordinary Record.
+
+See [Packed schemas](../../specs/Schemas.md#packed-schemas) and
+[Packed records and models](../../specs/Schemas.md#packed-records-and-models).
 
 ## What schemas leave to you
 

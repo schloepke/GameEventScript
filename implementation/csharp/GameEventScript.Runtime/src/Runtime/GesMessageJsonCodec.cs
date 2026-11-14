@@ -176,6 +176,8 @@ internal sealed class GesMessageJsonCodec
                 }
 
                 return Typed("Dice", ("rolls", Array(dice)));
+            case Bytes when value.ObjectValue is byte[] bytes:
+                return Typed("Bytes", ("base64", Text(Convert.ToBase64String(bytes))));
             case GesBytecodeTypeKind.Range:
                 if (value.ObjectValue is GesIntegerRange integer)
                     return Typed("Range", ("from", Text(integer.From.ToString(CultureInfo.InvariantCulture))), ("to", Text(integer.To.ToString(CultureInfo.InvariantCulture))), ("step", Text(integer.Step.ToString(CultureInfo.InvariantCulture))));
@@ -287,6 +289,27 @@ internal sealed class GesMessageJsonCodec
                 var z = Number(Get(value, "z")).AsNumeric;
                 var u = Unit(Get(value, "unit"));
                 return type == "Vector" ? GesValue.GesVector(x, y, z, u) : GesValue.GesPoint(x, y, z, u);
+            case "Bytes":
+            {
+                Fields(value, "type", "base64");
+                var text = String(Get(value, "base64"));
+                byte[] decoded;
+                try
+                {
+                    decoded = Convert.FromBase64String(text);
+                }
+                catch (FormatException)
+                {
+                    throw Error();
+                }
+
+                // Only the canonical padded spelling without whitespace is accepted.
+                if (!string.Equals(Convert.ToBase64String(decoded), text, StringComparison.Ordinal))
+                    throw Error();
+                var bytesValue = new GesValue();
+                bytesValue.SetBytes(decoded);
+                return bytesValue;
+            }
             case "Dice":
                 Fields(value, "type", "rolls");
                 var rolls = List(Get(value, "rolls"));

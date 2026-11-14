@@ -258,6 +258,67 @@ schema:
 
 ---
 
+## Test: names of platform types
+
+A schema and fields may take names that the platforms give their own types, such as `Math`,
+`system` and `array`: generated C# qualifies the platform types it uses, and the generation
+comparison compiles the code of this case.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: platform-type-names
+schemaApi:
+  sources:
+    - "schema :Math as {\n  system: :Text max 8\n  math: :Number integer between 0 and 9\n  array: :Bytes max 4\n  bitConverter: :Number between 0 and 1\n  flags: :Flags(#a, #b)\n}\n"
+  root: "Math"
+  encode:
+    type: ":Math"
+    entries:
+      - key: "array"
+        value:
+          type: ":Bytes"
+          value: "a0b7"
+      - key: "bitConverter"
+        value:
+          type: ":Number.binary64"
+          value: "0.5"
+      - key: "flags"
+        value:
+          type: ":Map"
+          entries:
+            - key: "a"
+              value:
+                type: ":Boolean"
+                value: "true"
+            - key: "b"
+              value:
+                type: ":Boolean"
+                value: "false"
+      - key: "math"
+        value:
+          type: ":Number.int64"
+          value: "3"
+      - key: "system"
+        value:
+          type: ":Text"
+          value: "sol"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Math\nfield system Text max 8\nfield math Number integer between 0e0 9e0\nfield array Bytes max 4\nfield bitConverter Number between 0e0 1e0\nfield flags Flags(#a #b)\n"
+  hash: "6ee045515b30c8ee"
+  encoded:
+    bytes: "33f7c63602bd05000000000000ff09"
+```
+
+---
+
 ## Test: comments and layout do not change the hash
 
 A respelled source has the same canonical form.
@@ -284,6 +345,7690 @@ schema:
 
 ---
 
+## Test: digit separators in a maximum
+
+A maximum may separate digits with `_`, as number literals do; the canonical form writes plain digits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-max-separators
+schemaApi:
+  sources:
+    - "schema :Log as { lines: :List(:Text max 1_024) max 10_000 }\n"
+  root: "Log"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Log\nfield lines List(Text max 1024) max 10000\n"
+  hash: "a1f97b9aa3b41bf8"
+```
+
+---
+
+## Test: a doubled separator in a maximum
+
+A separator stands only between two digits, so the maximum ends before it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-max-double-separator
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text max 4__234 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 30
+```
+
+---
+
+## Test: a leading zero before a separator
+
+A separator does not hide a leading zero.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-max-leading-zero-separator
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text max 0_1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 29
+```
+
+---
+
+## Test: a named tag set is its members
+
+A field of a named tag set has the canonical form and hash of the same `:Tag` written in place.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-tag-set
+schemaApi:
+  sources:
+    - "tags :Mount as (#front, #rear)\nschema :Bot as { mount: :Mount optional, mounts: :List(:Mount) max 2 }\n"
+  root: "Bot"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Bot\nfield mount Tag(#front #rear) optional\nfield mounts List(Tag(#front #rear)) max 2\n"
+  hash: "dd8517bdb2464d84"
+```
+
+---
+
+## Test: a tag set named like a schema
+
+A tag set shares its name space with schemas, messages and message sets.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-set-name-taken
+schemaApi:
+  sources:
+    - "tags :Mount as (#a)\nschema :Mount as { x: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 2
+    column: 1
+```
+
+---
+
+## Test: a tag set that repeats a tag
+
+Each member of a tag set is listed once.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-set-repeated-tag
+schemaApi:
+  sources:
+    - "tags :M as (#a, #a)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a tag set as a root
+
+Only a schema, message or message set takes a role.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-set-root
+schemaApi:
+  sources:
+    - "wire tags :M as (#a)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidRole"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a tag set beside a Tag in a union
+
+A named tag set is a Tag, so a union cannot hold it beside another Tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-set-union
+schemaApi:
+  sources:
+    - "tags :M as (#a)\nschema :S as { u: :M | :Tag(#b) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidUnion"
+    line: 2
+    column: 24
+```
+
+---
+
+## Test: a union label is no part of the hash
+
+A label only names an alternative for generated code, so the canonical form and hash leave it out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-alternative-label
+schemaApi:
+  sources:
+    - "schema :Bind as { id: :Number integer between 0 and 9 }\nschema :S as { units: :List(:Text max 64 | bind: :Bind) max 4 }\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield units List(Text max 64 | Bind) max 4\nschema Bind\nfield id Number integer between 0e0 9e0\n"
+  hash: "e53e48d424e29431"
+```
+
+---
+
+## Test: a label outside a union
+
+A label names an alternative of a union.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-label-outside-union
+schemaApi:
+  sources:
+    - "schema :S as { a: x: :Text }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidUnion"
+    line: 1
+    column: 19
+```
+
+---
+
+## Test: a label on Nothing
+
+A `:Nothing` alternative holds no value to label.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-label-on-nothing
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text | none: :Nothing }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidUnion"
+    line: 1
+    column: 27
+```
+
+---
+
+## Test: a label that repeats an alternative name
+
+Generated code names alternatives after their labels or types, so they must differ.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-label-repeats-name
+schemaApi:
+  sources:
+    - "schema :S as { a: text: :Boolean | :Text }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 36
+```
+
+---
+
+## Test: a schema constant
+
+A `let` names one value of its schema: bounds, steps, delta ranges and maximums of its fields may name it, and it is replaced there. The canonical form lists the lets in declared order before the fields, so their place among the fields does not matter, and a field may still be named `let`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-let
+schemaApi:
+  sources:
+    - "constant $cap be 4\nschema :Sound as {\n  span: :Quantity(s) between 0s and retention step 0.1s delta within drift\n  names: :List(:Text max 8) max slots\n  let: :Boolean\n  let retention be 2s\n  let drift be 500ms\n  let slots be $cap\n  let share be 50%\n}\n"
+  root: "Sound"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Sound\nlet retention Quantity(second) 2e0\nlet drift Quantity(second) 5e-1\nlet slots Number 4e0\nlet share Percentage 5e-1\nfield span Quantity(second) between 0e0 2e0 step 1e-1 delta 5e-1\nfield names List(Text max 8) max 4\nfield let Boolean\n"
+  hash: "57dfa98124dc9ccb"
+```
+
+---
+
+## Test: the description of schema constants
+
+Each `let` keeps its kind, unit and exact value in base units; a whole unitless value within Int64 is an integer.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-let
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  let retention be 2s\n  let slots be 16\n  let share be 50%\n  let ratio be 0.25\n  on: :Boolean\n}\n"
+  root: "Sound"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Sound"
+    kind: "Schema"
+    fields:
+      - name: "on"
+        alternatives:
+          - kind: "Boolean"
+    constants:
+      - name: "retention"
+        kind: "Quantity"
+        unit: "second"
+        value: "2e0"
+      - name: "slots"
+        kind: "Number"
+        integer: true
+        value: "16e0"
+      - name: "share"
+        kind: "Percentage"
+        value: "5e-1"
+      - name: "ratio"
+        kind: "Number"
+        value: "25e-2"
+```
+
+---
+
+## Test: a constant named like a field
+
+A `let` and a field share the names of their schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-field-name
+schemaApi:
+  sources:
+    - "schema :S as {\n  let n be 4\n  n: :Boolean\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 3
+    column: 3
+```
+
+---
+
+## Test: a constant named like a parameter
+
+A bound may name either a `let` or a parameter, so a `let` cannot take the name of a parameter of its file.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-parameter-name
+schemaApi:
+  sources:
+    - "parameter n: :Number\nschema :S as {\n  let n be 4\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 3
+    column: 3
+```
+
+---
+
+## Test: a constant of another unit
+
+A `let` in a bound has the unit of its field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-unit
+schemaApi:
+  sources:
+    - "schema :S as {\n  let n be 4s\n  x: :Quantity(m) between 0m and n\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 3
+    column: 34
+```
+
+---
+
+## Test: a maximum from a constant with a unit
+
+A maximum is a whole number without a unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-max-unit
+schemaApi:
+  sources:
+    - "schema :S as {\n  let n be 4s\n  t: :Text max n\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 3
+    column: 16
+```
+
+---
+
+## Test: a fractional maximum from a constant
+
+A `let` that a maximum names is a positive whole number of at most 12 digits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-max-fraction
+schemaApi:
+  sources:
+    - "schema :S as {\n  let n be 2.5\n  t: :Text max n\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 3
+    column: 16
+```
+
+---
+
+## Test: a step that names a parameter
+
+Steps and delta ranges never name a parameter, so a name there must be a `let` of the schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-step-parameter
+schemaApi:
+  sources:
+    - "parameter w: :Quantity(m)\nschema :S as {\n  x: :Quantity(m) between 0m and 10m step w\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 3
+    column: 43
+```
+
+---
+
+## Test: a constant that names another
+
+A `let` is a literal or a file constant; it does not name another `let`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-names-let
+schemaApi:
+  sources:
+    - "schema :S as {\n  let a be 1\n  let b be a\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 3
+    column: 12
+```
+
+---
+
+## Test: a constant beyond binary64
+
+A value that is no whole number within Int64 is a binary64, so it must stay finite and non-zero there.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-beyond-binary64
+schemaApi:
+  sources:
+    - "schema :S as {\n  let huge be 1e400\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.tooWide"
+    line: 2
+    column: 3
+```
+
+---
+
+## Test: a constant in a message
+
+Only schemas declare constants, so a message argument cannot name one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-in-message
+schemaApi:
+  sources:
+    - "message M(x: :Number between 0 and n)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 1
+    column: 36
+```
+
+---
+
+
+## Test: field defaults in the canonical form
+
+A default follows the marker as an exact number in base units, `true` or `false`, a tag, or `field` and the sibling it names; a let or constant is replaced by its value. A field may still be named `default`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-default
+schemaApi:
+  sources:
+    - "constant $full be 100%\nschema :Drive as {\n  let waypoints be 32\n  power: :Quantity(W) between 0W and 5kW step 1W default 1.5kW\n  maxPower: :Quantity(W) between 0W and 5kW step 1W delta within 1kW default power\n  efficiency: :Percentage between 0% and 100% default $full\n  stops: :Number integer between 1 and 1024 default waypoints\n  armed: :Boolean default false\n  mount: :Tag(#front, #rear) default #rear\n  default: :Text max 4\n}\n"
+  root: "Drive"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Drive\nlet waypoints Number 32e0\nfield power Quantity(watt) between 0e0 5e3 step 1e0 default 15e2\nfield maxPower Quantity(watt) between 0e0 5e3 step 1e0 delta 1e3 default field power\nfield efficiency Percentage between 0e0 1e0 default 1e0\nfield stops Number integer between 1e0 1024e0 default 32e0\nfield armed Boolean default false\nfield mount Tag(#front #rear) default #rear\nfield default Text max 4\n"
+  hash: "987d354c1fb999d2"
+```
+
+---
+
+## Test: the description of field defaults
+
+Each default keeps its kind: a number as its exact value in base units, a Boolean, a tag without `#`, or the sibling field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-default
+schemaApi:
+  sources:
+    - "tags :Mount as (#front, #rear)\nschema :Drive as {\n  power: :Quantity(W) default 2kW\n  maxPower: :Quantity(W) default power\n  share: :Percentage default 50%\n  on: :Boolean default true\n  mount: :Mount default #rear\n  wet: :Text optional default dry\n  dry: :Text optional\n}\n"
+  root: "Drive"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Drive"
+    kind: "Schema"
+    fields:
+      - name: "power"
+        alternatives:
+          - kind: "Quantity"
+            unit: "watt"
+        default:
+          kind: "Number"
+          value: "2e3"
+      - name: "maxPower"
+        alternatives:
+          - kind: "Quantity"
+            unit: "watt"
+        default:
+          kind: "Field"
+          name: "power"
+      - name: "share"
+        alternatives:
+          - kind: "Percentage"
+        default:
+          kind: "Number"
+          value: "5e-1"
+      - name: "on"
+        alternatives:
+          - kind: "Boolean"
+        default:
+          kind: "Boolean"
+          value: true
+      - name: "mount"
+        alternatives:
+          - kind: "Tag"
+            tags: ["front", "rear"]
+        default:
+          kind: "Tag"
+          name: "rear"
+      - name: "wet"
+        alternatives:
+          - kind: "Text"
+        optional: true
+        default:
+          kind: "Field"
+          name: "dry"
+      - name: "dry"
+        alternatives:
+          - kind: "Text"
+        optional: true
+```
+
+---
+
+## Test: a value takes the defaults of the fields it leaves out
+
+A left-out field takes its literal default, or the value of the sibling it names, after that sibling's own default; the wire carries every field, and decoding gives them all.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default
+schemaApi:
+  sources:
+    - "schema :S as {\n  max: :Number integer between 0 and 15 default power\n  power: :Number integer between 0 and 15 default 3\n  on: :Boolean default true\n  mode: :Tag(#a, #b) default #b\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+  decode: "3303"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "3303"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "max"
+          value:
+            type: ":Number.int64"
+            value: "3"
+        - key: "mode"
+          value:
+            type: ":Tag"
+            value: "b"
+        - key: "on"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "power"
+          value:
+            type: ":Number.int64"
+            value: "3"
+    byteCount: 2
+```
+
+---
+
+## Test: a given sibling is the default
+
+A field that names a sibling takes the value given for it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-sibling
+schemaApi:
+  sources:
+    - "schema :S as {\n  max: :Number integer between 0 and 15 default power\n  power: :Number integer between 0 and 15 default 3\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "power"
+        value:
+          type: ":Number.int64"
+          value: "7"
+  decode: "77"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "77"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "max"
+          value:
+            type: ":Number.int64"
+            value: "7"
+        - key: "power"
+          value:
+            type: ":Number.int64"
+            value: "7"
+    byteCount: 1
+```
+
+---
+
+## Test: defaults apply in nested records
+
+A nested record or Map takes the defaults of its own schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-nested
+schemaApi:
+  sources:
+    - "schema :Inner as { level: :Percentage between 0% and 100% step 1% default 25% }\nschema :S as { inner: :Inner }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "inner"
+        value:
+          type: ":Map"
+          entries: []
+  decode: "19"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "19"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "level"
+                value:
+                  type: ":Percentage"
+                  value: "0.25"
+    byteCount: 1
+```
+
+---
+
+## Test: an optional field takes an absent sibling
+
+An optional field may default only to an optional sibling; when that is absent too, both are absent.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-optional
+schemaApi:
+  sources:
+    - "schema :S as {\n  wet: :Number integer between 0 and 7 optional default dry\n  dry: :Number integer between 0 and 7 optional\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+  decode: "00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "dry"
+          value:
+            type: ":Nothing"
+        - key: "wet"
+          value:
+            type: ":Nothing"
+    byteCount: 1
+```
+
+---
+
+## Test: a default chain that ends without a value
+
+A required field whose sibling has neither a value nor a default is missing at the sibling's path.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-missing
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer between 0 and 7 default b\n  b: :Number integer between 0 and 7\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.missingField"
+      path: "b"
+```
+
+---
+
+## Test: a default does not replace nothing
+
+Only a left-out field takes its default; `nothing` for a required field stays an error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-nothing
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number integer between 0 and 7 default 1 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.nothingValue"
+      path: "a"
+```
+
+---
+
+## Test: a document may leave out a field with a default
+
+Document checking accepts a left-out field that has a default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-default-omitted
+schemaApi:
+  sources:
+    - "schema :S as {\n  power: :Quantity(W) default 0W\n  max: :Quantity(W) default power\n  on: :Boolean\n}\n"
+  document: ":Schema(:S)\non: true\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a default outside a range from a parameter
+
+A bound that a parameter decides checks the default at binding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-parameter-range
+schemaApi:
+  sources:
+    - "parameter limit: :Quantity(m)\nschema :S as {\n  a: :Quantity(m) between 0m and limit default 5m\n}\n"
+  root: "S"
+  parameters:
+    limit: "3m"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 3
+    column: 40
+```
+
+---
+
+## Test: a default outside the range
+
+A literal default lies in the field's closed range.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-range
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer between 0 and 10 default 11\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 39
+```
+
+---
+
+## Test: a default at the upper bound of a wrapping range
+
+A wrapping range is half-open, so its upper bound is no value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-wrapping
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Quantity(\u00b0) wrapping between 0\u00b0 and 360\u00b0 step 1\u00b0 default 360\u00b0\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 56
+```
+
+---
+
+## Test: a default off the step
+
+A default of a quantized field is a multiple of its step.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-step
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Quantity(m) between 0m and 10m step 1m default 2.5m\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 46
+```
+
+---
+
+## Test: a fractional default of an integer field
+
+An integer field takes a whole default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-integer
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer default 1.5\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 22
+```
+
+---
+
+## Test: a default beyond binary64
+
+A fractional default keeps its meaning in binary64.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-binary64
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number default 1e-400\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.tooWide"
+    line: 2
+    column: 14
+```
+
+---
+
+## Test: a default of another unit
+
+A numeric default has its field's unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-unit
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Quantity(m) default 5s\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 2
+    column: 27
+```
+
+---
+
+## Test: a default that names nothing
+
+A name is a sibling field or a let of the schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-unknown
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number default b\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 2
+    column: 22
+```
+
+---
+
+## Test: defaults that form a cycle
+
+Chains of sibling defaults resolve in dependency order, so they cannot form a cycle.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-cycle
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number default b\n  b: :Number default a\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.cycle"
+    line: 2
+    column: 14
+```
+
+---
+
+## Test: a default sibling of another type
+
+A sibling default has the field's type and constraints; only delta ranges may differ.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-type
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer between 0 and 9 default b\n  b: :Number integer between 0 and 8\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 38
+```
+
+---
+
+## Test: a sibling default of a type of its own
+
+A closed Tag written in place, Flags and a union get a generated type per field, so they take no sibling default; a tag set can.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-own-type
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Tag(#x, #y) default b\n  b: :Tag(#x, #y)\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 19
+```
+
+---
+
+## Test: a literal default of an optional field
+
+An optional field takes its default only from an optional sibling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-optional-literal
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number optional default 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 23
+```
+
+---
+
+## Test: an optional field that defaults to a required one
+
+A field and the sibling it names are both optional or both not.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-optional-sibling
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number optional default b\n  b: :Number\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 23
+```
+
+---
+
+## Test: a key with a default
+
+A key identifies a record and takes no default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-key
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer key default 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 26
+```
+
+---
+
+## Test: a default tag outside the set
+
+A tag default belongs to the field's set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-tag
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Tag(#x, #y) default #z\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 19
+```
+
+---
+
+## Test: a default tag above its maximum
+
+A tag default of a `:Tag max n` has at most `n` bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-tag-max
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Tag max 2 default #abc\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 17
+```
+
+---
+
+## Test: a default of another kind
+
+A Boolean field takes `true` or `false`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-kind
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Boolean default 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 15
+```
+
+---
+
+## Test: a literal default of a union
+
+A union takes its default only from a sibling field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-union
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number | :Text default 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 22
+```
+
+---
+
+## Test: a default of a message argument
+
+Defaults belong to schema fields; message arguments have none.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-message
+schemaApi:
+  sources:
+    - "message M(a: :Number default 1)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 22
+```
+
+---
+
+## Test: record defaults in the canonical form
+
+A record literal lists the fields it names in the field order of their schema, each value exact in base units, and `[:]` names none; a constant is replaced by its value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-default-record
+schemaApi:
+  sources:
+    - "constant $half be 50%\nschema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :Outer as { c: :C default [on: false] }\nschema :S as {\n  empty: :C default [:]\n  partial: :C default [on: false, level: $half]\n  nested: :Outer default [c: [power: 7]]\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield empty C default [:]\nfield partial C default [level: 5e-1, on: false]\nfield nested Outer default [c: [power: 7e0]]\nschema C\nfield power Number integer between 0e0 15e0 default 3e0\nfield level Percentage between 0e0 1e0 step 1e-1 default 1e0\nfield on Boolean default true\nschema Outer\nfield c C default [on: false]\n"
+  hash: "64574f645f09b5b1"
+```
+
+---
+
+## Test: a record literal across lines
+
+Comments and line breaks may stand between all tokens of a record literal, also between a field name and its colon.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-default-record-lines
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number default 3\n  on: :Boolean default true\n}\nschema :S as {\n  c: :C default [ // the defaults\n    on // the switch\n      : false,\n    power: 7\n  ]\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield c C default [power: 7e0, on: false]\nschema C\nfield power Number default 3e0\nfield on Boolean default true\n"
+  hash: "3caaafdc0d6ced9b"
+```
+
+---
+
+## Test: the description of a record default
+
+A record default lists the fields it names with their values in field order, a nested literal as a record of its own.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-default-record
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :Outer as { c: :C }\nschema :S as {\n  empty: :C default [:]\n  nested: :Outer default [c: [on: false, power: 7]]\n}\n"
+  root: "S"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "S"
+    kind: "Schema"
+    fields:
+      - name: "empty"
+        alternatives:
+          - kind: "Reference"
+            schema: "C"
+        default:
+          kind: "Record"
+          entries: []
+      - name: "nested"
+        alternatives:
+          - kind: "Reference"
+            schema: "Outer"
+        default:
+          kind: "Record"
+          entries:
+            - name: "c"
+              value:
+                kind: "Record"
+                entries:
+                  - name: "power"
+                    value:
+                      kind: "Number"
+                      value: "7e0"
+                  - name: "on"
+                    value:
+                      kind: "Boolean"
+                      value: false
+```
+
+---
+
+## Test: a left-out record takes the defaults of its schema
+
+`[:]` names no field, so each field of the left-out record takes its own default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-record-empty
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :S as { c: :C default [:] }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "a301"
+```
+
+---
+
+## Test: a left-out record takes its literal
+
+The fields a record literal names take its values; every other field takes its own default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-record-partial
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :S as { c: :C default [on: false, level: 50%] }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "5300"
+```
+
+---
+
+## Test: a nested record literal
+
+A record literal of a field whose type is again a schema writes that record as a nested literal, whose left-out fields take their own defaults.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-record-nested
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :Outer as {\n  c: :C\n  count: :Number integer between 0 and 7 default 1\n}\nschema :S as { o: :Outer default [c: [power: 7]] }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "a703"
+```
+
+---
+
+## Test: a given record ignores the literal
+
+The literal applies only when the record is left out; a given record takes the defaults of its own schema for the fields it leaves out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-record-present
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :S as { c: :C default [on: false, level: 50%] }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "c"
+        value:
+          type: ":Map"
+          entries:
+            - key: "power"
+              value:
+                type: ":Number.int64"
+                value: "9"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "a901"
+```
+
+---
+
+## Test: a taken record default
+
+`with` takes a record default together with its field, also from an abstract schema; `all optional` drops it as any other default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-default-record-with
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nabstract schema :Base as {\n  c: :C default [power: 1]\n  d: :C default [:]\n}\nschema :S as {\n  with :Base without (d)\n  with :Base all optional without (c)\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield c C default [power: 1e0]\nfield d C optional\nschema C\nfield power Number integer between 0e0 15e0 default 3e0\nfield level Percentage between 0e0 1e0 step 1e-1 default 1e0\nfield on Boolean default true\n"
+  hash: "a12ef2623472683c"
+```
+
+---
+
+## Test: a document may leave out a record with a default
+
+Document checking accepts a left-out record field that has a record default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-default-record-omitted
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :S as {\n  c: :C default [level: 50%]\n  on: :Boolean\n}\n"
+  document: ":Schema(:S)\non: true\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a record literal without a required field
+
+A required field without a default that the literal leaves out makes the literal invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-missing
+schemaApi:
+  sources:
+    - "schema :C as {\n  a: :Number\n  b: :Number default 1\n}\nschema :S as { c: :C default [b: 2] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 5
+    column: 22
+```
+
+---
+
+## Test: a nested record literal without a required field
+
+A nested literal is checked as its own literal, at its opening bracket.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-nested-missing
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number }\nschema :O as { c: :C }\nschema :S as { o: :O default [c: [:]] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 3
+    column: 34
+```
+
+---
+
+## Test: a record literal names an unknown field
+
+Each name of a record literal is a stored field of the record's schema; a computed field is none.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-unknown
+schemaApi:
+  sources:
+    - "schema :C as {\n  a: :Number default 1\n  b: :Number computed by a + 1\n}\nschema :S as { c: :C default [b: 2] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 5
+    column: 31
+```
+
+---
+
+## Test: a record literal value outside the range
+
+A value of a record literal is checked as the field's own default would be.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-range
+schemaApi:
+  sources:
+    - "schema :C as { level: :Percentage between 0% and 100% default 100% }\nschema :S as { c: :C default [level: 120%] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: a record literal value off the step
+
+A value of a quantized field lies on its step.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-step
+schemaApi:
+  sources:
+    - "schema :C as { a: :Quantity(m) between 0m and 10m step 1m default 1m }\nschema :S as { c: :C default [a: 2.5m] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: a record literal tag outside the set
+
+A tag of a record literal belongs to the field's tag set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-tag
+schemaApi:
+  sources:
+    - "schema :C as { mode: :Tag(#a, #b) default #a }\nschema :S as { c: :C default [mode: #c] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: a record literal value with another unit
+
+A value of a record literal has its field's unit, as a default does.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-unit
+schemaApi:
+  sources:
+    - "schema :C as { a: :Quantity(m) default 1m }\nschema :S as { c: :C default [a: 1W] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 2
+    column: 34
+```
+
+---
+
+## Test: a record literal value outside a range from a parameter
+
+A bound that a parameter decides checks the value at binding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-parameter
+schemaApi:
+  sources:
+    - "parameter limit: :Quantity(m)\nschema :C as { a: :Quantity(m) between 0m and limit default 1m }\nschema :S as { c: :C default [a: 5m] }\n"
+  root: "S"
+  parameters:
+    limit: "3m"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 3
+    column: 31
+```
+
+---
+
+## Test: a record literal names a field twice
+
+Each field appears at most once in a record literal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-twice
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as { c: :C default [a: 2, a: 3] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 37
+```
+
+---
+
+## Test: a record default of an optional field
+
+An optional field takes no record default, since it may be absent.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-optional
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as { c: :C optional default [:] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: a record default of a union
+
+A union takes its default only from a sibling field, also when a schema is one of its alternatives.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-union
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as { c: :C | :Nothing default [:] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 33
+```
+
+---
+
+## Test: a record literal of a scalar field
+
+Only a field whose type is a schema takes a record literal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-scalar
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number default [:] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 1
+    column: 27
+```
+
+---
+
+## Test: a number default of a record field
+
+A record field takes a record literal or a sibling field, never a number.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-number
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as { c: :C default 1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 22
+```
+
+---
+
+## Test: a record literal names a List
+
+A record literal holds numbers, Booleans, tags and nested records; a List, Text or union field stays out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-list-entry
+schemaApi:
+  sources:
+    - "schema :C as {\n  a: :List(:Number) max 4\n  b: :Number default 1\n}\nschema :S as { c: :C default [a: 1] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 5
+    column: 31
+```
+
+---
+
+## Test: a record literal names a union
+
+A union field of a record keeps out of its literal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-union-entry
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number | :Nothing }\nschema :S as { c: :C default [a: 1] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: a record literal names a let
+
+A record literal holds literals and constants; it names no let, parameter or field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-let
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as {\n  let one be 1\n  c: :C default [a: one]\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 4
+    column: 18
+```
+
+---
+
+## Test: an empty record literal without a colon
+
+An empty record literal is written `[:]`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-empty-brackets
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as { c: :C default [] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: taken fields in the canonical form
+
+`with` copies the fields of another schema where it stands, with their defaults; the canonical form lists them as if written there, and an abstract schema leaves no trace.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-with
+schemaApi:
+  sources:
+    - "abstract schema :Base as {\n  on: :Boolean\n  level: :Number integer between 0 and 7 default 3\n}\nschema :S as {\n  with :Base\n  mode: :Tag(#a, #b)\n  top: :Number integer between 0 and 7 default level\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield on Boolean\nfield level Number integer between 0e0 7e0 default 3e0\nfield mode Tag(#a #b)\nfield top Number integer between 0e0 7e0 default field level\n"
+  hash: "b35af4332f489feb"
+```
+
+---
+
+## Test: written fields hash like taken ones
+
+A schema that writes the fields a `with` would take has the same canonical form and hash.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-with-written
+schemaApi:
+  sources:
+    - "schema :S as {\n  on: :Boolean\n  level: :Number integer between 0 and 7 default 3\n  mode: :Tag(#a, #b)\n  top: :Number integer between 0 and 7 default level\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield on Boolean\nfield level Number integer between 0e0 7e0 default 3e0\nfield mode Tag(#a #b)\nfield top Number integer between 0e0 7e0 default field level\n"
+  hash: "b35af4332f489feb"
+```
+
+---
+
+## Test: taking fields all optional and without some
+
+`all optional` makes every taken field optional and drops its default, except a union with a Nothing alternative, which already holds an absent value; `without` leaves fields out, also a key.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-with-all-optional
+schemaApi:
+  sources:
+    - "schema :Area as {\n  id: :Number integer between 0 and 99 key\n  width: :Quantity(m) between 1m and 9m step 1m default 4m\n  name: :Text max 8\n  note: :Text max 4 | :Nothing\n}\nschema :Defaults as { with :Area all optional without (id) }\n"
+  root: "Defaults"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Defaults\nfield width Quantity(meter) between 1e0 9e0 step 1e0 optional\nfield name Text max 8 optional\nfield note Text max 4 | Nothing\n"
+  hash: "b3ad0d11820fbc1c"
+```
+
+---
+
+## Test: the description of taken fields
+
+A schema lists what it takes with `with` and its fields in their final order; an abstract schema says so.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-with
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\nschema :Area as { name: :Text, size: :Boolean }\nschema :S as {\n  with :Base\n  with :Area all optional without (size)\n  mode: :Boolean\n}\n"
+  root: "S"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "S"
+    kind: "Schema"
+    takes:
+      - schema: "Base"
+      - schema: "Area"
+        allOptional: true
+        without: ["size"]
+    fields:
+      - name: "on"
+        alternatives:
+          - kind: "Boolean"
+      - name: "name"
+        alternatives:
+          - kind: "Text"
+        optional: true
+      - name: "mode"
+        alternatives:
+          - kind: "Boolean"
+```
+
+---
+
+## Test: the description of an abstract schema
+
+An abstract schema describes its fields, also those it takes, but is never bound.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-abstract
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\nabstract schema :Module as { with :Base, off: :Boolean }\n"
+  root: "Module"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Module"
+    kind: "Schema"
+    abstract: true
+    takes:
+      - schema: "Base"
+    fields:
+      - name: "on"
+        alternatives:
+          - kind: "Boolean"
+      - name: "off"
+        alternatives:
+          - kind: "Boolean"
+```
+
+---
+
+## Test: a value with taken fields
+
+Composition is a schema-level thing only: the record stays flat on the wire and in values.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-with
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean, level: :Number integer between 0 and 7 }\nschema :S as { with :Base, mode: :Tag(#a, #b) }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "on"
+        value:
+          type: ":Boolean"
+          value: true
+      - key: "level"
+        value:
+          type: ":Number.int64"
+          value: "5"
+      - key: "mode"
+        value:
+          type: ":Tag"
+          value: "b"
+  decode: "1b"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "1b"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "level"
+          value:
+            type: ":Number.int64"
+            value: "5"
+        - key: "mode"
+          value:
+            type: ":Tag"
+            value: "b"
+        - key: "on"
+          value:
+            type: ":Boolean"
+            value: true
+    byteCount: 1
+```
+
+---
+
+## Test: a document with taken fields
+
+Document checking sees the taken fields like written ones.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-with
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\nschema :S as { with :Base, size: :Number integer between 0 and 9 }\n"
+  document: ":Schema(:S)\non: true\nsize: 4\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document of an abstract schema
+
+An abstract schema describes no document.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-abstract
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\n"
+  document: ":Schema(:Base)\non: true\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "schema.invalidAbstract"
+```
+
+---
+
+## Test: binding an abstract schema
+
+An abstract schema is never encoded, so it cannot be bound.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-abstract-bind
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\n"
+  root: "Base"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidAbstract"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: an abstract schema as a field type
+
+Only `with` takes an abstract schema; it is no field type.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-abstract-field
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\nschema :S as { x: :Base }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidAbstract"
+    line: 2
+    column: 19
+```
+
+---
+
+## Test: an abstract schema as a list element
+
+An abstract schema is no list element either.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-abstract-element
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\nschema :S as { x: :List(:Base) max 2 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidAbstract"
+    line: 2
+    column: 25
+```
+
+---
+
+## Test: an abstract schema with a role
+
+An abstract schema is no root, so it takes no role.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-abstract-role
+schemaApi:
+  sources:
+    - "model abstract schema :Base as { on: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidRole"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: taking an undeclared schema
+
+`with` names a schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-unknown
+schemaApi:
+  sources:
+    - "message M(a: :Boolean)\nschema :S as { with :M }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 2
+    column: 16
+```
+
+---
+
+## Test: schemas that take each other
+
+`with` must not form a cycle.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-cycle
+schemaApi:
+  sources:
+    - "schema :A as { with :B }\nschema :B as { with :A }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.cycle"
+    line: 2
+    column: 16
+```
+
+---
+
+## Test: a taken field named like an own one
+
+Taken fields share the names of the schema that takes them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-duplicate
+schemaApi:
+  sources:
+    - "schema :A as { a: :Boolean }\nschema :S as { a: :Text, with :A }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 2
+    column: 26
+```
+
+---
+
+## Test: leaving out a field the schema does not have
+
+`without` names fields of the taken schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-without
+schemaApi:
+  sources:
+    - "schema :A as { a: :Boolean }\nschema :S as { with :A without (b) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 2
+    column: 33
+```
+
+---
+
+## Test: a taken key that is not first
+
+A key stays the first field, also where `with` puts it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-key
+schemaApi:
+  sources:
+    - "schema :A as { a: :Number integer key }\nschema :S as { b: :Boolean, with :A }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidKey"
+    line: 2
+    column: 29
+```
+
+---
+
+## Test: a taken default whose field is left out
+
+A taken field keeps its default, so `without` cannot leave out the field it names, unless `all optional` drops the default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-default
+schemaApi:
+  sources:
+    - "schema :A as { a: :Boolean, b: :Boolean default a }\nschema :S as { with :A without (a) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 16
+```
+
+---
+
+## Test: with in a message
+
+Only a schema takes fields with `with`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-message
+schemaApi:
+  sources:
+    - "message M(with :A)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 17
+```
+
+---
+
+## Test: computed fields belong to the hash
+
+A computed field is part of the canonical form, in a prefix form with exact literals; a later
+field of the same spelling changes the hash like any other.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-computed
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  energy: :Quantity(J) between 0J and 1kJ step 1J\n  duration: :Quantity(s) between 0s and 10s step 1ms\n  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration\n  loud: :Boolean computed by power > 50W and not (duration = 0s)\n}\n"
+  root: "Sound"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Sound\nfield energy Quantity(joule) between 0e0 1e3 step 1e0\nfield duration Quantity(second) between 0e0 1e1 step 1e-3\ncomputed power Quantity(watt) (choice (quantity watt 0e0) (lessOrEqual (field duration) (quantity second 0e0)) (divide (field energy) (field duration)))\ncomputed loud Boolean (and (greater (field power) (quantity watt 5e1)) (not (equal (field duration) (quantity second 0e0))))\n"
+  hash: "df67ebf131d5bfd3"
+```
+
+---
+
+## Test: the description of computed fields
+
+Computed fields are described apart from the fields that are encoded.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-computed
+schemaApi:
+  sources:
+    - "schema :Gauge as {\n  current: :Number between 0 and 1000 step 0.5\n  maximum: :Number integer between 0 and 1000\n  bonus: :Percentage between 0% and 100% step 1%\n  boosted: :Number computed by current + bonus\n  share: :Number computed by current * bonus\n  doubled: :Percentage computed by bonus + bonus\n  spread: :Percentage optional computed by bonus / maximum\n}\n"
+  root: "Gauge"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Gauge"
+    kind: "Schema"
+    fields:
+      - name: "current"
+        alternatives:
+          - kind: "Number"
+            lower: "0e0"
+            upper: "1e3"
+            step: "5e-1"
+      - name: "maximum"
+        alternatives:
+          - kind: "Number"
+            integer: true
+            lower: "0e0"
+            upper: "1e3"
+      - name: "bonus"
+        alternatives:
+          - kind: "Percentage"
+            lower: "0e0"
+            upper: "1e0"
+            step: "1e-2"
+    computed:
+      - name: "boosted"
+        kind: "Number"
+        expression: "(add (field current) (field bonus))"
+      - name: "share"
+        kind: "Number"
+        expression: "(multiply (field current) (field bonus))"
+      - name: "doubled"
+        kind: "Percentage"
+        expression: "(add (field bonus) (field bonus))"
+      - name: "spread"
+        kind: "Percentage"
+        optional: true
+        expression: "(divide (field bonus) (field maximum))"
+```
+
+---
+
+## Test: a computed quantity and its condition
+
+Decoding derives each computed field from the decoded fields and the computed fields before it,
+with the values a script record gives: `300J / 0.25s` is the integer `1200W`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-quantity
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  energy: :Quantity(J) between 0J and 1kJ step 1J\n  duration: :Quantity(s) between 0s and 10s step 1ms\n  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration\n  loud: :Boolean computed by power > 50W and not (duration = 0s)\n}\n"
+  root: "Sound"
+  encode:
+    type: ":Sound"
+    entries:
+      - key: "duration"
+        value:
+          type: ":Quantity.binary64"
+          value: "0.25"
+          unit: ":second"
+      - key: "energy"
+        value:
+          type: ":Quantity.int64"
+          value: "300"
+          unit: ":joule"
+  decode: "2ce903"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "2ce903"
+  decoded:
+    value:
+      type: ":Sound"
+      entries:
+        - key: "duration"
+          value:
+            type: ":Quantity.binary64"
+            value: "0.25"
+            unit: ":second"
+        - key: "energy"
+          value:
+            type: ":Quantity.int64"
+            value: "300"
+            unit: ":joule"
+        - key: "loud"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "power"
+          value:
+            type: ":Quantity.int64"
+            value: "1200"
+            unit: ":watt"
+    byteCount: 3
+```
+
+---
+
+## Test: a choice guards a division
+
+The first condition that holds selects its value, so a zero duration gives `0W` instead of a division.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-choice
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  energy: :Quantity(J) between 0J and 1kJ step 1J\n  duration: :Quantity(s) between 0s and 10s step 1ms\n  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration\n  loud: :Boolean computed by power > 50W and not (duration = 0s)\n}\n"
+  root: "Sound"
+  encode:
+    type: ":Sound"
+    entries:
+      - key: "duration"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":second"
+      - key: "energy"
+        value:
+          type: ":Quantity.int64"
+          value: "300"
+          unit: ":joule"
+  decode: "2c0100"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "2c0100"
+  decoded:
+    value:
+      type: ":Sound"
+      entries:
+        - key: "duration"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":second"
+        - key: "energy"
+          value:
+            type: ":Quantity.int64"
+            value: "300"
+            unit: ":joule"
+        - key: "loud"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "power"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":watt"
+    byteCount: 3
+```
+
+---
+
+## Test: a computed binary64
+
+A quotient that is not whole stays binary64.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-binary64
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  energy: :Quantity(J) between 0J and 1kJ step 1J\n  duration: :Quantity(s) between 0s and 10s step 1ms\n  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration\n  loud: :Boolean computed by power > 50W and not (duration = 0s)\n}\n"
+  root: "Sound"
+  encode:
+    type: ":Sound"
+    entries:
+      - key: "duration"
+        value:
+          type: ":Quantity.int64"
+          value: "3"
+          unit: ":second"
+      - key: "energy"
+        value:
+          type: ":Quantity.int64"
+          value: "7"
+          unit: ":joule"
+  decode: "07e02e"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07e02e"
+  decoded:
+    value:
+      type: ":Sound"
+      entries:
+        - key: "duration"
+          value:
+            type: ":Quantity.int64"
+            value: "3"
+            unit: ":second"
+        - key: "energy"
+          value:
+            type: ":Quantity.int64"
+            value: "7"
+            unit: ":joule"
+        - key: "loud"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "power"
+          value:
+            type: ":Quantity.binary64"
+            value: "2.3333333333333335"
+            unit: ":watt"
+    byteCount: 3
+```
+
+---
+
+## Test: percentages in computed fields
+
+A percentage right of a number scales it by its own magnitude, `10.5 + 25%` is `13.125`; beside
+another percentage it adds. A percentage divided by zero is infinite, which a Percentage field
+turns into nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-percentages
+schemaApi:
+  sources:
+    - "schema :Gauge as {\n  current: :Number between 0 and 1000 step 0.5\n  maximum: :Number integer between 0 and 1000\n  bonus: :Percentage between 0% and 100% step 1%\n  boosted: :Number computed by current + bonus\n  share: :Number computed by current * bonus\n  doubled: :Percentage computed by bonus + bonus\n  spread: :Percentage optional computed by bonus / maximum\n}\n"
+  root: "Gauge"
+  encode:
+    type: ":Gauge"
+    entries:
+      - key: "bonus"
+        value:
+          type: ":Percentage"
+          value: "0.25"
+      - key: "current"
+        value:
+          type: ":Number.binary64"
+          value: "10.5"
+      - key: "maximum"
+        value:
+          type: ":Number.int64"
+          value: "0"
+  decode: "15002003"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "15002003"
+  decoded:
+    value:
+      type: ":Gauge"
+      entries:
+        - key: "boosted"
+          value:
+            type: ":Number.binary64"
+            value: "13.125"
+        - key: "bonus"
+          value:
+            type: ":Percentage"
+            value: "0.25"
+        - key: "current"
+          value:
+            type: ":Number.binary64"
+            value: "10.5"
+        - key: "doubled"
+          value:
+            type: ":Percentage"
+            value: "0.5"
+        - key: "maximum"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "share"
+          value:
+            type: ":Number.binary64"
+            value: "2.625"
+        - key: "spread"
+          value:
+            type: ":Nothing"
+    byteCount: 4
+```
+
+---
+
+## Test: a percentage divided by a number
+
+A percentage divided by a unitless number stays a percentage.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-percentage-quotient
+schemaApi:
+  sources:
+    - "schema :Gauge as {\n  current: :Number between 0 and 1000 step 0.5\n  maximum: :Number integer between 0 and 1000\n  bonus: :Percentage between 0% and 100% step 1%\n  boosted: :Number computed by current + bonus\n  share: :Number computed by current * bonus\n  doubled: :Percentage computed by bonus + bonus\n  spread: :Percentage optional computed by bonus / maximum\n}\n"
+  root: "Gauge"
+  encode:
+    type: ":Gauge"
+    entries:
+      - key: "bonus"
+        value:
+          type: ":Percentage"
+          value: "0.25"
+      - key: "current"
+        value:
+          type: ":Number.binary64"
+          value: "10.5"
+      - key: "maximum"
+        value:
+          type: ":Number.int64"
+          value: "4"
+  decode: "15202003"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "15202003"
+  decoded:
+    value:
+      type: ":Gauge"
+      entries:
+        - key: "boosted"
+          value:
+            type: ":Number.binary64"
+            value: "13.125"
+        - key: "bonus"
+          value:
+            type: ":Percentage"
+            value: "0.25"
+        - key: "current"
+          value:
+            type: ":Number.binary64"
+            value: "10.5"
+        - key: "doubled"
+          value:
+            type: ":Percentage"
+            value: "0.5"
+        - key: "maximum"
+          value:
+            type: ":Number.int64"
+            value: "4"
+        - key: "share"
+          value:
+            type: ":Number.binary64"
+            value: "2.625"
+        - key: "spread"
+          value:
+            type: ":Percentage"
+            value: "0.0625"
+    byteCount: 4
+```
+
+---
+
+## Test: integers stay exact
+
+Integer arithmetic is exact within Int64 and falls back to binary64 on overflow, so `a + 1 - a` is `1`
+where binary64 would give 0; `min of`, `max of`, `clamp`, `abs` and negation keep integers.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-integers
+schemaApi:
+  sources:
+    - "schema :Counter as {\n  a: :Number integer between -5000000000000000000 and 5000000000000000000\n  b: :Number integer between -1000 and 1000\n  sum: :Number computed by a + 1 - a\n  tripled: :Number computed by a * 3\n  low: :Number computed by min of a and b and 0\n  high: :Number computed by max of b and 0\n  bound: :Number computed by clamp b between 10 and -10\n  gap: :Number computed by abs (b - 7)\n  flipped: :Number computed by -b\n}\n"
+  root: "Counter"
+  encode:
+    type: ":Counter"
+    entries:
+      - key: "a"
+        value:
+          type: ":Number.int64"
+          value: "4000000000000000000"
+      - key: "b"
+        value:
+          type: ":Number.int64"
+          value: "-12"
+  decode: "000084e2506ce67cdc03"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "000084e2506ce67cdc03"
+  decoded:
+    value:
+      type: ":Counter"
+      entries:
+        - key: "a"
+          value:
+            type: ":Number.int64"
+            value: "4000000000000000000"
+        - key: "b"
+          value:
+            type: ":Number.int64"
+            value: "-12"
+        - key: "bound"
+          value:
+            type: ":Number.int64"
+            value: "-10"
+        - key: "flipped"
+          value:
+            type: ":Number.int64"
+            value: "12"
+        - key: "gap"
+          value:
+            type: ":Number.int64"
+            value: "19"
+        - key: "high"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "low"
+          value:
+            type: ":Number.int64"
+            value: "-12"
+        - key: "sum"
+          value:
+            type: ":Number.int64"
+            value: "1"
+        - key: "tripled"
+          value:
+            type: ":Number.binary64"
+            value: "1.2e19"
+    byteCount: 10
+```
+
+---
+
+## Test: lists, records and absent values
+
+A sum projects each element and adds from left to right, a count counts the elements, and an absent
+element field makes the sum nothing. `default` replaces an absent value and `has value` tests for one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-lists
+schemaApi:
+  sources:
+    - "schema :Source as {\n  power: :Quantity(W) between 0W and 1kW step 1W\n  level: :Number integer between 0 and 9 optional\n}\nschema :Room as {\n  sources: :List(:Source) max 4\n  levels: :List(:Number integer between 0 and 9) max 4\n  main: :Source optional\n  signature: :Quantity(W) computed by sources[:sum s => s.power]\n  total: :Number computed by levels[:sum] + sources[:count]\n  levelSum: :Number optional computed by sources[:sum s => s.level]\n  mainPower: :Quantity(W) computed by main.power default 0W\n  mainPresent: :Boolean computed by main has value\n  fallbackLevel: :Number computed by main.level default 5\n}\n"
+  root: "Room"
+  encode:
+    type: ":Room"
+    entries:
+      - key: "levels"
+        value:
+          type: ":List"
+          items:
+            - type: ":Number.int64"
+              value: "1"
+            - type: ":Number.int64"
+              value: "2"
+            - type: ":Number.int64"
+              value: "3"
+      - key: "sources"
+        value:
+          type: ":List"
+          items:
+            - type: ":Source"
+              entries:
+                - key: "level"
+                  value:
+                    type: ":Number.int64"
+                    value: "2"
+                - key: "power"
+                  value:
+                    type: ":Quantity.int64"
+                    value: "100"
+                    unit: ":watt"
+            - type: ":Source"
+              entries:
+                - key: "power"
+                  value:
+                    type: ":Quantity.int64"
+                    value: "250"
+                    unit: ":watt"
+  decode: "22a3e8632103"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "22a3e8632103"
+  decoded:
+    value:
+      type: ":Room"
+      entries:
+        - key: "fallbackLevel"
+          value:
+            type: ":Number.int64"
+            value: "5"
+        - key: "levelSum"
+          value:
+            type: ":Nothing"
+        - key: "levels"
+          value:
+            type: ":List"
+            items:
+              - type: ":Number.int64"
+                value: "1"
+              - type: ":Number.int64"
+                value: "2"
+              - type: ":Number.int64"
+                value: "3"
+        - key: "main"
+          value:
+            type: ":Nothing"
+        - key: "mainPower"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":watt"
+        - key: "mainPresent"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "signature"
+          value:
+            type: ":Quantity.int64"
+            value: "350"
+            unit: ":watt"
+        - key: "sources"
+          value:
+            type: ":List"
+            items:
+              - type: ":Source"
+                entries:
+                  - key: "level"
+                    value:
+                      type: ":Number.int64"
+                      value: "2"
+                  - key: "power"
+                    value:
+                      type: ":Quantity.int64"
+                      value: "100"
+                      unit: ":watt"
+              - type: ":Source"
+                entries:
+                  - key: "level"
+                    value:
+                      type: ":Nothing"
+                  - key: "power"
+                    value:
+                      type: ":Quantity.int64"
+                      value: "250"
+                      unit: ":watt"
+        - key: "total"
+          value:
+            type: ":Number.int64"
+            value: "8"
+    byteCount: 6
+```
+
+---
+
+## Test: empty lists and a present record
+
+An empty sum is 0, which the field's type gives its unit; a present record is read through its fields.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-empty
+schemaApi:
+  sources:
+    - "schema :Source as {\n  power: :Quantity(W) between 0W and 1kW step 1W\n  level: :Number integer between 0 and 9 optional\n}\nschema :Room as {\n  sources: :List(:Source) max 4\n  levels: :List(:Number integer between 0 and 9) max 4\n  main: :Source optional\n  signature: :Quantity(W) computed by sources[:sum s => s.power]\n  total: :Number computed by levels[:sum] + sources[:count]\n  levelSum: :Number optional computed by sources[:sum s => s.level]\n  mainPower: :Quantity(W) computed by main.power default 0W\n  mainPresent: :Boolean computed by main has value\n  fallbackLevel: :Number computed by main.level default 5\n}\n"
+  root: "Room"
+  encode:
+    type: ":Room"
+    entries:
+      - key: "levels"
+        value:
+          type: ":List"
+          items: []
+      - key: "main"
+        value:
+          type: ":Source"
+          entries:
+            - key: "level"
+              value:
+                type: ":Number.int64"
+                value: "1"
+            - key: "power"
+              value:
+                type: ":Quantity.int64"
+                value: "5"
+                unit: ":watt"
+      - key: "sources"
+        value:
+          type: ":List"
+          items: []
+  decode: "c00206"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "c00206"
+  decoded:
+    value:
+      type: ":Room"
+      entries:
+        - key: "fallbackLevel"
+          value:
+            type: ":Number.int64"
+            value: "1"
+        - key: "levelSum"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "levels"
+          value:
+            type: ":List"
+            items: []
+        - key: "main"
+          value:
+            type: ":Source"
+            entries:
+              - key: "level"
+                value:
+                  type: ":Number.int64"
+                  value: "1"
+              - key: "power"
+                value:
+                  type: ":Quantity.int64"
+                  value: "5"
+                  unit: ":watt"
+        - key: "mainPower"
+          value:
+            type: ":Quantity.int64"
+            value: "5"
+            unit: ":watt"
+        - key: "mainPresent"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "signature"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":watt"
+        - key: "sources"
+          value:
+            type: ":List"
+            items: []
+        - key: "total"
+          value:
+            type: ":Number.int64"
+            value: "0"
+    byteCount: 3
+```
+
+---
+
+## Test: division by zero and percentages
+
+`0 / 0` is nothing and `1 / 0` infinite; `x - p` takes the percentage of x, and a percentage times a
+percentage stays one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-edges
+schemaApi:
+  sources:
+    - "schema :Edge as {\n  x: :Number\n  y: :Number\n  p: :Percentage\n  q: :Number optional computed by x / y\n  huge: :Number computed by 1 / y\n  s: :Number computed by x - p\n  t: :Percentage computed by -p * p\n  u: :Number computed by p * x\n  v: :Number computed by clamp x between -1.5 and y + 0.5\n  w: :Number computed by max of x and 0.5 and -2\n  ne: :Boolean computed by x <> 0 and p = 25%\n}\n"
+  root: "Edge"
+  encode:
+    type: ":Edge"
+    entries:
+      - key: "p"
+        value:
+          type: ":Percentage"
+          value: "0.25"
+      - key: "x"
+        value:
+          type: ":Number.int64"
+          value: "0"
+      - key: "y"
+        value:
+          type: ":Number.int64"
+          value: "0"
+  decode: "00000000000000000000000000000000000000000000d03f"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00000000000000000000000000000000000000000000d03f"
+  decoded:
+    value:
+      type: ":Edge"
+      entries:
+        - key: "huge"
+          value:
+            type: ":Number.binary64"
+            value: "Infinity"
+        - key: "ne"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "p"
+          value:
+            type: ":Percentage"
+            value: "0.25"
+        - key: "q"
+          value:
+            type: ":Nothing"
+        - key: "s"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "t"
+          value:
+            type: ":Percentage"
+            value: "-0.0625"
+        - key: "u"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "v"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "w"
+          value:
+            type: ":Number.binary64"
+            value: "0.5"
+        - key: "x"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "y"
+          value:
+            type: ":Number.int64"
+            value: "0"
+    byteCount: 24
+```
+
+---
+
+## Test: clamp, max and a percentage of a binary64
+
+Bounds of `clamp` may come in any order, and `max of` keeps the kind of the winning value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-bounds
+schemaApi:
+  sources:
+    - "schema :Edge as {\n  x: :Number\n  y: :Number\n  p: :Percentage\n  q: :Number optional computed by x / y\n  huge: :Number computed by 1 / y\n  s: :Number computed by x - p\n  t: :Percentage computed by -p * p\n  u: :Number computed by p * x\n  v: :Number computed by clamp x between -1.5 and y + 0.5\n  w: :Number computed by max of x and 0.5 and -2\n  ne: :Boolean computed by x <> 0 and p = 25%\n}\n"
+  root: "Edge"
+  encode:
+    type: ":Edge"
+    entries:
+      - key: "p"
+        value:
+          type: ":Percentage"
+          value: "0.25"
+      - key: "x"
+        value:
+          type: ":Number.binary64"
+          value: "3.5"
+      - key: "y"
+        value:
+          type: ":Number.int64"
+          value: "-2"
+  decode: "0000000000000c4000000000000000c0000000000000d03f"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0000000000000c4000000000000000c0000000000000d03f"
+  decoded:
+    value:
+      type: ":Edge"
+      entries:
+        - key: "huge"
+          value:
+            type: ":Number.binary64"
+            value: "-0.5"
+        - key: "ne"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "p"
+          value:
+            type: ":Percentage"
+            value: "0.25"
+        - key: "q"
+          value:
+            type: ":Number.binary64"
+            value: "-1.75"
+        - key: "s"
+          value:
+            type: ":Number.binary64"
+            value: "2.625"
+        - key: "t"
+          value:
+            type: ":Percentage"
+            value: "-0.0625"
+        - key: "u"
+          value:
+            type: ":Number.binary64"
+            value: "0.875"
+        - key: "v"
+          value:
+            type: ":Number.binary64"
+            value: "-1.5"
+        - key: "w"
+          value:
+            type: ":Number.binary64"
+            value: "3.5"
+        - key: "x"
+          value:
+            type: ":Number.binary64"
+            value: "3.5"
+        - key: "y"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+    byteCount: 24
+```
+
+---
+## Test: Booleans with absent values
+
+`=` compares binary64 within two ULPs; `and` and `or` are three-valued, and a computed Boolean that
+gives nothing is false, as a script record reads it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-logic
+schemaApi:
+  sources:
+    - "schema :Logic as {\n  x: :Number\n  y: :Number\n  flag: :Boolean optional\n  close: :Boolean computed by x + y = 0.3\n  apart: :Boolean computed by x <> y\n  both: :Boolean computed by flag and x > 0 default false\n  either: :Boolean computed by flag or x > 0 default false\n}\n"
+  root: "Logic"
+  encode:
+    type: ":Logic"
+    entries:
+      - key: "x"
+        value:
+          type: ":Number.binary64"
+          value: "0.1"
+      - key: "y"
+        value:
+          type: ":Number.binary64"
+          value: "0.2"
+  decode: "9a9999999999b93f9a9999999999c93f00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "9a9999999999b93f9a9999999999c93f00"
+  decoded:
+    value:
+      type: ":Logic"
+      entries:
+        - key: "apart"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "both"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "close"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "either"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "flag"
+          value:
+            type: ":Nothing"
+        - key: "x"
+          value:
+            type: ":Number.binary64"
+            value: "0.1"
+        - key: "y"
+          value:
+            type: ":Number.binary64"
+            value: "0.2"
+    byteCount: 17
+```
+
+---
+
+## Test: square roots are correctly rounded
+
+`sqrt`, `√` and the power `^ 0.5` that they lower to give the correctly rounded square root on every platform: a whole
+root is an integer, a negative number has none, and `-infinity` gives `infinity` as pow does. `m²` has the root `m`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-roots
+schemaApi:
+  sources:
+    - "schema :Roots as {\n  zero: :Number\n  tiny: :Number\n  one: :Number\n  two: :Number\n  sixteen: :Number\n  large: :Number\n  infinite: :Number\n  negative: :Number\n  negativeInfinite: :Number\n  area: :Quantity(m²)\n  rootZero: :Number computed by sqrt zero\n  rootTiny: :Number computed by sqrt tiny\n  rootOne: :Number computed by √one\n  rootTwo: :Number computed by sqrt two\n  rootSixteen: :Number computed by sqrt(sixteen)\n  rootLarge: :Number computed by sqrt large\n  rootInfinite: :Number computed by sqrt infinite\n  rootNegative: :Number computed by sqrt negative\n  rootNegativeInfinite: :Number computed by sqrt negativeInfinite\n  rootNothing: :Number optional computed by sqrt (zero / zero)\n  power: :Number computed by two ^ 0.5\n  side: :Quantity(m) computed by sqrt area\n  scaled: :Number computed by sqrt two * 2 + 1\n}\n"
+  root: "Roots"
+  encode:
+    type: ":Roots"
+    entries:
+      - key: "area"
+        value:
+          type: ":Quantity.int64"
+          value: "16"
+          unit: ":squareMeter"
+      - key: "infinite"
+        value:
+          type: ":Number.binary64"
+          value: "Infinity"
+      - key: "large"
+        value:
+          type: ":Number.binary64"
+          value: "1.7976931348623157e308"
+      - key: "negative"
+        value:
+          type: ":Number.int64"
+          value: "-4"
+      - key: "negativeInfinite"
+        value:
+          type: ":Number.binary64"
+          value: "-Infinity"
+      - key: "one"
+        value:
+          type: ":Number.int64"
+          value: "1"
+      - key: "sixteen"
+        value:
+          type: ":Number.int64"
+          value: "16"
+      - key: "tiny"
+        value:
+          type: ":Number.binary64"
+          value: "5e-324"
+      - key: "two"
+        value:
+          type: ":Number.int64"
+          value: "2"
+      - key: "zero"
+        value:
+          type: ":Number.int64"
+          value: "0"
+  decode: "00000000000000000100000000000000000000000000f03f00000000000000400000000000003040ffffffffffffef7f000000000000f07f00000000000010c0000000000000f0ff0000000000003040"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00000000000000000100000000000000000000000000f03f00000000000000400000000000003040ffffffffffffef7f000000000000f07f00000000000010c0000000000000f0ff0000000000003040"
+  decoded:
+    value:
+      type: ":Roots"
+      entries:
+        - key: "area"
+          value:
+            type: ":Quantity.int64"
+            value: "16"
+            unit: ":squareMeter"
+        - key: "infinite"
+          value:
+            type: ":Number.binary64"
+            value: "Infinity"
+        - key: "large"
+          value:
+            type: ":Number.binary64"
+            value: "1.7976931348623157e308"
+        - key: "negative"
+          value:
+            type: ":Number.int64"
+            value: "-4"
+        - key: "negativeInfinite"
+          value:
+            type: ":Number.binary64"
+            value: "-Infinity"
+        - key: "one"
+          value:
+            type: ":Number.int64"
+            value: "1"
+        - key: "power"
+          value:
+            type: ":Number.binary64"
+            value: "1.4142135623730951"
+        - key: "rootInfinite"
+          value:
+            type: ":Number.binary64"
+            value: "Infinity"
+        - key: "rootLarge"
+          value:
+            type: ":Number.binary64"
+            value: "1.3407807929942596e154"
+        - key: "rootNegative"
+          value:
+            type: ":Nothing"
+        - key: "rootNegativeInfinite"
+          value:
+            type: ":Number.binary64"
+            value: "Infinity"
+        - key: "rootNothing"
+          value:
+            type: ":Nothing"
+        - key: "rootOne"
+          value:
+            type: ":Number.int64"
+            value: "1"
+        - key: "rootSixteen"
+          value:
+            type: ":Number.int64"
+            value: "4"
+        - key: "rootTiny"
+          value:
+            type: ":Number.binary64"
+            value: "2.2227587494850775e-162"
+        - key: "rootTwo"
+          value:
+            type: ":Number.binary64"
+            value: "1.4142135623730951"
+        - key: "rootZero"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "scaled"
+          value:
+            type: ":Number.binary64"
+            value: "3.8284271247461903"
+        - key: "side"
+          value:
+            type: ":Quantity.int64"
+            value: "4"
+            unit: ":meter"
+        - key: "sixteen"
+          value:
+            type: ":Number.int64"
+            value: "16"
+        - key: "tiny"
+          value:
+            type: ":Number.binary64"
+            value: "5e-324"
+        - key: "two"
+          value:
+            type: ":Number.int64"
+            value: "2"
+        - key: "zero"
+          value:
+            type: ":Number.int64"
+            value: "0"
+    byteCount: 80
+```
+
+---
+
+## Test: rounding and angle conversions in computed fields
+
+Rounding gives an integer with the unit of its operand, saturated at the bounds of Int64, and a percentage rounds its ratio.
+`rad` and `deg` divide and multiply in binary64, so their bits are exact too.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-rounding
+schemaApi:
+  sources:
+    - "schema :Rounds as {\n  x: :Number\n  big: :Number\n  share: :Percentage\n  span: :Quantity(m)\n  turn: :Quantity(°)\n  floorX: :Number computed by floor x\n  ceilX: :Number computed by ceil x\n  truncX: :Number computed by truncate x\n  evenX: :Number computed by round half even x\n  upX: :Number computed by round half up x\n  downX: :Number computed by round half down x\n  saturated: :Number computed by floor big\n  shareFloor: :Number computed by floor share\n  spanUp: :Quantity(m) computed by round half up span\n  radians: :Number computed by rad turn\n  degrees: :Quantity(°) computed by deg 1\n}\n"
+  root: "Rounds"
+  encode:
+    type: ":Rounds"
+    entries:
+      - key: "big"
+        value:
+          type: ":Number.binary64"
+          value: "1e300"
+      - key: "share"
+        value:
+          type: ":Percentage"
+          value: "2.5"
+      - key: "span"
+        value:
+          type: ":Quantity.binary64"
+          value: "2.5"
+          unit: ":meter"
+      - key: "turn"
+        value:
+          type: ":Quantity.int64"
+          value: "90"
+          unit: ":degree"
+      - key: "x"
+        value:
+          type: ":Number.binary64"
+          value: "-2.5"
+  decode: "00000000000004c09c7500883ce4377e000000000000044000000000000004400000000000805640"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00000000000004c09c7500883ce4377e000000000000044000000000000004400000000000805640"
+  decoded:
+    value:
+      type: ":Rounds"
+      entries:
+        - key: "big"
+          value:
+            type: ":Number.binary64"
+            value: "1e300"
+        - key: "ceilX"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+        - key: "degrees"
+          value:
+            type: ":Quantity.binary64"
+            value: "57.29577951308232"
+            unit: ":degree"
+        - key: "downX"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+        - key: "evenX"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+        - key: "floorX"
+          value:
+            type: ":Number.int64"
+            value: "-3"
+        - key: "radians"
+          value:
+            type: ":Number.binary64"
+            value: "1.5707963267948966"
+        - key: "saturated"
+          value:
+            type: ":Number.int64"
+            value: "9223372036854775807"
+        - key: "share"
+          value:
+            type: ":Percentage"
+            value: "2.5"
+        - key: "shareFloor"
+          value:
+            type: ":Number.int64"
+            value: "2"
+        - key: "span"
+          value:
+            type: ":Quantity.binary64"
+            value: "2.5"
+            unit: ":meter"
+        - key: "spanUp"
+          value:
+            type: ":Quantity.int64"
+            value: "3"
+            unit: ":meter"
+        - key: "truncX"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+        - key: "turn"
+          value:
+            type: ":Quantity.int64"
+            value: "90"
+            unit: ":degree"
+        - key: "upX"
+          value:
+            type: ":Number.int64"
+            value: "-3"
+        - key: "x"
+          value:
+            type: ":Number.binary64"
+            value: "-2.5"
+    byteCount: 40
+```
+
+---
+
+## Test: trigonometry in computed fields
+
+Trigonometry reads radians as a plain number or degrees, and `atan2` and the inverse functions give radians; `deg`
+turns them into degrees. These functions come from the platform library, so the case compares within four ULPs.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-trigonometry
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4
+schemaApi:
+  sources:
+    - "schema :Aim as {\n  dx: :Quantity(m) between -1000m and 1000m step 0.01m\n  dy: :Quantity(m) between -1000m and 1000m step 0.01m\n  turn: :Quantity(°) between -360° and 360° step 0.5°\n  t: :Number between -10 and 10 step 0.25\n  bearing: :Number computed by atan2(dy, dx)\n  heading: :Quantity(°) computed by deg atan2(dy, dx)\n  reach: :Quantity(m) computed by hypot(dx, dy)\n  rise: :Quantity(m) computed by hypot(dx, dy, 1m)\n  still: :Number computed by atan2(dx - dx, 0m)\n  sine: :Number computed by sin turn\n  cosine: :Number computed by cos turn\n  tangent: :Number computed by tan t\n  arc: :Number computed by asin (t / 10)\n  wide: :Number computed by acos t\n  arctan: :Number computed by atan t\n  inCone: :Boolean computed by heading < 30°\n}\n"
+  root: "Aim"
+  encode:
+    type: ":Aim"
+    entries:
+      - key: "dx"
+        value:
+          type: ":Quantity.int64"
+          value: "3"
+          unit: ":meter"
+      - key: "dy"
+        value:
+          type: ":Quantity.int64"
+          value: "4"
+          unit: ":meter"
+      - key: "t"
+        value:
+          type: ":Number.binary64"
+          value: "2.5"
+      - key: "turn"
+        value:
+          type: ":Quantity.int64"
+          value: "30"
+          unit: ":degree"
+  decode: "cc87c120c63019"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "cc87c120c63019"
+  decoded:
+    value:
+      type: ":Aim"
+      entries:
+        - key: "arc"
+          value:
+            type: ":Number.binary64"
+            value: "0.25268025514207865"
+        - key: "arctan"
+          value:
+            type: ":Number.binary64"
+            value: "1.1902899496825317"
+        - key: "bearing"
+          value:
+            type: ":Number.binary64"
+            value: "0.9272952180016122"
+        - key: "cosine"
+          value:
+            type: ":Number.binary64"
+            value: "0.8660254037844387"
+        - key: "dx"
+          value:
+            type: ":Quantity.int64"
+            value: "3"
+            unit: ":meter"
+        - key: "dy"
+          value:
+            type: ":Quantity.int64"
+            value: "4"
+            unit: ":meter"
+        - key: "heading"
+          value:
+            type: ":Quantity.binary64"
+            value: "53.13010235415597"
+            unit: ":degree"
+        - key: "inCone"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "reach"
+          value:
+            type: ":Quantity.int64"
+            value: "5"
+            unit: ":meter"
+        - key: "rise"
+          value:
+            type: ":Quantity.binary64"
+            value: "5.0990195135927845"
+            unit: ":meter"
+        - key: "sine"
+          value:
+            type: ":Number.binary64"
+            value: "0.49999999999999994"
+        - key: "still"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "t"
+          value:
+            type: ":Number.binary64"
+            value: "2.5"
+        - key: "tangent"
+          value:
+            type: ":Number.binary64"
+            value: "-0.7470222972386602"
+        - key: "turn"
+          value:
+            type: ":Quantity.int64"
+            value: "30"
+            unit: ":degree"
+        - key: "wide"
+          value:
+            type: ":Nothing"
+    byteCount: 7
+```
+
+---
+
+## Test: powers, exponentials and logarithms in computed fields
+
+`^`, `²` and `³` use the platform's pow and take the unit of the power from the derivation table; `cbrt` is the power 1/3,
+which a negative number does not have. `exp` and `ln` read plain numbers: `ln 0` is `-infinity` and the logarithm of a
+negative number is nothing, as is NaN, without making the field absent.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-powers
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4
+schemaApi:
+  sources:
+    - "schema :Growth as {\n  t: :Number between -10 and 10 step 0.25\n  n: :Number between -10 and 10 step 0.25\n  side: :Quantity(m) between 0m and 100m step 0.5m\n  cubed: :Number computed by t ^ 3\n  doubling: :Number computed by 2 ^ t\n  square: :Quantity(m²) computed by side²\n  volume: :Quantity(m³) computed by side³\n  back: :Quantity(m) computed by cbrt volume\n  root: :Number computed by cbrt t\n  noRoot: :Number computed by cbrt n\n  growth: :Number computed by exp t\n  huge: :Number computed by exp (t * 100)\n  log: :Number computed by ln t\n  logZero: :Number computed by ln (t - t)\n  logNegative: :Number computed by ln n\n  inverse: :Number computed by t ^ -1\n}\n"
+  root: "Growth"
+  encode:
+    type: ":Growth"
+    entries:
+      - key: "n"
+        value:
+          type: ":Number.int64"
+          value: "-2"
+      - key: "side"
+        value:
+          type: ":Quantity.binary64"
+          value: "1.5"
+          unit: ":meter"
+      - key: "t"
+        value:
+          type: ":Number.binary64"
+          value: "2.5"
+  decode: "32d000"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "32d000"
+  decoded:
+    value:
+      type: ":Growth"
+      entries:
+        - key: "back"
+          value:
+            type: ":Quantity.binary64"
+            value: "1.5"
+            unit: ":meter"
+        - key: "cubed"
+          value:
+            type: ":Number.binary64"
+            value: "15.625"
+        - key: "doubling"
+          value:
+            type: ":Number.binary64"
+            value: "5.656854249492381"
+        - key: "growth"
+          value:
+            type: ":Number.binary64"
+            value: "12.182493960703473"
+        - key: "huge"
+          value:
+            type: ":Number.binary64"
+            value: "3.7464546145026734e108"
+        - key: "inverse"
+          value:
+            type: ":Number.binary64"
+            value: "0.4"
+        - key: "log"
+          value:
+            type: ":Number.binary64"
+            value: "0.9162907318741551"
+        - key: "logNegative"
+          value:
+            type: ":Nothing"
+        - key: "logZero"
+          value:
+            type: ":Number.binary64"
+            value: "-Infinity"
+        - key: "n"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+        - key: "noRoot"
+          value:
+            type: ":Nothing"
+        - key: "root"
+          value:
+            type: ":Number.binary64"
+            value: "1.3572088082974532"
+        - key: "side"
+          value:
+            type: ":Quantity.binary64"
+            value: "1.5"
+            unit: ":meter"
+        - key: "square"
+          value:
+            type: ":Quantity.binary64"
+            value: "2.25"
+            unit: ":squareMeter"
+        - key: "t"
+          value:
+            type: ":Number.binary64"
+            value: "2.5"
+        - key: "volume"
+          value:
+            type: ":Quantity.binary64"
+            value: "3.375"
+            unit: ":cubicMeter"
+    byteCount: 3
+```
+
+---
+
+## Test: names in backticks
+
+A name in backticks names a field or let also where GES reserves its word: `` `length` `` reads the field `length`, and
+`` `e` `` reads the field `e` rather than the constant.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-backticks
+schemaApi:
+  sources:
+    - "schema :Span as {\n  length: :Quantity(m) between 0m and 100m step 0.5m\n  e: :Number between 0 and 10 step 1\n  half: :Quantity(m) computed by `length` / 2\n  scaled: :Number computed by `e` * 2\n  long: :Boolean computed by `length` > 10m and `e` > 1\n}\n"
+  root: "Span"
+  encode:
+    type: ":Span"
+    entries:
+      - key: "e"
+        value:
+          type: ":Number.int64"
+          value: "3"
+      - key: "length"
+        value:
+          type: ":Quantity.int64"
+          value: "25"
+          unit: ":meter"
+  decode: "3203"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "3203"
+  decoded:
+    value:
+      type: ":Span"
+      entries:
+        - key: "e"
+          value:
+            type: ":Number.int64"
+            value: "3"
+        - key: "half"
+          value:
+            type: ":Quantity.binary64"
+            value: "12.5"
+            unit: ":meter"
+        - key: "length"
+          value:
+            type: ":Quantity.int64"
+            value: "25"
+            unit: ":meter"
+        - key: "long"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "scaled"
+          value:
+            type: ":Number.int64"
+            value: "6"
+    byteCount: 2
+```
+
+---
+
+## Test: functions and names in backticks in the canonical form
+
+A function is a node of the canonical form like an operator, and `²` is the power 2. Backticks are spelling only: the
+canonical form names the field `length` as any other field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-computed-functions
+schemaApi:
+  sources:
+    - "schema :Aim as {\n  length: :Quantity(m) between 0m and 100m step 0.5m\n  turn: :Quantity(°) between 0° and 360° step 0.5°\n  area: :Quantity(m²) computed by `length`²\n  side: :Quantity(m) computed by √area\n  lean: :Number computed by sin turn\n  reach: :Quantity(m) computed by hypot(`length`, side)\n  steps: :Number computed by round half even (`length` / 1m)\n}\n"
+  root: "Aim"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Aim\nfield length Quantity(meter) between 0e0 1e2 step 5e-1\nfield turn Quantity(degree) between 0e0 36e1 step 5e-1\ncomputed area Quantity(squareMeter) (power (field length) (number 2e0))\ncomputed side Quantity(meter) (sqrt (field area))\ncomputed lean Number (sin (field turn))\ncomputed reach Quantity(meter) (hypot (field length) (field side))\ncomputed steps Number (roundHalfEven (divide (field length) (quantity meter 1e0)))\n"
+```
+
+---
+
+## Test: a square root without a unit of its own
+
+A unit has a square root only where the derivation table holds its square, so the root of `m` is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-root-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), b: :Quantity(m) computed by sqrt a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 61
+```
+
+---
+
+## Test: a cube root of a square
+
+The root of `m²` is `m`, but its cube root has no unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-cube-root-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m²), b: :Quantity(m) computed by cbrt a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 62
+```
+
+---
+
+## Test: a power of a quantity needs a literal exponent
+
+The unit of a power follows from its exponent, so a quantity takes a literal one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-power-exponent
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), n: :Number, b: :Quantity(m²) computed by a ^ n }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 78
+```
+
+---
+
+## Test: an exponent with a unit
+
+An exponent has no unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-power-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, n: :Quantity(m), b: :Number computed by a ^ n }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 72
+```
+
+---
+
+## Test: trigonometry of a length
+
+Trigonometry reads radians as a plain number or degrees.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-sine-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), b: :Number computed by sin a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 56
+```
+
+---
+
+## Test: an inverse function of an angle
+
+`asin` reads a plain number.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-arcsine-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(°), b: :Number computed by asin a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 56
+```
+
+---
+
+## Test: atan2 of two units
+
+The arguments of `atan2` and `hypot` have one unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-atan2-units
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), b: :Quantity(s), c: :Number computed by atan2(a, b) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 82
+```
+
+---
+
+## Test: hypot of one value
+
+`hypot` takes two or three arguments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-hypot-arity
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Number computed by hypot(a) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 51
+```
+
+---
+
+## Test: a root of a Boolean
+
+A function reads a number or a percentage.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-root-boolean
+schemaApi:
+  sources:
+    - "schema :S as { a: :Boolean, b: :Number computed by sqrt a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 57
+```
+
+---
+
+## Test: a power of a parenthesized function
+
+A parenthesized operand directly after a function or `abs` is the whole operand, as in GES, and the function is then
+the base of a power: `sqrt(a) ^ 2` is `(sqrt a) ^ 2`, `floor(a)²` the square of the floor, and unary minus still negates
+the power. Without parentheses the power belongs to the operand, so `sqrt a ^ 2` is the root of `a ^ 2`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-computed-call-power
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number\n  b: :Number computed by sqrt(a) ^ 2\n  c: :Number computed by floor(a)²\n  d: :Number computed by abs (a) ^ 3\n  e: :Number computed by -√(a) ^ 2\n  f: :Number computed by sqrt a ^ 2\n  g: :Number computed by round half even(a) ^ 2 ^ 2\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield a Number\ncomputed b Number (power (sqrt (field a)) (number 2e0))\ncomputed c Number (power (floor (field a)) (number 2e0))\ncomputed d Number (power (abs (field a)) (number 3e0))\ncomputed e Number (negate (power (sqrt (field a)) (number 2e0)))\ncomputed f Number (sqrt (power (field a) (number 2e0)))\ncomputed g Number (power (roundHalfEven (field a)) (power (number 2e0) (number 2e0)))\n"
+```
+
+---
+## Test: a document sets no computed field
+
+A computed field is never read from a document.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-computed
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  energy: :Quantity(J) between 0J and 1kJ step 1J\n  duration: :Quantity(s) between 0s and 10s step 1ms\n  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration\n  loud: :Boolean computed by power > 50W and not (duration = 0s)\n}\n"
+  document: ":Schema(:Sound)\nenergy: 3J\nduration: 1s\npower: 3W\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.unknownField"
+      line: 4
+      column: 1
+```
+
+---
+
+## Test: with takes computed fields
+
+A taken computed field reads the fields of the schema that takes it, and `without` may leave it out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-with-computed
+schemaApi:
+  sources:
+    - "abstract schema :Base as {\n  a: :Number\n  b: :Number\n  sum: :Number computed by a + b\n}\nschema :S as { with :Base, twice: :Number computed by sum * 2 }\n"
+  root: "S"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "S"
+    kind: "Schema"
+    takes:
+      - schema: "Base"
+    fields:
+      - name: "a"
+        alternatives:
+          - kind: "Number"
+      - name: "b"
+        alternatives:
+          - kind: "Number"
+    computed:
+      - name: "sum"
+        kind: "Number"
+        expression: "(add (field a) (field b))"
+      - name: "twice"
+        kind: "Number"
+        expression: "(multiply (field sum) (number 2e0))"
+```
+
+---
+
+## Test: an unknown name
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-unknown
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Number computed by a + c }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 1
+    column: 55
+```
+
+---
+
+## Test: units that do not fit
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-units
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), b: :Quantity(s), c: :Quantity(m) computed by a + b }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 78
+```
+
+---
+
+## Test: a result of another unit
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-result-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), b: :Quantity(s), c: :Quantity(m) computed by a / b }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 78
+```
+
+---
+
+## Test: a result of another type
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-result-type
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Boolean computed by a + 1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 52
+```
+
+---
+
+## Test: a percentage on the left
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-percentage
+schemaApi:
+  sources:
+    - "schema :S as { a: :Percentage, b: :Number, c: :Number computed by a + b }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 67
+```
+
+---
+
+## Test: a later computed field
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-order
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Number computed by c, c: :Number computed by a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 51
+```
+
+---
+
+## Test: a keyword as a name
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-keyword
+schemaApi:
+  sources:
+    - "schema :S as { e: :Number, b: :Number computed by e * 2 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 51
+```
+
+---
+
+## Test: a sum of quantities in arithmetic
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-sum-alone
+schemaApi:
+  sources:
+    - "schema :P as { w: :Quantity(W) }\nschema :S as { list: :List(:P), b: :Quantity(W) computed by list[:sum p => p.w] + 1W }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 2
+    column: 65
+```
+
+---
+
+## Test: constraints on a computed field
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-constraint
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Number between 0 and 1 computed by a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 28
+```
+
+---
+
+## Test: an optional computed Boolean
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-optional-boolean
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Boolean optional computed by a > 0 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 28
+```
+
+---
+
+## Test: a choice without otherwise
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-otherwise
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number\n  b: :Number computed by 1 when a > 0\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 3
+    column: 38
+```
+
+---
+
+## Test: a computed name twice
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-duplicate
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, a: :Number computed by 1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 28
+```
+
+---
+
+## Test: a default that names a computed field
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-default
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Number computed by a, c: :Number default b }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 1
+    column: 65
+```
+
+---
+
+## Test: a computed message argument
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-message
+schemaApi:
+  sources:
+    - "message M(a: :Number computed by 1)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 22
+```
+
+---
+
+## Test: without leaves out a field that a taken computed field reads
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-without
+schemaApi:
+  sources:
+    - "abstract schema :Base as { a: :Number, b: :Number computed by a * 2 }\nschema :S as { with :Base without (a) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 1
+    column: 63
+```
+
+---
+
+## Test: an optional list in a sum
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-optional-list
+schemaApi:
+  sources:
+    - "schema :S as { list: :List(:Number) optional, b: :Number computed by list[:sum] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 70
+```
+
+---
+## Test: a recursive List belongs to the hash
+
+`depth` follows `max` in the canonical form; a recursive schema is written once.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-recursive
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Loadout\nfield root Bind\nschema Bind\nfield name Text max 8\nfield units List(Bind) max 4 depth 3\n"
+  hash: "283ea52df2ff492f"
+```
+
+---
+
+## Test: the description of a recursive List
+
+A List type describes its depth.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-recursive
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Bind"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Bind"
+    kind: "Schema"
+    fields:
+      - name: "name"
+        alternatives:
+          - kind: "Text"
+            max: 8
+      - name: "units"
+        alternatives:
+          - kind: "List"
+            max: 4
+            element:
+              - kind: "Reference"
+                schema: "Bind"
+            depth: 3
+```
+
+---
+
+## Test: a tree as deep as its depth
+
+Records of the schema nest in each other up to the depth; the deepest List is empty and takes no bits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  encode:
+    type: ":Loadout"
+    entries:
+      - key: "root"
+        value:
+          type: ":Bind"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "a"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "b"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Bind"
+                              entries:
+                                - key: "name"
+                                  value:
+                                    type: ":Text"
+                                    value: "c"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "d"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items: []
+  decode: "11a6104b8c051900"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "11a6104b8c051900"
+  decoded:
+    value:
+      type: ":Loadout"
+      entries:
+        - key: "root"
+          value:
+            type: ":Bind"
+            entries:
+              - key: "name"
+                value:
+                  type: ":Text"
+                  value: "a"
+              - key: "units"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Bind"
+                      entries:
+                        - key: "name"
+                          value:
+                            type: ":Text"
+                            value: "b"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items:
+                              - type: ":Bind"
+                                entries:
+                                  - key: "name"
+                                    value:
+                                      type: ":Text"
+                                      value: "c"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                    - type: ":Bind"
+                      entries:
+                        - key: "name"
+                          value:
+                            type: ":Text"
+                            value: "d"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items: []
+    byteCount: 8
+```
+
+---
+
+## Test: a tree deeper than its depth
+
+A record in the deepest List is deeper than the depth: `wire.tooDeep` at that List.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-encode-too-deep
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  encode:
+    type: ":Loadout"
+    entries:
+      - key: "root"
+        value:
+          type: ":Bind"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "a"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "b"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Bind"
+                              entries:
+                                - key: "name"
+                                  value:
+                                    type: ":Text"
+                                    value: "c"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items:
+                                      - type: ":Bind"
+                                        entries:
+                                          - key: "name"
+                                            value:
+                                              type: ":Text"
+                                              value: "d"
+                                          - key: "units"
+                                            value:
+                                              type: ":List"
+                                              items: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooDeep"
+      path: "root.units[].units[].units"
+```
+
+---
+
+## Test: a document tree as deep as its depth
+
+Document checking counts the records of the schema as encoding does.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-recursive
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  document: ":Schema(:Loadout)\nroot: [name: 'a', units: [[name: 'b', units: [[name: 'c', units: []]]]]]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document tree deeper than its depth
+
+A record in the deepest List is `document.tooDeep`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-too-deep
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  document: ":Schema(:Loadout)\nroot: [name: 'a', units: [[name: 'b', units: [[name: 'c', units: [[name: 'd', units: []]]]]]]]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.tooDeep"
+      line: 2
+      column: 66
+```
+
+---
+
+## Test: depth on a list of another schema
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-other
+schemaApi:
+  sources:
+    - "schema :A as { b: :List(:B) max 2 depth 2 }\nschema :B as { on: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 35
+```
+
+---
+
+## Test: depth inside a union
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-union
+schemaApi:
+  sources:
+    - "schema :A as { b: :List(:A) max 2 depth 2 | :Nothing }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 35
+```
+
+---
+
+## Test: a tree of binds and unit ids
+
+The element of a recursive List may be a union of scalars and the one schema that declares it, so a bind holds unit ids and
+binds. Each record of the schema is one level deeper, and at the depth the List holds neither.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive-union
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(id: :Text max 8 | bind: :Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  encode:
+    type: ":Loadout"
+    entries:
+      - key: "root"
+        value:
+          type: ":Bind"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "a"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Text"
+                    value: "x"
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "b"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Bind"
+                              entries:
+                                - key: "name"
+                                  value:
+                                    type: ":Text"
+                                    value: "c"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                            - type: ":Text"
+                              value: "y"
+  decode: "11268137c434c6441e"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "11268137c434c6441e"
+  decoded:
+    value:
+      type: ":Loadout"
+      entries:
+        - key: "root"
+          value:
+            type: ":Bind"
+            entries:
+              - key: "name"
+                value:
+                  type: ":Text"
+                  value: "a"
+              - key: "units"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Text"
+                      value: "x"
+                    - type: ":Bind"
+                      entries:
+                        - key: "name"
+                          value:
+                            type: ":Text"
+                            value: "b"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items:
+                              - type: ":Bind"
+                                entries:
+                                  - key: "name"
+                                    value:
+                                      type: ":Text"
+                                      value: "c"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                              - type: ":Text"
+                                value: "y"
+    byteCount: 9
+```
+
+---
+
+## Test: a unit id deeper than the depth
+
+At the depth the List holds no element of any alternative, so a unit id there is as deep as a bind.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-encode-too-deep-union
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(id: :Text max 8 | bind: :Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  encode:
+    type: ":Loadout"
+    entries:
+      - key: "root"
+        value:
+          type: ":Bind"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "a"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Text"
+                    value: "x"
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "b"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Bind"
+                              entries:
+                                - key: "name"
+                                  value:
+                                    type: ":Text"
+                                    value: "c"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items:
+                                      - type: ":Text"
+                                        value: "z"
+                            - type: ":Text"
+                              value: "y"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooDeep"
+      path: "root.units[]:Bind.units[]:Bind.units"
+```
+
+---
+
+## Test: a document of binds and unit ids
+
+A document writes a unit as its id alone or as a bind record.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-recursive-union
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(id: :Text max 8 | bind: :Bind) max 4 depth 3\n}\n"
+  document: ":Schema(:Loadout)\nroot: [name: 'a', units: ['x', [name: 'b', units: [[name: 'c', units: []], 'y']]]]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document unit id deeper than the depth
+
+The deepest bind holds a unit id, so no alternative of the elements around it holds them, and the outermost element
+that none holds is `document.fieldType`, as in any union.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-too-deep-union
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(id: :Text max 8 | bind: :Bind) max 4 depth 3\n}\n"
+  document: ":Schema(:Loadout)\nroot: [name: 'a', units: [[name: 'b', units: [[name: 'c', units: ['z']]]]]]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.fieldType"
+      line: 2
+      column: 27
+```
+
+---
+
+## Test: a recursive union with a second schema
+
+Only one alternative of the union may be a schema, the one that declares the List.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-union-schema
+schemaApi:
+  sources:
+    - "schema :Unit as { id: :Text max 8 }\nschema :Bind as { units: :List(:Unit | :Bind) max 4 depth 3 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 2
+    column: 53
+```
+
+---
+
+## Test: a recursive union with a List
+
+The other alternatives are scalars: a List alternative holds elements, whose size the levels would have to count too.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-union-list
+schemaApi:
+  sources:
+    - "schema :Bind as { units: :List(:List(:Text max 8) max 2 | :Bind) max 4 depth 3 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 72
+```
+
+---
+
+## Test: a document read as a model reads it
+
+The header names the expected schema, the document passes its check, and its entries are the value a model converts; a field it leaves out keeps no entry, so the model takes its default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Unit)\nname: 'scout'\nparts: [[kind: #arm]]\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Unit"
+    value:
+      type: ":Unit"
+      entries:
+        - key: "name"
+          value:
+            type: ":Text"
+            value: "scout"
+        - key: "parts"
+          value:
+            type: ":List"
+            items:
+              - type: ":Map"
+                entries:
+                  - key: "kind"
+                    value:
+                      type: ":Tag"
+                      value: "arm"
+```
+
+---
+
+## Test: a document of one of several schemas
+
+The header chooses among the expected schemas.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-choice
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Base)\nid: 7\n"
+    expected: ["Unit", "Base"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Base"
+    value:
+      type: ":Base"
+      entries:
+        - key: "id"
+          value:
+            type: ":Number.int64"
+            value: "7"
+```
+
+---
+
+## Test: a document of another schema
+
+A header that names another schema is `document.schemaMismatch`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-other-schema
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Base)\nid: 7\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.schemaMismatch"
+      line: 1
+      column: 1
+      path: ""
+```
+
+---
+
+## Test: a document of an expected abstract schema
+
+An expected name still has to name a concrete schema of the set: an abstract schema describes no document.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-abstract-schema
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\n"
+  readDocument:
+    text: ":Schema(:Base)\non: true\n"
+    expected: ["Base"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.schemaMismatch"
+      line: 1
+      column: 1
+      path: ""
+```
+
+---
+
+## Test: a document of an expected message
+
+A message describes no document either, even where the caller expects its name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-message
+schemaApi:
+  sources:
+    - "message Ping()\nschema :Unit as { on: :Boolean }\n"
+  readDocument:
+    text: ":Schema(:Ping)\n"
+    expected: ["Ping"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.schemaMismatch"
+      line: 1
+      column: 1
+      path: ""
+```
+
+---
+
+## Test: a document of an expected undeclared schema
+
+An expected name that the set does not declare is `document.schemaMismatch` too.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-undeclared-schema
+schemaApi:
+  sources:
+    - "schema :Unit as { on: :Boolean }\n"
+  readDocument:
+    text: ":Schema(:Nope)\n"
+    expected: ["Nope"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.schemaMismatch"
+      line: 1
+      column: 1
+      path: ""
+```
+
+---
+
+## Test: a document without a header
+
+A document without a header names no schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-no-header
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: "name: 'scout'\nparts: []\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.schemaMismatch"
+      line: 1
+      column: 1
+      path: ""
+```
+
+---
+
+## Test: an error inside a list element names its path
+
+The error has its position and the path of the field, as the value path names it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-nested-path
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Unit)\nname: 'scout'\nparts: [[kind: #arm], [kind: #tail]]\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.fieldType"
+      line: 3
+      column: 30
+      path: "parts[].kind"
+```
+
+---
+
+## Test: a missing field names its path
+
+A missing field is reported where the record that lacks it starts, here the document.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-missing-field
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Unit)\nparts: []\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.missingField"
+      line: 1
+      column: 1
+      path: "name"
+```
+
+---
+
+## Test: an unknown field names its path
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-unknown-field
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Unit)\nname: 'scout'\nparts: []\nlevel: 3\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.unknownField"
+      line: 4
+      column: 1
+      path: "level"
+```
+
+---
+
+## Test: an unreadable document has no path
+
+A reading error comes before the schema and has no field path.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-unreadable
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Unit)\nname: 'scout'\nparts: [\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.unclosedBracket"
+      line: 3
+      column: 8
+      path: ""
+```
+
+---
+
+## Test: a document Disc reads as the library's value
+
+A document writes a Disc as the Map of its centre and radius; reading gives the geometry library's value with the
+radius's magnitude.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m)\n}\n"
+  readDocument:
+    text: ":Schema(:Zone)\nreach: [center: :Point(2m, 1m), radius: -3m]\n"
+    expected: ["Zone"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Zone"
+    value:
+      type: ":Zone"
+      entries:
+        - key: "reach"
+          value:
+            type: ":Disc"
+            center:
+              type: ":Point"
+              x: "2"
+              y: "1"
+              z: "0"
+            radius: "3"
+            unit: ":meter"
+```
+
+---
+
+## Test: a document Box and Poly read as the library's values
+
+A document writes a Box as the Map of its corners and a Poly as the List of its points; reading gives the geometry library's
+values that a model converts.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-geometry
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m)\n  outline: :Poly max 3\n}\n"
+  readDocument:
+    text: ":Schema(:Zone)\narea: [lower: :Point(20m, 1m), upper: :Point(5m, 3m)]\noutline: [:Point(0, 0), :Point(4, 0)]\n"
+    expected: ["Zone"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Zone"
+    value:
+      type: ":Zone"
+      entries:
+        - key: "area"
+          value:
+            type: ":Box"
+            lower:
+              type: ":Point"
+              x: "5"
+              y: "1"
+              z: "0"
+            upper:
+              type: ":Point"
+              x: "20"
+              y: "3"
+              z: "0"
+            unit: ":meter"
+        - key: "outline"
+          value:
+            type: ":Poly"
+            points:
+              - type: ":Point"
+                x: "0"
+                y: "0"
+                z: "0"
+              - type: ":Point"
+                x: "4"
+                y: "0"
+                z: "0"
+```
+
+---
+
+## Test: a document union takes the alternative the check chose
+
+Reading takes the alternative of a union that the document check accepted, not the first one whose shape fits: two points
+break the `max` of the Poly, so they stay the List of Points that the second alternative accepts.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-union-choice
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 1 | :List(:Point) max 5\n}\n"
+  readDocument:
+    text: ":Schema(:Zone)\noutline: [:Point(1, 2), :Point(3, 4)]\n"
+    expected: ["Zone"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Zone"
+    value:
+      type: ":Zone"
+      entries:
+        - key: "outline"
+          value:
+            type: ":List"
+            items:
+              - type: ":Point"
+                x: "1"
+                y: "2"
+                z: "0"
+              - type: ":Point"
+                x: "3"
+                y: "4"
+                z: "0"
+```
+
+---
+
+## Test: a document union inside a Record form takes the checked alternative
+
+A record written as `:Record(...)` keeps the alternatives that the check chose for its fields, as a Map does.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-union-choice-in-form
+schemaApi:
+  sources:
+    - "schema :Zone as { inner: :Inner }\nschema :Inner as { outline: :Poly max 1 | :List(:Point) max 5 }\n"
+  readDocument:
+    text: ":Schema(:Zone)\ninner: :Record('Inner', [outline: [:Point(1, 2), :Point(3, 4)]])\n"
+    expected: ["Zone"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Zone"
+    value:
+      type: ":Zone"
+      entries:
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "outline"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Point"
+                      x: "1"
+                      y: "2"
+                      z: "0"
+                    - type: ":Point"
+                      x: "3"
+                      y: "4"
+                      z: "0"
+```
+
+---
+
+## Test: a union continues on a line that starts with |
+
+A line whose first token is `|` continues the union of the field before it, and the field's marker follows the last alternative.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-leading-bar
+schemaApi:
+  sources:
+    - "schema :S as {\n  shape: :Text max 8\n    | :Number optional\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield shape Text max 8 | Number optional\n"
+```
+
+---
+
+## Test: a union continues after a | that ends a line
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-trailing-bar
+schemaApi:
+  sources:
+    - "schema :S as {\n  shape: :Text max 8 |\n    :Number optional\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield shape Text max 8 | Number optional\n"
+```
+
+---
+
+## Test: comments and blank lines between alternatives
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-comment-between
+schemaApi:
+  sources:
+    - "schema :S as {\n  shape: :Text max 8 // a name\n\n    // or a number\n    | :Number optional\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield shape Text max 8 | Number optional\n"
+```
+
+---
+
+## Test: a list element union spans lines
+
+The element union of a List and its labels may span lines like a field's.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-list-element-lines
+schemaApi:
+  sources:
+    - "schema :S as {\n  items: :List(id: :Text max 8\n    | count: :Number) max 2\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield items List(Text max 8 | Number) max 2\n"
+```
+
+---
+
+## Test: a field that starts with |
+
+A field never starts with `|`; one that does continues nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-union-bar-continues-nothing
+schemaApi:
+  sources:
+    - "schema :S as {\n  | :Text max 8\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 2
+    column: 3
+```
+
+---
+
+## Test: an error inside a continued alternative
+
+The error has the position of the alternative on its own line.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-union-continued-alternative
+schemaApi:
+  sources:
+    - "schema :S as {\n  shape: :Text max 8\n    | :Number between 5 and 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidRange"
+    line: 3
+    column: 23
+```
+
+---
+
+## Test: recursion without depth
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-missing
+schemaApi:
+  sources:
+    - "schema :A as { b: :List(:A) max 2 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.cycle"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a depth of zero
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-zero
+schemaApi:
+  sources:
+    - "schema :A as { b: :List(:A) max 2 depth 0 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 41
+```
+
+---
+
+## Test: a recursion deeper than lists nest
+
+Each level of a recursive List nests one list further, and lists nest at most 4 levels for encoding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-lists
+schemaApi:
+  sources:
+    - "schema :A as { b: :List(:A) max 2 depth 5 }\n"
+  root: "A"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 1
+    column: 19
+```
+
+---
+## Test: a changed tree
+
+The deepest name differs from the tree as deep as its depth.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive-changed
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  encode:
+    type: ":Loadout"
+    entries:
+      - key: "root"
+        value:
+          type: ":Bind"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "a"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "b"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Bind"
+                              entries:
+                                - key: "name"
+                                  value:
+                                    type: ":Text"
+                                    value: "e"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "d"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items: []
+  decode: "11a6104b94051900"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "11a6104b94051900"
+  decoded:
+    value:
+      type: ":Loadout"
+      entries:
+        - key: "root"
+          value:
+            type: ":Bind"
+            entries:
+              - key: "name"
+                value:
+                  type: ":Text"
+                  value: "a"
+              - key: "units"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Bind"
+                      entries:
+                        - key: "name"
+                          value:
+                            type: ":Text"
+                            value: "b"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items:
+                              - type: ":Bind"
+                                entries:
+                                  - key: "name"
+                                    value:
+                                      type: ":Text"
+                                      value: "e"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                    - type: ":Bind"
+                      entries:
+                        - key: "name"
+                          value:
+                            type: ":Text"
+                            value: "d"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items: []
+    byteCount: 8
+```
+
+---
+
+## Test: a keyed tree
+
+A recursive List of a schema with a key is keyed at every level but the deepest.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive-keyed
+schemaApi:
+  sources:
+    - "schema :Team as { root: :Unit }\nschema :Unit as {\n  id: :Number integer between 0 and 15 key\n  units: :List(:Unit) max 4 depth 3\n}\n"
+  root: "Team"
+  encode:
+    type: ":Team"
+    entries:
+      - key: "root"
+        value:
+          type: ":Unit"
+          entries:
+            - key: "id"
+              value:
+                type: ":Number.int64"
+                value: "1"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Unit"
+                    entries:
+                      - key: "id"
+                        value:
+                          type: ":Number.int64"
+                          value: "2"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Unit"
+                              entries:
+                                - key: "id"
+                                  value:
+                                    type: ":Number.int64"
+                                    value: "3"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                  - type: ":Unit"
+                    entries:
+                      - key: "id"
+                        value:
+                          type: ":Number.int64"
+                          value: "4"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items: []
+  decode: "21c91000"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "21c91000"
+  decoded:
+    value:
+      type: ":Team"
+      entries:
+        - key: "root"
+          value:
+            type: ":Unit"
+            entries:
+              - key: "id"
+                value:
+                  type: ":Number.int64"
+                  value: "1"
+              - key: "units"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Unit"
+                      entries:
+                        - key: "id"
+                          value:
+                            type: ":Number.int64"
+                            value: "2"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items:
+                              - type: ":Unit"
+                                entries:
+                                  - key: "id"
+                                    value:
+                                      type: ":Number.int64"
+                                      value: "3"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                    - type: ":Unit"
+                      entries:
+                        - key: "id"
+                          value:
+                            type: ":Number.int64"
+                            value: "4"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items: []
+    byteCount: 4
+```
+
+---
+
+## Test: a keyed tree with an added record
+
+A record is added at the deepest level that holds records.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive-keyed-added
+schemaApi:
+  sources:
+    - "schema :Team as { root: :Unit }\nschema :Unit as {\n  id: :Number integer between 0 and 15 key\n  units: :List(:Unit) max 4 depth 3\n}\n"
+  root: "Team"
+  encode:
+    type: ":Team"
+    entries:
+      - key: "root"
+        value:
+          type: ":Unit"
+          entries:
+            - key: "id"
+              value:
+                type: ":Number.int64"
+                value: "1"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Unit"
+                    entries:
+                      - key: "id"
+                        value:
+                          type: ":Number.int64"
+                          value: "2"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Unit"
+                              entries:
+                                - key: "id"
+                                  value:
+                                    type: ":Number.int64"
+                                    value: "3"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                            - type: ":Unit"
+                              entries:
+                                - key: "id"
+                                  value:
+                                    type: ":Number.int64"
+                                    value: "5"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                  - type: ":Unit"
+                    entries:
+                      - key: "id"
+                        value:
+                          type: ":Number.int64"
+                          value: "4"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items: []
+  decode: "21d11401"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "21d11401"
+  decoded:
+    value:
+      type: ":Team"
+      entries:
+        - key: "root"
+          value:
+            type: ":Unit"
+            entries:
+              - key: "id"
+                value:
+                  type: ":Number.int64"
+                  value: "1"
+              - key: "units"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Unit"
+                      entries:
+                        - key: "id"
+                          value:
+                            type: ":Number.int64"
+                            value: "2"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items:
+                              - type: ":Unit"
+                                entries:
+                                  - key: "id"
+                                    value:
+                                      type: ":Number.int64"
+                                      value: "3"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                              - type: ":Unit"
+                                entries:
+                                  - key: "id"
+                                    value:
+                                      type: ":Number.int64"
+                                      value: "5"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                    - type: ":Unit"
+                      entries:
+                        - key: "id"
+                          value:
+                            type: ":Number.int64"
+                            value: "4"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items: []
+    byteCount: 4
+```
+
+---
+
+## Test: a recursive List that with copies
+
+Where `with` copies a recursive List into another schema, it holds records of the declaring schema, which nest up to its depth below it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive-composed
+schemaApi:
+  sources:
+    - "schema :Node as {\n  tag: :Text max 4\n  kids: :List(:Node) max 2 depth 3\n}\nschema :Leaf as {\n  with :Node\n  name: :Text max 4\n}\n"
+  root: "Leaf"
+  encode:
+    type: ":Leaf"
+    entries:
+      - key: "tag"
+        value:
+          type: ":Text"
+          value: "l"
+      - key: "kids"
+        value:
+          type: ":List"
+          items:
+            - type: ":Node"
+              entries:
+                - key: "tag"
+                  value:
+                    type: ":Text"
+                    value: "a"
+                - key: "kids"
+                  value:
+                    type: ":List"
+                    items:
+                      - type: ":Node"
+                        entries:
+                          - key: "tag"
+                            value:
+                              type: ":Text"
+                              value: "b"
+                          - key: "kids"
+                            value:
+                              type: ":List"
+                              items:
+                                - type: ":Node"
+                                  entries:
+                                    - key: "tag"
+                                      value:
+                                        type: ":Text"
+                                        value: "c"
+                                    - key: "kids"
+                                      value:
+                                        type: ":List"
+                                        items: []
+      - key: "name"
+        value:
+          type: ":Text"
+          value: "n"
+  decode: "612b6145ac8cc50d"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "612b6145ac8cc50d"
+  decoded:
+    value:
+      type: ":Leaf"
+      entries:
+        - key: "tag"
+          value:
+            type: ":Text"
+            value: "l"
+        - key: "kids"
+          value:
+            type: ":List"
+            items:
+              - type: ":Node"
+                entries:
+                  - key: "tag"
+                    value:
+                      type: ":Text"
+                      value: "a"
+                  - key: "kids"
+                    value:
+                      type: ":List"
+                      items:
+                        - type: ":Node"
+                          entries:
+                            - key: "tag"
+                              value:
+                                type: ":Text"
+                                value: "b"
+                            - key: "kids"
+                              value:
+                                type: ":List"
+                                items:
+                                  - type: ":Node"
+                                    entries:
+                                      - key: "tag"
+                                        value:
+                                          type: ":Text"
+                                          value: "c"
+                                      - key: "kids"
+                                        value:
+                                          type: ":List"
+                                          items: []
+        - key: "name"
+          value:
+            type: ":Text"
+            value: "n"
+    byteCount: 8
+```
+
+---
+
+## Test: a copied recursive List deeper than its depth
+
+The fourth record of the declaring schema is deeper than the depth: `wire.tooDeep` at the List that holds it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-encode-too-deep-composed
+schemaApi:
+  sources:
+    - "schema :Node as {\n  tag: :Text max 4\n  kids: :List(:Node) max 2 depth 3\n}\nschema :Leaf as {\n  with :Node\n  name: :Text max 4\n}\n"
+  root: "Leaf"
+  encode:
+    type: ":Leaf"
+    entries:
+      - key: "tag"
+        value:
+          type: ":Text"
+          value: "l"
+      - key: "kids"
+        value:
+          type: ":List"
+          items:
+            - type: ":Node"
+              entries:
+                - key: "tag"
+                  value:
+                    type: ":Text"
+                    value: "a"
+                - key: "kids"
+                  value:
+                    type: ":List"
+                    items:
+                      - type: ":Node"
+                        entries:
+                          - key: "tag"
+                            value:
+                              type: ":Text"
+                              value: "b"
+                          - key: "kids"
+                            value:
+                              type: ":List"
+                              items:
+                                - type: ":Node"
+                                  entries:
+                                    - key: "tag"
+                                      value:
+                                        type: ":Text"
+                                        value: "c"
+                                    - key: "kids"
+                                      value:
+                                        type: ":List"
+                                        items:
+                                          - type: ":Node"
+                                            entries:
+                                              - key: "tag"
+                                                value:
+                                                  type: ":Text"
+                                                  value: "d"
+                                              - key: "kids"
+                                                value:
+                                                  type: ":List"
+                                                  items: []
+      - key: "name"
+        value:
+          type: ":Text"
+          value: "n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooDeep"
+      path: "kids[].kids[].kids[].kids"
+```
+
+---
+
+## Test: a depth of one
+
+A depth of 1 leaves the List always empty, so the source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-one
+schemaApi:
+  sources:
+    - "schema :A as { on: :Boolean, b: :List(:A) max 2 depth 1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 49
+```
+
+---
+
+## Test: two recursive Lists
+
+A schema holds at most one List with depth.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-twice
+schemaApi:
+  sources:
+    - "schema :A as { on: :Boolean, b: :List(:A) max 2 depth 2, c: :List(:A) max 2 depth 2 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 77
+```
+
+---
+
+## Test: a cycle through a copied recursive List
+
+A recursive List that `with` copies is an ordinary List of the declaring schema, so a schema that holds the copy inside the declaring one forms a cycle.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-cycle-composed
+schemaApi:
+  sources:
+    - "schema :Node as {\n  on: :Boolean\n  kids: :List(:Node) max 2 depth 2\n  more: :List(:Extra) max 1\n}\nschema :Extra as {\n  with :Node\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.cycle"
+    line: 1
+    column: 1
+```
+
+---
+## Test: a delta of a tree
+
+A record at the deepest level changes; the delta descends through each level of the recursion.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-recursive
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  deltaEncode:
+    record: "11a6104b94051900"
+    baseline: "11a6104b8c051900"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "558825ca820c"
+```
+
+---
+
+## Test: a delta of a tree gives the tree back
+
+The delta of a tree reads into the changed tree.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-recursive-decoded
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  deltaDecode:
+    delta: "558825ca820c"
+    baseline: "11a6104b8c051900"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    record: "11a6104b94051900"
+    deltaByteCount: 6
+```
+
+---
+
+## Test: a delta of a keyed tree
+
+A record is added to a keyed List one level below the root; the deepest level holds no records and is no keyed List.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-recursive-keyed
+schemaApi:
+  sources:
+    - "schema :Team as { root: :Unit }\nschema :Unit as {\n  id: :Number integer between 0 and 15 key\n  units: :List(:Unit) max 4 depth 3\n}\n"
+  root: "Team"
+  deltaEncode:
+    record: "21d11401"
+    baseline: "21c91000"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "05849002"
+```
+
+---
+
+## Test: a delta of a keyed tree gives the tree back
+
+The delta of a keyed tree reads into the changed tree.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-recursive-keyed-decoded
+schemaApi:
+  sources:
+    - "schema :Team as { root: :Unit }\nschema :Unit as {\n  id: :Number integer between 0 and 15 key\n  units: :List(:Unit) max 4 depth 3\n}\n"
+  root: "Team"
+  deltaDecode:
+    delta: "05849002"
+    baseline: "21c91000"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    record: "21d11401"
+    deltaByteCount: 4
+```
+
+---
+## Test: a guarded optional field that is absent
+
+`has value` guards the reads of an optional field, and `default` replaces it; an optional computed field is absent with it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-guarded-absent
+schemaApi:
+  sources:
+    - "schema :Guarded as {\n  a: :Number between 0 and 100 step 0.5 optional\n  twice: :Number computed by a * 2 when a has value, otherwise 0\n  large: :Boolean computed by a has value and a > 1\n  filled: :Number computed by a default 5\n  next: :Number optional computed by a + 1\n}\n"
+  root: "Guarded"
+  encode:
+    type: ":Guarded"
+    entries: []
+  decode: "00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00"
+  decoded:
+    value:
+      type: ":Guarded"
+      entries:
+        - key: "a"
+          value:
+            type: ":Nothing"
+        - key: "filled"
+          value:
+            type: ":Number.int64"
+            value: "5"
+        - key: "large"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "next"
+          value:
+            type: ":Nothing"
+        - key: "twice"
+          value:
+            type: ":Number.int64"
+            value: "0"
+    byteCount: 1
+```
+
+---
+
+## Test: a guarded optional field that is present
+
+The same fields with the optional field present.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-guarded-present
+schemaApi:
+  sources:
+    - "schema :Guarded as {\n  a: :Number between 0 and 100 step 0.5 optional\n  twice: :Number computed by a * 2 when a has value, otherwise 0\n  large: :Boolean computed by a has value and a > 1\n  filled: :Number computed by a default 5\n  next: :Number optional computed by a + 1\n}\n"
+  root: "Guarded"
+  encode:
+    type: ":Guarded"
+    entries:
+      - key: "a"
+        value:
+          type: ":Number.binary64"
+          value: "2.5"
+  decode: "0b00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0b00"
+  decoded:
+    value:
+      type: ":Guarded"
+      entries:
+        - key: "a"
+          value:
+            type: ":Number.binary64"
+            value: "2.5"
+        - key: "filled"
+          value:
+            type: ":Number.binary64"
+            value: "2.5"
+        - key: "large"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "next"
+          value:
+            type: ":Number.binary64"
+            value: "3.5"
+        - key: "twice"
+          value:
+            type: ":Number.int64"
+            value: "5"
+    byteCount: 2
+```
+
+---
+
+## Test: a required computed number that may be absent
+
+An optional operand without `has value` or `default` would give nothing: the source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-may-be-absent
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number optional\n  b: :Number computed by a * 2\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.computedMayBeAbsent"
+    line: 3
+    column: 26
+```
+
+---
+
+## Test: a computed Boolean that may be absent
+
+A computed Boolean is never optional, so an operand that may be absent needs a guard or a fallback.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-may-be-absent-boolean
+schemaApi:
+  sources:
+    - "schema :S as {\n  flag: :Boolean optional\n  on: :Boolean computed by flag and true\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.computedMayBeAbsent"
+    line: 3
+    column: 28
+```
+
+---
+
+## Test: a guard on another field
+
+`has value` proves only the field it names present.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-may-be-absent-other-guard
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number optional\n  b: :Number optional\n  c: :Number computed by a + b when a has value, otherwise 0\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.computedMayBeAbsent"
+    line: 4
+    column: 26
+```
+
+---
 ## Test: field order a is part of the hash
 
 Field order is the wire order.
@@ -1172,6 +8917,2174 @@ schema:
     error:
       code: "wire.typeMismatch"
       path: "position"
+```
+
+---
+
+## Test: a Box and a Poly with axis blocks
+
+A Box writes its corners `lower` and `upper` as two Points of the block's axes; a Poly writes its point count and
+then its points, each with the axes x and y.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-box-poly
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n  outline: :Poly(m) max 3 {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "area"
+        value:
+          type: ":Box"
+          lower:
+            type: ":Point"
+            x: "5"
+            y: "1"
+            z: "0"
+          upper:
+            type: ":Point"
+            x: "20"
+            y: "3"
+            z: "0"
+          unit: ":meter"
+      - key: "outline"
+        value:
+          type: ":Poly"
+          points:
+            - type: ":Point"
+              x: "0"
+              y: "0"
+              z: "0"
+            - type: ":Point"
+              x: "10"
+              y: "0"
+              z: "0"
+            - type: ":Point"
+              x: "0"
+              y: "2"
+              z: "0"
+          unit: ":meter"
+  decode: "85280f400140"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "85280f400140"
+  decoded:
+    value:
+      type: ":Zone"
+      entries:
+        - key: "area"
+          value:
+            type: ":Box"
+            lower:
+              type: ":Point"
+              x: "5"
+              y: "1"
+              z: "0"
+            upper:
+              type: ":Point"
+              x: "20"
+              y: "3"
+              z: "0"
+            unit: ":meter"
+        - key: "outline"
+          value:
+            type: ":Poly"
+            points:
+              - type: ":Point"
+                x: "0"
+                y: "0"
+                z: "0"
+              - type: ":Point"
+                x: "10"
+                y: "0"
+                z: "0"
+              - type: ":Point"
+                x: "0"
+                y: "2"
+                z: "0"
+            unit: ":meter"
+    byteCount: 6
+```
+
+---
+
+## Test: a Box and a Poly without axis blocks
+
+Without a block each corner takes x, y and z as binary64 values, and each point of a Poly x and y.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-box-poly-raw
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box\n  outline: :Poly max 1\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "area"
+        value:
+          type: ":Box"
+          lower:
+            type: ":Point"
+            x: "-1"
+            y: "0"
+            z: "0"
+          upper:
+            type: ":Point"
+            x: "1.5"
+            y: "2"
+            z: "0.5"
+      - key: "outline"
+        value:
+          type: ":Poly"
+          points:
+            - type: ":Point"
+              x: "2"
+              y: "-0.5"
+              z: "0"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "000000000000f0bf00000000000000000000000000000000000000000000f83f0000000000000040000000000000e03f0100000000000080000000000000c07f01"
+```
+
+---
+
+## Test: a decoded Box orders its corners
+
+The corners are two Points on the wire. A decoder accepts them in any order, and the Box takes the smaller component
+on each axis as `lower` and the larger as `upper`, as creating a Box from two corners does. Writing that Box gives its
+corners in order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-box-ordered
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n  outline: :Poly(m) max 3 {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "area"
+        value:
+          type: ":Box"
+          lower:
+            type: ":Point"
+            x: "20"
+            y: "1"
+            z: "0"
+          upper:
+            type: ":Point"
+            x: "5"
+            y: "3"
+            z: "0"
+          unit: ":meter"
+      - key: "outline"
+        value:
+          type: ":Poly"
+          points: []
+          unit: ":meter"
+  decode: "940a03"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "852803"
+  decoded:
+    value:
+      type: ":Zone"
+      entries:
+        - key: "area"
+          value:
+            type: ":Box"
+            lower:
+              type: ":Point"
+              x: "5"
+              y: "1"
+              z: "0"
+            upper:
+              type: ":Point"
+              x: "20"
+              y: "3"
+              z: "0"
+            unit: ":meter"
+        - key: "outline"
+          value:
+            type: ":Poly"
+            points: []
+            unit: ":meter"
+    byteCount: 3
+```
+
+---
+
+## Test: a Disc with an axis block
+
+A Disc writes its centre as a Point of the block's axes x and y, then its radius.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n    radius between 0m and 7m step 1m\n  }\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "reach"
+        value:
+          type: ":Disc"
+          center:
+            type: ":Point"
+            x: "5"
+            y: "1"
+            z: "0"
+          radius: "3"
+          unit: ":meter"
+  decode: "8506"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "8506"
+  decoded:
+    value:
+      type: ":Zone"
+      entries:
+        - key: "reach"
+          value:
+            type: ":Disc"
+            center:
+              type: ":Point"
+              x: "5"
+              y: "1"
+              z: "0"
+            radius: "3"
+            unit: ":meter"
+    byteCount: 2
+```
+
+---
+
+## Test: a Disc without an axis block
+
+Without a block the centre takes x and y and the radius one more binary64 value; a decoded radius takes its magnitude.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-disc-raw
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "reach"
+        value:
+          type: ":Disc"
+          center:
+            type: ":Point"
+            x: "2"
+            y: "-0.5"
+            z: "0"
+          radius: "1.5"
+  decode: "0000000000000040000000000000e0bf000000000000f8bf"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0000000000000040000000000000e0bf000000000000f83f"
+  decoded:
+    value:
+      type: ":Zone"
+      entries:
+        - key: "reach"
+          value:
+            type: ":Disc"
+            center:
+              type: ":Point"
+              x: "2"
+              y: "-0.5"
+              z: "0"
+            radius: "1.5"
+    byteCount: 24
+```
+
+---
+
+## Test: a Disc centre outside the plane
+
+A Disc lies in the plane z = 0, which it does not transmit, so a centre with another `z` cannot be written.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-disc-z
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "reach"
+        value:
+          type: ":Disc"
+          center:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "1"
+          radius: "1"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "reach.center"
+```
+
+---
+
+## Test: a Disc block without the radius
+
+A block that leaves out the radius transmits none, as for an axis it leaves out, so only a disc of radius 0 can be written.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-disc-no-radius
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m step 1m\n  }\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "reach"
+        value:
+          type: ":Disc"
+          center:
+            type: ":Point"
+            x: "4"
+            y: "0"
+            z: "0"
+          radius: "1"
+          unit: ":meter"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "reach"
+```
+
+---
+
+## Test: a Disc of another unit
+
+A Disc keeps the unit of its centre and radius, which must be the field's unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-disc-unit
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m)\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "reach"
+        value:
+          type: ":Disc"
+          center:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+          radius: "1"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "reach"
+```
+
+---
+
+## Test: Disc is a built-in type name
+
+A declaration cannot take the name of a built-in type, so `Disc` names no schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-disc-builtin-name
+schemaApi:
+  sources:
+    - "schema :Disc as {\n  a: :Boolean\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a Disc has no z axis
+
+A Disc lies in the plane z = 0, so its block names x, y and the radius only.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-disc-axis
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc {\n    z between 0 and 1\n  }\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 3
+    column: 5
+```
+
+---
+
+## Test: a Disc radius declared twice
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-disc-radius-twice
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc {\n    radius between 0 and 1\n    radius between 0 and 2\n  }\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 4
+    column: 5
+```
+
+---
+
+## Test: a Disc in the canonical form
+
+The block of a Disc lists x and y, then the radius.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    radius between 0m and 7m step 1m\n    x between 0m and 100m\n  }\n}\n"
+  root: "Zone"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Zone\nfield reach Disc(meter) { x between 0e0 1e2 ; radius between 0e0 7e0 step 1e0 }\n"
+  hash: "7d73f2dd1237c1b0"
+```
+
+---
+
+## Test: a dump of a Disc
+
+A Disc and its centre have no line of their own, only the axes of the centre and the radius.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dump-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n    radius between 0m and 7m step 1m\n  }\n}\n"
+  root: "Zone"
+  dump: "8506"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "reach.center.x bit=0 width=7 value=5\nreach.center.y bit=7 width=2 value=1\nreach.radius bit=9 width=3 value=3\nbytes 2\n"
+    valid: true
+```
+
+---
+
+## Test: a delta of a Disc
+
+A Disc is a nested delta of its centre and radius, and its centre one of its axes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n    radius between 0m and 7m step 1m\n  }\n}\n"
+  root: "Zone"
+  deltaEncode:
+    record: "8506"
+    baseline: "8502"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "1d"
+```
+
+---
+
+## Test: the description of a Disc
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    radius between 0m and 7m\n  }\n}\n"
+  root: "Zone"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Zone"
+    kind: "Schema"
+    fields:
+      - name: "reach"
+        alternatives:
+          - kind: "Disc"
+            unit: "meter"
+            axes:
+              - name: "radius"
+                lower: "0e0"
+                upper: "7e0"
+```
+
+---
+
+## Test: a Disc in a document
+
+A document has no geometry literal: a Disc is the Map of its `center`, a Point, and its `radius`, a number of the unit, each within the block; a negative radius is checked by its magnitude, which the disc takes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-disc
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m\n    radius between 0m and 7m\n  }\n}\n"
+  document: ":Schema(:Zone)\nreach: [center: :Point(1m, 0m), radius: -3m]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document Disc without a radius
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-disc-missing-radius
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m)\n}\n"
+  document: ":Schema(:Zone)\nreach: [center: :Point(1m, 0m)]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.missingField"
+      line: 2
+      column: 8
+```
+
+---
+
+## Test: a document Disc with a radius outside its range
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-disc-radius-range
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc(m) {\n    radius between 0m and 7m\n  }\n}\n"
+  document: ":Schema(:Zone)\nreach: [center: :Point(0m, 0m), radius: 8m]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.outOfRange"
+      line: 2
+      column: 41
+```
+
+---
+
+## Test: a document Poly point outside the plane
+
+A Poly lies in the plane z = 0 also without a block, so a document point with another `z` breaks the field's type.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-poly-outside-plane
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 4\n}\n"
+  document: ":Schema(:Zone)\noutline: [:Point(0, 0), :Point(1, 2, 1)]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.fieldType"
+      line: 2
+      column: 25
+```
+
+---
+
+## Test: a document Disc centre outside the plane
+
+A Disc lies in the plane z = 0 also without a block, so a document centre with another `z` breaks the field's type.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-disc-outside-plane
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc\n}\n"
+  document: ":Schema(:Zone)\nreach: [center: :Point(1, 0, 1), radius: 3]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.fieldType"
+      line: 2
+      column: 17
+```
+
+---
+
+## Test: a packed schema in the canonical form
+
+A packed schema writes `packed` and the width of its word after its name, so that the hash tells it from a schema of the same fields.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-canonical
+schemaApi:
+  sources:
+    - "packed schema :MapPoint as {\n  height: :Number integer between 0 and 4095\n  surface: :Number integer between 0 and 15\n  vegetation: :Number integer between 0 and 15\n  moisture: :Number integer between 0 and 15\n  wear: :Number integer between 0 and 15\n  flags: :Flags(#impassable, #blocksLineOfSight, #indestructible, #reserved)\n}\n"
+  root: "MapPoint"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema MapPoint packed 32\nfield height Number integer between 0e0 4095e0\nfield surface Number integer between 0e0 15e0\nfield vegetation Number integer between 0e0 15e0\nfield moisture Number integer between 0e0 15e0\nfield wear Number integer between 0e0 15e0\nfield flags Flags(#impassable #blocksLineOfSight #indestructible #reserved)\n"
+  hash: "fb9ca75ded53145f"
+```
+
+---
+
+## Test: a list of a scalar union
+
+A union without Text, Bytes or List alternatives is a plain value, so generated code reads the elements of its list into
+value items: a count of 2 in 3 bits, then index 0 with the integer 2 in 2 bits and index 1 with `true`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: list-of-scalar-union
+schemaApi:
+  sources:
+    - "schema :U as {\n  items: :List(:Number integer between 0 and 3 | flag: :Boolean) max 4\n}\n"
+  root: "U"
+  encode:
+    type: ":U"
+    entries:
+      - key: "items"
+        value:
+          type: ":List"
+          items:
+            - type: ":Number.int64"
+              value: "2"
+            - type: ":Boolean"
+              value: "true"
+  decode: "e2"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "e2"
+  decoded:
+    value:
+      type: ":U"
+      entries:
+        - key: "items"
+          value:
+            type: ":List"
+            items:
+              - type: ":Number.int64"
+                value: "2"
+              - type: ":Boolean"
+                value: "true"
+    byteCount: 1
+```
+
+---
+
+## Test: a packed record is its word
+
+The fields of a packed record lie at their bits from the least significant bit in declared order, so its wire bytes are its word written little-endian: height 1000, surface 3, vegetation 7, moisture 15, wear 0 and the flags impassable and indestructible make the word 0x50f733e8.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-word
+schemaApi:
+  sources:
+    - "packed schema :MapPoint as {\n  height: :Number integer between 0 and 4095\n  surface: :Number integer between 0 and 15\n  vegetation: :Number integer between 0 and 15\n  moisture: :Number integer between 0 and 15\n  wear: :Number integer between 0 and 15\n  flags: :Flags(#impassable, #blocksLineOfSight, #indestructible, #reserved)\n}\n"
+  root: "MapPoint"
+  encode:
+    type: ":MapPoint"
+    entries:
+      - key: "height"
+        value:
+          type: ":Number.int64"
+          value: "1000"
+      - key: "surface"
+        value:
+          type: ":Number.int64"
+          value: "3"
+      - key: "vegetation"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "moisture"
+        value:
+          type: ":Number.int64"
+          value: "15"
+      - key: "wear"
+        value:
+          type: ":Number.int64"
+          value: "0"
+      - key: "flags"
+        value:
+          type: ":Map"
+          entries:
+            - key: "impassable"
+              value:
+                type: ":Boolean"
+                value: "true"
+            - key: "indestructible"
+              value:
+                type: ":Boolean"
+                value: "true"
+  decode: "e833f750"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "e833f750"
+  decoded:
+    value:
+      type: ":MapPoint"
+      entries:
+        - key: "height"
+          value:
+            type: ":Number.int64"
+            value: "1000"
+        - key: "surface"
+          value:
+            type: ":Number.int64"
+            value: "3"
+        - key: "vegetation"
+          value:
+            type: ":Number.int64"
+            value: "7"
+        - key: "moisture"
+          value:
+            type: ":Number.int64"
+            value: "15"
+        - key: "wear"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "flags"
+          value:
+            type: ":Map"
+            entries:
+              - key: "impassable"
+                value:
+                  type: ":Boolean"
+                  value: "true"
+              - key: "indestructible"
+                value:
+                  type: ":Boolean"
+                  value: "true"
+    byteCount: 4
+```
+
+---
+
+## Test: a nested packed record
+
+A packed field continues the word with the bits of its fields: two Cells of 7 bits and a count of 2 bits fill the 16-bit word 0xd4d5.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-nested
+schemaApi:
+  sources:
+    - "packed(8) schema :Cell as {\n  level: :Number integer between 0 and 9\n  on: :Boolean\n  kind: :Tag(#a, #b, #c)\n}\npacked(16) schema :Pair as {\n  low: :Cell\n  high: :Cell\n  count: :Number integer between 0 and 3\n}\n"
+  root: "Pair"
+  encode:
+    type: ":Pair"
+    entries:
+      - key: "low"
+        value:
+          type: ":Cell"
+          entries:
+            - key: "level"
+              value:
+                type: ":Number.int64"
+                value: "5"
+            - key: "on"
+              value:
+                type: ":Boolean"
+                value: "true"
+            - key: "kind"
+              value:
+                type: ":Tag"
+                value: "c"
+      - key: "high"
+        value:
+          type: ":Cell"
+          entries:
+            - key: "level"
+              value:
+                type: ":Number.int64"
+                value: "9"
+            - key: "on"
+              value:
+                type: ":Boolean"
+                value: "false"
+            - key: "kind"
+              value:
+                type: ":Tag"
+                value: "b"
+      - key: "count"
+        value:
+          type: ":Number.int64"
+          value: "3"
+  decode: "d5d4"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "d5d4"
+  decoded:
+    value:
+      type: ":Pair"
+      entries:
+        - key: "low"
+          value:
+            type: ":Cell"
+            entries:
+              - key: "level"
+                value:
+                  type: ":Number.int64"
+                  value: "5"
+              - key: "on"
+                value:
+                  type: ":Boolean"
+                  value: "true"
+              - key: "kind"
+                value:
+                  type: ":Tag"
+                  value: "c"
+        - key: "high"
+          value:
+            type: ":Cell"
+            entries:
+              - key: "level"
+                value:
+                  type: ":Number.int64"
+                  value: "9"
+              - key: "on"
+                value:
+                  type: ":Boolean"
+                  value: "false"
+              - key: "kind"
+                value:
+                  type: ":Tag"
+                  value: "b"
+        - key: "count"
+          value:
+            type: ":Number.int64"
+            value: "3"
+    byteCount: 2
+```
+
+---
+
+## Test: a packed word with an index outside its range
+
+A level of 12 in the 4 bits of a range of 0 to 9 is no value; decoding fails at the field as for any record.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-invalid-index
+schemaApi:
+  sources:
+    - "packed(8) schema :Cell as {\n  level: :Number integer between 0 and 9\n  on: :Boolean\n  kind: :Tag(#a, #b, #c)\n}\npacked(16) schema :Pair as {\n  low: :Cell\n  high: :Cell\n  count: :Number integer between 0 and 3\n}\n"
+  root: "Pair"
+  decode: "0c00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidIndex"
+      path: "low.level"
+```
+
+---
+
+## Test: the description of a packed schema
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-describe
+schemaApi:
+  sources:
+    - "packed(8) schema :Cell as {\n  level: :Number integer between 0 and 9\n  on: :Boolean\n  kind: :Tag(#a, #b, #c)\n}\npacked(16) schema :Pair as {\n  low: :Cell\n  high: :Cell\n  count: :Number integer between 0 and 3\n}\n"
+  root: "Pair"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Pair"
+    kind: "Schema"
+    packedWidth: 16
+    packedBits: 16
+    fields:
+      - name: "low"
+        alternatives:
+          - kind: "Reference"
+            schema: "Cell"
+      - name: "high"
+        alternatives:
+          - kind: "Reference"
+            schema: "Cell"
+      - name: "count"
+        alternatives:
+          - kind: "Number"
+            integer: true
+            lower: "0e0"
+            upper: "3e0"
+```
+
+---
+
+## Test: a List of packed records
+
+A List holds its packed records one after another at their bits, without padding to the word.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-list
+schemaApi:
+  sources:
+    - "packed(8) schema :Cell as {\n  level: :Number integer between 0 and 9\n  on: :Boolean\n  kind: :Tag(#a, #b, #c)\n}\npacked(16) schema :Pair as {\n  low: :Cell\n  high: :Cell\n  count: :Number integer between 0 and 3\n}\nschema :Grid as {\n  cells: :List(:Cell) max 4\n  tick: :Number integer between 0 and 7\n}\n"
+  root: "Grid"
+  encode:
+    type: ":Grid"
+    entries:
+      - key: "cells"
+        value:
+          type: ":List"
+          items:
+            - type: ":Cell"
+              entries:
+                - key: "level"
+                  value:
+                    type: ":Number.int64"
+                    value: "5"
+                - key: "on"
+                  value:
+                    type: ":Boolean"
+                    value: "true"
+                - key: "kind"
+                  value:
+                    type: ":Tag"
+                    value: "c"
+            - type: ":Cell"
+              entries:
+                - key: "level"
+                  value:
+                    type: ":Number.int64"
+                    value: "9"
+                - key: "on"
+                  value:
+                    type: ":Boolean"
+                    value: "false"
+                - key: "kind"
+                  value:
+                    type: ":Tag"
+                    value: "b"
+            - type: ":Cell"
+              entries:
+                - key: "level"
+                  value:
+                    type: ":Number.int64"
+                    value: "5"
+                - key: "on"
+                  value:
+                    type: ":Boolean"
+                    value: "true"
+                - key: "kind"
+                  value:
+                    type: ":Tag"
+                    value: "c"
+      - key: "tick"
+        value:
+          type: ":Number.int64"
+          value: "6"
+  decode: "aba6aa06"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "aba6aa06"
+  decoded:
+    value:
+      type: ":Grid"
+      entries:
+        - key: "cells"
+          value:
+            type: ":List"
+            items:
+              - type: ":Cell"
+                entries:
+                  - key: "level"
+                    value:
+                      type: ":Number.int64"
+                      value: "5"
+                  - key: "on"
+                    value:
+                      type: ":Boolean"
+                      value: "true"
+                  - key: "kind"
+                    value:
+                      type: ":Tag"
+                      value: "c"
+              - type: ":Cell"
+                entries:
+                  - key: "level"
+                    value:
+                      type: ":Number.int64"
+                      value: "9"
+                  - key: "on"
+                    value:
+                      type: ":Boolean"
+                      value: "false"
+                  - key: "kind"
+                    value:
+                      type: ":Tag"
+                      value: "b"
+              - type: ":Cell"
+                entries:
+                  - key: "level"
+                    value:
+                      type: ":Number.int64"
+                      value: "5"
+                  - key: "on"
+                    value:
+                      type: ":Boolean"
+                      value: "true"
+                  - key: "kind"
+                    value:
+                      type: ":Tag"
+                      value: "c"
+        - key: "tick"
+          value:
+            type: ":Number.int64"
+            value: "6"
+    byteCount: 4
+```
+
+---
+
+## Test: a delta of a packed field
+
+A packed field changes as a whole: its change bit, then its word; the fields inside it have no change bits of their own.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-delta
+schemaApi:
+  sources:
+    - "packed(8) schema :Cell as {\n  level: :Number integer between 0 and 9\n  on: :Boolean\n  kind: :Tag(#a, #b, #c)\n}\npacked(16) schema :Pair as {\n  low: :Cell\n  high: :Cell\n  count: :Number integer between 0 and 3\n}\nschema :Holder as {\n  pair: :Pair\n  tick: :Number integer between 0 and 7\n}\n"
+  root: "Holder"
+  deltaEncode:
+    record: "d5d402"
+    baseline: "55d402"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "555303"
+```
+
+---
+
+## Test: a packed field with a default
+
+A packed record that leaves out a field with a default takes it as any record does: `a` 5 and `b` true make the word 0x0d.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-default
+schemaApi:
+  sources:
+    - "packed schema :D as {\n  a: :Number integer between 0 and 7 default 5\n  b: :Boolean\n}\n"
+  root: "D"
+  encode:
+    type: ":D"
+    entries:
+      - key: "b"
+        value:
+          type: ":Boolean"
+          value: "true"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0d"
+```
+
+---
+
+## Test: a packed record in a document
+
+A document writes a packed record as the Map of its fields, as any record.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-document
+schemaApi:
+  sources:
+    - "packed(8) schema :Cell as {\n  level: :Number integer between 0 and 9\n  on: :Boolean\n  kind: :Tag(#a, #b, #c)\n}\npacked(16) schema :Pair as {\n  low: :Cell\n  high: :Cell\n  count: :Number integer between 0 and 3\n}\n"
+  document: ":Schema(:Pair)\nlow: [level: 5, on: true, kind: #c]\nhigh: [level: 9, on: false, kind: #b]\ncount: 3\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a packed record in a document outside its range
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-document-range
+schemaApi:
+  sources:
+    - "packed(8) schema :Cell as {\n  level: :Number integer between 0 and 9\n  on: :Boolean\n  kind: :Tag(#a, #b, #c)\n}\npacked(16) schema :Pair as {\n  low: :Cell\n  high: :Cell\n  count: :Number integer between 0 and 3\n}\n"
+  document: ":Schema(:Pair)\nlow: [level: 12, on: true, kind: #c]\nhigh: [level: 9, on: false, kind: #b]\ncount: 3\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.outOfRange"
+      line: 2
+      column: 14
+```
+
+---
+
+## Test: an optional field in a packed schema
+
+A packed schema has a fixed width, so it holds no optional field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-optional
+schemaApi:
+  sources:
+    - "packed schema :A as {\n  a: :Number integer between 0 and 9 optional\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedField"
+    line: 2
+    column: 3
+```
+
+---
+
+## Test: a union in a packed schema
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-union
+schemaApi:
+  sources:
+    - "packed schema :A as {\n  a: :Boolean | :Nothing\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedField"
+    line: 2
+    column: 3
+```
+
+---
+
+## Test: a Text in a packed schema
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-text
+schemaApi:
+  sources:
+    - "packed schema :A as {\n  a: :Text max 4\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedField"
+    line: 2
+    column: 6
+```
+
+---
+
+## Test: an integer without a range in a packed schema
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-unbounded
+schemaApi:
+  sources:
+    - "packed schema :A as {\n  a: :Number integer\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedField"
+    line: 2
+    column: 6
+```
+
+---
+
+## Test: a number without a step in a packed schema
+
+A fractional number without a step is a binary64 of 64 bits; a packed field is quantized.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-binary64
+schemaApi:
+  sources:
+    - "packed schema :A as {\n  a: :Number between 0 and 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedField"
+    line: 2
+    column: 6
+```
+
+---
+
+## Test: a delta range in a packed schema
+
+A packed field changes as a whole, so a delta range has no meaning in it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-delta
+schemaApi:
+  sources:
+    - "packed schema :A as {\n  a: :Number integer between 0 and 99 delta within 3\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedField"
+    line: 2
+    column: 6
+```
+
+---
+
+## Test: a key in a packed schema
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-key
+schemaApi:
+  sources:
+    - "packed schema :A as {\n  a: :Number integer between 0 and 9 key\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedField"
+    line: 2
+    column: 3
+```
+
+---
+
+## Test: a computed field in a packed schema
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-computed
+schemaApi:
+  sources:
+    - "packed schema :A as {\n  a: :Number integer between 0 and 9\n  b: :Number computed by a + 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedField"
+    line: 3
+    column: 3
+```
+
+---
+
+## Test: a bound from a parameter in a packed schema
+
+The width of a packed schema is known without binding, so no parameter decides a bound.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-parameter
+schemaApi:
+  sources:
+    - "parameter n: :Number\npacked schema :A as {\n  a: :Number integer between 0 and n\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedField"
+    line: 3
+    column: 6
+```
+
+---
+
+## Test: a schema that is not packed in a packed schema
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-reference
+schemaApi:
+  sources:
+    - "schema :B as {\n  b: :Boolean\n}\npacked schema :A as {\n  a: :B\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedField"
+    line: 5
+    column: 6
+```
+
+---
+
+## Test: a packed schema of more than 64 bits
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-too-wide
+schemaApi:
+  sources:
+    - "packed schema :A as {\n  a: :Number integer between 0 and 4294967295\n  b: :Number integer between 0 and 4294967295\n  c: :Boolean\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedTooWide"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a packed schema wider than its declared word
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-width
+schemaApi:
+  sources:
+    - "packed(8) schema :A as {\n  a: :Number integer between 0 and 4095\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.packedTooWide"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a packed width that is no word
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-width-syntax
+schemaApi:
+  sources:
+    - "packed(12) schema :A as {\n  a: :Boolean\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 8
+```
+
+---
+
+## Test: an abstract packed schema
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-packed-abstract
+schemaApi:
+  sources:
+    - "abstract packed schema :A as {\n  a: :Boolean\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 10
+```
+
+---
+
+
+## Test: a Poly point outside the plane
+
+A Poly lies in the plane z = 0, which it does not transmit, so a point with another `z` cannot be written.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-poly-z
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 3\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "outline"
+        value:
+          type: ":Poly"
+          points:
+            - type: ":Point"
+              x: "0"
+              y: "0"
+              z: "1"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "outline[]"
+```
+
+---
+
+## Test: a Poly with more points than its max
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-poly-too-long
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 1\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "outline"
+        value:
+          type: ":Poly"
+          points:
+            - type: ":Point"
+              x: "0"
+              y: "0"
+              z: "0"
+            - type: ":Point"
+              x: "1"
+              y: "0"
+              z: "0"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooLong"
+      path: "outline"
+```
+
+---
+
+## Test: a Box of another unit
+
+A Box keeps the unit of its corners, which must be the field's unit, as for a Point.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-box-unit
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m)\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "area"
+        value:
+          type: ":Box"
+          lower:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+          upper:
+            type: ":Point"
+            x: "1"
+            y: "1"
+            z: "0"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "area"
+```
+
+---
+
+## Test: a Poly without max cannot be bound for encoding
+
+Like a List, a Poly needs a hard limit on its points.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: notencodable-poly
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly(m)\n}\n"
+  root: "Zone"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 2
+    column: 12
+```
+
+---
+
+## Test: Box and Poly are built-in type names
+
+A declaration cannot take the name of a built-in type, so `Box` and `Poly` name no schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-poly-builtin-name
+schemaApi:
+  sources:
+    - "schema :Poly as {\n  a: :Boolean\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a Poly has no z axis
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-poly-axis
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 4 {\n    z between 0 and 1\n  }\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 3
+    column: 5
+```
+
+---
+
+## Test: a dump of a Box and a Poly
+
+A Box and its corners have no line of their own, only their axes; a Poly has a line with its count.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dump-box-poly
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n  outline: :Poly(m) max 3 {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n}\n"
+  root: "Zone"
+  dump: "940a0700"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "area.lower.x bit=0 width=7 value=20\narea.lower.y bit=7 width=2 value=1\narea.upper.x bit=9 width=7 value=5\narea.upper.y bit=16 width=2 value=3\noutline bit=18 width=2 value=count=1\noutline[].x bit=20 width=7 value=0\noutline[].y bit=27 width=2 value=0\nbytes 4\n"
+    valid: true
+```
+
+---
+
+## Test: a delta of a Box
+
+A Box is a nested delta of its corners, and each corner one of its axes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-box
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n  outline: :Poly(m) max 3 {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n}\n"
+  root: "Zone"
+  deltaEncode:
+    record: "852803"
+    baseline: "850c03"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "1905"
+```
+
+---
+
+## Test: the description of a Box and a Poly
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-box-poly
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    y between 0m and 3m\n  }\n  outline: :Poly max 8\n}\n"
+  root: "Zone"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Zone"
+    kind: "Schema"
+    fields:
+      - name: "area"
+        alternatives:
+          - kind: "Box"
+            unit: "meter"
+            axes:
+              - name: "y"
+                lower: "0e0"
+                upper: "3e0"
+      - name: "outline"
+        alternatives:
+          - kind: "Poly"
+            max: 8
+```
+
+---
+
+## Test: a Box and a Poly in a document
+
+A document has no geometry literal: a Box is the Map of its corners `lower` and `upper`, and a Poly the List of its
+points, each within the axes of the block.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-box-poly
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    x between 0m and 100m\n    y between 0m and 3m\n  }\n  outline: :Poly max 3\n}\n"
+  document: ":Schema(:Zone)\narea: [lower: :Point(1m, 0m), upper: :Point(20m, 3m)]\noutline: [:Point(0, 0), :Point(4, 0), :Point(0, 3)]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document Box without a corner
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-box-missing-corner
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m)\n}\n"
+  document: ":Schema(:Zone)\narea: [lower: :Point(1m, 0m)]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.missingField"
+      line: 2
+      column: 7
+```
+
+---
+
+## Test: a document Poly with a point outside its range
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-poly-range
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 3 {\n    x between 0 and 10\n    y between 0 and 10\n  }\n}\n"
+  document: ":Schema(:Zone)\noutline: [:Point(0, 0), :Point(11, 0)]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.outOfRange"
+      line: 2
+      column: 25
 ```
 
 ---
@@ -2239,7 +12152,7 @@ gesBlock: case
 id: error-too-large
 schemaApi:
   sources:
-    - "schema :A as {\n  a: :Text max 20000000\n}\n"
+    - "schema :A as {\n  a: :Text max 100000000\n}\n"
   root: "A"
 ```
 
@@ -2352,6 +12265,34 @@ id: notencodable-text
 schemaApi:
   sources:
     - "schema :A as {\n  a: :Text\n}\n"
+  root: "A"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 2
+    column: 6
+```
+
+---
+
+## Test: a Bytes without max cannot be bound for encoding
+
+The error has its stable code and position.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: notencodable-bytes
+schemaApi:
+  sources:
+    - "schema :A as {\n  a: :Bytes\n}\n"
   root: "A"
 ```
 
@@ -2597,6 +12538,211 @@ schema:
 
 ---
 
+## Test: Bytes with a count and raw bytes
+
+A `:Bytes max n` writes its count in `width(n + 1)` bits and then its bytes, which need not be UTF-8.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bytes-roundtrip
+schemaApi:
+  sources:
+    - "schema :S as {\n  data: :Bytes max 4\n  tail: :Bytes max 2 | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "data"
+        value:
+          type: ":Bytes"
+          value: "a0b70b"
+      - key: "tail"
+        value:
+          type: ":Nothing"
+  decode: "03bd5d08"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "03bd5d08"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "data"
+          value:
+            type: ":Bytes"
+            value: "a0b70b"
+        - key: "tail"
+          value:
+            type: ":Nothing"
+    byteCount: 4
+```
+
+---
+
+## Test: Bytes as a union alternative
+
+A Bytes alternative follows its union index like any other value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bytes-in-union
+schemaApi:
+  sources:
+    - "schema :S as {\n  data: :Bytes max 4\n  tail: :Bytes max 2 | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "data"
+        value:
+          type: ":Bytes"
+          value: "ff"
+      - key: "tail"
+        value:
+          type: ":Bytes"
+          value: "0a"
+  decode: "f99702"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "f99702"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "data"
+          value:
+            type: ":Bytes"
+            value: "ff"
+        - key: "tail"
+          value:
+            type: ":Bytes"
+            value: "0a"
+    byteCount: 3
+```
+
+---
+
+## Test: Bytes above their maximum cannot be encoded
+
+Encoding checks the byte count against max.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bytes-too-long
+schemaApi:
+  sources:
+    - "schema :S as {\n  data: :Bytes max 4\n  tail: :Bytes max 2 | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "data"
+        value:
+          type: ":Bytes"
+          value: "0102030405"
+      - key: "tail"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooLong"
+      path: "data"
+```
+
+---
+
+## Test: Text is no Bytes value
+
+A Bytes field takes only Bytes values.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bytes-type-mismatch
+schemaApi:
+  sources:
+    - "schema :S as {\n  data: :Bytes max 4\n  tail: :Bytes max 2 | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "data"
+        value:
+          type: ":Text"
+          value: "ab"
+      - key: "tail"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "data"
+```
+
+---
+
+## Test: A Bytes count above its maximum
+
+A count larger than max is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bytes-invalid-count
+schemaApi:
+  sources:
+    - "schema :S as { data: :Bytes max 4 }\n"
+  root: "S"
+  decode: "0500"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidCount"
+      path: "data"
+```
+
+---
+
 ## Test: a NaN pattern
 
 NaN is not a Number value.
@@ -2679,6 +12825,129 @@ schema:
   decoded:
     error:
       code: "wire.invalidNumber"
+      path: "v"
+```
+
+---
+
+## Test: a decoded value outside the range of a field without a step
+
+A finite binary64 outside the range is `wire.outOfRange`, as when encoding it; only a
+pattern that is no Number value is `wire.invalidNumber`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-decode-out-of-range
+schemaApi:
+  sources:
+    - "schema :S as { v: :Number between 0 and 1 }\n"
+  root: "S"
+  decode: "0000000000001440"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.outOfRange"
+      path: "v"
+```
+
+---
+
+## Test: a delta that sets the change bit of a Disc centre without axes
+
+A Disc whose block names only its radius never writes its centre, so the canonical delta leaves the centre's change bit
+clear and reading one that sets it is `wire.invalidDelta` at the centre.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-delta-decode-disc-centre-bit
+schemaApi:
+  sources:
+    - "schema :R as { d: :Disc(m) { radius between 0m and 3m step 1m } }\n"
+  root: "R"
+  deltaDecode:
+    delta: "0f"
+    baseline: "00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "d.center"
+```
+
+---
+
+## Test: the delta of a packed root fits its largest encoding
+
+A packed root's delta is a change bit and its whole word, one bit more than the record, so eight Boolean fields write two
+bytes and the largest encoding counts them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-delta-packed-root-size
+schemaApi:
+  sources:
+    - "packed schema :Switches as {\n  a: :Boolean\n  b: :Boolean\n  c: :Boolean\n  d: :Boolean\n  e: :Boolean\n  f: :Boolean\n  g: :Boolean\n  h: :Boolean\n}\n"
+  root: "Switches"
+  deltaEncode:
+    record: "ff"
+    baseline: "00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "ff01"
+```
+
+---
+
+## Test: a delta value outside the range of a field without a step
+
+A delta carries such a value raw, so it fails the same way.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-delta-decode-out-of-range
+schemaApi:
+  sources:
+    - "schema :S as { v: :Number between 0 and 1 }\n"
+  root: "S"
+  deltaDecode:
+    delta: "010000000000288000"
+    baseline: "000000000000e03f"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    error:
+      code: "wire.outOfRange"
       path: "v"
 ```
 
@@ -6369,6 +16638,65 @@ schema:
 
 ---
 
+## Test: a Poly point without bits
+
+A Poly whose block names only a wrapping axis of one step has points without bits, so the
+data cannot limit its count, as for a List element.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-poly-point-without-bits
+schemaApi:
+  sources:
+    - "schema :A as {\n  outline: :Poly(m) max 999999999999 {\n    x wrapping between 0m and 1m step 1m\n  }\n}\n"
+  root: "A"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 2
+    column: 12
+```
+
+---
+
+## Test: a Poly point that a parameter leaves without bits
+
+Binding decides it when a parameter makes the period one step.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-poly-point-without-bits-parameter
+schemaApi:
+  sources:
+    - "parameter period: :Quantity(m)\nschema :A as {\n  outline: :Poly(m) max 8 {\n    x wrapping between 0m and period step 1m\n  }\n}\n"
+  root: "A"
+  parameters:
+    period: "1m"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 3
+    column: 12
+```
+
+---
+
 ## Test: a Message with another label
 
 Labels are part of a Message's signature.
@@ -6571,7 +16899,7 @@ schema:
 
 ## Test: a message at the limit
 
-Its largest encoding has exactly 10 MiB.
+Its largest encoding has exactly 64 MiB: a 26-bit length, the bytes and six Booleans.
 
 ### Case description
 
@@ -6580,7 +16908,7 @@ gesBlock: case
 id: message-at-limit
 schemaApi:
   sources:
-    - "message A(t: :Text max 10485756, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean, e: :Boolean, f: :Boolean, g: :Boolean, h: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
+    - "message A(t: :Text max 67108860, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean, e: :Boolean, f: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
   root: "A"
 ```
 
@@ -6589,14 +16917,14 @@ schemaApi:
 ```yaml
 gesBlock: expect
 schema:
-  maxByteCount: 10485760
+  maxByteCount: 67108864
 ```
 
 ---
 
 ## Test: a message set beyond the limit
 
-The index takes the encoding past 10 MiB, which is an error and not clamped.
+The index takes the encoding past 64 MiB, which is an error and not clamped.
 
 ### Case description
 
@@ -6605,7 +16933,7 @@ gesBlock: case
 id: error-set-too-large
 schemaApi:
   sources:
-    - "message A(t: :Text max 10485756, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean, e: :Boolean, f: :Boolean, g: :Boolean, h: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
+    - "message A(t: :Text max 67108860, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean, e: :Boolean, f: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
   root: "S"
 ```
 
@@ -15610,7 +25938,7 @@ id: keyed-nested-field
 kind: schemaApi
 level: atomic
 schemaApi:
-  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :Box as {\n  items: :List(:Item) max 5\n}\n\nschema :Top as {\n  box: :Box\n}\n"]
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :Crate as {\n  items: :List(:Item) max 5\n}\n\nschema :Top as {\n  crate: :Crate\n}\n"]
   root: "Top"
   deltaEncode: {"record": "0a280206", "baseline": "0928"}
   deltaDecode: {"delta": "43040c00", "baseline": "0928"}
@@ -16557,4 +26885,460 @@ gesBlock: expect
 schema:
   maxByteCount: 13
   deltaEncoded: {"bytes": "2b6c42448807d1201644"}
+```
+
+---
+
+## Test: Flags as a mask of their members
+
+A `:Flags` field writes one bit per member in declared order; `false` and absent keys leave a member unset, and decoding gives a Map of the set members.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-roundtrip
+schemaApi:
+  sources:
+    - "schema :S as {\n  state: :Flags(#a, #b, #c)\n  extra: :Flags(#x) | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "state"
+        value:
+          type: ":Map"
+          entries:
+            - key: "a"
+              value:
+                type: ":Boolean"
+                value: "true"
+            - key: "b"
+              value:
+                type: ":Boolean"
+                value: "false"
+            - key: "c"
+              value:
+                type: ":Boolean"
+                value: "true"
+      - key: "extra"
+        value:
+          type: ":Map"
+          entries:
+            - key: "x"
+              value:
+                type: ":Boolean"
+                value: "true"
+  decode: "15"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "15"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "state"
+          value:
+            type: ":Map"
+            entries:
+              - key: "a"
+                value:
+                  type: ":Boolean"
+                  value: "true"
+              - key: "c"
+                value:
+                  type: ":Boolean"
+                  value: "true"
+        - key: "extra"
+          value:
+            type: ":Map"
+            entries:
+              - key: "x"
+                value:
+                  type: ":Boolean"
+                  value: "true"
+    byteCount: 1
+```
+
+---
+
+## Test: Flags without set members
+
+An empty Map clears every member; a union picks Nothing for nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-empty
+schemaApi:
+  sources:
+    - "schema :S as {\n  state: :Flags(#a, #b, #c)\n  extra: :Flags(#x) | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "state"
+        value:
+          type: ":Map"
+          entries: []
+      - key: "extra"
+        value:
+          type: ":Nothing"
+  decode: "08"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "08"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "state"
+          value:
+            type: ":Map"
+            entries: []
+        - key: "extra"
+          value:
+            type: ":Nothing"
+    byteCount: 1
+```
+
+---
+
+## Test: a key outside the Flags set
+
+Only the declared members can be set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-unknown-member
+schemaApi:
+  sources:
+    - "schema :S as {\n  state: :Flags(#a, #b, #c)\n  extra: :Flags(#x) | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "state"
+        value:
+          type: ":Map"
+          entries:
+            - key: "d"
+              value:
+                type: ":Boolean"
+                value: "true"
+      - key: "extra"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.unknownTag"
+      path: "state"
+```
+
+---
+
+## Test: a Flags value that is no Boolean
+
+Each member's value is a Boolean.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-type-mismatch
+schemaApi:
+  sources:
+    - "schema :S as {\n  state: :Flags(#a, #b, #c)\n  extra: :Flags(#x) | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "state"
+        value:
+          type: ":Map"
+          entries:
+            - key: "a"
+              value:
+                type: ":Number.int64"
+                value: "1"
+      - key: "extra"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "state"
+```
+
+---
+
+## Test: the canonical form of Flags
+
+Flags list their members in declared order, which is part of the hash.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-canonical
+schemaApi:
+  sources:
+    - "schema :S as { s: :Flags(#a, #b) }\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield s Flags(#a #b)\n"
+  hash: "9795c02de7d571f0"
+```
+
+---
+
+## Test: Flags with more than 64 members
+
+A mask holds at most 64 members.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-too-wide
+schemaApi:
+  sources:
+    - "schema :S as {\n  s: :Flags(#m0, #m1, #m2, #m3, #m4, #m5, #m6, #m7, #m8, #m9, #m10, #m11, #m12, #m13, #m14, #m15, #m16, #m17, #m18, #m19, #m20, #m21, #m22, #m23, #m24, #m25, #m26, #m27, #m28, #m29, #m30, #m31, #m32, #m33, #m34, #m35, #m36, #m37, #m38, #m39, #m40, #m41, #m42, #m43, #m44, #m45, #m46, #m47, #m48, #m49, #m50, #m51, #m52, #m53, #m54, #m55, #m56, #m57, #m58, #m59, #m60, #m61, #m62, #m63, #m64)\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.tooWide"
+    line: 2
+    column: 6
+```
+
+---
+
+## Test: a Flags member listed twice
+
+Members are unique within their set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-duplicate
+schemaApi:
+  sources:
+    - "schema :S as {\n  s: :Flags(#a, #a)\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 2
+    column: 6
+```
+
+---
+
+## Test: Flags without a set
+
+A Flags type lists its members.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-without-set
+schemaApi:
+  sources:
+    - "schema :S as {\n  s: :Flags\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 2
+    column: 12
+```
+
+---
+
+## Test: Flags in a dump
+
+A dump lists the set members and the mask.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dump-flags
+schemaApi:
+  sources:
+    - "schema :S as { s: :Flags(#a, #b, #c) }\n"
+  root: "S"
+  dump: "05"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "s bit=0 width=3 value=#a #c mask=5\nbytes 1\n"
+    valid: true
+```
+
+---
+
+## Test: document Flags
+
+A document writes Flags as a Map of Booleans whose keys are members.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-flags
+schemaApi:
+  sources:
+    - "schema :S as { s: :Flags(#a, #b) }\n"
+  document: ":Schema(:S)\ns: [a: true, b: false]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document Flags key outside the set
+
+The error is positioned at the key.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-flags-unknown
+schemaApi:
+  sources:
+    - "schema :S as { s: :Flags(#a, #b) }\n"
+  document: ":Schema(:S)\ns: [a: true, d: true]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.fieldType"
+      line: 2
+      column: 14
+```
+
+---
+
+## Test: a Map that Flags do not hold selects the next alternative
+
+Flags hold a Map whose keys are all members with Boolean values; any other Map tries the following alternatives.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-union-schema
+schemaApi:
+  sources:
+    - "schema :Pos as { x: :Number integer between 0 and 7 }\nschema :S as { u: :Flags(#a, #b) | :Pos }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "u"
+        value:
+          type: ":Map"
+          entries:
+            - key: "x"
+              value:
+                type: ":Number.int64"
+                value: "3"
+  decode: "07"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "u"
+          value:
+            type: ":Pos"
+            entries:
+              - key: "x"
+                value:
+                  type: ":Number.int64"
+                  value: "3"
+    byteCount: 1
 ```

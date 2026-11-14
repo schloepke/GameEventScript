@@ -20,6 +20,96 @@ public enum GesSchemaKind : byte
     Messages
 }
 
+/// <summary>The kinds of a field's default.</summary>
+public enum GesSchemaDefaultKind : byte
+{
+    /// <summary>A number of a numeric field, in base units; a Percentage holds its ratio.</summary>
+    Number,
+    /// <summary><c>true</c> or <c>false</c> of a Boolean field.</summary>
+    Boolean,
+    /// <summary>A tag of a Tag field.</summary>
+    Tag,
+    /// <summary>A sibling field of the same type, whose value the field takes.</summary>
+    Field,
+    /// <summary>A record literal of a field whose type is a schema: the fields it names, each other field taking its own
+    /// default.</summary>
+    Record
+}
+
+/// <summary>The value a field takes when a value or document leaves it out, declared with <c>default</c>; the wire always
+/// carries the field.</summary>
+public sealed class GesSchemaDefaultInfo
+{
+    internal GesSchemaDefaultInfo(GesResolvedDefault fallback)
+    {
+        Kind = fallback.Kind;
+        if (fallback.Kind == GesSchemaDefaultKind.Number) Number = new GesSchemaBound(new GesResolvedValue { Value = fallback.Value });
+        Boolean = fallback.Boolean;
+        Name = fallback.Name;
+        var entries = new GesSchemaDefaultEntryInfo[fallback.Entries.Length];
+        for (var index = 0; index < entries.Length; index++) entries[index] = new GesSchemaDefaultEntryInfo(fallback.Entries[index]);
+        Entries = new GesReadOnlyArray<GesSchemaDefaultEntryInfo>(entries);
+    }
+
+    /// <summary>Gets the kind of default.</summary>
+    public GesSchemaDefaultKind Kind { get; }
+
+    /// <summary>Gets the exact number in base units of a <see cref="GesSchemaDefaultKind.Number"/> default.</summary>
+    public GesSchemaBound? Number { get; }
+
+    /// <summary>Gets the value of a <see cref="GesSchemaDefaultKind.Boolean"/> default.</summary>
+    public bool Boolean { get; }
+
+    /// <summary>Gets the tag without <c>#</c> of a <see cref="GesSchemaDefaultKind.Tag"/> default, the sibling field of a
+    /// <see cref="GesSchemaDefaultKind.Field"/> default, or an empty string.</summary>
+    public string Name { get; }
+
+    /// <summary>Gets the fields a <see cref="GesSchemaDefaultKind.Record"/> default names, in the field order of its schema;
+    /// empty for <c>[:]</c> and every other kind.</summary>
+    public GesReadOnlyArray<GesSchemaDefaultEntryInfo> Entries { get; }
+}
+
+/// <summary>A field that a record literal default names, with its value.</summary>
+public sealed class GesSchemaDefaultEntryInfo
+{
+    internal GesSchemaDefaultEntryInfo(GesResolvedRecordEntry entry)
+    {
+        Name = entry.Field.Name;
+        Value = new GesSchemaDefaultInfo(entry.Value);
+    }
+
+    /// <summary>Gets the name of the field in the record's schema.</summary>
+    public string Name { get; }
+
+    /// <summary>Gets the value: a <see cref="GesSchemaDefaultKind.Number"/>, <see cref="GesSchemaDefaultKind.Boolean"/>,
+    /// <see cref="GesSchemaDefaultKind.Tag"/> or nested <see cref="GesSchemaDefaultKind.Record"/> default.</summary>
+    public GesSchemaDefaultInfo Value { get; }
+}
+
+/// <summary>The fields a schema takes from another with <c>with</c>.</summary>
+public sealed class GesSchemaTakeInfo
+{
+    internal GesSchemaTakeInfo(GesSchema schema, bool allOptional, string[] without)
+    {
+        Schema = schema;
+        IsAllOptional = allOptional;
+        Without = new GesReadOnlyArray<string>(without);
+    }
+
+    /// <summary>Gets the schema whose fields are taken.</summary>
+    public GesSchema Schema { get; }
+
+    /// <summary>Gets whether <c>all optional</c> makes every taken field optional and drops its default.</summary>
+    public bool IsAllOptional { get; }
+
+    /// <summary>Gets the fields that <c>without</c> leaves out, in written order.</summary>
+    public GesReadOnlyArray<string> Without { get; }
+
+    /// <summary>Gets whether the fields are taken unchanged, so that generated models take the schema's protocol or
+    /// interface.</summary>
+    public bool IsUnchanged => !IsAllOptional && Without.Count == 0;
+}
+
 /// <summary>A bound, step or delta range: a parameter or an exact decimal.</summary>
 public readonly struct GesSchemaBound
 {
@@ -49,12 +139,12 @@ public readonly struct GesSchemaBound
     public double? ToDouble() => IsParameter ? null : double.Parse(Significand.ToString(CultureInfo.InvariantCulture) + "e" + Exponent.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
 }
 
-/// <summary>The limits of a numeric axis of a Point or Vector.</summary>
+/// <summary>The limits of a numeric axis of a Point, Vector, Box, Poly or Disc, or of the radius of a Disc.</summary>
 public sealed class GesSchemaAxisInfo
 {
     internal GesSchemaAxisInfo(GesResolvedAxis axis)
     {
-        Name = axis.Axis.ToString();
+        Name = axis.Axis;
         var constraints = axis.Constraints;
         IsInteger = constraints.Integer;
         IsWrapping = constraints.Wrapping;
@@ -64,7 +154,7 @@ public sealed class GesSchemaAxisInfo
         Delta = GesSchemaType.Bound(constraints.Delta);
     }
 
-    /// <summary>Gets the axis: <c>x</c>, <c>y</c> or <c>z</c>.</summary>
+    /// <summary>Gets the axis: <c>x</c>, <c>y</c> or <c>z</c>, or <c>radius</c> for the radius of a Disc.</summary>
     public string Name { get; }
 
     /// <summary>Gets whether the axis holds whole numbers.</summary>
@@ -101,8 +191,11 @@ public sealed class GesSchemaType
         Step = Bound(constraints.Step);
         Delta = Bound(constraints.Delta);
         Tags = new GesReadOnlyArray<string>(type.Tags);
+        TagSet = type.TagSet;
+        Label = type.Label;
         Max = type.Max;
         Element = GesSchema.Types(type.Element ?? []);
+        Depth = type.Depth;
         var axes = new List<GesSchemaAxisInfo>();
         foreach (var axis in type.Axes ?? []) axes.Add(new GesSchemaAxisInfo(axis));
         Axes = new GesReadOnlyArray<GesSchemaAxisInfo>(axes);
@@ -114,7 +207,7 @@ public sealed class GesSchemaType
     /// <summary>Gets the kind of type.</summary>
     public GesSchemaTypeKind Kind { get; }
 
-    /// <summary>Gets the unit of a Quantity, Point or Vector.</summary>
+    /// <summary>Gets the unit of a Quantity, Point, Vector, Box, Poly or Disc.</summary>
     public GesQuantityUnit Unit { get; }
 
     /// <summary>Gets whether a number holds whole numbers.</summary>
@@ -135,16 +228,29 @@ public sealed class GesSchemaType
     /// <summary>Gets the range of a delta, if there is one.</summary>
     public GesSchemaBound? Delta { get; }
 
-    /// <summary>Gets the closed set of a Tag; empty when any tag is allowed.</summary>
+    /// <summary>Gets the closed set of a Tag, empty when any tag is allowed, or the members of Flags in declared order.</summary>
     public GesReadOnlyArray<string> Tags { get; }
 
-    /// <summary>Gets the maximum of a Text in UTF-8 bytes or of a List in elements, if there is one.</summary>
+    /// <summary>Gets the name of the declared tag set a Tag takes its members from, or an empty string; the name belongs to no
+    /// hash and does not change the encoding.</summary>
+    public string TagSet { get; }
+
+    /// <summary>Gets the label of a union alternative, as in <c>bind: :Loadout_UnitBind</c>, or an empty string; generated code
+    /// names the alternative after it, and it belongs to no hash.</summary>
+    public string Label { get; }
+
+    /// <summary>Gets the maximum of a Text in UTF-8 bytes, of a List in elements or of a Poly in points, if there is one.</summary>
     public long? Max { get; }
 
     /// <summary>Gets the alternatives of a List's element; empty when any element is allowed.</summary>
     public GesReadOnlyArray<GesSchemaType> Element { get; }
 
-    /// <summary>Gets the axes of an axis block in x, y, z order; empty without a block, when all three are stored in full.</summary>
+    /// <summary>Gets the <c>depth</c> of a List whose element is the schema that declares it: how many records of that schema
+    /// nest in each other at most; 0 for every other type.</summary>
+    public int Depth { get; }
+
+    /// <summary>Gets the axes of an axis block in x, y, z, radius order; empty without a block, when every axis is stored in
+    /// full: x, y and z, x and y of a Poly, or x, y and the radius of a Disc.</summary>
     public GesReadOnlyArray<GesSchemaAxisInfo> Axes { get; }
 
     /// <summary>Gets the schema a <see cref="GesSchemaTypeKind.Reference"/> refers to.</summary>
@@ -161,9 +267,10 @@ public sealed class GesSchemaFieldInfo
         IsOptional = field.Marker == GesSchemaFieldMarker.Optional;
         IsKey = field.Marker == GesSchemaFieldMarker.Key;
         Alternatives = GesSchema.Types(field.Alternatives);
+        Default = field.Default is { } fallback ? new GesSchemaDefaultInfo(fallback) : null;
     }
 
-    /// <summary>Gets the name.</summary>
+    /// <summary>Gets the field name, or the argument label of a message argument.</summary>
     public string Name { get; }
 
     /// <summary>Gets whether a message argument has no label.</summary>
@@ -177,6 +284,42 @@ public sealed class GesSchemaFieldInfo
 
     /// <summary>Gets the types of the field: one, or the alternatives of a union in source order.</summary>
     public GesReadOnlyArray<GesSchemaType> Alternatives { get; }
+
+    /// <summary>Gets the value the field takes when a value or document leaves it out, or null when it has none.</summary>
+    public GesSchemaDefaultInfo? Default { get; }
+}
+
+/// <summary>
+/// A field written <c>computed by</c>: a value derived from the other fields that is never encoded or read from a document.
+/// </summary>
+public sealed class GesSchemaComputedFieldInfo
+{
+    internal GesSchemaComputedFieldInfo(GesResolvedComputed field)
+    {
+        Name = field.Name;
+        Kind = field.Kind;
+        Unit = field.Unit;
+        IsOptional = field.Optional;
+        var builder = new System.Text.StringBuilder();
+        GesComputedCanonical.Write(field.Expression, builder);
+        Expression = builder.ToString();
+    }
+
+    /// <summary>Gets the field name.</summary>
+    public string Name { get; }
+
+    /// <summary>Gets the type: <see cref="GesSchemaTypeKind.Number"/>, <see cref="GesSchemaTypeKind.Quantity"/>,
+    /// <see cref="GesSchemaTypeKind.Percentage"/> or <see cref="GesSchemaTypeKind.Boolean"/>.</summary>
+    public GesSchemaTypeKind Kind { get; }
+
+    /// <summary>Gets the unit of a Quantity.</summary>
+    public GesQuantityUnit Unit { get; }
+
+    /// <summary>Gets whether the value may be absent, which generated code then gives an optional type.</summary>
+    public bool IsOptional { get; }
+
+    /// <summary>Gets the checked expression in the prefix form of the canonical form, with literals as exact decimals.</summary>
+    public string Expression { get; }
 }
 
 /// <summary>A parameter that a declaration reaches and every binding must supply.</summary>
@@ -189,7 +332,7 @@ public sealed class GesSchemaParameterInfo
         Unit = unit;
     }
 
-    /// <summary>Gets the name.</summary>
+    /// <summary>Gets the parameter name, which <see cref="GesSchemaParameters"/> supplies a value for at binding.</summary>
     public string Name { get; }
 
     /// <summary>Gets the kind: Number, Percentage or Quantity.</summary>
@@ -197,6 +340,35 @@ public sealed class GesSchemaParameterInfo
 
     /// <summary>Gets the unit of a Quantity.</summary>
     public GesQuantityUnit Unit { get; }
+}
+
+/// <summary>A constant of a schema, declared as <c>let name be value</c>: never encoded, part of the hash, and generated as a
+/// static member of the schema's types.</summary>
+public sealed class GesSchemaConstantInfo
+{
+    internal GesSchemaConstantInfo(GesResolvedLet let)
+    {
+        Name = let.Name;
+        Kind = let.Kind;
+        Unit = let.Unit;
+        IsInteger = let.Integer;
+        Value = new GesSchemaBound(new GesResolvedValue { Value = let.Value });
+    }
+
+    /// <summary>Gets the constant name.</summary>
+    public string Name { get; }
+
+    /// <summary>Gets the kind its literal gives it: Number, Percentage or Quantity.</summary>
+    public GesSchemaTypeKind Kind { get; }
+
+    /// <summary>Gets the unit of a Quantity.</summary>
+    public GesQuantityUnit Unit { get; }
+
+    /// <summary>Gets whether the value is a whole Number within Int64; any other value is a Binary64 in base units.</summary>
+    public bool IsInteger { get; }
+
+    /// <summary>Gets the exact value in base units; a Percentage holds its ratio.</summary>
+    public GesSchemaBound Value { get; }
 }
 
 /// <summary>
@@ -213,13 +385,44 @@ public sealed class GesSchema
         Name = declaration.Name;
         Kind = declaration.Kind;
         Tags = new GesReadOnlyArray<string>(declaration.Tags);
+        WireGroup = declaration.Syntax.WireGroup;
+        ModelGroup = declaration.Syntax.ModelGroup;
+        IsAbstract = declaration.Abstract;
+        PackedWidth = declaration.Packed ? declaration.PackedWidth : 0;
+        PackedBits = declaration.PackedBits;
     }
 
-    /// <summary>Gets the name.</summary>
+    /// <summary>Gets the declared name without the leading <c>:</c>, such as <c>Ship</c>; <see cref="GesSchemaSet.Schema"/>
+    /// finds the declaration by it.</summary>
     public string Name { get; }
 
     /// <summary>Gets the kind of declaration.</summary>
     public GesSchemaKind Kind { get; }
+
+    /// <summary>
+    /// Gets the group in which the declaration is a wire root, <c>default</c> for <c>wire</c> without a group, or null when
+    /// it is no wire root. Roles are generation metadata: they are not part of the canonical form or any hash.
+    /// </summary>
+    public string? WireGroup { get; }
+
+    /// <summary>Gets the group in which the schema is a model root, <c>default</c> for <c>model</c> without a group, or
+    /// null when it is no model root. Roles are not part of the canonical form or any hash.</summary>
+    public string? ModelGroup { get; }
+
+    /// <summary>Gets whether the schema is abstract: it only lends its fields with <c>with</c> and is never bound, checked
+    /// against a document or generated as a type.</summary>
+    public bool IsAbstract { get; }
+
+    /// <summary>Gets the width of a packed schema's word, 8, 16, 32 or 64 bits, or 0 for a schema that is not packed.</summary>
+    public int PackedWidth { get; }
+
+    /// <summary>Gets how many bits of its word a packed schema's fields take, those of its record on the wire; 0 for a schema
+    /// that is not packed.</summary>
+    public int PackedBits { get; }
+
+    /// <summary>Gets the schemas whose fields this schema takes with <c>with</c>, in declared order. Their fields are part of
+    /// <see cref="Fields"/>, as if written in place.</summary>
+    public GesReadOnlyArray<GesSchemaTakeInfo> Takes { get; private set; }
 
     /// <summary>Gets the schema hash: FNV-1a 64 over the canonical form.</summary>
     public ulong Hash { get; private set; }
@@ -233,6 +436,13 @@ public sealed class GesSchema
     /// <summary>Gets the fields of a schema or the arguments of a message, in declared order.</summary>
     public GesReadOnlyArray<GesSchemaFieldInfo> Fields { get; private set; }
 
+    /// <summary>Gets the fields of a schema written <c>computed by</c>, own and taken, in the order their expressions may read
+    /// each other.</summary>
+    public GesReadOnlyArray<GesSchemaComputedFieldInfo> ComputedFields { get; private set; }
+
+    /// <summary>Gets the constants a schema declares with <c>let</c>, in declared order.</summary>
+    public GesReadOnlyArray<GesSchemaConstantInfo> Constants { get; private set; }
+
     /// <summary>Gets the tags of a message, in declared order.</summary>
     public GesReadOnlyArray<string> Tags { get; }
 
@@ -242,7 +452,8 @@ public sealed class GesSchema
     /// <summary>Binds the declaration for encoding and decoding. It can be bound any number of times.</summary>
     /// <param name="parameters">The values of the parameters it reaches, if it has any.</param>
     /// <returns>The immutable bound schema.</returns>
-    /// <exception cref="GesSchemaException">The declaration cannot be encoded or a value breaks a rule.</exception>
+    /// <exception cref="GesSchemaException">The declaration is abstract or cannot be encoded, a reached parameter has no value
+    /// or a value of another kind, or a value breaks a rule.</exception>
     public GesBoundSchema Bind(GesSchemaParameters? parameters = null) => GesSchemaBinder.Bind(_declaration, parameters ?? new GesSchemaParameters());
 
     /// <summary>Checks a GES document against this schema, whatever its header says.</summary>
@@ -252,6 +463,8 @@ public sealed class GesSchema
     /// code with its position, or a <c>schema.*</c> code when this is no schema or a parameter value has another kind.</exception>
     public void CheckDocument(string text, GesSchemaParameters? parameters = null)
         => GesSchemaSet.Check(text, GesSchemaSet.ReadDocument(text), _declaration, parameters);
+
+    internal GesResolvedDeclaration Declaration => _declaration;
 
     // Declarations can refer to each other, so the sets are filled once every declaration has its object.
     internal void Complete()
@@ -265,6 +478,15 @@ public sealed class GesSchema
         var fields = new List<GesSchemaFieldInfo>();
         foreach (var field in _declaration.Fields) fields.Add(new GesSchemaFieldInfo(field));
         Fields = new GesReadOnlyArray<GesSchemaFieldInfo>(fields);
+        var computed = new List<GesSchemaComputedFieldInfo>();
+        foreach (var field in _declaration.Computed) computed.Add(new GesSchemaComputedFieldInfo(field));
+        ComputedFields = new GesReadOnlyArray<GesSchemaComputedFieldInfo>(computed);
+        var constants = new List<GesSchemaConstantInfo>();
+        foreach (var let in _declaration.Lets) constants.Add(new GesSchemaConstantInfo(let));
+        Constants = new GesReadOnlyArray<GesSchemaConstantInfo>(constants);
+        var takes = new List<GesSchemaTakeInfo>();
+        foreach (var (taken, with) in _declaration.Takes) takes.Add(new GesSchemaTakeInfo(taken.Public, with.AllOptional, with.Without));
+        Takes = new GesReadOnlyArray<GesSchemaTakeInfo>(takes);
         var members = new List<GesSchema>();
         foreach (var member in _declaration.Members) members.Add(member.Public);
         Members = new GesReadOnlyArray<GesSchema>(members);

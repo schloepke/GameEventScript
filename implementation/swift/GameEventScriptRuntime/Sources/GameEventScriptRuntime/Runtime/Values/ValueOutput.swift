@@ -28,6 +28,8 @@ protocol GesValueOutput {
 
     func dice(_ value: [Int32]) -> Result
 
+    func bytes(_ value: [UInt8]) -> Result
+
     func list(_ value: [GesValue]) -> Result
 
     func map(_ value: [GesMapEntry]) -> Result

@@ -39,6 +39,14 @@ the parser recorded for it, and for a few constructs the node that owns it.
 Leading trivia contributes Plain whitespace, a leading BOM as Plain and `//`
 comments as Comment.
 
+> **Since: Unreleased** — names in backticks and keyword-like field names
+
+A name in backticks is one token, backticks included, and is categorized like
+any other name, usually as Identifier; invalid backtick content is an illegal
+token and Plain. A keyword-like word that names a record field in a
+declaration or after `.` has the field or member role and is Identifier, as it
+is as an argument label.
+
 Input is parsed as a fragment: besides declarations, it may hold statements
 outside a handler, as editor and console input does, and those are categorized
 as statements. Parsing recovers after each failed declaration or statement, so
@@ -88,29 +96,49 @@ end of the document. Errors of the construction that follows a complete read,
 such as `:Range(1)` constructing nothing or the Range materialization total,
 are reported only by reading the document (`GesDocument`).
 
+## GES schemas
+
+> **Since: Unreleased** — GES schema highlighting
+
+A GES schema source ([Schemas](Schemas.md)) is categorized token by token from left to right, so text after an error
+keeps its categories. Whitespace, line breaks, a leading BOM and every character that starts no token below, such as
+`{`, `:`, `|` and `,`, are Plain; `//` to the end of the line is Comment. `:` before an ASCII uppercase letter starts a
+Type that runs over letters and digits and over each `_` followed by an uppercase letter, as in `:Unit_Weapon`. `#` or
+`$` before an ASCII letter starts a Tag or Constant over letters and digits. A digit, or `-` before a digit, starts a
+Number that runs up to whitespace, a line break, `,`, a parenthesis, a brace, `|`, `#` or `//`, so `1cm` and `0.1°` are
+one Number. A word of ASCII letters and digits is Keyword when it is one of `schema`, `message`, `messages`, `constant`,
+`parameter`, `as`, `be`, `between`, `and`, `wrapping`, `step`, `delta`, `within`, `integer`, `optional`, `key`, `max`,
+`depth`, `tags`, `wire`, `model`, `let`, `default`, `true`, `false`, `abstract`, `with`, `all`, `without`, `computed`,
+`by`, `when`, `otherwise`, `or`, `not`, `of`, `min`, `clamp`, `abs` and `has`; otherwise a word that starts with an
+uppercase letter, joined like a Type, is Message, and any other word is Identifier.
+
+The diagnostics hold the first error of reading the source, with the code and position [Schemas](Schemas.md) defines.
+Its range covers the scalar at the position, both UTF-16 units of one outside the BMP, or has length zero at the end
+of the text. Binding and generation errors need parameters or roots and are not reported.
+
 ## Categories
 
 Categories are Plain, Keyword, Builtin, Identifier, Message, Type, Tag,
 Constant, Number, String, Comment, Symbol, Function, Module, Label and Register.
 
-| Category | GES | GESA | GES documents |
-| --- | --- | --- | --- |
-| Plain | whitespace, line breaks, a BOM, unrecognized text | whitespace, other words | whitespace, line breaks, a BOM, unquoted words |
-| Keyword | keywords, contextual keywords such as `between`, `from`, `first`, operators, `true`, `false`, `nothing` | directives, mnemonics, `unit`, `=` | `:Schema`, `true`, `false`, `nothing`, `with` |
-| Builtin | intrinsics, selectors, `:namespace.name` extension names, units of `:Quantity(...)`, inline-assembly opcodes | — | `fibonacci` and `factorial` of `:Series` |
-| Identifier | variables, bindings, parameters, fields, members, argument labels, map keys | attribute names before `=` | keys, labels, handler parameters |
-| Message | message and handler names | — | message names of `:Message` and `:Handler` |
-| Type | type names such as `:Number` and record types | capitalized words that name no label | `:Name` of typed forms and the schema type |
-| Tag | tags | segment names, units after `unit:` | tags |
-| Constant | `$constant` references | — | — |
-| Number | numeric literals with their whole unit spelling, such as `2m²`, `2m^2` and `4/s`, compact dice such as `2d6`, math constants | numbers, `#` immediates | numbers with units, `Infinity`, `NaN` |
-| String | strings, including an unterminated string to the end of the document | dumper strings | quoted Text and keys, also unterminated |
-| Comment | `//` comments | comments, `@` addresses, region lines | `//` comments |
-| Symbol | punctuation, `_` | punctuation | brackets, parentheses, commas, colons |
-| Function | function and predicate names where declared, called or tested | — | — |
-| Module | the module name of a module declaration | — | — |
-| Label | inline-assembly labels | label definitions and references, symbolic register names | — |
-| Register | — | registers such as `r1` | — |
+| Category | GES | GESA | GES documents | GES schemas |
+| --- | --- | --- | --- | --- |
+| Plain | whitespace, line breaks, a BOM, unrecognized text | whitespace, other words | whitespace, line breaks, a BOM, unquoted words | whitespace, line breaks, a BOM, punctuation |
+| Keyword | keywords, contextual keywords such as `between`, `from`, `first`, operators, `true`, `false`, `nothing` | directives, mnemonics, `unit`, `=` | `:Schema`, `true`, `false`, `nothing`, `with` | the schema keywords |
+| Builtin | intrinsics, selectors, `:namespace.name` extension names, units of `:Quantity(...)`, inline-assembly opcodes | — | `fibonacci` and `factorial` of `:Series` | — |
+| Identifier | variables, bindings, parameters, fields, members, argument labels, map keys | attribute names before `=` | keys, labels, handler parameters | other words starting in lowercase, such as field and parameter names |
+| Message | message and handler names | — | message names of `:Message` and `:Handler` | other words starting in uppercase |
+| Type | type names such as `:Number` and record types | capitalized words that name no label | `:Name` of typed forms and the schema type | `:Name` |
+| Tag | tags | segment names, units after `unit:` | tags | `#name` |
+| Constant | `$constant` references | — | — | `$name` |
+| Number | numeric literals with their whole unit spelling, such as `2m²`, `2m^2` and `4/s`, compact dice such as `2d6`, math constants | numbers, `#` immediates | numbers with units, `Infinity`, `NaN` | numbers with their unit spelling |
+| String | strings, including an unterminated string to the end of the document | dumper strings | quoted Text and keys, also unterminated | — |
+| Comment | `//` comments | comments, `@` addresses, region lines | `//` comments | `//` comments |
+| Symbol | punctuation, `_` | punctuation | brackets, parentheses, commas, colons | — |
+| Function | function and predicate names where declared, called or tested | — | — | — |
+| Module | the module name of a module declaration | — | — | — |
+| Label | inline-assembly labels | label definitions and references, symbolic register names | — | — |
+| Register | — | registers such as `r1` | — | — |
 
 Classification does not prove that text is valid GES.
 
@@ -150,7 +178,8 @@ Native package tests run those Markdown cases without Runtime or Compiler and
 verify categories, diagnostics, span coverage and ANSI text preservation.
 `scripts/test-syntax-roundtrip.py --trees` additionally requires both ports to
 produce identical spans and diagnostics for every corpus source, every
-document text of the document suite and every shared case. These are presentation conformance, separate from the VM
+document text of the document suite, every schema text of the schema suite and the schema fixtures, and every shared
+case, each in its own language. These are presentation conformance, separate from the VM
 capability corpus.
 
 The TextMate grammars under `tools/editors` serve editor bundles only; the

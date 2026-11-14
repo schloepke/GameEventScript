@@ -5,6 +5,10 @@
     let scalars: [Unicode.Scalar]
     var index = 0, line = 1, column = 1, byteOffset = 0
     var previousCR = false
+    // Open groups: `(` and `[` make line breaks trivia, `{` makes them statement separators again
+    // (specs/Language.md#lexical-rules). A closer also ends the unclosed groups inside it, but never one outside the
+    // innermost open block, so an unclosed `(` cannot swallow the line breaks after its block.
+    var groups: [Unicode.Scalar] = []
 
     @_spi(Syntax) public init(_ text: String) { scalars = Array(text.unicodeScalars) }
 
@@ -26,6 +30,19 @@
 
     // Only space, tab and the line breaks LF and CR are portable source whitespace.
     static func space(_ c: Unicode.Scalar) -> Bool { [9, 10, 13, 32].contains(c.value) }
+
+    // A lowercase ASCII letter, then ASCII letters or digits, then optionally `_0` or `_` with digits without a leading zero.
+    static func quotableName(_ name: String) -> Bool {
+        let scalars = Array(name.unicodeScalars)
+        guard let first = scalars.first, lower(first) else { return false }
+        var index = 1
+        while index < scalars.count && (letter(scalars[index]) || digit(scalars[index])) { index += 1 }
+        if index == scalars.count { return true }
+        guard scalars[index] == "_", index + 1 < scalars.count else { return false }
+        index += 1
+        if scalars[index] == "0" { return index + 1 == scalars.count }
+        return scalars[index...].allSatisfy { digit($0) }
+    }
 
     static func validSuffix(_ text: String) -> Bool {
         guard let separator = text.firstIndex(of: "_") else { return true }
@@ -181,7 +198,33 @@
 
     func slice(_ start: Int) -> String { String(String.UnicodeScalarView(scalars[start..<index])) }
 
+    var inGroup: Bool { groups.last.map { $0 != "{" } ?? false }
+
     @_spi(Syntax) public mutating func read() -> GesToken {
+        let token = readToken()
+        switch token.kind {
+        case .leftParen: groups.append("(")
+        case .leftBracket: groups.append("[")
+        case .leftBrace: groups.append("{")
+        case .rightParen: close("(")
+        case .rightBracket: close("[")
+        case .rightBrace: close("{")
+        default: break
+        }
+        return token
+    }
+
+    private mutating func close(_ opener: Unicode.Scalar) {
+        for index in groups.indices.reversed() {
+            if groups[index] == opener {
+                groups.removeSubrange(index...)
+                return
+            }
+            if groups[index] == "{" { return }
+        }
+    }
+
+    private mutating func readToken() -> GesToken {
         // Each read starts where the previous token ended, so everything skipped here is leading trivia.
         let fullStart = byteOffset
         // A leading BOM is trivia of the first token and occupies no column.
@@ -196,6 +239,13 @@
             }
             if current == "/" && peek() == "/" {
                 while index < scalars.count && current != "\n" && current != "\r" { advance() }
+                continue
+            }
+            // Inside parentheses and brackets a line break separates nothing and is leading trivia.
+            if (current == "\r" || current == "\n") && inGroup {
+                let cr = current == "\r"
+                advance()
+                if cr && current == "\n" { advance() }
                 continue
             }
             break
@@ -248,6 +298,17 @@
             if Self.upper(first) { return token(.message, text) }
             return token(Self.keywords[text] ?? .identifier, text, word: true)
         }
+        // A hexadecimal integer such as `0xff_88_00` is a number token without unit or percentage; missing digits, other
+        // attached characters and values above Int64.max make the whole word illegal.
+        if first == "0" && peek() == "x" {
+            advance()
+            advance()
+            while GesNumberLiteral.hexDigit(current) != nil || current == "_" && GesNumberLiteral.hexDigit(peek()) != nil { advance() }
+            let text = slice(start)
+            if index == scalars.count || Self.space(current) || Self.boundaries.contains(current), GesNumberLiteral.read(text).isValid { return token(.float, text) }
+            while index < scalars.count && !Self.space(current) { advance() }
+            return token(.illegal, slice(start))
+        }
         if Self.digit(first) {
             while Self.digit(current) || current == "_" && Self.digit(peek()) { advance() }
             if current == "." && Self.digit(peek()) {
@@ -261,12 +322,18 @@
             let suffixLength = Self.unitStarts.contains(current) ? GesQuantityUnit.suffixLength(scalars, at: index) { Self.space($0) || Self.boundaries.contains($0) } : 0
             if current == "%" {
                 advance()
+                // As in C#, a percentage ends at whitespace, a structural boundary or a dice `d`+digit, not at a letter.
+                if index < scalars.count && !Self.space(current) && !Self.boundaries.contains(current) && !(current == "d" && Self.digit(peek())) {
+                    while index < scalars.count && !Self.space(current) { advance() }
+                    return token(.illegal, slice(start))
+                }
             } else if suffixLength > 0 {
                 for _ in 0..<suffixLength { advance() }
                 quantity = true
             } else if current == "°" {
-                advance()
-                quantity = true
+                // `°` not followed by a boundary is no degree suffix, and the whole word is illegal.
+                while index < scalars.count && !Self.space(current) { advance() }
+                return token(.illegal, slice(start))
             }
             if index < scalars.count && !Self.letter(current) && !Self.space(current) && !Self.boundaries.contains(current) {
                 while index < scalars.count && !Self.space(current) { advance() }
@@ -274,6 +341,20 @@
             }
             let text = slice(start)
             return token(quantity ? .unitNumber : text.unicodeScalars.last == "%" ? .percentage : .float, text)
+        }
+        // A name in backticks, such as `length` in backticks, is an identifier whose value is the inner name: a lower name,
+        // which may be any keyword word, optionally with a binding's derivation suffix (specs/Language.md#lexical-rules).
+        // Other content up to the closing backtick on the same line is one illegal token; an unclosed backtick alone is one.
+        if first == "`" {
+            var close = index + 1
+            while close < scalars.count && scalars[close] != "`" && scalars[close] != "\r" && scalars[close] != "\n" { close += 1 }
+            guard close < scalars.count && scalars[close] == "`" else {
+                advance()
+                return token(.illegal, "`")
+            }
+            while index <= close { advance() }
+            let name = String(String.UnicodeScalarView(scalars[(start + 1)..<close]))
+            return Self.quotableName(name) ? token(.identifier, name, word: true) : token(.illegal, slice(start))
         }
         if first == "\"" || first == "'" {
             // Only a doubled delimiter escapes the quote; a backslash is ordinary text.

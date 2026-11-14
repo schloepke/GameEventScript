@@ -74,7 +74,8 @@ internal sealed partial class GesSyntaxBinder
         NodeKind.MemberAccessExpression => BindMemberAccess(node),
         NodeKind.CollectionAccessExpression => BindCollectionAccess(node),
         NodeKind.TypeConstructorExpression => BindTypeConstructor(node),
-        NodeKind.DiceLiteralExpression => BindDiceLiteral(node),
+        NodeKind.DiceLiteralExpression => BindDiceLiteral(node, "dice"),
+        NodeKind.BytesLiteralExpression => BindDiceLiteral(node, "bytes"),
         NodeKind.RangeExpression => BindRange(node),
         NodeKind.RandomExpression => BindRandom(node),
         NodeKind.SeededRandomExpression => BindSeededRandom(node),
@@ -333,7 +334,8 @@ internal sealed partial class GesSyntaxBinder
         {
             c.Advance();
             var operation = start.Kind switch { OperatorMinus => GesUnaryOperator.Negate, KeywordParse => GesUnaryOperator.Parse, Empty => GesUnaryOperator.Empty, _ => GesUnaryOperator.Not };
-            if (operation == GesUnaryOperator.Parse && c.MatchWord("strict")) operation = GesUnaryOperator.ParseStrict;
+            // As the parser decides: the mode word stands on the line of `parse`.
+            if (operation == GesUnaryOperator.Parse && c.Current.Line == c.Previous.EndLine && c.MatchWord("strict")) operation = GesUnaryOperator.ParseStrict;
             if (operation is not (GesUnaryOperator.Parse or GesUnaryOperator.ParseStrict)) c.SkipNewLines();
             var operand = Operand(ref c);
             return Set(new GesUnaryExpressionNode(operation, operand), start, c.Previous);
@@ -588,7 +590,7 @@ internal sealed partial class GesSyntaxBinder
         var target = Operand(ref c);
         c.Expect(Dot);
         c.SkipNewLines();
-        return Merge(new GesMemberAccessExpressionNode(target, c.Expect(Identifier).Text), target);
+        return Merge(new GesMemberAccessExpressionNode(target, c.ExpectFieldName().Text), target);
     }
 
     private GesExpressionNode BindCollectionAccess(GesSyntaxNode node)
@@ -676,7 +678,8 @@ internal sealed partial class GesSyntaxBinder
         return Set(new GesTypeConstructorExpressionNode(typeName, arguments), start, c.Previous);
     }
 
-    private GesExpressionNode BindDiceLiteral(GesSyntaxNode node)
+    // A Dice or Bytes literal binds as the cast of its integer List.
+    private GesExpressionNode BindDiceLiteral(GesSyntaxNode node, string typeName)
     {
         var c = new Cursor(this, node);
         var start = c.Expect(TypeName);
@@ -698,8 +701,8 @@ internal sealed partial class GesSyntaxBinder
 
         c.Expect(RightBracket);
         var values = Set(new GesListLiteralExpressionNode(items), bracket, c.Previous);
-        // Reuse deterministic list-to-Dice conversion; CreateDice is a random roll.
-        return Set(new GesTypeConstructorExpressionNode("dice", new GesArgumentListNode([new GesArgumentNode(null, values)])), start, c.Previous);
+        // Reuse deterministic list conversion; CreateDice is a random roll.
+        return Set(new GesTypeConstructorExpressionNode(typeName, new GesArgumentListNode([new GesArgumentNode(null, values)])), start, c.Previous);
     }
 
     private GesExpressionNode BindRange(GesSyntaxNode node)
@@ -731,9 +734,8 @@ internal sealed partial class GesSyntaxBinder
     private GesExpressionNode BindRandom(GesSyntaxNode node)
     {
         var c = new Cursor(this, node);
-        c.Expect(KeywordRandom);
+        var start = c.Expect(KeywordRandom);
         c.SkipNewLines();
-        var start = c.Previous;
         c.MatchWord("from");
         c.SkipNewLines();
         var from = Operand(ref c);
@@ -901,15 +903,18 @@ internal sealed partial class GesSyntaxBinder
             return Set(new GesCallExpressionNode(start.Text, labeled), start, c.Previous);
         }
 
-        // Unlabeled call arguments carry no source range.
+        // Unlabeled call arguments carry no source range; labeled ones after them bind as in a labeled call.
         var arguments = new List<GesArgumentNode> { BindUnrangedArgument(first) };
-        while (c.Match(Comma))
+        while (true)
         {
             c.SkipNewLines();
-            arguments.Add(BindUnrangedArgument(c.TakeNode(NodeKind.Argument)));
+            if (c.Match(Comma)) c.SkipNewLines();
+            else if (!c.IsNode(NodeKind.Argument)) break;
+            var argument = c.TakeNode(NodeKind.Argument);
+            var labelProbe = new Cursor(this, argument);
+            arguments.Add(IsLabelStart(ref labelProbe) ? BindArgument(argument) : BindUnrangedArgument(argument));
         }
 
-        c.SkipNewLines();
         c.Expect(RightParen);
         return Set(new GesCallExpressionNode(start.Text, new GesArgumentListNode(arguments)), start, c.Previous);
     }

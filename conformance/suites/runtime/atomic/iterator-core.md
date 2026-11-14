@@ -2647,9 +2647,9 @@ sources:
 ### Source code under test
 
 ```ges
-record :Box as { value: :Number }
+record :Crate as { value: :Number }
 on Start {
-  for values in [[:Box(value: 1), [value: 2], :Box(value: 3)], [[value: 2], :Box(value: 3), :Box(value: 1)]] {
+  for values in [[:Crate(value: 1), [value: 2], :Crate(value: 3)], [[value: 2], :Crate(value: 3), :Crate(value: 1)]] {
     emit Direct(values: [values[:take highest 1][1], values[:take lowest 1][1], values[:drop highest 1], values[:drop lowest 1]])
     emit Iterator(values: [values[:filter item where true][:take highest 1][1], values[:filter item where true][:take lowest 1][1], values[:filter item where true][:drop highest 1], values[:filter item where true][:drop lowest 1]])
   }
@@ -2677,7 +2677,7 @@ steps:
             value:
               type: ":List"
               items:
-                - type: ":Box"
+                - type: ":Crate"
                   entries:
                     - key: "value"
                       value:
@@ -2697,7 +2697,7 @@ steps:
                           value:
                             type: ":Number.int64"
                             value: "2"
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
@@ -2705,13 +2705,13 @@ steps:
                             value: "3"
                 - type: ":List"
                   items:
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
                             type: ":Number.int64"
                             value: "1"
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
@@ -2723,7 +2723,7 @@ steps:
             value:
               type: ":List"
               items:
-                - type: ":Box"
+                - type: ":Crate"
                   entries:
                     - key: "value"
                       value:
@@ -2743,7 +2743,7 @@ steps:
                           value:
                             type: ":Number.int64"
                             value: "2"
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
@@ -2751,13 +2751,13 @@ steps:
                             value: "3"
                 - type: ":List"
                   items:
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
                             type: ":Number.int64"
                             value: "1"
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
@@ -2769,7 +2769,7 @@ steps:
             value:
               type: ":List"
               items:
-                - type: ":Box"
+                - type: ":Crate"
                   entries:
                     - key: "value"
                       value:
@@ -2789,7 +2789,7 @@ steps:
                           value:
                             type: ":Number.int64"
                             value: "2"
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
@@ -2797,13 +2797,13 @@ steps:
                             value: "1"
                 - type: ":List"
                   items:
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
                             type: ":Number.int64"
                             value: "3"
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
@@ -2815,7 +2815,7 @@ steps:
             value:
               type: ":List"
               items:
-                - type: ":Box"
+                - type: ":Crate"
                   entries:
                     - key: "value"
                       value:
@@ -2835,7 +2835,7 @@ steps:
                           value:
                             type: ":Number.int64"
                             value: "2"
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
@@ -2843,13 +2843,13 @@ steps:
                             value: "1"
                 - type: ":List"
                   items:
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:
                             type: ":Number.int64"
                             value: "3"
-                    - type: ":Box"
+                    - type: ":Crate"
                       entries:
                         - key: "value"
                           value:

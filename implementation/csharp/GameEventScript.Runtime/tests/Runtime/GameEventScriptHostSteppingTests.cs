@@ -123,7 +123,7 @@ public sealed class GameEventScriptHostSteppingTests
             .WithRandomSeed(0L)
             .WithRuntimeLimits(new GesRuntimeLimits { MaxRandomScopeDepth = 1 })
             .WithRuntimeObserver(observer)
-            .WithRegistry(RandomScopeExtensionRegistry.Instance)
+            .WithExtensionRegistry(RandomScopeExtensionRegistry.Instance)
             .Build().StartForTest();
         host.Load(Compile("on Start { let value be :randomTest.overpush; emit Done(value: value) }"));
         long? followingValue = null;
@@ -153,7 +153,7 @@ public sealed class GameEventScriptHostSteppingTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithRandomSeed(0L)
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add))
-            .WithRegistry(RandomScopeExtensionRegistry.Instance)
+            .WithExtensionRegistry(RandomScopeExtensionRegistry.Instance)
             .Build().StartForTest();
         host.Load(Compile("on Start { let value be :randomTest.leak; emit Done(value: value) }"));
         long? followingValue = null;
@@ -250,7 +250,7 @@ public sealed class GameEventScriptHostSteppingTests
             nativeCompleted.Signal();
         });
         Assert.IsTrue(runner.Receive(Create("Native")));
-        Assert.IsTrue(runner.Unsubscribe(first));
+        Assert.IsTrue(first.Detach());
 
         var second = runner.Subscribe("Native", [], (_, _) =>
         {
@@ -258,11 +258,13 @@ public sealed class GameEventScriptHostSteppingTests
             nativeCompleted.Signal();
         });
         Assert.IsTrue(runner.Receive(Create("Native")));
-        Assert.IsTrue(runner.Unsubscribe(second));
+        Assert.IsTrue(second.Detach());
+        Assert.IsFalse(second.Detach(), "Detaching is idempotent.");
+        Assert.IsFalse(second.IsAttached);
 
         var instance = runner.Load(Compile("on ScriptStart { emit ScriptDone }"));
         Assert.IsTrue(runner.Receive(Create("ScriptStart")));
-        Assert.IsTrue(runner.Detach(instance));
+        Assert.IsTrue(instance.Detach());
 
         Assert.IsTrue(nativeCompleted.Wait(TimeSpan.FromSeconds(5)));
         Assert.IsTrue(scriptCompleted.Wait(TimeSpan.FromSeconds(5)));

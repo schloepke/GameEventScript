@@ -15,9 +15,11 @@ internal static class GesSchemaFormatter
         GesSchemaDeclarationKind? previous = null;
         foreach (var declaration in source.Declarations)
         {
-            var simple = declaration.Kind is GesSchemaDeclarationKind.Constant or GesSchemaDeclarationKind.Parameter;
+            var simple = declaration.Kind is GesSchemaDeclarationKind.Constant or GesSchemaDeclarationKind.Parameter or GesSchemaDeclarationKind.TagSet;
             if (previous is { } last && !(simple && last == declaration.Kind)) builder.Append('\n');
             previous = declaration.Kind;
+            Role("wire", declaration.WireGroup, builder);
+            Role("model", declaration.ModelGroup, builder);
             switch (declaration.Kind)
             {
                 case GesSchemaDeclarationKind.Constant:
@@ -29,11 +31,28 @@ internal static class GesSchemaFormatter
                     builder.Append('\n');
                     break;
                 case GesSchemaDeclarationKind.Schema:
+                    if (declaration.Abstract) builder.Append("abstract ");
+                    if (declaration.Packed) builder.Append(declaration.PackedWidth > 0 ? $"packed({declaration.PackedWidth}) " : "packed ");
                     builder.Append("schema :").Append(declaration.Name).Append(" as {\n");
-                    foreach (var field in declaration.Fields)
+                    foreach (var let in declaration.Lets) builder.Append("  let ").Append(let.Name).Append(" be ").Append(Value(let.Value)).Append('\n');
+                    // Fields, computed fields and withs in their written order.
+                    var withIndex = 0;
+                    var fieldIndex = 0;
+                    var computedIndex = 0;
+                    while (true)
                     {
+                        var with = withIndex < declaration.Withs.Length ? declaration.Withs[withIndex].Sequence : int.MaxValue;
+                        var field = fieldIndex < declaration.Fields.Length ? declaration.Fields[fieldIndex].Sequence : int.MaxValue;
+                        var computed = computedIndex < declaration.Computed.Length ? declaration.Computed[computedIndex].Sequence : int.MaxValue;
+                        if (with == int.MaxValue && field == int.MaxValue && computed == int.MaxValue) break;
+                        if (with < field && with < computed)
+                        {
+                            With(declaration.Withs[withIndex++], builder);
+                            continue;
+                        }
+
                         builder.Append("  ");
-                        Field(field, builder, "  ");
+                        Field(field < computed ? declaration.Fields[fieldIndex++] : declaration.Computed[computedIndex++], builder, "  ");
                         builder.Append('\n');
                     }
 
@@ -56,6 +75,11 @@ internal static class GesSchemaFormatter
 
                     builder.Append('\n');
                     break;
+                case GesSchemaDeclarationKind.TagSet:
+                    builder.Append("tags :").Append(declaration.Name).Append(" as ");
+                    Tags(declaration.Tags, builder);
+                    builder.Append('\n');
+                    break;
                 default:
                     builder.Append("messages :").Append(declaration.Name).Append(" as (").Append(string.Join(", ", declaration.Members)).Append(")\n");
                     break;
@@ -65,21 +89,286 @@ internal static class GesSchemaFormatter
         return builder.ToString();
     }
 
+    // The group `default` is the one a role without a group names.
+    private static void Role(string role, string? group, StringBuilder builder)
+    {
+        if (group is null) return;
+        builder.Append(role);
+        if (group != "default") builder.Append('(').Append(group).Append(')');
+        builder.Append(' ');
+    }
+
+    private static void With(GesSchemaWithSyntax with, StringBuilder builder)
+    {
+        builder.Append("  with :").Append(with.Name);
+        if (with.AllOptional) builder.Append(" all optional");
+        if (with.Without.Length > 0) builder.Append(" without (").Append(string.Join(", ", with.Without)).Append(')');
+        builder.Append('\n');
+    }
+
+    // The width up to which a schema field's union stays on one line, as documents print their containers.
+    private const int LineWidth = 100;
+
+    // A schema field's union stays on one line while it fits; past that, or with an axis block, each further alternative
+    // takes a line of its own with a leading `|`, one level deeper than the field. Message arguments stay on their line.
     private static void Field(GesSchemaFieldSyntax field, StringBuilder builder, string indent)
+    {
+        if (indent.Length == 0 || field.Alternatives.Length < 2)
+        {
+            FieldText(field, builder, indent, broken: false);
+            return;
+        }
+
+        var inline = new StringBuilder();
+        FieldText(field, inline, indent, broken: false);
+        var text = inline.ToString();
+        if (text.IndexOf('\n') < 0 && Scalars(indent) + Scalars(text) <= LineWidth) builder.Append(text);
+        else FieldText(field, builder, indent, broken: true);
+    }
+
+    private static int Scalars(string text)
+    {
+        var count = 0;
+        foreach (var c in text)
+            if (!char.IsLowSurrogate(c)) count++;
+        return count;
+    }
+
+    private static void FieldText(GesSchemaFieldSyntax field, StringBuilder builder, string indent, bool broken)
     {
         if (field.Unlabeled) builder.Append("_ ");
         builder.Append(field.Name).Append(": ");
-        Union(field.Alternatives, builder, indent);
+        Union(field.Alternatives, builder, indent, broken);
         if (field.Marker == GesSchemaFieldMarker.Optional) builder.Append(" optional");
         else if (field.Marker == GesSchemaFieldMarker.Key) builder.Append(" key");
+        if (field.Computed is { } computed)
+        {
+            builder.Append(" computed by ");
+            Expression(computed, 0, builder);
+            return;
+        }
+
+        if (field.Default is not { } fallback) return;
+        builder.Append(" default ");
+        DefaultText(fallback, builder);
     }
 
-    private static void Union(GesSchemaTypeSyntax[] alternatives, StringBuilder builder, string indent)
+    // A record literal prints on one line, `[:]` when it names no field.
+    private static void DefaultText(GesSchemaDefaultSyntax fallback, StringBuilder builder)
     {
+        if (fallback.Record is { } record)
+        {
+            if (record.Length == 0)
+            {
+                builder.Append("[:]");
+                return;
+            }
+
+            builder.Append('[');
+            for (var index = 0; index < record.Length; index++)
+            {
+                if (index > 0) builder.Append(", ");
+                builder.Append(record[index].Name).Append(": ");
+                DefaultText(record[index].Value, builder);
+            }
+
+            builder.Append(']');
+        }
+        else if (fallback.Tag is { } tag) builder.Append('#').Append(tag);
+        else if (fallback.Boolean is { } boolean) builder.Append(boolean ? "true" : "false");
+        else builder.Append(Value(fallback.Value!));
+    }
+
+    internal static string Expression(GesSchemaExpressionSyntax expression)
+    {
+        var builder = new StringBuilder();
+        Expression(expression, 0, builder);
+        return builder.ToString();
+    }
+
+    // The operand of a unary function or abs: one that needs no parentheses of its own but starts with `(` would read as the
+    // function's parenthesized operand and leave the rest outside it, so it takes parentheses.
+    private static void Operand(GesSchemaExpressionSyntax operand, StringBuilder builder)
+    {
+        var text = new StringBuilder();
+        Expression(operand, 8, text);
+        if (Level(operand) >= 8 && text.Length > 0 && text[0] == '(') builder.Append('(').Append(text).Append(')');
+        else builder.Append(text);
+    }
+
+    // Prints an expression on one line with the parentheses its precedence needs: 0 choice, 1 default, 2 or, 3 and,
+    // 4 equality, 5 relation, 6 addition, 7 multiplication, 8 unary, 9 power, 10 postfix and primary. A name that GES reserves
+    // is written in backticks.
+    private static void Expression(GesSchemaExpressionSyntax expression, int minimum, StringBuilder builder)
+    {
+        var level = Level(expression);
+        if (level < minimum) builder.Append('(');
+        var children = expression.Children;
+        switch (expression.Kind)
+        {
+            case GesSchemaExpressionKind.Literal:
+                builder.Append(expression.Literal!.Text);
+                break;
+            case GesSchemaExpressionKind.Boolean:
+                builder.Append(expression.Boolean ? "true" : "false");
+                break;
+            case GesSchemaExpressionKind.Constant:
+                builder.Append('$').Append(expression.Name);
+                break;
+            case GesSchemaExpressionKind.Name:
+                Name(expression.Name, builder);
+                break;
+            case GesSchemaExpressionKind.Member:
+                Expression(children[0], 10, builder);
+                builder.Append('.');
+                Name(expression.Name, builder);
+                break;
+            case GesSchemaExpressionKind.Function when expression.Name is "atan2" or "hypot":
+                builder.Append(expression.Name).Append('(');
+                for (var index = 0; index < children.Length; index++)
+                {
+                    if (index > 0) builder.Append(", ");
+                    Expression(children[index], 0, builder);
+                }
+
+                builder.Append(')');
+                break;
+            case GesSchemaExpressionKind.Function:
+                builder.Append(expression.Name).Append(' ');
+                Operand(children[0], builder);
+                break;
+            case GesSchemaExpressionKind.Binary when expression.Operator == GesSchemaBinaryOperator.Power:
+                // The base takes no power of its own and the exponent is unary, so powers associate to the right.
+                Expression(children[0], 10, builder);
+                builder.Append(" ^ ");
+                Expression(children[1], 8, builder);
+                break;
+            case GesSchemaExpressionKind.Negate:
+                builder.Append('-');
+                Expression(children[0], 8, builder);
+                break;
+            case GesSchemaExpressionKind.Not:
+                builder.Append("not ");
+                Expression(children[0], 8, builder);
+                break;
+            case GesSchemaExpressionKind.Abs:
+                builder.Append("abs ");
+                Operand(children[0], builder);
+                break;
+            case GesSchemaExpressionKind.Binary:
+                Expression(children[0], level, builder);
+                builder.Append(' ').Append(Symbol(expression.Operator)).Append(' ');
+                Expression(children[1], level + 1, builder);
+                break;
+            case GesSchemaExpressionKind.Choice:
+                for (var index = 0; index + 1 < children.Length; index += 2)
+                {
+                    Expression(children[index], 1, builder);
+                    builder.Append(" when ");
+                    Expression(children[index + 1], 1, builder);
+                    builder.Append(", ");
+                }
+
+                builder.Append("otherwise ");
+                Expression(children[^1], 1, builder);
+                break;
+            case GesSchemaExpressionKind.Min or GesSchemaExpressionKind.Max:
+                builder.Append(expression.Kind == GesSchemaExpressionKind.Min ? "min of " : "max of ");
+                for (var index = 0; index < children.Length; index++)
+                {
+                    if (index > 0) builder.Append(" and ");
+                    Expression(children[index], 6, builder);
+                }
+
+                break;
+            case GesSchemaExpressionKind.Clamp:
+                builder.Append("clamp ");
+                Expression(children[0], 6, builder);
+                builder.Append(" between ");
+                Expression(children[1], 6, builder);
+                builder.Append(" and ");
+                Expression(children[2], 6, builder);
+                break;
+            case GesSchemaExpressionKind.Default:
+                Expression(children[0], 1, builder);
+                builder.Append(" default ");
+                Expression(children[1], 2, builder);
+                break;
+            case GesSchemaExpressionKind.HasValue:
+                Expression(children[0], 6, builder);
+                builder.Append(" has value");
+                break;
+            case GesSchemaExpressionKind.Count:
+                Expression(children[0], 10, builder);
+                builder.Append("[:count]");
+                break;
+            default:
+                Expression(children[0], 10, builder);
+                builder.Append("[:sum");
+                if (children.Length > 1)
+                {
+                    builder.Append(' ').Append(expression.Name).Append(" => ");
+                    Expression(children[1], 0, builder);
+                }
+
+                builder.Append(']');
+                break;
+        }
+
+        if (level < minimum) builder.Append(')');
+    }
+
+    private static int Level(GesSchemaExpressionSyntax expression) => expression.Kind switch
+    {
+        GesSchemaExpressionKind.Choice => 0,
+        GesSchemaExpressionKind.Default => 1,
+        GesSchemaExpressionKind.HasValue => 5,
+        GesSchemaExpressionKind.Negate or GesSchemaExpressionKind.Not or GesSchemaExpressionKind.Abs => 8,
+        GesSchemaExpressionKind.Function => expression.Name is "atan2" or "hypot" ? 10 : 8,
+        GesSchemaExpressionKind.Binary => expression.Operator switch
+        {
+            GesSchemaBinaryOperator.Or => 2,
+            GesSchemaBinaryOperator.And => 3,
+            GesSchemaBinaryOperator.Equal or GesSchemaBinaryOperator.NotEqual => 4,
+            GesSchemaBinaryOperator.Add or GesSchemaBinaryOperator.Subtract => 6,
+            GesSchemaBinaryOperator.Multiply or GesSchemaBinaryOperator.Divide => 7,
+            GesSchemaBinaryOperator.Power => 9,
+            _ => 5
+        },
+        _ => 10
+    };
+
+    private static void Name(string name, StringBuilder builder)
+    {
+        if (GesSchemaSourceReader.IsPlainName(name)) builder.Append(name);
+        else builder.Append('`').Append(name).Append('`');
+    }
+
+    internal static string Symbol(GesSchemaBinaryOperator binary) => binary switch
+    {
+        GesSchemaBinaryOperator.Add => "+",
+        GesSchemaBinaryOperator.Subtract => "-",
+        GesSchemaBinaryOperator.Multiply => "*",
+        GesSchemaBinaryOperator.Divide => "/",
+        GesSchemaBinaryOperator.Less => "<",
+        GesSchemaBinaryOperator.LessOrEqual => "<=",
+        GesSchemaBinaryOperator.Greater => ">",
+        GesSchemaBinaryOperator.GreaterOrEqual => ">=",
+        GesSchemaBinaryOperator.Equal => "=",
+        GesSchemaBinaryOperator.NotEqual => "<>",
+        GesSchemaBinaryOperator.And => "and",
+        GesSchemaBinaryOperator.Power => "^",
+        _ => "or"
+    };
+
+    private static void Union(GesSchemaTypeSyntax[] alternatives, StringBuilder builder, string indent, bool broken = false)
+    {
+        var inner = broken ? indent + "  " : indent;
         for (var index = 0; index < alternatives.Length; index++)
         {
-            if (index > 0) builder.Append(" | ");
-            Type(alternatives[index], builder, indent);
+            if (index > 0) builder.Append(broken ? "\n" + inner + "| " : " | ");
+            if (alternatives[index].Label.Length > 0) builder.Append(alternatives[index].Label).Append(": ");
+            Type(alternatives[index], builder, inner);
         }
     }
 
@@ -92,8 +381,13 @@ internal static class GesSchemaFormatter
                 break;
             case GesSchemaTypeKind.Point:
             case GesSchemaTypeKind.Vector:
-                builder.Append(type.Kind == GesSchemaTypeKind.Point ? ":Point" : ":Vector");
+            case GesSchemaTypeKind.Box:
+            case GesSchemaTypeKind.Poly:
+            case GesSchemaTypeKind.Disc:
+                builder.Append(':').Append(type.Kind.ToString());
                 if (type.Unit != GesQuantityUnit.UnitNone) builder.Append('(').Append(type.Unit.ToSuffix()).Append(')');
+                if (type.Max is { } polyMax) builder.Append(" max ").Append(polyMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
                 if (type.Axes is { } axes)
                 {
                     builder.Append(" {\n");
@@ -112,10 +406,21 @@ internal static class GesSchemaFormatter
                 builder.Append(":Tag");
                 if (type.Tags is { } tags) Tags(tags, builder);
                 if (type.Max is { } tagMax) builder.Append(" max ").Append(tagMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
+                return;
+            case GesSchemaTypeKind.Flags:
+                builder.Append(":Flags");
+                Tags(type.Tags!, builder);
                 return;
             case GesSchemaTypeKind.Text:
                 builder.Append(":Text");
                 if (type.Max is { } textMax) builder.Append(" max ").Append(textMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
+                return;
+            case GesSchemaTypeKind.Bytes:
+                builder.Append(":Bytes");
+                if (type.Max is { } bytesMax) builder.Append(" max ").Append(bytesMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
                 return;
             case GesSchemaTypeKind.List:
                 builder.Append(":List");
@@ -127,10 +432,13 @@ internal static class GesSchemaFormatter
                 }
 
                 if (type.Max is { } listMax) builder.Append(" max ").Append(listMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
+                if (type.Depth > 0) builder.Append(" depth ").Append(type.Depth);
                 return;
             case GesSchemaTypeKind.Dice:
                 builder.Append(":Dice");
                 if (type.Max is { } diceMax) builder.Append(" max ").Append(diceMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
                 break;
             case GesSchemaTypeKind.Reference:
                 builder.Append(':').Append(type.Name);
@@ -157,7 +465,7 @@ internal static class GesSchemaFormatter
     }
 
     private static string Value(GesSchemaValueSyntax value)
-        => value.Parameter.Length > 0 ? value.Parameter : value.Constant.Length > 0 ? "$" + value.Constant : value.Text;
+        => value.Name.Length > 0 ? value.Name : value.Constant.Length > 0 ? "$" + value.Constant : value.Text;
 
     private static void Tags(string[] tags, StringBuilder builder)
     {

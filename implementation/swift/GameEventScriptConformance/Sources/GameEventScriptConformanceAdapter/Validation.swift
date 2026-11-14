@@ -83,7 +83,7 @@ enum Validation {
                             "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key",
                             "dump", "dumpBaseline",
                             "deltaEncode",
-                            "deltaDecode", "describe", "document",
+                            "deltaDecode", "describe", "document", "readDocument",
                         ]
                     )
                 case "documentApi":
@@ -108,7 +108,7 @@ enum Validation {
                     let access = try api.required("access")
                     try self.fields(access, ["value", "external", "fromEntries", "members", "readFields", "materialize", "toJson", "toMessageJson"])
                     try require(access["fromEntries"]?.boolValue != nil && access["toJson"]?.boolValue != nil && access["toMessageJson"]?.boolValue != nil && (access["external"] == .null) != (access["value"] == .null))
-                    if let probe = access["external"], probe != .null { try require(["counting", "typed", "failing", "faulting", "ordered", "sparse"].contains(try probe.stringValue ?? "")) }
+                    if let probe = access["external"], probe != .null { try require(["counting", "typed", "failing", "faulting", "ordered", "sparse"].contains(probe.stringValue ?? "")) }
                     if access["value"] != .null { try value(access.required("value")) }
                     for path in access.values("members") { try require(path.arrayValue?.allSatisfy { $0.stringValue != nil } == true) }
                 case "valueApi":
@@ -164,7 +164,8 @@ enum Validation {
 
     static func limits(_ input: Input) throws {
         let allowed = [
-            "maxProcessedEventsPerRun", "maxQueuedMessagesPerRun", "maxExecutionSteps", "maxRegisterValues", "maxLoopIterations", "maxCallDepth", "maxRandomScopeDepth", "maxRangeItems", "maxGeneratedCollectionItems", "maxDiceCount", "maxDiceSides",
+            "maxProcessedMessagesPerRun", "maxQueuedMessages", "maxExecutionSteps", "maxRegisterValues", "maxLoopIterations", "maxCallDepth", "maxRandomScopeDepth", "maxRangeItems", "maxGeneratedCollectionItems", "maxValueDepth", "maxDiceCount",
+            "maxDiceSides",
         ]
         try fields(input, [], optional: allowed)
         for entry in input.objectValue! {
@@ -183,7 +184,7 @@ enum Validation {
         try require(Set(deferred).isSubset(of: programs) && Set(deferred).count == deferred.count)
         var handlers = Set<String>()
         for handler in try array(input.required("nativeHandlers")) {
-            try fields(handler, ["id", "message", "parameters", "messageName", "priority", "initiallySubscribed", "throw", "faultCode", "faultContext", "emit", "actions"])
+            try fields(handler, ["id", "message", "parameters", "messageName", "priority", "initiallySubscribed", "throw", "faultCode", "faultContext", "emit", "actions", "leakRandomScope"])
             try require(handlers.insert(handler.text("id")).inserted)
             _ = try strings(handler.required("parameters"))
             try require(handler["message"]?.stringValue != nil && handler["priority"]?.integerValue.map { (Int(Int32.min)...Int(Int32.max)).contains($0) } == true)
@@ -191,7 +192,7 @@ enum Validation {
             let context = try handler.required("faultContext")
             try fields(context, ["programName", "handlerName"])
             for key in ["programName", "handlerName"] { try require(context[key] == .null || context[key]?.stringValue != nil) }
-            for key in ["messageName", "initiallySubscribed", "throw"] { try require(handler[key]?.boolValue != nil) }
+            for key in ["messageName", "initiallySubscribed", "throw", "leakRandomScope"] { try require(handler[key]?.boolValue != nil) }
             for emit in try array(handler.required("emit")) {
                 try fields(emit, ["message", "forwardArguments"])
                 try require(emit["forwardArguments"]?.boolValue != nil)
@@ -275,11 +276,29 @@ enum Validation {
             } else if type == ":Message" {
                 try fields(input, ["type", "message"])
                 try message(input.required("message"))
+            } else if type == ":Disc" {
+                try fields(input, ["type", "center", "radius"], optional: ["unit"])
+                let center = try input.required("center")
+                try fields(center, ["type", "x", "y", "z"])
+                try require(center["type"]?.stringValue == ":Point")
+                for key in ["x", "y", "z"] { _ = try RuntimeValues.parseNumber(center.text(key)) }
+                _ = try RuntimeValues.parseNumber(input.text("radius"))
+            } else if type == ":Box" || type == ":Poly" {
+                try fields(input, type == ":Box" ? ["type", "lower", "upper"] : ["type", "points"], optional: ["unit"])
+                let points = type == ":Box" ? [try input.required("lower"), try input.required("upper")] : try array(input.required("points"))
+                for point in points {
+                    try fields(point, ["type", "x", "y", "z"])
+                    try require(point["type"]?.stringValue == ":Point")
+                    for key in ["x", "y", "z"] { _ = try RuntimeValues.parseNumber(point.text(key)) }
+                }
             } else if [":Vector", ":Point"].contains(type) {
                 try fields(input, ["type", "x", "y", "z"], optional: ["unit"])
                 for key in ["x", "y", "z"] { _ = try RuntimeValues.parseNumber(input.text(key)) }
             } else if [":Range.int64", ":Range.binary64"].contains(type) {
                 try fields(input, ["type", "from", "to", "step"])
+                _ = try RuntimeValues.decode(input)
+            } else if type == ":Bytes" {
+                try fields(input, ["type", "value"])
                 _ = try RuntimeValues.decode(input)
             } else if type == ":Dice" {
                 try fields(input, ["type", "rolls"])

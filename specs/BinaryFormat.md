@@ -96,7 +96,10 @@ retention mode. All remaining flag bits are invalid in V1.
 | `0x8000`–`0xFFFD` | private/experimental | any | no |
 | `0xFFFE` | NamedCustomSection | reserved | no |
 
-Types `0x0000` and `0xFFFF` are invalid. V1 has one linear code address space and
+Types `0x0000` and `0xFFFF` are invalid. The reserved types `0x0040`–`0x004F` and `0xFFFE` have no V1
+meaning, so a V1 reader treats them like any unknown type: an optional one is retained as an opaque section or
+dropped by retention, and a Required one fails with `UnknownRequiredSection`. Their names in the public section-type
+enumerations only keep the numbers from being used for something else. V1 has one linear code address space and
 therefore exactly one CodeSegment. Multiple programs are combined by separate
 `Host.Load` calls, not by multiple code sections.
 
@@ -170,6 +173,13 @@ Function and predicate binding identity is the binding name plus its ordered
 argument-name list. Duplicate signatures are invalid. Function and predicate
 names may not overlap even when their argument-name lists differ; declared
 source types and local parameter names are not encoded identity components.
+Record binding names are unique and every Record binding carries an ID, because
+casts and `parse` find a Record constructor by its name. These name rules fail
+with `InvalidProgram`; `DuplicateBindingId` reports only a repeated ID within its
+binding scope.
+Binding argument names are `_` or plain lowercase labels without the `_number`
+suffix, which belongs to local variables only; a `MessageNameHandler` records
+the single label `message` whatever its source binding is called.
 
 Matching resource declarations alone do not establish validity. The independent
 code-derived bounds and frame/staging rules are defined in

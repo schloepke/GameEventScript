@@ -68,7 +68,7 @@ internal static class GesDocumentFormatter
                 for (var i = 0; i < message.Arguments.Count; i++)
                     if (!IsPrintable(message.Arguments[i])) return false;
                 return true;
-            case Nothing or GesBytecodeTypeKind.Boolean or Integer or Float or Percentage or Tag or Text or Vector or Point
+            case Nothing or GesBytecodeTypeKind.Boolean or Integer or Float or Percentage or Tag or Text or Bytes or Vector or Point
                 or GesBytecodeTypeKind.Range or Series:
                 return true;
             case Handler:

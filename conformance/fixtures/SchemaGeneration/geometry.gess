@@ -1,0 +1,39 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The fixture of the checked-in geometry code: Boxes, Polys and Discs with and without axis blocks, optional, as a union
+// alternative and as list elements, in wire records with deltas and in models.
+wire(geometry) model(geometry) schema :Zone as {
+  id: :Number integer between 0 and 255 key
+  area: :Box(m) {
+    x between 0m and 100m step 1m delta within 3m
+    y between 0m and 3m step 1m
+  }
+  bounds: :Box optional
+  outline: :Poly(m) max 3 {
+    x between 0m and 100m step 1m
+    y between 0m and 3m step 1m
+  }
+  free: :Poly max 4
+  pick: :Box(m) | :Nothing
+  rings: :List(:Poly(m) max 2) max 2
+}
+
+// A Disc with a full block, without one, with the radius alone and without the radius.
+wire(geometry) model(geometry) schema :Reach as {
+  zone: :Disc(m) {
+    x between 0m and 100m step 1m delta within 3m
+    y between 0m and 3m step 1m
+    radius between 0m and 7m step 1m
+  }
+  free: :Disc optional
+  aura: :Disc(m) {
+    radius between 0m and 10m step 1cm
+  }
+  mark: :Disc(m) {
+    x between 0m and 100m step 1m
+  }
+  pick: :Disc(m) | :Nothing
+  rings: :List(:Disc(m) {
+    radius between 0m and 3m step 1m
+  }) max 2
+}

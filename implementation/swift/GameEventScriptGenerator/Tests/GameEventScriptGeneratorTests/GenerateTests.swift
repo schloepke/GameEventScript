@@ -11,7 +11,126 @@ final class GenerateTests: XCTestCase {
         try GesSchemaGenerator.generate(try GesSchemaSet(parsing: source), roots: [root], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: language, namespace: namespace))
     }
 
-    private func code(_ body: () throws -> String) -> String {
+    func testTheValuesOfRecordDefaultsTakeNoTypeName() throws {
+        // The values of the record defaults of :S are held by SDefaults, which the schema of that name would also be.
+        let set = try GesSchemaSet(parsing: "schema :C as { a: :Number default 1 }\nschema :SDefaults as { b: :Boolean }\nschema :S as {\n  c: :C default [:]\n  d: :SDefaults\n}\n")
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["S"], options: GesSchemaGenerateOptions(language: language, values: true)) }, "generate.nameCollision")
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["S"], options: GesSchemaGenerateOptions(language: language, bindings: true)) }, "generate.nameCollision")
+            XCTAssertTrue(try GesSchemaGenerator.generateModels(set, roots: ["S"], options: GesSchemaGenerateOptions(language: language)).contains("SDefaults"))
+        }
+    }
+
+    func testModelsNeedTheirOwnNamespaceAndWireName() throws {
+        let set = try GesSchemaSet(parsing: "wire model packed schema :Cell as { a: :Boolean }\nwire schema :CellWire as { b: :Boolean }\nwire model schema :Grid as { c: :List(:Cell) max 4 }\n")
+        let roots = ["Cell", "Grid"]
+
+        func wire(_ language: GesSchemaLanguage, _ namespace: String, _ models: String, _ more: [String] = []) -> String {
+            code { try GesSchemaGenerator.generate(set, roots: roots + more, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: language, namespace: namespace, models: models)) }
+        }
+
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            // Wire records and models of one schema share its name, so they need different namespaces.
+            XCTAssertEqual(wire(language, "", ""), "generate.nameCollision")
+            XCTAssertEqual(wire(language, "Game.Shared", "Game.Shared"), "generate.nameCollision")
+            // The wire members of the shared packed root Cell take the name CellWire.
+            XCTAssertEqual(wire(language, "Wire", "", ["CellWire"]), "generate.nameCollision")
+            XCTAssertEqual(wire(language, "Wire", ""), "")
+        }
+        // Swift namespace components are enums: wire code extends those it shares with the models' namespace.
+        let extended = try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire", models: "Game.Model"))
+        XCTAssertTrue(extended.contains("extension Game {\n    /// The namespace `Wire` of generated schema types.\n    public enum Wire {"))
+        XCTAssertEqual(wire(.csharp, "Game.Wire", "Game.Model"), "")
+        let panels = try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Panels", extendNamespace: "Game"))
+        XCTAssertTrue(panels.contains("extension Game {\n    /// The namespace `Panels` of generated model types.\n    public enum Panels {"))
+        // A namespace that starts in the global one of the other side must not take the name of a type there.
+        XCTAssertEqual(wire(.swift, "Grid.Wire", ""), "generate.nameCollision")
+        XCTAssertEqual(wire(.csharp, "", "Grid.Model"), "generate.nameCollision")
+        // Nor where one namespace continues the other: models in Game hold Grid, so wire code cannot live in Game.Grid.
+        XCTAssertEqual(wire(.swift, "Game.Grid", "Game"), "generate.nameCollision")
+        // Wire code in the whole namespace that the models' one begins with extends it with one brace for every one it opens.
+        let whole = try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game", models: "Game.Model"))
+        XCTAssertTrue(whole.contains("\nextension Game {\n"))
+        XCTAssertEqual(whole.filter { $0 == "{" }.count, whole.filter { $0 == "}" }.count)
+        // C# merges namespaces, so extending them is a usage error there.
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .csharp, namespace: "Game.Panels", extendNamespace: "Game")) }, "generate.usage")
+        // A one-part namespace can be extended as a whole, and only a leading part of the namespace can be extended.
+        let single = try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game", extendNamespace: "Game"))
+        XCTAssertTrue(single.contains("\nextension Game {\n"))
+        XCTAssertEqual(single.filter { $0 == "{" }.count, single.filter { $0 == "}" }.count)
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Panels", extendNamespace: "Panels")) }, "generate.usage")
+        // A type of any model group counts, since the models' namespace holds them all: models in Game hold Report, so wire code
+        // cannot live in Game.Report, whether Report shares the wire root's group or not.
+        for source in ["wire model schema :Grid as { a: :Boolean }\nmodel schema :Report as { b: :Boolean }\n", "wire model schema :Grid as { a: :Boolean }\nmodel(hud) schema :Report as { b: :Boolean }\n"] {
+            let withReport = try GesSchemaSet(parsing: source)
+            XCTAssertEqual(
+                code { try GesSchemaGenerator.generate(withReport, roots: ["Grid"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Report", models: "Game")) },
+                "generate.nameCollision"
+            )
+        }
+        // The wire namespace holds the `<Name>Wire` members of packed roots, which a models' namespace continuing it cannot name.
+        XCTAssertEqual(wire(.swift, "Game", "Game.CellWire"), "generate.nameCollision")
+        // Swift wire code names model types through the models' namespace and its conversions name the wire namespace. Inside
+        // the wire namespace a wire type hides the models' first component, inside a record its nested types, inside a model
+        // the model's nested types hide the wire's, and a lowercase component is hidden by members; the first component of a
+        // namespace must not hide a Swift type either. C# qualifies with global:: and is not affected.
+        let hiding = try GesSchemaSet(parsing: "wire(w) model(m) packed schema :Cell as { level: :Number integer between 0 and 9 }\nwire(w) schema :Model as { cell: :Cell }\nwire(w) schema :Holder as { cell: :Cell\n  model: :Flags(#a, #b) }\n")
+        let converted = try GesSchemaSet(parsing: "wire(w) model(m) schema :Model as { a: :Boolean }\nwire(w) model(m) schema :Holder as { net: :Flags(#a, #b) }\n")
+        let rejected: [(GesSchemaSet, [String], String, String, String, String)] = [
+            (hiding, ["Cell", "Model"], "Wire", "Model", "generate.nameCollision", "The wire type 'Model' hides"),
+            (hiding, ["Cell", "Holder"], "Wire", "ModelFlags", "generate.nameCollision", "hides the namespace 'ModelFlags'"),
+            (converted, ["Holder"], "NetFlags", "Game", "generate.nameCollision", "hides the wire namespace"),
+            (set, roots, "Wire", "Swift.Models", "generate.nameCollision", "the name of a Swift type"),
+            (set, roots, "Wire", "model", "generate.invalidNamespace", "lowercase"),
+            (set, roots, "wire", "Model", "generate.invalidNamespace", "lowercase"),
+        ]
+        for (rejectedSet, rejectedRoots, space, modelSpace, expected, message) in rejected {
+            do {
+                _ = try GesSchemaGenerator.generate(rejectedSet, roots: rejectedRoots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: space, models: modelSpace))
+                XCTFail("\(space) \(modelSpace) is accepted.")
+            } catch let error as GesGeneratorError {
+                XCTAssertEqual(error.code, expected, space + " " + modelSpace)
+                XCTAssertTrue(error.message.contains(message), error.message)
+            }
+        }
+        let csharp = try GesSchemaGenerator.generate(hiding, roots: ["Cell", "Model"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .csharp, namespace: "Wire", models: "Model"))
+        XCTAssertTrue(csharp.contains("global::Model.Cell"))
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "String")) }, "generate.nameCollision")
+        // Accepted: a later wire component, which the code extending the full namespace does not see; the first component only;
+        // a wire type named like the models' namespace where only file-scope conversions or nothing names it; model types of
+        // an enclosing namespace, which the extension of the full namespace does not see either; and namespaces whose names
+        // only resemble those reserved for types.
+        let accepted: [(GesSchemaSet, [String], String, String)] = [
+            (hiding, ["Cell"], "Wire.Model", "Model"),
+            (hiding, ["Cell", "Model"], "Wire", "Game.Model"),
+            (converted, ["Model"], "Wire", "Model"),
+            (try GesSchemaSet(parsing: "wire(w) schema :Model as { a: :Boolean }\n"), ["Model"], "Wire", "Model"),
+            (set, roots, "Game", "Game.Cell"),
+            (set, roots, "Cell.Net", "Cell"),
+            (set, roots, "Wire", "GesModels"),
+        ]
+        for (acceptedSet, acceptedRoots, space, modelSpace) in accepted {
+            _ = try GesSchemaGenerator.generate(acceptedSet, roots: acceptedRoots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: space, models: modelSpace))
+        }
+        // Wire generation also extends only a leading part, and the larger of that part and the one shared with the models.
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire", extendNamespace: "Wire")) }, "generate.usage")
+        let deeper = try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire.Packed", models: "Game.Model", extendNamespace: "Game.Wire"))
+        XCTAssertTrue(deeper.contains("\nextension Game.Wire {\n"))
+        // Models that read documents extend the namespace too.
+        let documents = try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Panels", documents: true, extendNamespace: "Game"))
+        XCTAssertTrue(documents.contains("extension Game {\n    /// The namespace `Panels` of generated model types.\n    public enum Panels {"))
+        // An invalid namespace reports itself first.
+        XCTAssertEqual(wire(.swift, ".Wire", ".Wire"), "generate.invalidNamespace")
+    }
+
+    func testTheDocumentTypeTakesNoGeneratedName() throws {
+        // In a namespace the reading type is Document, which a model root of that name would also be.
+        let set = try GesSchemaSet(parsing: "schema :Document as { a: :Boolean }\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Document"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Units", documents: true)) }, "generate.nameCollision")
+        XCTAssertTrue(try GesSchemaGenerator.generateModels(set, roots: ["Document"], options: GesSchemaGenerateOptions(language: .swift, documents: true)).contains("enum ModelDocument"))
+    }
+
+    private func code<Result>(_ body: () throws -> Result) -> String {
         do {
             _ = try body()
             return ""
@@ -36,6 +155,52 @@ final class GenerateTests: XCTestCase {
         XCTAssertTrue(swift.contains("public struct S: Sendable {"))
     }
 
+    func testModelsBoundedByParametersDescribeTheirNames() throws {
+        // A parameter's name may hold an e, which a canonical decimal also holds.
+        let set = try GesSchemaSet(parsing: "parameter worldHeight: :Quantity(m)\nmodel schema :Spot as { y: :Quantity(m) between 0m and worldHeight step 1cm }\n")
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            XCTAssertTrue(try GesSchemaGenerator.generateModels(set, roots: ["Spot"], options: GesSchemaGenerateOptions(language: language)).contains("worldHeight"))
+        }
+    }
+
+    func testLentFieldsKeepOneNameInTheirInterfaceAndEveryTypeTakingThem() throws {
+        // A field named like the lending schema, or like a schema that takes it, is renamed alike everywhere it is lent.
+        let lent = [
+            ("abstract schema :Base as { base: :Number }\nmodel schema :Child as {\n  with :Base\n  b: :Boolean\n}\n", "BaseValue", "baseValue"),
+            ("abstract schema :Base as { child: :Number }\nmodel schema :Child as {\n  with :Base\n  b: :Boolean\n}\n", "ChildValue", "childValue"),
+        ]
+        for (source, csharp, swift) in lent {
+            let set = try GesSchemaSet(parsing: source)
+            let roots = GesSchemaGenerator.modelRoots(set, group: "default")
+            var code = try GesSchemaGenerator.generateModels(set, roots: roots, options: GesSchemaGenerateOptions(language: .csharp))
+            XCTAssertTrue(code.contains("double \(csharp) { get; }"))
+            XCTAssertTrue(code.contains("public double \(csharp) { get; set; }"))
+            code = try GesSchemaGenerator.generateModels(set, roots: roots, options: GesSchemaGenerateOptions(language: .swift))
+            XCTAssertTrue(code.contains("var \(swift): Double { get }"))
+            XCTAssertTrue(code.contains("public var \(swift): Double"))
+        }
+    }
+
+    func testCSharpModelMembersDoNotTakeTheNameOfTheirType() throws {
+        // C# rejects a member named like its type: a record FromValue with values, and a document class Value or FromDocument
+        // beside the document type's members. Swift takes all of them.
+        let cases: [(String, Bool, Bool)] = [
+            ("model schema :FromValue as { a: :Boolean }\n", true, false),
+            ("model schema :Value as { a: :Boolean }\n", false, true),
+            ("model schema :FromDocument as { a: :Boolean }\n", false, true),
+        ]
+        for (source, values, documents) in cases {
+            let set = try GesSchemaSet(parsing: source)
+            let roots = GesSchemaGenerator.modelRoots(set, group: "default")
+            XCTAssertEqual(
+                code { try GesSchemaGenerator.generateModels(set, roots: roots, options: GesSchemaGenerateOptions(language: .csharp, values: values, documents: documents)) },
+                "generate.nameCollision",
+                source
+            )
+            _ = try GesSchemaGenerator.generateModels(set, roots: roots, options: GesSchemaGenerateOptions(language: .swift, values: values, documents: documents))
+        }
+    }
+
     func testCollidingNamesAreRejected() throws {
         XCTAssertEqual(code { try generate("schema :S as {\n  write: :Boolean\n}\n", "S", .csharp) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  write: :Boolean\n}\n", "S", .swift) }, "generate.nameCollision")
@@ -44,6 +209,16 @@ final class GenerateTests: XCTestCase {
         XCTAssertEqual(code { try generate("schema :S as {\n  quantize: :Boolean\n}\n", "S", .swift) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  state: :Tag(#a)\n  stateTag: :Boolean\n}\n", "S", .csharp) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  heat: :Boolean optional\n  hasHeat: :Boolean\n}\n", "S", .swift) }, "generate.nameCollision")
+        XCTAssertEqual(code { try generate("schema :S as {\n  mode: :Flags(#rawValue, #other)\n}\n", "S", .swift) }, "generate.nameCollision")
+        let keywords = try GesSchemaSet(parsing: "model schema :S as {\n  default: :Text\n  in: :Boolean\n  var: :Boolean\n}\n")
+        let model = try GesSchemaGenerator.generateModels(
+            keywords,
+            roots: GesSchemaGenerator.modelRoots(keywords, group: "default"),
+            options: GesSchemaGenerateOptions(language: .swift, values: true, bindings: true)
+        )
+        XCTAssertTrue(model.contains("init(default: String, in: Bool, `var`: Bool)"))
+        XCTAssertTrue(model.contains("S(default: field0, in: field1, var: field2)"))
+        XCTAssertTrue(try generate("schema :S as {\n  mode: :Flags(#rawValue, #other)\n}\n", "S", .csharp).contains("RawValue = 1UL << 0,"))
         XCTAssertTrue(try generate("schema :S as {\n  s: :Boolean\n}\n", "S", .swift).contains("public var sValue: Bool = false"))
     }
 
@@ -139,5 +314,103 @@ final class GenerateTests: XCTestCase {
         XCTAssertEqual(text.components(separatedBy: "partial struct Inner").count, 2)
         XCTAssertTrue(text.contains("from the roots A, B."))
         XCTAssertTrue(text.contains("\"i.a\","))
+    }
+
+    func testSplitOutputPlacesEachDeclarationInTheFileOfItsDeclaration() throws {
+        let set = try GesSchemaSet(sources: [
+            GesSchemaSource(name: "maps/world.gess", text: "tags :Side as (#left, #right)\nschema :World as {\n  bot: :Bot\n  side: :Side\n}\n"),
+            GesSchemaSource(name: "bots.gess", text: "schema :Bot as {\n  names: :List(:Text max 4) max 2\n}\n"),
+        ])
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            let fileExtension = language == .swift ? ".swift" : ".g.cs"
+            var options = GesSchemaGenerateOptions(language: language, namespace: "Game.Wire", values: true, split: .schema)
+            var files = try GesSchemaGenerator.generateFiles(set, roots: ["World"], parameters: GesSchemaParameters(), options: options)
+            XCTAssertEqual(files.map(\.path), ["Game.Wire.Bot", "Game.Wire.Side", "Game.Wire.World", "_Game.Wire"].map { $0 + fileExtension } + [".ges-generated.json"])
+            XCTAssertTrue(files[0].text.contains("NamesItem"))
+            XCTAssertFalse(files[2].text.contains("NamesItem"))
+            XCTAssertTrue(files[3].text.contains("__GesSchemas"))
+            XCTAssertTrue(files[4].text.contains("\"split\": \"schema\""))
+            XCTAssertTrue(files[4].text.contains("\"files\": [\n    \"Game.Wire.Bot\(fileExtension)"))
+            options.split = .file
+            files = try GesSchemaGenerator.generateFiles(set, roots: ["World"], parameters: GesSchemaParameters(), options: options)
+            XCTAssertEqual(files.map(\.path), ["Game.Wire.bots" + fileExtension, "Game.Wire.world" + fileExtension, "_Game.Wire" + fileExtension, ".ges-generated.json"])
+            XCTAssertTrue(files[1].text.contains("Side"))
+        }
+        let swift = try GesSchemaGenerator.generateFiles(
+            set,
+            roots: ["World"],
+            parameters: GesSchemaParameters(),
+            options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire", split: .schema)
+        )
+        XCTAssertTrue(swift[0].text.contains("extension Game.Wire {\n"))
+        XCTAssertTrue(swift[3].text.contains("public enum Game {\n    /// The namespace `Wire` of generated schema types.\n    public enum Wire {}\n}\n"))
+        XCTAssertFalse(swift[0].text.contains("from the root"))
+    }
+
+    func testSplitOutputRejectsMismatchedRequestsAndCollidingFileNames() throws {
+        let set = try GesSchemaSet(parsing: "schema :S as {\n  on: :Boolean\n}\n")
+        let split = GesSchemaGenerateOptions(split: .schema)
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: ["S"], parameters: GesSchemaParameters(), options: split) }, "generate.usage")
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["S"], options: split) }, "generate.usage")
+        XCTAssertEqual(code { try GesSchemaGenerator.generateFiles(set, roots: ["S"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions()) }, "generate.usage")
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModelFiles(set, roots: ["S"], options: GesSchemaGenerateOptions()) }, "generate.usage")
+        let cases = try GesSchemaSet(parsing: "schema :Ab as {\n  b: :AB\n}\nschema :AB as {\n  on: :Boolean\n}\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generateFiles(cases, roots: ["Ab"], parameters: GesSchemaParameters(), options: split) }, "generate.nameCollision")
+        let sources = try GesSchemaSet(sources: [
+            GesSchemaSource(name: "a/s.gess", text: "schema :A as {\n  b: :B\n}\n"), GesSchemaSource(name: "b/s.gess", text: "schema :B as {\n  on: :Boolean\n}\n"),
+        ])
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModelFiles(sources, roots: ["A"], options: GesSchemaGenerateOptions(split: .file)) }, "generate.nameCollision")
+        XCTAssertEqual(try GesSchemaGenerator.generateModelFiles(sources, roots: ["A"], options: GesSchemaGenerateOptions(split: .schema)).count, 4)
+    }
+
+    func testNestedTypesMustNotHideTopLevelTypes() throws {
+        let set = try GesSchemaSet(
+            parsing:
+                "tags :ModeTag as (#p, #q, #r)\nschema :SlotsItem as {\n  a: :Boolean\n}\nschema :Squad as {\n  mode: :Tag(#a, #b)\n  other: :ModeTag\n}\nschema :Crew as {\n  slots: :List(:Text max 4 | :Number integer between 0 and 3) max 3\n  spare: :SlotsItem\n}\n"
+        )
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            let options = GesSchemaGenerateOptions(language: language)
+            XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: ["Squad"], parameters: GesSchemaParameters(), options: options) }, "generate.nameCollision")
+            XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: ["Crew"], parameters: GesSchemaParameters(), options: options) }, "generate.nameCollision")
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Squad"], options: options) }, "generate.nameCollision")
+        }
+    }
+
+    func testTypesMustNotTakeNamesThatGeneratedCodeUses() throws {
+        let swift = GesSchemaGenerateOptions(language: .swift)
+        let csharp = GesSchemaGenerateOptions()
+        for name in ["String", "Int", "Type", "Swift"] {
+            let set = try GesSchemaSet(parsing: "schema :\(name) as {\n  on: :Boolean\n}\n")
+            XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: [name], parameters: GesSchemaParameters(), options: swift) }, "generate.nameCollision")
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: [name], options: swift) }, "generate.nameCollision")
+            _ = try GesSchemaGenerator.generate(set, roots: [name], parameters: GesSchemaParameters(), options: csharp)
+        }
+        let runtime = try GesSchemaSet(parsing: "schema :GesValue as {\n  on: :Boolean\n}\n")
+        for options in [csharp, swift] {
+            XCTAssertEqual(code { try GesSchemaGenerator.generate(runtime, roots: ["GesValue"], parameters: GesSchemaParameters(), options: options) }, "generate.nameCollision")
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(runtime, roots: ["GesValue"], options: options) }, "generate.nameCollision")
+        }
+        let member = try GesSchemaSet(parsing: "schema :S as {\n  gesValue: :Boolean\n  gesture: :Boolean\n}\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(member, roots: ["S"], parameters: GesSchemaParameters(), options: csharp) }, "generate.nameCollision")
+        _ = try GesSchemaGenerator.generate(try GesSchemaSet(parsing: "schema :Gesture as {\n  gesture: :Boolean\n}\n"), roots: ["Gesture"], parameters: GesSchemaParameters(), options: csharp)
+    }
+
+    func testSwiftModelsReserveTheHashableMembers() throws {
+        for field in ["hashValue", "hash"] {
+            let set = try GesSchemaSet(parsing: "schema :Unit as {\n  \(field): :Number integer between 0 and 9\n}\n")
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Unit"], options: GesSchemaGenerateOptions(language: .swift)) }, "generate.nameCollision")
+            _ = try GesSchemaGenerator.generateModels(set, roots: ["Unit"], options: GesSchemaGenerateOptions())
+        }
+    }
+
+    func testManifestNamesTheValueConversionsThatDocumentsInclude() throws {
+        let set = try GesSchemaSet(parsing: "schema :S as {\n  on: :Boolean\n}\n")
+        var documents = GesSchemaGenerateOptions(split: .schema)
+        documents.documents = true
+        var both = documents
+        both.values = true
+        let documentFiles = try GesSchemaGenerator.generateModelFiles(set, roots: ["S"], options: documents)
+        XCTAssertEqual(documentFiles, try GesSchemaGenerator.generateModelFiles(set, roots: ["S"], options: both))
+        XCTAssertTrue(try XCTUnwrap(documentFiles.last).text.contains("\"values\": true"))
     }
 }

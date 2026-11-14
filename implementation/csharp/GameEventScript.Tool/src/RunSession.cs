@@ -105,6 +105,18 @@ internal sealed class RunSession
         return result.State is GesExecutionState.Completed or GesExecutionState.Waiting;
     }
 
+    // The end of console input waits for delayed work as a batch run does, so piped input loses no timer; `:quit` discards it.
+    internal bool DrainDelayed()
+    {
+        while (Host.NextMessageDelay is { } delay)
+        {
+            if (delay > 0) Thread.Sleep((int)Math.Min(1000, delay / 1000 + (delay % 1000 == 0 ? 0 : 1)));
+            if (Host.NextMessageDelay == 0 && !Pump()) return false;
+        }
+
+        return true;
+    }
+
     internal void WriteSummary()
         => Console.Error.WriteLine($"Run completed: {_processedMessages} messages, {_opcodes} opcodes, {_emits} emits, {_publishes} publishes.");
 }

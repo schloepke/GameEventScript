@@ -38,26 +38,27 @@ def targets(root, artifacts_only, report):
     if not artifacts_only:
         for name in ("bin", "obj", "TestResults", ".build"):
             add(root / name)
-        implementation = root / "implementation"
-        if implementation.is_symlink():
-            report("Skip symbolic link: implementation")
-        else:
-            for language, names in (
-                ("csharp", {"bin", "obj", "TestResults"}),
-                ("swift", {".build"}),
-            ):
-                base = implementation / language
-                if base.is_symlink():
-                    report(f"Skip symbolic link: implementation/{language}")
-                    continue
-                for directory, children, _ in os.walk(base, followlinks=False):
-                    for name in list(children):
-                        path = Path(directory) / name
-                        if name in names:
-                            add(path)
-                            children.remove(name)
-                        elif path.is_symlink() or name == ".git":
-                            children.remove(name)
+        # The examples build into artifacts, but an editor that opens one of their packages indexes it in its own .build.
+        for parent, base, names in (
+            ("implementation", "csharp", {"bin", "obj", "TestResults"}),
+            ("implementation", "swift", {".build"}),
+            ("examples", "", {"bin", "obj", "TestResults", ".build"}),
+        ):
+            if (root / parent).is_symlink():
+                report(f"Skip symbolic link: {parent}")
+                continue
+            start = root / parent / base if base else root / parent
+            if start.is_symlink():
+                report(f"Skip symbolic link: {start.relative_to(root)}")
+                continue
+            for directory, children, _ in os.walk(start, followlinks=False):
+                for name in list(children):
+                    path = Path(directory) / name
+                    if name in names:
+                        add(path)
+                        children.remove(name)
+                    elif path.is_symlink() or name in (".git", "node_modules"):
+                        children.remove(name)
     return sorted(candidates)
 
 

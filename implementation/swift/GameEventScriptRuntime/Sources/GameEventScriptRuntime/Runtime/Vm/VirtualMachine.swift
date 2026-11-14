@@ -26,6 +26,12 @@ final class GesVirtualMachine {
     private var depth = 0
     private let maxRegisters: Int
     private var pendingCapacity = 0
+    private var registersInUse = 0
+    // Advances when an extension call ends, so argument views retained beyond their call can tell.
+    var extensionCallGeneration = 0
+    // The running handler's budget and MaxValueDepth, fixed for each slice.
+    private var valueBudget: GesRuntimeBudget?
+    private var maxValueDepth: Int64 = .max
     let extensionCall = GesExtensionCall()
     lazy var constructorCall = GesExternalTypeConstructorCall()
 
@@ -45,15 +51,26 @@ final class GesVirtualMachine {
     @inline(__always)
     var registers: GesRegisterFile { GesRegisterFile(base: registerBase, count: registerCapacity) }
 
+    func useLimits(of budget: GesRuntimeBudget) {
+        valueBudget = budget
+        maxValueDepth = budget.limits.maxValueDepth > 0 ? Int64(budget.limits.maxValueDepth) : .max
+    }
+
     func prepareCapacity(_ capacity: Int) {
         if processing {
             pendingCapacity = max(pendingCapacity, capacity)
             return
         }
+        // Prewarming grows the capacity only; the new registers hold Nothing and are not in use.
+        let inUse = registersInUse
         ensureRegisterCapacity(capacity)
+        registersInUse = inUse
     }
 
     @discardableResult func ensureRegisterCapacity(_ count: Int) -> Bool {
+        // Every frame, local block and staged argument reserves its registers here, so this is the high-water mark of
+        // the registers the handler can have written.
+        if count > registersInUse { registersInUse = count }
         if count <= registerCapacity { return true }
         if count > maxRegisters {
             raiseError("runtime.registerOverflow")
@@ -89,7 +106,26 @@ final class GesVirtualMachine {
     func isRegisterData(_ index: Int) -> Bool { registers[frameStart + index].isRegisterData }
 
     // Copy existing values (arguments, callbacks, collection members); computed results use typed setters.
-    func setValue(_ index: Int, _ value: GesValue) { registers[frameStart + index] = value }
+    func setValue(_ index: Int, _ value: GesValue) {
+        registers[frameStart + index] = value
+        if value.nestingDepth > maxValueDepth { exceedValueDepth() }
+    }
+
+    // Every script-built container reaches a register through setValue or one of the container setters below, so these
+    // checks bound the depth of every value a handler holds (specs/HostRuntime.md#value-nesting).
+    private func checkValueDepth(_ index: Int) {
+        if registers[frameStart + index].nestingDepth > maxValueDepth { exceedValueDepth() }
+    }
+
+    // The same check for an absolute register offset, which the operations that build Lists in place use.
+    func checkValueDepth(absolute index: Int) {
+        if registers[index].nestingDepth > maxValueDepth { exceedValueDepth() }
+    }
+
+    private func exceedValueDepth() { valueBudget?.exhaust("MaxValueDepth", Int(clamping: maxValueDepth)) }
+
+    // Operations that visit Range items without a loop charge each visited item like a loop iteration.
+    func chargeRangeItem() -> Bool { valueBudget?.loop() ?? true }
 
     func output(_ index: Int) -> GesRegisterOutput { .init(state: self, index: index) }
 
@@ -111,21 +147,41 @@ final class GesVirtualMachine {
 
     func setDice(_ index: Int, _ value: [Int32]) { registers[frameStart + index].setDice(value) }
 
-    func setList(_ index: Int, _ value: [GesValue]) { registers[frameStart + index].setList(value) }
+    func setBytes(_ index: Int, _ value: [UInt8]) { registers[frameStart + index].setBytes(value) }
 
-    func setMap(_ index: Int, _ value: [GesMapEntry]) { registers[frameStart + index].setMap(value) }
+    func setList(_ index: Int, _ value: [GesValue]) {
+        registers[frameStart + index].setList(value)
+        checkValueDepth(index)
+    }
 
-    func setMap(_ index: Int, _ value: GesValueMap) { registers[frameStart + index].setMap(value) }
+    func setMap(_ index: Int, _ value: [GesMapEntry]) {
+        registers[frameStart + index].setMap(value)
+        checkValueDepth(index)
+    }
 
-    func setRecord(_ index: Int, typeName: String, entries: [GesMapEntry]) { registers[frameStart + index].setRecord(typeName: typeName, entries: entries) }
+    func setMap(_ index: Int, _ value: GesValueMap) {
+        registers[frameStart + index].setMap(value)
+        checkValueDepth(index)
+    }
 
-    func setRecord(_ index: Int, typeName: String, fields: GesValueMap) { registers[frameStart + index].setRecord(typeName: typeName, fields: fields) }
+    func setRecord(_ index: Int, typeName: String, entries: [GesMapEntry]) {
+        registers[frameStart + index].setRecord(typeName: typeName, entries: entries)
+        checkValueDepth(index)
+    }
+
+    func setRecord(_ index: Int, typeName: String, fields: GesValueMap) {
+        registers[frameStart + index].setRecord(typeName: typeName, fields: fields)
+        checkValueDepth(index)
+    }
 
     func setIntegerRange(_ index: Int, from: Int64, to: Int64, step: Int64) { registers[frameStart + index].setIntegerRange(from: from, to: to, step: step) }
 
     func setFloatRange(_ index: Int, from: Double, to: Double, step: Double) { registers[frameStart + index].setFloatRange(from: from, to: to, step: step) }
 
-    func setMessage(_ index: Int, _ value: GameEventScriptMessage) { registers[frameStart + index].setMessage(value) }
+    func setMessage(_ index: Int, _ value: GameEventScriptMessage) {
+        registers[frameStart + index].setMessage(value)
+        checkValueDepth(index)
+    }
 
     func setHandler(_ index: Int, _ value: GesMessageSignature) { registers[frameStart + index].setHandler(value) }
 
@@ -284,7 +340,9 @@ final class GesVirtualMachine {
 
     func reset() {
         for index in 0..<depth { frames[index] = .init() }
-        for index in 0..<registerCapacity { registerBase[index].setNothing() }
+        // Only the registers this handler reserved can hold values; the rest of the capacity is still Nothing.
+        for index in 0..<min(registersInUse, registerCapacity) { registerBase[index].setNothing() }
+        registersInUse = 0
         linked = nil
         handlerName = nil
         error = nil
@@ -298,6 +356,7 @@ final class GesVirtualMachine {
         constructorCall.end()
         if pendingCapacity > 0 {
             ensureRegisterCapacity(pendingCapacity)
+            registersInUse = 0
             pendingCapacity = 0
         }
     }

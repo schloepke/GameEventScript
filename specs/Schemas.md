@@ -71,34 +71,68 @@ messages :Combat as (Hit, Died)
 ### Grammar
 
 ```text
-source      = { constant | parameter | schema | message | messages }
+source      = { constant | parameter | tagsdecl | "abstract" schema | [ roles ] ( [ packed ] schema | message | messages ) }
+packed      = "packed" [ "(" ( "8" | "16" | "32" | "64" ) ")" ]
+tagsdecl    = "tags" ":" TypeName "as" tagset
+roles       = role [ role ]
+role        = ( "wire" | "model" ) [ "(" LowerName ")" ]
 constant    = "constant" "$" ConstantName "be" literal
 parameter   = "parameter" LowerName ":" ( ":Number" | ":Percentage" | quantity )
-schema      = "schema" ":" TypeName "as" "{" { field } "}"
+schema      = "schema" ":" TypeName "as" "{" { field | let | with } "}"
+with        = "with" ":" TypeName [ "all" "optional" ] [ "without" "(" LowerName { "," LowerName } ")" ]
+let         = "let" LowerName "be" ( literal | "$" ConstantName )
 message     = "message" MessageName "(" [ argument { "," argument } ] ")" [ "tags" tagset ]
 messages    = "messages" ":" TypeName "as" "(" MessageName { "," MessageName } ")"
-field       = LowerName ":" union [ "optional" | "key" ]
+field       = LowerName ":" union [ "optional" | "key" ] [ "default" fallback | "computed" "by" expression ]
 argument    = [ "_" ] LowerName ":" union [ "optional" ]
 
-union       = type { "|" type }
+union       = alternative { "|" alternative }
+alternative = [ LowerName ":" ] type
 type        = ":Boolean"
             | numeric
             | spatial
-            | ":Tag" [ tagset | "max" integer ]
-            | ":Text" [ "max" integer ]
-            | ":List" [ "(" union ")" [ "max" integer ] ]
+            | ":Tag" [ tagset | "max" maximum ]
+            | ":Text" [ "max" maximum ]
+            | ":Bytes" [ "max" maximum ]
+            | ":List" [ "(" union ")" [ "max" maximum ] [ "depth" depth ] ]
             | ":" TypeName
-            | ":Dice" [ "max" integer ] constraints
+            | ":Dice" [ "max" maximum ] constraints
             | ":Map" | ":Range" | ":Series" | ":Message" | ":Handler" | ":Nothing"
 numeric     = ( ":Number" | ":Percentage" | quantity ) constraints
 quantity    = ":Quantity" "(" unit ")"
-spatial     = ( ":Point" | ":Vector" ) [ "(" unit ")" ] [ "{" axis { axis } "}" ]
+spatial     = ( ":Point" | ":Vector" | ":Box" ) [ "(" unit ")" ] [ "{" axis { axis } "}" ]
+            | ":Poly" [ "(" unit ")" ] [ "max" maximum ] [ "{" planeaxis { planeaxis } "}" ]
+            | ":Disc" [ "(" unit ")" ] [ "{" discaxis { discaxis } "}" ]
 axis        = ( "x" | "y" | "z" ) constraints
+planeaxis   = ( "x" | "y" ) constraints
+discaxis    = ( "x" | "y" | "radius" ) constraints
 constraints = [ "integer" ] [ range ] [ "step" value ] [ "delta" "within" value ]
-range       = [ "wrapping" ] "between" bound "and" bound
-bound       = value | LowerName
-value       = literal | "$" ConstantName
+range       = [ "wrapping" ] "between" value "and" value
+value       = literal | "$" ConstantName | LowerName
+maximum     = integer | LowerName
+fallback    = "true" | "false" | "#" TagName | value | record
+record      = "[" ":" "]" | "[" entry { "," entry } "]"
+entry       = LowerName ":" ( literal | "$" ConstantName | "true" | "false" | "#" TagName | record )
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
+
+expression  = fallen [ "when" fallen { "," fallen "when" fallen } [ "," ] "otherwise" fallen ]
+fallen      = disjunction { "default" disjunction }
+disjunction = conjunction { "or" conjunction }
+conjunction = equality { "and" equality }
+equality    = relation { ( "=" | "<>" ) relation }
+relation    = sum { ( "<" | "<=" | ">" | ">=" ) sum | "has" "value" }
+sum         = product { ( "+" | "-" ) product }
+product     = unary { ( "*" | "/" ) unary }
+unary       = ( "-" | "not" | "abs" | function ) unary | power
+function    = "sqrt" | "√" | "cbrt" | "∛" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "exp" | "ln"
+            | "floor" | "ceil" | "truncate" | "round" "half" ( "even" | "up" | "down" ) | "rad" | "deg"
+power       = ( postfix | ( "abs" | function ) "(" expression ")" ) [ "^" unary | "²" | "³" ]
+postfix     = primary { "." name | "[" ":" "count" "]" | "[" ":" "sum" [ LowerName "=>" expression ] "]" }
+primary     = literal | "true" | "false" | "$" ConstantName | name | "(" expression ")"
+            | ( "min" | "max" ) "of" sum "and" sum { "and" sum }
+            | "clamp" sum "between" sum "and" sum
+            | ( "atan2" | "hypot" ) "(" expression "," expression [ "," expression ] ")"
+name        = LowerName | "`" LowerName "`"
 ```
 
 `LowerName`, `ConstantName`, `TypeName`, `MessageName` and `TagName` follow the
@@ -106,15 +140,37 @@ tagset      = "(" "#" TagName { "," "#" TagName } ")"
 [`:Quantity(unit)`](Language.md#records-and-custom-types) accepts. `literal` is one exact
 finite number of the [number grammar](Semantics/Numbers.md#text-and-number-conversion), with an
 optional `%` or unit suffix; a Text, a constant or a parameter is no literal. `integer` is
-at most 12 decimal digits without a leading zero.
+at most 12 decimal digits without a leading zero; a single `_` may separate two digits, as in `max 10_000`. `depth` is
+1 to 3 decimal digits without a leading zero, and a [recursive List](#recursion) needs at least 2. A
+`LowerName` in a `value` or `maximum` names a `let` of the schema or, only in a range, a parameter of the file; in a
+`fallback` it names a `let` or a sibling field. An [expression](#computed-fields) has its own names.
 
 **Layout.** Spaces and tabs may separate any two tokens, and a line comment may end any
-line. A source may start with a BOM. Fields and axes are separated by commas or line breaks,
+line. A source may start with a BOM. Fields, lets and axes are separated by commas or line breaks,
 and repeated or trailing separators are allowed. Arguments, members and tags are separated by
 exactly one comma. A line break is allowed only in these places: between declarations, after
 `as`, inside the parentheses of an argument list, a member list, a tag set or a `:List`, inside
-the braces of a schema or an axis block, and after `|`. Each field, with its type and marker,
+the braces of a schema or an axis block, and before or after each `|` of a union. Each field, with its type and marker,
 otherwise stays on one line.
+
+> **Since: Unreleased** — unions across lines
+
+A union may span lines wherever it stands: in a field, an argument, a List element and with labeled alternatives. A `|` may
+end a line with the next alternative on the following line, or start a line, which then continues the union of the field
+before it; a field never starts with `|`, so a field whose first token is `|` is `schema.syntax`. Comments and blank lines
+may stand between the alternatives, and the field's marker, `default` or `computed by` follows the last one, as on one line:
+
+```gess
+schema :Unit_Marker as {
+  shape: point: :Point(m) { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m }
+    | box: :Box(m) { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m }
+    // A polygon of up to 16 points.
+    | poly: :Poly(m) max 16 { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m } optional
+}
+```
+
+An error inside a continued alternative has the line and column of that alternative. A role is written without spaces, as in `wire(world)`, and stands on the line of its
+declaration.
 
 ### Declarations
 
@@ -128,6 +184,41 @@ A source is a sequence of declarations in any order; a reference may come before
 - **`schema :Name as { ... }`** declares a record type: named fields in order, none or many.
   It can be a root, the type of a field, argument or list element, and the type name of a
   [Record](#record-values). A schema without fields encodes to no bits.
+- **`let name be value`** inside a schema names one value of that schema, a literal or a file constant. Its literal
+  gives it its kind and unit: `2s` is a `:Quantity(s)`, `50%` a Percentage, `16` a Number. A whole Number within Int64
+  is an integer; any other value is a binary64 in base units and must stay finite and, unless zero, non-zero there, or it
+  is `schema.tooWide`. The fields of its schema, and only they, may name it as a bound, step, delta range or `max`, where
+  it is replaced by its value; a `max` takes a positive whole Number of at most 12 digits, like a written one. A let is
+  never encoded and is no field of a value or document, but it belongs to the [canonical form](#canonical-form) and the
+  hash, since both sides of a connection rely on it, and [generated code](#tools) declares it as a static member of the
+  schema's types. Its name differs from the fields and lets of its schema and from the parameters of its file, since a
+  bound may name either, or it is `schema.duplicateName`. *Since: Unreleased.*
+
+  A let is one value, not an expression: binding and reading evaluate nothing, and arithmetic between lets, such as
+  `peakPower * 2s`, would need an expression language for a single convenience; its result is written instead. File
+  constants and parameters are not generated, so a bound stays private to its file unless a schema states it as a let.
+
+- **`with :Name`** inside a schema takes the fields of another schema: they are copied where `with` stands, in their
+  declared order, with their types, markers and [defaults](#defaults), as if written there. `all optional` makes each
+  taken field optional and drops its default, except a union with a `:Nothing` alternative, which already holds an absent
+  value; a taken key becomes optional too. `without (a, b)` leaves fields out. Composition is a schema-level thing only:
+  the record stays flat on the wire, in values and in documents, and the [canonical form](#canonical-form) and hash list
+  the fields as written, so `with` leaves no trace there. A field keeps its own file's constants, parameters and lets,
+  and lets are not taken. A taken field named like a field or let of the schema is `schema.duplicateName`, a field
+  `without` names that the taken schema lacks `schema.unknownName`, a taken default whose sibling `without` leaves out
+  `schema.invalidDefault`, a taken key that does not end up first `schema.invalidKey`, and schemas that take each other
+  `schema.cycle`. Only a schema takes fields; a message has no `with`. *Since: Unreleased.*
+- **`abstract schema :Name as { ... }`** declares a schema that only lends its fields with `with`, such as the fields many
+  unit schemas share. It is no field type, list element, union alternative or root, takes no role, is never bound or
+  checked against a document, and is never generated as a type of its own: each of these is `schema.invalidAbstract`, a
+  role `schema.invalidRole`. It may take other schemas, abstract or not. It is described like other schemas, with a hash
+  over its own fields, but has no hash on the wire: its fields belong to the hash of each schema that takes them. The
+  keyword is `abstract` rather than `protocol`, since the ports name what is generated differently and a schema
+  describes fields, not behaviour. *Since: Unreleased.*
+
+  `with` is composition within one schema set; taking a schema from another set, such as a mod building on a game's
+  contract, would need a version or hash both sides bind and will use another keyword.
+
 - **`message Name(...) tags (...)`** declares one message signature: its name, its arguments in
   order, and a closed set of tags, of which any subset may be present. An argument has the
   label of its name, as in `target: 5`, or with `_` none, so `_ damage` is passed by position
@@ -138,8 +229,56 @@ A source is a sequence of declarations in any order; a reference may come before
   of the listed messages, at least one, each once. Its encoding starts with the index of the chosen
   message, so a receiver learns which message follows; see [messages](#messages). A set
   can be a root and nothing else: it is not a type, and a message may belong to several sets.
+- **`tags :Name as (#a, #b)`** names a closed tag set, each tag once. A field, argument, list element or union
+  alternative of type `:Name` is the `:Tag(#a, #b)` written in place: the same constraints, encoding, values and
+  [canonical form](#canonical-form), so the name belongs to no hash and renaming a set changes no bytes. A set
+  is no root, and a union cannot hold it beside another Tag. [Generated code](#tools) declares one type per set
+  that every field of it uses, instead of one per field. *Since: Unreleased.*
 
-Schemas, messages and message sets share one namespace across all sources.
+Schemas, messages, message sets and tag sets share one namespace across all sources.
+
+A union alternative may carry a label, as in `units: :List(:Text max 64 | bind: :Loadout_UnitBind)`. Generated code
+names the alternative after its label instead of its type (`.bind`, C# `Bind`); the label changes no bytes, values,
+paths, canonical form or hash, as alternatives are told apart by the kind of their value. A label stands only in a union
+of two or more alternatives and not on `:Nothing`, which has no value, or it is `schema.invalidUnion`; labels and the
+type names of unlabeled alternatives, with a label's first letter capitalized, differ within a union, or it is
+`schema.duplicateName`. *Since: Unreleased.*
+
+### Roles
+
+> **Since: Unreleased**
+
+A role marks a declaration as a root of a kind of [code generation](#tools), optionally in a named group:
+
+```gess
+wire(world) schema :World as { tick: :Number integer between 0 and 1000000, bots: :List(:World_Bot) max 64 }
+wire(protocol) messages :GameEvents as (Hit, Died)
+model(view) schema :WorldView as { tick: :Number integer, bots: :List(:BotView) }
+wire schema :Arena as { size: :Number integer between 1 and 64 }
+schema :World_Bot as { id: :Number integer between 0 and 255 key }
+```
+
+- **`wire(group)`** makes a schema, message or message set a wire root of the group: code that writes, reads,
+  compares, quantizes and deltas its records. **`model(group)`** makes a schema a model root of the group: a plain value
+  type that is never encoded. A role without a group belongs to the group `default`. A group is a `LowerName`.
+- **Roles belong to roots.** A declaration without a role is a part: it is generated when a root reaches it, through
+  fields, union alternatives, list elements or the members of a message set, and takes its form from that root. A part that
+  a wire root and a model root both reach is generated in both forms, each in the output of its own generation.
+- **A marked declaration can also be a part.** A root of one group that another group's root reaches is generated as a part
+  there and is no root of that group, so generating the group pulls in nothing else of the root's own group.
+- A declaration takes at most one `wire` and one `model` role, so `wire(world) model(view) schema :Arena` is both. A model
+  root is a schema; messages and message sets carry no data model of their own. A role on a constant or a parameter, `model`
+  on a message or message set, a word in the place of a role that is neither `wire` nor `model`, and a group that is no
+  `LowerName` are `schema.invalidRole`; a second `wire` or `model` role is `schema.duplicateRole`.
+- **A wire root must be encodable.** Reading the sources reports `schema.notEncodable` for a wire root that reaches a
+  document-only type, as far as it is decided without parameter values: the conditions and the order of
+  [binding](#binding) without the bounds, so a `:List` without `max`, a `:Text` without a length or a `:Map` fail at
+  `ges schema check`. A bound that depends on a parameter stays a binding error.
+- **A model root may use every type** that has a [model type](#model-types), document-only ones included, and needs no
+  ranges, steps or parameter values. Its constraints document the values and still serve document checking.
+- An abstract schema is no root and takes no role: `schema.invalidRole`.
+- **Roles are generation metadata.** They are not part of the [canonical form](#canonical-form), so adding, changing or
+  removing a role changes neither the schema hash nor the binding hash, and no wire format changes with them.
 
 A field or argument has one of these markers at most:
 
@@ -154,9 +293,15 @@ Types:
 | `:Boolean` | `true` or `false` |
 | `:Number`, `:Percentage`, `:Quantity(unit)` | a number, a percentage, or a number with that unit; `:Quantity(none)` is `:Number`. Limited by [constraints](#constraints) |
 | `:Point`, `:Vector`, with an optional unit | three components with one unit. A block lists the axes that are transmitted, in any order, each with its own constraints |
+| `:Box`, with an optional unit and block | an axis-aligned [Box](PublicApi.md#geometry-library) of the corners `lower` and `upper`, each a `:Point` of the unit and block; see [geometry](#geometry) |
+| `:Poly max n`, with an optional unit and block | a [Poly](PublicApi.md#geometry-library) of at most `n` points in the plane z = 0; its block names only x and y |
+| `:Disc`, with an optional unit and block | a [Disc](PublicApi.md#geometry-library) in the plane z = 0: its `center`, a `:Point` of the unit and the block's x and y, and its `radius`; its block names only x, y and `radius` |
 | `:Tag(#a, #b)`, `:Tag max n`, `:Tag` | one tag of the closed set, a tag of at most `n` characters, or any tag |
+| `:Flags(#a, #b)` | any subset of 1 to 64 members, as a Map of the members with Boolean values; see [record values](#record-values) |
 | `:Text max n`, `:Text` | a text of at most `n` UTF-8 bytes, or any text |
+| `:Bytes max n`, `:Bytes` | at most `n` bytes, or any [Bytes](Language.md#bytes) |
 | `:List(T) max n`, `:List(T)`, `:List` | at most `n` elements of `T`, any number of them, or any elements |
+| `:List(:Self) max n depth d` | a [recursive List](#recursion) of the schema that declares it, at most `d` records deep |
 | `:Dice max n between a and b`, `:Dice` | at most `n` rolls, each within the range, or any rolls |
 | `:Name` | a Record of the schema `Name` |
 | `T \| U` | a value of one of the alternatives; see [rules](#rules) |
@@ -165,6 +310,285 @@ Types:
 
 A schema, message or message set cannot take the name of a built-in type of this table, nor
 `Record`, the language's type of all Records.
+
+### Geometry
+
+> **Since: Unreleased**
+
+`:Box`, `:Poly` and `:Disc` hold the shapes of the [geometry library](PublicApi.md#geometry-library), so that a record
+carries them as its native types instead of as two `:Point` fields, a `:List(:Point)` or a Point and a radius.
+
+```gess
+schema :Zone as {
+  area: :Box(m) {
+    x between 0m and 100m step 1cm
+    y between 0m and 100m step 1cm
+  }
+  outline: :Poly(m) max 16 {
+    x between 0m and 100m step 1cm
+    y between 0m and 100m step 1cm
+  }
+  reach: :Disc(m) {
+    x between 0m and 100m step 1cm
+    y between 0m and 100m step 1cm
+    radius between 0m and 50m step 1cm
+  }
+}
+```
+
+- **A Box** is two corners, `lower` and `upper`, each a `:Point` with the unit and the axes of the block, so it
+  binds, encodes, deltas and dumps as two nested Points with the paths `area.lower.x` and so on. Its value orders
+  the corners on each axis, as creating a `GesBox` from two corners does: a decoder accepts them in any order and gives the
+  ordered Box, and writing that Box writes them in order. Requiring order on the wire would need a check across fields in
+  every decoder and delta path for data that only a hand-written writer can produce, so the Box orders it instead.
+- **A Poly** is a List of Points with the unit and the axes x and y of the block, or x and y as binary64 without one. A
+  polygon lies in the plane z = 0, so `z` is not transmitted: a point with another `z` cannot be written
+  (`wire.typeMismatch`), and decoding sets it to 0. Like a List, it needs `max` for encoding. Encoding does not check that
+  the polygon is [valid](PublicApi.md#geometry-library), since an invalid polygon is a value of its own.
+- **A Disc** is its centre, a `:Point` with the unit and the axes x and y of the block, then its radius, a number of the
+  unit within the block's `radius`, or x, y and the radius as binary64 without a block; it binds, encodes, deltas and dumps as a
+  nested Point and a number with the paths `reach.center.x` and `reach.radius`. A disc lies in the plane z = 0, so a centre
+  with another `z` cannot be written (`wire.typeMismatch`). As for an axis, a block that leaves out the radius transmits
+  none: only a disc of radius 0 can be written, and decoding gives radius 0. A decoded negative radius takes its
+  magnitude, as creating a `GesDisc` does. Encoding does not check that the disc is
+  [valid](PublicApi.md#geometry-library).
+- Their values are the external values `:Box`, `:Poly` and `:Disc` of the library with the field's unit; another value or
+  unit is `wire.typeMismatch`. A Box, Poly or Disc cannot be a key, has no default literal and cannot be read by a computed
+  field.
+
+### Defaults
+
+> **Since: Unreleased**
+
+A schema field may end with **`default`**, the value it takes when a value or document leaves it out.
+
+```gess
+schema :DriveUnit as {
+  let waypoints be 32
+  power: :Quantity(W) between 0W and 5kW default 0W
+  maxPower: :Quantity(W) between 0W and 5kW default power
+  efficiency: :Percentage between 0% and 100% default 100%
+  maxWaypoints: :Number integer between 1 and 1024 default waypoints
+  armed: :Boolean default true
+  mount: :Tag(#front, #rear) default #front
+}
+```
+
+- **A literal default** is a number, a file constant or a let of the field's schema for a numeric field, `true` or
+  `false` for a `:Boolean`, or a tag for a `:Tag`. It has the field's unit, lies in its range (a wrapping range is
+  half-open), on its step, is whole within Int64 for an `integer` field and keeps its meaning in binary64 otherwise, and a
+  tag belongs to the set or fits `max`. A bound that a parameter decides checks it at binding. Other types, apart from a
+  schema with a record default, and unions take no literal default: their values have no literal in the schema language, and a literal that picks a union alternative by
+  its kind would add a rule for a rare case.
+- **A sibling default** names another field of the same schema, whose value the field takes, after that field's own
+  default; chains resolve in dependency order and must not form a cycle. Both have the same type, constraints included,
+  so every value of one is valid for the other without a check on read; only `delta within` may differ, since it constrains
+  no value. A type that generated code declares per field, a closed Tag written in place, Flags, a union or a List of
+  them, takes no sibling default; a [tag set](#declarations) shares its type, so its fields can. A range that the sibling
+  shares only partly is no default but a rule that rejects data, which stays in host code like other such rules.
+- **A record default** is a record literal for a field whose single type is a schema, as in
+  `electricity: :Unit_Consumer default [efficiency: 90%]`; `[:]` names no field. Comments and line breaks may stand
+  between its tokens. It names fields of that schema, each at most once, and gives each a value that is checked as a
+  literal default of that field would be, also against a bound a parameter decides at binding; a field whose type is
+  again a schema takes a nested record literal. A field it leaves out takes its own default, or is absent where it is
+  optional or accepts `:Nothing`; a required field without a default that it leaves out makes it
+  `schema.invalidDefault`. It names no let, parameter or sibling, and no computed field, union, List, Text, Bytes,
+  Flags, spatial or other field without a literal: such a field keeps its own default or stays out. The literal applies
+  only when the whole record is left out; a given record, even a partial one, takes the defaults of its own schema for
+  what it leaves out.
+
+```gess
+schema :Unit_Consumer as {
+  power: :Quantity(W) between 0W and 1_000_000W default 0W
+  efficiency: :Percentage between 0% and 100% default 100%
+}
+
+model(data) schema :DriveUnit as { electricity: :Unit_Consumer default [:] }
+model(data) schema :WeaponUnit as { electricity: :Unit_Consumer default [efficiency: 90%] }
+```
+
+- **`optional`** with a default only names an optional sibling: the field is absent when the sibling is, and a literal
+  would make `optional` meaningless. Both are optional or both are not. A `key` takes no default, since it identifies the
+  record. Message arguments take none, since a message holds every argument of its signature. A record default is no
+  sibling, so an optional field or a union takes none.
+- **Where it applies:** reading a [value](#record-values) or a model's value, [checking a document](#document-checking),
+  and generated model initializers. The wire always carries the field without a presence bit, since the sender holds the
+  resolved value, and decoding gives every field; a record with a record default is encoded in full like any other. `nothing` given for a required field stays `wire.nothingValue`: only
+  a field that is left out takes its default.
+- A default belongs to the [canonical form](#canonical-form) and the hash, since both sides read values and documents
+  alike. `with` takes a record default with its field like any other default, also from an abstract schema, and
+  `all optional` drops it. Only sibling fields, literals and lets serve as defaults, not [computed fields](#computed-fields) or
+  expressions: a default is a value the sender left out and resolves to a field that the wire carries.
+
+### Computed fields
+
+> **Since: Unreleased**
+
+A schema field may be written **`computed by`** an expression, as a field of a [script record](Language.md#records-and-custom-types)
+is: a value derived from the other fields, which is never encoded and never read from a document. Rules that both a server
+and its clients need, in different languages, are written once in the schema.
+
+```gess
+schema :SoundMade as {
+  energy: :Quantity(J) between 0J and 1MJ step 1J
+  duration: :Quantity(s) between 0s and 60s step 1ms
+  sources: :List(:SoundSource) max 8
+  power: :Quantity(W) computed by
+    0W when duration <= 0s,
+    otherwise energy / duration
+  signature: :Quantity(W) computed by sources[:sum s => s.power]
+  loud: :Boolean computed by power > 50W and not (duration = 0s)
+}
+```
+
+- **The expression** is a subset of GES expressions with their spellings and precedence, so the same text means the same
+  in a script record: number, percentage and quantity literals, `true`, `false`, file constants, lets, the fields of the
+  record and of its schema fields (`main.power`), the computed fields declared before it, `+ - * /`, unary `-`, `abs`,
+  `< <= > >= = <>`, `and`, `or`, `not`, `value when condition, …, otherwise fallback`, `min of a and b …`,
+  `max of …`, `clamp x between a and b`, `default`, `has value`, and over a list field `[:count]`, `[:sum]` and
+  `[:sum item => value]`. A line break may follow an operator, a keyword, a comma or `by`.
+- **Functions and powers** (*Since: Unreleased*) are those of GES with its spellings: `sqrt` or `√`, `cbrt` or `∛`, `sin`,
+  `cos`, `tan`, `asin`, `acos`, `atan`, `exp`, `ln`, `floor`, `ceil`, `truncate`, `round half even`, `round half up`,
+  `round half down`, `rad` and `deg` before their operand, as `sqrt area` or `sqrt (a * a)`; `atan2(y, x)` and
+  `hypot(x, y)` or `hypot(x, y, z)` with arguments; and the power `x ^ y`, `x²` and `x³`. A power binds tighter than unary
+  minus, so `-x ^ 2` is `-(x ^ 2)`, and `a ^ b ^ c` is `a ^ (b ^ c)`. An operand that starts with `(` right after a
+  function or `abs` is its whole operand, and the function is then the base of a power as in GES: `sqrt(x) ^ 2` is
+  `(sqrt x) ^ 2` and `floor(x)²` squares the floor, while `sqrt x ^ 2` is the root of `x ^ 2`. A
+  power sign belongs to a literal where it completes a unit, as in `16m²`, and is a power otherwise, as in `2²` or `2s²`.
+- **Names in backticks** (*Since: Unreleased*). A name that GES reserves, such as `length`, `e`, `pi` or `on`, names a
+  field or let only in backticks, as `` `length` / 2 ``, since a script record reads the plain word differently: `e` is
+  Euler's number there. Without backticks it is `schema.invalidExpression`. Backticks are spelling only: the field is the
+  same, the [canonical form](#canonical-form) writes its plain name, and a field may be declared `length` without them.
+- **Types and units are checked at binding.** Each operand is a Number with a unit, a Percentage or a Boolean, and the
+  operations take the [same-unit and derivation rules](Language.md#quantities): `energy / duration` gives watts, `2N + 3J`
+  is `schema.unitMismatch`. A percentage scales a number on its left (`x + 10%` is `x * 1.1`) or combines with another
+  percentage; on the left of a number it is `schema.invalidExpression`. The expression gives exactly the field's type and
+  unit. The field is a `:Number`, `:Quantity`, `:Percentage` or `:Boolean` without constraints, never a `key`, and takes no
+  `default`. A function reads a number or a percentage, whose ratio it takes, and gives a number: `sqrt` and `cbrt` give
+  the root of a unit that is a square or cube in the derivation table (`sqrt` of `m²` is `m`), and of another unit, such
+  as `m` or `m³` for `sqrt`, they are `schema.unitMismatch`; `sin`, `cos` and `tan` read radians as a plain number or
+  degrees as `°`; `asin`, `acos`, `atan`, `exp` and `ln` read plain numbers, and the inverse functions and `atan2` give
+  plain radians, which `deg` turns into `°` and `rad` back; `atan2` and `hypot` take arguments of one unit, which `hypot`
+  keeps; rounding keeps the unit. A quantity's power takes a literal exponent, which gives the unit of the result from
+  the derivation table (`side²` of `m` is `m²`); an exponent has no unit. Every other unit is `schema.unitMismatch`.
+- **Values follow the virtual machine.** Integers stay exact Int64 values and fall back to binary64 on overflow, a binary64
+  result that is whole within Int64 becomes an integer, `/` divides in binary64, `0 / 0` is nothing and `1 / 0` infinite,
+  `=` compares within two ULPs, `and` and `or` are three-valued, an absent optional field is nothing, and a condition passes
+  only when it is true. The value is then converted to the field's type as a record converts it: a Percentage takes a
+  finite number as its ratio and is nothing when infinite, and a Boolean is `true` only for true, so a computed Boolean is
+  never absent and is not `optional`. A required one that gives nothing, such as `0 / 0`, reads as NaN in generated code.
+  A function of nothing is nothing, and one without a value is NaN, which is nothing without making the field absent: the
+  root of a negative number, `ln` of one, `asin 2` or `sin` of an infinity. Rounding gives an integer, saturated at the
+  bounds of Int64. `ln 0` is `-infinity`, `atan2(0, 0)` is `0`, and the square root of `-infinity` is `infinity`, as the
+  power 0.5 that it is gives.
+- **Square roots are exact, the other functions are not** (*Since: Unreleased*). `sqrt`, `√` and a power with the
+  exponent 0.5 give the correctly rounded square root, so their bits are the same on every platform and in every port, as
+  the bits of `+ - * /`, rounding, `rad` and `deg` are. Trigonometry, `exp`, `ln`, `cbrt` and other powers come from the
+  platform's math library, as they do in [scripts](Semantics/Numbers.md#transcendental-functions): the runtimes and the
+  generated code give the bits of the virtual machine on the same platform, but a value may differ in its last bits
+  between platforms, such as a server and its clients. A computed Boolean or choice that compares such a value near a
+  boundary, such as `inCone: :Boolean computed by bearing < 30°`, can then come out differently on both sides; a
+  classification that both sides must agree on belongs in a stored field, which one side computes and sends.
+- **An absent field is handled where it is read.** A required computed field that would give nothing because an optional
+  field it reads is absent is `schema.computedMayBeAbsent`: mark it `optional`, guard the read with `has value`, or give a
+  fallback with `default`. `x has value` proves `x` and each record on its path present on the right of `and` and in the
+  value its `when` condition selects, so `x * 2 when x has value, otherwise 0` and `x has value and x > 1` are required
+  fields; a guard on another field proves nothing. NaN, such as `0 / 0`, is no absence and stays allowed. A computed Boolean
+  is never optional, so it guards or falls back. `has value` of a field that is never absent is allowed and simply true;
+  schemas report errors, not notices, so it gives none.
+- **A sum adds from left to right**, starting with its first element; an empty list gives the integer 0, which the field's
+  type gives its unit. That 0 has no unit, so a sum of quantities or percentages stands alone, as the expression, a value of
+  a choice or a side of `default`; inside arithmetic it is `schema.invalidExpression`. A sum or count reads a list that is
+  no optional field and lies in none, and a projection contains no other aggregate.
+- **Order.** A computed field reads the stored fields and the computed fields declared before it, so there is no cycle;
+  naming a later one is `schema.invalidExpression`. A `with` takes the computed fields of its schema where it stands, checked
+  against the fields of the schema that takes them, with the lets and constants of where they were written; `without` may
+  leave one out, and leaving out a field one reads is `schema.unknownName`. `all optional` makes a taken number optional.
+- **Not encoded.** The wire, deltas, the largest encoding and the binding hash ignore computed fields, and a document that
+  sets one fails with `document.unknownField`. Decoding a [value](#record-values) adds them, encoding ignores them, and
+  they belong to the [canonical form](#canonical-form) and the schema hash, since both sides derive the same values.
+- **Not included:** the vector and point functions of GES, such as `distance`, `dot` or `normalize`, `wrap degree` and
+  `chance`; the index of a tag in its set, which a script cannot compute; text; and functions with parameters, such as a
+  bearing at a given time, which are a possible next step.
+
+The rules come from the virtual machine, which is the reference: `scripts/test-computed-fields.py` turns every corpus record
+with computed fields into a script record and requires both virtual machines to print the bits that the value paths of both
+runtimes and the generated code of both languages give, within the ULPs a corpus case allows for the functions of the
+platform's math library.
+
+### Recursion
+
+> **Since: Unreleased**
+
+A schema cannot hold itself, except through one recursive List: `units: :List(:Loadout_Bind) max 16 depth 3` in the
+schema `:Loadout_Bind` holds records of that schema, which hold such a List in turn, so that at most `d` records of the
+schema nest in each other where `d` is the `depth`. A tree of binds needs one schema instead of one per level.
+
+- **Where.** `depth` stands only on a List that is the single type of a field and whose element is the schema that
+  declares the field: alone, or as the one schema alternative of a union whose other alternatives are scalars, as in
+  `units: :List(id: :Text max 64 | bind: :Loadout_Bind) max 16 depth 3`, where a document writes a unit as its id alone or
+  as a bind. A scalar holds no schema and no elements, so no List, Dice or Poly. Anything else, such as a second schema
+  alternative, a second recursive List in a schema, and a depth of 1, which would leave the List always empty, are
+  `schema.invalidConstraint` at `depth`. Every other reference cycle stays `schema.cycle`, and a List
+  of the schema itself without `depth` is such a cycle. The depth belongs to the [canonical form](#canonical-form) and the
+  hash; a model List may have no `max`, but `depth` still follows it.
+- **Levels.** Binding unrolls the recursion: the outermost record of the schema is level 1, and each record in the List
+  is one level deeper. Below the depth the List is an ordinary List of its `max`. At the depth it holds no record and no
+  other alternative either: it is always empty, takes no bits, has no element and counts toward no list nesting. Each level above it nests one list
+  further, so [lists nest at most 4 levels](#rules) bounds the depth together with the other Lists around it, and the
+  [largest encoding](#largest-encoding) follows from `max` and `depth` as for any List.
+- **Deeper data.** A record in the List at the depth is deeper than the depth: writing fails with `wire.tooDeep` at the
+  List's path, with the detail `deeper than depth <d>` in its message, such as
+  `wire.tooDeep at 'root.units[].units[].units': deeper than depth 3`, and a document check with `document.tooDeep` at
+  the List. Data cannot be deeper, since a decoder reads nothing there. In a union element the record at the depth is a
+  value that no alternative holds, so the element around it is `document.fieldType`, as in any union.
+- **Taken by `with`.** Where [`with`](#declarations) copies a recursive List into another schema, it is an ordinary List
+  of the declaring schema there, whose records nest up to the depth below it. The copy counts as a reference to the
+  declaring schema, so a schema that holds it inside the declaring one forms a cycle.
+- **Keys and deltas.** A recursive List of a schema with a key is a [keyed list](#keyed-lists) at every level but the
+  deepest, which holds nothing and never changes. A delta descends through the levels like through any nested record.
+
+Unrolling keeps the wire format: a recursive record is encoded as if each level had its own schema, and readers and
+writers need no stack beyond their running lists. In generated code the item type of a union element takes the level of the
+record that holds the List, and the schema alternative's nodes follow the union's other alternatives, so that those keep
+their offsets at every level. Only self-recursion is supported, because a schema that holds one
+recursive List has one level to count, and generated code of all other schemas stays as it is. A recursion through
+several schemas or with several Lists would need a level per path, for no use found so far.
+
+### Packed schemas
+
+> **Since: Unreleased**
+
+`packed` before `schema` declares a record of fixed width that generated code holds as one machine word. It may follow
+[roles](#roles) and is no role itself:
+
+```gess
+wire(map) model(map) packed schema :MapPoint as {
+  height: :Number integer between 0 and 4095
+  surface: :Number integer between 0 and 15
+  moisture: :Number integer between 0 and 15
+  flags: :Flags(#impassable, #blocksLineOfSight, #indestructible, #reserved)
+}
+
+wire(map) model(map) schema :MapTrack as { points: :List(:MapPoint) max 1000000 }
+```
+
+- **Fields.** A packed schema holds only fields of a fixed width: an `integer` or stepped number with literal or constant
+  bounds and without `delta within`, a `:Boolean`, a closed `:Tag` or tag set, `:Flags`, or another packed schema. Every
+  other field is `schema.packedField` at its type, an `optional` field or `key` at the field, and a computed field at its
+  name; unions and parameters are not allowed, since either would change the width.
+- **Width.** The bits are the sum of the fields' [encoding widths](#field-encodings), at most 64, else
+  `schema.packedTooWide` at `packed`. `packed(n)` declares the word of `n` bits, which must hold them, and plain `packed`
+  takes the smallest of 8, 16, 32 and 64 that does. An abstract schema is not packed (`schema.syntax`).
+- **Bit layout.** The word holds the fields from its least significant bit in declared order, a nested packed schema as its
+  own bits: exactly the bits of the record's [wire encoding](#records). The word written in little-endian byte order is
+  therefore the record's wire bytes, padded with zero bits to whole bytes; bits above the fields are zero. A packed root
+  encodes in `ceil(bits / 8)` bytes.
+- **Everywhere else** a packed schema is an ordinary schema: the same wire format, [defaults](#defaults), document form and
+  [record value](#record-values) for scripts. Its [delta](#deltas) is a change bit and, when the word differs, the word.
+
+Packed records exist for dense data such as maps of millions of points: [generated code](#tools) stores a `:List` of them as
+one array of words, which reads and writes a word at a time.
 
 ### Constraints
 
@@ -180,8 +604,8 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
 
 ### Rules
 
-- A bound is a literal, a declared constant or a parameter; it cannot refer to a field.
-  A step and a delta range are literals or constants, never parameters. No expression is evaluated, so reading and
+- A bound is a literal, a declared constant, a let of its schema or a parameter; it cannot refer to a field.
+  A step and a delta range are literals, constants or lets, never parameters. No expression is evaluated, so reading and
   binding need neither a compiler nor a VM.
 - `between a and b` is the closed range `[a, b]`; `wrapping between a and b`
   is the half-open range `[a, b)`. The lower bound must be below the upper bound, and
@@ -213,23 +637,24 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
   the type name `:Quantity`: a unit does not distinguish alternatives.
 - A Dice has no constraint other than a range, whose bounds lie within `1` to `2^31 - 1`, as a roll is a
   positive Int32. Anything else is `schema.invalidConstraint` or `schema.invalidBound`.
+- A field with a [default](#defaults) may be left out, in a value and in a document, which gives it its default.
 - A field with a `:Nothing` alternative may be left out, in a value and in a document, which
   counts as `nothing`. A Message holds every argument of its signature, with `nothing` where one
   is absent, since its labels and their order are its signature.
-- A schema reference names a `schema`; references must not form a cycle. Nesting is
+- A schema reference names a `schema`; references must not form a cycle, except through a
+  [recursive List](#recursion). Nesting is
   limited to 32 levels. Lists nest at most 4 levels for encoding, so that a writer and
   a reader keep their running lists without allocating; deeper lists are
   `schema.notEncodable`.
-- There is no `computed by`. A receiver derives such values in its own code; see
-  [Records](#record-values).
-- Constants and parameters are visible only in the file that declares them. Schema,
+- A [computed field](#computed-fields) is derived from the other fields and is never encoded.
+- Constants and parameters are visible only in the file that declares them, and lets only in their schema. Schema,
   message and message set names are visible across all sources.
 - A `max` is positive.
 - A position relative to something else, such as a carrier, is a schema of its own
   with its own bounds.
 - Names are unique: declarations of schemas, messages and sets together, constants and
-  parameters per file, fields within a schema, arguments within a
-  message, axes within a block, tags within a set, members within a message set. A Message's labels and their order are part of its
+  parameters per file, fields and lets within a schema, a let and the parameters of its file, arguments within a
+  message, axes within a block, tags within a set or Flags, members within a message set. A Message's labels and their order are part of its
   signature, as everywhere in GES.
 
 ### Encodable and document-only types
@@ -240,14 +665,17 @@ be encoded; binding a schema that reaches another type for encoding fails with
 
 | Type | Encodable | Document check |
 | --- | --- | --- |
-| `:Boolean`, numeric, `:Point`, `:Vector` | yes | yes |
+| `:Boolean`, numeric, `:Point`, `:Vector`, `:Box`, `:Disc` | yes | yes |
 | `:Tag(#a, #b)`, `:Tag max n` | yes | yes |
+| `:Flags(#a, #b)` | yes | yes |
 | `:Text max n` | yes | yes |
+| `:Bytes max n` | yes | yes |
 | `:List(T) max n` with an encodable `T` | yes | yes |
+| `:Poly max n` | yes | yes |
 | `:Dice max n` | yes | yes |
 | `:TypeName` with only encodable fields | yes | yes |
 | A union of encodable alternatives, such as `:Text max 8 \| :Unit \| :Nothing` | yes | yes |
-| `:Tag`, `:Text`, `:List`, `:List(T)`, `:Dice` without a set or `max` | no | yes |
+| `:Tag`, `:Text`, `:Bytes`, `:List`, `:List(T)`, `:Dice`, `:Poly` without a set or `max` | no | yes |
 | `:Map`, `:Range`, `:Series`, `:Message`, `:Handler`, `:Nothing` outside a union | no | yes |
 
 ### Source errors
@@ -259,18 +687,26 @@ Source errors use the phase `schema` with line and column, in the manner of
 | --- | --- |
 | `schema.syntax` | the source does not match the grammar |
 | `schema.duplicateName` | a name repeats within its kind, or a schema, message or message set takes the name of a built-in type or `Record` |
-| `schema.unknownName` | a type, message, constant or parameter is not declared |
-| `schema.cycle` | schema references form a cycle, or references or `:List` types nest more than 32 levels |
-| `schema.unitMismatch` | a bound, step or delta range has another unit than its field |
+| `schema.unknownName` | a type, message, constant, let or parameter is not declared, a step, delta range or `max` names no let of its schema, or a default names neither a field nor a let |
+| `schema.cycle` | schema references form a cycle, references or `:List` types nest more than 32 levels, or sibling defaults form a cycle |
+| `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, a `max` names a let with a unit, or a computed expression combines units that have no result unit or gives another unit than its field, or a function, root or power reads a unit it does not take or a quantity's power has no literal exponent |
 | `schema.invalidRange` | a lower bound is not below its upper bound |
 | `schema.invalidStep` | a step is not positive, not exact, or a bound or delta range is no multiple of it |
-| `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field |
-| `schema.notEncodable` | encoding reaches a document-only type |
+| `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field, a `max` that names a let other than a positive whole Number of at most 12 digits, a `depth` other than on a field's List of its own schema, a second `depth` in a schema, or a depth of 1 |
+| `schema.notEncodable` | encoding reaches a document-only type, also when the sources are read for a [wire root](#roles) |
 | `schema.invalidKey` | a `key` breaks the [key rules](#rules) |
 | `schema.invalidUnion` | a union alternative repeats a type name or has `delta within`, or a union with `:Nothing` is `optional` |
 | `schema.invalidBound` | an `integer` bound is fractional or outside Int64, or a Dice bound is outside `1` to `2^31 - 1` |
-| `schema.tooWide` | a quantized field exceeds the [limits](#quantization), or a bound of a fractional field becomes infinite or zero in binary64 |
+| `schema.tooWide` | a quantized field exceeds the [limits](#quantization), a bound or default of a fractional field or a fractional let becomes infinite or zero in binary64, or Flags have more than 64 members |
 | `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows |
+| `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
+| `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
+| `schema.packedField` | a [packed schema](#packed-schemas) holds a field without a fixed width, an `optional` field, a key, a union or a computed field |
+| `schema.packedTooWide` | a packed schema's fields take more than 64 bits or more than its declared `packed(n)` |
+| `schema.invalidAbstract` | an abstract schema is a field type, list element, union alternative, a bound or checked root, or a model root |
+| `schema.computedMayBeAbsent` | a required [computed field](#computed-fields) reads an optional field that may be absent without `has value` or `default` |
+| `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name without backticks, an optional list in an aggregate), gives `hypot` or `atan2` another number of arguments, combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
+| `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
 `schema.invalidConstraint`, `schema.tooWide` and `schema.tooLarge` can also arise at binding,
@@ -317,9 +753,9 @@ GES sets no world size; only the limits apply.
 ### Largest encoding
 
 A bound schema has `MaxByteCount`, the size of its largest top-level encoding. It is computed at binding with checked arithmetic, counting every optional as
-present, every Text, List and Dice at its `max`, and every union as its index and its largest alternative. A schema counts the larger of its largest
+present, every Text, Bytes, List and Dice at its `max`, and every union as its index and its largest alternative. A schema counts the larger of its largest
 full record and its largest [delta](#deltas), so one buffer serves both: a Boolean's delta costs its change bit, and a field with a delta range its change bit, the
-fallback bit and the larger of both widths. It may be at most 10 485 760 bytes (10 MiB).
+fallback bit and the larger of both widths. It may be at most 67 108 864 bytes (64 MiB), enough for 16 million packed records of 32 bits.
 Exceeding this, or an overflow while computing it, fails binding with `schema.tooLarge`.
 A [keyed list](#keyed-lists) counts its form bit and the larger of the whole list and its
 element form: three counts and `max · (position + the larger of the largest element and its largest
@@ -329,8 +765,10 @@ A message set adds its index to the bits of its largest member, before rounding 
 A bound layout has at most 1 048 576 fields, counting each use of a referenced schema and each
 List element type once; more also fails with `schema.tooLarge`.
 
-A List element must have at least one bit, or `schema.notEncodable` fails binding: only then
-does the data limit the count. A `:Tag` with one tag and a schema without fields have no bits.
+A List element and a Poly point must have at least one bit, or `schema.notEncodable` fails
+binding: only then does the data limit the count. A `:Tag` with one tag, a schema without fields
+and a wrapping field whose period is one step have no bits, so a Poly whose block names only such
+axes has points without bits.
 
 ## Schema hash
 
@@ -339,9 +777,14 @@ It is not sent with records: the caller compares it at connection setup or store
 its own header, and there is no compatibility between different hashes. It is no
 security measure.
 
+A bound member of a message set reports the hash and binding hash of its set, not those of
+its own declaration: its records exist only within the set's encoding, which starts with the
+member index, so the set's hash is the one that the two sides of a connection compare. The
+member's declaration keeps its own hash, as every declaration does.
+
 The hash runs over a [canonical form](#canonical-form), never over source text.
-Comments, layout, file boundaries, declaration order outside the reached declarations
-and the spelling of literals do not change it, so `50kN` and `50000N` hash alike. Field
+Comments, layout, file boundaries, declaration order outside the reached declarations,
+[roles](#roles) and the spelling of literals do not change it, so `50kN` and `50000N` hash alike. Field
 order, types, bounds, steps and delta ranges do.
 
 The hash is FNV-1a 64 (offset basis `14695981039346656037`, prime
@@ -362,13 +805,29 @@ separated by one space, and nothing else is added.
 
 ```text
 parameter <name> <kind>
-schema <TypeName>
+schema <TypeName> [packed <width>]
+let <name> <kind> <number>
 field <name> <type>
+computed <name> <kind> [optional] <expression>
 message <MessageName> [tags <#tag> ...]
 argument <name or _ name> <type>
 messages <TypeName>
 member <MessageName>
 ```
+
+A [packed schema](#packed-schemas) adds ` packed` and its word's width, declared or chosen, to its `schema` line, so packing
+changes the hash. A schema writes its lets right after its `schema` line, in declared order, so where they stand among the fields does
+not matter; `<kind>` is `Number`, `Percentage` or `Quantity(<portable unit name>)`, as for a parameter. Its computed fields
+follow its fields, in the order they read each other, with the kind `Boolean` besides; the expression is a prefix form in
+parentheses: `(field a b)` for `a.b`, `(item b)` for a projected element, literals as `(number <n>)`, `(percentage <n>)`,
+`(quantity <unit> <n>)`, `(true)` and `(false)` with constants and lets replaced by their values, and every operation as
+`(<name> <operands>)`: `negate`, `not`, `abs`, `add`, `subtract`, `multiply`, `divide`, `less`, `lessOrEqual`,
+`greater`, `greaterOrEqual`, `equal`, `notEqual`, `and`, `or`, `choice` with values and conditions in pairs and the
+fallback last, `min`, `max`, `clamp`, `default`, `hasValue`, `sum` with the list and an optional projection, `count`, and
+the functions `power` (also for `²` and `³`, whose exponent is `(number 2e0)` or `(number 3e0)`), `sqrt` (also for `√`),
+`cbrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `hypot`, `exp`, `ln`, `floor`, `ceil`, `truncate`,
+`roundHalfEven`, `roundHalfUp`, `roundHalfDown`, `rad` and `deg`. A name in backticks is written as its plain name.
+The variable of a projection is not written, so renaming it keeps the hash.
 
 `<type>` is written as:
 
@@ -377,17 +836,23 @@ member <MessageName>
 | `:Boolean` | `Boolean` |
 | `:Number`, `:Percentage` | `Number`, `Percentage` |
 | `:Quantity(unit)` | `Quantity(<portable unit name>)`; `:Quantity(none)` is `Number` |
-| `:Point(unit)`, `:Vector(unit)` | `Point(<portable unit name>)`, `Vector(...)`; no unit or `none` is `Point(none)` |
-| axis block | after the type, `{ <axis> <constraints> ; ... }` in order x, y, z |
+| `:Point(unit)`, `:Vector(unit)`, `:Box(unit)` | `Point(<portable unit name>)`, `Vector(...)`, `Box(...)`; no unit or `none` is `Point(none)` |
+| `:Poly(unit) max n` | `Poly(<portable unit name>) max <n>`, `Poly(...)` without `max` |
+| `:Disc(unit)` | `Disc(<portable unit name>)` |
+| axis block | after the type, `{ <axis> <constraints> ; ... }` in order x, y, z, radius |
 | `:Tag(#a, #b)`, `:Tag max n`, `:Tag` | `Tag(#a #b)`, `Tag max <n>`, `Tag` |
+| `:Flags(#a, #b)` | `Flags(#a #b)` |
 | `:Text max n`, `:Text` | `Text max <n>`, `Text` |
+| `:Bytes max n`, `:Bytes` | `Bytes max <n>`, `Bytes` |
 | `:Dice max n between a and b`, `:Dice` | `Dice max <n> between <a> <b>`, each part only when written; `Dice` |
-| `:List(T) max n` | `List(<T>) max <n>`; `List(<T>)` and `List` without `max` or `T` |
+| `:List(T) max n` | `List(<T>) max <n>`; `List(<T>)` and `List` without `max` or `T`; ` depth <d>` follows a [recursive List](#recursion) |
 | `:TypeName`, `:Map`, ... | `TypeName`, `Map`, ... |
 
 A numeric type is followed by its constraints, and any field or argument then by its
 marker, in this order: `integer`, `between <a> <b>` or `wrapping between <a> <b>`,
-`step <s>`, `delta <d>`, then `optional` or `key`. A union writes its alternatives in
+`step <s>`, `delta <d>`, then `optional` or `key`, then `default` and a number, `true`, `false`, `#<tag>`,
+`field <name>` for a sibling, or a record literal: `[:]`, or `[<name>: <value>, ...]` with the named fields in the order of
+their schema, each value written like a default and a nested record literal again in brackets. A union writes its alternatives in
 source order with ` | ` between them, also inside `List(...)`; the marker follows the last
 one. Unit names are the
 [portable names](Language.md#quantities). A bound is a number or a parameter name.
@@ -395,7 +860,7 @@ one. Unit names are the
 A number is its exact decimal value in base units, written `<significand>e<exponent>`:
 the significand is an integer without trailing zeros, with a leading `-` when negative,
 and zero is `0e0`. Prefixes and percent signs are applied first, and constants are
-replaced by their values. So `1cm`, `0.01m` and `10mm` are all `1e-2`, and `135` is
+replaced by their values, and so are lets where a field names them, also as a default. So `1cm`, `0.01m` and `10mm` are all `1e-2`, and `135` is
 `135e0`, `5km` is `5e3`.
 
 ```text
@@ -489,21 +954,27 @@ caller owns the mapping from keys to objects. Message arguments have no key. A
 | wrapping | [index](#wrapping-values), `width(n)` bits |
 | fractional without a step | IEEE 754 bits of the binary64, 64 bits; a range is checked but does not narrow it |
 | `:Point`, `:Vector` | declared axes in order x, y, z, each as a numeric; without a block x, y, z as 64-bit binary64 |
+| `:Box` | the corner `lower`, then `upper`, each as a `:Point` of the block |
+| `:Poly max n` | point count, `width(n + 1)` bits, then each point as a `:Point` of the block, x and y without one |
+| `:Disc` | the centre as a `:Point` of the block, x and y without one, then the radius as a numeric of the block's `radius`, a 64-bit binary64 without a block |
 | `:Tag(...)` with `n` tags | index in declared order, `width(n)` bits |
+| `:Flags(...)` with `n` members | a mask of `n` bits; bit `i`, counted from the first bit written, is set for the member at index `i` in declared order |
 | `:Tag max n` | as `:Text max n`: the tag name without `#`, its byte count, then its bytes |
 | `:Text max n` | UTF-8 byte count, `width(n + 1)` bits, then the bytes |
-| `:List(T) max n` | element count, `width(n + 1)` bits, then the elements |
+| `:Bytes max n` | as `:Text max n`: the byte count, then the bytes, which need not be UTF-8 |
+| `:List(T) max n` | element count, `width(n + 1)` bits, then the elements; at the depth of a [recursive List](#recursion) nothing |
 | `:Dice max n` | roll count, `width(n + 1)` bits, then each roll as an `integer` of its range, `1` to `2^31 - 1` without one. The [value path](#value-path) writes them in descending order and a typed writer in the order of its caller; a decoder accepts any order, since creating a Dice sorts its rolls |
 | union of `n` alternatives | index in declared order, `width(n)` bits, then the alternative |
 | `:Nothing` as an alternative | no bits |
 | `:TypeName` | its fields inline |
 
-`max` counts UTF-8 bytes for Text, characters for a Tag, which is ASCII, elements for a List and
-rolls for a Dice. A range's index never
+`max` counts UTF-8 bytes for Text, characters for a Tag, which is ASCII, elements for a List,
+points for a Poly and rolls for a Dice. A range's index never
 exceeds `n - 1`; a decoder rejects a larger bit pattern. Units come from the schema.
 
 A fractional field without a step stays at 64 bits, which is a deliberate choice in the
-schema; there is no 32-bit form. Flags are one `:Boolean` per flag.
+schema; there is no 32-bit form. Independent switches are one `:Flags` field, whose members
+cost one bit each, and member order belongs to the hash.
 
 ### Messages
 
@@ -647,15 +1118,19 @@ movement smaller than a step is no change and costs nothing.
 | --- | --- |
 | `:Boolean` | none; the change bit toggles the baseline |
 | numeric with `delta within` | [range form](#delta-range) |
-| other numeric, `:Tag`, `:Text`, `:List` of other elements, `:Dice` | the full encoding |
+| other numeric, `:Tag`, `:Text`, `:Bytes`, `:List` of other elements, `:Dice`, `:Poly` | the full encoding |
 | `:List` of a schema with a key | a [keyed list](#keyed-lists) |
 | `:Point`, `:Vector` with a block | one change bit per declared axis, then the payloads of the changed axes |
 | `:Point`, `:Vector` without a block | three change bits, then a raw 64-bit binary64 for each changed axis; bits are compared |
+| `:Box` | a nested delta of its corners: two change bits, then the payload of each changed corner as a `:Point` |
+| `:Disc` | a nested delta of its centre and radius: a change bit for each that is transmitted, then the payload of the changed centre as a `:Point` and of the changed radius as a numeric |
 | `:TypeName` | a nested delta: its own change bits and payloads |
+| a [packed schema](#packed-schemas) | its full encoding: the word changes as a whole |
 | union | index; when the baseline has the same alternative, its payload, otherwise its full encoding |
 | `optional` | presence bit; when present and the baseline also has a value, the field's payload, otherwise its full encoding |
 
-A list is replaced as a whole, unless its elements have a key, which is what identifies them.
+A list is replaced as a whole, unless its elements have a key, which is what identifies them, so a List of packed records is
+replaced as a whole too. A packed root's delta is one change bit, then its full encoding when it changed.
 
 With `worldWidth = worldHeight = 5000m`:
 
@@ -694,7 +1169,8 @@ delta. In a [keyed list](#keyed-lists), an element's key has neither.
 > **Since: Unreleased**
 
 A list is keyed when its element type is a single `:TypeName` whose schema has a `key`, at any depth.
-This needs no syntax, and the full encoding does not change. Lists of other elements, including
+This needs no syntax, and the full encoding does not change. A [recursive List](#recursion) is keyed at every level but
+its deepest. Lists of other elements, including
 unions, are replaced as a whole.
 
 The payload of a changed keyed list starts with a form bit:
@@ -826,10 +1302,11 @@ one record. Decoding fails without partial results for:
 | --- | --- |
 | `wire.truncated` | the data ends before the record does |
 | `wire.invalidIndex` | an index is at least `n`, for a range, tag, union or message set |
-| `wire.invalidCount` | a Text, Tag, List or Dice count exceeds its `max` |
+| `wire.invalidCount` | a Text, Bytes, Tag, List or Dice count exceeds its `max` |
 | `wire.invalidText` | Text is not valid UTF-8 |
 | `wire.invalidTag` | a `:Tag max n` holds no valid [tag name](Semantics/Text.md#portable-name-grammars) |
 | `wire.invalidNumber` | NaN or negative zero, or an infinity with a range |
+| `wire.outOfRange` | a fractional field without a step holds a finite binary64 outside its range, in a record or a raw delta value; the same code as when encoding it, since the pattern is a valid Number |
 | `wire.invalidPadding` | a padding bit is not zero |
 | `wire.limitExceeded` | the record exceeds the caller's limit |
 | `wire.invalidDelta` | a delta is not [canonical](#canonical-delta-form), leaves its range, or its key differs from the baseline's |
@@ -846,13 +1323,16 @@ complete:
 | `wire.typeMismatch` | a value has another kind or unit than its field, a nonzero omitted axis, a Message whose labels differ from its signature, or a Map with a key that a union alternative does not have |
 | `wire.unknownTag` | a tag is not in its set |
 | `wire.invalidTag` | a typed writer gives a `:Tag max n` no valid tag name |
-| `wire.tooLong` | a Text, Tag, List or Dice exceeds its `max` |
+| `wire.tooLong` | a Text, Bytes, Tag, List or Dice exceeds its `max` |
+| `wire.tooDeep` | a [recursive List](#recursion) holds a record at its depth; the message names the depth |
 | `wire.bufferTooSmall` | the caller's buffer is too small |
 | `wire.fieldOrder` | a typed writer or reader uses a field out of order |
 | `wire.keyMismatch` | a record and its baseline have different keys |
 | `wire.overlappingBuffers` | the target buffer of `GesSchemaDelta` overlaps an input, in either direction, or a generated record's baseline shares its storage |
 
-Errors carry the field path but no value from the data, so they can be logged safely.
+Errors carry the field path but no value from the data, so they can be logged safely. `wire.tooDeep` also carries a
+detail from the schema, `deeper than depth <d>`, in `GesWireException.Detail` and its message (Swift `GesWireError.detail`);
+other errors have an empty detail.
 
 ## Record values
 
@@ -860,18 +1340,28 @@ The convenient path converts between `GesValue` and the wire.
 
 - A schema `:Bot` corresponds to a Record with the type name `Bot`. Fields are matched
   by name; a Map works too. Encoding does not convert units.
+- A field that a Record or Map leaves out takes its [default](#defaults): its literal, or the value of the sibling it
+  names, after that sibling's own default. A chain that ends at a field without a value or default is
+  `wire.missingField` at that field, and `nothing` for an optional one.
 - Record fields without a schema entry are not transmitted. This covers the computed
-  fields of a script record. The same holds for the keys of a Map, except when it selects a union
+  fields of a script record and of the schema. The same holds for the keys of a Map, except when it selects a union
   alternative.
 - Decoding builds `:Record("Bot", fields)` without a constructor, as in
-  [product JSON](MessageFormat.md). A host with a Program may pass the fields to the
-  record's constructor, which derives its computed fields on the normal VM.
+  [product JSON](MessageFormat.md), and adds the schema's [computed fields](#computed-fields) with the values a script
+  record derives. A host with a Program may still pass the fields to a record's constructor.
 - A Message converts in the same way, with its signature and tags.
-- A value selects a union alternative by its kind, with unit, or for a Record by its type name; no
-  other kind converts. Since alternatives repeat no type name, a union value has exactly one encoding. A Map
-  has no type name: the first schema alternative that holds it decides. An alternative holds a Map
+- `:Flags` take a Map whose keys are members: `true` sets a member, `false` or an absent key
+  leaves it unset. Another key is `wire.unknownTag`, a value that is no Boolean or a value that
+  is no Map `wire.typeMismatch`. Decoding gives a Map of the set members, each `true`, in key
+  order, so `[armed:]` from a script's [flag Map](Language.md#maps) round-trips.
+- A `:Box`, `:Poly` or `:Disc` field takes the library's external value of its unit, and decoding gives one; a Box orders
+  its corners, and a Disc takes its radius's magnitude.
+- A value selects a union alternative by its kind, with unit, or for a Record by its type name, and for a Box, Poly or Disc by
+  being one; no other kind converts. Since alternatives repeat no type name, a union value has exactly one encoding. A Map
+  has no type name: the first schema or Flags alternative that holds it decides. A schema holds a Map
   when all its fields fit and every key is one of its fields, also in the Maps nested in it, as in
-  a [document check](#document-checking). When none holds, the error of the last one is reported.
+  a [document check](#document-checking); Flags hold it when every key is a member with a Boolean.
+  When none holds, the error of the last schema is reported.
 
 ## Document checking
 
@@ -885,13 +1375,16 @@ to a `GesSchema`, which ignores it, and takes optional parameters.
   one schema no other schema of it refers to, which is the root. A reference from a message
   does not count. Without such a source or root the check fails with `schema.unknownName`.
 - Errors use document positions: `document.missingField`, `document.unknownField`,
-  `document.fieldType`, `document.outOfRange`. Units are not cast implicitly.
+  `document.fieldType`, `document.outOfRange`, and `document.tooDeep` for a non-empty
+  [recursive List](#recursion) at its depth. Units are not cast implicitly.
 - An explicit form counts as the value it constructs, so `:Number(3, 'm')` checks like `3m`.
   A position inside such a value is reported at the form. A form that constructs `nothing`
   is `document.invalidLiteral`, as in [reading](Documents.md).
 - A union accepts a value that satisfies one of its alternatives, tried in source order;
   the first one decides. `document.fieldType` reports a value that satisfies none. A Map
-  or a Record of that type satisfies a schema alternative when all its fields check.
+  or a Record of that type satisfies a schema alternative when all its fields check. A
+  model reads a Box, Poly or Disc only where the check chose that alternative, so a List of
+  points that breaks a Poly's `max` stays the List a later alternative accepts.
   Reading of the document itself stays unchanged:
 
 ```gess
@@ -912,6 +1405,15 @@ units: ['scout', [name: 'tank', count: 2]]
 facing: #north
 ```
 
+- `:Flags` accept a Map whose keys are members with Boolean values; another key is
+  `document.fieldType` at the key, a value that is no Boolean at the value.
+- A document has no geometry literal, since `parse` resolves no external constructor. A `:Box` is the Map of its corners,
+  `[lower: :Point(1m, 0m), upper: :Point(20m, 3m)]`, or a `:Record("Box", ...)` of them: another key is
+  `document.unknownField` and a missing corner `document.missingField`. A `:Poly` is the List of its points. A `:Disc` is
+  the Map of its `center` and `radius`, `[center: :Point(1m, 0m), radius: 3m]`, or a `:Record("Disc", ...)` of them, with
+  the same errors. Each corner, point or centre is a Point of the unit within the axes of the block; without a block a point
+  or centre lies in the plane z = 0. A radius is a number of
+  the unit whose magnitude, which the disc takes, lies within the block's `radius`, or zero when the block leaves it out.
 - A value outside a closed range is an error. A wrapping field accepts any finite
   value. `max` and `integer` are checked; `step` and `delta within` are not.
 - A bound that uses an unbound parameter is not checked. A value that is given must have the
@@ -958,11 +1460,13 @@ var positionX = reader.ReadNumber(x);                             // double, wit
   `units[]:Unit.name` inside one. Reusing a handle costs no lookup.
 - Typed operations: `Boolean`, `Integer` (Int64), `Number` (binary64), `Index` (the raw
   wire index, for game code that stores quantized values and skips the conversion), `Tag`
-  (index) and `Text` (validated UTF-8, or for a `:Tag max n` a validated tag name without `#`). A reader copies Text into a caller's buffer of the
+  (index), `Flags` (a 64-bit mask whose bit `i` is the member at index `i`; a writer rejects a bit
+  beyond the last member with `wire.unknownTag`), `Text` (validated UTF-8, or for a `:Tag max n` a validated tag name without `#`) and `Bytes`
+  (any bytes of a `:Bytes max n`). A reader copies Text and Bytes into a caller's buffer of the
   field's `max`, since a value need not start at a byte boundary.
-- `BeginList` writes or reads the element count of a List or Dice, and the elements follow, each entered at
-  the `[]` handle. `BeginNested` enters a nested schema, Point or Vector. There is no end
-  call: the cursor knows where a list or nesting ends.
+- `BeginList` writes or reads the element count of a List, Dice or Poly, and the elements follow, each entered at
+  the `[]` handle. `BeginNested` enters a nested schema, Point, Vector, Box, corner of a Box (`area.lower`) or point of
+  a Poly. There is no end call: the cursor knows where a list or nesting ends.
 - `WriteAbsent` marks an `optional` field as absent; any other write sets its presence bit.
   `ReadPresence` reads the bit, and a reader calls it before an `optional` field.
 - `SelectAlternative` writes the index of a union's alternative, in declared order, and `ReadAlternative`
@@ -1008,12 +1512,20 @@ calls them with constant widths and operands, so they are part of the contract:
   returns the byte count. A value has no bits above its width. `BitPosition`, `SetBit` for a
   bit already written as zero and `Rewind` to an earlier position serve encoders that learn a
   flag or count only later. A full buffer is `wire.bufferTooSmall`; a buffer of the record's
-  byte count suffices.
+  byte count suffices. `GesBitWriter.Counting()` (Swift `GesBitWriter.counting()`) creates a writer without a buffer that
+  accepts every write, stores nothing and returns from `Finish` the byte count the same writes need; its
+  `RequiredByteCount` (Swift `requiredByteCount`) is the room a buffer needs on the way, which exceeds that count when a
+  `Rewind` took bits back, as a delta does for an element that turned out unchanged.
 - `GesBitReader` reads such values from untrusted data with an optional byte limit. Reading
   past the end is `wire.truncated`, or `wire.limitExceeded` when the limit ends first, with
-  the path the caller names; `ReadBytes` reads nothing when the bytes do not fit. `Require`
+  the path the caller names; `ReadBytes` reads nothing when the bytes do not fit. `RemainingBits` (Swift
+  `remainingBits`) counts the bits left before the end or the limit, so a reader can check once for many fixed-width
+  values, as generated code does for a List of packed records. `Require`
   checks remaining bits without reading, `Seek` moves to a position, and `Finish` checks the
   padding (`wire.invalidPadding`) and returns the bytes consumed.
+- Positions given to `SetBit`, `Rewind` and `Seek` come from the caller's own writes and reads, never from data. A
+  negative position is a programming error, not a wire error: C# throws when the buffer is accessed, and Swift traps
+  through a precondition, since its raw buffer access checks no bounds in release builds.
 - `GesWireRules` holds the value rules over plain operands: `IsValidUtf8`, `IsTagName`,
   `QuantizedIndex` and `WrappedQuantizedIndex` with the [quantization](#quantization) operands
   `10^k` and `p`, `QuantizedValue` and `WrappedIndex`, and `WriteDeltaRange` and `ReadDeltaRange` for
@@ -1034,12 +1546,18 @@ not use it:
 - `Name`, `Kind` (`Schema`, `Message` or `Messages`), `Hash` and `CanonicalForm`;
 - `Parameters`, the reached parameters in ascending name order, each with `Name`, `Kind` and `Unit`;
 - `Fields`, the fields or arguments in declared order, each with `Name`, `IsUnlabeled`,
-  `IsOptional`, `IsKey` and `Alternatives`;
+  `IsOptional`, `IsKey`, `Alternatives` and `Default`, a `GesSchemaDefaultInfo` with `Kind` (`Number`, `Boolean`, `Tag`,
+  `Field` or `Record`), the exact `Number`, the `Boolean`, the `Name` of a tag without `#` or of the sibling, and the
+  `Entries` of a record literal in the field order of its schema, each a `GesSchemaDefaultEntryInfo` with `Name` and
+  `Value`, or null;
+- `IsAbstract`, and `Takes`, what a schema takes with `with` in declared order: each a `GesSchemaTakeInfo` with
+  `Schema`, `IsAllOptional`, `Without` and `IsUnchanged`; `Fields` already holds the taken fields in place;
 - `Tags` of a message and `Members` of a message set, in declared order;
 - `Bind` and `CheckDocument`.
 
 An alternative is a `GesSchemaType` with `Kind`, `Unit`, `IsInteger`, `IsWrapping`, `Lower`,
-`Upper`, `Step`, `Delta`, `Tags`, `Max`, `Element`, `Axes` and, for a reference, `Schema`. An axis
+`Upper`, `Step`, `Delta`, `Tags`, `Max`, `Element`, `Depth`, 0 except for a [recursive List](#recursion), `Axes` and,
+for a reference, `Schema`. An axis
 has `Name` and the same limits. Absent limits are absent, and an empty `Tags`, `Element` or `Axes`
 means no closed set, no element type and no axis block. A limit is a `GesSchemaBound`: a parameter's
 name, or the exact decimal `Significand` and `Exponent` of the [canonical form](#schema-hash),
@@ -1051,7 +1569,10 @@ For rare data, Runtime offers `GesSchemaValues`: `Encode(bot, value, buffer)` en
 [Record, Map or Message](#record-values), `Decode(bot, bytes)` returns the value and the
 bytes it occupied, and `ReadKey(bot, bytes)` returns a [key](#keys) without decoding the
 rest. An external value of the schema's type name encodes through its materialized fields, also as a nested Record or a baseline, and a failing getter propagates as the [runtime failure of a field read](PublicApi.md), not as a wire error. `Encode(bot, value, baseline, buffer)` and `Decode(bot, bytes, baseline)` do the same for a
-[delta](#deltas) against a baseline value. Swift uses the idiomatic spelling of the same concepts. Kinds do not convert implicitly:
+[delta](#deltas) against a baseline value. A delta call encodes both values in full, so it takes scratch space of the
+largest encoding per call, whatever the size of the data: the size is known only after encoding, and a counting pass first
+would run external getters twice. A receiver of untrusted or frequent deltas uses `GesSchemaDelta` with its own buffers.
+Swift uses the idiomatic spelling of the same concepts. Kinds do not convert implicitly:
 the language computes with Boolean and Dice as numbers, but a Number, Quantity or Percentage
 field rejects them with `wire.typeMismatch`, because decoding could not return them. A script
 converts them explicitly with `as :Number`.
@@ -1071,10 +1592,17 @@ ges schema layout world.gess panel.gess --root Bot --root GameAnswers --param wo
 ges schema layout world.gess panel.gess --all-roots --param worldWidth=2000m -o wire.layout.json
 ges schema generate world.gess --root Bot --param worldWidth=2000m --language csharp --namespace Game.Net -o Bot.g.cs
 ges schema generate world.gess --root Bot --param worldWidth=2000m --language swift --namespace Wire -o Bot.swift --check
+ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language swift --namespace Wire -o Wire.swift
+ges schema generate world.gess panels.gess --model view --language csharp --namespace Game.Model -o Model.g.cs
+ges schema generate map.gess --wire map --language swift --namespace Wire --models Model -o MapWire.swift
+ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language swift --namespace Wire -d Generated/Wire
+ges schema generate world.gess panels.gess --model view --language swift --namespace Model -d Generated/Model --split file --check
 ```
 
 `format` prints the recommended layout and, like document formatting, drops comments; input
-and output must differ. An option a command does not use is a usage error.
+and output must differ. A schema field's union stays on one line while the field fits 100 Unicode scalars and holds no axis
+block; otherwise each further alternative takes a line of its own, starting with `| ` and indented one level beyond the
+field, with the marker after the last alternative. Message arguments stay on the line of their message. An option a command does not use is a usage error.
 `hash` prints the schema hash and, with parameters, the binding hash. A `--param` of `hash`
 or `dump` for a parameter the root does not reach fails with `schema.unknownName`, so that a
 misspelled name cannot go unnoticed; naming a parameter twice is a usage error. `dump` makes binary
@@ -1082,9 +1610,10 @@ data readable through the schema: it lists each field with path, bit offset, wid
 decoded value, and ends with the first error, its field path and bit offset; invalid data
 gives exit code 1. Its text is the same in every port. Each field is one line,
 `<path> bit=<offset> width=<bits> value=<value>`, whose width includes a presence bit. The value
-is `true` or `false`, a number, a quoted Text, `#<tag> index=<i>`, `#<tag>` for a `:Tag max n`, `count=<n>` for a List or Dice,
+is `true` or `false`, a number, a quoted Text, the [Bytes literal](Language.md#bytes) `:Bytes("…")`, `#<tag> index=<i>`, `#<tag>` for a `:Tag max n`, the set members as `#<member>` separated by spaces, or `none`, then
+` mask=<mask>` for Flags, `count=<n>` for a List or Dice,
 `<alternative> index=<i>` for a union, with the type name of the alternative, or `absent`. A nested
-schema, Point or Vector has no line of its own, only its fields. A message set starts with
+schema, Point, Vector, Box, Box corner, Disc or Disc centre has no line of its own, only its fields; a Poly has the line of a List. A message set starts with
 `message <name> index=<i>`. A valid record ends with `bytes <n>`, an invalid one with
 `error <code> path=<path> bit=<offset>`. With `--baseline` the data is a [delta](#deltas): a first
 line `delta bytes <n>` is followed by the lines of the resulting record, or the error ends the text
@@ -1098,22 +1627,59 @@ console and the highlighter know `.gess`, and the editor bundles have a grammar 
 
 `layout` prints the [generation layout](#generation-layout) of one or more roots. `--root` may be
 repeated; naming a root twice is a usage error. `--all-roots` makes every declaration of the files
-a root, in declaration order, and excludes `--root`. A `--param` that no root reaches fails with
-`schema.unknownName`, and so does a reached parameter without a value.
+a root, in declaration order. `--wire <group>` makes the [wire roots](#roles) of the group in the given files the roots,
+in declaration order, and `--model <group>` the model roots, which `layout` then prints as the [model layout](#model-layout)
+and `generate` writes as [model types](#model-types). Exactly one of `--root`, `--all-roots`, `--wire` and `--model` is
+given, a run names one group, and a group without a root in the files fails with `generate.usage`; wire and model code go to
+separate files. A `--param` that no root reaches fails with `schema.unknownName`, and so does a reached parameter without a
+value; models reach no parameter, so every `--param` of a `--model` run fails, and `--checked-exclusivity` is a usage error
+there.
 
 `generate` takes the same roots and parameters and writes code in the language of `--language`,
 `csharp` (C# 9, for Unity) or `swift` (Swift 6, without Foundation); every CLI writes every language,
 and both CLIs write identical text. Each reached schema becomes one type that writes and reads its
 records over the [bit primitives](#bit-primitives) with the bytes, `wire.*` codes and field paths of
-the writer and reader, with parameters as constants. A type without Text, List or Dice, directly or
+the writer and reader, with parameters as constants. A type without Text, Bytes, List or Dice, directly or
 in a type it holds, is a value type (C# `struct`, Swift `Sendable` struct); otherwise it is a class
 whose storage grows when a read or a caller needs more room and is then reused, so that reading and
 writing allocate nothing once it has held its largest data. A Text is held as UTF-8 bytes with a
-string view, a List or Dice as a C# `List<T>` or Swift array, and a list element that is a union,
-Text or List as a generated item type. An `optional` field adds a presence flag and, for a value
+string view, Bytes as bytes (C# a span with a `Set<Field>` method, Swift `[UInt8]`), a List or Dice as a C# `List<T>` or Swift array, and a list element that is a union,
+Text, Bytes or List as a generated item type. A closed Tag is an enum `<Field>Tag` nested in its record; a Tag of a
+[tag set](#declarations) uses the one enum `Name` that the file declares beside its records, whose raw value is the
+index. Flags are a `<Field>Flags` type as in [model types](#model-types), whose
+raw value is the wire mask. A `:Point` or `:Vector` is the runtime's
+[`GesPoint` or `GesVector`](PublicApi.md#spatial-values), and a `:Box` its [`GesBox`](PublicApi.md#geometry-library) and a
+`:Disc` its `GesDisc`, in every field, list element and alternative; quantization stays per field, and reading or quantizing
+a Box makes a new, ordered one, and a Disc a new one. A `:Poly` is the List of its Points, which reading reuses, with a view `<Field>Poly` (Swift `<field>Poly`) that
+makes the `GesPoly`: an immutable polygon that checks its validity when it is made could not be read without allocating. An axis that a block leaves out is not transmitted: writing a record or a delta whose omitted axis is not zero fails
+with `wire.typeMismatch` at the field's path, as the [value path](#value-path) does, and reading sets it to zero. An `optional` field adds a presence flag and, for a value
 type, a nullable view. A message adds a Boolean per tag, and a message set holds the selected
 member and one record per message. After a failed read the values of the target are unspecified.
 A field named like its type, which C# does not allow, gets the suffix `Value` in every language.
+
+A schema with a [recursive List](#recursion) is a class whose List holds records of itself. Its internal methods take the
+level of the record as a last parameter, 1 by default, and pass one more to the records in the List; at the depth the
+List writes and reads nothing and fails with `wire.tooDeep` and its detail when it holds a record, in writing, counting,
+comparing, quantizing and deltas alike. Its field paths list its own fields first and then the deeper levels, so its own
+offsets stay constants at every level. No other schema changes: a schema that holds a recursive one calls it as any
+nested record, and every schema without one generates the same code as before recursion existed, which
+`scripts/compare-schema-generation.py` checks against a recorded digest of every corpus schema's output.
+
+A required list of class elements gets `Set<Field>Count(count)` (Swift `set<Field>Count(_:)`), which sets the list to
+`count` elements the record reuses, as a read does, so a caller fills it without allocating once it has grown; the
+elements keep earlier values until their fields are set. A list of Text or `:Tag max n` elements also gets
+`<Field>Values` (Swift `<field>Values`), its elements as C# `string[]` or Swift `[String]`; reading and setting it
+allocate, and setting reuses the elements. A field whose name collides with either fails with `generate.nameCollision`.
+
+A record writes into a caller's buffer with `Write` (Swift `write(into:)`), for which `MaxByteCount` always suffices, and
+into a new array of its exact size with `ToBytes` (Swift `encoded()`). `ByteCount` (Swift `encodedByteCount()`) returns
+that exact size without writing, with the same `wire.*` failures; `ToBytes` uses it, so it never allocates the largest
+encoding. A record of `:Bytes max 4194304` that holds a kilobyte allocates a kilobyte. Deltas offer the same with
+`DeltaByteCount` and `ToDeltaBytes` (Swift `deltaEncodedByteCount(against:)` and `deltaEncoded(against:)`). Counting
+runs the write over a counting [`GesBitWriter`](#bit-primitives) and skips the bytes of a Text or Bytes at once, so a full
+write costs about one and a half writes and a sparse large record a fraction of the old allocation. A delta writer tries
+elements and takes unchanged ones back, so `ToDeltaBytes` sizes its buffer by the counting writer's `RequiredByteCount`
+and returns the exact bytes.
 
 Every generated record compares by wire values with `WireEquals`, the indices and stored bits
 that it writes, never raw numbers; `Quantize` replaces each quantized number by the value its index
@@ -1147,9 +1713,348 @@ namespace or nested Swift enums, and `--access internal` hides them from other m
 `--check`, `generate` compares its text with the file of `-o` and fails with `cli.outdated` when it
 differs or is missing. The text starts with a header that names the roots, parameters and hashes,
 without a date or version. A generation request that cannot be carried out fails with a
-`generate.*` code: `generate.nameCollision` when two generated names of one type are equal,
-`generate.invalidNamespace`, and `generate.usage` when the [Generator API](PublicApi.md#schema-code-generation)
-receives no root.
+`generate.*` code: `generate.nameCollision` when two generated names of one type are equal (in Swift a
+`:Flags` member `#rawValue` meets the mask of its `OptionSet`), when a type that a record nests for a field, such as
+`SlotsItem` or `ModeTag`, takes the name of a schema, message or tag set of the generation, which it would hide for every
+reference inside the record, when a type or a C# member takes a name of the form `Ges` and an uppercase letter, which
+belongs to the runtime types that generated code names without qualification, when a Swift type takes a name that
+generated Swift uses without qualification (`Any`, `AnyObject`, `Array`, `Bool`, `CaseIterable`, `Codable`, `Double`,
+`Equatable`, `Error`, `GameEventScriptRuntime`, `Hashable`, `Identifiable`, `Int`, `Int32`, `Int64`, `OptionSet`,
+`Protocol`, `Result`, `Self`, `Sendable`, `String`, `Swift`, `Type`, `UInt64`, `UInt8`, `UTF8`,
+`UnsafeMutableRawBufferPointer`, `UnsafeRawBufferPointer`), or two [split](#split-output) file names differ only in
+case, `generate.invalidNamespace`, and `generate.usage` when the [Generator API](PublicApi.md#schema-code-generation)
+receives no root or a split that does not fit the call. Generated C# instead qualifies every platform type it uses that
+a type or member of the same name could hide, such as `global::System.Math` and `[global::System.Flags]`, so a schema
+`:Math` or a field `system` needs no reservation.
+
+#### Packed records and models
+
+> **Since: Unreleased**
+
+A [packed schema](#packed-schemas) is one type in model and wire code, its model type below: a value type over one word of
+its width, whose fields are computed properties over their bits. A field of it in a wire record is a plain value and a
+`:List` of it a `List<T>` or Swift array of words, which a reader fills a word at a time: when the data holds all
+elements, it checks the remaining bits once and reads each word as one value, never a GES value. A word with an index
+beyond a field's range, such as 10 in a field `between 0 and 9` of 4 bits, or beyond a closed Tag's tags, is
+`wire.invalidIndex` at that field's path in either path, and the per-word check is left out when every field uses all of its
+bits. Writing checks a word that was taken unchecked field by field, `wire.outOfRange` at the field, and a word with bits
+above the fields at the record. A packed wire root gets the wire members of every root over its word; its record takes
+`ceil(bits / 8)` bytes and its delta is a change bit and the word, so `MaxByteCount`, which serves both, is
+`ceil((bits + 1) / 8)`.
+
+`--models <namespace>` (an empty string for the global namespace) is for wire code that sits beside model code of the
+same schemas, generated with `--model` into that namespace in the same module. The wire code then uses the models'
+packed types instead of declaring its own, so a wire record with a List of packed records exposes the models' type as its
+array element (`points: [MapPoint]`, C# `List<MapPoint>`), and assigning such a List between a model and a record copies
+no element. Every wire record whose schema a model root of any group reaches also converts to and from its model
+directly, field by field, without GES values and without the bytes: C# `ToModel()` and `CopyFrom(model)`, Swift
+`toModel()`, `read(model:)` and the model's `init(wire:)`. The conversion compares the model type's `SchemaHash` with the
+record's, so a model generated from another state of the schema fails with C# `InvalidOperationException` or a Swift
+precondition and is never converted. Values are checked when the record is written, as for any value a caller sets.
+A packed wire root shared with the models gets its wire members in the wire namespace, so that several wire generations
+of one module may share the model type: C# as extension methods of the model's struct in a static class `<Name>Wire`,
+Swift as static members of an enum `<Name>Wire` that take the record (`Wire.MapPointWire.encoded(point)`,
+`read(&point, from: bytes)`); both hold `BindingHash`/`bindingHash` and `MaxByteCount`/`maxByteCount`. Such a root converts
+to and from GES values through its model's `--values` conversion, which gives the same Record. The conversion of wire
+records and the wire members of a packed root that wire code declares itself extend their types at file scope, also in
+split files, and name wire and model types so that neither hides the other. `--models` must name another namespace than
+`--namespace`, and where one of the two namespaces continues the other, its next component must not be the name of a
+type in the shorter one, else `generate.nameCollision`: a type that the wire code declares, including its `<Name>Wire`
+types but not the packed types that the models declare, or a type of any model group, since the wire code converts to the
+models of every group and their namespace holds them all; a `<Name>Wire` that another type of the generation already names
+is `generate.nameCollision` too. A Swift file declares its namespace components as enums, extending those that another
+generation of the module declares, and then extends the whole namespace with its declarations (`enum Wire {}` then
+`extension Wire { … }`), as split files do; there Swift finds neither the members of an enclosing component nor a later
+component of the namespace. Swift wire code that shares packed types names the models' types through their namespace
+from inside the wire namespace, a conversion names the models' and the wire namespace from an extension of its record at
+file scope, and a model's `init(wire:)` names the wire namespace from an extension of the model. So the first component
+of a non-global models' namespace must not be the name of a type that the wire code declares where it shares packed types,
+nor of a type nested in a wire record that names it, and the first component of the wire namespace not that of a type
+nested in a model that a conversion extends, else `generate.nameCollision`; C# qualifies them with `global::`. Members
+begin with a lowercase letter, so the namespaces of Swift wire code with `--models` and of its models begin with an
+uppercase one (`generate.invalidNamespace`), and the first component of any Swift namespace must not be the name of a
+Swift type that generated code names without qualification (`generate.nameCollision`). Two generations of one module
+whose namespaces share leading components must declare them once: wire code extends the components it shares with the
+models' namespace (`extension Game { enum Wire {} }` beside models in `Game.Model`), and `--extend-namespace <A>`
+(`ExtendNamespace`) makes any generation extend the leading part `A` of its namespace, which another generation declares:
+`Game` for `Game.Panels` writes `extension Game { enum Panels {} }`, and `Game` for `Game` declares no enum.
+A part that does not lead the namespace is `generate.usage`, and C# generation, whose namespaces merge, rejects it with
+`generate.usage` too. The conversion members take the wire code's `--access` and name the models' types, so the models need the same
+`--access`, or a broader one. `--models` is
+only for wire code and is a usage error with `--model`.
+
+`ToValue` and `ReadValue` go through the record's bytes and build one GES value per element, so on a List of millions of
+packed records they take far longer and much more memory than the record's own reading and writing; scripts that need
+such data take it as a Record, and native code uses the conversion above.
+
+### Split output
+
+> **Since: Unreleased**
+
+`-o` writes one file, and without it `generate` prints that file. `-d <dir>` (`--out-dir`) instead writes several files
+into a directory that `generate` owns, which compiles on several cores and turns a schema change into a diff of the files
+it touches. `--split schema`, the default, writes one file per declaration: a schema, message or message set with its
+nested types (list items, closed tags, Flags and union alternatives), a [tag set](#declarations), and for models the
+protocol of an [abstract schema](#declarations) in a file of its own, while the protocol of another schema stands in that
+schema's file. `--split file` writes one file per `.gess` source with every type it declares. A type always goes into the
+file of its declaration, so a type that another source reaches is never duplicated. `-o` together with `-d`, and `--split`
+without `-d`, fail with `generate.usage`.
+
+A file is named after its declaration or after its source file without `.gess`, with the namespace in front:
+`Wire.World_Bot.swift`, `Wire.world.swift`, `Game.Net.World_Bot.g.cs`. Swift requires distinct file names within a
+module, and wire and model code of one target live in different namespaces, so the namespace keeps their files apart.
+Two file names that differ only in ASCII case, which case-insensitive file systems cannot hold, fail with
+`generate.nameCollision`, and so do two sources of the same file name in a file split. The shared part goes into a file
+named `_` and the namespace (`_Wire.swift`), or `_Generated` without a namespace: the Swift namespace enums, the embedded
+schema sources of `--values`, the conversions and helpers of models and the `GesTypes` catalog of `--bindings`. A split file
+declares its types in `extension Wire { … }` (C# `namespace Wire { … }`), and helpers that a single file keeps `private`
+are internal there and keep their `__` prefix; their names depend only on the namespace, so adding a root or changing a
+schema leaves the other files unchanged. A Swift shared file without content is omitted when there is no namespace to
+declare, and so is a C# one. Each split file starts with a short header that refers to the manifest instead of naming
+roots and hashes, so that it changes only with its own declarations; the single file of `-o` keeps its header.
+
+The directory holds the manifest `.ges-generated.json`, canonical JSON with the members `manifest` (1), `code` (`wire` or
+`model`), `language`, `split` (`schema` or `file`), `namespace`, `access`, `values` (also `true` with `documents`, whose
+code includes the value conversions, so that equal code has an equal manifest), `bindings`, `documents` only when given, `checkedExclusivity`,
+`extendNamespace` (the part that `--extend-namespace` names) only when given, `roots` (each with `name`, `hash` and for wire code `bindingHash`), `parameters` (as in the
+[generation layout](#generation-layout); empty for models) and `files`, the generated file names in ordinal order without
+the manifest. Without `--check`, `generate` writes every file whose bytes changed, keeps unchanged files with their time
+stamps, removes the files that the previous manifest lists and that are no longer generated, and leaves every other file
+alone with the warning `cli.unowned`; a missing or unreadable manifest owns nothing. It removes before it writes, so a
+file renamed only in case on a file system that ignores case is written anew, and writes the manifest last, so a run that
+fails before keeps the previous manifest and its files stay owned. With `--check` it compares the whole
+directory and fails with `cli.outdated` for every changed, missing and surplus file. Names that begin with `.` and Unity's
+`.meta` files are neither reported nor removed, so editors and engines may keep their files beside the code; SwiftPM and
+Unity both ignore the hidden manifest. Every CLI writes identical files and manifests.
+
+### Model types
+
+> **Since: Unreleased**
+
+`generate --model` writes model types: plain values that a program builds, keeps and compares, such as a client's view of
+the world, and that never travel. They have no reading, writing, deltas, quantization or storage reuse, so a model schema
+needs no ranges, steps or parameters, and every reached schema becomes one type, in name order.
+
+| Schema | Swift | C# |
+| --- | --- | --- |
+| schema | `struct`, `Hashable`, `Sendable`, `Codable` | `sealed class` with value equality, `IEquatable<T>`, `==` |
+| [packed schema](#packed-schemas) | a `struct` as below | a `struct` as below |
+| `:Boolean` | `Bool` | `bool` |
+| `:Number`, `:Quantity(unit)` | `Double` | `double` |
+| `integer` | `Int` | `long` |
+| `:Percentage` | `Double`, the ratio as in wire code | `double` |
+| `:Text`, `:Tag` without a set | `String` | `string` |
+| `:Bytes` | `[UInt8]` | `byte[]` |
+| `:Tag(#a, #b)` | an enum `<Field>Tag` with `String` raw values, `CaseIterable` | an enum `<Field>Tag` |
+| `:Name` of a [tag set](#declarations) | one enum `Name` beside the records, as above, for every field of the set | one enum `Name` beside the records |
+| `:Flags(#a, #b)` | an `OptionSet` `<Field>Flags` over `UInt64`, one static member per member | a `[Flags]` enum `<Field>Flags` over `ulong`, one value per member |
+| `:List(T)` | `[T]` | `List<T>` |
+| `:Dice` | `[Int]`, the rolls | `List<int>` |
+| `:Point`, `:Vector` | `GesPoint`, `GesVector` | `GesPoint`, `GesVector` |
+| `:Box`, `:Poly`, `:Disc` | `GesBox`, `GesPoly`, `GesDisc` | `GesBox`, `GesPoly`, `GesDisc` |
+| `:Name` | the model type `Name` | the model type `Name` |
+| union | an enum `<Field>Alternative` with one case and value per alternative | an abstract class `<Field>Alternative` with one sealed subclass per alternative, named after it, holding `Value` |
+| `optional`, `:Nothing` alternative | `Optional`; `nil` is absent or `nothing` | nullable; `null` is absent or `nothing` |
+
+A union with a `:Nothing` alternative becomes a nullable value without it, and when one alternative remains, that
+alternative's type. A list element type is named `<Field>Item`, so a closed Tag in a list is `<Field>ItemTag`. `:Map`,
+`:Range`, `:Series`, `:Message`, `:Handler` and a `:List` without an element type have no model type yet:
+`generate.unsupported`. Each property is documented with its declaration, so its unit and documented range stay visible.
+
+A [packed schema](#packed-schemas) is a value type over one unsigned word of its width (C# `byte`, `ushort`, `uint` or
+`ulong`, Swift `UInt8` to `UInt64`), whose size is the word's: a Swift struct's `MemoryLayout.stride` equals the word's
+bytes. Its fields are computed properties over their bits, which follow the [bit layout](#packed-schemas), so the word is
+the record's wire encoding; a nested packed schema is its own type in its bits. Setting a field, in the property or the
+memberwise initializer, checks the value against the field's range and tags and fails with Swift `precondition` or C#
+`ArgumentOutOfRangeException`; a stepped number is stored as its nearest step. A field with a [default](#defaults) has it as its default
+argument.
+
+- **Swift**: `struct Name: Hashable, Sendable, Codable` with the one stored property `rawValue`, `static let bits`, a
+  memberwise `init`, `init(uncheckedRawValue:)` for words known to be valid, `init?(rawValue:)` and `static func
+  isValid(_:)`, which reject a word with bits above the fields, an index beyond a field's range that does not use all of
+  its bits, or one beyond a Tag's tags. `Codable` writes the fields by name, not the word.
+- **C#**: `struct Name : IEquatable<Name>` with `Bits`, `RawValue`, a constructor with every field, `FromRawUnchecked(raw)`,
+  `FromRaw(raw)`, which returns `null` for an invalid word, `IsValid(raw)`, a property per field and `With<Field>(value)`,
+  which returns a copy with that field changed. `default(Name)` is the word 0, not the fields' defaults.
+
+- **Swift** stores `var` properties in declared order and has a memberwise `init` whose absent values default to `nil` and
+  lists to `[]`. A field with a literal [default](#defaults) has it as its default argument; one with a sibling default takes
+  an optional argument that defaults to `nil` and resolves `nil` to the sibling's property, since Swift cannot default one
+  argument to another. A record default is a call of the memberwise `init` with the fields it names, as in
+  `electricity: Unit_Consumer = Unit_Consumer(efficiency: 0.9)`, units and percentages resolved to the stored values at
+  generation. A schema with a `key` is `Identifiable`; the key is `id`, or a computed `id` returns it. `Codable` is part
+  of the standard library, so models still import no Foundation; `GesPoint` and `GesVector` are `Codable` with `x`, `y`,
+  `z`. With `--bindings` or `--values`, one internal helper enum named after the header holds the value conversions both
+  share.
+- **C#** has settable properties in declared order, a constructor with every field and a parameterless one that leaves every
+  field at its default or zero value (empty text and lists, new records, the first alternative with its zero value). A
+  sibling default takes a nullable parameter that resolves `null` to the sibling's property. A record default is a call of
+  the constructor with the fields it names as named arguments, as in `new Unit_Consumer(efficiency: 0.9)`, so that the
+  constructor resolves sibling defaults; every other parameter without a C# default, that is every field before the last
+  field without a schema default, gets the field's own literal default, or `null` for a sibling default or an absent field. As a parameter a record default
+  is no constant, so it takes `= null` and resolves `null` to that call. The parameterless constructor creates records,
+  lists and union alternatives, and the other one assigns every field, so no property initializer creates an object that
+  a constructor replaces. Reading a value or document that leaves out a field with a record default takes a GES value
+  built once per field, not a new model encoded on every read. C# optional parameters end
+  the list, so a default becomes one, `= value` or `= null`, only for the fields after the last field without a default. It uses C# 9 with
+  neither `record`, `init` accessors nor Reflection, so Unity and IL2CPP need no shim. Classes keep a copy from sharing a
+  list with its original; value equality compares lists element by element, and 0 and -0 hash alike. A file holds one
+  internal helper class named after its header; it also holds the value conversions that `--bindings` and `--values`
+  share, so a file with both options holds them once.
+- Every model type carries `SchemaHash` (Swift `static let schemaHash`), the [schema hash](#schema-hash) of its schema,
+  which a wire record of the same schema carries too, so a test notices generated code that a schema change left stale.
+  A field that would take its name fails with `generate.nameCollision`.
+- Every [let](#declarations) of a schema is a static member of its model and wire types, in base units with a Percentage
+  as its ratio: C# `public const long` for an integer and `public const double` otherwise, named in PascalCase; Swift
+  `static let` of type `Int` in models, `Int64` in wire records and `Double` otherwise. A member that would take the name
+  of a generated member or another member fails with `generate.nameCollision`. *Since: Unreleased.*
+- **Composition.** A schema that types take unchanged with `with`, without `all optional` or `without`, becomes a
+  protocol (Swift) or interface (C#) with read-only properties, and every model type that takes it adopts it; a plain
+  schema that is taken also adopts its own. An abstract schema is generated only as this protocol. Swift names it after
+  an abstract schema, since no type takes the name, and `<Name>Fields` for a plain schema beside its struct; C# names it
+  `I<Name>`. It refines the protocols of the schemas it takes unchanged and requires its other fields whose type is shared
+  by name: every type except a union, Flags and a closed Tag written in place, which generated code declares per field; a
+  [tag set](#declarations) shares its type. `all optional` and `without` change the fields' shape, so such a taking adopts
+  nothing. A protocol named like a type or tag set of the file is `generate.nameCollision`. Wire records adopt no
+  protocol: their fields are storage that a read reuses, with presence flags and UTF-8 text, so a shared read-only
+  property would need an allocating view; a program reads shared fields on models. *Since: Unreleased.*
+- **Computed fields.** A [computed field](#computed-fields) is a read-only property of models and wire records alike,
+  derived on each read: `Double` (C# `double`) for a number or percentage ratio, `Double?` when it is `optional`, and
+  `Bool` for a Boolean; a required number that gives nothing reads as NaN. Binding knows each operand's kind, unit,
+  optionality and declared range, so a field is one expression in the language's own operators, such as
+  `var power: Double { duration <= 0.0 ? 0.0 : energy / duration }`, with every unit and percentage decision made when the
+  code is generated. It gives the virtual machine's bits because binary64 `+ - * /` round correctly and the evaluation order
+  is kept. Generated C# never adds a product in the same expression: a product that an addition or subtraction takes,
+  including the change of `number + percentage`, comes from the helper `Product`, because a C++ compiler such as the one
+  behind IL2CPP may contract `a * b + c` into a fused operation with one rounding, as the [quantization](#why-this-is-exact)
+  formulas avoid too; Swift contracts nothing without an explicit option. NaN stands for nothing, an optional field reads as NaN where it is absent (or directly where `has value` proves
+  it present), and a Boolean that may be nothing is an optional Bool only where `not`, `=`, `has value` or `default` tells
+  nothing from false. The few rules plain code lacks are helpers of one type `GesComputed` per generation (with the
+  generation's suffix without a namespace): no negative zero, where binding cannot exclude one; the equality of GES numbers
+  (whole numbers exactly, others within two ULPs); `min`, `max` and `clamp`, which give nothing for nothing; three-valued
+  `and`, `or` and comparisons; and the conversions to optional fields and ratios. Each sum is a private method with a loop.
+  Functions and powers (*Since: Unreleased*) call the same platform functions as the virtual machine: a square root is
+  `Math.Sqrt` or `.squareRoot()` (through the helper `SquareRoot` only where the operand may be `-infinity`), rounding is
+  `Math.Floor`, `Math.Round` or `.rounded(...)`, and the other functions are helpers such as `Sine`, `Power`, `Arctangent`
+  (`atan2`, 0 for `(0, 0)`), `Hypotenuse` or `Radians` over `System.Math` and the C math library. Swift reaches the C
+  library only through these helpers, so that no member of a record such as a field `exp` hides it, and a Swift file of a
+  generation whose computed fields use a function or power imports `Darwin`, `Glibc`, `Musl` or `ucrt`, whichever the
+  platform has; the helpers and the import are absent from a generation without them. A rounding of an operand whose
+  declared range reaches beyond Int64 keeps the dynamic form, since the virtual machine saturates it.
+  The virtual machine adds and multiplies whole numbers as exact Int64 values; where the declared ranges cannot exclude such
+  a result beyond 2^53 meeting another operand, as for an `integer` field without a range, the field keeps the dynamic
+  form: a property over an internal method `__<field>()` that returns the exact GES value through the helpers that repeat
+  the virtual machine. The bits hold for the values a record can hold on the wire; a value outside its declared range, which
+  no encoding carries, may differ in the last bit of a chain of whole numbers beyond 2^53 or in the sign of a zero. The
+  checked-in code of `conformance/fixtures/SchemaGeneration/computed.gess` pins both forms. A computed field is no initializer
+  parameter, is not stored, encoded or part of equality and `Codable`, and its name must not collide with a generated
+  member, such as the presence flag `hasMain` of a field `main`. With `--values` a model's value carries it as decoding a
+  record's bytes does, and reading ignores it; `--bindings` offers it to scripts as a field they read but cannot set.
+  *Since: Unreleased.*
+- A model is a plain value: an optional field that defaults to a sibling holds what it is given, and reading a value that
+  gives `nothing` for it keeps it absent, though its initializer resolves `nil` to the sibling. Swift's synthesized
+  `Codable` stores every property and applies no default; defaults belong to GES values and documents.
+- Model and wire types of one schema are separate types in separate files; no conversion between both forms is generated,
+  since a client's model rarely has the shape of its wire roots. A program converts in its own code.
+
+With `--values`, every model type also converts to and from the plain value that the [value path](#record-values) uses
+for a record of its schema, so that wire records and models meet there; no code converts between them directly:
+
+- Swift `func toValue() -> GesValue` and `init(value: GesValue) throws(GesWireError)`; C# `GesValue ToValue()` and
+  `static T FromValue(GesValue value)`, which throws `GesWireException`.
+- The value is the Record that `GesSchemaValues` decodes from the record's bytes: a Record of the schema's name with every
+  field in declared order, nested records as Records, Lists, numbers with their units and integral values as integers,
+  Percentages, Tags for closed and open tags, Flags as the Map of their set members, Points and Vectors with their unit,
+  Boxes, Polys and Discs as the library's external values with their unit, a union as its alternative's value and an absent
+  optional or `:Nothing` alternative as `nothing`.
+- Reading takes a Record of the schema's name, whose other fields are ignored, or a Map whose keys are all fields of it,
+  and converts strictly as the [script bindings](#script-bindings) do. It fails with the codes of the
+  [value path](#value-path), and a field it leaves out takes its [default](#defaults): a required field without a key or default is `wire.missingField`, `nothing` where a value is required
+  is `wire.nothingValue`, and a value of another type is `wire.typeMismatch`, each at the field's path; a value that is no
+  such Record or Map fails at the empty path. A nested record reports the
+  path of its own field and a list element its list's path with `[]`, as the value path names them, such as
+  `entries[].level`; a union that holds none of its alternatives reports itself.
+- So a wire record reads a model with `read(value:)` (C# `ReadValue`), failing as a write would for a value out of range
+  or a text too long, and a model reads a wire record's `toValue()` back. A model whose fields have no wire meaning, such
+  as an unbounded text, still has a value; only the wire side checks constraints.
+- `--values` is independent of `--bindings`; both may be given.
+
+A generated name that collides, such as a field named `id` beside a key named otherwise, fails with
+`generate.nameCollision`, as in wire code. With `--values`, that includes `toValue` (C# `ToValue` and `FromValue`). Swift
+models are `Hashable`, so they reserve `hashValue` and `hash`, as C# models reserve the members every object inherits:
+a stored `hashValue` would otherwise satisfy the deprecated requirement in place of the synthesized hash.
+
+### Model documents
+
+> **Since: Unreleased**
+
+`--documents` (option `Documents`) lets generated models read GES document text, so a host that loads data files repeats
+no parsing, header check, schema check or error mapping. It includes `--values`, concerns only model code and does no file
+I/O: text goes in, a model comes out.
+
+- **Per model root:** Swift `init(document text: String) throws(GesDocumentError)`, C# `static T FromDocument(string text)`.
+  It requires the header `:Schema(:Name)` of the root; a missing or other header is `document.schemaMismatch` at line 1,
+  column 1, with a message naming both. It checks the document against the schema sources the code embeds, as
+  [document checking](#document-checking) does, and converts its entries as `init(value:)` does, so fields it leaves out take
+  their [defaults](#defaults). A Box written as the Map of its corners, a Poly as the List of its points and a Disc as the
+  Map of its centre and radius become the geometry library's values first.
+- **Per generation:** one type `Document` inside the namespace, which already qualifies it (Swift `Units.Document`, C#
+  `Game.Units.Document`), and `ModelDocument` without a namespace, where `Document` would collide too easily: a Swift enum with one case per model root, holding its model, and a C# abstract class with one sealed subclass per
+  root, named after it and holding `Value`. Its `init(document:)` (C# `FromDocument`) accepts the header of any root and
+  chooses the case by it, so a host that reads files of several kinds needs no switch on schema names. A model root, tag set
+  or other generated type of that name is `generate.nameCollision`.
+- **Errors** are the document error of the port (`GesDocumentError`, `GesDocumentException`) with its code, line, column
+  and field path: a reading error with its `document.*` code and no path, a schema check error with its `document.*` code
+  and the path of the field as the value path names it, such as `parts[].kind`, and a `wire.*` error of the conversion at
+  the deepest entry its path names, a List for an element, since paths name no index. The Runtime's
+  [`GesSchemaDocument`](PublicApi.md#schemas) does the reading for generated code.
+- The embedded sources live in one internal helper per generation, beside the value conversions; split output puts the
+  document type and the helper in the shared file, and the manifest adds `documents: true`.
+
+### Script bindings
+
+> **Since: Unreleased**
+
+`generate --model --bindings` also offers the model types to scripts as
+[external types](HostRuntime.md#external-type-boundary). The generated code implements the Runtime's portable
+external-type contracts itself: it imports neither the Bridge nor its macros, needs no macro approval in Xcode and uses no
+Reflection, so managed code stripping under IL2CPP removes nothing it needs. Without `--bindings` the code is unchanged.
+
+- A generated `GesTypes` class is the compiler's catalog and the host's external-type registry at once: pass one instance
+  to `WithExternalTypeCatalog` and `WithExternalTypeRegistry` (Swift `withExternalTypeCatalog`, `withExternalTypeRegistry`).
+  It declares every reached model type under its schema name, each after the types it holds, and resolves other types and
+  constructors through an optional next catalog and registry. A next catalog that already declares one of its type names
+  is rejected when the set is created (C# `ArgumentException`, Swift `GesApiError.invalidArgument`), so two declarations of
+  one name never compete.
+- Each type gets `ToGesValue()` and `FromGesValue(value)` (Swift `gesValue()` and `init?(gesValue:)`). A script reads its
+  fields with their declared kinds and units: a Quantity with its unit, a Percentage, a Text, a Tag (also for a closed tag),
+  a Point or Vector with its unit, a Box, Poly or Disc as the [geometry library's](PublicApi.md#geometry-library) external value, which
+  the host registers, Flags as the Map of their set members, a List, Dice, the nested record as its external value, a union as its alternative's value,
+  and `nothing` for an absent value. Integers read as Numbers. A Swift value is the copy that was wrapped; a C# record is read
+  when a script reads a field.
+- Each type has one constructor, `:Name(fields: map)`, and a field `fields` that returns the record as such a Map, so
+  `:World_Body(fields: body.fields)` copies one. External constructors receive every argument present and of a built-in
+  type, so a Map carries optional fields, which may be left out or `nothing`, and nested records. Values convert strictly:
+  a number needs the field's unit, an integer an integral value, a Tag field also takes a Text, a closed tag one of its
+  tags, Flags a Map of members with Boolean values, a list and its elements convert element by element, and a record field takes that record's external value. A value
+  that does not convert, a missing required field or a key the type does not declare constructs `nothing`, like other domain
+  failures. A schema field named `fields` collides with it: `generate.nameCollision`.
+- Wire types get no bindings: a wire record reuses its storage, so a script holding one would see it change with the next
+  read. `--values` converts wire records to and from GES values through their exact bytes and models to and from the same
+  plain values; `--bindings` without `--model` is a usage error, and the Generator rejects it with `generate.usage`.
+
+### Model layout
+
+`layout --model` prints the language-neutral model layout in the JSON form of the [generation layout](#generation-layout):
+`model` (the format version, 1), `roots` and `types`, ordered by name, and when types take schemas unchanged with `with`,
+`protocols`, ordered by name. A type has `name`, `hash` and `fields`, a schema with lets `constants` and one with computed
+fields `computed` as in the generation layout, and `takes`, the schemas it takes unchanged, when it has any. A protocol has `name`, `abstract`, `takes` (the
+protocols it refines) and `fields` (the shared fields it requires besides those). A field has
+`name`, `path`, `optional`, `key`, `default` as in the generation layout when it has one, and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
+`integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
+`tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max`, `depth` only for a [recursive List](#recursion), and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
+`vector` add `unit` and `axes` (the names of an axis block), so do `box` and `disc`, whose axes may name `radius`, `poly` adds `unit`, `axes` and `max`, `schema` adds `name`, and `union` adds `alternatives`;
+`boolean` and `nothing` have none. A missing `max` is `null`.
 
 ### Generation layout
 
@@ -1176,20 +2081,37 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   `message` or `messages`), `hash`, `bindingHash`, `bindingHashDepends` (the parameters the type
   reaches), `maxByteCount` and `maxByteCountDepends` (the parameters named in the bounds of its
   fields and of the types it reaches). A message set adds `members` and `memberWidth`; a schema
-  or message adds `fields`, and a message also `tags`.
-- A field has `name`, `path`, `optional`, `key`, `unlabeled` and `encoding`. List elements,
+  or message adds `fields`, a schema with [lets](#declarations) `constants`, a schema with
+  [computed fields](#computed-fields) `computed`, and a message `tags`. A constant has `name`, `type` and `unit` as a
+  parameter, `value`, its exact decimal in base units, and `integer`. A computed field has `name`, `type` (`Number`,
+  `Quantity`, `Percentage` or `Boolean`), `unit`, `optional` and `expression`, a node with `op` (the names of the
+  [canonical form](#canonical-form), and `literal`, `field` and `item`), `type` (`Number`, `Percentage`, `Boolean`, `Record`
+  or `List`) and `unit`; a literal adds `value` (an exact decimal, `true` or `false`) and `integer`, a path `path`, the four
+  arithmetic operations `first`, `second` and `third`, the unit checks the virtual machine makes for them, and an operation
+  `children`.
+- A field has `name`, `path`, `optional`, `key`, `unlabeled`, with a [default](#defaults) `default` with `kind`
+  (`number`, `boolean`, `tag`, `field` or `record`) and `value` (an exact decimal in base units, a Boolean, a tag without
+  `#` or the sibling's name), or for a record `entries`, each with `name` and its own `default`, and `encoding`. List elements,
   axes and union alternatives are written with `name`, `path` and `encoding` only; an element is
-  named `[]` and an alternative by its type, as in its path.
+  named `[]` and an alternative by its label or else by its type, as in its path.
 - An encoding has `kind` and the members of its kind:
   - `boolean`: none.
   - `integer`, `quantized` and `float`: `type`, `unit`, `range`; `integer` and `quantized` add
     `wrapping`, `lower` and `maxIndex`; then `width`; `quantized` adds `numerator` and `tenPower`,
     the `p` and `10^k` of its step, and with `float` with a range both add `lowerValue` and
     `upperValue`; then `deltaRange`, `deltaWidth` and `depends`, the parameters named in its bounds.
-  - `tag`: `tags`, without `#`, and `width`.
+  - `tag`: `tags`, without `#`, `tagSet` with the name of a [tag set](#declarations) the tag takes its members
+    from, only then, and `width`.
+  - `flags`: `tags`, the members without `#`, and `width`, their count.
   - `text`: `tagName` for a `:Tag max n`, `maxCount` and `width`.
-  - `list`: `dice`, `maxCount`, `width`, `keyed`, `positionWidth` and `element`.
+  - `bytes`: `maxCount` and `width`.
+  - `list`: `dice`, `maxCount`, `width`, `keyed`, `positionWidth`, `depth` only for a [recursive List](#recursion),
+    and `element`.
   - `point` and `vector`: `unit` and `axes`, the transmitted axes in order x, y, z.
+  - `box`: `unit` and `corners`, the fields `lower` and `upper`, each a `point`.
+  - `poly`: `unit`, `maxCount`, `width` and `element`, a `point` field with the axes x and y.
+  - `disc`: `unit`, `center`, a `point` field with the axes x and y, and `radius`, a numeric field, unless the block
+    leaves it out.
   - `schema`: `name`, the type it refers to.
   - `union`: `width` and `alternatives`, in declared order.
   - `nothing`: none.
@@ -1364,7 +2286,11 @@ Parity is verified like every GES feature.
     lists of unions, a field after a union, and rejection of a document-only alternative with
     `schema.notEncodable`;
   - the document errors `document.missingField`, `document.unknownField`,
-    `document.fieldType` and `document.outOfRange`, with their positions.
+    `document.fieldType`, `document.outOfRange` and `document.tooDeep`, with their positions;
+  - [recursive Lists](#recursion): the canonical form, trees as deep as their depth, deeper data, keyed trees and their
+    deltas, a recursive List that `with` copies, and the source errors.
+  - [packed schemas](#packed-schemas): the canonical form, the word as wire bytes, nested packed schemas, invalid
+    indices, Lists, deltas, defaults, documents and every source error.
 - `scripts/test-schema-roundtrip.py` exchanges real
   bytes between C# and Swift, with random values, edge values at each bound and half-step
   ties, and compares bytes and decoded binary64 bits in both directions. Negative controls
@@ -1375,5 +2301,15 @@ Parity is verified like every GES feature.
 - A fuzz run feeds random and mutated bytes to the decoders of both ports, which must
   agree on accept or reject, for full records and for deltas. Random deltas also match an
   independent oracle.
+- `scripts/test-generated-schemas.py` also marks each corpus record root as a model root and generates its wire code
+  with `--models`, so every such record converts to its model and back to the same bytes in both languages.
+  `scripts/bench-packed-schemas.py` measures a List of 1, 4 and 16 million packed records in both ports: the copy between
+  model and wire record, encoding, decoding and the conversion back, and checks that the decoded model is equal.
 - Allocation tests prove that the writer, the reader and `GesSchemaDelta` allocate nothing on
   success in both ports, as for the existing hot paths.
+- The role suite covers reading and describing roles, every role error, the encodability check of wire roots at reading
+  and that roles change neither hash. The role fixture (`conformance/fixtures/SchemaGeneration/roles`) holds wire and model
+  groups that reference each other, a part reached from both roles and a marked declaration used as a part; its layouts by
+  group and its wire, model and binding code are checked in for both languages, both CLIs must write them identically, and
+  the generated-code gate compiles them as C# 9 for Unity and as Swift 6 with warnings as errors. Native tests in both ports
+  run spatial wire fields in 2D and 3D, model equality, and scripts that read and construct bound models.

@@ -321,6 +321,8 @@ internal partial class GesVirtualMachine
                 return comparison;
             case GesBytecodeTypeKind.Boolean when b.Kind is GesBytecodeTypeKind.Boolean:
                 return a.IsTrue.CompareTo(b.IsTrue);
+            case Bytes when b.Kind is Bytes && a.ObjectValue is byte[] leftBytes && b.ObjectValue is byte[] rightBytes:
+                return Math.Sign(leftBytes.AsSpan().SequenceCompareTo(rightBytes));
             default:
                 return 0;
         }
@@ -356,6 +358,8 @@ internal partial class GesVirtualMachine
                 return 12;
             case Dice:
                 return 13;
+            case Bytes:
+                return 14;
             default:
                 return 8;
         }

@@ -96,6 +96,15 @@ final class RunSession {
         return try reader.result().get()
     }
 
+    // The end of console input waits for delayed work as a batch run does, so piped input loses no timer; `:quit` discards it.
+    func drainDelayed() throws -> Bool {
+        while let delay = host.nextMessageDelay {
+            if delay > 0 { Thread.sleep(forTimeInterval: Double(min(delay, 1_000_000)) / 1_000_000) }
+            if host.nextMessageDelay == 0, try !pump() { return false }
+        }
+        return true
+    }
+
     func writeSummary() { io.line("Run completed: \(messages) messages, \(opcodes) opcodes, \(emits) emits, \(publishes) publishes.", toError: true) }
 }
 

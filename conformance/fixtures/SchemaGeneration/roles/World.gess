@@ -1,0 +1,45 @@
+// The wire roots of the group world. Panel_Badge is a wire root of the group panels and a part here.
+parameter worldWidth: :Quantity(m)
+
+wire(world) schema :World as {
+  tick: :Number integer between 0 and 1000000
+  arena: :Vector(m) { x between 0m and worldWidth step 1m, y between 0m and worldWidth step 1m }
+  bots: :List(:World_Bot) max 8
+  badge: :Panel_Badge optional
+}
+
+// A named tag set: one generated type for every field that uses it, here and in the group view.
+tags :Side as (#left, #right)
+
+// A let names a value of its schema; generated code declares it as a static member.
+// The wire record takes the fields of an abstract schema in place; the bytes are those of fields written there.
+abstract schema :World_Named as {
+  name: :Text max 12
+}
+
+wire(world) schema :World_Cards as {
+  let deck be 4
+  with :World_Named
+  cards: :List(:Panel_Badge) max deck
+  labels: :List(:Tag max 12) max deck
+  side: :Side optional
+}
+
+schema :World_Bot as {
+  id: :Number integer between 0 and 255 key
+  position: :Point(m) { x between 0m and worldWidth step 1cm, y between 0m and worldWidth step 1cm }
+  velocity: :Vector(m) { x between -100m and 100m step 1cm, y between -100m and 100m step 1cm, z between -100m and 100m step 1cm }
+  body: :World_Body
+  token: :Bytes max 4
+  state: :Flags(#armed, #cloaked, #docked)
+}
+
+// Reached from the wire root World and from the model root WorldView.
+schema :World_Body as {
+  let heaviest be 1t
+  let wear be 2.5%
+  mass: :Quantity(kg) between 0kg and heaviest step 1kg
+  hull: :Tag(#light, #heavy) default #light
+  // A computed field is not encoded; wire records and models derive it alike.
+  burden: :Quantity(kg) computed by mass + wear
+}

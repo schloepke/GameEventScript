@@ -71,7 +71,8 @@ extension GesCompiler {
     }
 
     func indexAccess(_ input: Int, _ index: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
-        if case .literal(let v) = index.kind, let n = v.integerValue, (0...65535).contains(n) {
+        // As in C#, only a unitless integer literal is an immediate index; `values[3m]` reads the property.
+        if case .literal(let v) = index.kind, v.valueKind == .integer, !v.hasUnit, let n = v.integerValue, (0...65535).contains(n) {
             r.emit(.indexAccess, d, Int(n), input)
         } else if case .literal(let v) = index.kind, v.valueKind == .tag || v.valueKind == .text, let tag = v.textValue {
             r.emit(.memberAccess, d, builder.text(tag), input)
@@ -113,7 +114,8 @@ extension GesCompiler {
             r.mark(prepared)
             validSource = valid
         }
-        if s.operation == "fold" { _ = try expression(s.expressions[0], r, scope, destination: accumulator) } else { r.emit(.loadNothing, accumulator) }
+        // As in C#, the seed is read first and moved under the selector's range, so the shared passes decide the rest.
+        if s.operation == "fold" { r.emit(.move, accumulator, try expression(s.expressions[0], r, scope)) } else { r.emit(.loadNothing, accumulator) }
         if let validSource { invalid.append(r.emit(.jumpIfNotTrue, 0, validSource)) } else { invalid.append(r.emit(.iteratorCreateOrJump, iterator, input)) }
         let first = s.operation == "reduce" ? r.emit(.iteratorNext, accumulator, iterator) : nil
         let loop = r.mark()

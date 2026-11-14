@@ -132,7 +132,7 @@ final class GesAstValidator {
 
     private func parameterTypeHints(_ d: GesDefinition) {
         for p in d.parameters {
-            if let type = p.type, !knownType(type) { report("validate.invalidTypeConstructor", p.location, symbol: type, kind: .type, message: "Unknown type ':\(type)' in this program.") }
+            if let type = p.type, !parameterType(type) { report("validate.invalidTypeConstructor", p.location, symbol: type, kind: .type, message: "Unknown type ':\(type)' in this program.") }
         }
     }
 
@@ -148,8 +148,16 @@ final class GesAstValidator {
         }
     }
 
+    // A parameter hint names a type a value can be converted to, as in C#: a built-in constructor type, a quantity with
+    // a known unit, a script record or a catalog type; `:Record` and the numeric helpers are no conversion targets.
+    func parameterType(_ type: String) -> Bool {
+        ["nothing", "tag", "text", "percentage", "vector", "point", "boolean", "number", "numeric", "series", "list", "range", "message", "handler", "map", "dice", "bytes"].contains(type)
+            || type.hasPrefix("quantity:") && GesCompilerSupport.quantityUnit(String(type.dropFirst(9))) != nil
+            || records[type] != nil || catalog?.types.contains { $0.name == type } == true
+    }
+
     func knownType(_ type: String) -> Bool {
-        ["record", "number", "numeric", "nothing", "boolean", "percentage", "vector", "point", "series", "tag", "text", "list", "range", "message", "handler", "map", "dice", "unit", "integer", "fractional"].contains(type)
+        ["record", "number", "numeric", "nothing", "boolean", "percentage", "vector", "point", "series", "tag", "text", "list", "range", "message", "handler", "map", "dice", "bytes", "unit", "integer", "fractional"].contains(type)
             || type.hasPrefix("quantity:")
             || records[type] != nil || catalog?.types.contains { $0.name == type } == true
     }
@@ -365,7 +373,7 @@ final class GesAstValidator {
         func invalid() { report("validate.invalidTypeConstructor", e.location, symbol: type, kind: .type) }
 
         if ["__split", "__splitWhitespace"].contains(type) { return }
-        if ["record", "range", "series", "number", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"].contains(type) {
+        if ["record", "range", "series", "number", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "bytes", "handler"].contains(type) {
             if type == "message" {
                 var isLiteral = false
                 if case .message = args.first?.value.kind { isLiteral = true }

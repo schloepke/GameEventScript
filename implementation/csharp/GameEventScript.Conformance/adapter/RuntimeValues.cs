@@ -42,6 +42,16 @@ internal static class RuntimeValues
             var z = ParseNumber(value.GetProperty("z").GetString()!);
             return type == ":Vector" ? GesValue.GesVector(x, y, z, ReadUnit(value)) : GesValue.GesPoint(x, y, z, ReadUnit(value));
         }
+        if (type is ":Box" or ":Poly" or ":Disc" && !value.TryGetProperty("entries", out _))
+        {
+            // A shape of the geometry library: unitless Points and the unit of the whole shape. A Record of that name has entries.
+            var fields = type switch { ":Box" => new[] { "type", "lower", "upper" }, ":Poly" => new[] { "type", "points" }, _ => new[] { "type", "center", "radius" } };
+            Fields(value, value.TryGetProperty("unit", out _) ? [.. fields, "unit"] : fields);
+            var shapeUnit = ReadUnit(value);
+            if (type == ":Disc") return new GesDisc(UnitlessPoint(value.GetProperty("center")), ParseNumber(value.GetProperty("radius").GetString()!)).ToValue(shapeUnit);
+            if (type == ":Box") return new GesBox(UnitlessPoint(value.GetProperty("lower")), UnitlessPoint(value.GetProperty("upper"))).ToValue(shapeUnit);
+            return new GesPoly(value.GetProperty("points").EnumerateArray().Select(UnitlessPoint).ToArray()).ToValue(shapeUnit);
+        }
         if (type is ":Range.int64" or ":Range.binary64")
         {
             Fields(value, "type", "from", "to", "step");
@@ -93,6 +103,7 @@ internal static class RuntimeValues
             ":Percentage" => GesValue.GesPercentage(ParseNumber(value.GetProperty("value").GetString()!)),
             ":List" => GesValue.GesList(value.GetProperty("items").EnumerateArray().Select(Decode).ToArray()),
             ":Tag" => GesValue.GesTag(value.GetProperty("value").GetString() ?? throw new ArgumentException("Tag value required.")),
+            ":Bytes" => GesValue.GesBytes(Convert.FromHexString(value.GetProperty("value").GetString() ?? throw new ArgumentException("Bytes value required."))),
             ":Dice" => GesValue.GesDice(value.GetProperty("rolls").EnumerateArray().Select(roll => roll.GetInt32() > 0 ? roll.GetInt32() : throw new ArgumentException("Positive roll required.")).ToArray()),
             ":Map" => GesValue.GesMap(value.GetProperty("entries").EnumerateArray().Select(item => item.GetProperty("key").GetString()!).ToArray(),
                 value.GetProperty("entries").EnumerateArray().Select(item => Decode(item.GetProperty("value"))).ToArray()),
@@ -117,6 +128,7 @@ internal static class RuntimeValues
             case GesBytecodeTypeKind.Text: return new { type = ":Text", value = value.AsText() };
             case GesBytecodeTypeKind.Tag: return new { type = ":Tag", value = value.AsText() };
             case GesBytecodeTypeKind.Dice: return new { type = ":Dice", rolls = value.AsDice().ToArray() };
+            case GesBytecodeTypeKind.Bytes: return new { type = ":Bytes", value = Convert.ToHexString(value.AsBytes()).ToLowerInvariant() };
             case GesBytecodeTypeKind.Integer: return Numeric(value, "int64", value.AsInteger().ToString(CultureInfo.InvariantCulture));
             case GesBytecodeTypeKind.Float: return Numeric(value, "binary64", value.AsNumber().ToString("R", CultureInfo.InvariantCulture));
             case GesBytecodeTypeKind.Percentage: return new { type = ":Percentage", value = value.AsNumber().ToString("R", CultureInfo.InvariantCulture) };
@@ -150,6 +162,8 @@ internal static class RuntimeValues
                     step = range.Step.ToString("R", CultureInfo.InvariantCulture)
                 };
             case GesBytecodeTypeKind.Message: return new { type = ":Message", message = EncodeMessage(value.Message!) };
+            case GesBytecodeTypeKind.Custom when Geometry(value) is { } geometry:
+                return geometry;
             case GesBytecodeTypeKind.Custom:
             case GesBytecodeTypeKind.Map:
                 var map = value.MaterializedMap()!;
@@ -161,6 +175,38 @@ internal static class RuntimeValues
             default: throw new ArgumentException("Unsupported observed runtime value kind: " + value.ValueKind);
         }
     }
+    private static GesPoint UnitlessPoint(JsonElement point)
+    {
+        Fields(point, "type", "x", "y", "z");
+        if (point.GetProperty("type").GetString() != ":Point") throw new ArgumentException("A geometry point is a unitless :Point.");
+        return new GesPoint(ParseNumber(point.GetProperty("x").GetString()!), ParseNumber(point.GetProperty("y").GetString()!), ParseNumber(point.GetProperty("z").GetString()!));
+    }
+
+    // A Box, Poly or Disc of the geometry library, whose unit the public API reads only by asking for one.
+    private static Dictionary<string, object>? Geometry(GesValue value)
+    {
+        foreach (var unit in Enum.GetValues<GesQuantityUnit>())
+        {
+            Dictionary<string, object>? result = null;
+            if (GesBox.FromValue(value, unit) is { } box) result = new() { ["type"] = ":Box", ["lower"] = Unitless(box.Min), ["upper"] = Unitless(box.Max) };
+            else if (GesPoly.FromValue(value, unit) is { } poly) result = new() { ["type"] = ":Poly", ["points"] = poly.Points.Select(Unitless).ToArray() };
+            else if (GesDisc.FromValue(value, unit) is { } disc) result = new() { ["type"] = ":Disc", ["center"] = Unitless(disc.Center), ["radius"] = disc.Radius.ToString("R", CultureInfo.InvariantCulture) };
+            if (result is null) continue;
+            if (unit != GesQuantityUnit.UnitNone) result["unit"] = ":" + unit.ToTypeName();
+            return result;
+        }
+
+        return null;
+    }
+
+    private static object Unitless(GesPoint point) => new Dictionary<string, object>
+    {
+        ["type"] = ":Point",
+        ["x"] = point.X.ToString("R", CultureInfo.InvariantCulture),
+        ["y"] = point.Y.ToString("R", CultureInfo.InvariantCulture),
+        ["z"] = point.Z.ToString("R", CultureInfo.InvariantCulture)
+    };
+
     private static GesQuantityUnit ReadUnit(JsonElement value) => !value.TryGetProperty("unit", out var unit)
         ? GesQuantityUnit.UnitNone
         : unit.GetString() is { } name && name.StartsWith(":", StringComparison.Ordinal) && name != ":\u00B0" && GesQuantityUnits.ParseTypeName(name.Substring(1)) is { } parsed

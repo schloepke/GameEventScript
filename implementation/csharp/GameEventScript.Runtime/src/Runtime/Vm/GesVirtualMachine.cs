@@ -69,6 +69,13 @@ internal partial class GesVirtualMachine
     internal GesExternalTypeConstructorCall ExternalTypeConstructorCall => _externalTypeConstructorCall ??= new GesExternalTypeConstructorCall();
 
     internal ushort CodeSegmentSize => ActiveProgram!.CodeSegmentSize;
+    private GesRuntimeBudget? _budget;
+    private int _registersInUse;
+    // Advances when an extension call ends, so argument views retained beyond their call can tell.
+    internal int ExtensionCallGeneration { get; private set; }
+
+    internal void EndExtensionCall() => ExtensionCallGeneration++;
+    private long _maxValueDepth = long.MaxValue;
     internal readonly int MaxRegisterCount;
 
     internal GameEventScriptMessage? ProcessingMessage { get; private set; }
@@ -91,7 +98,11 @@ internal partial class GesVirtualMachine
     {
         if (State != StateValue.Ready) return false;
 
-        if (!EnsureRegisterCapacity(required))
+        // Prewarming grows the capacity only; the new registers hold Nothing and are not in use.
+        var inUse = _registersInUse;
+        var prepared = EnsureRegisterCapacity(required);
+        _registersInUse = inUse;
+        if (!prepared)
             throw new GesVmException(ErrorDiagnostic ?? new GesDiagnostic(
                 GesDiagnosticPhase.Runtime,
                 GesDiagnosticCodes.RuntimeRegisterOverflow,
@@ -110,14 +121,18 @@ internal partial class GesVirtualMachine
         RegisterFrameStart = 0;
         StageLength = 0;
         RandomGenerator = context.Random;
+        _budget = context.RuntimeBudget;
+        var maxValueDepth = context.RuntimeBudget.Limits.MaxValueDepth;
+        _maxValueDepth = maxValueDepth > 0 ? maxValueDepth : long.MaxValue;
         if (callAsArguments)
         {
             var arguments = message.Arguments;
             if (!EnsureRegisterCapacity(arguments.Count)) return false;
             RegisterFrameLength = (ushort)arguments.Count;
+            // Arguments come from the queue unchecked: only values a handler builds count against MaxValueDepth.
             for (var i = 0; i < RegisterFrameLength; i++)
             {
-                SetValue((ushort)i, in arguments.VmValueAt(i));
+                RegisterValues[i] = arguments.VmValueAt(i);
             }
         }
         else
@@ -137,7 +152,24 @@ internal partial class GesVirtualMachine
     internal bool IsRegisterNothing(ushort index) => RegisterValues[index + RegisterFrameStart].Kind is GesBytecodeTypeKind.Nothing;
     internal ref readonly GesValue RegisterStaged(ushort index) => ref RegisterValues[index + RegisterFrameStart + RegisterFrameLength];
     internal void SetNothing(ushort index) => RegisterValues[index + RegisterFrameStart].SetNothing();
-    internal void SetValue(ushort index, in GesValue value) => RegisterValues[index + RegisterFrameStart] = value;
+    internal void SetValue(ushort index, in GesValue value)
+    {
+        RegisterValues[index + RegisterFrameStart] = value;
+        if (value.IntegerValue > _maxValueDepth && value.NestingDepth > _maxValueDepth) ExceedValueDepth();
+    }
+
+    // Every script-built container reaches a register through SetValue or one of the container setters below, so these
+    // checks bound the depth of every value a handler holds (specs/HostRuntime.md#value-nesting).
+    private void CheckValueDepth(ushort index)
+    {
+        if (RegisterValues[index + RegisterFrameStart].NestingDepth > _maxValueDepth) ExceedValueDepth();
+    }
+
+    // Operations that visit Range items without a loop charge each visited item like a loop iteration.
+    private bool ChargeRangeItem() => _budget is null || _budget.ConsumeLoopIterationIfAvailable("Range items visited by one operation exceed the loop iteration limit.");
+
+    private void ExceedValueDepth() => _budget?.Exhaust("MaxValueDepth", "Value nesting exceeds the configured depth.", (int)_maxValueDepth);
+
     internal void SetBoolean(ushort index, bool value) => RegisterValues[index + RegisterFrameStart].SetBoolean(value);
     internal void SetInteger(ushort index, long value, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetInteger(value, unit);
     internal void SetFloat(ushort index, double value, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetFloat(value, unit);
@@ -151,14 +183,34 @@ internal partial class GesVirtualMachine
     internal void SetPoint(ushort index, double x, double y, double z, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetPoint(x, y, z, unit);
     internal void SetPoint(ushort index, GesSpatialValue point, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetPoint(point, unit);
     internal void SetDice(ushort index, int[] values) => RegisterValues[index + RegisterFrameStart].SetDice(values);
-    internal void SetList(ushort index, GesValue[] list) => RegisterValues[index + RegisterFrameStart].SetList(list);
-    internal void SetMap(ushort index, GesValueMap valueMap) => RegisterValues[index + RegisterFrameStart].SetMap(valueMap);
-    internal void SetRecord(ushort index, string typeName, GesValueMap record) => RegisterValues[index + RegisterFrameStart].SetRecord(typeName, record);
+    internal void SetList(ushort index, GesValue[] list)
+    {
+        RegisterValues[index + RegisterFrameStart].SetList(list);
+        CheckValueDepth(index);
+    }
+
+    internal void SetMap(ushort index, GesValueMap valueMap)
+    {
+        RegisterValues[index + RegisterFrameStart].SetMap(valueMap);
+        CheckValueDepth(index);
+    }
+
+    internal void SetRecord(ushort index, string typeName, GesValueMap record)
+    {
+        RegisterValues[index + RegisterFrameStart].SetRecord(typeName, record);
+        CheckValueDepth(index);
+    }
+
     internal void SetExternal(ushort index, IGesExternalValue value) => RegisterValues[index + RegisterFrameStart].SetExternal(value);
     internal void SetIntegerRange(ushort index, long from, long to, long step) => RegisterValues[index + RegisterFrameStart].SetIntegerRange(from, to, step);
     internal void SetFloatRange(ushort index, double from, double to, double step) => RegisterValues[index + RegisterFrameStart].SetFloatRange(from, to, step);
     internal void SetHandler(ushort index, GesMessageSignature handler) => RegisterValues[index + RegisterFrameStart].SetHandler(handler);
-    internal void SetMessage(ushort index, GameEventScriptMessage message) => RegisterValues[index + RegisterFrameStart].SetMessage(message);
+    internal void SetMessage(ushort index, GameEventScriptMessage message)
+    {
+        RegisterValues[index + RegisterFrameStart].SetMessage(message);
+        CheckValueDepth(index);
+    }
+
     internal void SetSeries(ushort index, GesSeriesValue series) => RegisterValues[index + RegisterFrameStart].SetSeries(series);
     internal void SetIterator(ushort index, IGesIterator value) => RegisterValues[index + RegisterFrameStart].SetIterator(value);
     internal void CreateListBuilder(ushort index) => RegisterValues[index + RegisterFrameStart].SetListBuilder(new GesVmListBuilder());
@@ -201,7 +253,10 @@ internal partial class GesVirtualMachine
         RegisterFrameStart = 0;
         RegisterFrameLength = 0;
         StageLength = 0;
-        for (var i = 0; i < RegisterValues.Length; i++) RegisterValues[i].SetNothing();
+        // Only the registers this handler reserved can hold values; the rest of the capacity is still Nothing.
+        var used = Math.Min(_registersInUse, RegisterValues.Length);
+        for (var i = 0; i < used; i++) RegisterValues[i].SetNothing();
+        _registersInUse = 0;
         RandomGenerator = null!;
         ExtensionCall.EndCall();
         _externalTypeConstructorCall?.EndCall();
@@ -394,6 +449,9 @@ internal partial class GesVirtualMachine
     }
     private bool EnsureRegisterCapacity(int requiredRegisters)
     {
+        // Every frame, local block and staged argument reserves its registers here, so this is the high-water mark of
+        // the registers the handler can have written.
+        if (requiredRegisters > _registersInUse) _registersInUse = requiredRegisters;
         if (requiredRegisters <= RegisterValues.Length) return true;
         if (requiredRegisters > MaxRegisterCount)
             return RaiseError(GesDiagnosticCodes.RuntimeRegisterOverflow,

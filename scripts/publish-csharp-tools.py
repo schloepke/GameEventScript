@@ -4,11 +4,11 @@
 """Validate the complete NuGet CLI set; publish only with explicit --publish."""
 import argparse
 import os
-import subprocess
 import sys
 
 sys.dont_write_bytecode = True
 from csharp_tool_packages import release_packages
+import nuget_publication
 
 
 def main():
@@ -23,9 +23,10 @@ def main():
         if not key:
             raise ValueError("A short-lived NUGET_API_KEY is required")
         for path in packages:
-            # No globs, no symbol auto-discovery, no skip-duplicate hiding mismatches.
-            subprocess.run(["dotnet", "nuget", "push", str(path), "--no-symbols",
-                            "--api-key", key, "--source", "https://api.nuget.org/v3/index.json"], check=True)
+            # No globs and no symbol auto-discovery; a version already published with identical contents is skipped and
+            # one with other contents fails, so a rerun resumes without hiding a mismatch.
+            package_id, version = path.name.removesuffix(".nupkg").removesuffix("." + args.version), args.version
+            nuget_publication.push(path, package_id, version, symbols=False)
     print(f"{'Published' if args.publish else 'Validated'} {len(packages)} CLI packages.")
 
 

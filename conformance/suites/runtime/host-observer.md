@@ -278,7 +278,7 @@ This case stops before the pending message starts, preserves observer order, and
 gesBlock: case
 id: emit-and-runtime-limit-order
 runtimeLimits:
-  maxProcessedEventsPerRun: 1
+  maxProcessedMessagesPerRun: 1
 ```
 
 ### Source code under test
@@ -306,7 +306,7 @@ steps:
       - name: Deferred
     runtimeLimits:
       include:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -323,14 +323,14 @@ steps:
         signatureId: "Start()"
       - event: runtimeLimit
         runtimeLimit:
-          name: MaxProcessedEventsPerRun
+          name: MaxProcessedMessagesPerRun
           limit: 1
   resume:
     accepted: false
     paused: false
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -355,7 +355,7 @@ This runtime case exercises “Queue limit rejects the newest message and preser
 gesBlock: case
 id: queue-limit-observer-order
 runtimeLimits:
-  maxQueuedMessagesPerRun: 2
+  maxQueuedMessages: 2
 nativeHandlers:
   - id: start
     message: Start
@@ -396,7 +396,7 @@ steps:
       - name: C
     runtimeLimits:
       include:
-        - name: MaxQueuedMessagesPerRun
+        - name: MaxQueuedMessages
           limit: 2
     trace:
       - event: dispatchStarted
@@ -413,7 +413,7 @@ steps:
         accepted: true
       - event: runtimeLimit
         runtimeLimit:
-          name: MaxQueuedMessagesPerRun
+          name: MaxQueuedMessages
           limit: 2
       - event: emit
         id: "0"
@@ -446,7 +446,7 @@ steps:
 ## Test: Exactly 1 script messages finish at the limit during completion
 
 This case reaches the configured message count exactly while draining all work.
-The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+The final dispatch must complete without reporting MaxProcessedMessagesPerRun;
 the existing pending-message case supplies the over-limit control.
 
 ### Case description
@@ -455,7 +455,7 @@ the existing pending-message case supplies the over-limit control.
 gesBlock: case
 id: processed-limit-script-completion-1
 runtimeLimits:
-  maxProcessedEventsPerRun: 1
+  maxProcessedMessagesPerRun: 1
 ```
 
 ### Source code under test
@@ -479,7 +479,7 @@ steps:
     paused: false
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -497,7 +497,7 @@ steps:
 ## Test: Exactly 2 script messages finish at the limit during completion
 
 This case reaches the configured message count exactly while draining all work.
-The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+The final dispatch must complete without reporting MaxProcessedMessagesPerRun;
 the existing pending-message case supplies the over-limit control.
 
 ### Case description
@@ -506,7 +506,7 @@ the existing pending-message case supplies the over-limit control.
 gesBlock: case
 id: processed-limit-script-completion-2
 runtimeLimits:
-  maxProcessedEventsPerRun: 2
+  maxProcessedMessagesPerRun: 2
 ```
 
 ### Source code under test
@@ -533,7 +533,7 @@ steps:
       - name: Deferred
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 2
     trace:
       - event: dispatchStarted
@@ -563,7 +563,7 @@ steps:
 ## Test: Exactly 1 script messages finish at the limit during frame
 
 This case reaches the configured message count exactly while draining all work.
-The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+The final dispatch must complete without reporting MaxProcessedMessagesPerRun;
 the existing pending-message case supplies the over-limit control.
 
 ### Case description
@@ -572,7 +572,7 @@ the existing pending-message case supplies the over-limit control.
 gesBlock: case
 id: processed-limit-script-frame-1
 runtimeLimits:
-  maxProcessedEventsPerRun: 1
+  maxProcessedMessagesPerRun: 1
 ```
 
 ### Source code under test
@@ -596,7 +596,7 @@ steps:
     paused: false
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -614,7 +614,7 @@ steps:
 ## Test: Exactly 2 script messages finish at the limit during frame
 
 This case reaches the configured message count exactly while draining all work.
-The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+The final dispatch must complete without reporting MaxProcessedMessagesPerRun;
 the existing pending-message case supplies the over-limit control.
 
 ### Case description
@@ -623,7 +623,7 @@ the existing pending-message case supplies the over-limit control.
 gesBlock: case
 id: processed-limit-script-frame-2
 runtimeLimits:
-  maxProcessedEventsPerRun: 2
+  maxProcessedMessagesPerRun: 2
 ```
 
 ### Source code under test
@@ -650,7 +650,7 @@ steps:
       - name: Deferred
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 2
     trace:
       - event: dispatchStarted
@@ -680,7 +680,7 @@ steps:
 ## Test: Exactly 1 native messages finish at the limit during completion
 
 This case reaches the configured message count exactly while draining all work.
-The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+The final dispatch must complete without reporting MaxProcessedMessagesPerRun;
 the existing pending-message case supplies the over-limit control.
 
 ### Case description
@@ -689,7 +689,7 @@ the existing pending-message case supplies the over-limit control.
 gesBlock: case
 id: processed-limit-native-completion-1
 runtimeLimits:
-  maxProcessedEventsPerRun: 1
+  maxProcessedMessagesPerRun: 1
 nativeHandlers:
   - id: start
     message: Start
@@ -711,7 +711,7 @@ steps:
     paused: false
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -729,7 +729,7 @@ steps:
 ## Test: Exactly 2 native messages finish at the limit during completion
 
 This case reaches the configured message count exactly while draining all work.
-The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+The final dispatch must complete without reporting MaxProcessedMessagesPerRun;
 the existing pending-message case supplies the over-limit control.
 
 ### Case description
@@ -738,7 +738,7 @@ the existing pending-message case supplies the over-limit control.
 gesBlock: case
 id: processed-limit-native-completion-2
 runtimeLimits:
-  maxProcessedEventsPerRun: 2
+  maxProcessedMessagesPerRun: 2
 nativeHandlers:
   - id: start
     message: Start
@@ -768,7 +768,7 @@ steps:
       - name: Deferred
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 2
     trace:
       - event: dispatchStarted
@@ -798,7 +798,7 @@ steps:
 ## Test: Exactly 1 native messages finish at the limit during frame
 
 This case reaches the configured message count exactly while draining all work.
-The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+The final dispatch must complete without reporting MaxProcessedMessagesPerRun;
 the existing pending-message case supplies the over-limit control.
 
 ### Case description
@@ -807,7 +807,7 @@ the existing pending-message case supplies the over-limit control.
 gesBlock: case
 id: processed-limit-native-frame-1
 runtimeLimits:
-  maxProcessedEventsPerRun: 1
+  maxProcessedMessagesPerRun: 1
 nativeHandlers:
   - id: start
     message: Start
@@ -829,7 +829,7 @@ steps:
     paused: false
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -847,7 +847,7 @@ steps:
 ## Test: Exactly 2 native messages finish at the limit during frame
 
 This case reaches the configured message count exactly while draining all work.
-The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+The final dispatch must complete without reporting MaxProcessedMessagesPerRun;
 the existing pending-message case supplies the over-limit control.
 
 ### Case description
@@ -856,7 +856,7 @@ the existing pending-message case supplies the over-limit control.
 gesBlock: case
 id: processed-limit-native-frame-2
 runtimeLimits:
-  maxProcessedEventsPerRun: 2
+  maxProcessedMessagesPerRun: 2
 nativeHandlers:
   - id: start
     message: Start
@@ -886,7 +886,7 @@ steps:
       - name: Deferred
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 2
     trace:
       - event: dispatchStarted
@@ -923,7 +923,7 @@ This case stops before the pending message starts, preserves observer order, and
 gesBlock: case
 id: processed-limit-pending-native-completion
 runtimeLimits:
-  maxProcessedEventsPerRun: 1
+  maxProcessedMessagesPerRun: 1
 nativeHandlers:
   - id: start
     message: Start
@@ -954,7 +954,7 @@ steps:
       - name: Deferred
     runtimeLimits:
       include:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -971,14 +971,14 @@ steps:
         signatureId: "Start()"
       - event: runtimeLimit
         runtimeLimit:
-          name: MaxProcessedEventsPerRun
+          name: MaxProcessedMessagesPerRun
           limit: 1
   resume:
     accepted: false
     paused: false
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -1003,7 +1003,7 @@ This case stops before the pending message starts, preserves observer order, and
 gesBlock: case
 id: processed-limit-pending-native-frame
 runtimeLimits:
-  maxProcessedEventsPerRun: 1
+  maxProcessedMessagesPerRun: 1
 nativeHandlers:
   - id: start
     message: Start
@@ -1034,7 +1034,7 @@ steps:
       - name: Deferred
     runtimeLimits:
       include:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -1051,14 +1051,14 @@ steps:
         signatureId: "Start()"
       - event: runtimeLimit
         runtimeLimit:
-          name: MaxProcessedEventsPerRun
+          name: MaxProcessedMessagesPerRun
           limit: 1
   resume:
     accepted: false
     paused: false
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -1083,7 +1083,7 @@ This case stops before the pending message starts, preserves observer order, and
 gesBlock: case
 id: processed-limit-pending-script-frame
 runtimeLimits:
-  maxProcessedEventsPerRun: 1
+  maxProcessedMessagesPerRun: 1
 ```
 
 ### Source code under test
@@ -1111,7 +1111,7 @@ steps:
       - name: Deferred
     runtimeLimits:
       include:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -1128,14 +1128,14 @@ steps:
         signatureId: "Start()"
       - event: runtimeLimit
         runtimeLimit:
-          name: MaxProcessedEventsPerRun
+          name: MaxProcessedMessagesPerRun
           limit: 1
   resume:
     accepted: false
     paused: false
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 1
     trace:
       - event: dispatchStarted
@@ -1160,7 +1160,7 @@ This case processes two logical messages with a limit of three. Both dispatches 
 gesBlock: case
 id: processed-limit-below-script-completion
 runtimeLimits:
-  maxProcessedEventsPerRun: 3
+  maxProcessedMessagesPerRun: 3
 ```
 
 ### Source code under test
@@ -1187,7 +1187,7 @@ steps:
       - name: Deferred
     runtimeLimits:
       exclude:
-        - name: MaxProcessedEventsPerRun
+        - name: MaxProcessedMessagesPerRun
           limit: 3
     trace:
       - event: dispatchStarted
@@ -1283,3 +1283,51 @@ steps:
         message: { name: Missing }
         signatureId: "undeliverable(*)"
 ```
+
+---
+
+## Test: A leaked random scope is reported after another handler failed
+
+A failing native handler does not suppress the random-scope diagnostic of the next handler of the same message: only a handler's own failure makes its scope cleanup expected recovery.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: scope-imbalance-after-failed-handler
+nativeHandlers:
+  - id: failing
+    message: "Start"
+    priority: 2
+    throw: true
+  - id: leaking
+    message: "Start"
+    priority: 1
+    leakRandomScope: true
+```
+
+### Source code under test
+
+```ges
+on Start {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    diagnostics:
+      - phase: runtime
+        code: runtime.nativeHandlerFailure
+      - phase: runtime
+        code: runtime.randomScopeImbalance
+```
+

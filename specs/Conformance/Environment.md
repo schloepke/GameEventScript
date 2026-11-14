@@ -74,6 +74,15 @@ constructor input. Every read of `count` returns one more than the read before i
 starting at 1. Reading `other` raises an unanticipated platform failure when
 `failOther` is true and otherwise returns 0.
 
+## External type `NumberProbe`
+
+> **Since: Unreleased**
+
+The fixed V1 external-type catalog also declares `NumberProbe(value: Float<UnitNone>)` with fields
+`value: Float<UnitNone>` and `stored: Float<UnitNone>` in that order. `value` retains the converted
+constructor input; `stored` returns the Integer quantity `3m`, so a case can observe that a Number
+declaration without a unit keeps a Quantity's unit and makes the value binary64.
+
 ## External type `CallbackProbe`
 
 The fixed V1 external-type catalog also declares
@@ -137,6 +146,15 @@ values that differ from their declarations: the integer `3`, `:Vector(1s, 2s, 3s
 the Number `0.5`, the Tag `#gun`, the Text `'turret'` and the integer `1`.
 Unknown field names return no value. The fixture covers how field reads follow
 their declared types.
+
+## Geometry library
+
+> **Since: Unreleased**
+
+The environment includes the standard [geometry library](../PublicApi.md#geometry-library): its catalog resolves `:Box`,
+`:Poly` and `:Disc` in front of the fixture types above, and its constructor and extension registries resolve `:geometry.*`
+in front of the fixture registries. The names `Box`, `Poly` and `Disc` are therefore taken in script cases, as they are for
+every host that registers the library.
 
 ## Declarative Host environment
 

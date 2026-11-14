@@ -46,6 +46,7 @@ enum GesComparison {
             if a.unit != b.unit { return nil }
             for (x, y) in [(av.x, bv.x), (av.y, bv.y), (av.z, bv.z)] { if x != y { return x < y ? -1 : 1 } }
         }
+        if let av = a.bytesValue, let bv = b.bytesValue { return av == bv ? 0 : av.lexicographicallyPrecedes(bv) ? -1 : 1 }
         return 0
     }
 
@@ -133,6 +134,7 @@ enum GesComparison {
         case .list: 11
         case .map: 12
         case .dice: 13
+        case .bytes: 14
         default: 8
         }
     }

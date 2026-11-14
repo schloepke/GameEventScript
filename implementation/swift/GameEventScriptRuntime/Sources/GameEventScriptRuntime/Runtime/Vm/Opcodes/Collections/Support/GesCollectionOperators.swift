@@ -4,6 +4,16 @@
 enum GesCollectionOperators {
     static func length(_ value: GesValue) -> Int64 { value.integerRangeValue?.count ?? value.floatRangeValue?.count ?? (value.spatialValue != nil ? 3 : Int64(value.length)) }
 
+    static func isRange(_ value: GesValue) -> Bool { value.integerRangeValue != nil || value.floatRangeValue != nil }
+
+    // Two integer Ranges compare without visiting items: the first (or last) terms and, beyond one item, the steps decide.
+    static func integerRangeAffix(_ left: GesIntegerRange, _ leftCount: Int64, _ right: GesIntegerRange, _ rightCount: Int64, suffix: Bool) -> Bool {
+        if rightCount == 0 { return true }
+        let leftTerm = suffix ? left.term(at: leftCount) : left.from
+        let rightTerm = suffix ? right.term(at: rightCount) : right.from
+        return leftTerm == rightTerm && (rightCount == 1 || left.step == right.step)
+    }
+
     static func sequence(_ value: GesValue) -> Bool { [.list, .dice, .integerRange, .floatRange].contains(value.kind) }
 
     static func materialize(_ slot: GesValue, ranges: Bool = true) -> [GesValue]? {
@@ -39,6 +49,7 @@ enum GesCollectionOperators {
         }
         if let list = value.listValue { return list.contains(needle) }
         if let dice = value.diceRolls { return needle.kind == .integer && !needle.hasUnit && dice.contains { Int64($0) == needle.asInteger } }
+        if let bytes = value.bytesValue { return needle.kind == .integer && !needle.hasUnit && bytes.contains { Int64($0) == needle.asInteger } }
         if value.kind == .map { return needle.textValue.flatMap { value.asMap!.get($0) } != nil }
         if value.spatialValue != nil { return needle.isNumeric && (1...3).contains { value.index(Int64($0)) == needle } }
         if let range = value.integerRangeValue { return needle.kind == .integer && !needle.hasUnit && range.contains(needle.asInteger) }

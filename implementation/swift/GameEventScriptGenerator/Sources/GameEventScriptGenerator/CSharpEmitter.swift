@@ -19,47 +19,111 @@ enum GesCSharpEmitter {
 
     // Members every generated type declares, and those every C# object inherits.
     static let reserved = [
-        "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "WriteDelta", "ToDeltaBytes", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals",
+        "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "ByteCount", "WriteDelta", "ToDeltaBytes", "DeltaByteCount", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals",
         "GetHashCode", "ToString", "GetType",
     ]
 
     typealias Code = GesSchemaPlanner.Code
     typealias Names = [(name: String, origin: String)]
 
-    static func emit(_ layout: GesSchemaLayout, _ types: [GesPlanType], _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> String {
+    static func emit(
+        _ layout: GesSchemaLayout,
+        _ types: [GesPlanType],
+        _ options: GesSchemaGenerateOptions,
+        _ packed: GesModelLayout?,
+        _ modelLayout: GesModelLayout?
+    ) throws(GesGeneratorError) -> GesCodeDocument {
         let access = options.access == .public ? "public" : "internal"
         let space = try GesSchemaPlanner.namespace(options.namespace, keywords)
-        var code = Code()
-        code.raw(GesSchemaPlanner.header(layout))
-        code.blank()
-        code.line("#nullable enable")
-        code.blank()
-        code.line("using System;")
-        code.line("using System.Collections.Generic;")
-        code.line("using GameEventScript.Api;")
-        code.blank()
-        if !space.isEmpty {
-            code.line("namespace " + space.joined(separator: "."))
-            code.open("{")
+        var prologue = Code()
+        prologue.blank()
+        prologue.line("#nullable enable")
+        prologue.blank()
+        prologue.line("using System;")
+        prologue.line("using System.Collections.Generic;")
+        prologue.line("using GameEventScript.Api;")
+        prologue.blank()
+        let header = GesSchemaPlanner.header(layout)
+        let holder = "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
+        let global = "global::" + space.map { $0 + "." }.joined()
+        let computed = GesSchemaPlanner.computed(types, GesComputedEmitter.helper(options.namespace, GesSchemaPlanner.suffix(header, options)), swift: false)
+        let sets = GesSchemaPlanner.tagSets(types, global)
+        // Packed records are the model types over one word, the shared ones of the model namespace or declared here.
+        var models = global
+        if let shared = options.models { models = "global::" + (try GesSchemaPlanner.namespace(shared, keywords)).map { $0 + "." }.joined() }
+        for type in types {
+            for field in type.fields { GesSchemaPlanner.qualifyPacked(field.value, models) }
         }
-        let holder = "__GesSchemas" + GesSchemaPlanner.hash(GesSchemaPlanner.header(layout))
-        let context = Context(elements: GesSchemaPlanner.keyedElements(types), global: "global::" + space.map { $0 + "." }.joined(), values: options.values, holder: holder)
-        for (index, type) in types.enumerated() {
-            if index > 0 { code.blank() }
-            if type.kind == .messages { try messageSet(&code, type, access, context) } else { try record(&code, type, access, context) }
+        var topLevel = GesSchemaPlanner.topLevel(types, sets)
+        if options.models != nil { try GesSchemaPlanner.reserveSharedRoots(layout, types, &topLevel) }
+        let context = Context(
+            layout: layout,
+            elements: GesSchemaPlanner.keyedElements(types),
+            global: global,
+            values: options.values,
+            holder: holder,
+            computed: computed,
+            topLevel: topLevel,
+            models: modelLayout.map { ModelConversion($0, models) }
+        )
+        var document = GesCodeDocument(header: header, prologue: prologue.text, space: space, parameters: !layout.parameters.isEmpty)
+        for type in types {
+            if type.layout.packedWidth > 0 {
+                let root = layout.roots.contains(type.name)
+                if let packed {
+                    document.units.append(
+                        GesCodeUnit(owner: type.name) { code in
+                            try GesCSharpModelEmitter.packedType(&code, packed, type.name, access, context.global, root ? { members in packedRoot(&members, type, context) } : nil)
+                        }
+                    )
+                } else if root {
+                    document.units.append(
+                        GesCodeUnit(owner: type.name) { code in
+                            // A root shared with models gets its wire members as extension methods of the model's struct.
+                            code.line("/// <summary>The wire members of the packed record <c>:\(type.name)</c>, a wire root whose type the models declare: its bytes are its word, little-endian.</summary>")
+                            code.line("\(access) static class \(type.name)Wire")
+                            code.open("{")
+                            packedRoot(&code, type, context, models + type.name)
+                            code.close()
+                        }
+                    )
+                }
+                continue
+            }
+            document.units.append(
+                GesCodeUnit(owner: type.name) { code in
+                    if type.kind == .messages { try messageSet(&code, type, access, context) } else { try record(&code, type, access, context) }
+                }
+            )
         }
-        if options.values { valuesHolder(&code, layout, holder) }
-        if !space.isEmpty { code.close() }
-        return code.text
+        for set in sets {
+            document.units.append(GesCodeUnit(owner: set.name) { code in tagSetDeclaration(&code, set.name, set.tags, access) })
+        }
+        try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: false)
+        let shared = options.split != .none
+        if options.values { document.units.append(GesCodeUnit(owner: "") { code in valuesHolder(&code, layout, holder, shared: shared) }) }
+        if layout.types.contains(where: { !$0.computed.isEmpty }) {
+            let computed = context.computed
+            let values = computed.needsValues(types.map { ($0.name, $0.layout.computed) })
+            let math = GesComputedEmitter.usesMath(types.map(\.layout.computed))
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: false, values: values, math: math) })
+        }
+        return document
     }
 
     // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.
     struct Context {
+        let layout: GesSchemaLayout
         let elements: Set<String>
         let global: String
         // Whether records convert to and from GES values through the helper type that holds the embedded sources.
         let values: Bool
         let holder: String
+        let computed: GesComputedEmitter
+        // The records and tag sets declared beside each other, which a record's nested type must not hide.
+        let topLevel: Set<String>
+        // The models that records convert to and from directly, nil without `--models`.
+        let models: ModelConversion?
     }
 
     static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
@@ -78,8 +142,18 @@ enum GesCSharpEmitter {
             if field.optional && plain(field.value) { names.append((field.base + "Optional", "the optional value of " + field.layout.name)) }
             nested(field.value, &names, field.layout.name)
         }
+        for field in type.fields {
+            if isPooledList(field) { names.append(("Set" + field.base + "Count", "the element count of " + field.layout.name)) }
+            if isTextList(field) { names.append((field.base + "Values", "the texts of " + field.layout.name)) }
+        }
         for tag in type.tags { names.append((tag.base, "the tag #" + tag.tag)) }
-        try GesSchemaPlanner.unique(type.name, names)
+        if !type.isItem {
+            for constant in type.layout.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
+        }
+        if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: false, &names) }
+        let model = type.isItem || type.kind != .schema ? nil : context.models?.type(type.name)
+        if model != nil { names.append(("ToModel", "the generated member ToModel")) }
+        try GesSchemaPlanner.unique(type.name, names, context.topLevel)
 
         let visibility = type.isItem ? "public" : access
         code.line(
@@ -107,12 +181,15 @@ enum GesCSharpEmitter {
             code.line("/// <summary>Whether the tag <c>#\(tag.tag)</c> is set.</summary>")
             code.line("public bool \(tag.base);")
         }
+        for field in type.fields { listAccess(&code, field) }
+        if !type.isItem { context.computed.members(&code, type.name, type.layout.computed, "public") }
         methods(&code, type)
         if type.isClass && (type.kind == .schema || type.isItem) { sharing(&code, type) }
         let deltas = type.kind == .schema && !type.isItem
         if deltas { sameHelpers(&code, type, context.global) }
         extras(&code, type, deltas, context.elements.contains(type.name))
         if context.values && !type.isItem { valueMembers(&code, type, context.holder) }
+        if let model { try modelMembers(&code, type, model, context.models!) }
         for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
     }
@@ -126,21 +203,34 @@ enum GesCSharpEmitter {
         code.blank()
         code.line("/// <summary>The size of the largest encoding in bytes.</summary>")
         code.line("public const int MaxByteCount = \(layout.maxByteCount);")
+        lets(&code, layout.constants)
+    }
+
+    /// The lets of a schema, in base units; a Percentage holds its ratio.
+    static func lets(_ code: inout Code, _ constants: [GesLayoutConstant]) {
+        for constant in constants {
+            code.blank()
+            code.line("/// <summary><c>\(GesSchemaPlanner.constantSource(constant))</c></summary>")
+            code.line("public const \(constant.integer ? "long" : "double") \(GesSchemaPlanner.pascal(constant.name)) = \(GesSchemaPlanner.constantValue(constant));")
+        }
     }
 
     // Whether an optional value also has a nullable view: a value type without storage.
-    static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .list }
+    static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .bytes && value.encoding.kind != .list }
 
     // The nested types and members a value declares, for the collision check.
     static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
         let name = nestedName(value)
-        if !name.isEmpty { names.append((name, "the type of " + field)) }
+        if !name.isEmpty && value.tagType.isEmpty { names.append((name, GesSchemaPlanner.nestedTypeOrigin + "of " + field)) }
         switch value.encoding.kind {
         case .text:
             names.append((value.base + "Utf8", "the UTF-8 bytes of " + field))
             names.append(("Set" + value.base + "Utf8", "the UTF-8 setter of " + field))
+        case .bytes:
+            names.append(("Set" + value.base, "the setter of " + field))
         case .list:
-            if let item = value.item { names.append((item.name, "the element type of " + field)) } else { nested(value.element!, &names, field) }
+            if value.encoding.poly { names.append((value.base + "Poly", "the polygon view of " + field)) }
+            if let item = value.item { names.append((item.name, GesSchemaPlanner.nestedTypeOrigin + "of the elements of " + field)) } else { nested(value.element!, &names, field) }
         case .union:
             for alternative in value.alternatives {
                 if alternative.encoding.kind != .nothing { names.append((alternative.base, "the alternative \(alternative.label) of \(field)")) }
@@ -153,9 +243,8 @@ enum GesCSharpEmitter {
 
     static func nestedName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
-        case .tag: value.base + "Tag"
-        case .point: value.base + "Point"
-        case .vector: value.base + "Vector"
+        case .tag: value.tagType.isEmpty ? value.base + "Tag" : value.tagType
+        case .flags: value.base + "Flags"
         case .union: value.base + "Alternative"
         default: ""
         }
@@ -166,14 +255,65 @@ enum GesCSharpEmitter {
         case .boolean: "bool"
         case .integer: "long"
         case .quantized, .float: "double"
-        case .schema: value.encoding.schema
+        case .schema: value.packed?.type ?? value.encoding.schema
         case .text: "string"
+        case .bytes: "byte[]"
+        case .point: "GesPoint"
+        case .vector: "GesVector"
+        case .box: "GesBox"
+        case .disc: "GesDisc"
         case .list: "List<\(elementName(value))>"
         default: nestedName(value)
         }
     }
 
     static func elementName(_ list: GesPlanValue) -> String { list.item?.name ?? typeName(list.element!) }
+
+    // A required list whose elements are classes the record reuses.
+    static func isPooledList(_ field: GesPlanField) -> Bool { !field.optional && field.value.encoding.kind == .list && field.value.element!.isClass }
+
+    // A pooled list of Text or open Tag elements, whose element type holds one text.
+    static func isTextList(_ field: GesPlanField) -> Bool { isPooledList(field) && field.value.item != nil && field.value.element!.encoding.kind == .text }
+
+    // Sets a pooled list to a count of reused elements, as a read does, and for texts offers them as strings.
+    static func listAccess(_ code: inout Code, _ field: GesPlanField) {
+        if !isPooledList(field) { return }
+        let value = field.value
+        let base = value.base
+        code.blank()
+        code.line("/// <summary>Sets <c>\(field.layout.name)</c> to <paramref name=\"count\"/> elements that the record reuses, as a read does; their fields keep earlier values until they are set.</summary>")
+        code.line("/// <param name=\"count\">The element count.</param>")
+        code.line("public void Set\(base)Count(int count)")
+        code.open("{")
+        code.line("if (count < 0) throw new global::System.ArgumentOutOfRangeException(nameof(count));")
+        code.line("\(base).Clear();")
+        code.line("for (var position = 0; position < count; position++)")
+        code.open("{")
+        code.line("if (position == __\(base)Pool.Count) __\(base)Pool.Add(new \(elementName(value))());")
+        code.line("\(base).Add(__\(base)Pool[position]);")
+        code.close()
+        code.close()
+        if !isTextList(field) { return }
+        let text = value.item!.fields[0].base
+        code.blank()
+        code.line("/// <summary>The elements of <c>\(field.layout.name)</c> as strings; reading and setting allocate, and setting reuses the elements.</summary>")
+        code.line("public string[] \(base)Values")
+        code.open("{")
+        code.line("get")
+        code.open("{")
+        code.line("var values = new string[\(base).Count];")
+        code.line("for (var index = 0; index < values.Length; index++) values[index] = \(base)[index].\(text);")
+        code.line("return values;")
+        code.close()
+        code.blank()
+        code.line("set")
+        code.open("{")
+        code.line("if (value is null) throw new global::System.ArgumentNullException(nameof(value));")
+        code.line("Set\(base)Count(value.Length);")
+        code.line("for (var index = 0; index < value.Length; index++) \(base)[index].\(text) = value[index];")
+        code.close()
+        code.close()
+    }
 
     // A class reference starts as an instance, so that a record can be filled without allocating later.
     static func initializer(_ value: GesPlanValue) -> String {
@@ -213,16 +353,41 @@ enum GesCSharpEmitter {
         }
     }
 
+    // A Bytes value grows its storage as a Text does, without UTF-8 conveniences.
+    static func bytesMember(_ code: inout Code, _ value: GesPlanValue, _ summary: String) {
+        let storage = "__" + value.base
+        let max = String(value.encoding.maxCount)
+        code.line("private byte[] \(storage) = global::System.Array.Empty<byte>();")
+        code.line("private int \(storage)Length;")
+        code.blank()
+        code.line("/// <summary>\(summary), at most \(max) bytes.</summary>")
+        code.line("public ReadOnlySpan<byte> \(value.base) => new ReadOnlySpan<byte>(\(storage), 0, \(storage)Length);")
+        code.blank()
+        code.line("/// <summary>Sets \(summary.prefix(1).lowercased() + summary.dropFirst()); its length is checked when the record is written.</summary>")
+        code.line("/// <param name=\"bytes\">The bytes.</param>")
+        code.line("public void Set\(value.base)(ReadOnlySpan<byte> bytes)")
+        code.open("{")
+        code.line("if (\(storage).Length < bytes.Length) global::System.Array.Resize(ref \(storage), global::System.Math.Max(bytes.Length, global::System.Math.Min(\(max), \(storage).Length * 2)));")
+        code.line("bytes.CopyTo(\(storage));")
+        code.line("\(storage)Length = bytes.Length;")
+        code.close()
+    }
+
     // Declares the member that stores a value, with its storage and conveniences.
     static func member(_ code: inout Code, _ value: GesPlanValue, _ summary: String) {
+        if value.encoding.kind == .bytes { return bytesMember(&code, value, summary) }
         if value.encoding.kind != .text {
             code.line("/// <summary>\(summary)\(description(value)).</summary>")
             code.line("public \(typeName(value)) \(value.base)\(initializer(value))")
+            if !value.encoding.poly { return }
+            code.blank()
+            code.line("/// <summary>\(summary) as a polygon; reading it allocates.</summary>")
+            code.line("public GesPoly \(value.base)Poly => new GesPoly(\(value.base));")
             return
         }
         let storage = "__" + value.base
         let max = String(value.encoding.maxCount)
-        code.line("private byte[] \(storage) = Array.Empty<byte>();")
+        code.line("private byte[] \(storage) = global::System.Array.Empty<byte>();")
         code.line("private int \(storage)Length;")
         code.blank()
         code.line("/// <summary>\(summary) as UTF-8 bytes\(value.encoding.tagName ? ", a tag name without #" : "").</summary>")
@@ -232,7 +397,7 @@ enum GesCSharpEmitter {
         code.line("/// <param name=\"utf8\">The bytes.</param>")
         code.line("public void Set\(value.base)Utf8(ReadOnlySpan<byte> utf8)")
         code.open("{")
-        code.line("if (\(storage).Length < utf8.Length) Array.Resize(ref \(storage), Math.Max(utf8.Length, Math.Min(\(max), \(storage).Length * 2)));")
+        code.line("if (\(storage).Length < utf8.Length) global::System.Array.Resize(ref \(storage), global::System.Math.Max(utf8.Length, global::System.Math.Min(\(max), \(storage).Length * 2)));")
         code.line("utf8.CopyTo(\(storage));")
         code.line("\(storage)Length = utf8.Length;")
         code.close()
@@ -240,16 +405,17 @@ enum GesCSharpEmitter {
         code.line("/// <summary>\(summary) as a string; reading and setting it allocate.</summary>")
         code.line("public string \(value.base)")
         code.open("{")
-        code.line("get => System.Text.Encoding.UTF8.GetString(\(storage), 0, \(storage)Length);")
-        code.line("set => Set\(value.base)Utf8(System.Text.Encoding.UTF8.GetBytes(value));")
+        code.line("get => global::System.Text.Encoding.UTF8.GetString(\(storage), 0, \(storage)Length);")
+        code.line("set => Set\(value.base)Utf8(global::System.Text.Encoding.UTF8.GetBytes(value));")
         code.close()
     }
 
     static func description(_ value: GesPlanValue) -> String {
         let encoding = value.encoding
         switch encoding.kind {
-        case .quantized, .float, .integer, .point, .vector: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
+        case .quantized, .float, .integer, .point, .vector, .box, .disc: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
         case .union: return ", the selected alternative"
+        case .list where encoding.poly: return ", the points of a polygon\(encoding.unit != "none" ? " in " + encoding.unit : ""), at most \(encoding.maxCount)"
         case .list: return ", at most \(encoding.maxCount) elements"
         default: return ""
         }
@@ -278,7 +444,7 @@ enum GesCSharpEmitter {
             }
         }
         code.blank()
-        code.line("internal \(selfModifier)void __WriteFields(ref GesBitWriter writer, string[] paths, int at)")
+        code.line("internal \(selfModifier)void __WriteFields(ref GesBitWriter writer, string[] paths, int at\(levelParameter(type)))")
         code.open("{")
         for field in type.fields {
             if field.optional {
@@ -295,7 +461,7 @@ enum GesCSharpEmitter {
         for tag in type.tags { code.line("writer.Write(\(tag.base) ? 1UL : 0UL, 1);") }
         code.close()
         code.blank()
-        code.line("internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)")
+        code.line("internal void __ReadFields(ref GesBitReader reader, string[] paths, int at\(levelParameter(type)))")
         code.open("{")
         for field in type.fields {
             if field.optional {
@@ -325,13 +491,24 @@ enum GesCSharpEmitter {
         code.line("return writer.Finish();")
         code.close()
         code.blank()
-        code.line("/// <summary>Writes this \(what) into a new array of its exact size.</summary>")
+        code.line("/// <summary>Counts the bytes that <see cref=\"Write\"/> writes for this \(what), without writing them.</summary>")
+        code.line("/// <returns>The exact byte count.</returns>")
+        code.line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>")
+        code.line("public \(selfModifier)int ByteCount()")
+        code.open("{")
+        code.line("var writer = GesBitWriter.Counting();")
+        for line in write { code.line(line) }
+        code.line("return writer.Finish();")
+        code.close()
+        code.blank()
+        code.line("/// <summary>Writes this \(what) into a new array of its exact size, which <see cref=\"ByteCount\"/> counts first.</summary>")
         code.line("/// <returns>The bytes.</returns>")
         code.line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>")
         code.line("public \(selfModifier)byte[] ToBytes()")
         code.open("{")
-        code.line("var buffer = new byte[MaxByteCount];")
-        code.line("return buffer.AsSpan(0, Write(buffer)).ToArray();")
+        code.line("var buffer = new byte[ByteCount()];")
+        code.line("Write(buffer);")
+        code.line("return buffer;")
         code.close()
         code.blank()
         code.line("/// <summary>Reads a \(what) from untrusted data into this instance. After an error its values are unspecified.</summary>")
@@ -348,13 +525,13 @@ enum GesCSharpEmitter {
     }
 
     static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String, _ context: Context) throws(GesGeneratorError) {
-        var names: Names = [(type.name, "the type itself"), ("Selected", "the selected member"), ("Member", "the member type")]
+        var names: Names = [(type.name, "the type itself"), ("Selected", "the selected member"), ("Member", GesSchemaPlanner.nestedTypeOrigin + "of the members")]
         for name in reserved { names.append((name, "the generated member " + name)) }
         if context.values {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
         for member in type.members { names.append((member, "the member " + member)) }
-        try GesSchemaPlanner.unique(type.name, names)
+        try GesSchemaPlanner.unique(type.name, names, context.topLevel)
         let width = String(type.layout.memberWidth)
         let last = unsigned(UInt64(type.members.count) - 1)
         code.line(
@@ -400,6 +577,25 @@ enum GesCSharpEmitter {
 
     static func path(_ value: GesPlanValue) -> String { "paths[at + \(value.node)]" }
 
+    // A recursive schema's methods take the level of the record, 1 where a caller enters the recursion.
+    static func levelParameter(_ type: GesPlanType) -> String { type.depth > 0 ? ", int level = 1" : "" }
+
+    // The level argument of a call into a record: one deeper for the element of a recursive List.
+    static func nextLevel(_ value: GesPlanValue) -> String { value.recursive ? ", level + 1" : "" }
+
+    // The level that the item of a recursive union takes: that of the record holding the List.
+    static func itemLevel(_ element: GesPlanValue) -> String { element.passesLevel ? ", level" : "" }
+
+    // Opens the levels of a recursive List that hold elements; at its depth the List holds nothing, so data there is deeper.
+    static func openLevels(_ code: inout Code, _ value: GesPlanValue, _ count: String) {
+        code.line("if (level >= \(value.depth))")
+        code.open("{")
+        code.line("if (\(count) > 0) throw new GesWireException(GesWireException.TooDeep, \(path(value)), \"deeper than depth \(value.depth)\");")
+        code.close()
+        code.line("else")
+        code.open("{")
+    }
+
     static func fail(_ code: String, _ value: GesPlanValue) -> String { "throw new GesWireException(GesWireException.\(code), \(path(value)));" }
 
     // Writes the value in `target`, which the caller has validated as present.
@@ -429,33 +625,48 @@ enum GesCSharpEmitter {
         case .float:
             code.line("if (double.IsNaN(\(target))) \(fail("NotRepresentable", value))")
             if encoding.range { code.line("if (\(target) < \(bits(encoding.lowerValue)) || \(target) > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
-            code.line("writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(\(target) == 0 ? 0d : \(target))), 64);")
+            code.line("writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(\(target) == 0 ? 0d : \(target))), 64);")
         case .tag:
             code.line("if ((ulong)\(target) > \(unsigned(UInt64(encoding.tags.count) - 1))) \(fail("UnknownTag", value))")
             code.line("writer.Write((ulong)\(target), \(width));")
-        case .text:
+        case .flags:
+            if encoding.width < 64 { code.line("if ((ulong)\(target) > \(unsigned(full(encoding.width)))) \(fail("UnknownTag", value))") }
+            code.line("writer.Write((ulong)\(target), \(width));")
+        case .text, .bytes:
             code.open("{")
             code.line("var text = new ReadOnlySpan<byte>(__\(value.base), 0, __\(value.base)Length);")
             code.line("if (text.Length > \(max)) \(fail("TooLong", value))")
-            code.line(encoding.tagName ? "if (!GesWireRules.IsTagName(text)) \(fail("InvalidTag", value))" : "if (!GesWireRules.IsValidUtf8(text)) \(fail("InvalidText", value))")
+            if encoding.kind == .text {
+                code.line(encoding.tagName ? "if (!GesWireRules.IsTagName(text)) \(fail("InvalidTag", value))" : "if (!GesWireRules.IsValidUtf8(text)) \(fail("InvalidText", value))")
+            }
             code.line("writer.Write((ulong)text.Length, \(width));")
             code.line("writer.WriteBytes(text);")
             code.close()
         case .list:
+            if value.depth > 0 { openLevels(&code, value, target + ".Count") }
             code.line("if (\(target).Count > \(max)) \(fail("TooLong", value))")
             code.line("writer.Write((ulong)\(target).Count, \(width));")
             code.line("foreach (var item in \(target))")
             code.open("{")
             if value.item != nil {
-                code.line("item.__WriteFields(ref writer, paths, at + \(value.element!.node));")
+                code.line("item.__WriteFields(ref writer, paths, at + \(value.element!.node)\(itemLevel(value.element!)));")
             } else {
                 write(&code, value.element!, "item")
             }
             code.close()
+            if value.depth > 0 { code.close() }
         case .point, .vector:
             for axis in value.axes { write(&code, axis, target + "." + axis.base) }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("if (\(target).\(axis) != 0) \(fail("TypeMismatch", value))") }
+        case .box:
+            for corner in value.corners { write(&code, corner, target + "." + corner.base) }
+        case .disc:
+            for part in value.corners { write(&code, part, target + "." + part.base) }
+            if value.corners.count == 1 { code.line("if (\(target).Radius != 0) \(fail("TypeMismatch", value))") }
+        case .schema where value.packed != nil:
+            packedWrite(&code, value, target)
         case .schema:
-            code.line("\(target).__WriteFields(ref writer, paths, at + \(value.node + 1));")
+            code.line("\(target).__WriteFields(ref writer, paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .union:
             code.line("switch (\(target))")
             code.open("{")
@@ -487,6 +698,8 @@ enum GesCSharpEmitter {
             code.line("\(target) = reader.Read(1, \(path(value))) != 0;")
         case .integer where !encoding.range:
             code.line("\(target) = unchecked((long)reader.Read(64, \(path(value))));")
+        case .flags:
+            code.line("\(target) = (\(nestedName(value)))reader.Read(\(width), \(path(value)));")
         case .integer, .quantized, .tag:
             code.open("{")
             code.line("var index = reader.Read(\(width), \(path(value)));")
@@ -501,30 +714,42 @@ enum GesCSharpEmitter {
         case .float:
             code.open("{")
             code.line("var bits = reader.Read(64, \(path(value)));")
-            code.line("var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));")
+            code.line("var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));")
             code.line("if (double.IsNaN(value) || bits == 0x8000000000000000UL\(encoding.range ? " || double.IsInfinity(value)" : "")) \(fail("InvalidNumber", value))")
             if encoding.range { code.line("if (value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
             code.line("\(target) = value;")
             code.close()
-        case .text:
+        case .text, .bytes:
             let storage = "__" + value.base
             code.open("{")
             code.line("var count = (int)reader.Read(\(width), \(path(value)));")
             code.line("if (count > \(max)) \(fail("InvalidCount", value))")
             code.line("reader.Require(count * 8L, \(path(value)));")
-            code.line("if (\(storage).Length < count) Array.Resize(ref \(storage), Math.Max(count, Math.Min(\(max), \(storage).Length * 2)));")
+            code.line("if (\(storage).Length < count) global::System.Array.Resize(ref \(storage), global::System.Math.Max(count, global::System.Math.Min(\(max), \(storage).Length * 2)));")
             code.line("var text = new Span<byte>(\(storage), 0, count);")
             code.line("reader.ReadBytes(text, \(path(value)));")
-            code.line(encoding.tagName ? "if (!GesWireRules.IsTagName(text)) \(fail("InvalidTag", value))" : "if (!GesWireRules.IsValidUtf8(text)) \(fail("InvalidText", value))")
+            if encoding.kind == .text {
+                code.line(encoding.tagName ? "if (!GesWireRules.IsTagName(text)) \(fail("InvalidTag", value))" : "if (!GesWireRules.IsValidUtf8(text)) \(fail("InvalidText", value))")
+            }
             code.line("\(storage)Length = count;")
             code.close()
         case .list:
             let element = value.element!
             let name = elementName(value)
+            if value.depth > 0 {
+                // The deepest level reads no count, since its List takes no bits.
+                code.line("if (level >= \(value.depth)) \(target).Clear();")
+                code.line("else")
+            }
             code.open("{")
             code.line("var count = (int)reader.Read(\(width), \(path(value)));")
             code.line("if (count > \(max)) \(fail("InvalidCount", value))")
             code.line("\(target).Clear();")
+            if element.packed != nil {
+                packedList(&code, value, target, "count")
+                code.close()
+                break
+            }
             code.line("for (var position = 0; position < count; position++)")
             code.open("{")
             if element.isClass {
@@ -536,7 +761,7 @@ enum GesCSharpEmitter {
                 code.line("\(name) item;")
             }
             if value.item != nil {
-                code.line("item.__ReadFields(ref reader, paths, at + \(element.node));")
+                code.line("item.__ReadFields(ref reader, paths, at + \(element.node)\(itemLevel(element)));")
             } else {
                 read(&code, element, "item")
             }
@@ -545,8 +770,28 @@ enum GesCSharpEmitter {
             code.close()
         case .point, .vector:
             for axis in value.axes { read(&code, axis, target + "." + axis.base) }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("\(target).\(axis) = 0;") }
+        case .box:
+            // The corners arrive as two Points; the box orders them.
+            code.open("{")
+            for corner in value.corners {
+                code.line("var \(corner.label)\(value.node) = new GesPoint();")
+                read(&code, corner, corner.label + String(value.node))
+            }
+            code.line("\(target) = new GesBox(lower\(value.node), upper\(value.node));")
+            code.close()
+        case .disc:
+            // The centre and the radius, which a block can leave out; the disc takes the radius's magnitude.
+            code.open("{")
+            code.line("var center\(value.node) = new GesPoint();")
+            code.line("var radius\(value.node) = 0d;")
+            for part in value.corners { read(&code, part, part.label + String(value.node)) }
+            code.line("\(target) = new GesDisc(center\(value.node), radius\(value.node));")
+            code.close()
+        case .schema where value.packed != nil:
+            packedRead(&code, value, target)
         case .schema:
-            code.line("\(target).__ReadFields(ref reader, paths, at + \(value.node + 1));")
+            code.line("\(target).__ReadFields(ref reader, paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .union:
             code.open("{")
             code.line("var choice = reader.Read(\(width), \(path(value)));")
@@ -573,6 +818,7 @@ enum GesCSharpEmitter {
         let name = nestedName(value)
         switch value.encoding.kind {
         case .tag:
+            if !value.tagType.isEmpty { break }
             code.blank()
             code.line("/// <summary>The tags of the field, in declared order.</summary>")
             code.line("public enum \(name) : \(underlying(value.encoding.tags.count))")
@@ -582,17 +828,8 @@ enum GesCSharpEmitter {
                 code.line(GesSchemaPlanner.pascal(tag) + ",")
             }
             code.close()
-        case .point, .vector:
-            code.blank()
-            code.line("/// <summary>The transmitted axes of the \(value.encoding.kind == .point ? "Point" : "Vector").</summary>")
-            code.line("public struct \(name)")
-            code.open("{")
-            for (index, axis) in value.axes.enumerated() {
-                if index > 0 { code.blank() }
-                code.line("/// <summary>The \(axis.label) axis.</summary>")
-                code.line("public double \(axis.base);")
-            }
-            code.close()
+        case .flags:
+            flagsDeclaration(&code, name, value.encoding.tags)
         case .union:
             code.blank()
             code.line("/// <summary>The alternatives of the field, in declared order.</summary>")
@@ -622,6 +859,33 @@ enum GesCSharpEmitter {
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint" }
 
+    // A named tag set, declared once beside the records that use it.
+    static func tagSetDeclaration(_ code: inout Code, _ name: String, _ tags: [String], _ access: String) {
+        code.blank()
+        code.line("/// <summary>The tag set <c>:\(name)</c>, in declared order.</summary>")
+        code.line("\(access) enum \(name) : \(underlying(tags.count))")
+        code.open("{")
+        for tag in tags {
+            code.line("/// <summary>The tag <c>#\(tag)</c>.</summary>")
+            code.line(GesSchemaPlanner.pascal(tag) + ",")
+        }
+        code.close()
+    }
+
+    // One bit per member in declared order, so the enum value is the wire mask; the empty value needs no name.
+    static func flagsDeclaration(_ code: inout Code, _ name: String, _ members: [String]) {
+        code.blank()
+        code.line("/// <summary>The members of the field, one bit each in declared order.</summary>")
+        code.line("[global::System.Flags]")
+        code.line("public enum \(name) : ulong")
+        code.open("{")
+        for (index, member) in members.enumerated() {
+            code.line("/// <summary>The member <c>#\(member)</c>.</summary>")
+            code.line("\(GesSchemaPlanner.pascal(member)) = 1UL << \(index),")
+        }
+        code.close()
+    }
+
     static func full(_ width: Int) -> UInt64 { width >= 64 ? .max : (1 << UInt64(width)) - 1 }
 
     static func long(_ value: Int64) -> String { value == .min ? "long.MinValue" : "\(value)L" }
@@ -631,5 +895,5 @@ enum GesCSharpEmitter {
     // An integral binary64 such as 10^k or p, exact as a literal.
     static func double(_ value: Int64) -> String { "\(value)d" }
 
-    static func bits(_ value: Double) -> String { "BitConverter.Int64BitsToDouble(unchecked((long)0x\(GesSchemaLayoutJson.hex(value.bitPattern))UL))" }
+    static func bits(_ value: Double) -> String { "global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x\(GesSchemaLayoutJson.hex(value.bitPattern))UL))" }
 }

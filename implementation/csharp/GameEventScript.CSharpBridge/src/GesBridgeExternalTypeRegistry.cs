@@ -166,6 +166,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
     private readonly Dictionary<string, GesExternalTypeDefinition> _typesByName = new(StringComparer.Ordinal);
     private readonly Dictionary<string, IGesExternalTypeConstructor> _constructors = new(StringComparer.Ordinal);
     private readonly Dictionary<Type, GesBridgeExternalTypeBinding> _bindingsByClrType = new();
+    private readonly List<(Type Type, string Use)> _externalUses = [];
     private IReadOnlyList<GesExternalTypeDefinition> _types = Array.Empty<GesExternalTypeDefinition>();
 
     private GesBridgeExternalTypeRegistry()
@@ -201,6 +202,13 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
             registry.RegisterType(type ?? throw new ArgumentException("External type list contains null.", nameof(types)));
         }
 
+        // A field or parameter of an external CLR type needs that type in the same registry.
+        foreach (var (type, use) in registry._externalUses)
+        {
+            if (registry.FindBinding(type) is null)
+                throw new ArgumentException($"{use} has CLR type '{type.FullName}', which this registry does not register.", nameof(types));
+        }
+
         registry._types = GesReadOnlyArray<GesExternalTypeDefinition>.FromOwnedArray(registry._typesByName.Values.ToArray());
         return registry;
     }
@@ -227,34 +235,36 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
         return _constructors.TryGetValue(reference.SignatureId, out var constructor) ? constructor : null;
     }
 
-    internal GesValue ToValue(object? value)
+    // An external value of a registered CLR type or one derived from it, or nothing for null.
+    internal GesValue ToExternalValue(object? value)
     {
-        if (value is not null && CreateExternalValue(value) is { } externalValue)
-        {
-            var result = new GesValue();
-            result.SetExternal(externalValue);
-            return result;
-        }
-
-        return GesBridgeValueConverter.ToValue(value);
+        var result = new GesValue();
+        if (value is not null && CreateExternalValue(value) is { } externalValue) result.SetExternal(externalValue);
+        return result;
     }
 
     internal IGesExternalValue? CreateExternalValue(object value)
-        => _bindingsByClrType.TryGetValue(value.GetType(), out var binding)
-            ? new GesBridgeExternalValue(value, binding, this)
-            : null;
+        => FindBinding(value.GetType()) is { } binding ? new GesBridgeExternalValue(value, binding, this) : null;
+
+    // The binding of a CLR type, or of the nearest registered base class, as a factory may return a derived instance.
+    private GesBridgeExternalTypeBinding? FindBinding(Type type)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+            if (_bindingsByClrType.TryGetValue(current, out var binding)) return binding;
+        return null;
+    }
 
     private void RegisterType(Type clrType)
     {
         var typeAttribute = clrType.GetCustomAttribute<GesTypeAttribute>() ??
                             throw new ArgumentException($"CLR type '{clrType.FullName}' must declare GesTypeAttribute.", nameof(clrType));
         var typeName = GesExternalTypeNames.NormalizeTypeName(typeAttribute.TypeName);
-        var fields = BuildFields(clrType);
+        var fields = BuildFields(clrType, _externalUses);
         var fieldReaders = fields.ToDictionary(
             field => field.Definition.Name,
             field => field,
             StringComparer.Ordinal);
-        var constructors = BuildConstructors(clrType, typeName, fields.Select(field => field.Definition.Name).ToHashSet(StringComparer.Ordinal), this);
+        var constructors = BuildConstructors(clrType, typeName, fields.Select(field => field.Definition.Name).ToHashSet(StringComparer.Ordinal), this, _externalUses);
 
         var definition = new GesExternalTypeDefinition(
             typeName,
@@ -272,7 +282,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
         }
     }
 
-    private static IReadOnlyList<GesBridgeExternalFieldBinding> BuildFields(Type clrType)
+    private static IReadOnlyList<GesBridgeExternalFieldBinding> BuildFields(Type clrType, List<(Type, string)> externalUses)
     {
         var fields = new List<GesBridgeExternalFieldBinding>();
         foreach (var property in clrType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
@@ -288,7 +298,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
                 throw new ArgumentException($"External GameEventScript field '{property.Name}' on '{clrType.FullName}' must be a readable non-indexer property.");
             }
 
-            fields.Add(CreateFieldBinding(attribute, instance => property.GetValue(instance, BindingFlags.DoNotWrapExceptions, null, null, null)));
+            fields.Add(CreateFieldBinding(clrType, attribute, property.PropertyType, instance => property.GetValue(instance, BindingFlags.DoNotWrapExceptions, null, null, null), externalUses));
         }
 
         foreach (var field in clrType.GetFields(BindingFlags.Instance | BindingFlags.Public))
@@ -299,7 +309,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
                 continue;
             }
 
-            fields.Add(CreateFieldBinding(attribute, instance => field.GetValue(instance)));
+            fields.Add(CreateFieldBinding(clrType, attribute, field.FieldType, instance => field.GetValue(instance), externalUses));
         }
 
         var duplicates = fields
@@ -313,15 +323,25 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
         return fields;
     }
 
-    private static GesBridgeExternalFieldBinding CreateFieldBinding(GesFieldAttribute attribute, Func<object, object?> reader)
+    // The CLR type of a field decides its conversion at registration, so an unsupported type fails here and not when a
+    // script first reads the field.
+    private static GesBridgeExternalFieldBinding CreateFieldBinding(Type owner, GesFieldAttribute attribute, Type clrType, Func<object, object?> reader, List<(Type, string)> externalUses)
     {
         var definition = attribute.Kind is { } kind
             ? new GesExternalTypeFieldDefinition(attribute.Name, kind, attribute.Unit)
             : new GesExternalTypeFieldDefinition(attribute.Name, attribute.TypeName);
-        return new GesBridgeExternalFieldBinding(definition, reader);
+        var writer = GesBridgeValueConverter.CreateWriter(clrType, attribute.Unit);
+        if (writer is null)
+        {
+            if (!clrType.IsClass || clrType.GetCustomAttribute<GesTypeAttribute>() is null)
+                throw new ArgumentException($"External GameEventScript field '{attribute.Name}' on '{owner.FullName}' has CLR type '{clrType.FullName}', which does not convert to a GES value.");
+            externalUses.Add((clrType, $"External GameEventScript field '{attribute.Name}' on '{owner.FullName}'"));
+        }
+
+        return new GesBridgeExternalFieldBinding(definition, reader, writer);
     }
 
-    private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(Type clrType, string typeName, ISet<string> fieldNames, GesBridgeExternalTypeRegistry registry)
+    private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(Type clrType, string typeName, ISet<string> fieldNames, GesBridgeExternalTypeRegistry registry, List<(Type, string)> externalUses)
     {
         var constructors = new List<ReflectionExternalTypeConstructor>();
         foreach (var constructor in clrType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
@@ -331,7 +351,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
                 continue;
             }
 
-            constructors.Add(BuildConstructorBinding(typeName, fieldNames, constructor, values => constructor.Invoke(BindingFlags.DoNotWrapExceptions, null, values, null), registry));
+            constructors.Add(BuildConstructorBinding(typeName, fieldNames, constructor, values => constructor.Invoke(BindingFlags.DoNotWrapExceptions, null, values, null), registry, externalUses));
         }
 
         foreach (var method in clrType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
@@ -351,7 +371,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
                 throw new ArgumentException($"External GameEventScript constructor '{clrType.FullName}.{method.Name}' must return '{clrType.FullName}'.");
             }
 
-            constructors.Add(BuildConstructorBinding(typeName, fieldNames, method, values => method.Invoke(null, BindingFlags.DoNotWrapExceptions, null, values, null), registry));
+            constructors.Add(BuildConstructorBinding(typeName, fieldNames, method, values => method.Invoke(null, BindingFlags.DoNotWrapExceptions, null, values, null), registry, externalUses));
         }
 
         var duplicates = constructors
@@ -365,10 +385,10 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
         return constructors;
     }
 
-    private static ReflectionExternalTypeConstructor BuildConstructorBinding(string typeName, ISet<string> fieldNames, MethodBase method, Func<object?[], object?> invoke, GesBridgeExternalTypeRegistry registry)
+    private static ReflectionExternalTypeConstructor BuildConstructorBinding(string typeName, ISet<string> fieldNames, MethodBase method, Func<object?[], object?> invoke, GesBridgeExternalTypeRegistry registry, List<(Type, string)> externalUses)
     {
         var parameters = method.GetParameters()
-            .Select(parameter => BuildParameterDefinition(method, fieldNames, parameter))
+            .Select(parameter => BuildParameterDefinition(method, fieldNames, parameter, externalUses))
             .ToArray();
         return new ReflectionExternalTypeConstructor(
             new GesExternalTypeConstructorDefinition(typeName, parameters.Select(parameter => parameter.Definition)),
@@ -377,7 +397,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
             registry);
     }
 
-    private static ExternalParameterBinding BuildParameterDefinition(MethodBase method, ISet<string> fieldNames, ParameterInfo parameter)
+    private static ExternalParameterBinding BuildParameterDefinition(MethodBase method, ISet<string> fieldNames, ParameterInfo parameter, List<(Type, string)> externalUses)
     {
         var attribute = parameter.GetCustomAttribute<GesParamAttribute>() ??
                         throw new ArgumentException($"External GameEventScript constructor '{method.DeclaringType?.FullName}.{method.Name}' parameter '{parameter.Name}' must declare GesParamAttribute.");
@@ -389,10 +409,14 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
             throw new ArgumentException($"External GameEventScript constructor '{method.DeclaringType?.FullName}.{method.Name}' parameter '{definition.Name}' is not a declared field.");
         }
 
-        return new ExternalParameterBinding(definition, parameter.ParameterType);
+        var use = $"External GameEventScript constructor '{method.DeclaringType?.FullName}.{method.Name}' parameter '{definition.Name}'";
+        var reader = GesBridgeValueConverter.CreateReader(parameter.ParameterType, attribute.Unit) ??
+                     throw new ArgumentException($"{use} has CLR type '{parameter.ParameterType.FullName}', which no GES value converts to.");
+        if (parameter.ParameterType.IsClass && parameter.ParameterType.GetCustomAttribute<GesTypeAttribute>() is not null) externalUses.Add((parameter.ParameterType, use));
+        return new ExternalParameterBinding(definition, parameter.ParameterType, reader);
     }
 
-    private sealed record ExternalParameterBinding(GesExternalTypeParameterDefinition Definition, Type ClrType);
+    private sealed record ExternalParameterBinding(GesExternalTypeParameterDefinition Definition, Type ClrType, GesBridgeValueConverter.ClrReader Reader);
 
     private sealed class ReflectionExternalTypeConstructor(
         GesExternalTypeConstructorDefinition definition,
@@ -411,10 +435,12 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
                 return;
             }
 
+            // An argument that does not convert exactly is a fault of the call, as a throwing Swift conversion is.
             var converted = new object?[arguments.Length];
             for (var index = 0; index < converted.Length; index++)
             {
-                converted[index] = GesBridgeValueConverter.ToClrValue(arguments, index, parameters[index].ClrType);
+                if (!parameters[index].Reader(in arguments[index], out converted[index]))
+                    throw new InvalidOperationException($"The argument '{parameters[index].Definition.Name}' of :{Definition.TypeName} does not convert to CLR type '{parameters[index].ClrType.FullName}'.");
             }
 
             var result = invoke(converted);
@@ -436,7 +462,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
     }
 }
 
-internal sealed record GesBridgeExternalFieldBinding(GesExternalTypeFieldDefinition Definition, Func<object, object?> Reader);
+internal sealed record GesBridgeExternalFieldBinding(GesExternalTypeFieldDefinition Definition, Func<object, object?> Reader, Func<object?, GesValue>? Writer);
 
 internal sealed class GesBridgeExternalTypeBinding(GesExternalTypeDefinition definition, IReadOnlyDictionary<string, GesBridgeExternalFieldBinding> fields)
 {
@@ -453,155 +479,168 @@ internal sealed class GesBridgeExternalValue(object instance, GesBridgeExternalT
     public GesValue? GetField(string fieldName)
     {
         if (!binding.Fields.TryGetValue(fieldName, out var field)) return null;
-        var value = registry.ToValue(field.Reader(Instance));
+        var clr = field.Reader(Instance);
+        var value = field.Writer is { } writer ? writer(clr) : registry.ToExternalValue(clr);
         return GesExternalTypeValueConverter.CoerceToDeclaredType(in value, field.Definition);
     }
 }
 
 internal static class GesBridgeValueConverter
 {
-    public static GesValue ToValue(object? value)
+    // A strict conversion of a GES value to a CLR type; false when the value does not convert exactly.
+    internal delegate bool ClrReader(in GesValue value, out object? result);
+
+    // The CLR types a field may hold, as a conversion to its GES value, or null for a type no field may have. A class with
+    // GesTypeAttribute is an external value of the registry; the caller checks that the registry holds it.
+    internal static Func<object?, GesValue>? CreateWriter(Type type, GesQuantityUnit unit)
     {
-        switch (value)
-        {
-            case null:
-                return GesValue.GesNothing();
-            case GesValue vmValue:
-                return vmValue;
-            case bool boolean:
-                return GesValue.GesBoolean(boolean);
-            case string text:
-                return GesValue.GesText(text);
-            case double number:
-                return GesValue.GesFloat(number);
-            case float number:
-                return GesValue.GesFloat(number);
-            case decimal number:
-                return GesValue.GesFloat((double)number);
-            case long integer:
-                return GesValue.GesInteger(integer);
-            case int integer:
-                return GesValue.GesInteger(integer);
-            case short integer:
-                return GesValue.GesInteger(integer);
-            case byte integer:
-                return GesValue.GesInteger(integer);
-            case GameEventScriptMessage message:
+        if (Nullable.GetUnderlyingType(type) is { } underlying)
+            return CreateWriter(underlying, unit) is { } inner ? value => value is null ? GesValue.GesNothing() : inner(value) : null;
+        if (type == typeof(GesValue)) return value => (GesValue)value!;
+        if (type == typeof(bool)) return value => GesValue.GesBoolean((bool)value!);
+        if (type == typeof(string)) return value => value is null ? GesValue.GesNothing() : GesValue.GesText((string)value);
+        if (type == typeof(byte[])) return value => value is null ? GesValue.GesNothing() : GesValue.GesBytes((byte[])value);
+        if (type == typeof(double)) return value => GesValue.GesFloat((double)value!);
+        if (type == typeof(float)) return value => GesValue.GesFloat((float)value!);
+        if (type == typeof(long)) return value => GesValue.GesInteger((long)value!);
+        if (type == typeof(int)) return value => GesValue.GesInteger((int)value!);
+        if (type == typeof(short)) return value => GesValue.GesInteger((short)value!);
+        if (type == typeof(byte)) return value => GesValue.GesInteger((byte)value!);
+        if (type == typeof(GesPoint)) return value => ((GesPoint)value!).ToValue(unit);
+        if (type == typeof(GesVector)) return value => ((GesVector)value!).ToValue(unit);
+        if (type == typeof(GesBox)) return value => ((GesBox)value!).ToValue(unit);
+        if (type == typeof(GesDisc)) return value => ((GesDisc)value!).ToValue(unit);
+        if (type == typeof(GesPoly)) return value => value is null ? GesValue.GesNothing() : ((GesPoly)value).ToValue(unit);
+        if (type == typeof(GameEventScriptMessage))
+            return value =>
             {
                 var result = new GesValue();
-                result.SetMessage(message);
+                if (value is GameEventScriptMessage message) result.SetMessage(message);
                 return result;
-            }
-            case GesMessageSignature signature:
+            };
+        if (type == typeof(GesMessageSignature))
+            return value =>
             {
                 var result = new GesValue();
-                result.SetHandler(signature);
+                if (value is GesMessageSignature signature) result.SetHandler(signature);
                 return result;
-            }
-        }
-
-        throw new InvalidOperationException($"Cannot convert CLR value of type '{value.GetType().FullName}' to GesValue.");
+            };
+        return null;
     }
 
-    public static object? ToClrValue(in GesValue value, Type targetType)
+    // The CLR types a constructor parameter may have, as a strict conversion, or null for an unsupported type. Nothing
+    // converts only to a nullable value type or a GesValue; a number converts only exactly; a Boolean is no number.
+    internal static ClrReader? CreateReader(Type type, GesQuantityUnit unit)
     {
-        if (targetType == typeof(GesValue))
+        if (Nullable.GetUnderlyingType(type) is { } underlying)
         {
-            return value;
+            if (CreateReader(underlying, unit) is not { } inner) return null;
+            return (in GesValue value, out object? result) =>
+            {
+                result = null;
+                return value.IsNothing || inner(in value, out result);
+            };
         }
 
-        if (targetType == typeof(string))
-        {
-            return value.AsText();
-        }
-
-        if (targetType == typeof(bool))
-        {
-            return value.AsBoolean();
-        }
-
-        if (targetType == typeof(double))
-        {
-            return value.AsNumber();
-        }
-
-        if (targetType == typeof(long))
-        {
-            return value.AsInteger();
-        }
-
-        if (targetType == typeof(int))
-        {
-            return checked((int)value.AsInteger());
-        }
-
-        if (targetType == typeof(short))
-        {
-            return checked((short)value.AsInteger());
-        }
-
-        if (targetType == typeof(byte))
-        {
-            return checked((byte)value.AsInteger());
-        }
-
-        var externalObject = ToClrExternalObjectValue(value, targetType);
-        if (externalObject is not null)
-        {
-            return externalObject;
-        }
-
-        if (targetType == typeof(object))
-        {
-            return value;
-        }
-
-        throw new InvalidOperationException($"Cannot convert GameEventScript value kind '{value.ValueKind}' to CLR type '{targetType.FullName}'.");
+        if (type == typeof(GesValue))
+            return (in GesValue value, out object? result) =>
+            {
+                result = value;
+                return true;
+            };
+        if (type == typeof(string)) return Read(GesBytecodeTypeKind.Text, (in GesValue value) => value.AsText());
+        if (type == typeof(byte[])) return Read(GesBytecodeTypeKind.Bytes, (in GesValue value) => value.AsBytes().ToArray());
+        if (type == typeof(bool)) return Read(GesBytecodeTypeKind.Boolean, (in GesValue value) => value.AsBoolean());
+        if (type == typeof(double))
+            return (in GesValue value, out object? result) =>
+            {
+                var valid = TryReadDouble(in value, out var number);
+                result = number;
+                return valid;
+            };
+        if (type == typeof(float))
+            return (in GesValue value, out object? result) =>
+            {
+                var valid = TryReadDouble(in value, out var number) && (double)(float)number == number;
+                result = (float)number;
+                return valid;
+            };
+        if (type == typeof(long)) return Integer(long.MinValue, long.MaxValue, integer => integer);
+        if (type == typeof(int)) return Integer(int.MinValue, int.MaxValue, integer => (int)integer);
+        if (type == typeof(short)) return Integer(short.MinValue, short.MaxValue, integer => (short)integer);
+        if (type == typeof(byte)) return Integer(byte.MinValue, byte.MaxValue, integer => (byte)integer);
+        if (type == typeof(GesPoint)) return Shape(value => GesPoint.FromValue(value, unit));
+        if (type == typeof(GesVector)) return Shape(value => GesVector.FromValue(value, unit));
+        if (type == typeof(GesBox)) return Shape(value => GesBox.FromValue(value, unit));
+        if (type == typeof(GesDisc)) return Shape(value => GesDisc.FromValue(value, unit));
+        if (type == typeof(GesPoly)) return Shape(value => GesPoly.FromValue(value, unit));
+        if (type.IsClass && type.GetCustomAttribute<GesTypeAttribute>() is not null)
+            return (in GesValue value, out object? result) =>
+            {
+                result = ToClrExternalObjectValue(in value, type);
+                return result is not null;
+            };
+        return null;
     }
 
-    public static object? ToClrValue(GesValueArguments values, int index, Type targetType)
+    private delegate object ValueRead(in GesValue value);
+
+    private static ClrReader Read(GesBytecodeTypeKind kind, ValueRead read)
+        => (in GesValue value, out object? result) =>
+        {
+            var valid = value.ValueKind == kind;
+            result = valid ? read(in value) : null;
+            return valid;
+        };
+
+    private static ClrReader Integer(long minimum, long maximum, Func<long, object> convert)
+        => (in GesValue value, out object? result) =>
+        {
+            var valid = TryReadInt64(in value, out var integer) && integer >= minimum && integer <= maximum;
+            result = valid ? convert(integer) : null;
+            return valid;
+        };
+
+    private static ClrReader Shape(Func<GesValue, object?> read)
+        => (in GesValue value, out object? result) =>
+        {
+            result = read(value);
+            return result is not null;
+        };
+
+    // An Integer, or a Float with an integral value in the Int64 range.
+    internal static bool TryReadInt64(in GesValue value, out long result)
     {
-        if (targetType == typeof(GesValue))
+        result = 0;
+        if (value.IsNothing) return false;
+        if (value.ValueKind == GesBytecodeTypeKind.Integer)
         {
-            return values[index];
+            result = value.AsInteger();
+            return true;
         }
 
-        if (targetType == typeof(string))
+        if (value.ValueKind != GesBytecodeTypeKind.Float) return false;
+        var number = value.AsNumber();
+        if (!(number >= -9223372036854775808d && number < 9223372036854775808d && number == Math.Truncate(number))) return false;
+        result = (long)number;
+        return true;
+    }
+
+    // A Float, or an Integer that binary64 represents exactly.
+    internal static bool TryReadDouble(in GesValue value, out double result)
+    {
+        result = 0d;
+        if (value.IsNothing) return false;
+        if (value.ValueKind == GesBytecodeTypeKind.Float)
         {
-            return values.GetAsText(index);
+            result = value.AsNumber();
+            return true;
         }
 
-        if (targetType == typeof(bool))
-        {
-            return values.GetAsBoolean(index);
-        }
-
-        if (targetType == typeof(double))
-        {
-            return values.GetAsNumber(index);
-        }
-
-        if (targetType == typeof(long))
-        {
-            return values.GetAsInteger(index);
-        }
-
-        if (targetType == typeof(int))
-        {
-            return checked((int)values.GetAsInteger(index));
-        }
-
-        if (targetType == typeof(short))
-        {
-            return checked((short)values.GetAsInteger(index));
-        }
-
-        if (targetType == typeof(byte))
-        {
-            return checked((byte)values.GetAsInteger(index));
-        }
-
-        return ToClrValue(in values[index], targetType);
+        if (value.ValueKind != GesBytecodeTypeKind.Integer) return false;
+        var integer = value.AsInteger();
+        result = integer;
+        return result >= -9223372036854775808d && result < 9223372036854775808d && (long)result == integer;
     }
 
     public static object? ToClrExternalObjectValue(in GesValue value, Type objectType)

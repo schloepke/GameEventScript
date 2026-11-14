@@ -195,9 +195,14 @@ not as an additional source-compilation limit.
 ## Lexical Rules
 
 ASCII space and tab separate tokens. `LF`, `CRLF`, `CR`, and semicolons separate
-statements where the grammar permits a separator. Inside the parentheses of an
-argument list or type constructor, line breaks separate nothing: they may stand
-before and after each argument and before the closing parenthesis. Line comments
+statements where the grammar permits a separator. Inside any parentheses or
+square brackets, line breaks separate nothing: an argument or parameter list, a
+list, map or pattern, a selector such as `[:take highest⏎1]` and a parenthesized
+expression may span lines anywhere between their tokens. Inside braces, which
+contain statements, line breaks separate statements again, also when the braces
+stand inside brackets. Word forms that read a word on the same line, such as
+`parse strict`, keep that rule inside brackets. Outside brackets the parenthesis of a call stands on the line of its name,
+so `twice` followed by `(x)` on the next line is two statements. Line comments
 start with `//` and continue up to, but do not consume, the next logical newline.
 
 ```ges
@@ -218,7 +223,10 @@ Names are intentionally narrow:
   `deg`, `wrap`, `round`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`,
   `hypot`, `distance`, `squared`, `length`, `normalize`, `dot`, `cross`,
   `angle`). Any other keyword, such as `empty`, `record` or `if`, followed by `:`
-  is a `parse.syntax` error. A map literal key is always a plain name; even
+  is a `parse.syntax` error. A record field name in a record declaration and
+  the name after `.` in member access accept the same keyword-like words, so
+  `record :Shape as { length: :Number }` declares a field that `s.length` reads.
+  A map literal key is always a plain name; even
   `to:` does not start a map entry. An extension function name after
   `:namespace.` is a plain name or a prefix intrinsic name, so `:ns.empty(1)`
   is not an extension call.
@@ -243,6 +251,39 @@ Names are intentionally narrow:
 - A module name is one or more dot-separated components. Every component starts
   with a lowercase ASCII letter and continues with lowercase ASCII letters or
   digits. Uppercase letters, `_`, and `-` are forbidden.
+
+> **Since: Unreleased** — names in backticks and keyword-like field names
+
+A name in backticks is the plain name wherever a lowercase name stands: a
+binding and its reads, a parameter, a callable name, an argument label, a record
+field in a declaration and after `.`, a map key and an object-pattern key. It
+lets any keyword serve as a name, such as a record field named `record` or a
+local named `if`. Between the backticks stands exactly one lowercase name: a
+lowercase ASCII letter followed by ASCII letters or digits, which may be any
+keyword word, optionally followed by the canonical derivation suffix `_0`,
+`_1`, and so on. The name obeys the rules of the position it stands in, so a
+suffix is still valid only for variable bindings. A pair of backticks with
+nothing, a space, an uppercase letter, `_` other than that suffix, or any other
+character between them, and a backtick without a closing backtick on the same
+line, are `parse.syntax` errors. A name in backticks and the plain name are the
+same name: they declare and read the same binding or field. In backticks a word
+is never a keyword or a contextual word, so `` `e` `` reads a binding or field
+named `e` while plain `e` stays Euler's number, and `` parse `strict` `` parses
+a binding named `strict`. The lexer keeps the backticks in the token's
+spelling ([Syntax](Syntax.md#tokens)).
+
+```ges
+record :Shape as {
+  length: :Quantity(m),
+  `record`: :Number,
+  half: :Quantity(m) computed by `length` / 2
+}
+
+on Start {
+  let `if` be :Shape(length: 4m, `record`: 7)
+  emit Done(half: `if`.half, length: `if`.length, `record`: `if`.`record`)
+}
+```
 
 All of these name grammars use only ASCII characters; they do not depend on
 platform Unicode classification. Source is strict UTF-8, an optional initial BOM
@@ -272,7 +313,10 @@ Numeric literals contain an integer part and an optional fractional part, use
 supplies a negative sign. Single underscores may separate adjacent digits but
 may not lead, trail, or repeat. A directly following `%` forms a percentage
 literal, and a directly following unit spelling from [Quantities](#quantities)
-forms a quantity literal:
+forms a quantity literal. A percentage ends before whitespace, a structural
+character or a dice `d` with a digit, a unit before whitespace or a structural
+character; any other following character makes the whole word illegal, so
+`5%abc` and `90°x` are no products:
 
 ```ges
 let integer be 42
@@ -287,7 +331,20 @@ let speed be 3m/s              // meter-per-second quantity
 let delay be 250ms             // prefixed spelling of 0.25s
 let area be 2m²                // square-meter quantity, not (2m)²
 let rate be 4/s                // spelling of 4Hz
+let color be 0xff_88_00        // hexadecimal integer 16746496
 ```
+
+> **Since: Unreleased** — hexadecimal integer literals
+
+A hexadecimal literal is `0x` followed by hexadecimal digits `0`–`9`, `a`–`f`
+or `A`–`F`; single underscores may separate adjacent digits as in decimal
+literals. The prefix is lowercase. It denotes an exact integer of at most
+`0x7fff_ffff_ffff_ffff`; unary minus supplies a negative sign, so the smallest
+hexadecimal operand is `-0x7fff_ffff_ffff_ffff`. It has no fractional part,
+percentage or unit suffix: `0x1d` is 29, never a day count. A `0x` without
+digits, a larger value or any directly attached letter, digit or other
+non-structural character makes the whole word an illegal token. Values print
+in decimal; nothing records the spelling.
 
 > **Since: Unreleased** — physical unit literals
 
@@ -737,6 +794,11 @@ From high to low precedence:
 
 Power accepts at most one `^` or superscript suffix at each unparenthesized
 power node; its right operand is unary, which makes `a ^ b ^ c` right-associative.
+A power applies only to a power base: a postfix expression, an intrinsic call
+such as `atan2(y, x)`, or a unary intrinsic with a parenthesized operand (see
+[Prefix Intrinsics and Selectors](#prefix-intrinsics-and-selectors)). A unary
+operator or a unary intrinsic without parentheses ends with its operand, so
+`-x² ^ 2` is a syntax error like `x² ^ 2`.
 Parentheses override precedence. The fixed Unicode aliases are token aliases and
 have exactly the semantics and precedence of their ASCII counterparts.
 
@@ -964,6 +1026,21 @@ accepts any unitless number. Invalid domains, incompatible units, unsupported
 values, and `nothing` produce `nothing`. Transcendental portability follows
 [Number semantics](Semantics/Numbers.md).
 
+> **Since: Unreleased** — parenthesized intrinsic as power base
+
+When the first token after the intrinsic word, including the mode words of
+`round half even`, `round half up`, `round half down` and `wrap degree`, is `(`,
+whitespace, comments and line breaks between them included, that parenthesis
+opens the intrinsic's whole operand, which ends at its matching `)`. Such an
+intrinsic is a power base like the call form `atan2(y, x)`: `floor(x) ^ 2` and
+`floor (x) ^ 2` are `(floor x) ^ 2`, `floor(x)²` squares the floor,
+`sqrt(16) ^ 2` and `√(16) ^ 2` are `16`, and, since a power binds tighter than
+unary minus, `-floor(x) ^ 2` is `-((floor x) ^ 2)`. Without parentheses the
+operand is a unary expression that takes the power itself: `floor x ^ 2` is
+`floor (x ^ 2)` and `sqrt x²` is the root of `x²`. A postfix suffix such as
+`.y` or `[...]` cannot follow the closing parenthesis; parenthesize the whole
+intrinsic instead, as in `(floor(x)).y`.
+
 ### Multi-argument navigation intrinsics
 
 The following forms require parentheses and comma-separated arguments. Incorrect
@@ -1067,6 +1144,7 @@ The source language recognizes these built-in types:
 - `:List`
 - `:Map`
 - `:Dice`
+- `:Bytes`
 
 ### Casts
 
@@ -1091,6 +1169,7 @@ component constructors.
 | `:List` | preserves lists; expands text/tags into Unicode scalars, spatial values into three components, dice into rolls, and ranges into terms; unsupported values become `[]` |
 | `:Map` | preserves maps; exposes record/external fields and spatial `x`, `y`, `z`; unsupported values become `[:]` |
 | `:Dice` | preserves dice; converts a list of positive Int32 integer rolls; a non-list becomes empty dice and an invalid list becomes `nothing` |
+| `:Bytes` | preserves bytes; converts a list of unitless integers from 0 to 255 and hexadecimal Text as in `:Bytes("…")`; anything else is `nothing` |
 | `:Range`, `:Series`, `:Message`, `:Handler` | preserves the same runtime kind and returns `nothing` for another kind |
 | custom record | preserves the same record type or invokes that record constructor from a map; other values become `nothing` |
 
@@ -1177,9 +1256,11 @@ let snapshot be :Record("Hit", [amount: 100])
 ```
 
 `:Boolean(value)`, `:Text(value)`, `:Tag(value)`, `:List(value)`,
-`:Map(value)`, `:Dice(value)` and the one-argument numeric/spatial forms retain
+`:Map(value)`, `:Dice(value)`, `:Bytes(value)` and the one-argument numeric/spatial forms retain
 their cast behavior. The single argument may also use the label `value`
-(except spatial forms, which retain their component labels). `:Dice[...]` remains a deterministic result literal.
+(except spatial forms, which retain their component labels); `:Text` and `:Bytes`
+alternatively take the label `utf8` for the [UTF-8 conversion](#bytes). `:Dice[...]` remains a deterministic result literal,
+and `:Bytes[...]` a Bytes literal.
 `:Number(value, unit)` accepts empty Text and every `:Quantity(...)` unit name
 from [Quantities](#quantities), such as `none`, `m`, `second`, `m/s` or
 `deg/s`; prefixed spellings and unknown names yield `nothing`, as does a
@@ -1621,6 +1702,54 @@ UTF-16 code units, or grapheme clusters. Indexes remain 1-based. Equality is
 exact and ordering is lexicographic by Unicode scalar value; see
 [Text semantics](Semantics/Text.md).
 
+### Bytes
+
+> **Since: Unreleased**
+
+Bytes are an immutable sequence of bytes for opaque host data such as hashes,
+identifiers and encoded records. A Bytes literal lists integer literals from 0
+to 255, in decimal or hexadecimal; `:Bytes("…")` reads pairs of hexadecimal
+digits in either case, which single spaces may separate:
+
+```ges
+let header be :Bytes[0xa0, 183, 11]
+let hash be :Bytes("a0b7 0b")      // the same bytes
+let empty be :Bytes[]
+```
+
+Items of `:Bytes[...]` follow the rules of `:Dice[...]` items: signs,
+fractions, expressions, names and units are syntax errors. `as :Bytes` and
+`:Bytes(value)` keep Bytes, convert a List whose items are all unitless integers
+from 0 to 255, and read hexadecimal Text as `:Bytes("…")` does; every other
+value, and Text with an incomplete pair or another character, gives `nothing`.
+`as :Text` writes the canonical literal, lowercase pairs without spaces such as
+`:Bytes("a0b70b")`, which `parse` and documents read back; `as :List` gives
+the bytes as Int64 numbers.
+
+Bytes count their bytes, index from 1 to an Int64 number from 0 to 255 and
+iterate in order. `x in bytes` is true for a unitless integer equal to one of
+the bytes, and `:contains any`, `:contains all`, `[:first]`, `[:last]` and
+`[:single]` treat Bytes as the List of those numbers. Equality compares the bytes exactly; ordering is lexicographic by
+unsigned byte, so a prefix comes first ([Determinism](Semantics/Determinism.md)).
+Empty Bytes are `empty`. Like Lists, Bytes are neither true nor false in
+Boolean logic. Bytes are not numeric, not Text and no List.
+
+`[:take first n]`, `[:take last n]`, `[:drop first n]` and `[:drop last n]`
+give Bytes; a count beyond the length selects all bytes or none. `:take` and
+`:drop` with `highest` or `lowest`, as well as `:reverse` and the other list
+selectors that reorder, give `nothing` for Bytes. `bytes + bytes` concatenates;
+see [Collection Operators](#collection-operators) for the other operands.
+
+`:Bytes(utf8: value)` encodes Text or a Tag as UTF-8 and gives `nothing` for
+every other value. `:Text(utf8: value)` decodes Bytes that are valid UTF-8,
+without surrogates or overlong forms, and gives `nothing` for invalid UTF-8 and
+every other value:
+
+```ges
+let encoded be :Bytes(utf8: "hé")             // :Bytes("68c3a9")
+let decoded be :Text(utf8: :Bytes("6869"))    // "hi"
+```
+
 ### Vector and Point
 
 Vectors and points have `x`, `y`, and `z` numeric components plus an optional
@@ -2034,8 +2163,10 @@ reversed lists. Maps, scalars, and `nothing` yield `nothing`.
 
 `:shuffle` is defined for lists, dice, ranges, and iterator chains and always
 materializes a list. This allows game-oriented cases such as shuffling a card
-range with `from 1 to 32[:shuffle]`. Maps, scalars, and `nothing` yield
-`nothing`.
+range with `from 1 to 32[:shuffle]`. A Range longer than `MaxRangeItems`
+shuffles to an empty list with a limit observation, as `as :List` does
+([Host runtime](HostRuntime.md#iterator-and-generated-collection-limits)).
+Maps, scalars, and `nothing` yield `nothing`.
 
 ### Dice Patterns and Object Matching
 
@@ -2118,6 +2249,10 @@ removes keys present in the right map. `map - tag`, `map - text`, and
 `map - listOfKeys` remove matching keys. Other unsupported operand
 combinations produce `nothing`.
 
+`bytes + bytes` concatenates both Bytes. Bytes with Text follow the Text rule
+below, and Bytes with a List the insertion rule above; `+` with Bytes and any
+other operand produces `nothing`.
+
 `zip` is defined for lists only. It pairs items by index up to the shorter
 operand length and returns a list of maps with `left` and `right` entries.
 Other operand combinations produce `nothing`.
@@ -2133,8 +2268,12 @@ formatted with the same text representation used by `as :Text`, so
 
 `random` is a built-in random expression form. Bounds are evaluated left to
 right. Two integral, unitless bounds draw a uniformly distributed signed-64-bit
-integer including both ordered bounds. Otherwise compatible finite numeric
-bounds draw a Binary64 value by scaling a `[0, 1)` source; final Binary64
+integer including both ordered bounds. A bound written as a decimal literal,
+such as `10.0`, also negated (`-10.0`), through a constant whose literal is
+decimal, or as a math constant such as `pi`, selects the Binary64 draw even
+when its value is integral; the spelling is decided at compile time, so a bound
+read from a binding or a call counts by its value. Otherwise compatible finite
+numeric bounds draw a Binary64 value by scaling a `[0, 1)` source; final Binary64
 rounding may nevertheless equal the upper bound. Reversed bounds are accepted.
 Equal bounds return that bound without consuming random state. Incompatible
 units, absent values, non-numeric values, and invalid non-finite bounds produce
@@ -2370,6 +2509,7 @@ Runtime limits cover:
 - maximum call depth
 - maximum range items
 - maximum generated collection items
+- maximum value nesting depth
 - maximum dice count and dice sides
 
 Runtime limits are reset per handler, while a host frame budget is an independent
@@ -2419,7 +2559,8 @@ IntelliJ-based editors. A rule uses `::=`; adjacent expressions form a sequence;
 zero-or-more / one-or-more repetitions. Quoted text is a terminal. Uppercase
 bare names such as `LOWER_NAME`, `VARIABLE_NAME`, `TYPE_TAG`, `MODULE_NAME`,
 `CONSTANT_REFERENCE`, `MESSAGE_NAME`, `NUMBER`, and `NL` are lexical token
-categories governed by the lexical rules above; `UNIT_SYMBOL` is a unit symbol
+categories governed by the lexical rules above; `LOWER_NAME` and
+`VARIABLE_NAME` include a name in backticks; `UNIT_SYMBOL` is a unit symbol
 or ASCII spelling from [Quantities](#quantities).
 
 This is only a notation contract. The specification does not adopt Grammar-Kit
@@ -2438,7 +2579,7 @@ constant_definition ::= 'constant' CONSTANT_REFERENCE 'be' scalar_literal
 
 record_definition ::= 'record' custom_type_tag 'as' '{' separators [record_field (record_field_separator record_field)*] separators '}'
 record_field_separator ::= ',' separators | separators
-record_field ::= ['_'] LOWER_NAME ':' type_reference ['clamped' 'between' expression 'and' expression] ['computed' 'by' expression]
+record_field ::= ['_'] field_name ':' type_reference ['clamped' 'between' expression 'and' expression] ['computed' 'by' expression]
 
 predicate_definition ::= 'predicate' LOWER_NAME definition_parameters 'be' expression
 function_definition ::= 'function' LOWER_NAME definition_parameters 'be' expression
@@ -2499,10 +2640,11 @@ multiplicative_expression ::= unary_expression (('*' | '×' | '·' | '⋅' | '/'
 unary_expression ::= ('-' | '−' | not_operator | 'empty' | 'parse' ['strict']) unary_expression | unary_intrinsic_expression | power_expression
 not_operator ::= 'not' | '!' | '~' | '¬'
 power_expression ::= power_base_expression [('^' unary_expression) | '²' | '³']
-power_base_expression ::= series_expression | extension_call_expression | intrinsic_call_expression | clamp_expression | variadic_expression | postfix_expression
+power_base_expression ::= parenthesized_intrinsic_expression | series_expression | extension_call_expression | intrinsic_call_expression |
+                          clamp_expression | variadic_expression | postfix_expression
 
-unary_intrinsic_expression ::= unary_intrinsic unary_intrinsic_operand
-unary_intrinsic_operand ::= unary_expression | '(' expression ')'
+unary_intrinsic_expression ::= unary_intrinsic unary_expression
+parenthesized_intrinsic_expression ::= unary_intrinsic '(' expression ')'
 unary_intrinsic ::= 'abs' | 'ln' | 'exp' | 'sqrt' | '√' | 'cbrt' | '∛' |
                     'chance' | 'floor' | 'ceil' | 'truncate' |
                     'round' 'half' ('even' | 'up' | 'down') |
@@ -2514,7 +2656,7 @@ clamp_expression ::= 'clamp' unary_expression 'between' expression 'and' express
 variadic_expression ::= ('min' | 'max') 'of' expression ('and' expression)*
 
 postfix_expression ::= primary_expression postfix_suffix*
-postfix_suffix ::= '.' LOWER_NAME | '[' collection_selector structured_selector* ']'
+postfix_suffix ::= '.' field_name | '[' collection_selector structured_selector* ']'
 primary_expression ::= nullary_predicate_expression | literal | CONSTANT_REFERENCE | call_expression | uppercase_call_expression |
                        type_constructor_expression | VARIABLE_NAME |
                        '(' expression ')' | bracket_literal | generated_list_expression | combined_source_expression |
@@ -2525,7 +2667,11 @@ uppercase_call_expression ::= MESSAGE_NAME parenthesized_arguments
 type_constructor_expression ::= (built_in_type_tag | custom_type_tag) parenthesized_arguments
 parenthesized_arguments ::= '(' [argument (',' argument)*] ')'
 argument ::= [argument_label ':'] expression
-argument_label ::= LOWER_NAME | 'to'
+argument_label ::= LOWER_NAME | label_word
+field_name ::= LOWER_NAME | label_word
+label_word ::= 'to' | 'nothing' | 'pi' | 'e' | 'tau' | 'infinity' | 'abs' | 'ln' | 'exp' | 'sqrt' | 'cbrt' | 'chance' | 'floor' | 'ceil' |
+               'truncate' | 'rad' | 'deg' | 'wrap' | 'round' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2' | 'hypot' |
+               'distance' | 'squared' | 'length' | 'normalize' | 'dot' | 'cross' | 'angle'
 
 literal ::= NUMBER | PERCENTAGE | UNIT_NUMBER | TEXT_LITERAL | TAG_LITERAL | 'true' | 'false' | 'nothing' | math_constant
 scalar_literal ::= literal | ('-' | '−') (NUMBER | PERCENTAGE | UNIT_NUMBER | math_constant)
@@ -2598,7 +2744,7 @@ type_reference ::= built_in_type_tag | custom_type_tag
 built_in_type_tag ::= ':Boolean' | ':Number' | ':Percentage' |
                       ':Quantity' '(' unit_name ')' | ':Vector' | ':Point' |
                       ':Series' | ':Range' | ':Message' | ':Handler' | ':Tag' |
-                      ':Text' | ':List' | ':Map' | ':Dice' | ':Nothing'
+                      ':Text' | ':List' | ':Map' | ':Dice' | ':Bytes' | ':Nothing'
 custom_type_tag ::= TYPE_TAG
 unit_name ::= 'none' | 'meter' | 'second' | 'degree' | 'degree/s' | UNIT_SYMBOL
 numeric_check ::= 'numeric' | 'integer' | 'fractional'
@@ -2609,6 +2755,11 @@ share the same leading syntax. An empty argument list, or a list containing only
 unlabeled parameter declarations (`name` or `_ name`), creates a handler value.
 A list containing a labeled argument (`name: expression`) creates a message
 value. A bare uppercase name in `emit` or `publish` is a zero-argument message.
+
+A unary intrinsic whose operand starts with `(` as the next token after the
+intrinsic word always forms `parenthesized_intrinsic_expression`, never
+`unary_intrinsic_expression` with a parenthesized primary; see
+[Prefix Intrinsics and Selectors](#prefix-intrinsics-and-selectors).
 
 Adjacent `NUMBER VARIABLE_NAME` tokens without whitespace are also accepted as
 implicit multiplication. This applies only to numeric literals followed by an

@@ -8,6 +8,7 @@ import argparse
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -27,11 +28,12 @@ def modules(version):
     return MODULES.get(version, CANDIDATE_MODULES)
 
 
-def run(args, cwd, log, timeout=1800):
+def run(args, cwd, log, timeout=1800, environment=None):
     with log.open('a') as output:
         output.write('COMMAND ' + repr(args) + '\n')
         output.flush()
-        result = subprocess.run(args, cwd=cwd, stdout=output, stderr=subprocess.STDOUT, timeout=timeout)
+        env = {**os.environ, **environment} if environment else None
+        result = subprocess.run(args, cwd=cwd, stdout=output, stderr=subprocess.STDOUT, timeout=timeout, env=env)
     if result.returncode:
         raise RuntimeError(f'Command failed; see {log}\n{log.read_text()[-6000:]}')
 
@@ -85,7 +87,9 @@ def csharp(workspace, candidate):
     source = workspace / 'candidate-source'
     snapshot(candidate, source, workspace)
     feed = workspace / 'feed'
-    run([str(source / 'scripts/pack-csharp.sh'), CANDIDATE, str(feed)], source, workspace / 'pack.log')
+    # The snapshot is no repository of its own, so it packs with the candidate commit's time, as a checkout of it would.
+    commit_time = subprocess.check_output(['git', 'log', '-1', '--format=%ct', candidate], cwd=ROOT, text=True).strip()
+    run([str(source / 'scripts/pack-csharp.sh'), CANDIDATE, str(feed)], source, workspace / 'pack.log', environment={'SOURCE_DATE_EPOCH': commit_time})
     # Isolate consumer MSBuild settings from this repository's artifact paths.
     (workspace / 'Directory.Build.props').write_text('<Project />\n')
     (workspace / 'Directory.Build.targets').write_text('<Project />\n')

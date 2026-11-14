@@ -24,7 +24,7 @@ internal static class RunConsole
             var line = waiting ? RunWaitingInput.Read(session, input, terminal && !Console.IsErrorRedirected, color, history) : prompt is null ? input.ReadLine() : prompt.ReadLine();
             if (line is null)
             {
-                if (session.Workspace.CanQuit()) return success;
+                if (session.Workspace.CanQuit()) return session.DrainDelayed() && success;
                 if (terminal) continue;
                 return false;
             }
@@ -155,12 +155,12 @@ internal static class RunConsole
             }
             catch (DecoderFallbackException exception)
             {
-                Console.Error.WriteLine($"{activePath}: error cli.invalidEncoding: {exception.Message}");
+                Console.Error.WriteLine($"{Prefix(activePath)}error cli.invalidEncoding: {exception.Message}");
                 success = false;
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                Console.Error.WriteLine($"{activePath}: error cli.io: {exception.Message}");
+                Console.Error.WriteLine($"{Prefix(activePath)}error cli.io: {exception.Message}");
                 success = false;
             }
             catch (ArgumentException exception)
@@ -186,4 +186,7 @@ internal static class RunConsole
         if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException("Specify one file after :load. Use :help load for examples.");
         return text;
     }
+
+    // An error of a file names it first; one without a file, such as a failed save, has no prefix.
+    private static string Prefix(string? path) => path is null ? string.Empty : path + ": ";
 }

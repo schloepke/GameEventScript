@@ -11,9 +11,9 @@ from core.corpus import InvalidDocument, closed
 from checks.compiler_checks import exact, diagnostic
 from checks import numeric_checks as numeric
 
-LIMITS = {'maxProcessedEventsPerRun', 'maxQueuedMessagesPerRun', 'maxExecutionSteps', 'maxRegisterValues',
+LIMITS = {'maxProcessedMessagesPerRun', 'maxQueuedMessages', 'maxExecutionSteps', 'maxRegisterValues',
           'maxLoopIterations', 'maxCallDepth', 'maxRandomScopeDepth', 'maxRangeItems',
-          'maxGeneratedCollectionItems', 'maxDiceCount', 'maxDiceSides'}
+          'maxGeneratedCollectionItems', 'maxValueDepth', 'maxDiceCount', 'maxDiceSides'}
 
 
 def value(raw):
@@ -29,6 +29,33 @@ def value(raw):
         if 'unit' in raw:
             if not isinstance(raw['unit'], str) or raw['unit'] not in numeric.UNITS:
                 raise InvalidDocument('Invalid spatial unit')
+            result['unit'] = numeric.UNITS[raw['unit']]
+        return result
+    if kind in (':Box', ':Poly', ':Disc') and 'entries' not in raw:
+        # A shape of the geometry library: unitless Points and the unit of the whole shape. A Record of that name has entries.
+        shape = {'type', 'lower', 'upper'} if kind == ':Box' else {'type', 'points'} if kind == ':Poly' else {'type', 'center', 'radius'}
+        if set(raw) not in (shape, shape | {'unit'}):
+            raise InvalidDocument('Invalid geometry value fields')
+        if kind == ':Disc':
+            numeric.number(raw['radius'])
+        points = [raw['lower'], raw['upper']] if kind == ':Box' else [raw['center']] if kind == ':Disc' else raw['points']
+        if not isinstance(points, list):
+            raise InvalidDocument('Invalid polygon points')
+        checked = []
+        for point in points:
+            if not isinstance(point, dict) or point.get('type') != ':Point' or 'unit' in point:
+                raise InvalidDocument('A geometry point is a unitless :Point')
+            checked.append(value(point))
+        result = dict(raw)
+        if kind == ':Box':
+            result['lower'], result['upper'] = checked
+        elif kind == ':Disc':
+            result['center'] = checked[0]
+        else:
+            result['points'] = checked
+        if 'unit' in raw:
+            if not isinstance(raw['unit'], str) or raw['unit'] not in numeric.UNITS:
+                raise InvalidDocument('Invalid geometry unit')
             result['unit'] = numeric.UNITS[raw['unit']]
         return result
     if kind in (':Range.int64', ':Range.binary64'):
@@ -52,7 +79,7 @@ def value(raw):
         return {'type': kind, 'entries': value({'type': ':Map', 'entries': raw['entries']})['entries']}
 
     field = {':Nothing': None, ':Text': 'value', ':Boolean': 'value', ':Number.int64': 'value',
-             ':List': 'items', ':Map': 'entries', ':Tag': 'value', ':Dice': 'rolls',
+             ':List': 'items', ':Map': 'entries', ':Tag': 'value', ':Dice': 'rolls', ':Bytes': 'value',
              ':Number.binary64': 'value', ':Quantity.int64': 'value', ':Quantity.binary64': 'value', ':Percentage': 'value'}.get(kind, 'unsupported')
     if field == 'unsupported':
         raise InvalidDocument('Unsupported runtime value type: ' + str(kind))
@@ -76,6 +103,9 @@ def value(raw):
     elif kind in (':Text', ':Tag', ':Boolean'):
         if not isinstance(raw['value'], str) or (kind == ':Boolean' and raw['value'] not in ('true', 'false')):
             raise InvalidDocument('Invalid scalar transport')
+    elif kind == ':Bytes':
+        if not isinstance(raw['value'], str) or not re.fullmatch(r'(?:[0-9a-f]{2})*', raw['value']):
+            raise InvalidDocument('Invalid bytes transport')
     elif kind == ':Dice':
         if not isinstance(raw['rolls'], list) or any(type(x) is not int or not 0 < x < 2**31 for x in raw['rolls']):
             raise InvalidDocument('Invalid dice rolls')

@@ -34,6 +34,8 @@ internal static partial class GesCSharpEmitter
         var positionWidth = encoding.PositionWidth.ToString(CultureInfo.InvariantCulture);
         var max = encoding.MaxCount.ToString(CultureInfo.InvariantCulture);
         var pool = $"__{value.Base}Pool";
+        var next = NextLevel(element);
+        var depth = value.Depth.ToString(CultureInfo.InvariantCulture);
 
         code.Blank();
         code.Line($"private static bool __Ascending{node}(List<{name}> list, string[] paths, int at)");
@@ -49,16 +51,27 @@ internal static partial class GesCSharpEmitter
         code.Close();
 
         code.Blank();
-        code.Line($"private bool __WriteKeyed{node}({owner} baseline, ref GesBitWriter writer, string[] paths, int at)");
+        code.Line($"private bool __WriteKeyed{node}({owner} baseline, ref GesBitWriter writer, string[] paths, int at{(value.Depth > 0 ? ", int level" : "")})");
         code.Open("{");
         code.Line($"var list = {value.Base};");
         code.Line($"var held = baseline.{value.Base};");
+        if (value.Depth > 0)
+        {
+            // At its depth the List is no longer keyed: it holds nothing and never changes.
+            code.Line($"if (level >= {depth})");
+            code.Open("{");
+            code.Line($"if (list.Count + held.Count > 0) throw new GesWireException(GesWireException.TooDeep, {Path(value)}, \"deeper than depth {depth}\");");
+            code.Line("return false;");
+            code.Close();
+            code.Blank();
+        }
+
         code.Line($"if (list.Count > {max} || held.Count > {max}) {Throw("TooLong", value)}");
         code.Line($"var listAscending = __Ascending{node}(list, paths, at);");
         code.Line($"var heldAscending = __Ascending{node}(held, paths, at);");
         code.Line("if (!listAscending || !heldAscending)");
         code.Open("{");
-        code.Line($"if (__Same{node}(baseline, paths, at)) return false;");
+        code.Line($"if (__Same{node}(baseline, paths, at{Level(value)})) return false;");
         code.Line("writer.Write(1, 1);");
         Write(code, value, "list");
         code.Line("return true;");
@@ -87,7 +100,7 @@ internal static partial class GesCSharpEmitter
         code.Open("{");
         Match(code, "list", "held", at);
         code.Line("if (kept) continue;");
-        code.Line($"list[position].__WriteFields(ref writer, paths, {at});");
+        code.Line($"list[position].__WriteFields(ref writer, paths, {at}{next});");
         code.Line("added++;");
         code.Close();
         code.Line($"__SetCount(ref writer, countBit, added, {width});");
@@ -102,7 +115,7 @@ internal static partial class GesCSharpEmitter
         code.Line("if (!kept) continue;");
         code.Line("var start = writer.BitPosition;");
         code.Line($"writer.Write((ulong)position, {positionWidth});");
-        code.Line($"if (list[other].__WriteDelta(held[position], ref writer, paths, {at}, true)) changed++;");
+        code.Line($"if (list[other].__WriteDelta(held[position], ref writer, paths, {at}, true{next})) changed++;");
         code.Line("else writer.Rewind(start);");
         code.Close();
         code.Line($"__SetCount(ref writer, countBit, changed, {width});");
@@ -115,16 +128,28 @@ internal static partial class GesCSharpEmitter
         // they are read, an added key that the baseline holds at that element. A first pass validates the added elements;
         // the merge then reads them again where they belong.
         code.Blank();
-        code.Line($"private void __ReadKeyed{node}({owner} baseline, ref GesBitReader reader, string[] paths, int at)");
+        code.Line($"private void __ReadKeyed{node}({owner} baseline, ref GesBitReader reader, string[] paths, int at{(value.Depth > 0 ? ", int level" : "")})");
         code.Open("{");
         code.Line($"var held = baseline.{value.Base};");
+        if (value.Depth > 0)
+        {
+            // At its depth the List takes no bits, so a change there is none.
+            code.Line($"if (level >= {depth})");
+            code.Open("{");
+            code.Line($"{value.Base}.Clear();");
+            code.Line($"if (__Same{node}(baseline, paths, at, level)) {Throw("InvalidDelta", value)}");
+            code.Line("return;");
+            code.Close();
+            code.Blank();
+        }
+
         code.Line($"if (reader.Read(1, {Path(value)}) == 1)");
         code.Open("{");
         Read(code, value, value.Base);
         code.Line($"var listAscending = __Ascending{node}({value.Base}, paths, at);");
         code.Line($"var heldAscending = __Ascending{node}(held, paths, at);");
         code.Line($"if (listAscending && heldAscending) {Throw("InvalidDelta", value)}");
-        code.Line($"if (__Same{node}(baseline, paths, at)) {Throw("InvalidDelta", value)}");
+        code.Line($"if (__Same{node}(baseline, paths, at{Level(value)})) {Throw("InvalidDelta", value)}");
         code.Line("return;");
         code.Close();
         code.Blank();
@@ -157,12 +182,12 @@ internal static partial class GesCSharpEmitter
         if (element.IsClass)
         {
             code.Line($"if ({pool}.Count == 0) {pool}.Add(new {name}());");
-            code.Line($"{pool}[0].__ReadFields(ref reader, paths, {at});");
+            code.Line($"{pool}[0].__ReadFields(ref reader, paths, {at}{next});");
         }
         else
         {
             code.Line($"var scratch = new {name}();");
-            code.Line($"scratch.__ReadFields(ref reader, paths, {at});");
+            code.Line($"scratch.__ReadFields(ref reader, paths, {at}{next});");
         }
 
         code.Close();
@@ -198,7 +223,7 @@ internal static partial class GesCSharpEmitter
         code.Open("{");
         Slot(code, element, name, pool);
         code.Line("reader.Seek(changedCursor);");
-        code.Line($"if (!item.__ReadDelta(element, ref reader, paths, {at}, true)) {Throw("InvalidDelta", element)}");
+        code.Line($"if (!item.__ReadDelta(element, ref reader, paths, {at}, true{next})) {Throw("InvalidDelta", element)}");
         code.Line("changedCursor = reader.BitPosition;");
         code.Line("list.Add(item);");
         code.Line("var before = nextChanged;");
@@ -264,7 +289,7 @@ internal static partial class GesCSharpEmitter
     {
         Slot(code, value.Element!, name, pool);
         code.Line("reader.Seek(addedCursor);");
-        code.Line($"item.__ReadFields(ref reader, paths, {at});");
+        code.Line($"item.__ReadFields(ref reader, paths, {at}{NextLevel(value.Element!)});");
         code.Line("addedCursor = reader.BitPosition;");
         code.Line("list.Add(item);");
         code.Line($"if (--addedLeft > 0) addedOrder = {global}{name}.__ReadKeyOrder(ref reader, paths, {at});");

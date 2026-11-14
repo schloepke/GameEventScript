@@ -1379,7 +1379,7 @@ id: case-0005
 kind: performance
 level: scenario
 runtimeLimits:
-  maxProcessedEventsPerRun: 128
+  maxProcessedMessagesPerRun: 128
 comparison:
   binary64:
     mode: ulp

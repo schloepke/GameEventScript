@@ -98,6 +98,8 @@ internal partial class GesVirtualMachine
                         dst.SetNothing();
                         return dst;
                 }
+            case Bytes:
+                return CastBytes(in xValue);
             case List:
                 return CastList(state, in xValue, context);
             case Map:
@@ -126,6 +128,43 @@ internal partial class GesVirtualMachine
 
         dst.SetText(xValue.ToText);
         return dst;
+    }
+
+    // Bytes stay unchanged, Text reads hexadecimal digit pairs, and a List converts only when every item is a unitless
+    // integer from 0 to 255.
+    private static GesValue CastBytes(in GesValue xValue)
+    {
+        var dst = new GesValue();
+        switch (xValue.Kind)
+        {
+            case Bytes:
+                return xValue;
+            case Text:
+                if (GesBytesText.Parse(xValue.TextValue) is { } parsed) dst.SetBytes(parsed);
+                else dst.SetNothing();
+                return dst;
+            case List when xValue.ObjectValue is GesValue[] list:
+            {
+                var bytes = list.Length == 0 ? [] : new byte[list.Length];
+                for (var i = 0; i < list.Length; i++)
+                {
+                    var item = list[i];
+                    if (item.Kind is not Integer || item.Unit is not UnitNone || item.IntegerValue is < 0 or > 255)
+                    {
+                        dst.SetNothing();
+                        return dst;
+                    }
+
+                    bytes[i] = (byte)item.IntegerValue;
+                }
+
+                dst.SetBytes(bytes);
+                return dst;
+            }
+            default:
+                dst.SetNothing();
+                return dst;
+        }
     }
 
     private static GesValue CastList(GesVirtualMachine? vm, in GesValue xValue, GesContext? context)
@@ -168,6 +207,13 @@ internal partial class GesVirtualMachine
             {
                 var list = new GesValue[dice.Length];
                 for (var i = 0; i < dice.Length; i++) list[i].SetInteger(dice[i]);
+                dst.SetList(list);
+                return dst;
+            }
+            case Bytes when xValue.ObjectValue is byte[] bytes:
+            {
+                var list = new GesValue[bytes.Length];
+                for (var i = 0; i < bytes.Length; i++) list[i].SetInteger(bytes[i]);
                 dst.SetList(list);
                 return dst;
             }

@@ -50,6 +50,9 @@ final class GesModelField {
     var key = false
     var defaultValue: GesLayoutDefault?
     var value = GesModelValue()
+    // Whether the member takes the suffix Value because a schema lends the field with `with` and the field is named like that
+    // schema or one that takes it, so that the interface or protocol and every type taking it name it alike.
+    var renamed = false
 }
 
 enum GesModelKind {
@@ -136,7 +139,32 @@ enum GesModelLayoutBuilder {
             }
             layout.protocols.append(protocolType)
         }
+        renameLent(layout)
         return layout
+    }
+
+    // A field that a schema lends with `with` takes one member name in its interface or protocol and in every type that takes
+    // it: like a field named after its own type, it is renamed where it is named like the lending schema or one taking it.
+    private static func renameLent(_ layout: GesModelLayout) {
+        for protocolType in layout.protocols {
+            var owners: Set<String> = [protocolType.name]
+            var grew = true
+            while grew {
+                grew = false
+                for other in layout.protocols where !owners.contains(other.name) && other.takes.contains(where: owners.contains) {
+                    grew = owners.insert(other.name).inserted || grew
+                }
+                for type in layout.types where !owners.contains(type.name) && type.takes.contains(where: owners.contains) {
+                    grew = owners.insert(type.name).inserted || grew
+                }
+            }
+            for field in protocolType.fields where owners.contains(GesSchemaPlanner.pascal(field.name)) {
+                field.renamed = true
+                for type in layout.types where owners.contains(type.name) {
+                    for taken in type.fields where taken.name == field.name { taken.renamed = true }
+                }
+            }
+        }
     }
 
     private static func collectProtocols(_ schema: GesSchema, _ protocols: inout [String: GesSchema]) {

@@ -838,6 +838,18 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   code.
 - The Conformance runner scales its batch deadline with the selected cases and prints how long a batch took.
 - Workflow container images are pinned by digest and every job has a timeout.
+- Reading a schema document converts each union along the alternative that the document check accepted, so a List of
+  points that breaks a Poly's `max` stays the List that a later alternative takes instead of becoming a Poly. Without an
+  axis block, the points of a Poly and the centre of a Disc must lie in the plane z = 0, as encoding requires.
+- `GesSchemaDocument` accepts only a concrete schema of the set as an expected root: an abstract schema, a message or an
+  undeclared name is `document.schemaMismatch` in both ports, where C# threw `GesSchemaException` for an undeclared one.
+- Decoding a Swift `GesBox` orders its corners as creating one does.
+- Generated models give a field lent with `with` one member name in its interface or protocol and in every type taking it
+  when the field is named like one of them, and C# model generation rejects members named like their type and the
+  document roots `Value` and `FromDocument` with `generate.nameCollision` instead of emitting code that does not compile.
+- `ges schema generate --out-dir` writes the manifest after removing the files it no longer names, so a failed removal
+  keeps them owned.
+- The Swift compiler assigns binding IDs per kind with counters, as C# does, instead of in quadratic time.
 - Generated Swift setters of packed fields shift the field after subtracting its lower bound; they ORed every field into
   the lowest bits.
 - The DLLs in the C# packages carry the time of the packed commit, or the current time for uncommitted changes, instead

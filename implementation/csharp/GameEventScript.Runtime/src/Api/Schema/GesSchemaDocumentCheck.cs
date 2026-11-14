@@ -35,6 +35,10 @@ internal sealed class GesSchemaDocumentCheck
     private readonly Dictionary<(GesResolvedType Type, GesDocumentNode Value), bool> _holds = new();
     private readonly Dictionary<GesDocumentNode, GesDocumentNode> _resolved = new();
 
+    // The alternative that held for each union of several, by the position of its value and the union's alternatives, so
+    // that converting the checked document takes the alternative the check chose.
+    private readonly Dictionary<(int Start, GesResolvedType[] Alternatives), GesResolvedType> _chosen = new();
+
     // How many records of each schema enclose the value being checked, which a recursive List counts against its depth.
     private readonly Dictionary<GesResolvedDeclaration, int> _levels = new();
 
@@ -51,11 +55,17 @@ internal sealed class GesSchemaDocumentCheck
 
     // The first error of a document against its schema, with its position and field path, or null.
     internal static GesDocumentException? Failing(string text, GesDocumentNode root, GesResolvedDeclaration schema, GesSchemaParameters? parameters)
+        => Failing(text, root, schema, parameters, out _);
+
+    // The first error, or null with the alternative that held for each union of several.
+    internal static GesDocumentException? Failing(string text, GesDocumentNode root, GesResolvedDeclaration schema, GesSchemaParameters? parameters, out IReadOnlyDictionary<(int Start, GesResolvedType[] Alternatives), GesResolvedType> chosen)
     {
         if (parameters is not null) GesSchemaBinder.CheckParameters(schema, parameters);
+        var check = new GesSchemaDocumentCheck(parameters);
+        chosen = check._chosen;
         try
         {
-            new GesSchemaDocumentCheck(parameters).Fields(root, schema, 0);
+            check.Fields(root, schema, 0);
             return null;
         }
         catch (Failure failure)
@@ -149,7 +159,11 @@ internal sealed class GesSchemaDocumentCheck
                 _holds[(alternative, value)] = holds;
             }
 
-            if (holds) return;
+            if (holds)
+            {
+                _chosen[(value.Start, alternatives)] = alternative;
+                return;
+            }
         }
 
         throw Fail(FieldType, value.Start);
@@ -321,7 +335,14 @@ internal sealed class GesSchemaDocumentCheck
     private void Spatial(GesResolvedType type, GesDocumentNode value, GesDocumentNodeKind kind)
     {
         Require(value, value.Kind == kind && value.Unit == type.Unit);
-        if (type.Axes is not { } axes) return;
+        if (type.Axes is not { } axes)
+        {
+            // Without a block the points of a Poly and the centre of a Disc lie in the plane z = 0, as with a block that
+            // declares no z.
+            if (type.Kind is GesSchemaTypeKind.Poly or GesSchemaTypeKind.Disc) Require(value, value.Z == 0);
+            return;
+        }
+
         foreach (var axis in new[] { "x", "y", "z" })
         {
             var component = axis == "x" ? value.X : axis == "y" ? value.Y : value.Z;

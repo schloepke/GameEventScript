@@ -53,7 +53,7 @@ enum GesModelPlanner {
     static func fields(_ type: GesModelType) -> [GesModelPlanField] {
         type.fields.map { field in
             let pascal = GesSchemaPlanner.pascal(field.name)
-            let member = pascal == type.name ? pascal + "Value" : pascal
+            let member = pascal == type.name || field.renamed ? pascal + "Value" : pascal
             let value = self.value(field.value, member, "")
             if field.optional { value.nullable = true }
             return GesModelPlanField(field: field, base: member, value: value)

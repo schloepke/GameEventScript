@@ -85,7 +85,7 @@ final class GeometryTests: XCTestCase {
         XCTAssertEqual(GesPoly(poly.value()), poly)
     }
 
-    func testBoxesOrderTheirCorners() {
+    func testBoxesOrderTheirCorners() throws {
         let box = GesBox(GesPoint(x: 10, y: 0), GesPoint(x: 0, y: 4))
         XCTAssertEqual(box.min, GesPoint(x: 0, y: 0))
         XCTAssertEqual(box.max, GesPoint(x: 10, y: 4))
@@ -110,6 +110,11 @@ final class GeometryTests: XCTestCase {
         let deep = GesBox(GesPoint(x: 0, y: 0, z: 0), GesPoint(x: 4, y: 4, z: 4))
         XCTAssertEqual(deep.inset(by: 1)?.max, GesPoint(x: 3, y: 3, z: 3))
         XCTAssertEqual(deep.clamp(GesPoint(x: 5, y: -1, z: 2)), GesPoint(x: 4, y: 0, z: 2))
+        // Decoding orders the corners as creating one does, so a decoded box contains what lies between them.
+        let decoded = try JSONDecoder().decode(GesBox.self, from: Data(#"{"min":{"x":2,"y":2,"z":0},"max":{"x":0,"y":0,"z":0}}"#.utf8))
+        XCTAssertEqual(decoded, GesBox(GesPoint(x: 0, y: 0), GesPoint(x: 2, y: 2)))
+        XCTAssertTrue(decoded.contains(GesPoint(x: 1, y: 1)))
+        XCTAssertEqual(try JSONDecoder().decode(GesBox.self, from: try JSONEncoder().encode(box)), box)
     }
 
     func testPolygonsMeasureTheirArea() {

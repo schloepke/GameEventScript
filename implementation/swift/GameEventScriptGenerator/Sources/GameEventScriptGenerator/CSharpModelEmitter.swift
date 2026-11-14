@@ -37,6 +37,14 @@ enum GesCSharpModelEmitter {
         let computed = GesModelPlanner.computed(layout, GesComputedEmitter.helper(options.namespace, suffix), swift: false)
         let documents = options.documents ? "__GesModelDocuments" + suffix : nil
         let documentType = options.documents ? try GesModelPlanner.documentType(layout, space) : ""
+        // The document type holds a class per root with a property Value beside its static FromDocument, which a C# class of
+        // either name cannot hold.
+        for root in options.documents ? layout.roots : [] where root == "Value" || root == "FromDocument" {
+            throw GesGeneratorError(
+                GesGeneratorError.nameCollision,
+                "The document type '\(documentType)' declares the class '\(root)' for that root, which C# cannot hold beside its member \(root)."
+            )
+        }
         for type in layout.types {
             let reads = layout.roots.contains(type.name) ? documents : nil
             document.units.append(
@@ -182,7 +190,8 @@ enum GesCSharpModelEmitter {
             return
         }
         let fields = GesModelPlanner.fields(type)
-        var names: Names = reserved.map { ($0, "the inherited member " + $0) }
+        // A C# member cannot take the name of its type.
+        var names: Names = [(type.name, "the type itself")] + reserved.map { ($0, "the inherited member " + $0) }
         names.append(("SchemaHash", "the generated member SchemaHash"))
         if bindings { names += ["ToGesValue", "FromGesValue"].map { ($0, "the generated member " + $0) } }
         if values != nil { names += ["ToValue", "FromValue"].map { ($0, "the generated member " + $0) } }
@@ -366,7 +375,7 @@ enum GesCSharpModelEmitter {
         let packedLayout = type.packed!
         let wire = packedLayout.type(type.name)
         let raw = GesCSharpEmitter.packedRaw(wire.packedWidth)
-        var names: Names = reserved.map { ($0, "the inherited member " + $0) }
+        var names: Names = [(type.name, "the type itself")] + reserved.map { ($0, "the inherited member " + $0) }
         names += ["SchemaHash", "Bits", "RawValue", "IsValid", "FromRaw", "FromRawUnchecked"].map { ($0, "the generated member " + $0) }
         if bindings { names += ["ToGesValue", "FromGesValue"].map { ($0, "the generated member " + $0) } }
         if values != nil { names += ["ToValue", "FromValue"].map { ($0, "the generated member " + $0) } }

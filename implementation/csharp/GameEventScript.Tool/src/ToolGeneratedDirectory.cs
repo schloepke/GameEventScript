@@ -14,23 +14,24 @@ internal static class ToolGeneratedDirectory
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
+    // An unchanged file keeps its time stamp, so that builds do not compile it again.
+    private static void WriteChanged(string path, string text)
+    {
+        var bytes = StrictUtf8.GetBytes(text);
+        if (File.Exists(path) && File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes)) return;
+        ToolFileOutput.Write(path, bytes);
+    }
+
     internal static int Write(string directory, IReadOnlyList<GesGeneratedFile> files)
     {
         var root = Path.GetFullPath(directory);
         var owned = Owned(Path.Combine(root, GesManifestName(files)));
         Directory.CreateDirectory(root);
         var generated = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var file in files)
-        {
-            generated.Add(file.Path);
-            var path = Path.Combine(root, file.Path);
-            var bytes = StrictUtf8.GetBytes(file.Text);
-
-            // An unchanged file keeps its time stamp, so that builds do not compile it again.
-            if (File.Exists(path) && File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes)) continue;
-            ToolFileOutput.Write(path, bytes);
-        }
-
+        foreach (var file in files) generated.Add(file.Path);
+        // The manifest, the last file, follows the removal of the files it no longer names: a run that fails before keeps
+        // the previous manifest, which still owns them.
+        for (var index = 0; index < files.Count - 1; index++) WriteChanged(Path.Combine(root, files[index].Path), files[index].Text);
         foreach (var name in Entries(root))
         {
             if (generated.Contains(name)) continue;
@@ -38,6 +39,8 @@ internal static class ToolGeneratedDirectory
             if (owned.Contains(name) && File.Exists(path)) File.Delete(path);
             else Console.Error.WriteLine($"warning cli.unowned: {Path.Combine(directory, name)} is not generated and was left alone.");
         }
+
+        WriteChanged(Path.Combine(root, files[files.Count - 1].Path), files[files.Count - 1].Text);
 
         return 0;
     }

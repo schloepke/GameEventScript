@@ -41,6 +41,11 @@ internal static class GesCSharpModelEmitter
         var computed = GesModelPlanner.Computed(layout, GesComputedEmitter.Helper(options.Namespace, suffix), swift: false);
         var documents = options.Documents ? "__GesModelDocuments" + suffix : null;
         var documentType = options.Documents ? GesModelPlanner.DocumentType(layout, space) : "";
+        // The document type holds a class per root with a property Value beside its static FromDocument, which a C# class of
+        // either name cannot hold.
+        foreach (var root in layout.Roots)
+            if (options.Documents && root is "Value" or "FromDocument")
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The document type '{documentType}' declares the class '{root}' for that root, which C# cannot hold beside its member {root}.");
         foreach (var type in layout.Types)
             document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, support, qualifier, options.Bindings, options.Values ? values : null, computed, layout.Roots.Contains(type.Name) ? documents : null)));
         foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Interface(code, layout, protocol, access)));
@@ -179,7 +184,8 @@ internal static class GesCSharpModelEmitter
         }
 
         var fields = GesModelPlanner.Fields(type);
-        var names = new List<(string, string)>();
+        // A C# member cannot take the name of its type.
+        var names = new List<(string, string)> { (type.Name, "the type itself") };
         foreach (var reserved in Reserved) names.Add((reserved, "the inherited member " + reserved));
         names.Add(("SchemaHash", "the generated member SchemaHash"));
         if (bindings)
@@ -366,7 +372,7 @@ internal static class GesCSharpModelEmitter
         var fields = GesModelPlanner.Fields(type);
         var wire = type.Packed!.Type(type.Name);
         var raw = GesCSharpEmitter.PackedRaw(wire.PackedWidth);
-        var names = new List<(string, string)>();
+        var names = new List<(string, string)> { (type.Name, "the type itself") };
         foreach (var reserved in Reserved) names.Add((reserved, "the inherited member " + reserved));
         foreach (var reserved in new[] { "SchemaHash", "Bits", "RawValue", "IsValid", "FromRaw", "FromRawUnchecked" }) names.Add((reserved, "the generated member " + reserved));
         if (bindings)

@@ -733,6 +733,7 @@ symbol {"access":"public","declaration":"func distance(to point: GesPoint) -> Do
 symbol {"access":"public","declaration":"func dot(_ other: GesVector) -> Double","kind":"swift.method","path":"GameEventScriptRuntime.GesVector.dot(_:)"}
 symbol {"access":"public","declaration":"func dump(includeInstructionAddresses: Bool = false) -> String","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptProgram.dump(includeInstructionAddresses:)","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.class"}}
 symbol {"access":"public","declaration":"func encode() throws -> [UInt8]","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptProgram.encode()","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.class"}}
+symbol {"access":"public","declaration":"func encode(to encoder: any Encoder) throws","kind":"swift.method","path":"GameEventScriptRuntime.GesBox.encode(to:)"}
 symbol {"access":"public","declaration":"func encode(to encoder: any Encoder) throws","kind":"swift.method","path":"GameEventScriptRuntime.GesDisc.encode(to:)"}
 symbol {"access":"public","declaration":"func encode(to encoder: any Encoder) throws","kind":"swift.method","path":"GameEventScriptRuntime.GesPoly.encode(to:)"}
 symbol {"access":"public","declaration":"func encodedSize() throws -> Int","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptProgram.encodedSize()","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.class"}}

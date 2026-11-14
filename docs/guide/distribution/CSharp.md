@@ -13,8 +13,9 @@ packages under the `GameEventScript` product name:
 - `GameEventScript.CSharpBridge` contains optional C# delegate, reflection,
   dictionary, and automatic-runner adapters and depends only on Runtime.
 
-- `GameEventScript.Syntax` contains optional GES/GESA editor ranges,
-  TextMate scopes, incremental states and ANSI rendering, with no GES dependency.
+- `GameEventScript.Syntax` contains the lexer, parser and validator and the
+  highlighting of whole GES, GESA, GESD and GESS documents with UTF-16 ranges and
+  ANSI rendering, with no GES dependency.
 - `GameEventScript.Generator` (since Unreleased) writes typed C# and Swift code
   for `.gess` schemas at build time and depends on Runtime and Syntax. Games
   never ship it; the code it generates needs Runtime only.

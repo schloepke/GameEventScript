@@ -41,8 +41,8 @@ public sealed class GesSchemaDocument
     /// <param name="expected">The names of the schemas the header may name, without the leading <c>:</c>.</param>
     /// <returns>The checked document with the schema it names and its entries as a Record.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="schemas"/>, <paramref name="text"/> or <paramref name="expected"/> is <see langword="null"/>.</exception>
-    /// <exception cref="GesDocumentException">The text is no document, its header names no expected schema
-    /// (<see cref="SchemaMismatch"/>, naming both), or it breaks the schema, with the <c>document.*</c> code, its position and
+    /// <exception cref="GesDocumentException">The text is no document, its header names no expected schema or one that is no
+    /// concrete schema of the set (<see cref="SchemaMismatch"/>), or it breaks the schema, with the <c>document.*</c> code, its position and
     /// the field path.</exception>
     public static GesSchemaDocument Read(GesSchemaSet schemas, string text, params string[] expected)
     {
@@ -59,9 +59,21 @@ public sealed class GesSchemaDocument
             throw new GesDocumentException(SchemaMismatch, 1, 1, message: $"The document names {found} where {wanted} is expected.");
         }
 
-        var declaration = schemas.Declaration(named);
-        if (GesSchemaDocumentCheck.Failing(text, syntax.Root!, declaration, null) is { } failure) throw failure;
-        return new GesSchemaDocument(named, GesSchemaValues.DocumentShapes(declaration, value), syntax.Root!, text);
+        // Only a concrete schema of the set describes a document, as for GesSchemaSet.CheckDocument.
+        GesResolvedDeclaration declaration;
+        try
+        {
+            declaration = schemas.Declaration(named);
+        }
+        catch (GesSchemaException)
+        {
+            throw new GesDocumentException(SchemaMismatch, 1, 1, message: $"The schema set declares no :{named}.");
+        }
+
+        if (declaration.Kind != GesSchemaKind.Schema || declaration.Abstract)
+            throw new GesDocumentException(SchemaMismatch, 1, 1, message: $"The document names :{named}, which is no schema that describes a document.");
+        if (GesSchemaDocumentCheck.Failing(text, syntax.Root!, declaration, null, out var chosen) is { } failure) throw failure;
+        return new GesSchemaDocument(named, GesSchemaValues.DocumentShapes(declaration, value, syntax.Root, chosen), syntax.Root!, text);
     }
 
     /// <summary>

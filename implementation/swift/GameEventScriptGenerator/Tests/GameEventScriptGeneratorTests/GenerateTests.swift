@@ -155,6 +155,44 @@ final class GenerateTests: XCTestCase {
         XCTAssertTrue(swift.contains("public struct S: Sendable {"))
     }
 
+    func testLentFieldsKeepOneNameInTheirInterfaceAndEveryTypeTakingThem() throws {
+        // A field named like the lending schema, or like a schema that takes it, is renamed alike everywhere it is lent.
+        let lent = [
+            ("abstract schema :Base as { base: :Number }\nmodel schema :Child as {\n  with :Base\n  b: :Boolean\n}\n", "BaseValue", "baseValue"),
+            ("abstract schema :Base as { child: :Number }\nmodel schema :Child as {\n  with :Base\n  b: :Boolean\n}\n", "ChildValue", "childValue"),
+        ]
+        for (source, csharp, swift) in lent {
+            let set = try GesSchemaSet(parsing: source)
+            let roots = GesSchemaGenerator.modelRoots(set, group: "default")
+            var code = try GesSchemaGenerator.generateModels(set, roots: roots, options: GesSchemaGenerateOptions(language: .csharp))
+            XCTAssertTrue(code.contains("double \(csharp) { get; }"))
+            XCTAssertTrue(code.contains("public double \(csharp) { get; set; }"))
+            code = try GesSchemaGenerator.generateModels(set, roots: roots, options: GesSchemaGenerateOptions(language: .swift))
+            XCTAssertTrue(code.contains("var \(swift): Double { get }"))
+            XCTAssertTrue(code.contains("public var \(swift): Double"))
+        }
+    }
+
+    func testCSharpModelMembersDoNotTakeTheNameOfTheirType() throws {
+        // C# rejects a member named like its type: a record FromValue with values, and a document class Value or FromDocument
+        // beside the document type's members. Swift takes all of them.
+        let cases: [(String, Bool, Bool)] = [
+            ("model schema :FromValue as { a: :Boolean }\n", true, false),
+            ("model schema :Value as { a: :Boolean }\n", false, true),
+            ("model schema :FromDocument as { a: :Boolean }\n", false, true),
+        ]
+        for (source, values, documents) in cases {
+            let set = try GesSchemaSet(parsing: source)
+            let roots = GesSchemaGenerator.modelRoots(set, group: "default")
+            XCTAssertEqual(
+                code { try GesSchemaGenerator.generateModels(set, roots: roots, options: GesSchemaGenerateOptions(language: .csharp, values: values, documents: documents)) },
+                "generate.nameCollision",
+                source
+            )
+            _ = try GesSchemaGenerator.generateModels(set, roots: roots, options: GesSchemaGenerateOptions(language: .swift, values: values, documents: documents))
+        }
+    }
+
     func testCollidingNamesAreRejected() throws {
         XCTAssertEqual(code { try generate("schema :S as {\n  write: :Boolean\n}\n", "S", .csharp) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  write: :Boolean\n}\n", "S", .swift) }, "generate.nameCollision")

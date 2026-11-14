@@ -26,6 +26,21 @@ public struct GesBox: Hashable, Sendable, Codable, CustomStringConvertible {
     /// Creates the box from the origin to `size`; a negative component spans the negative side of its axis.
     public init(size: GesVector) { self.init(.zero, .zero + size) }
 
+    private enum CodingKeys: String, CodingKey { case min, max }
+
+    /// Decodes the corners and orders them as creating one does, so a decoded box keeps `min` below `max` on every axis.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(try container.decode(GesPoint.self, forKey: .min), try container.decode(GesPoint.self, forKey: .max))
+    }
+
+    /// Encodes the corners.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(min, forKey: .min)
+        try container.encode(max, forKey: .max)
+    }
+
     /// The smallest x component, `min.x`.
     public var minX: Double { min.x }
 

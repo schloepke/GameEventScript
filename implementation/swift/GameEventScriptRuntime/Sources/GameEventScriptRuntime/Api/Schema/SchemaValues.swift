@@ -398,7 +398,14 @@ public enum GesSchemaValues {
 
     // A checked document writes a Box as the Map of its corners, a Poly as the List of its points and a Disc as the Map of its
     // centre and radius, since documents have no geometry literal; this gives them the geometry library's values, as the schema's fields and their alternatives expect.
-    static func documentShapes(_ schema: GesResolvedDeclaration, _ value: GesValue) -> GesValue {
+    // `node` is the value's node in the checked document and `chosen` the alternative that held for each union of several, so
+    // that a value takes the alternative the check chose rather than the first one its shape fits.
+    static func documentShapes(
+        _ schema: GesResolvedDeclaration,
+        _ value: GesValue,
+        node: GesDocumentNode? = nil,
+        chosen: [GesSchemaDocumentCheck.Choice: GesResolvedType] = [:]
+    ) -> GesValue {
         guard let map = value.asMap else { return value }
         var keys: [String] = []
         var values: [GesValue] = []
@@ -406,14 +413,23 @@ public enum GesSchemaValues {
             let key = map.key(at: index)
             let entry = map.value(at: index)
             keys.append(key)
-            values.append(schema.fields.first { $0.name == key }.map { documentShape($0.alternatives, entry) } ?? entry)
+            var child: (node: GesDocumentNode, start: Int)?
+            if case .map(let names, let children, _, let offsets)? = node, let label = names.firstIndex(of: key) { child = (children[label], offsets[label]) }
+            values.append(schema.fields.first { $0.name == key }.map { documentShape($0.alternatives, entry, child, chosen) } ?? entry)
         }
         if let name = value.customTypeName { return .record(typeName: name, keys: keys, values: values) }
         return .map(keys: keys, values: values)
     }
 
-    private static func documentShape(_ alternatives: [GesResolvedType], _ value: GesValue) -> GesValue {
-        for type in alternatives {
+    private static func documentShape(
+        _ alternatives: [GesResolvedType],
+        _ value: GesValue,
+        _ node: (node: GesDocumentNode, start: Int)?,
+        _ chosen: [GesSchemaDocumentCheck.Choice: GesResolvedType]
+    ) -> GesValue {
+        var candidates = alternatives
+        if let node, let held = chosen[GesSchemaDocumentCheck.Choice(node.start, alternatives)] { candidates = [held] }
+        for type in candidates {
             switch type.kind {
             case .box:
                 if let corners = value.asMap, corners.length == 2, let lower = corners.get("lower").flatMap({ GesPoint($0, unit: type.unit) }),
@@ -432,10 +448,15 @@ public enum GesSchemaValues {
                 let points = value.asList.compactMap { GesPoint($0, unit: type.unit) }
                 if points.count == value.asList.count { return GesPoly(points).value(unit: type.unit) }
             case .list:
-                if let element = type.element, value.valueKind == .list { return .list(value.asList.map { documentShape(element, $0) }) }
+                if let element = type.element, value.valueKind == .list {
+                    let list = value.asList
+                    var items: ([GesDocumentNode], [Int])?
+                    if case .list(let children, let offsets)? = node?.node, children.count == list.count { items = (children, offsets) }
+                    return .list(list.indices.map { index in documentShape(element, list[index], items.map { ($0.0[index], $0.1[index]) }, chosen) })
+                }
             case .reference:
                 if value.asMap != nil, value.customTypeName == nil || value.customTypeName == type.referenceName, let reference = type.reference {
-                    return documentShapes(reference, value)
+                    return documentShapes(reference, value, node: node?.node, chosen: chosen)
                 }
             default:
                 continue

@@ -11,7 +11,7 @@
 | `GameEventScriptRuntime` | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types, GES documents and schemas | Syntax, Swift standard library and platform math library |
 | `GameEventScriptCompiler` | Binding of the Syntax tree, validation across sources, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime and Syntax |
 | [`GameEventScriptSwiftBridge`](GameEventScriptSwiftBridge/README.md) | Native closure adapters, typed value conversion, KeyPath/external-type bindings and an optional synchronized Host runner | Runtime; Foundation for the runner |
-| [`GameEventScriptSyntax`](GameEventScriptSyntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting with UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | Swift standard library |
+| [`GameEventScriptSyntax`](GameEventScriptSyntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting of whole documents with UTF-16 spans and ANSI rendering | Swift standard library |
 | [`GameEventScriptGenerator`](GameEventScriptGenerator/README.md) | Generation layout and typed C# and Swift code for `.gess` schemas, used at build time | Runtime, Syntax and Swift standard library |
 | `GameEventScriptConformance` | Internal observation adapter, codec probes and native implementation tests | Runtime and Compiler |
 | `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, Syntax, Generator, Foundation and POSIX |

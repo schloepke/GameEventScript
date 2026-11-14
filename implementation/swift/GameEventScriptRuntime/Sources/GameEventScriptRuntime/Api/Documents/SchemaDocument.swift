@@ -24,8 +24,8 @@ public struct GesSchemaDocument {
     ///   - text: The document text.
     ///   - schemas: The schema set that declares the expected schemas.
     ///   - expected: The schemas the header may name.
-    /// - Throws: `GesDocumentError` when the text is no document, its header names no expected schema (``schemaMismatch``,
-    ///   naming both), or it breaks the schema, with the `document.*` code, its position and the field path.
+    /// - Throws: `GesDocumentError` when the text is no document, its header names no expected schema or one that is no
+    ///   concrete schema of the set (``schemaMismatch``), or it breaks the schema, with the `document.*` code, its position and the field path.
     public init(_ text: String, schemas: GesSchemaSet, expected: [String]) throws(GesDocumentError) {
         let value: GesValue
         do {
@@ -46,13 +46,22 @@ public struct GesSchemaDocument {
         let declaration: GesResolvedDeclaration
         do {
             declaration = try schemas.declaration(name)
-            failure = try GesSchemaDocumentCheck.failing(syntax, declaration, nil)
+        } catch {
+            throw GesDocumentError(code: Self.schemaMismatch, line: 1, column: 1, message: "The schema set declares no :\(name).")
+        }
+        // Only a concrete schema of the set describes a document, as for GesSchemaSet.checkDocument.
+        if declaration.kind != .schema || declaration.isAbstract {
+            throw GesDocumentError(code: Self.schemaMismatch, line: 1, column: 1, message: "The document names :\(name), which is no schema that describes a document.")
+        }
+        let chosen: [GesSchemaDocumentCheck.Choice: GesResolvedType]
+        do {
+            (failure, chosen) = try GesSchemaDocumentCheck.choosing(syntax, declaration, nil)
         } catch {
             throw GesDocumentError(code: Self.schemaMismatch, line: 1, column: 1, message: "The schema set cannot check :\(name): \(error).")
         }
         if let failure { throw failure }
         schema = name
-        self.value = GesSchemaValues.documentShapes(declaration, value)
+        self.value = GesSchemaValues.documentShapes(declaration, value, node: syntax.root, chosen: chosen)
         self.syntax = syntax
     }
 

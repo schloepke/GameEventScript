@@ -1382,7 +1382,9 @@ to a `GesSchema`, which ignores it, and takes optional parameters.
   is `document.invalidLiteral`, as in [reading](Documents.md).
 - A union accepts a value that satisfies one of its alternatives, tried in source order;
   the first one decides. `document.fieldType` reports a value that satisfies none. A Map
-  or a Record of that type satisfies a schema alternative when all its fields check.
+  or a Record of that type satisfies a schema alternative when all its fields check. A
+  model reads a Box, Poly or Disc only where the check chose that alternative, so a List of
+  points that breaks a Poly's `max` stays the List a later alternative accepts.
   Reading of the document itself stays unchanged:
 
 ```gess
@@ -1409,7 +1411,8 @@ facing: #north
   `[lower: :Point(1m, 0m), upper: :Point(20m, 3m)]`, or a `:Record("Box", ...)` of them: another key is
   `document.unknownField` and a missing corner `document.missingField`. A `:Poly` is the List of its points. A `:Disc` is
   the Map of its `center` and `radius`, `[center: :Point(1m, 0m), radius: 3m]`, or a `:Record("Disc", ...)` of them, with
-  the same errors. Each corner, point or centre is a Point of the unit within the axes of the block, and a radius a number of
+  the same errors. Each corner, point or centre is a Point of the unit within the axes of the block; without a block a point
+  or centre lies in the plane z = 0. A radius is a number of
   the unit whose magnitude, which the disc takes, lies within the block's `radius`, or zero when the block leaves it out.
 - A value outside a closed range is an error. A wrapping field accepts any finite
   value. `max` and `integer` are checked; `step` and `delta within` are not.
@@ -1816,7 +1819,8 @@ code includes the value conversions, so that equal code has an equal manifest), 
 [generation layout](#generation-layout); empty for models) and `files`, the generated file names in ordinal order without
 the manifest. Without `--check`, `generate` writes every file whose bytes changed, keeps unchanged files with their time
 stamps, removes the files that the previous manifest lists and that are no longer generated, and leaves every other file
-alone with the warning `cli.unowned`; a missing or unreadable manifest owns nothing. With `--check` it compares the whole
+alone with the warning `cli.unowned`; a missing or unreadable manifest owns nothing. It writes the manifest last, after
+that removal, so a run that fails before keeps the previous manifest and its files stay owned. With `--check` it compares the whole
 directory and fails with `cli.outdated` for every changed, missing and surplus file. Names that begin with `.` and Unity's
 `.meta` files are neither reported nor removed, so editors and engines may keep their files beside the code; SwiftPM and
 Unity both ignore the hidden manifest. Every CLI writes identical files and manifests.

@@ -445,7 +445,9 @@ public static class GesSchemaValues
     // A checked document writes a Box as the Map of its corners, a Poly as the List of its points and a Disc as the Map of its
     // centre and radius, since documents have no
     // geometry literal; this gives them the geometry library's values, as the schema's fields and their alternatives expect.
-    internal static GesValue DocumentShapes(GesResolvedDeclaration schema, GesValue value)
+    // `node` is the value's node in the checked document and `chosen` the alternative that held for each union of several, so
+    // that a value takes the alternative the check chose rather than the first one its shape fits.
+    internal static GesValue DocumentShapes(GesResolvedDeclaration schema, GesValue value, GesDocumentNode? node = null, IReadOnlyDictionary<(int Start, GesResolvedType[] Alternatives), GesResolvedType>? chosen = null)
     {
         if (value.AsMap() is not { } map) return value;
         var keys = new string[map.Length];
@@ -455,15 +457,17 @@ public static class GesSchemaValues
             keys[index] = map.KeyAt(index);
             var entry = map.ValueAt(index);
             var field = Array.Find(schema.Fields, candidate => candidate.Name == keys[index]);
-            values[index] = field is null ? entry : DocumentShape(field.Alternatives, entry);
+            var label = node is { Kind: GesDocumentNodeKind.Map } ? Array.IndexOf(node.Labels, keys[index]) : -1;
+            values[index] = field is null ? entry : DocumentShape(field.Alternatives, entry, label < 0 ? null : node!.Children[label], chosen);
         }
 
         return value.CustomTypeName is { } name ? GesValue.GesRecord(name, keys, values) : GesValue.GesMap(keys, values);
     }
 
-    private static GesValue DocumentShape(GesResolvedType[] alternatives, GesValue value)
+    private static GesValue DocumentShape(GesResolvedType[] alternatives, GesValue value, GesDocumentNode? node, IReadOnlyDictionary<(int Start, GesResolvedType[] Alternatives), GesResolvedType>? chosen)
     {
-        foreach (var type in alternatives)
+        var candidates = node is not null && chosen is not null && chosen.TryGetValue((node.Start, alternatives), out var held) ? [held] : alternatives;
+        foreach (var type in candidates)
         {
             switch (type.Kind)
             {
@@ -477,11 +481,12 @@ public static class GesSchemaValues
                     return new GesDisc(middle, radius.AsNumber()).ToValue(type.Unit);
                 case GesSchemaTypeKind.List when type.Element is { } element && value.ValueKind == GesBytecodeTypeKind.List:
                     var list = value.AsList();
+                    var items = node is { Kind: GesDocumentNodeKind.List } && node.Children.Length == list.Length ? node.Children : null;
                     var shaped = new GesValue[list.Length];
-                    for (var index = 0; index < shaped.Length; index++) shaped[index] = DocumentShape(element, list[index]);
+                    for (var index = 0; index < shaped.Length; index++) shaped[index] = DocumentShape(element, list[index], items?[index], chosen);
                     return GesValue.GesList(shaped);
                 case GesSchemaTypeKind.Reference when value.AsMap() is not null && (value.CustomTypeName is not { } name || name == type.ReferenceName):
-                    return DocumentShapes(type.Reference!, value);
+                    return DocumentShapes(type.Reference!, value, node, chosen);
             }
         }
 

@@ -14,15 +14,10 @@ struct ToolGeneratedDirectory {
         let root = try ToolFiles.fullPath(directory)
         let owned = Self.owned(Self.join(root, files[files.count - 1].path))
         try FileManager.default.createDirectory(atPath: root, withIntermediateDirectories: true)
-        var generated: Set<String> = []
-        for file in files {
-            generated.insert(file.path)
-            let path = Self.join(root, file.path)
-            let bytes = Data(file.text.utf8)
-            // An unchanged file keeps its time stamp, so that builds do not compile it again.
-            if FileManager.default.contents(atPath: path) == bytes { continue }
-            try ToolFiles.write(bytes, to: path)
-        }
+        let generated = Set(files.map(\.path))
+        // The manifest, the last file, follows the removal of the files it no longer names: a run that fails before keeps
+        // the previous manifest, which still owns them.
+        for file in files.dropLast() { try Self.writeChanged(Self.join(root, file.path), file.text) }
         for name in try Self.entries(root) where !generated.contains(name) {
             let path = Self.join(root, name)
             var isDirectory: ObjCBool = false
@@ -32,7 +27,16 @@ struct ToolGeneratedDirectory {
                 io.line("warning cli.unowned: \(Self.join(directory, name)) is not generated and was left alone.", toError: true)
             }
         }
+        try Self.writeChanged(Self.join(root, files[files.count - 1].path), files[files.count - 1].text)
         return 0
+    }
+
+    /// Writes a file unless it already holds the text; an unchanged file keeps its time stamp, so that builds do not compile
+    /// it again.
+    private static func writeChanged(_ path: String, _ text: String) throws {
+        let bytes = Data(text.utf8)
+        if FileManager.default.contents(atPath: path) == bytes { return }
+        try ToolFiles.write(bytes, to: path)
     }
 
     func check(_ directory: String, _ files: [GesGeneratedFile]) throws -> Int {

@@ -69,6 +69,10 @@ internal sealed class GesModelField
     internal bool Key;
     internal GesLayoutDefault? Default;
     internal GesModelValue Value = new();
+
+    // Whether the member takes the suffix Value because a schema lends the field with `with` and the field is named like that
+    // schema or one that takes it, so that the interface or protocol and every type taking it name it alike.
+    internal bool Renamed;
 }
 
 internal enum GesModelKind
@@ -185,7 +189,36 @@ internal static class GesModelLayoutBuilder
             layout.Protocols.Add(protocol);
         }
 
+        RenameLent(layout);
         return layout;
+    }
+
+    // A field that a schema lends with `with` takes one member name in its interface or protocol and in every type that takes
+    // it: like a field named after its own type, it is renamed where it is named like the lending schema or one taking it.
+    private static void RenameLent(GesModelLayout layout)
+    {
+        foreach (var protocol in layout.Protocols)
+        {
+            var owners = new HashSet<string>(StringComparer.Ordinal) { protocol.Name };
+            for (var grew = true; grew;)
+            {
+                grew = false;
+                foreach (var other in layout.Protocols)
+                    if (!owners.Contains(other.Name) && other.Takes.Exists(owners.Contains)) grew |= owners.Add(other.Name);
+                foreach (var type in layout.Types)
+                    if (!owners.Contains(type.Name) && type.Takes.Exists(owners.Contains)) grew |= owners.Add(type.Name);
+            }
+
+            foreach (var field in protocol.Fields)
+            {
+                if (!owners.Contains(GesSchemaPlanner.Pascal(field.Name))) continue;
+                field.Renamed = true;
+                foreach (var type in layout.Types)
+                    if (owners.Contains(type.Name))
+                        foreach (var taken in type.Fields)
+                            if (taken.Name == field.Name) taken.Renamed = true;
+            }
+        }
     }
 
     private static void Protocols(GesSchema schema, SortedDictionary<string, GesSchema> protocols)

@@ -22,12 +22,27 @@ struct GesSchemaDocumentCheck {
     private struct Attempt: Hashable {
         let type: ObjectIdentifier
         let value: GesDocumentNode
+        // Equal values at other positions are checked again, so that each records the alternatives of its own unions.
+        let start: Int
+    }
+
+    // A union of several alternatives at the position of its value, whose held alternative converting the checked document
+    // takes rather than the first one its shape fits.
+    struct Choice: Hashable {
+        let start: Int
+        let alternatives: [ObjectIdentifier]
+
+        init(_ start: Int, _ alternatives: [GesResolvedType]) {
+            self.start = start
+            self.alternatives = alternatives.map(ObjectIdentifier.init)
+        }
     }
 
     // What each alternative of a union answered, so nested unions stay linear, and how many records of each schema enclose
     // the value being checked, which a recursive List counts against its depth.
     private final class Attempts {
         var holds: [Attempt: Bool] = [:]
+        var chosen: [Choice: GesResolvedType] = [:]
         var levels: [ObjectIdentifier: Int] = [:]
         // The path of the value being checked.
         var path = ""
@@ -50,14 +65,20 @@ struct GesSchemaDocumentCheck {
 
     // The first error of a document against its schema, with its position and field path, or nil.
     static func failing(_ syntax: GesDocumentSyntax, _ schema: GesResolvedDeclaration, _ parameters: GesSchemaParameters?) throws -> GesDocumentError? {
+        try choosing(syntax, schema, parameters).failure
+    }
+
+    // The first error, or nil with the alternative that held for each union of several.
+    static func choosing(_ syntax: GesDocumentSyntax, _ schema: GesResolvedDeclaration, _ parameters: GesSchemaParameters?) throws -> (failure: GesDocumentError?, chosen: [Choice: GesResolvedType]) {
         if let parameters { try GesSchemaBinder.checkParameters(schema, parameters) }
+        let check = Self(parameters: parameters)
         do {
-            guard case .map(let keys, let values, let keyOffsets, let valueOffsets)? = syntax.root else { return nil }
-            try Self(parameters: parameters).fields(keys, values, keyOffsets, valueOffsets, start: 0, schema)
-            return nil
+            guard case .map(let keys, let values, let keyOffsets, let valueOffsets)? = syntax.root else { return (nil, [:]) }
+            try check.fields(keys, values, keyOffsets, valueOffsets, start: 0, schema)
+            return (nil, check.attempts.chosen)
         } catch let failure as Failure {
             let (line, column) = syntax.location(failure.offset)
-            return GesDocumentError(code: failure.code, line: line, column: column, path: failure.path)
+            return (GesDocumentError(code: failure.code, line: line, column: column, path: failure.path), [:])
         }
     }
 
@@ -95,14 +116,18 @@ struct GesSchemaDocumentCheck {
         let value = Self.resolved(written, start)
         if alternatives.count == 1 { return try type(alternatives[0], value, start) }
         for alternative in alternatives {
-            let attempt = Attempt(type: ObjectIdentifier(alternative), value: value)
+            let attempt = Attempt(type: ObjectIdentifier(alternative), value: value, start: start)
             if let holds = attempts.holds[attempt] {
-                if holds { return }
+                if holds {
+                    attempts.chosen[Choice(start, alternatives)] = alternative
+                    return
+                }
                 continue
             }
             do {
                 try type(alternative, value, start)
                 attempts.holds[attempt] = true
+                attempts.chosen[Choice(start, alternatives)] = alternative
                 return
             } catch is Failure {
                 attempts.holds[attempt] = false
@@ -253,7 +278,12 @@ struct GesSchemaDocumentCheck {
 
     private func spatial(_ type: GesResolvedType, _ value: GesDocumentNode, _ start: Int, point: Bool) throws {
         guard case .spatial(let isPoint, let x, let y, let z, let unit) = value, isPoint == point, unit == type.unit else { throw fail(Self.fieldType, start) }
-        guard let axes = type.axes else { return }
+        guard let axes = type.axes else {
+            // Without a block the points of a Poly and the centre of a Disc lie in the plane z = 0, as with a block that
+            // declares no z.
+            if (type.kind == .poly || type.kind == .disc) && z != 0 { throw fail(Self.fieldType, start) }
+            return
+        }
         for (axis, component) in [("x", x), ("y", y), ("z", z)] {
             if let declared = axes.first(where: { $0.axis == axis }) {
                 try numeric(declared.constraints, false, 0, component, start)

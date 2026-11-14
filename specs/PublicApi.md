@@ -742,7 +742,8 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 | dump | `static GesSchemaDump.Read(schema, data)`, also with a baseline record | `GesSchemaDump.read(_:data:)`, also with `baseline:` |
 
 `GesSchemaDocument` reads a document as [generated models](Schemas.md#model-documents) do: its header must name one of the
-expected schemas, or the error is `document.schemaMismatch` at line 1, column 1, naming both; the document is then checked
+expected schemas, or the error is `document.schemaMismatch` at line 1, column 1, naming both; so is an expected name that
+names no concrete `schema` of the set, such as an abstract schema or a message; the document is then checked
 against that schema, whose error carries its `document.*` code, position and field path. `Value` is the Record of the
 document's entries, with a Box, Poly or Disc written as their corners, points or centre and radius turned into the geometry
 library's values.

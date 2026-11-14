@@ -6376,6 +6376,102 @@ schema:
 
 ---
 
+## Test: a document of an expected abstract schema
+
+An expected name still has to name a concrete schema of the set: an abstract schema describes no document.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-abstract-schema
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\n"
+  readDocument:
+    text: ":Schema(:Base)\non: true\n"
+    expected: ["Base"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.schemaMismatch"
+      line: 1
+      column: 1
+      path: ""
+```
+
+---
+
+## Test: a document of an expected message
+
+A message describes no document either, even where the caller expects its name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-message
+schemaApi:
+  sources:
+    - "message Ping()\nschema :Unit as { on: :Boolean }\n"
+  readDocument:
+    text: ":Schema(:Ping)\n"
+    expected: ["Ping"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.schemaMismatch"
+      line: 1
+      column: 1
+      path: ""
+```
+
+---
+
+## Test: a document of an expected undeclared schema
+
+An expected name that the set does not declare is `document.schemaMismatch` too.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-undeclared-schema
+schemaApi:
+  sources:
+    - "schema :Unit as { on: :Boolean }\n"
+  readDocument:
+    text: ":Schema(:Nope)\n"
+    expected: ["Nope"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.schemaMismatch"
+      line: 1
+      column: 1
+      path: ""
+```
+
+---
+
 ## Test: a document without a header
 
 A document without a header names no schema.
@@ -6630,6 +6726,50 @@ schema:
               - type: ":Point"
                 x: "4"
                 y: "0"
+                z: "0"
+```
+
+---
+
+## Test: a document union takes the alternative the check chose
+
+Reading takes the alternative of a union that the document check accepted, not the first one whose shape fits: two points
+break the `max` of the Poly, so they stay the List of Points that the second alternative accepts.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-union-choice
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 1 | :List(:Point) max 5\n}\n"
+  readDocument:
+    text: ":Schema(:Zone)\noutline: [:Point(1, 2), :Point(3, 4)]\n"
+    expected: ["Zone"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Zone"
+    value:
+      type: ":Zone"
+      entries:
+        - key: "outline"
+          value:
+            type: ":List"
+            items:
+              - type: ":Point"
+                x: "1"
+                y: "2"
+                z: "0"
+              - type: ":Point"
+                x: "3"
+                y: "4"
                 z: "0"
 ```
 
@@ -9468,6 +9608,64 @@ schema:
       code: "document.outOfRange"
       line: 2
       column: 41
+```
+
+---
+
+## Test: a document Poly point outside the plane
+
+A Poly lies in the plane z = 0 also without a block, so a document point with another `z` breaks the field's type.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-poly-outside-plane
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 4\n}\n"
+  document: ":Schema(:Zone)\noutline: [:Point(0, 0), :Point(1, 2, 1)]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.fieldType"
+      line: 2
+      column: 25
+```
+
+---
+
+## Test: a document Disc centre outside the plane
+
+A Disc lies in the plane z = 0 also without a block, so a document centre with another `z` breaks the field's type.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-disc-outside-plane
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  reach: :Disc\n}\n"
+  document: ":Schema(:Zone)\nreach: [center: :Point(1, 0, 1), radius: 3]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.fieldType"
+      line: 2
+      column: 17
 ```
 
 ---

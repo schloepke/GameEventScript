@@ -70,6 +70,48 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
+    public void LentFieldsKeepOneNameInTheirInterfaceAndEveryTypeTakingThem()
+    {
+        // A field named like the lending schema, or like a schema that takes it, is renamed alike everywhere it is lent.
+        var lent = new[]
+        {
+            ("abstract schema :Base as { base: :Number }\nmodel schema :Child as {\n  with :Base\n  b: :Boolean\n}\n", "BaseValue", "baseValue"),
+            ("abstract schema :Base as { child: :Number }\nmodel schema :Child as {\n  with :Base\n  b: :Boolean\n}\n", "ChildValue", "childValue")
+        };
+        foreach (var (source, csharp, swift) in lent)
+        {
+            var set = GesSchemaSet.Parse(source);
+            var roots = GesSchemaGenerator.ModelRoots(set, "default");
+            var code = GesSchemaGenerator.GenerateModels(set, roots, new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp });
+            StringAssert.Contains(code, $"double {csharp} {{ get; }}");
+            StringAssert.Contains(code, $"public double {csharp} {{ get; set; }}");
+            code = GesSchemaGenerator.GenerateModels(set, roots, new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift });
+            StringAssert.Contains(code, $"var {swift}: Double {{ get }}");
+            StringAssert.Contains(code, $"public var {swift}: Double");
+        }
+    }
+
+    [TestMethod]
+    public void CSharpModelMembersDoNotTakeTheNameOfTheirType()
+    {
+        // C# rejects a member named like its type: a record FromValue with values, and a document class Value or FromDocument
+        // beside the document type's members. Swift takes all of them.
+        foreach (var (source, options) in new[]
+        {
+            ("model schema :FromValue as { a: :Boolean }\n", new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp, Values = true }),
+            ("model schema :Value as { a: :Boolean }\n", new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp, Documents = true }),
+            ("model schema :FromDocument as { a: :Boolean }\n", new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp, Documents = true })
+        })
+        {
+            var set = GesSchemaSet.Parse(source);
+            var roots = GesSchemaGenerator.ModelRoots(set, "default");
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, roots, options)), source);
+            options.Language = GesSchemaLanguage.Swift;
+            GesSchemaGenerator.GenerateModels(set, roots, options);
+        }
+    }
+
+    [TestMethod]
     public void SwiftModelsEscapeKeywordsOnlyWhereSwiftNeedsIt()
     {
         var set = GesSchemaSet.Parse("model schema :S as {\n  default: :Text\n  in: :Boolean\n  var: :Boolean\n}\n");

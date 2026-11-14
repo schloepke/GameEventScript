@@ -158,7 +158,7 @@ internal static class GesModelPlanner
         foreach (var field in type.Fields)
         {
             var pascal = GesSchemaPlanner.Pascal(field.Name);
-            var member = pascal == type.Name ? pascal + "Value" : pascal;
+            var member = pascal == type.Name || field.Renamed ? pascal + "Value" : pascal;
             var value = Value(field.Value, member, "");
             value.Nullable |= field.Optional;
             fields.Add(new GesModelPlanField { Field = field, Base = member, Value = value });

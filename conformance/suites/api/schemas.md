@@ -6968,9 +6968,9 @@ schema:
 ## Test: a union checked inside a failed alternative keeps its choice in the next one
 
 The first alternative `:A` checks the unions of `box.item`, `box.item.middle` and `box.item.middle.inner`, then fails on
-`flag`, which takes back all three choices. `:B` checks the same item against the same declaration `:Box2`, whose cached
-answer `:Outer` repeats the choice `:Mid` of the union inside it and, through the cached answer of `:Mid`, the choice
-`:Large` one level deeper, rather than leaving the inner value to the first schema whose fields fit.
+`flag`, which takes back all three choices. `:B` checks the same item against the same declaration `:Box2`, where the
+cached answer `:Outer` of the item repeats the choice `:Mid` of the union inside it and, through the cached answer of `:Mid`,
+the choice `:Large` one level deeper, rather than leaving the inner value to the first schema whose fields fit.
 
 ### Case description
 

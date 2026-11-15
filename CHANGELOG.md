@@ -10,7 +10,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
-## [0.5.0] — 2026-11-14
+## [0.5.0] — 2026-11-16
 
 This release adds GES schemas (`.gess`) with exact bit-level encoding, deltas and
 generated C# and Swift code, GES documents (`.gesd`), the Bytes type, the shared

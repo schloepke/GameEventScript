@@ -258,10 +258,17 @@ enum GesSwiftModelEmitter {
         code.close()
     }
 
-    // A packed type that wire code declares itself, without conversions, as the model code of the same schema declares it.
-    static func packedType(_ code: inout Code, _ layout: GesModelLayout, _ name: String, _ access: String) throws(GesGeneratorError) {
-        try packedRecord(&code, layout, layout.types.first { $0.name == name }!, access, bindings: false, values: nil, documents: nil)
+    // A packed type that wire code declares itself, without conversions, as the model code of the same schema declares it. A
+    // wire root's members extend it, so its fields must not take their names, nor `toValue` with `--values`.
+    static func packedType(_ code: inout Code, _ layout: GesModelLayout, _ name: String, _ access: String, root: Bool, values: Bool) throws(GesGeneratorError) {
+        let members = !root ? [] : values ? packedWireMembers + ["toValue"] : packedWireMembers
+        try packedRecord(&code, layout, layout.types.first { $0.name == name }!, access, bindings: false, values: nil, documents: nil, wireMembers: members)
     }
+
+    // The members that the wire code of a packed root adds to its type; `schemaHash` and `init` are the model's own.
+    private static let packedWireMembers = [
+        "bindingHash", "maxByteCount", "write", "encodedByteCount", "encoded", "read", "wireEquals", "copy", "quantize", "writeDelta", "deltaEncodedByteCount", "deltaEncoded", "readDelta",
+    ]
 
     // A packed schema's model: a struct whose one stored property is its word, with a property per field at its bits, so that
     // `MemoryLayout<T>.stride` is the word's size and a list of them is a dense array; wire code of the schema holds the same
@@ -273,7 +280,8 @@ enum GesSwiftModelEmitter {
         _ access: String,
         bindings: Bool,
         values: String?,
-        documents: String?
+        documents: String?,
+        wireMembers: [String] = []
     ) throws(GesGeneratorError) {
         let fields = GesModelPlanner.fields(type)
         let packedLayout = type.packed!
@@ -286,6 +294,7 @@ enum GesSwiftModelEmitter {
             nested(field.value, &names, field.field.name)
         }
         for reserved in ["schemaHash", "bits", "rawValue", "isValid", "CodingKeys", "hashValue", "hash"] { names.append((reserved, "the generated member " + reserved)) }
+        for reserved in wireMembers { names.append((reserved, "the wire member " + reserved)) }
         for constant in type.constants { names.append((constant.name, "the let " + constant.name)) }
         if bindings { names.append(("gesValue", "the generated member gesValue")) }
         if values != nil { names.append(("toValue", "the generated member toValue")) }
@@ -366,13 +375,14 @@ enum GesSwiftModelEmitter {
             }
         }
         code.blank()
-        code.open("private enum CodingKeys: String, CodingKey {")
+        // An enum without cases cannot have a raw type.
+        code.open(fields.isEmpty ? "private enum CodingKeys: CodingKey {" : "private enum CodingKeys: String, CodingKey {")
         for field in fields { code.line("case \(member(field.base)) = \(GesSchemaPlanner.literal(field.field.name, swift: true))") }
         code.close()
         code.blank()
         code.line("/// Decodes the fields by name and checks each as its setter does.")
         code.open("\(access)init(from decoder: any Decoder) throws {")
-        code.line("let container = try decoder.container(keyedBy: CodingKeys.self)")
+        code.line(fields.isEmpty ? "_ = try decoder.container(keyedBy: CodingKeys.self)" : "let container = try decoder.container(keyedBy: CodingKeys.self)")
         code.line("rawValue = 0")
         for (index, field) in fields.enumerated() {
             code.line("let \(member(field.base)) = try container.decode(\(self.type(field.value)).self, forKey: .\(member(field.base)))")
@@ -862,9 +872,11 @@ enum GesSwiftModelEmitter {
                     if descends(field.value) {
                         code.line("let field\(index) = \(read(field.value, type.name, held, "fieldPath(path, \(fieldLiteral))", name, support))")
                     } else {
-                        code.line(
-                            "guard let field\(index) = \(decode(field.value, type.name, held, name, support, plain: true))\(fits(checks, index, "field\(index)")) else { throw failure(\(held), fieldPath(path, \(fieldLiteral))) }"
-                        )
+                        code.line("guard let field\(index) = \(decode(field.value, type.name, held, name, support, plain: true)) else { throw failure(\(held), fieldPath(path, \(fieldLiteral))) }")
+                        // A value of the field's type outside its range is the value path's error, not a value of another type.
+                        if let check = checks[index] {
+                            code.line("guard \(check)(field\(index)) else { throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, \(fieldLiteral))) }")
+                        }
                     }
                 }
                 construct(&code, type.name, arguments, fields)

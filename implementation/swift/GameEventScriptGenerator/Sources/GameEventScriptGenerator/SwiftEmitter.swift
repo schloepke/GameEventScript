@@ -118,7 +118,13 @@ enum GesSwiftEmitter {
         }
         for type in types {
             if type.layout.packedWidth > 0 {
-                if let packed { document.units.append(GesCodeUnit(owner: type.name) { code in try GesSwiftModelEmitter.packedType(&code, packed, type.name, access) }) }
+                if let packed {
+                    document.units.append(
+                        GesCodeUnit(owner: type.name) { code in
+                            try GesSwiftModelEmitter.packedType(&code, packed, type.name, access, root: layout.roots.contains(type.name), values: context.values)
+                        }
+                    )
+                }
 
                 // A wire root's members extend the type at file scope where the wire code declares it, and are an enum
                 // `<Name>Wire` in the wire namespace where the models declare it.

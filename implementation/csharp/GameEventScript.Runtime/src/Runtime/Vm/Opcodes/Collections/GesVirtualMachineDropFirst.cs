@@ -32,7 +32,7 @@ internal partial class GesVirtualMachine
                 result = DropFirstRange(in source, range, count);
                 break;
             case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
-                result = DropFirstRange(in source, range, count);
+                result = DropFirstRange(this, in source, range, count);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
                 result = DropFirstIterator(this, iterator, count);

@@ -3729,6 +3729,48 @@ binary:
 
 ---
 
+## Test: message-name-handler-label
+
+A message-name handler binding must record exactly the synthetic argument label `message`. A binding that records `payload` instead is rejected by Program validation instead of being dispatched with a mislabeled message parameter.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-name-handler-label
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-message-name-handler-label
+  resourceId: gesb-v1.message-name-handler-label
+  relativePath: GesbV1/message-name-handler-label.gesb
+  sha256: 0E8F56F29E06C3A2FE4E48717F19035F08E3B08B13FB7BC47C8FB8140BD651A4
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the message-name handler binding argument name string `message` with `payload` at file byte offset 64; retain all other bytes"
+```
+
+### Source code under test
+
+```ges
+module namehandler
+on Damage as incoming {}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 0
+```
+
+---
+
 ## Test: duplicate-record-name
 
 Two Record bindings named `Aaa` would let casts and `parse` pick different constructors, so Program validation rejects the second name.

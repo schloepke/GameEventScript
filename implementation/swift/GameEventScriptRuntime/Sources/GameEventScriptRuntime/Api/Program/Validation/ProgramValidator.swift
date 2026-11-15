@@ -38,6 +38,8 @@ enum GesProgramValidator {
                 if text == "_" { continue }
                 if !GesNames.plain(text) || !names.insert(text).inserted { throw failure(.invalidProgram, 4, index) }
             }
+            // A message-name handler receives exactly one direct `:Message` argument under the fixed synthetic label.
+            if binding.kind == .messageNameHandler, binding.argumentNames.count != 1 || !GesText.scalarEqual(p.stringConstants[Int(binding.argumentNames[0])], "message") { throw failure(.invalidProgram, 4, index) }
             for tag in binding.requiredTags + binding.excludedTags { if !GesNames.plain(p.stringConstants[Int(tag)]) { throw failure(.invalidProgram, 4, index) } }
             if binding.kind == .function || binding.kind == .predicate {
                 let signature = "\(binding.kind.rawValue):\(name)(" + binding.argumentNames.map { p.stringConstants[Int($0)] }.joined(separator: ",") + ")"

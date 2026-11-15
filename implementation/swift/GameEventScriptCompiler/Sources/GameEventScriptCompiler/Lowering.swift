@@ -135,7 +135,12 @@ extension GesCompiler {
         scope.values[name] = d
         _ = try expression(value, r, scope, destination: d)
         if knownNonList(value, r, scope) { r.nonListBindings.insert(d) }
-        if case .handler(_, let parameters) = value.kind { scope.handlers[name] = parameters.map(\.label) }
+        // As C# ClassifyHandlerSignature: a Handler literal or an alias of a binding with a known signature.
+        switch value.kind {
+        case .handler(_, let parameters): scope.handlers[name] = parameters.map(\.label)
+        case .name(let other): if let labels = scope.handler(other) { scope.handlers[name] = labels }
+        default: break
+        }
         return d
     }
 
@@ -308,7 +313,8 @@ extension GesCompiler {
 
     func callExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         guard case .call(let name, let arguments) = e.kind else { preconditionFailure() }
-        if let handler = scope.get(name) {
+        // Calls resolve in the callable namespace first, as in C#; only other names bind a local Handler.
+        if !callableNames.contains(name), let handler = scope.get(name) {
             let regs = try arguments.map { try expression($0.value, r, scope) }
             // As in C#, an unlabeled argument fits its position; a labeled one must name the parameter there.
             if let labels = scope.handler(name), labels.count != arguments.count || zip(arguments, labels).contains(where: { $0.label != "_" && $0.label != $1 }) {

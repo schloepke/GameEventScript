@@ -784,7 +784,7 @@ internal sealed partial class GesComputedEmitter
 
     private static bool UsesMath(GesComputedNode node)
     {
-        if (node.Op >= GesComputedOp.Power) return true;
+        if (node.Op is >= GesComputedOp.Power and <= GesComputedOp.Deg) return true;
         foreach (var child in node.Children)
             if (UsesMath(child)) return true;
         return false;

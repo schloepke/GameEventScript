@@ -230,10 +230,10 @@ class AdapterTests(unittest.TestCase):
 
     def test_product_json_codec_and_exact_oracle(self):
         cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'messageApi' and ('json' in c.metadata['messageApi'] or 'roundTripJson' in c.metadata['messageApi'])]
-        self.assertEqual(54, len(cases))
+        self.assertEqual(57, len(cases))
         request = requests(cases)
         observed = execute(self.command, request)
-        self.assertEqual(54, verify(cases, observed)['summary']['passed'])
+        self.assertEqual(57, verify(cases, observed)['summary']['passed'])
         for case in cases:
             expected = case.expected['message']
             if 'json' in expected:
@@ -241,7 +241,7 @@ class AdapterTests(unittest.TestCase):
             else:
                 expected['error'] = 'message.resourceLimit' if expected['error'] != 'message.resourceLimit' else 'message.invalidJson'
         self.assertEqual(request, requests(cases))
-        self.assertEqual(54, verify(cases, observed)['summary']['failed'])
+        self.assertEqual(57, verify(cases, observed)['summary']['failed'])
         for mutate in (lambda api: api.update(json={}), lambda api: api.update(roundTripJson=1)):
             broken = requests([cases[0]])
             mutate(broken['cases'][0]['api'])
@@ -289,9 +289,9 @@ class AdapterTests(unittest.TestCase):
 
     def test_literal_api_modes_and_limits_are_checked_only_in_python(self):
         cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'valueApi' and 'literal' in c.metadata['valueApi']]
-        self.assertEqual(31, len(cases))
+        self.assertEqual(32, len(cases))
         observed = execute(self.command, requests(cases))
-        self.assertEqual(31, verify(cases, observed)['summary']['passed'])
+        self.assertEqual(32, verify(cases, observed)['summary']['passed'])
         case = next(c for c in cases if c.id.endswith('literal-lenient-quantity'))
         observed['observations'][case.id]['literal']['value']['unit'] = ':newton'
         self.assertEqual(1, verify(cases, observed)['summary']['failed'])

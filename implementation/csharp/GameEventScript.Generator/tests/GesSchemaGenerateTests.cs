@@ -70,6 +70,20 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
+    public void PackedRootsReserveTheirWireMembers()
+    {
+        // Wire code that declares a packed root extends its type with the wire members, which its fields must not take.
+        const string root = "packed schema :P as {\n  encoded: :Boolean\n}\n";
+        Assert.AreEqual("generate.nameCollision", Code(() => Generate(root, "P", GesSchemaLanguage.Swift)));
+        StringAssert.Contains(Generate(root, "P", GesSchemaLanguage.CSharp), "public bool Encoded");
+        Assert.AreEqual("generate.nameCollision", Code(() => Generate("packed schema :P as {\n  toBytes: :Boolean\n}\n", "P", GesSchemaLanguage.CSharp)));
+        // A packed type that only a field holds gets no wire members.
+        StringAssert.Contains(Generate(root + "schema :S as {\n  p: :P\n}\n", "S", GesSchemaLanguage.Swift), "public var encoded: Bool {");
+        // A packed schema without fields has keys without a raw type, which Swift requires of an enum without cases.
+        StringAssert.Contains(Generate("packed schema :E as {\n}\n", "E", GesSchemaLanguage.Swift), "private enum CodingKeys: CodingKey {\n");
+    }
+
+    [TestMethod]
     public void ModelsBoundedByParametersDescribeTheirNames()
     {
         // A parameter's name may hold an e, which a canonical decimal also holds.

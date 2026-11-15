@@ -1097,6 +1097,7 @@ enum GesCSharpModelEmitter {
             code.line("internal static \(record) Read\(type.name)(in GesValue value, string path)")
             code.open("{")
             code.line("var fields = RecordFields(value, \(typeLiteral), \(names)) ?? throw Failure(value, path);")
+            let fits = packedFits(type, fields)
             for index in GesModelPlanner.readOrder(fields) {
                 let field = fields[index]
                 let fieldLiteral = literal(field.field.name)
@@ -1107,6 +1108,10 @@ enum GesCSharpModelEmitter {
                     code.line("var field\(index) = \(read(field.value, type.name, held, "Path(path, \(fieldLiteral))", qualifier, support));")
                 } else {
                     code.line("if (!\(decode(field.value, type.name, held, "out var field\(index)", qualifier, support))) throw Failure(\(held), Path(path, \(fieldLiteral)));")
+                }
+                // A value of a packed field's type outside its range is the value path's error, where the setter would throw.
+                if let check = fits[index] {
+                    code.line("if (!(\(check("field\(index)")))) throw new GesWireException(GesWireException.OutOfRange, Path(path, \(fieldLiteral)));")
                 }
             }
             let kept = GesModelPlanner.kept(fields)
@@ -1127,6 +1132,7 @@ enum GesCSharpModelEmitter {
             var conditions = ["fields is null"]
             for (index, field) in fields.enumerated() {
                 conditions.append("!" + decode(field.value, type.name, inline(layout, fields, index, type.name, qualifier, support, type.name + "Defaults"), "out var field\(index)", qualifier, support))
+                if let check = fits[index] { conditions.append("!(\(check("field\(index)")))") }
             }
             for (index, condition) in conditions.enumerated() {
                 code.line((index == 0 ? "if (" : "    || ") + condition + (index == conditions.count - 1 ? ") return false;" : ""))
@@ -1316,8 +1322,15 @@ enum GesCSharpModelEmitter {
             code.blank()
             code.line("private static bool Decode\(type.name)(in GesValue value, out \(name) result)")
             code.open("{")
-            code.line("result = \(name).FromGesValue(value)!;")
-            code.line("return result is not null;")
+            if type.packed != nil {
+                // A packed record is a struct, whose FromGesValue gives a nullable value.
+                code.line("var decoded = \(name).FromGesValue(value);")
+                code.line("result = decoded.GetValueOrDefault();")
+                code.line("return decoded.HasValue;")
+            } else {
+                code.line("result = \(name).FromGesValue(value)!;")
+                code.line("return result is not null;")
+            }
             code.close()
             var found: [GesModelPlanValue] = []
             for field in fields { conversions(field.value, &found) }
@@ -1326,6 +1339,17 @@ enum GesCSharpModelEmitter {
             }
         }
         code.close()
+    }
+
+    // The tests that a converted value fits each field of a packed model, as its setter checks it, by index; nil where every
+    // value fits or the model is not packed.
+    private static func packedFits(_ type: GesModelType, _ fields: [GesModelPlanField]) -> [((String) -> String)?] {
+        guard let packed = type.packed else { return Array(repeating: nil, count: fields.count) }
+        let bits = GesCSharpEmitter.packedLayout(packed, packed.type(type.name))
+        return fields.indices.map { index in
+            let encoding = bits[index].field.encoding
+            return GesCSharpEmitter.packedFits(encoding, "") == nil ? nil : { value in GesCSharpEmitter.packedFits(encoding, value)! }
+        }
     }
 
     private static func conversion(_ code: inout Code, _ owner: String, _ qualifier: String, _ support: String, _ value: GesModelPlanValue, plain: Bool = false) {

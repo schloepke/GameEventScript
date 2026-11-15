@@ -73,7 +73,7 @@ public sealed class GesSchemaDocument
         if (declaration.Kind != GesSchemaKind.Schema || declaration.Abstract)
             throw new GesDocumentException(SchemaMismatch, 1, 1, message: $"The document names :{named}, which is no schema that describes a document.");
         if (GesSchemaDocumentCheck.Failing(text, syntax.Root!, declaration, null, out var chosen) is { } failure) throw failure;
-        return new GesSchemaDocument(named, GesSchemaValues.DocumentShapes(declaration, value, syntax.Root, chosen), syntax.Root!, text);
+        return new GesSchemaDocument(named, GesSchemaValues.DocumentShapes(declaration, value, chosen), syntax.Root!, text);
     }
 
     /// <summary>

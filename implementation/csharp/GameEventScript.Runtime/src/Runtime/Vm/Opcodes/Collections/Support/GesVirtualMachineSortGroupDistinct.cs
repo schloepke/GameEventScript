@@ -90,13 +90,8 @@ internal partial class GesVirtualMachine
                     return;
                 }
 
-                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
-                {
-                    vm.SetFloatRange(destinationRegister, last, range.From, -range.Step);
-                    return;
-                }
-
-                vm.SetNothing(destinationRegister);
+                var reversed = FloatRangeSlice(vm, range, length, 0, length, reversed: true);
+                vm.SetValue(destinationRegister, in reversed);
                 return;
             }
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -142,11 +137,7 @@ internal partial class GesVirtualMachine
 
     private static bool SortValues(GesValue[] values, int count, bool descending)
     {
-        if (HasNumericSortKeys(values, count))
-        {
-            SortNumeric(values, null, count, descending);
-            return true;
-        }
+        if (SortNumeric(values, null, count, descending)) return true;
 
         for (var i = 1; i < count; i++)
         {
@@ -168,11 +159,7 @@ internal partial class GesVirtualMachine
 
     internal static bool SortValuesByKeys(GesValue[] values, GesValue[] keys, int count, bool descending)
     {
-        if (HasNumericSortKeys(keys, count))
-        {
-            SortNumeric(values, keys, count, descending);
-            return true;
-        }
+        if (SortNumeric(values, keys, count, descending)) return true;
 
         for (var i = 1; i < count; i++)
         {
@@ -195,33 +182,62 @@ internal partial class GesVirtualMachine
         return true;
     }
 
-    // When all keys are numeric with one unit and none is NaN, every pair is comparable and
-    // CompareAscending reduces to binary64 comparison. SortNumeric then yields exactly the stable
-    // insertion-sort order in O(n log n), without heap allocation for small inputs.
-    private static bool HasNumericSortKeys(GesValue[] keys, int count)
+    // When all keys are numeric with one unit and none is NaN, every pair is comparable and CompareAscending reduces to
+    // comparing Int64 keys exactly when all are integers, and otherwise to binary64 comparison, which is exact while every
+    // integer key stays within ±2^53. SortNumeric then yields exactly the stable insertion-sort order in O(n log n),
+    // without heap allocation for small inputs; mixed keys with a larger integer use the insertion sort.
+    private static bool SortNumeric(GesValue[] values, GesValue[]? keys, int count, bool descending)
     {
+        var sortKeys = keys ?? values;
         if (count < 2) return false;
-        var unit = keys[0].Unit;
+        var unit = sortKeys[0].Unit;
+        var allIntegers = true;
+        var largeInteger = false;
         for (var i = 0; i < count; i++)
         {
-            ref readonly var key = ref keys[i];
-            if (!key.IsNumeric || key.Unit != unit || double.IsNaN(key.AsNumeric)) return false;
+            ref readonly var key = ref sortKeys[i];
+            if (!key.IsNumeric || key.Unit != unit) return false;
+            if (key.Kind == Integer)
+            {
+                largeInteger |= key.IntegerValue is > ExactBinary64Integer or < -ExactBinary64Integer;
+                continue;
+            }
+
+            allIntegers = false;
+            if (double.IsNaN(key.AsNumeric)) return false;
         }
 
+        if (!largeInteger)
+        {
+            Span<(double Key, int Index)> order = count <= 128 ? stackalloc (double, int)[count] : new (double, int)[count];
+            for (var i = 0; i < count; i++)
+            {
+                var number = sortKeys[i].AsNumeric;
+                order[i] = (descending ? -number : number, i);
+            }
+
+            SortAndPermute(order, values, keys, count);
+            return true;
+        }
+
+        if (!allIntegers) return false;
+        Span<(long Key, int Index)> integerOrder = count <= 128 ? stackalloc (long, int)[count] : new (long, int)[count];
+        for (var i = 0; i < count; i++)
+        {
+            var number = sortKeys[i].IntegerValue;
+            // The complement reverses the order of every Int64 without overflow.
+            integerOrder[i] = (descending ? ~number : number, i);
+        }
+
+        SortAndPermute(integerOrder, values, keys, count);
         return true;
     }
 
-    // Requires HasNumericSortKeys; sorts (key, original index) pairs, then permutes in place.
-    private static void SortNumeric(GesValue[] values, GesValue[]? keys, int count, bool descending)
-    {
-        var sortKeys = keys ?? values;
-        Span<(double Key, int Index)> order = count <= 128 ? stackalloc (double, int)[count] : new (double, int)[count];
-        for (var i = 0; i < count; i++)
-        {
-            var number = sortKeys[i].AsNumeric;
-            order[i] = (descending ? -number : number, i);
-        }
+    private const long ExactBinary64Integer = 1L << 53;
 
+    private static void SortAndPermute<TKey>(Span<(TKey Key, int Index)> order, GesValue[] values, GesValue[]? keys, int count)
+        where TKey : struct, IComparable<TKey>
+    {
         // (key, index) pairs are distinct, so this unstable heapsort has exactly one result.
         for (var root = count / 2 - 1; root >= 0; root--) SiftDown(order, root, count);
         for (var end = count - 1; end > 0; end--)
@@ -255,7 +271,8 @@ internal partial class GesVirtualMachine
         }
     }
 
-    private static void SiftDown(Span<(double Key, int Index)> heap, int root, int end)
+    private static void SiftDown<TKey>(Span<(TKey Key, int Index)> heap, int root, int end)
+        where TKey : struct, IComparable<TKey>
     {
         while (true)
         {
@@ -268,7 +285,12 @@ internal partial class GesVirtualMachine
         }
     }
 
-    private static bool Precedes((double Key, int Index) left, (double Key, int Index) right) => left.Key < right.Key || (left.Key == right.Key && left.Index < right.Index);
+    private static bool Precedes<TKey>((TKey Key, int Index) left, (TKey Key, int Index) right)
+        where TKey : struct, IComparable<TKey>
+    {
+        var comparison = left.Key.CompareTo(right.Key);
+        return comparison < 0 || comparison == 0 && left.Index < right.Index;
+    }
 
     private static int? CompareAscending(in GesValue a, in GesValue b)
     {
@@ -282,6 +304,12 @@ internal partial class GesVirtualMachine
             if (a.Unit != b.Unit)
             {
                 return null;
+            }
+
+            // Two integers compare exactly, as the comparison operators do.
+            if (a.Kind == Integer && b.Kind == Integer)
+            {
+                return a.IntegerValue.CompareTo(b.IntegerValue);
             }
 
             var left = a.AsNumeric;

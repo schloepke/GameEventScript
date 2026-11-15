@@ -421,6 +421,72 @@ steps:
 
 ---
 
+## Test: a handler alias keeps the known signature of its handler
+
+A local that aliases a binding of a Handler literal keeps its known signature, so a call through the alias with a
+mismatched label yields `nothing`, as the call through the original binding does, while a matching call binds.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: handler-alias-keeps-signature
+kind: scriptApi
+level: scenario
+sources:
+  - name: "handler-alias-keeps-signature.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let cb be Done(value)
+  let alias be cb
+  let second be alias
+  emit alias(other: 42)
+  emit second(other: 43)
+  emit alias(value: 7)
+  emit After(aliasMismatch: alias(other: 42) is nothing, originalMismatch: cb(other: 42) is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "7"
+      - name: "After"
+        args:
+          - name: "aliasMismatch"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "originalMismatch"
+            value:
+              type: ":Boolean"
+              value: true
+```
+
+---
+
 ## Test: invalid handler binding and non message emit are lenient no ops
 
 This runtime case exercises “invalid handler binding and non message emit are lenient no ops” and verifies the declared messages, values, and execution result.

@@ -23,4 +23,18 @@ public sealed class GesSourceNestingProcessTests
         Assert.AreEqual(0, capture.ExitCode);
         Assert.AreEqual("completed:" + mode, Encoding.UTF8.GetString(capture.StandardOutput));
     }
+
+    [TestMethod]
+    [TestCategory("Isolation")]
+    public void CompilerTypesALongCallChainOnABoundedNativeStack()
+    {
+        var directory = Path.Combine(TestRepositoryPaths.ConformanceArtifactsDirectory, "received", "call-chain", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var capture = CompilerProcessIsolation.Execute(["--call-chain"], directory, 60_000);
+        File.WriteAllBytes(Path.Combine(directory, "stdout.txt"), capture.StandardOutput);
+        File.WriteAllBytes(Path.Combine(directory, "stderr.txt"), capture.StandardError);
+        Assert.IsNull(capture.Failure, $"Compiler worker failed: {capture.Failure}; exit {capture.ExitCode}; evidence: {directory}.");
+        Assert.AreEqual(0, capture.ExitCode);
+        Assert.AreEqual("completed:call-chain", Encoding.UTF8.GetString(capture.StandardOutput));
+    }
 }

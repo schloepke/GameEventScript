@@ -179,7 +179,8 @@ with `InvalidProgram`; `DuplicateBindingId` reports only a repeated ID within it
 binding scope.
 Binding argument names are `_` or plain lowercase labels without the `_number`
 suffix, which belongs to local variables only; a `MessageNameHandler` records
-the single label `message` whatever its source binding is called.
+exactly the single label `message` whatever its source binding is called, and
+any other argument-name list fails with `InvalidProgram`.
 
 Matching resource declarations alone do not establish validity. The independent
 code-derived bounds and frame/staging rules are defined in

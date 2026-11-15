@@ -1464,3 +1464,60 @@ steps:
       exclude:
         - any: true
 ```
+
+---
+
+## Test: a call resolves a function before a local binding of the same name
+
+A call resolves in the program-wide callable namespace, so `pulse()` in the value of `let pulse` calls the function
+`pulse` instead of binding the new local as a Handler.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: call-resolves-callable-before-local
+kind: scriptApi
+level: scenario
+sources:
+  - name: "call-resolves-callable-before-local.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function pulse() be 5
+
+on Start {
+  let pulse be pulse()
+  emit Done(value: pulse, again: pulse())
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "5"
+          - name: "again"
+            value:
+              type: ":Number.int64"
+              value: "5"
+```

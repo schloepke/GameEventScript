@@ -114,6 +114,34 @@ final class GeneratedPackedCodeTests: XCTestCase {
         }
     }
 
+    /// A value outside a packed field's range is `wire.outOfRange` at the field's path, as the value path classifies it, where
+    /// the field's setter would trap; a value of another type stays `wire.typeMismatch`.
+    func testValuesOutsideAPackedFieldAreOutOfRange() throws {
+        func replacing(_ value: GesValue, _ key: String, _ replacement: GesValue) -> GesValue {
+            let map = value.asMap!
+            let keys = (0..<map.length).map { map.key(at: $0) }
+            return .record(typeName: value.customTypeName!, keys: keys, values: keys.indices.map { keys[$0] == key ? replacement : map.value(at: $0) })
+        }
+
+        let cell = PackedModel.Cell(level: 7, open: true, kind: .water, slope: 0.3, marks: .held)
+        for (value, code, path) in [
+            (replacing(cell.toValue(), "level", .integer(10)), GesWireError.outOfRange, "level"),
+            (replacing(cell.toValue(), "level", .boolean(true)), GesWireError.typeMismatch, "level"),
+            (replacing(makeGrid().toValue(), "origin", replacing(cell.toValue(), "level", .integer(-1))), GesWireError.outOfRange, "origin.level"),
+        ] {
+            let read: () throws -> Void = value.customTypeName == "Cell" ? { _ = try PackedModel.Cell(value: value) } : { _ = try PackedModel.Grid(value: value) }
+            XCTAssertThrowsError(try read()) { error in
+                XCTAssertEqual(code, (error as? GesWireError)?.code)
+                XCTAssertEqual(path, (error as? GesWireError)?.path)
+            }
+        }
+        // The value path reports the same for the wire record.
+        XCTAssertThrowsError(try PackedWire.Grid().read(value: replacing(makeGrid().toValue(), "origin", replacing(cell.toValue(), "level", .integer(-1))))) { error in
+            XCTAssertEqual(GesWireError.outOfRange, (error as? GesWireError)?.code)
+            XCTAssertEqual("origin.level", (error as? GesWireError)?.path)
+        }
+    }
+
     /// A packed root that the models declare gets its wire members as the enum `CellWire` of its wire namespace, so that
     /// another wire generation of the module may share the model type too.
     func testSharedPackedRootsWriteThroughTheirWireEnum() throws {

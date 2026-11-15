@@ -81,8 +81,12 @@ final class GesLiteralEvaluation {
     // evaluation throws GesLiteralLimitError; a Host exhausts the handler.
     private func withinRangeItems(_ count: Int64, offset: Int) throws -> Bool {
         let limit = context?.budget.limits.maxRangeItems ?? Self.dataRangeItems
-        materializedRangeItems += count
-        if limit <= 0 || materializedRangeItems <= Int64(limit) { return true }
+        if limit <= 0 { return true }
+        // The total never exceeds the limit, so comparing against the remaining budget cannot overflow.
+        if count <= Int64(limit) - materializedRangeItems {
+            materializedRangeItems += count
+            return true
+        }
         guard let context else {
             var error = GesLiteralLimitError(limitName: "MaxRangeItems", limit: limit)
             error.offset = offset

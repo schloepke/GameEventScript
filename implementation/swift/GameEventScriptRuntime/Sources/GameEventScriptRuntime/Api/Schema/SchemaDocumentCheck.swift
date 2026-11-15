@@ -26,14 +26,15 @@ struct GesSchemaDocumentCheck {
         let start: Int
     }
 
-    // A union of several alternatives at the position of its value, whose held alternative converting the checked document
-    // takes rather than the first one its shape fits.
+    // A union of several alternatives at the exact path of its value, whose held alternative converting the checked document
+    // takes rather than the first one its shape fits. The exact path names each list element by its index, as `items[2].value`,
+    // since the values of an explicit form share the form's position.
     struct Choice: Hashable {
-        let start: Int
+        let position: String
         let alternatives: [ObjectIdentifier]
 
-        init(_ start: Int, _ alternatives: [GesResolvedType]) {
-            self.start = start
+        init(_ position: String, _ alternatives: [GesResolvedType]) {
+            self.position = position
             self.alternatives = alternatives.map(ObjectIdentifier.init)
         }
     }
@@ -44,8 +45,9 @@ struct GesSchemaDocumentCheck {
         var holds: [Attempt: Bool] = [:]
         var chosen: [Choice: GesResolvedType] = [:]
         var levels: [ObjectIdentifier: Int] = [:]
-        // The path of the value being checked.
+        // The path of the value being checked, and its exact path with list indices.
         var path = ""
+        var position = ""
     }
 
     let parameters: GesSchemaParameters?
@@ -86,13 +88,21 @@ struct GesSchemaDocumentCheck {
 
     static func join(_ path: String, _ name: String) -> String { path.isEmpty ? name : path + "." + name }
 
-    // Checks a nested value under its path segment: a field name, or `[]` for an element.
-    private func under(_ segment: String, _ check: () throws -> Void) throws {
+    // Checks a nested value under its path segment: a field name, or `[]` for the element at an index.
+    private func under(_ segment: String, index: Int = 0, _ check: () throws -> Void) throws {
         let outer = attempts.path
+        let outerPosition = attempts.position
         attempts.path = segment == "[]" ? outer + segment : Self.join(outer, segment)
-        defer { attempts.path = outer }
+        attempts.position = segment == "[]" ? Self.element(outerPosition, index) : Self.join(outerPosition, segment)
+        defer {
+            attempts.path = outer
+            attempts.position = outerPosition
+        }
         try check()
     }
+
+    // The exact path of a list element, which converting the checked document follows to the alternatives the check chose.
+    static func element(_ position: String, _ index: Int) -> String { position + "[" + String(index) + "]" }
 
     private func fields(_ keys: [String], _ values: [GesDocumentNode], _ keyOffsets: [Int], _ valueOffsets: [Int], start: Int, _ schema: GesResolvedDeclaration) throws {
         let level = attempts.levels[ObjectIdentifier(schema)] ?? 0
@@ -119,7 +129,7 @@ struct GesSchemaDocumentCheck {
             let attempt = Attempt(type: ObjectIdentifier(alternative), value: value, start: start)
             if let holds = attempts.holds[attempt] {
                 if holds {
-                    attempts.chosen[Choice(start, alternatives)] = alternative
+                    attempts.chosen[Choice(attempts.position, alternatives)] = alternative
                     return
                 }
                 continue
@@ -127,7 +137,7 @@ struct GesSchemaDocumentCheck {
             do {
                 try type(alternative, value, start)
                 attempts.holds[attempt] = true
-                attempts.chosen[Choice(start, alternatives)] = alternative
+                attempts.chosen[Choice(attempts.position, alternatives)] = alternative
                 return
             } catch is Failure {
                 attempts.holds[attempt] = false
@@ -195,7 +205,7 @@ struct GesSchemaDocumentCheck {
             // A document has no geometry literal: a Poly is the List of its points.
             guard case .list(let items, let offsets) = value else { return try require(false) }
             if let max = type.max, items.count > max { throw fail(Self.outOfRange, start) }
-            for (index, item) in items.enumerated() { try under("[]") { try spatial(type, Self.resolved(item, offsets[index]), offsets[index], point: true) } }
+            for (index, item) in items.enumerated() { try under("[]", index: index) { try spatial(type, Self.resolved(item, offsets[index]), offsets[index], point: true) } }
         case .tag:
             guard case .tag(let name) = value else { return try require(false) }
             try require(type.tags?.contains(name) ?? true)
@@ -220,7 +230,7 @@ struct GesSchemaDocumentCheck {
             }
             if let max = type.max, items.count > max { throw fail(Self.outOfRange, start) }
             if let element = type.element {
-                for (index, item) in items.enumerated() { try under("[]") { try union(element, item, offsets[index]) } }
+                for (index, item) in items.enumerated() { try under("[]", index: index) { try union(element, item, offsets[index]) } }
             }
         case .reference:
             var fields = value

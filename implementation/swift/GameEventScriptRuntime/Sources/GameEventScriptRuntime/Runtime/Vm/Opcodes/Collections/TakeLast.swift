@@ -16,8 +16,7 @@ extension GesVirtualMachine {
                 guard let from = range.term(at: first) else { return setNothing(destination) }
                 return setIntegerRange(destination, from: from, to: range.to, step: range.step)
             }
-            guard let range = registers[x].floatRangeValue, let from = range.term(at: first) else { return setNothing(destination) }
-            return setFloatRange(destination, from: from, to: range.to, step: range.step)
+            return setFloatRangeSlice(destination, registers[x].floatRangeValue!, start: first - 1, count: Int64(count), reversed: false)
         }
         if let bytes = registers[x].bytesValue { return setByteSlice(destination, x, bytes, (bytes.count - min(count, bytes.count))..<bytes.count) }
         guard let values = GesCollectionOperators.materialize(registers[x], ranges: false) else { return setNothing(destination) }

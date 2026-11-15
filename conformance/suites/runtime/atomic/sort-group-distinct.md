@@ -1237,3 +1237,69 @@ steps:
               type: ":Number.int64"
               value: "18"
 ```
+
+---
+
+## Test: sorting and extremes compare large integers exactly
+
+Integers beyond 2^53 order exactly, as `<` and `>` compare them, in `:sort`, `:order by`, `:take highest`, `:take lowest`,
+`:drop highest` and `:drop lowest`, also when one key needs the stable insertion order because it is mixed with a
+fractional key.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: sort-large-integers-exactly
+kind: scriptApi
+level: atomic
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let pair be [9007199254740993, 9007199254740992]
+  emit Done(greater: 9007199254740993 > 9007199254740992, ascending: pair[:sort ascending], descending: [9007199254740992, 9007199254740993][:sort descending], three: [9007199254740993, 9007199254740992, 1][:sort ascending], ordered: pair[:order by x => x ascending], highest: [9007199254740992, 9007199254740993][:take highest 1], lowest: pair[:take lowest 1], dropHighest: pair[:drop highest 1], dropLowest: [9007199254740992, 9007199254740993][:drop lowest 1], mixed: [9007199254740993, 0.5, 9007199254740992][:sort ascending])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "greater"
+            value: {"type": ":Boolean", "value": true}
+          - name: "ascending"
+            value: {"type": ":List", "items": [{"type": ":Number.int64", "value": "9007199254740992"}, {"type": ":Number.int64", "value": "9007199254740993"}]}
+          - name: "descending"
+            value: {"type": ":List", "items": [{"type": ":Number.int64", "value": "9007199254740993"}, {"type": ":Number.int64", "value": "9007199254740992"}]}
+          - name: "three"
+            value: {"type": ":List", "items": [{"type": ":Number.int64", "value": "1"}, {"type": ":Number.int64", "value": "9007199254740992"}, {"type": ":Number.int64", "value": "9007199254740993"}]}
+          - name: "ordered"
+            value: {"type": ":List", "items": [{"type": ":Number.int64", "value": "9007199254740992"}, {"type": ":Number.int64", "value": "9007199254740993"}]}
+          - name: "highest"
+            value: {"type": ":List", "items": [{"type": ":Number.int64", "value": "9007199254740993"}]}
+          - name: "lowest"
+            value: {"type": ":List", "items": [{"type": ":Number.int64", "value": "9007199254740992"}]}
+          - name: "dropHighest"
+            value: {"type": ":List", "items": [{"type": ":Number.int64", "value": "9007199254740992"}]}
+          - name: "dropLowest"
+            value: {"type": ":List", "items": [{"type": ":Number.int64", "value": "9007199254740993"}]}
+          - name: "mixed"
+            value: {"type": ":List", "items": [{"type": ":Number.binary64", "value": "0.5"}, {"type": ":Number.int64", "value": "9007199254740992"}, {"type": ":Number.int64", "value": "9007199254740993"}]}
+```
+

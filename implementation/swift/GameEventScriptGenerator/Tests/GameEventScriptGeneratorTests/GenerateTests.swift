@@ -155,6 +155,18 @@ final class GenerateTests: XCTestCase {
         XCTAssertTrue(swift.contains("public struct S: Sendable {"))
     }
 
+    func testPackedRootsReserveTheirWireMembers() throws {
+        // Wire code that declares a packed root extends its type with the wire members, which its fields must not take.
+        let root = "packed schema :P as {\n  encoded: :Boolean\n}\n"
+        XCTAssertEqual(code { try generate(root, "P", .swift) }, "generate.nameCollision")
+        XCTAssertTrue(try generate(root, "P", .csharp).contains("public bool Encoded"))
+        XCTAssertEqual(code { try generate("packed schema :P as {\n  toBytes: :Boolean\n}\n", "P", .csharp) }, "generate.nameCollision")
+        // A packed type that only a field holds gets no wire members.
+        XCTAssertTrue(try generate(root + "schema :S as {\n  p: :P\n}\n", "S", .swift).contains("public var encoded: Bool {"))
+        // A packed schema without fields has keys without a raw type, which Swift requires of an enum without cases.
+        XCTAssertTrue(try generate("packed schema :E as {\n}\n", "E", .swift).contains("private enum CodingKeys: CodingKey {\n"))
+    }
+
     func testModelsBoundedByParametersDescribeTheirNames() throws {
         // A parameter's name may hold an e, which a canonical decimal also holds.
         let set = try GesSchemaSet(parsing: "parameter worldHeight: :Quantity(m)\nmodel schema :Spot as { y: :Quantity(m) between 0m and worldHeight step 1cm }\n")

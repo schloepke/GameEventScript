@@ -2500,3 +2500,149 @@ steps:
           - name: endpointAbsent
             value: {"type": ":Boolean", "value": true}
 ```
+
+---
+
+## Test: r32-selectors-match-the-list
+
+This case checks that every Range-keeping selector on a floating range gives exactly the items the same selector gives for the materialized List, also when no range can reproduce them, as for `from 0.1 to 0.75 step 0.25`, whose two-item prefix range would count one item, and the reversal of `from 0.1 to 0.2 step 0.04`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r32-selectors-match-the-list
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 0.1 to 0.75 step 0.25
+  let values be range as :List
+  let fine be from 0.1 to 0.2 step 0.04
+  let fineValues be fine as :List
+  let down be from 0.7 to 0.1 step -0.25
+  let downValues be down as :List
+  emit Done(takeFirst: range[:take first 2], dropLast: range[:drop last 1], reversed: fine[:reverse], sorted: fine[:sort descending])
+  emit Same(takeFirst: range[:take first 2] as :List = values[:take first 2], takeLast: range[:take last 2] as :List = values[:take last 2], dropFirst: range[:drop first 1] as :List = values[:drop first 1], dropLast: range[:drop last 1] as :List = values[:drop last 1], highest: range[:take highest 2] as :List = values[:take highest 2], lowest: range[:take lowest 2] as :List = values[:take lowest 2], dropHighest: range[:drop highest 1] as :List = values[:drop highest 1], dropLowest: range[:drop lowest 1] as :List = values[:drop lowest 1], reversed: fine[:reverse] as :List = fineValues[:reverse], sorted: fine[:sort descending] as :List = fineValues[:sort descending], downHighest: down[:take highest 2] as :List = downValues[:take highest 2], downLowest: down[:take lowest 2] as :List = downValues[:take lowest 2], downSorted: down[:sort ascending] as :List = downValues[:sort ascending])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: takeFirst
+            value: {"type": ":List", "items": [{"type": ":Number.binary64", "value": "0.1"}, {"type": ":Number.binary64", "value": "0.35"}]}
+          - name: dropLast
+            value: {"type": ":List", "items": [{"type": ":Number.binary64", "value": "0.1"}, {"type": ":Number.binary64", "value": "0.35"}]}
+          - name: reversed
+            value: {"type": ":List", "items": [{"type": ":Number.binary64", "value": "0.18"}, {"type": ":Number.binary64", "value": "0.14"}, {"type": ":Number.binary64", "value": "0.1"}]}
+          - name: sorted
+            value: {"type": ":List", "items": [{"type": ":Number.binary64", "value": "0.18"}, {"type": ":Number.binary64", "value": "0.14"}, {"type": ":Number.binary64", "value": "0.1"}]}
+      - name: Same
+        args:
+          - name: takeFirst
+            value: {"type": ":Boolean", "value": true}
+          - name: takeLast
+            value: {"type": ":Boolean", "value": true}
+          - name: dropFirst
+            value: {"type": ":Boolean", "value": true}
+          - name: dropLast
+            value: {"type": ":Boolean", "value": true}
+          - name: highest
+            value: {"type": ":Boolean", "value": true}
+          - name: lowest
+            value: {"type": ":Boolean", "value": true}
+          - name: dropHighest
+            value: {"type": ":Boolean", "value": true}
+          - name: dropLowest
+            value: {"type": ":Boolean", "value": true}
+          - name: reversed
+            value: {"type": ":Boolean", "value": true}
+          - name: sorted
+            value: {"type": ":Boolean", "value": true}
+          - name: downHighest
+            value: {"type": ":Boolean", "value": true}
+          - name: downLowest
+            value: {"type": ":Boolean", "value": true}
+          - name: downSorted
+            value: {"type": ":Boolean", "value": true}
+```
+
+---
+
+## Test: r32-exact-selections-stay-ranges
+
+This case checks that a floating range whose terms are exact binary multiples keeps Range results for slices, extremes and reversal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r32-exact-selections-stay-ranges
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 0.5 to 3.5 step 0.5
+  emit Done(takeFirst: range[:take first 2], takeLast: range[:take last 2], dropFirst: range[:drop first 5], highest: range[:take highest 2], reversed: range[:reverse])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: takeFirst
+            value: {"type": ":Range.binary64", "from": "0.5", "to": "1", "step": "0.5"}
+          - name: takeLast
+            value: {"type": ":Range.binary64", "from": "3", "to": "3.5", "step": "0.5"}
+          - name: dropFirst
+            value: {"type": ":Range.binary64", "from": "3", "to": "3.5", "step": "0.5"}
+          - name: highest
+            value: {"type": ":Range.binary64", "from": "3.5", "to": "3", "step": "-0.5"}
+          - name: reversed
+            value: {"type": ":Range.binary64", "from": "3.5", "to": "0.5", "step": "-0.5"}
+```

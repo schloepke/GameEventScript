@@ -91,8 +91,8 @@ internal struct GesLiteralParser
         }
         if (_text[_position] == ':')
         {
-            if (_text.AsSpan(_position).StartsWith(":Vector".AsSpan(), StringComparison.Ordinal)) return ReadSpatial(depth, point: false);
-            if (_text.AsSpan(_position).StartsWith(":Point".AsSpan(), StringComparison.Ordinal)) return ReadSpatial(depth, point: true);
+            if (StartsWithTypeName(":Vector")) return ReadSpatial(depth, point: false);
+            if (StartsWithTypeName(":Point")) return ReadSpatial(depth, point: true);
         }
         if (_text[_position] == ':' && !_text.AsSpan(_position).StartsWith(":Dice[".AsSpan(), StringComparison.Ordinal) &&
             !_text.AsSpan(_position).StartsWith(":Bytes[".AsSpan(), StringComparison.Ordinal))
@@ -284,6 +284,14 @@ internal struct GesLiteralParser
     }
 
     private static bool IsNameCharacter(char value) => value is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_';
+
+    // The complete type name must match: `:VectorClock(...)` and `:Point_Of(...)` are Record constructors.
+    private bool StartsWithTypeName(string name)
+    {
+        if (!_text.AsSpan(_position).StartsWith(name.AsSpan(), StringComparison.Ordinal)) return false;
+        var end = _position + name.Length;
+        return end == _text.Length || _text[end] is not ((>= 'a' and <= 'z') or (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_');
+    }
 
     private GesValue? ReadSpatial(int depth, bool point)
     {

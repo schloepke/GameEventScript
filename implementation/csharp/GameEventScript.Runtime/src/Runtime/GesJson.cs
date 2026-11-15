@@ -282,10 +282,7 @@ internal static class GesJson
                         b.Append('\t');
                         break;
                     case 'u':
-                        if (Position + 4 > text.Length || !ushort.TryParse(text.AsSpan(Position, 4), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var hex))
-                            throw Error("message.invalidJson");
-                        b.Append((char)hex);
-                        Position += 4;
+                        b.Append(ReadHexEscape());
                         break;
                     default:
                         throw Error("message.invalidJson");
@@ -293,6 +290,31 @@ internal static class GesJson
             }
 
             throw Error("message.invalidJson");
+        }
+
+        // A \u escape requires exactly four ASCII hex digits; signs, spaces and other characters are rejected.
+        private char ReadHexEscape()
+        {
+            if (Position + 4 > text.Length)
+                throw Error("message.invalidJson");
+            var value = 0;
+            for (var i = 0; i < 4; i++)
+            {
+                var c = text[Position + i];
+                int digit;
+                if (c is >= '0' and <= '9')
+                    digit = c - '0';
+                else if (c is >= 'a' and <= 'f')
+                    digit = c - 'a' + 10;
+                else if (c is >= 'A' and <= 'F')
+                    digit = c - 'A' + 10;
+                else
+                    throw Error("message.invalidJson");
+                value = (value << 4) | digit;
+            }
+
+            Position += 4;
+            return (char)value;
         }
     }
 }

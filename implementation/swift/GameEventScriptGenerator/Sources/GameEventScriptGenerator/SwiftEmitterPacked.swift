@@ -121,7 +121,7 @@ extension GesSwiftEmitter {
 
     // Reads a packed record's word field by field, so that an error names the field as decoding a record does.
     static func packedReadFields(_ code: inout Code, _ value: GesPlanValue, _ word: String) {
-        code.line("var \(word): UInt64 = 0")
+        code.line("\(value.packed!.leaves.contains(where: { $0.width > 0 }) ? "var" : "let") \(word): UInt64 = 0")
         for leaf in value.packed!.leaves {
             if leaf.width == 0 { continue }
             let path = "paths[at + \(leaf.node)]"
@@ -222,8 +222,7 @@ extension GesSwiftEmitter {
         code.line("@discardableResult")
         code.open(sig(true, "read", "from data: UnsafeRawBufferPointer, byteLimit: Int = .max", " throws(GesWireError) -> Int"))
         code.line("var reader = GesBitReader(data: data, byteLimit: byteLimit)")
-        code.line("let paths = Self.__paths")
-        code.line("let at = 0")
+        GesCSharpEmitter.packedReadPaths(&code, word, "let paths = Self.__paths", "let at = 0")
         packedReadFields(&code, selfValue, "word")
         code.line(set("\(raw)(truncatingIfNeeded: word)"))
         code.line("return try reader.finish()")
@@ -277,8 +276,7 @@ extension GesSwiftEmitter {
         code.line("@discardableResult")
         code.open(sig(true, "readDelta", "from data: UnsafeRawBufferPointer, against baseline: \(recordType), byteLimit: Int = .max", " throws(GesWireError) -> Int"))
         code.line("var reader = GesBitReader(data: data, byteLimit: byteLimit)")
-        code.line("let paths = Self.__paths")
-        code.line("let at = 0")
+        GesCSharpEmitter.packedReadPaths(&code, word, "let paths = Self.__paths", "let at = 0")
         code.open("if try reader.read(1, path: \"\") == 0 {")
         code.line("\(record) = baseline")
         code.close("} else {")

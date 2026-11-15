@@ -846,14 +846,17 @@ internal static class __GesModelValuesccffb4914c9f4f34
         var fields = RecordFields(value, "Cell", CellFields) ?? throw Failure(value, path);
         var value0 = Required(fields, "level", path);
         if (!__GesModelsccffb4914c9f4f34.Integer(value0, GesQuantityUnit.UnitNone, out var field0)) throw Failure(value0, Path(path, "level"));
+        if (!(field0 >= 0L && unchecked((ulong)field0 - 0UL) <= 9UL)) throw new GesWireException(GesWireException.OutOfRange, Path(path, "level"));
         var value1 = Required(fields, "open", path);
         if (!__GesModelsccffb4914c9f4f34.Boolean(value1, out var field1)) throw Failure(value1, Path(path, "open"));
         var value2 = Required(fields, "kind", path);
         if (!DecodeCellKindTag(value2, out var field2)) throw Failure(value2, Path(path, "kind"));
         var value3 = Required(fields, "slope", path);
         if (!__GesModelsccffb4914c9f4f34.Percentage(value3, out var field3)) throw Failure(value3, Path(path, "slope"));
+        if (!(field3 >= global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)) && field3 <= global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x3ff0000000000000UL)))) throw new GesWireException(GesWireException.OutOfRange, Path(path, "slope"));
         var value4 = Required(fields, "marks", path);
         if (!DecodeCellMarksFlags(value4, out var field4)) throw Failure(value4, Path(path, "marks"));
+        if (!((ulong)field4 <= 3UL)) throw new GesWireException(GesWireException.OutOfRange, Path(path, "marks"));
         return new global::Cell(field0, field1, field2, field3, field4);
     }
 
@@ -863,10 +866,13 @@ internal static class __GesModelValuesccffb4914c9f4f34
         var fields = RecordFields(value, "Cell", CellFields);
         if (fields is null
             || !__GesModelsccffb4914c9f4f34.Integer(__GesModelsccffb4914c9f4f34.Field(fields, "level"), GesQuantityUnit.UnitNone, out var field0)
+            || !(field0 >= 0L && unchecked((ulong)field0 - 0UL) <= 9UL)
             || !__GesModelsccffb4914c9f4f34.Boolean(__GesModelsccffb4914c9f4f34.Field(fields, "open"), out var field1)
             || !DecodeCellKindTag(__GesModelsccffb4914c9f4f34.Field(fields, "kind"), out var field2)
             || !__GesModelsccffb4914c9f4f34.Percentage(__GesModelsccffb4914c9f4f34.Field(fields, "slope"), out var field3)
-            || !DecodeCellMarksFlags(__GesModelsccffb4914c9f4f34.Field(fields, "marks"), out var field4)) return false;
+            || !(field3 >= global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)) && field3 <= global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x3ff0000000000000UL)))
+            || !DecodeCellMarksFlags(__GesModelsccffb4914c9f4f34.Field(fields, "marks"), out var field4)
+            || !((ulong)field4 <= 3UL)) return false;
         result = new global::Cell(field0, field1, field2, field3, field4);
         return true;
     }
@@ -1039,10 +1045,13 @@ internal static class __GesModelValuesccffb4914c9f4f34
         var fields = RecordFields(value, "Offset", OffsetFields) ?? throw Failure(value, path);
         var value0 = Required(fields, "delta", path);
         if (!__GesModelsccffb4914c9f4f34.Integer(value0, GesQuantityUnit.UnitNone, out var field0)) throw Failure(value0, Path(path, "delta"));
+        if (!(field0 >= -8L && unchecked((ulong)field0 - 18446744073709551608UL) <= 15UL)) throw new GesWireException(GesWireException.OutOfRange, Path(path, "delta"));
         var value1 = Required(fields, "gear", path);
         if (!__GesModelsccffb4914c9f4f34.Integer(value1, GesQuantityUnit.UnitNone, out var field1)) throw Failure(value1, Path(path, "gear"));
+        if (!(field1 >= 10L && unchecked((ulong)field1 - 10UL) <= 3UL)) throw new GesWireException(GesWireException.OutOfRange, Path(path, "gear"));
         var value2 = Required(fields, "lift", path);
         if (!__GesModelsccffb4914c9f4f34.Number(value2, GesQuantityUnit.UnitMeter, out var field2)) throw Failure(value2, Path(path, "lift"));
+        if (!(field2 >= global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xbff0000000000000UL)) && field2 <= global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x3ff0000000000000UL)))) throw new GesWireException(GesWireException.OutOfRange, Path(path, "lift"));
         var value3 = Required(fields, "kind", path);
         if (!DecodeOffsetKindTag(value3, out var field3)) throw Failure(value3, Path(path, "kind"));
         return new global::Offset(field0, field1, field2, field3);
@@ -1054,8 +1063,11 @@ internal static class __GesModelValuesccffb4914c9f4f34
         var fields = RecordFields(value, "Offset", OffsetFields);
         if (fields is null
             || !__GesModelsccffb4914c9f4f34.Integer(__GesModelsccffb4914c9f4f34.Field(fields, "delta"), GesQuantityUnit.UnitNone, out var field0)
+            || !(field0 >= -8L && unchecked((ulong)field0 - 18446744073709551608UL) <= 15UL)
             || !__GesModelsccffb4914c9f4f34.Integer(__GesModelsccffb4914c9f4f34.Field(fields, "gear"), GesQuantityUnit.UnitNone, out var field1)
+            || !(field1 >= 10L && unchecked((ulong)field1 - 10UL) <= 3UL)
             || !__GesModelsccffb4914c9f4f34.Number(__GesModelsccffb4914c9f4f34.Field(fields, "lift"), GesQuantityUnit.UnitMeter, out var field2)
+            || !(field2 >= global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xbff0000000000000UL)) && field2 <= global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x3ff0000000000000UL)))
             || !DecodeOffsetKindTag(__GesModelsccffb4914c9f4f34.Field(fields, "kind"), out var field3)) return false;
         result = new global::Offset(field0, field1, field2, field3);
         return true;

@@ -523,15 +523,18 @@ enum __GesModelValuesccffb4914c9f4f34 {
     static func readCell(_ value: GesValue, _ path: String) throws(GesWireError) -> Cell {
         guard let fields = recordFields(value, "Cell", CellFields) else { throw failure(value, path) }
         let value0 = try required(fields, "level", path)
-        guard let field0 = __GesModelsccffb4914c9f4f34.integer(value0, .none), Cell.fitsLevel(field0) else { throw failure(value0, fieldPath(path, "level")) }
+        guard let field0 = __GesModelsccffb4914c9f4f34.integer(value0, .none) else { throw failure(value0, fieldPath(path, "level")) }
+        guard Cell.fitsLevel(field0) else { throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, "level")) }
         let value1 = try required(fields, "open", path)
         guard let field1 = __GesModelsccffb4914c9f4f34.boolean(value1) else { throw failure(value1, fieldPath(path, "open")) }
         let value2 = try required(fields, "kind", path)
         guard let field2 = __GesModelsccffb4914c9f4f34.tag(value2).flatMap(Cell.KindTag.init(rawValue:)) else { throw failure(value2, fieldPath(path, "kind")) }
         let value3 = try required(fields, "slope", path)
-        guard let field3 = __GesModelsccffb4914c9f4f34.percentage(value3), Cell.fitsSlope(field3) else { throw failure(value3, fieldPath(path, "slope")) }
+        guard let field3 = __GesModelsccffb4914c9f4f34.percentage(value3) else { throw failure(value3, fieldPath(path, "slope")) }
+        guard Cell.fitsSlope(field3) else { throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, "slope")) }
         let value4 = try required(fields, "marks", path)
-        guard let field4 = __GesModelValuesccffb4914c9f4f34.decodeCellMarksFlags(value4), Cell.fitsMarks(field4) else { throw failure(value4, fieldPath(path, "marks")) }
+        guard let field4 = __GesModelValuesccffb4914c9f4f34.decodeCellMarksFlags(value4) else { throw failure(value4, fieldPath(path, "marks")) }
+        guard Cell.fitsMarks(field4) else { throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, "marks")) }
         return Cell(level: field0, open: field1, kind: field2, slope: field3, marks: field4)
     }
 
@@ -666,11 +669,14 @@ enum __GesModelValuesccffb4914c9f4f34 {
     static func readOffset(_ value: GesValue, _ path: String) throws(GesWireError) -> Offset {
         guard let fields = recordFields(value, "Offset", OffsetFields) else { throw failure(value, path) }
         let value0 = try required(fields, "delta", path)
-        guard let field0 = __GesModelsccffb4914c9f4f34.integer(value0, .none), Offset.fitsDelta(field0) else { throw failure(value0, fieldPath(path, "delta")) }
+        guard let field0 = __GesModelsccffb4914c9f4f34.integer(value0, .none) else { throw failure(value0, fieldPath(path, "delta")) }
+        guard Offset.fitsDelta(field0) else { throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, "delta")) }
         let value1 = try required(fields, "gear", path)
-        guard let field1 = __GesModelsccffb4914c9f4f34.integer(value1, .none), Offset.fitsGear(field1) else { throw failure(value1, fieldPath(path, "gear")) }
+        guard let field1 = __GesModelsccffb4914c9f4f34.integer(value1, .none) else { throw failure(value1, fieldPath(path, "gear")) }
+        guard Offset.fitsGear(field1) else { throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, "gear")) }
         let value2 = try required(fields, "lift", path)
-        guard let field2 = __GesModelsccffb4914c9f4f34.number(value2, .meter), Offset.fitsLift(field2) else { throw failure(value2, fieldPath(path, "lift")) }
+        guard let field2 = __GesModelsccffb4914c9f4f34.number(value2, .meter) else { throw failure(value2, fieldPath(path, "lift")) }
+        guard Offset.fitsLift(field2) else { throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, "lift")) }
         let value3 = try required(fields, "kind", path)
         guard let field3 = __GesModelsccffb4914c9f4f34.tag(value3).flatMap(Offset.KindTag.init(rawValue:)) else { throw failure(value3, fieldPath(path, "kind")) }
         return Offset(delta: field0, gear: field1, lift: field2, kind: field3)

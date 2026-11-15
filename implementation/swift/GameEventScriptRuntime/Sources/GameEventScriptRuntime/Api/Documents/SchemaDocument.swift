@@ -61,7 +61,7 @@ public struct GesSchemaDocument {
         }
         if let failure { throw failure }
         schema = name
-        self.value = GesSchemaValues.documentShapes(declaration, value, node: syntax.root, chosen: chosen)
+        self.value = GesSchemaValues.documentShapes(declaration, value, chosen: chosen)
         self.syntax = syntax
     }
 

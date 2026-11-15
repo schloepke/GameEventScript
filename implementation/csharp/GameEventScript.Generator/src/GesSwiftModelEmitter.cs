@@ -267,14 +267,22 @@ internal static class GesSwiftModelEmitter
         code.Close();
     }
 
-    // A packed type that wire code declares itself, without conversions, as the model code of the same schema declares it.
-    internal static void PackedType(GesSchemaPlanner.Code code, GesModelLayout layout, string name, string access)
-        => PackedRecord(code, layout, layout.Types.Find(candidate => candidate.Name == name)!, access, false, null, null);
+    // A packed type that wire code declares itself, without conversions, as the model code of the same schema declares it. A
+    // wire root's members extend it, so its fields must not take their names, nor `toValue` with `--values`.
+    internal static void PackedType(GesSchemaPlanner.Code code, GesModelLayout layout, string name, string access, bool root, bool values)
+    {
+        string[] members = !root ? [] : values ? [.. PackedWireMembers, "toValue"] : PackedWireMembers;
+        PackedRecord(code, layout, layout.Types.Find(candidate => candidate.Name == name)!, access, false, null, null, members);
+    }
+
+    // The members that the wire code of a packed root adds to its type; `schemaHash` and `init` are the model's own.
+    private static readonly string[] PackedWireMembers =
+        ["bindingHash", "maxByteCount", "write", "encodedByteCount", "encoded", "read", "wireEquals", "copy", "quantize", "writeDelta", "deltaEncodedByteCount", "deltaEncoded", "readDelta"];
 
     // A packed schema's model: a struct whose one stored property is its word, with a property per field at its bits, so that
     // `MemoryLayout<T>.stride` is the word's size and a list of them is a dense array; wire code of the schema holds the same
     // word. Hashable and equality compare the word; Codable writes the fields by name.
-    private static void PackedRecord(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, bool bindings, string? values, string? documents)
+    private static void PackedRecord(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, bool bindings, string? values, string? documents, string[]? wireMembers = null)
     {
         var fields = GesModelPlanner.Fields(type);
         var wire = type.Packed!.Type(type.Name);
@@ -288,6 +296,7 @@ internal static class GesSwiftModelEmitter
         }
 
         foreach (var reserved in new[] { "schemaHash", "bits", "rawValue", "isValid", "CodingKeys", "hashValue", "hash" }) names.Add((reserved, "the generated member " + reserved));
+        foreach (var reserved in wireMembers ?? []) names.Add((reserved, "the wire member " + reserved));
         foreach (var constant in type.Constants) names.Add((constant.Name, "the let " + constant.Name));
         if (bindings) names.Add(("gesValue", "the generated member gesValue"));
         if (values is not null) names.Add(("toValue", "the generated member toValue"));
@@ -374,13 +383,14 @@ internal static class GesSwiftModelEmitter
         }
 
         code.Blank();
-        code.Open("private enum CodingKeys: String, CodingKey {");
+        // An enum without cases cannot have a raw type.
+        code.Open(fields.Count == 0 ? "private enum CodingKeys: CodingKey {" : "private enum CodingKeys: String, CodingKey {");
         foreach (var field in fields) code.Line($"case {Member(field.Base)} = {GesSchemaPlanner.Literal(field.Field.Name, true)}");
         code.Close();
         code.Blank();
         code.Line("/// Decodes the fields by name and checks each as its setter does.");
         code.Open($"{access}init(from decoder: any Decoder) throws {{");
-        code.Line("let container = try decoder.container(keyedBy: CodingKeys.self)");
+        code.Line(fields.Count == 0 ? "_ = try decoder.container(keyedBy: CodingKeys.self)" : "let container = try decoder.container(keyedBy: CodingKeys.self)");
         code.Line("rawValue = 0");
         foreach (var (field, check) in fields.ConvertAll(field => (field, GesSwiftEmitter.PackedFits(packed[fields.IndexOf(field)]))))
         {
@@ -888,7 +898,13 @@ internal static class GesSwiftModelEmitter
                     var missing = fields[index].Value.Nullable ? $"fields.get({fieldLiteral}) ?? .nothing" : $"try required(fields, {fieldLiteral}, path)";
                     code.Line($"let {held} = {Held(layout, fields, index, type.Name, support, type.Name + "Defaults", sibling => "value" + sibling.ToString(CultureInfo.InvariantCulture), missing)}");
                     if (Descends(fields[index].Value)) code.Line($"let field{index} = {Read(fields[index].Value, type.Name, held, $"fieldPath(path, {fieldLiteral})", name, support)}");
-                    else code.Line($"guard let field{index} = {Decode(fields[index].Value, type.Name, held, name, support, plain: true)}{Fits(checks, index, "field" + index.ToString(CultureInfo.InvariantCulture))} else {{ throw failure({held}, fieldPath(path, {fieldLiteral})) }}");
+                    else
+                    {
+                        code.Line($"guard let field{index} = {Decode(fields[index].Value, type.Name, held, name, support, plain: true)} else {{ throw failure({held}, fieldPath(path, {fieldLiteral})) }}");
+                        // A value of the field's type outside its range is the value path's error, not a value of another type.
+                        if (checks[index] is { } check)
+                            code.Line($"guard {check}(field{index}) else {{ throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, {fieldLiteral})) }}");
+                    }
                 }
 
                 Construct(code, type.Name, arguments, fields);

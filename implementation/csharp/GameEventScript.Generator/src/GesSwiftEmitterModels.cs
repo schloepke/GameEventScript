@@ -55,6 +55,7 @@ internal static partial class GesSwiftEmitter
         code.Line(check);
         conversion.Reset();
         var arguments = new List<string>();
+        var absent = new List<string>();
         foreach (var field in fields)
         {
             var wire = type.Fields.Find(candidate => candidate.Layout.Name == field.Field.Name)
@@ -63,9 +64,18 @@ internal static partial class GesSwiftEmitter
             code.Line($"let {local}: {ModelType(field.Value, model.Name, conversion)}");
             ToModelField(code, wire, field, model.Name, "self", local, conversion);
             arguments.Add($"{GesSchemaPlanner.Camel(field.Base)}: {local}");
+            if (wire.Optional && GesModelPlanner.Sibling(fields, field) is not null) absent.Add($"model.{Member(field.Base)} = {local}");
         }
 
-        code.Line($"return {name}({string.Join(", ", arguments)})");
+        if (absent.Count == 0) code.Line($"return {name}({string.Join(", ", arguments)})");
+        else
+        {
+            // The initializer gives an absent field the sibling it defaults to; the conversion keeps it absent, as the record holds it.
+            code.Line($"var model = {name}({string.Join(", ", arguments)})");
+            foreach (var line in absent) code.Line(line);
+            code.Line("return model");
+        }
+
         code.Close();
         code.Blank();
         code.Line("/// Fills this record from a model, field by field without GES values; the values are checked when the record is written.");
@@ -359,7 +369,8 @@ internal static partial class GesSwiftEmitter
             return;
         }
 
-        var optional = model.Nullable ? "?" : "";
+        // Only a :Nothing alternative leaves the model value nil here; an optional field's presence was already unwrapped.
+        var optional = nothing is not null ? "?" : "";
         code.Line($"switch {source} {{");
         foreach (var alternative in value.Alternatives)
         {
@@ -373,10 +384,10 @@ internal static partial class GesSwiftEmitter
             code.Dedent();
         }
 
-        if (model.Nullable)
+        if (nothing is not null)
         {
             code.Line("case nil:");
-            code.Line($"    {member} = .{Member(nothing!.Label)}");
+            code.Line($"    {member} = .{Member(nothing.Label)}");
         }
 
         code.Line("}");

@@ -152,7 +152,7 @@ internal static class GesAstValidator
                 // A repeated binding, which the Syntax validator reports, keeps the type of the first.
                 if (scope.ContainsInCurrentScope(let.Identifier)) return;
                 // A binding has the statically established type of its value, as a constant has that of its literal.
-                scope.Declare(let.Identifier, InferImmutableBindingType(let.Expression, scope.Constants) ?? StaticTypeName(ClassifyExpression(let.Expression, callables, typeDefinitions, scope.DeclaredTypes, new HashSet<string>(StringComparer.Ordinal))));
+                scope.Declare(let.Identifier, InferImmutableBindingType(let.Expression, scope.Constants) ?? StaticTypeName(ClassifyExpression(let.Expression, callables, typeDefinitions, scope.DeclaredTypes, new CallableResults())));
                 return;
 
             case GesIfStatementNode ifStatement:
@@ -248,6 +248,33 @@ internal static class GesAstValidator
         Unknown
     }
 
+    // The result types of callables classified during one top-level classification. A chain of calls is classified with
+    // an explicit stack instead of native recursion (specs/Language.md#functions-and-predicates): while a callable body is classified, a
+    // call of a callable without a result records it as missing, and the body is classified again once the missing
+    // callable has its result. A call of a callable still on the stack is a cycle and stays unknown.
+    private sealed class CallableResults
+    {
+        public Dictionary<string, StaticExpressionInfo> Results { get; } = new(StringComparer.Ordinal);
+
+        public List<(GesCallableDefinition Callable, string Key)> Pending { get; } = [];
+
+        public HashSet<string> PendingKeys { get; } = new(StringComparer.Ordinal);
+
+        public GesCallableDefinition? Missing { get; set; }
+
+        public void Push(GesCallableDefinition callable, string key)
+        {
+            Pending.Add((callable, key));
+            PendingKeys.Add(key);
+        }
+
+        public void Pop(string key)
+        {
+            Pending.RemoveAt(Pending.Count - 1);
+            PendingKeys.Remove(key);
+        }
+    }
+
     private readonly struct StaticExpressionInfo
     {
         private StaticExpressionInfo(StaticExpressionKind kind, string? typeName)
@@ -280,7 +307,7 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, GesExpressionNode> constants)
     {
         var parameterTypes = BuildDeclaredTypeMap(predicateDefinition.ParameterList, constants);
-        var result = ClassifyExpression(predicateDefinition.Expression, callables, typeDefinitions, parameterTypes, new HashSet<string>(StringComparer.Ordinal));
+        var result = ClassifyExpression(predicateDefinition.Expression, callables, typeDefinitions, parameterTypes, new CallableResults());
 
         if (result.IsPredicateCompatible) return;
 
@@ -334,7 +361,7 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
-        ISet<string> visitedCallables)
+        CallableResults callableResults)
     {
         switch (expression)
         {
@@ -371,19 +398,21 @@ internal static class GesAstValidator
                     ? FromDeclaredType(declaredType)
                     : StaticExpressionInfo.Unknown;
 
-            case GesMemberAccessExpressionNode memberAccess: return ClassifyMemberAccess(memberAccess, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesMemberAccessExpressionNode memberAccess: return ClassifyMemberAccess(memberAccess, callables, typeDefinitions, declaredTypes, callableResults);
 
             case GesCollectionAccessExpressionNode collectionAccess: return ClassifyCollectionAccess(collectionAccess);
 
-            case GesCallExpressionNode call: return ClassifyCall(call, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesCallExpressionNode call: return ClassifyCall(call, callables, typeDefinitions, declaredTypes, callableResults);
 
             case GesTypeCastExpressionNode typeCast: return FromDeclaredType(typeCast.TypeName);
+
+            case GesTypeConstructorExpressionNode { TypeName: "number", Arguments.Count: 2 } numberWithUnit: return ClassifyNumberWithUnit(numberWithUnit);
 
             case GesTypeConstructorExpressionNode typeConstructor: return FromDeclaredType(typeConstructor.TypeName);
 
             case GesBetweenExpressionNode:
             case GesSendExpressionNode: return StaticExpressionInfo.Boolean;
-            case GesUnaryExpressionNode unary: return ClassifyUnary(unary, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesUnaryExpressionNode unary: return ClassifyUnary(unary, callables, typeDefinitions, declaredTypes, callableResults);
 
             case GesIntrinsicCallExpressionNode intrinsic:
                 if (intrinsic.Function is GesIntrinsicFunction.Hypot or GesIntrinsicFunction.Distance)
@@ -393,14 +422,38 @@ internal static class GesAstValidator
                         ? StaticExpressionInfo.Other("vector")
                         : StaticExpressionInfo.Other("number");
 
-            case GesBinaryExpressionNode binary: return ClassifyBinary(binary, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesBinaryExpressionNode binary: return ClassifyBinary(binary, callables, typeDefinitions, declaredTypes, callableResults);
 
-            case GesGuardedChoiceExpressionNode guardedChoice: return ClassifyGuardedChoice(guardedChoice, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesGuardedChoiceExpressionNode guardedChoice: return ClassifyGuardedChoice(guardedChoice, callables, typeDefinitions, declaredTypes, callableResults);
 
-            case GesSeededRandomExpressionNode seededRandom: return ClassifyExpression(seededRandom.BodyExpression, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesSeededRandomExpressionNode seededRandom: return ClassifyExpression(seededRandom.BodyExpression, callables, typeDefinitions, declaredTypes, callableResults);
 
             default: return StaticExpressionInfo.Other();
         }
+    }
+
+    // `:Number(value, unit)` has the quantity type of a literal unit text; an unknown unit name or a literal value with
+    // a conflicting unit yields nothing, and a computed unit leaves the type unknown (specs/Language.md#explicit-data-constructors).
+    private static StaticExpressionInfo ClassifyNumberWithUnit(GesTypeConstructorExpressionNode constructor)
+    {
+        var labels = new[] { constructor.Arguments[0].Name, constructor.Arguments[1].Name };
+        if (GesDataConstruction.Positions("number", labels) is not { } positions)
+            return StaticExpressionInfo.Unknown;
+        var valueIndex = positions[0] == 0 ? 0 : 1;
+        if (constructor.Arguments[1 - valueIndex].Expression is not GesTextLiteralExpressionNode unitText)
+            return StaticExpressionInfo.Unknown;
+        var unit = unitText.Value.Length == 0 ? GesQuantityUnit.UnitNone : GesQuantityUnits.ParseQuantityName(unitText.Value);
+        if (unit is null)
+            return StaticExpressionInfo.Nothing;
+        var valueUnitName = constructor.Arguments[valueIndex].Expression switch
+        {
+            GesUnitIntegerLiteralExpressionNode integer => integer.UnitName,
+            GesUnitFloatLiteralExpressionNode floating => floating.UnitName,
+            _ => null
+        };
+        if (valueUnitName is not null && (GesQuantityUnits.ParseQuantityName(valueUnitName) ?? GesQuantityUnits.ParseTypeName(valueUnitName)) != unit)
+            return StaticExpressionInfo.Nothing;
+        return unit == GesQuantityUnit.UnitNone ? StaticExpressionInfo.Other("number") : StaticExpressionInfo.Other("quantity:" + unit.Value.ToSuffix());
     }
 
     private static StaticExpressionInfo FromDeclaredType(string? typeName)
@@ -428,7 +481,7 @@ internal static class GesAstValidator
     private static string? ConstantTypeName(GesExpressionNode value, IReadOnlyDictionary<string, GesExpressionNode> constants)
         => value is GesNothingLiteralExpressionNode
             ? "nothing"
-            : InferImmutableBindingType(value, constants) ?? StaticTypeName(ClassifyExpression(value, NoCallables, NoTypes, NoDeclaredTypes, new HashSet<string>(StringComparer.Ordinal)));
+            : InferImmutableBindingType(value, constants) ?? StaticTypeName(ClassifyExpression(value, NoCallables, NoTypes, NoDeclaredTypes, new CallableResults()));
 
     private static string? InferImmutableBindingType(GesExpressionNode expression, IReadOnlyDictionary<string, GesExpressionNode> constants)
     {
@@ -438,7 +491,8 @@ internal static class GesAstValidator
 
         if (expression is GesTypeCastExpressionNode typeCast) return typeCast.TypeName;
 
-        if (expression is GesTypeConstructorExpressionNode typeConstructor) return typeConstructor.TypeName;
+        // `:Number(value, unit)` takes its type from the unit argument (ClassifyNumberWithUnit).
+        if (expression is GesTypeConstructorExpressionNode typeConstructor) return typeConstructor is { TypeName: "number", Arguments.Count: 2 } ? null : typeConstructor.TypeName;
 
         if (expression is GesConstantReferenceExpressionNode constant && constants.TryGetValue(constant.Name, out var value)) return InferImmutableBindingType(value, constants);
 
@@ -453,7 +507,7 @@ internal static class GesAstValidator
         GesValidationErrors errors,
         IReadOnlyDictionary<string, string> declaredTypes)
     {
-        var result = ClassifyExpression(seedExpression, callables, typeDefinitions, declaredTypes, new HashSet<string>(StringComparer.Ordinal));
+        var result = ClassifyExpression(seedExpression, callables, typeDefinitions, declaredTypes, new CallableResults());
         if (result.TypeName is "integer" ||
             seedExpression is GesConstantReferenceExpressionNode constant && declaredTypes.TryGetValue("$" + constant.Name, out var constantType) && constantType == "integer" ||
             HasExplicitNumberSeedConversion(seedExpression, declaredTypes) ||
@@ -488,9 +542,9 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
-        ISet<string> visitedCallables)
+        CallableResults callableResults)
     {
-        var target = ClassifyExpression(memberAccess.Target, callables, typeDefinitions, declaredTypes, visitedCallables);
+        var target = ClassifyExpression(memberAccess.Target, callables, typeDefinitions, declaredTypes, callableResults);
         if (string.IsNullOrWhiteSpace(target.TypeName) ||
             !typeDefinitions.TryGetValue(target.TypeName!, out var typeDefinition))
         {
@@ -509,7 +563,7 @@ internal static class GesAstValidator
             _ => StaticExpressionInfo.Unknown
         };
 
-    private static StaticExpressionInfo ClassifyCall(GesCallExpressionNode call, IReadOnlyDictionary<string, GesCallableDefinition> callables, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, string> declaredTypes, ISet<string> visitedCallables)
+    private static StaticExpressionInfo ClassifyCall(GesCallExpressionNode call, IReadOnlyDictionary<string, GesCallableDefinition> callables, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, string> declaredTypes, CallableResults callableResults)
     {
         var callable = GesCallableSignatures.Resolve(callables, call);
         if (callable is null) return StaticExpressionInfo.Unknown;
@@ -517,16 +571,33 @@ internal static class GesAstValidator
         if (callable.Kind == GesCallableKind.PredicateCall) return StaticExpressionInfo.Boolean;
 
         var callableKey = $"{callable.Kind}:{callable.SignatureId}";
-        if (!visitedCallables.Add(callableKey)) return StaticExpressionInfo.Unknown;
+        if (callableResults.Results.TryGetValue(callableKey, out var known)) return known;
+        if (callableResults.PendingKeys.Contains(callableKey)) return StaticExpressionInfo.Unknown;
+        if (callableResults.Pending.Count > 0)
+        {
+            callableResults.Missing ??= callable;
+            return StaticExpressionInfo.Unknown;
+        }
 
-        try
+        callableResults.Push(callable, callableKey);
+        while (callableResults.Pending.Count > 0)
         {
-            return ClassifyExpression(callable.Expression, callables, typeDefinitions, CalleeTypes(callable.ParameterList, declaredTypes), visitedCallables);
+            var (current, currentKey) = callableResults.Pending[^1];
+            callableResults.Missing = null;
+            // A callee sees only its own parameters and the constants, so its result holds for every caller.
+            var result = ClassifyExpression(current.Expression, callables, typeDefinitions, CalleeTypes(current.ParameterList, declaredTypes), callableResults);
+            if (callableResults.Missing is { } missing)
+            {
+                callableResults.Missing = null;
+                callableResults.Push(missing, $"{missing.Kind}:{missing.SignatureId}");
+                continue;
+            }
+
+            callableResults.Results[currentKey] = result;
+            callableResults.Pop(currentKey);
         }
-        finally
-        {
-            visitedCallables.Remove(callableKey);
-        }
+
+        return callableResults.Results[callableKey];
     }
 
     private static StaticExpressionInfo ClassifyUnary(
@@ -534,22 +605,22 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
-        ISet<string> visitedCallables)
+        CallableResults callableResults)
     {
         return unary.Operator switch
         {
             GesUnaryOperator.Parse or GesUnaryOperator.ParseStrict => StaticExpressionInfo.Unknown,
             GesUnaryOperator.HasValue or GesUnaryOperator.Empty or GesUnaryOperator.Chance => StaticExpressionInfo.Boolean,
-            GesUnaryOperator.Abs => ClassifyUnitPreserving(unary.Operand, vectorMagnitude: true, callables, typeDefinitions, declaredTypes, visitedCallables),
+            GesUnaryOperator.Abs => ClassifyUnitPreserving(unary.Operand, vectorMagnitude: true, callables, typeDefinitions, declaredTypes, callableResults),
             GesUnaryOperator.Floor or GesUnaryOperator.Ceil or GesUnaryOperator.Truncate or
                 GesUnaryOperator.RoundHalfEven or GesUnaryOperator.RoundHalfUp or GesUnaryOperator.RoundHalfDown
-                => ClassifyUnitPreserving(unary.Operand, vectorMagnitude: false, callables, typeDefinitions, declaredTypes, visitedCallables),
+                => ClassifyUnitPreserving(unary.Operand, vectorMagnitude: false, callables, typeDefinitions, declaredTypes, callableResults),
             GesUnaryOperator.NaturalLog or GesUnaryOperator.Exp or
                 GesUnaryOperator.DegreeToRadians or GesUnaryOperator.DegreeFromRadians or GesUnaryOperator.WrapDegree or
                 GesUnaryOperator.Sin or GesUnaryOperator.Cos or GesUnaryOperator.Tan or
                 GesUnaryOperator.Asin or GesUnaryOperator.Acos or GesUnaryOperator.Atan => StaticExpressionInfo.Other("number"),
-            GesUnaryOperator.Negate => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables),
-            GesUnaryOperator.Not => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
+            GesUnaryOperator.Negate => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, callableResults),
+            GesUnaryOperator.Not => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, callableResults).IsPredicateCompatible
                 ? StaticExpressionInfo.Boolean
                 : StaticExpressionInfo.Unknown,
             _ => StaticExpressionInfo.Other()
@@ -565,9 +636,9 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
-        ISet<string> visitedCallables)
+        CallableResults callableResults)
     {
-        var type = ClassifyExpression(operand, callables, typeDefinitions, declaredTypes, visitedCallables).TypeName;
+        var type = ClassifyExpression(operand, callables, typeDefinitions, declaredTypes, callableResults).TypeName;
         if (type is "s" or "m" || GesQuantityUnits.ParseTypeName(type) is not null || type?.StartsWith("quantity:", StringComparison.Ordinal) == true)
             return StaticExpressionInfo.Other(type);
         return type is null || vectorMagnitude && type == "vector" ? StaticExpressionInfo.Other() : StaticExpressionInfo.Other("number");
@@ -578,7 +649,7 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
-        ISet<string> visitedCallables)
+        CallableResults callableResults)
     {
         return binary.Operator switch
         {
@@ -595,13 +666,13 @@ internal static class GesAstValidator
             GesBinaryOperator.And or
                 GesBinaryOperator.Or or
                 GesBinaryOperator.Xor or
-                GesBinaryOperator.Implies => ClassifyExpression(binary.Left, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible &&
-                                             ClassifyExpression(binary.Right, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
+                GesBinaryOperator.Implies => ClassifyExpression(binary.Left, callables, typeDefinitions, declaredTypes, callableResults).IsPredicateCompatible &&
+                                             ClassifyExpression(binary.Right, callables, typeDefinitions, declaredTypes, callableResults).IsPredicateCompatible
                 ? StaticExpressionInfo.Boolean
                 : StaticExpressionInfo.Unknown,
             GesBinaryOperator.Default => MergePredicateCompatibleResults(
-                ClassifyExpression(binary.Left, callables, typeDefinitions, declaredTypes, visitedCallables),
-                ClassifyExpression(binary.Right, callables, typeDefinitions, declaredTypes, visitedCallables)),
+                ClassifyExpression(binary.Left, callables, typeDefinitions, declaredTypes, callableResults),
+                ClassifyExpression(binary.Right, callables, typeDefinitions, declaredTypes, callableResults)),
             _ => StaticExpressionInfo.Other()
         };
     }
@@ -611,17 +682,17 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
-        ISet<string> visitedCallables)
+        CallableResults callableResults)
     {
         var result = StaticExpressionInfo.Nothing;
         for (var index = 0; index < guardedChoice.Branches.Count; index++)
         {
             var branch = guardedChoice.Branches[index];
-            result = MergePredicateCompatibleResults(result, ClassifyExpression(branch.ValueExpression, callables, typeDefinitions, declaredTypes, visitedCallables));
+            result = MergePredicateCompatibleResults(result, ClassifyExpression(branch.ValueExpression, callables, typeDefinitions, declaredTypes, callableResults));
             if (!result.IsPredicateCompatible) return result;
         }
 
-        return MergePredicateCompatibleResults(result, ClassifyExpression(guardedChoice.OtherwiseExpression, callables, typeDefinitions, declaredTypes, visitedCallables));
+        return MergePredicateCompatibleResults(result, ClassifyExpression(guardedChoice.OtherwiseExpression, callables, typeDefinitions, declaredTypes, callableResults));
     }
 
     private static StaticExpressionInfo MergePredicateCompatibleResults(StaticExpressionInfo left, StaticExpressionInfo right)
@@ -709,7 +780,7 @@ internal static class GesAstValidator
                     if (send.Delay is not null)
                     {
                         ValidateExpressionReferences(parsedScriptContext, send.Delay, callables, typeDefinitions, errors, declaredTypes);
-                        var delayType = ClassifyExpression(send.Delay, callables, typeDefinitions, declaredTypes, new HashSet<string>(StringComparer.Ordinal));
+                        var delayType = ClassifyExpression(send.Delay, callables, typeDefinitions, declaredTypes, new CallableResults());
                         if (delayType.TypeName is not null && delayType.Kind is not (StaticExpressionKind.Unknown or StaticExpressionKind.Nothing) && delayType.TypeName is not ("s" or "second" or "quantity:s" or "quantity:second"))
                             errors.Add(parsedScriptContext, "Send delay requires a time quantity", "Quantity(s)", GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, send.Delay);
                     }

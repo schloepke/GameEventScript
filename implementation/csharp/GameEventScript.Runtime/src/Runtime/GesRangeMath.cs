@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using System;
+
 namespace GameEventScript.Runtime;
 
 internal static class GesRangeMath
@@ -111,6 +113,57 @@ internal static class GesRangeMath
         var offset = step * zeroBasedIndex;
         var value = from + offset;
         return step > 0d ? System.Math.Min(value, to) : System.Math.Max(value, to);
+    }
+
+    // Whether the floating Range (sliceFrom, sliceTo, sliceStep) has exactly the terms [start, start + count) of the
+    // non-empty Range (from, to, step) with `length` terms, last first when reversed. A prefix keeps `from` and `step`,
+    // so its terms are computed identically and only its length needs checking; other slices also require that every
+    // term of the source is exact (IsExactGrid), so that terms counted from another origin cannot round differently.
+    internal static bool IsExactFloatSlice(double from, double to, double step, long length, long start, long count, bool reversed, double sliceFrom, double sliceTo, double sliceStep)
+    {
+        if (GetLength(sliceFrom, sliceTo, sliceStep) != count) return false;
+        return start == 0 && !reversed || IsExactGrid(from, to, step, length);
+    }
+
+    // Every term from + step * i is exact and unclamped: `from` and `step` are integer multiples of a common power of
+    // two whose largest multiple among the terms stays below 2^53, and the last term does not pass `to`.
+    private static bool IsExactGrid(double from, double to, double step, long length)
+    {
+        const long significandLimit = 1L << 53;
+        var (stepOdd, stepExponent) = OddSignificand(step);
+        var (fromOdd, fromExponent) = from == 0d ? (0L, stepExponent) : OddSignificand(from);
+        var exponent = System.Math.Min(stepExponent, fromExponent);
+        if (!Scale(stepOdd, stepExponent - exponent, out var stepUnits) || !Scale(fromOdd, fromExponent - exponent, out var fromUnits))
+            return false;
+        if (length - 1 > (significandLimit - 1 - fromUnits) / stepUnits) return false;
+        var last = from + step * (length - 1);
+        return step > 0d ? last <= to : last >= to;
+    }
+
+    // The odd integer significand of a finite non-zero binary64 magnitude and the exponent of its lowest set bit.
+    private static (long Odd, int Exponent) OddSignificand(double value)
+    {
+        var bits = BitConverter.DoubleToInt64Bits(value) & long.MaxValue;
+        var biased = (int)(bits >> 52);
+        var significand = bits & ((1L << 52) - 1);
+        if (biased != 0) significand |= 1L << 52;
+        var exponent = (biased == 0 ? 1 : biased) - 1075;
+        while ((significand & 1L) == 0L)
+        {
+            significand >>= 1;
+            exponent++;
+        }
+
+        return (significand, exponent);
+    }
+
+    // odd * 2^shift as an integer below 2^53.
+    private static bool Scale(long odd, int shift, out long value)
+    {
+        value = 0;
+        if (shift >= 53 || odd >> (53 - shift) != 0L) return false;
+        value = odd << shift;
+        return true;
     }
 
     private static long CountInclusive(ulong zeroBasedDistance, ulong stepMagnitude)

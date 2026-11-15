@@ -138,12 +138,12 @@ public final class GesSchemaSet: @unchecked Sendable {
         try GesSchemaDocumentCheck.check(syntax, schema, parameters)
     }
 
-    // The one schema of a source that no other schema of it refers to.
+    // The one schema of a source that no other schema of it refers to; a recursive schema's reference to itself does not count.
     private func rootSchema(_ source: String) throws -> GesResolvedDeclaration {
         var referenced: Set<ObjectIdentifier> = []
         for declaration in ordered where declaration.scope.sourceName == source && declaration.kind == .schema {
             for field in declaration.fields {
-                for type in field.alternatives { Self.collectReferences(type, &referenced) }
+                for type in field.alternatives { Self.collectReferences(type, declaration, &referenced) }
             }
         }
         var root: GesResolvedDeclaration?
@@ -156,9 +156,9 @@ public final class GesSchemaSet: @unchecked Sendable {
         return root
     }
 
-    private static func collectReferences(_ type: GesResolvedType, _ referenced: inout Set<ObjectIdentifier>) {
-        if let reference = type.reference { referenced.insert(ObjectIdentifier(reference)) }
-        for alternative in type.element ?? [] { collectReferences(alternative, &referenced) }
+    private static func collectReferences(_ type: GesResolvedType, _ owner: GesResolvedDeclaration, _ referenced: inout Set<ObjectIdentifier>) {
+        if let reference = type.reference, reference !== owner { referenced.insert(ObjectIdentifier(reference)) }
+        for alternative in type.element ?? [] { collectReferences(alternative, owner, &referenced) }
     }
 
     /// The name of the source that declares a schema, message, message set or tag set, which places its generated code in

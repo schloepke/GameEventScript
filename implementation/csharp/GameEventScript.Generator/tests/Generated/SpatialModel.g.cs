@@ -1144,53 +1144,6 @@ namespace GameEventScript.Tests.Generator.Spatial.Model
         /// <summary>Three-valued or: true wins over nothing.</summary>
         internal static bool? Or(bool? a, bool? b) => a == true || b == true ? true : a == false && b == false ? false : null;
 
-        /// <summary>A power, nothing where either operand is: the platform's pow, and the correctly rounded square root for the exponent 0.5.</summary>
-        internal static double Power(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : b == 0.5 ? SquareRoot(a) : global::System.Math.Pow(a, b);
-
-        /// <summary>The correctly rounded square root, and infinity for negative infinity, as the power with the exponent 0.5 gives.</summary>
-        internal static double SquareRoot(double value) => double.IsNegativeInfinity(value) ? double.PositiveInfinity : global::System.Math.Sqrt(value);
-
-        /// <summary>The power with the exponent 1/3 that a cube root is; a negative number has none.</summary>
-        internal static double CubeRoot(double value) => global::System.Math.Pow(value, 1.0 / 3.0);
-
-        internal static double Sine(double radians) => global::System.Math.Sin(radians);
-
-        internal static double Cosine(double radians) => global::System.Math.Cos(radians);
-
-        internal static double Tangent(double radians) => global::System.Math.Tan(radians);
-
-        internal static double Arcsine(double value) => global::System.Math.Asin(value);
-
-        internal static double Arccosine(double value) => global::System.Math.Acos(value);
-
-        internal static double Arctangent(double value) => global::System.Math.Atan(value);
-
-        /// <summary>The angle of the direction (x, y) in radians, 0 for (0, 0).</summary>
-        internal static double Arctangent(double y, double x) => y == 0 && x == 0 ? 0 : global::System.Math.Atan2(y, x);
-
-        internal static double Hypotenuse(double a, double b) => global::System.Math.Sqrt(Product(a, a) + Product(b, b));
-
-        internal static double Hypotenuse(double a, double b, double c) => global::System.Math.Sqrt(Product(a, a) + Product(b, b) + Product(c, c));
-
-        internal static double Exponential(double value) => global::System.Math.Exp(value);
-
-        internal static double Logarithm(double value) => global::System.Math.Log(value);
-
-        /// <summary>Rounds to the nearest integer and a half toward zero.</summary>
-        internal static double RoundHalfDown(double value)
-        {
-            var absolute = global::System.Math.Abs(value);
-            var floor = global::System.Math.Floor(absolute);
-            var rounded = absolute - floor > 0.5 ? floor + 1 : floor;
-            return value < 0 ? -rounded : rounded;
-        }
-
-        /// <summary>Degrees in radians, NaN for an infinite angle.</summary>
-        internal static double Radians(double degrees) => double.IsInfinity(degrees) ? double.NaN : degrees / 180 * global::System.Math.PI;
-
-        /// <summary>Radians in degrees, NaN for an infinite angle.</summary>
-        internal static double Degrees(double radians) => double.IsInfinity(radians) ? double.NaN : radians / global::System.Math.PI * 180;
-
         /// <summary>A GES scalar: kind 0 nothing, 1 an Int64, 2 a binary64, 3 a percentage ratio, 4 false, 5 true.</summary>
         internal readonly struct Value
         {
@@ -1417,53 +1370,6 @@ namespace GameEventScript.Tests.Generator.Spatial.Model
             4 or 5 => global::GameEventScript.Runtime.Values.GesValue.GesBoolean(value.Kind == 5),
             _ => global::GameEventScript.Runtime.Values.GesValue.GesNothing()
         };
-
-        internal static Value Power(Value a, Value b) => a.Kind == 0 || b.Kind == 0 ? Nothing : Float(Power(a.Numeric, b.Numeric));
-
-        internal static Value SquareRoot(Value a) => a.Kind == 0 ? Nothing : Float(SquareRoot(a.Numeric));
-
-        internal static Value CubeRoot(Value a) => a.Kind == 0 ? Nothing : Float(CubeRoot(a.Numeric));
-
-        internal static Value Sine(Value a, bool degrees) => a.Kind == 0 ? Nothing : Float(Sine(degrees ? Radians(a.Numeric) : a.Numeric));
-
-        internal static Value Cosine(Value a, bool degrees) => a.Kind == 0 ? Nothing : Float(Cosine(degrees ? Radians(a.Numeric) : a.Numeric));
-
-        internal static Value Tangent(Value a, bool degrees) => a.Kind == 0 ? Nothing : Float(Tangent(degrees ? Radians(a.Numeric) : a.Numeric));
-
-        internal static Value Arcsine(Value a) => a.Kind == 0 ? Nothing : Float(Arcsine(a.Numeric));
-
-        internal static Value Arccosine(Value a) => a.Kind == 0 ? Nothing : Float(Arccosine(a.Numeric));
-
-        internal static Value Arctangent(Value a) => a.Kind == 0 ? Nothing : Float(Arctangent(a.Numeric));
-
-        internal static Value Arctangent(Value y, Value x) => y.Kind == 0 || x.Kind == 0 ? Nothing : Float(Arctangent(y.Numeric, x.Numeric));
-
-        internal static Value Hypotenuse(Value a, Value b) => a.Kind == 0 || b.Kind == 0 ? Nothing : Float(Hypotenuse(a.Numeric, b.Numeric));
-
-        internal static Value Hypotenuse(Value a, Value b, Value c) => a.Kind == 0 || b.Kind == 0 || c.Kind == 0 ? Nothing : Float(Hypotenuse(a.Numeric, b.Numeric, c.Numeric));
-
-        internal static Value Exponential(Value a) => a.Kind == 0 ? Nothing : Float(Exponential(a.Numeric));
-
-        internal static Value Logarithm(Value a) => a.Kind == 0 ? Nothing : Float(Logarithm(a.Numeric));
-
-        /// <summary>A rounded number is an Int64, saturated at its bounds.</summary>
-        private static Value Saturated(double value) => Integer(value >= 9223372036854775808d ? long.MaxValue : value < -9223372036854775808d ? long.MinValue : (long)value);
-
-        internal static Value Floor(Value a) => a.Kind == 0 ? Nothing : Saturated(global::System.Math.Floor(a.Numeric));
-
-        internal static Value Ceiling(Value a) => a.Kind == 0 ? Nothing : Saturated(global::System.Math.Ceiling(a.Numeric));
-
-        internal static Value Truncate(Value a) => a.Kind == 0 ? Nothing : Saturated(global::System.Math.Truncate(a.Numeric));
-
-        internal static Value RoundHalfEven(Value a) => a.Kind == 0 ? Nothing : Saturated(global::System.Math.Round(a.Numeric, global::System.MidpointRounding.ToEven));
-
-        internal static Value RoundHalfUp(Value a) => a.Kind == 0 ? Nothing : Saturated(global::System.Math.Round(a.Numeric, global::System.MidpointRounding.AwayFromZero));
-
-        internal static Value RoundHalfDown(Value a) => a.Kind == 0 ? Nothing : Saturated(RoundHalfDown(a.Numeric));
-
-        internal static Value Radians(Value a) => a.Kind == 0 ? Nothing : Float(Radians(a.Numeric));
-
-        internal static Value Degrees(Value a) => a.Kind == 0 ? Nothing : Float(Degrees(a.Numeric));
 
         /// <summary>A Vector of three components, nothing where one is nothing or NaN.</summary>
         internal static GesVector? Vector(Value x, Value y, Value z) => x.Kind == 0 || y.Kind == 0 || z.Kind == 0 ? null : Vector(x.Numeric, y.Numeric, z.Numeric);

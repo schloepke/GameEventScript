@@ -54,6 +54,7 @@ extension GesSwiftEmitter {
         code.line(check)
         conversion.reset()
         var arguments: [String] = []
+        var absent: [String] = []
         for field in fields {
             guard let wire = type.fields.first(where: { $0.layout.name == field.field.name }) else {
                 throw GesGeneratorError(
@@ -65,8 +66,16 @@ extension GesSwiftEmitter {
             code.line("let \(local): \(modelType(field.value, model.name, conversion))")
             toModelField(&code, wire, field, model.name, "self", local, conversion)
             arguments.append("\(GesSchemaPlanner.camel(field.base)): \(local)")
+            if wire.optional, GesModelPlanner.sibling(fields, field) != nil { absent.append("model.\(member(field.base)) = \(local)") }
         }
-        code.line("return \(name)(\(arguments.joined(separator: ", ")))")
+        if absent.isEmpty {
+            code.line("return \(name)(\(arguments.joined(separator: ", ")))")
+        } else {
+            // The initializer gives an absent field the sibling it defaults to; the conversion keeps it absent, as the record holds it.
+            code.line("var model = \(name)(\(arguments.joined(separator: ", ")))")
+            for line in absent { code.line(line) }
+            code.line("return model")
+        }
         code.close()
         code.blank()
         code.line("/// Fills this record from a model, field by field without GES values; the values are checked when the record is written.")
@@ -409,7 +418,8 @@ extension GesSwiftEmitter {
             code.close()
             return
         }
-        let optional = model.nullable ? "?" : ""
+        // Only a :Nothing alternative leaves the model value nil here; an optional field's presence was already unwrapped.
+        let optional = nothing != nil ? "?" : ""
         code.line("switch \(source) {")
         for alternative in value.alternatives {
             if alternative.encoding.kind == .nothing { continue }
@@ -421,9 +431,9 @@ extension GesSwiftEmitter {
             fromModel(&code, alternative, present, modelOwner, owner, wired, local, false, conversion)
             code.dedent()
         }
-        if model.nullable {
+        if let nothing {
             code.line("case nil:")
-            code.line("    \(member) = .\(self.member(nothing!.label))")
+            code.line("    \(member) = .\(self.member(nothing.label))")
         }
         code.line("}")
     }

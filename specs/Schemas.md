@@ -1427,7 +1427,7 @@ to a `GesSchema`, which ignores it, and takes optional parameters.
 - `:Schema(:DriveUnit)` names a `schema` of the set. `:Schema('DriveUnit.gess')` names
   the source with exactly that name, whose declarations are available and that holds exactly
   one schema no other schema of it refers to, which is the root. A reference from a message
-  does not count. Without such a source or root the check fails with `schema.unknownName`.
+  or a [recursive](#recursion) schema's reference to itself does not count. Without such a source or root the check fails with `schema.unknownName`.
 - Errors use document positions: `document.missingField`, `document.unknownField`,
   `document.fieldType`, `document.outOfRange`, and `document.tooDeep` for a non-empty
   [recursive List](#recursion) at its depth. Units are not cast implicitly.
@@ -1437,8 +1437,11 @@ to a `GesSchema`, which ignores it, and takes optional parameters.
 - A union accepts a value that satisfies one of its alternatives, tried in source order;
   the first one decides. `document.fieldType` reports a value that satisfies none. A Map
   or a Record of that type satisfies a schema alternative when all its fields check. A
-  model reads a Box, Poly or Disc only where the check chose that alternative, so a List of
-  points that breaks a Poly's `max` stays the List a later alternative accepts.
+  model reads the alternative the check chose, also for each element of an explicit form
+  such as `:List(...)`: a Map that a schema alternative of a union accepted reads as a Record
+  of that schema, so `[value: 42]` that only `:Large` accepts is no `:Small` whose fields
+  merely fit, and a Box, Poly or Disc is read only where the check chose that alternative,
+  so a List of points that breaks a Poly's `max` stays the List a later alternative accepts.
   Reading of the document itself stays unchanged:
 
 ```gess
@@ -1794,7 +1797,8 @@ beyond a field's range, such as 10 in a field `between 0 and 9` of 4 bits, or be
 bits. Writing checks a word that was taken unchecked field by field, `wire.outOfRange` at the field, and a word with bits
 above the fields at the record. A packed wire root gets the wire members of every root over its word; its record takes
 `ceil(bits / 8)` bytes and its delta is a change bit and the word, so `MaxByteCount`, which serves both, is
-`ceil((bits + 1) / 8)`.
+`ceil((bits + 1) / 8)`. Where the wire code declares a packed root itself, its wire members extend the same type, so a
+field named like one of them, such as `encoded` in Swift or `ToBytes` in C#, is `generate.nameCollision`.
 
 `--models <namespace>` (an empty string for the global namespace) is for wire code that sits beside model code of the
 same schemas, generated with `--model` into that namespace in the same module. The wire code then uses the models'
@@ -1805,6 +1809,8 @@ directly, field by field, without GES values and without the bytes: C# `ToModel(
 `toModel()`, `read(model:)` and the model's `init(wire:)`. The conversion compares the model type's `SchemaHash` with the
 record's, so a model generated from another state of the schema fails with C# `InvalidOperationException` or a Swift
 precondition and is never converted. Values are checked when the record is written, as for any value a caller sets.
+Each field converts as the record holds it: an absent optional field stays absent in the model and back, also where it
+[defaults](#defaults) to a sibling that the model's initializer would otherwise give it.
 A packed wire root shared with the models gets its wire members in the wire namespace, so that several wire generations
 of one module may share the model type: C# as extension methods of the model's struct in a static class `<Name>Wire`,
 Swift as static members of an enum `<Name>Wire` that take the record (`Wire.MapPointWire.encoded(point)`,
@@ -2013,11 +2019,13 @@ argument.
 - A model is a plain value: an optional field that defaults to a sibling holds what it is given, and reading a value that
   gives `nothing` for it keeps it absent, though its initializer resolves `nil` to the sibling. Swift's synthesized
   `Codable` stores every property and applies no default; defaults belong to GES values and documents.
-- Model and wire types of one schema are separate types in separate files; no conversion between both forms is generated,
-  since a client's model rarely has the shape of its wire roots. A program converts in its own code.
+- Model and wire types of one schema are separate types in separate files. Without `--models`, no conversion between both
+  forms is generated, since a client's model rarely has the shape of its wire roots, and a program converts in its own
+  code; wire code generated with `--models` converts directly, as [packed records and
+  models](#packed-records-and-models) describes.
 
 With `--values`, every model type also converts to and from the plain value that the [value path](#record-values) uses
-for a record of its schema, so that wire records and models meet there; no code converts between them directly:
+for a record of its schema, so that wire records and models meet there, also where no direct conversion is generated:
 
 - Swift `func toValue() -> GesValue` and `init(value: GesValue) throws(GesWireError)`; C# `GesValue ToValue()` and
   `static T FromValue(GesValue value)`, which throws `GesWireException`.
@@ -2029,7 +2037,9 @@ for a record of its schema, so that wire records and models meet there; no code 
 - Reading takes a Record of the schema's name, whose other fields are ignored, or a Map whose keys are all fields of it,
   and converts strictly as the [script bindings](#script-bindings) do. It fails with the codes of the
   [value path](#value-path), and a field it leaves out takes its [default](#defaults): a required field without a key or default is `wire.missingField`, `nothing` where a value is required
-  is `wire.nothingValue`, and a value of another type is `wire.typeMismatch`, each at the field's path; a value that is no
+  is `wire.nothingValue`, a value of another type is `wire.typeMismatch`, and a value outside the range of a
+  [packed](#packed-records-and-models) model's field, which its word cannot hold, is `wire.outOfRange`, each at the
+  field's path; a value that is no
   such Record or Map fails at the empty path. A nested record reports the
   path of its own field and a list element its list's path with `[]`, as the value path names them, such as
   `entries[].level`; a union that holds none of its alternatives reports itself.

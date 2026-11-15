@@ -157,7 +157,8 @@ A schema is a declaration in a `.gess` file, written in the one schema language 
 to a file and its root schema. Plain reading stays as specified here; the separate
 operation [`CheckDocument`](Schemas.md#document-checking) of a schema set reports missing,
 unknown and mistyped fields and values out of range with their document positions, without
-implicit unit casts. A schema has no computed fields.
+implicit unit casts. A document never sets a schema's [computed fields](Schemas.md#computed-fields); one that does fails
+with `document.unknownField`.
 
 ## Errors
 

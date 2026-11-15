@@ -3,6 +3,7 @@
 
 using GameEventScript.Api;
 using GameEventScript.Generator;
+using GameEventScript.Runtime.Values;
 using GameEventScript.Tests.Generator.Packed.Wire;
 using Model = GameEventScript.Tests.Generator.Packed.Model;
 using Own = GameEventScript.Tests.Generator.Packed.Own;
@@ -235,6 +236,31 @@ public sealed class GesPackedGeneratedCodeTests
         error = Assert.ThrowsExactly<GesWireException>(() => wire.ToBytes());
         Assert.AreEqual(GesWireException.OutOfRange, error.Code);
         Assert.AreEqual("cells[].level", error.Path);
+    }
+
+    // A value outside a packed field's range is wire.outOfRange at the field's path, as the value path classifies it, where the
+    // field's setter would throw ArgumentOutOfRangeException; a value of another type stays wire.typeMismatch.
+    [TestMethod]
+    public void ValuesOutsideAPackedFieldAreOutOfRange()
+    {
+        static GesValue Replacing(GesValue value, string key, GesValue replacement)
+        {
+            var map = value.AsMap()!;
+            var keys = Enumerable.Range(0, map.Length).Select(map.KeyAt).ToArray();
+            return GesValue.GesRecord(value.CustomTypeName!, keys, keys.Select((name, index) => name == key ? replacement : map.ValueAt(index)).ToArray());
+        }
+
+        var cell = new Model.Cell(7, true, Model.Cell.KindTag.Water, 0.3, Model.Cell.MarksFlags.Held);
+        var error = Assert.ThrowsExactly<GesWireException>(() => Model.Cell.FromValue(Replacing(cell.ToValue(), "level", GesValue.GesInteger(10))));
+        Assert.AreEqual((GesWireException.OutOfRange, "level"), (error.Code, error.Path));
+        error = Assert.ThrowsExactly<GesWireException>(() => Model.Cell.FromValue(Replacing(cell.ToValue(), "level", GesValue.GesBoolean(true))));
+        Assert.AreEqual((GesWireException.TypeMismatch, "level"), (error.Code, error.Path));
+        var grid = Replacing(Grid().ToValue(), "origin", Replacing(cell.ToValue(), "level", GesValue.GesInteger(-1)));
+        error = Assert.ThrowsExactly<GesWireException>(() => Model.Grid.FromValue(grid));
+        Assert.AreEqual((GesWireException.OutOfRange, "origin.level"), (error.Code, error.Path));
+        // The value path reports the same for the wire record.
+        error = Assert.ThrowsExactly<GesWireException>(() => new Wire.Grid().ReadValue(grid));
+        Assert.AreEqual((GesWireException.OutOfRange, "origin.level"), (error.Code, error.Path));
     }
 
     [TestMethod]

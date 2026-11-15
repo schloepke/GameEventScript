@@ -100,3 +100,47 @@ public struct GesFloatRange: Hashable {
         return false
     }
 }
+
+extension GesFloatRange {
+    // Whether `slice` has exactly the terms [start, start + count) of this non-empty Range, last first when reversed,
+    // as IsExactFloatSlice of C#. A prefix keeps `from` and `step`, so its terms are computed identically and only its
+    // length needs checking; other slices also require that every term of this Range is exact (isExactGrid), so that
+    // terms counted from another origin cannot round differently.
+    func isExactSlice(start: Int64, count: Int64, reversed: Bool, _ slice: GesFloatRange) -> Bool {
+        if slice.count != count { return false }
+        return start == 0 && !reversed || isExactGrid
+    }
+
+    // Every term from + step * i is exact and unclamped: `from` and `step` are integer multiples of a common power of
+    // two whose largest multiple among the terms stays below 2^53, and the last term does not pass `to`.
+    private var isExactGrid: Bool {
+        let significandLimit: Int64 = 1 << 53
+        let (stepOdd, stepExponent) = Self.oddSignificand(step)
+        let (fromOdd, fromExponent) = from == 0 ? (0, stepExponent) : Self.oddSignificand(from)
+        let exponent = min(stepExponent, fromExponent)
+        guard let stepUnits = Self.scale(stepOdd, stepExponent - exponent), let fromUnits = Self.scale(fromOdd, fromExponent - exponent) else { return false }
+        if count - 1 > (significandLimit - 1 - fromUnits) / stepUnits { return false }
+        let last = from + step * Double(count - 1)
+        return step > 0 ? last <= to : last >= to
+    }
+
+    // The odd integer significand of a finite non-zero binary64 magnitude and the exponent of its lowest set bit.
+    private static func oddSignificand(_ value: Double) -> (Int64, Int) {
+        let bits = value.bitPattern & 0x7FFF_FFFF_FFFF_FFFF
+        let biased = Int(bits >> 52)
+        var significand = Int64(bits & 0x000F_FFFF_FFFF_FFFF)
+        if biased != 0 { significand |= 1 << 52 }
+        var exponent = (biased == 0 ? 1 : biased) - 1075
+        while significand & 1 == 0 {
+            significand >>= 1
+            exponent += 1
+        }
+        return (significand, exponent)
+    }
+
+    // odd * 2^shift as an integer below 2^53.
+    private static func scale(_ odd: Int64, _ shift: Int) -> Int64? {
+        if shift >= 53 || odd >> (53 - shift) != 0 { return nil }
+        return odd << shift
+    }
+}

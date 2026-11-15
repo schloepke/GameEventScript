@@ -139,7 +139,7 @@ internal static partial class GesSwiftEmitter
     // Reads a packed record's word field by field, so that an error names the field as decoding a record does.
     private static void PackedReadFields(GesSchemaPlanner.Code code, GesPlanValue value, string word)
     {
-        code.Line($"var {word}: UInt64 = 0");
+        code.Line($"{(value.Packed!.Leaves.Exists(leaf => leaf.Width > 0) ? "var" : "let")} {word}: UInt64 = 0");
         foreach (var (node, shift, width, largest) in value.Packed!.Leaves)
         {
             if (width == 0) continue;
@@ -247,8 +247,7 @@ internal static partial class GesSwiftEmitter
         code.Line("@discardableResult");
         code.Open(Sig(true, "read", "from data: UnsafeRawBufferPointer, byteLimit: Int = .max", " throws(GesWireError) -> Int"));
         code.Line("var reader = GesBitReader(data: data, byteLimit: byteLimit)");
-        code.Line("let paths = Self.__paths");
-        code.Line("let at = 0");
+        GesCSharpEmitter.PackedReadPaths(code, word, "let paths = Self.__paths", "let at = 0");
         PackedReadFields(code, self, "word");
         code.Line(Set($"{raw}(truncatingIfNeeded: word)"));
         code.Line("return try reader.finish()");
@@ -303,8 +302,7 @@ internal static partial class GesSwiftEmitter
         code.Line("@discardableResult");
         code.Open(Sig(true, "readDelta", $"from data: UnsafeRawBufferPointer, against baseline: {recordType}, byteLimit: Int = .max", " throws(GesWireError) -> Int"));
         code.Line("var reader = GesBitReader(data: data, byteLimit: byteLimit)");
-        code.Line("let paths = Self.__paths");
-        code.Line("let at = 0");
+        GesCSharpEmitter.PackedReadPaths(code, word, "let paths = Self.__paths", "let at = 0");
         code.Open("if try reader.read(1, path: \"\") == 0 {");
         code.Line($"{record} = baseline");
         code.Close("} else {");

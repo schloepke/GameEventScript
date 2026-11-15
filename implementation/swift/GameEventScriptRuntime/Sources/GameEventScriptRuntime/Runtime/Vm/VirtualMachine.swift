@@ -30,7 +30,7 @@ final class GesVirtualMachine {
     // Advances when an extension call ends, so argument views retained beyond their call can tell.
     var extensionCallGeneration = 0
     // The running handler's budget and MaxValueDepth, fixed for each slice.
-    private var valueBudget: GesRuntimeBudget?
+    private(set) var valueBudget: GesRuntimeBudget?
     private var maxValueDepth: Int64 = .max
     let extensionCall = GesExtensionCall()
     lazy var constructorCall = GesExternalTypeConstructorCall()

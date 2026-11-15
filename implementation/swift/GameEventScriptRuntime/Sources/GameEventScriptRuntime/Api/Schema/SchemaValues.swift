@@ -397,14 +397,24 @@ public enum GesSchemaValues {
     }
 
     // A checked document writes a Box as the Map of its corners, a Poly as the List of its points and a Disc as the Map of its
-    // centre and radius, since documents have no geometry literal; this gives them the geometry library's values, as the schema's fields and their alternatives expect.
-    // `node` is the value's node in the checked document and `chosen` the alternative that held for each union of several, so
-    // that a value takes the alternative the check chose rather than the first one its shape fits.
+    // centre and radius, since documents have no geometry literal; this gives them the geometry library's values, as the
+    // schema's fields and their alternatives expect. `chosen` holds the alternative that held for each union of several by the
+    // exact path of its value, so that a value takes the alternative the check chose rather than the first one its shape fits;
+    // a Map of a chosen schema alternative becomes a Record of that schema, which a model reads as that alternative.
     static func documentShapes(
         _ schema: GesResolvedDeclaration,
         _ value: GesValue,
-        node: GesDocumentNode? = nil,
         chosen: [GesSchemaDocumentCheck.Choice: GesResolvedType] = [:]
+    ) -> GesValue {
+        documentShapes(schema, value, "", chosen, name: value.customTypeName)
+    }
+
+    private static func documentShapes(
+        _ schema: GesResolvedDeclaration,
+        _ value: GesValue,
+        _ position: String,
+        _ chosen: [GesSchemaDocumentCheck.Choice: GesResolvedType],
+        name: String?
     ) -> GesValue {
         guard let map = value.asMap else { return value }
         var keys: [String] = []
@@ -413,26 +423,22 @@ public enum GesSchemaValues {
             let key = map.key(at: index)
             let entry = map.value(at: index)
             keys.append(key)
-            var child: (node: GesDocumentNode, start: Int)?
-            // A Record form holds its entries in its fields argument, where the check recorded their unions too.
-            if let node, case .map(let names, let children, _, let offsets)? = GesSchemaDocument.entries(node), let label = names.firstIndex(where: { GesText.scalarEqual($0, key) }) {
-                child = (children[label], offsets[label])
-            }
-            values.append(schema.fields.first { GesText.scalarEqual($0.name, key) }.map { documentShape($0.alternatives, entry, child, chosen) } ?? entry)
+            values.append(
+                schema.fields.first { GesText.scalarEqual($0.name, key) }.map { documentShape($0.alternatives, entry, GesSchemaDocumentCheck.join(position, $0.name), chosen) } ?? entry
+            )
         }
-        if let name = value.customTypeName { return .record(typeName: name, keys: keys, values: values) }
+        if let name { return .record(typeName: name, keys: keys, values: values) }
         return .map(keys: keys, values: values)
     }
 
     private static func documentShape(
         _ alternatives: [GesResolvedType],
         _ value: GesValue,
-        _ node: (node: GesDocumentNode, start: Int)?,
+        _ position: String,
         _ chosen: [GesSchemaDocumentCheck.Choice: GesResolvedType]
     ) -> GesValue {
-        var candidates = alternatives
-        if let node, let held = chosen[GesSchemaDocumentCheck.Choice(node.start, alternatives)] { candidates = [held] }
-        for type in candidates {
+        let held = chosen[GesSchemaDocumentCheck.Choice(position, alternatives)]
+        for type in held.map({ [$0] }) ?? alternatives {
             switch type.kind {
             case .box:
                 if let corners = value.asMap, corners.length == 2, let lower = corners.get("lower").flatMap({ GesPoint($0, unit: type.unit) }),
@@ -453,13 +459,11 @@ public enum GesSchemaValues {
             case .list:
                 if let element = type.element, value.valueKind == .list {
                     let list = value.asList
-                    var items: ([GesDocumentNode], [Int])?
-                    if case .list(let children, let offsets)? = node?.node, children.count == list.count { items = (children, offsets) }
-                    return .list(list.indices.map { index in documentShape(element, list[index], items.map { ($0.0[index], $0.1[index]) }, chosen) })
+                    return .list(list.indices.map { index in documentShape(element, list[index], GesSchemaDocumentCheck.element(position, index), chosen) })
                 }
             case .reference:
                 if value.asMap != nil, value.customTypeName == nil || value.customTypeName == type.referenceName, let reference = type.reference {
-                    return documentShapes(reference, value, node: node?.node, chosen: chosen)
+                    return documentShapes(reference, value, position, chosen, name: held == nil ? value.customTypeName : type.referenceName)
                 }
             default:
                 continue

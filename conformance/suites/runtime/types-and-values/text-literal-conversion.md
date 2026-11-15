@@ -8298,6 +8298,79 @@ steps:
 
 ---
 
+## Test: parse-spatial-name-boundary
+
+This case checks the following contract: only the complete type names `Vector` and `Point` select the spatial literal form; Record constructors whose names merely start with them, such as `:VectorClock(1)` and `:Point_Of(2)`, are recognized as Record constructors of the running Program by `parse` and `parse strict`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-spatial-name-boundary"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :VectorClock as {
+  _ tick: :Number
+}
+
+record :Point_Of as {
+  _ index: :Number
+}
+
+on Start {
+  emit Done(strictClock: parse strict ":VectorClock(1)", lenientClock: parse ":VectorClock(1)", strictPoint: parse strict ":Point_Of(2)", vector: parse strict ":Vector(1, 2, 3)")
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "strictClock"
+            value:
+              type: ":VectorClock"
+              entries:
+                - key: tick
+                  value: { type: ":Number.int64", value: "1" }
+          - name: "lenientClock"
+            value:
+              type: ":VectorClock"
+              entries:
+                - key: tick
+                  value: { type: ":Number.int64", value: "1" }
+          - name: "strictPoint"
+            value:
+              type: ":Point_Of"
+              entries:
+                - key: index
+                  value: { type: ":Number.int64", value: "2" }
+          - name: "vector"
+            value: { type: ":Vector", x: "1", y: "2", z: "3" }
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
 ## Test: parse-type-name-follows-colon
 
 This case checks the following contract: as in source, the type name of a typed literal form follows its `:` directly; whitespace after the colon makes the input unrecognized, so `parse` keeps the original Text and `parse strict` produces `nothing`, while whitespace after the type name remains allowed.
@@ -8694,6 +8767,51 @@ steps:
       args:
         - name: "value"
           value: { type: ":Text", value: "[:Hit(1), :List(:Range(1, 6000)), :List(:Range(1, 6000))]" }
+    local:
+      - name: "Before"
+        args: []
+    runtimeLimits:
+      include:
+        - name: "MaxRangeItems"
+```
+
+---
+
+## Test: parse-strict-range-items-count-overflow
+
+This case checks the following contract: the Range item total compares each materialization with the remaining MaxRangeItems budget, so a Range whose item count is near the Int64 maximum stops the `parse strict` handler with the MaxRangeItems runtime limit instead of overflowing the total and producing a partial value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-strict-range-items-count-overflow"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) { emit Before; emit After(value: parse strict value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value: { type: ":Text", value: "[:List(:Range(from: 1, to: 1)), :List(:Range(from: 1, to: 9223372036854775807)), 7]" }
     local:
       - name: "Before"
         args: []

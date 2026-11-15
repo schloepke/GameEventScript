@@ -187,9 +187,9 @@ an explicit ordinary call selects a predicate by its full signature. Every call
 receives a fresh frame. The synchronous call graph must be acyclic: direct and
 indirect recursion are not part of the
 language.
-Call-graph validation and resource analysis must support acyclic chains within
-the portable Program limits without depending on the embedding's native stack
-size. Runtime call-depth limits apply when loading and executing a Program,
+Call-graph validation, static result typing through calls and resource analysis
+must support acyclic chains within the portable Program limits without depending
+on the embedding's native stack size. Runtime call-depth limits apply when loading and executing a Program,
 not as an additional source-compilation limit.
 
 ## Lexical Rules
@@ -546,8 +546,11 @@ message and tags are captured immediately. Duration must be a numeric Quantity(s
 not a unitless number or another unit. Unit-preserving computations such as
 `abs (-0.2s)`, `floor 1.5s` or `abs` of a time Vector are valid durations; a
 numeric result must not be assumed unitless when its unit is unknown, for
-example an untyped function parameter. Statically established wrong types, such
-as `10m`, `floor 1.5m` or a rounded Vector, produce
+example an untyped function parameter. `:Number(value, unit)` with a literal
+unit Text has that unit's Quantity type, so `:Number(0, "s")` is a valid
+duration; with a computed unit its type is unknown, and an unknown unit name
+yields `nothing`. Statically established wrong types, such
+as `10m`, `floor 1.5m`, `:Number(0, "m")` or a rounded Vector, produce
 `validate.invalidTypeConstructor`; dynamically invalid values, nothing, negative
 values, nonfinite values or unrepresentable delays produce false without sending.
 A zero duration is identical to the same result-bearing send without `after`:
@@ -740,7 +743,7 @@ random with 123 {
 }
 
 let fixedSeed be 123
-let fixedValue be random with fixedSeed (random from 1 to 100)
+let fixedValue be random with (fixedSeed) (random from 1 to 100)
 
 on Start(seed) {
   let suppliedValue be random with (seed as :Number) (random from 1 to 100)
@@ -1828,7 +1831,9 @@ let sample be fib[:take first 5]
 `:term` is a series-only selector. Lists, dice, ranges, and all other values
 return `nothing` for `[:term n]`. Direct `:take first`, `:drop first`, `:take
 last`, and `:drop last` selectors are defined for finite lists, dice, and
-ranges; range slices stay ranges instead of being materialized as lists.
+ranges; range slices stay ranges instead of being materialized as lists, except
+for floating ranges whose slice no range can reproduce exactly
+([Determinism](Semantics/Determinism.md#iteration-and-ranges)).
 
 Built-in series:
 
@@ -2158,7 +2163,9 @@ equally to deterministic, random, filtered, and weighted choice.
 `:reverse` is defined for lists, dice, ranges, and iterator chains. Lists
 reverse into lists. Dice reverse into lists so the requested order is preserved
 instead of being normalized back into dice order. Ranges reverse into ranges by
-swapping the effective bounds and negating the step. Iterator chains materialize
+swapping the effective bounds and negating the step, unless a floating range
+cannot be reproduced exactly in reverse
+([Determinism](Semantics/Determinism.md#iteration-and-ranges)). Iterator chains materialize
 reversed lists. Maps, scalars, and `nothing` yield `nothing`.
 
 `:shuffle` is defined for lists, dice, ranges, and iterator chains and always

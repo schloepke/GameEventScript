@@ -83,8 +83,8 @@ struct GesLiteralParser {
         if position == bytes.count { return 0 }
         if bytes[position] == 91 { return 1 }
         if bytes[position] != 58 { return 0 }
-        if starts(":Vector") { return 3 }
-        if starts(":Point") { return 4 }
+        if startsTypeName(":Vector") { return 3 }
+        if startsTypeName(":Point") { return 4 }
         return starts(":Dice[") || starts(":Bytes[") ? 0 : 2
     }
 
@@ -540,4 +540,15 @@ struct GesLiteralParser {
     private static func space(_ byte: UInt8) -> Bool { byte == 32 || byte == 9 || byte == 10 || byte == 13 }
 
     private func starts(_ token: String) -> Bool { bytes[position...].starts(with: token.utf8) }
+
+    // The complete type name must match: `:VectorClock(...)` and `:Point_Of(...)` are Record constructors.
+    private func startsTypeName(_ name: String) -> Bool {
+        if !starts(name) { return false }
+        let end = position + name.utf8.count
+        if end == bytes.count { return true }
+        switch bytes[end] {
+        case 48...57, 65...90, 95, 97...122: return false
+        default: return true
+        }
+    }
 }

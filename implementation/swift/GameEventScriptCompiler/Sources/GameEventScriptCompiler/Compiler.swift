@@ -148,6 +148,8 @@ final class GesCompiler {
     var moduleName: String
     let constants: [String: GesExpression]
     var definitions: [String: GesDefinition], records: [String: GesRecord]
+    // The names of all functions and predicates; calls of these never bind a local Handler.
+    let callableNames: Set<String>
     let builder: GesBinaryBuilder
 
     // Lowers the modules and declarations of a completed validation.
@@ -158,6 +160,7 @@ final class GesCompiler {
         constants = validated.constants
         definitions = validated.definitions
         records = validated.records
+        callableNames = Set(validated.definitions.values.map(\.name))
         self.sources = sources
         self.options = options
         builder = GesBinaryBuilder(sources: sources, options: options, fallbackLocation: validated.modules.first?.location ?? .init(sourceName: "UnknownSource"))

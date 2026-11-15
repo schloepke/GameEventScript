@@ -46,7 +46,9 @@ PACKED_SPLITS = ((["--model", "packed", "--values"], "", "PackedSplitModel", "fi
                  (["--wire", "packed", "--values", "--models", "Game.Model"], "Game.Wire", "GameWire", "file"),
                  (["--model", "packed", "--extend-namespace", "Game"], "Game.Copy", "GameCopy", "file"),
                  # Wire code whose whole namespace the models' namespace begins with extends `Game` itself.
-                 (["--wire", "packed", "--values", "--models", "Game.Model"], "Game", "GameRoot", "schema"))
+                 (["--wire", "packed", "--values", "--models", "Game.Model"], "Game", "GameRoot", "schema"),
+                 # Script bindings of packed models, whose records are value types.
+                 (["--model", "packed", "--values", "--bindings"], "Bound.Model", "BoundModel", "file"))
 # Single Swift files whose names Swift lookup must not confuse, each group in a target of its own: wire code in a namespace
 # that continues the models' one beside the model type Cell, a later wire component named like the models' namespace, and
 # with models in the global namespace a later wire component named like the packed type that the wire code names bare.

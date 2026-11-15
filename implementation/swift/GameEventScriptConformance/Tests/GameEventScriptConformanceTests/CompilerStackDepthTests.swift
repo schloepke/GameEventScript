@@ -39,6 +39,17 @@ final class CompilerStackDepthTests: XCTestCase {
         for form in Self.deepestForms { XCTAssertEqual(Self.compileOnSmallStack(form.source(form.limit + 1)), ["parse.sourceNestingExceeded"], form.name) }
     }
 
+    // A valid acyclic chain of functions whose result types the validator derives through every call, for a predicate
+    // result, a local binding and a send delay, as the call-chain probe of the C# compiler worker.
+    func testALongCallChainTypesOnASmallStack() {
+        let length = 5000
+        var source = "function c0() be true\nfunction d0() be 1s\n"
+        for index in 1..<length { source += "function c\(index)() be c\(index - 1)()\nfunction d\(index)() be d\(index - 1)()\n" }
+        source += "predicate check() be c\(length - 1)()\n"
+        source += "on Start {\n  let value be c\(length - 1)()\n  emit after d\(length - 1)() Done(value: value, check: check())\n}\n"
+        XCTAssertEqual(Self.compileOnSmallStack(source), [])
+    }
+
     // The diagnostic codes of compiling `source` on a thread with a 512 KB stack; empty when compilation succeeds.
     private static func compileOnSmallStack(_ source: String) -> [String] {
         // Written by the compiling thread before it signals and read only after the wait.

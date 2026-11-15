@@ -47,6 +47,17 @@ internal static partial class GesCSharpEmitter
         return result;
     }
 
+    // The test that a value fits a field, as its setter checks it, or null when every value of the field's type fits; a
+    // wrapping quantized value fits within 2^50 steps of the lower bound, as GesWireRules computes its index.
+    internal static string? PackedFits(GesLayoutEncoding encoding, string value) => encoding.Kind switch
+    {
+        GesLayoutKind.Integer when !encoding.Wrapping => $"{value} >= {Long(encoding.Lower)} && unchecked((ulong){value} - {Unsigned(unchecked((ulong)encoding.Lower))}) <= {Unsigned(encoding.MaxIndex)}",
+        GesLayoutKind.Quantized when encoding.Wrapping => $"{value} * {Double(encoding.TenPower)} / {Double(encoding.Numerator)} is >= -1125899906842624d and <= 1125899906842624d",
+        GesLayoutKind.Quantized => $"{value} >= {Bits(encoding.LowerValue)} && {value} <= {Bits(encoding.UpperValue)}",
+        GesLayoutKind.Flags when encoding.Width < 64 => $"(ulong){value} <= {Unsigned(Full(encoding.Width))}",
+        _ => null
+    };
+
     // The largest valid index of a field, below which a word of its bits is valid; null when every index of its bits is.
     internal static ulong? PackedLargest(GesLayoutEncoding encoding)
     {
@@ -152,6 +163,14 @@ internal static partial class GesCSharpEmitter
         code.Line(at);
     }
 
+    // A read names the fields it reads; a word without any bits reads none.
+    internal static void PackedReadPaths(GesSchemaPlanner.Code code, GesPackedWord word, string paths, string at)
+    {
+        if (!word.Leaves.Exists(leaf => leaf.Width > 0)) return;
+        code.Line(paths);
+        code.Line(at);
+    }
+
     private static void PackedChecks(GesSchemaPlanner.Code code, GesPackedWord word, string raw, string path)
     {
         if (word.Bits < word.Width) code.Line($"if (({raw} >> {N(word.Bits)}) != 0) throw new GesWireException(GesWireException.OutOfRange, {path});");
@@ -227,8 +246,7 @@ internal static partial class GesCSharpEmitter
         code.Line(Sig(true, "int", "Read", "ReadOnlySpan<byte> data, long byteLimit = long.MaxValue"));
         code.Open("{");
         code.Line("var reader = new GesBitReader(data, byteLimit);");
-        code.Line("var paths = __paths;");
-        code.Line("const int at = 0;");
+        PackedReadPaths(code, word, "var paths = __paths;", "const int at = 0;");
         PackedReadFields(code, self, "word");
         code.Line(Set($"({raw})word"));
         code.Line("return reader.Finish();");
@@ -290,8 +308,7 @@ internal static partial class GesCSharpEmitter
         code.Line(Sig(true, "int", "ReadDelta", $"ReadOnlySpan<byte> data, {name} baseline, long byteLimit = long.MaxValue"));
         code.Open("{");
         code.Line("var reader = new GesBitReader(data, byteLimit);");
-        code.Line("var paths = __paths;");
-        code.Line("const int at = 0;");
+        PackedReadPaths(code, word, "var paths = __paths;", "const int at = 0;");
         code.Line($"if (reader.Read(1, \"\") == 0) {Set("baseline.RawValue")}");
         code.Line("else");
         code.Open("{");

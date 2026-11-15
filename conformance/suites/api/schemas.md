@@ -6822,6 +6822,149 @@ schema:
 
 ---
 
+## Test: a document union of schemas reads as the schema the check chose
+
+The check accepts `[value: 42]` only as `:Large`; the read value names that schema, so a model takes the same alternative
+rather than the first one whose fields fit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-union-schema-choice
+schemaApi:
+  sources:
+    - "schema :Small as { value: :Number integer between 0 and 9 }\nschema :Large as { value: :Number integer between 10 and 99 }\nschema :Holder as { item: :Small | :Large }\n"
+  readDocument:
+    text: ":Schema(:Holder)\nitem: [value: 42]\n"
+    expected: ["Holder"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Holder"
+    value:
+      type: ":Holder"
+      entries:
+        - key: "item"
+          value:
+            type: ":Large"
+            entries:
+              - key: "value"
+                value:
+                  type: ":Number.int64"
+                  value: "42"
+```
+
+---
+
+## Test: the elements of an explicit List form keep their own checked alternatives
+
+The elements of `:List(...)` share the position of the form, so each element's union keeps the alternative the check chose for
+that element.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-union-choice-list-form
+schemaApi:
+  sources:
+    - "schema :Small as { value: :Number integer between 0 and 9 }\nschema :Large as { value: :Number integer between 10 and 99 }\nschema :Holder as { items: :List(:Small | :Large) max 4 }\n"
+  readDocument:
+    text: ":Schema(:Holder)\nitems: :List([[value: 42], [value: 3]])\n"
+    expected: ["Holder"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Holder"
+    value:
+      type: ":Holder"
+      entries:
+        - key: "items"
+          value:
+            type: ":List"
+            items:
+              - type: ":Large"
+                entries:
+                  - key: "value"
+                    value:
+                      type: ":Number.int64"
+                      value: "42"
+              - type: ":Small"
+                entries:
+                  - key: "value"
+                    value:
+                      type: ":Number.int64"
+                      value: "3"
+```
+
+---
+
+## Test: a union inside an explicit Record form keeps the checked alternative
+
+A record written as `:Record(...)` inside an explicit form keeps the alternative the check chose for its union field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-union-choice-record-in-list-form
+schemaApi:
+  sources:
+    - "schema :Small as { value: :Number integer between 0 and 9 }\nschema :Large as { value: :Number integer between 10 and 99 }\nschema :Box2 as { item: :Small | :Large }\nschema :Holder as { boxes: :List(:Box2) max 4 }\n"
+  readDocument:
+    text: ":Schema(:Holder)\nboxes: :List([:Record('Box2', [item: [value: 5]]), :Record('Box2', [item: [value: 50]])])\n"
+    expected: ["Holder"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Holder"
+    value:
+      type: ":Holder"
+      entries:
+        - key: "boxes"
+          value:
+            type: ":List"
+            items:
+              - type: ":Box2"
+                entries:
+                  - key: "item"
+                    value:
+                      type: ":Small"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "5"
+              - type: ":Box2"
+                entries:
+                  - key: "item"
+                    value:
+                      type: ":Large"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "50"
+```
+
+---
+
 ## Test: a union continues on a line that starts with |
 
 A line whose first token is `|` continues the union of the field before it, and the field's marker follows the last alternative.
@@ -17390,6 +17533,58 @@ schema:
 
 ---
 
+## Test: a recursive root schema of a source
+
+A schema's reference to itself does not keep it from being the root.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-file-recursive-root
+schemaApi:
+  sources:
+    - "schema :Tree as {\n  name: :Text max 8\n  children: :List(:Tree) max 2 depth 2\n}\n"
+  document: ":Schema('schema0.gess')\nname: 'a'\nchildren: [[name: 'b', children: []]]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a recursive schema that another schema refers to
+
+The schema that refers to it stays the only root.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-file-recursive-referenced
+schemaApi:
+  sources:
+    - "schema :Tree as {\n  children: :List(:Tree) max 2 depth 2\n}\nschema :Forest as {\n  tree: :Tree\n}\n"
+  document: ":Schema('schema0.gess')\ntree: [children: []]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
 ## Test: a fractional bound that is infinite in binary64
 
 The field compares in binary64, so its bound must stay finite there.
@@ -27341,4 +27536,129 @@ schema:
                   type: ":Number.int64"
                   value: "3"
     byteCount: 1
+```
+
+---
+
+## Test: an optional union holds a value
+
+`optional` applies to the whole union, which then has no `:Nothing` alternative; models and wire code of it convert
+directly.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: optional-union-present
+schemaApi:
+  sources:
+    - "schema :Opt as {\n  val: :Number integer between 0 and 9 | :Boolean optional\n  flag: :Boolean\n}\n"
+  root: "Opt"
+  encode:
+    type: ":Opt"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: true
+      - key: "val"
+        value:
+          type: ":Number.int64"
+          value: "5"
+  decode: "55"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "55"
+  decoded:
+    value:
+      type: ":Opt"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "val"
+          value:
+            type: ":Number.int64"
+            value: "5"
+    byteCount: 1
+```
+
+---
+
+## Test: an absent optional field that defaults to a sibling
+
+Bytes that leave `mirror` absent decode to `nothing` rather than its sibling's value; models and wire code of such bytes
+convert directly and keep it absent.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: optional-sibling-default-absent
+schemaApi:
+  sources:
+    - "schema :Pair as {\n  original: :Number integer between 0 and 9 optional\n  mirror: :Number integer between 0 and 9 optional default original\n}\n"
+  root: "Pair"
+  decode: "0b"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    value:
+      type: ":Pair"
+      entries:
+        - key: "mirror"
+          value:
+            type: ":Nothing"
+        - key: "original"
+          value:
+            type: ":Number.int64"
+            value: "5"
+    byteCount: 1
+```
+
+---
+
+## Test: a packed schema without fields
+
+Its word has no bits, so its record takes no bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: packed-empty
+schemaApi:
+  sources:
+    - "packed schema :Empty as {\n}\n"
+  root: "Empty"
+  encode:
+    type: ":Empty"
+    entries: []
+  decode: ""
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: ""
+  decoded:
+    value:
+      type: ":Empty"
+      entries: []
+    byteCount: 0
 ```

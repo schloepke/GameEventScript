@@ -7,15 +7,6 @@
 // swift-format-ignore-file
 
 import GameEventScriptRuntime
-#if canImport(Darwin)
-    import Darwin
-#elseif canImport(Glibc)
-    import Glibc
-#elseif canImport(Musl)
-    import Musl
-#elseif canImport(ucrt)
-    import ucrt
-#endif
 
 /// The namespace `SpatialModel` of generated model types.
 enum SpatialModel {}
@@ -771,52 +762,6 @@ extension SpatialModel {
         /// Three-valued or: true wins over nothing.
         static func or(_ a: Bool?, _ b: Bool?) -> Bool? { a == true || b == true ? true : a == false && b == false ? false : nil }
 
-        /// A power, nothing where either operand is: the platform's pow, and the correctly rounded square root for the exponent 0.5.
-        static func power(_ a: Double, _ b: Double) -> Double { a.isNaN || b.isNaN ? .nan : b == 0.5 ? squareRoot(a) : pow(a, b) }
-
-        /// The correctly rounded square root, and infinity for negative infinity, as the power with the exponent 0.5 gives.
-        static func squareRoot(_ value: Double) -> Double { value == -.infinity ? .infinity : value.squareRoot() }
-
-        /// The power with the exponent 1/3 that a cube root is; a negative number has none.
-        static func cubeRoot(_ value: Double) -> Double { pow(value, 1.0 / 3.0) }
-
-        static func sine(_ radians: Double) -> Double { sin(radians) }
-
-        static func cosine(_ radians: Double) -> Double { cos(radians) }
-
-        static func tangent(_ radians: Double) -> Double { tan(radians) }
-
-        static func arcsine(_ value: Double) -> Double { asin(value) }
-
-        static func arccosine(_ value: Double) -> Double { acos(value) }
-
-        static func arctangent(_ value: Double) -> Double { atan(value) }
-
-        /// The angle of the direction (x, y) in radians, 0 for (0, 0).
-        static func arctangent(_ y: Double, _ x: Double) -> Double { y == 0 && x == 0 ? 0 : atan2(y, x) }
-
-        static func hypotenuse(_ a: Double, _ b: Double) -> Double { (a * a + b * b).squareRoot() }
-
-        static func hypotenuse(_ a: Double, _ b: Double, _ c: Double) -> Double { (a * a + b * b + c * c).squareRoot() }
-
-        static func exponential(_ value: Double) -> Double { exp(value) }
-
-        static func logarithm(_ value: Double) -> Double { log(value) }
-
-        /// Rounds to the nearest integer and a half toward zero.
-        static func roundHalfDown(_ value: Double) -> Double {
-            let absolute = Swift.abs(value)
-            let floor = absolute.rounded(.down)
-            let rounded = absolute - floor > 0.5 ? floor + 1 : floor
-            return value < 0 ? -rounded : rounded
-        }
-
-        /// Degrees in radians, NaN for an infinite angle.
-        static func radians(_ degrees: Double) -> Double { degrees.isInfinite ? .nan : degrees / 180 * .pi }
-
-        /// Radians in degrees, NaN for an infinite angle.
-        static func degrees(_ radians: Double) -> Double { radians.isInfinite ? .nan : radians / .pi * 180 }
-
         /// A GES scalar: kind 0 nothing, 1 an Int64, 2 a binary64, 3 a percentage ratio, 4 false, 5 true.
         struct Value {
             let kind: UInt8
@@ -1009,57 +954,6 @@ extension SpatialModel {
             default: return .nothing
             }
         }
-
-        static func power(_ a: Value, _ b: Value) -> Value { a.kind == 0 || b.kind == 0 ? nothing : float(power(a.numeric, b.numeric)) }
-
-        static func squareRoot(_ a: Value) -> Value { a.kind == 0 ? nothing : float(squareRoot(a.numeric)) }
-
-        static func cubeRoot(_ a: Value) -> Value { a.kind == 0 ? nothing : float(cubeRoot(a.numeric)) }
-
-        static func sine(_ a: Value, _ degrees: Bool) -> Value { a.kind == 0 ? nothing : float(sine(degrees ? radians(a.numeric) : a.numeric)) }
-
-        static func cosine(_ a: Value, _ degrees: Bool) -> Value { a.kind == 0 ? nothing : float(cosine(degrees ? radians(a.numeric) : a.numeric)) }
-
-        static func tangent(_ a: Value, _ degrees: Bool) -> Value { a.kind == 0 ? nothing : float(tangent(degrees ? radians(a.numeric) : a.numeric)) }
-
-        static func arcsine(_ a: Value) -> Value { a.kind == 0 ? nothing : float(arcsine(a.numeric)) }
-
-        static func arccosine(_ a: Value) -> Value { a.kind == 0 ? nothing : float(arccosine(a.numeric)) }
-
-        static func arctangent(_ a: Value) -> Value { a.kind == 0 ? nothing : float(arctangent(a.numeric)) }
-
-        static func arctangent(_ y: Value, _ x: Value) -> Value { y.kind == 0 || x.kind == 0 ? nothing : float(arctangent(y.numeric, x.numeric)) }
-
-        static func hypotenuse(_ a: Value, _ b: Value) -> Value { a.kind == 0 || b.kind == 0 ? nothing : float(hypotenuse(a.numeric, b.numeric)) }
-
-        static func hypotenuse(_ a: Value, _ b: Value, _ c: Value) -> Value {
-            a.kind == 0 || b.kind == 0 || c.kind == 0 ? nothing : float(hypotenuse(a.numeric, b.numeric, c.numeric))
-        }
-
-        static func exponential(_ a: Value) -> Value { a.kind == 0 ? nothing : float(exponential(a.numeric)) }
-
-        static func logarithm(_ a: Value) -> Value { a.kind == 0 ? nothing : float(logarithm(a.numeric)) }
-
-        /// A rounded number is an Int64, saturated at its bounds.
-        private static func saturated(_ value: Double) -> Value {
-            integer(value >= 9_223_372_036_854_775_808.0 ? Int64.max : value < -9_223_372_036_854_775_808.0 ? Int64.min : Int64(value))
-        }
-
-        static func floor(_ a: Value) -> Value { a.kind == 0 ? nothing : saturated(a.numeric.rounded(.down)) }
-
-        static func ceiling(_ a: Value) -> Value { a.kind == 0 ? nothing : saturated(a.numeric.rounded(.up)) }
-
-        static func truncate(_ a: Value) -> Value { a.kind == 0 ? nothing : saturated(a.numeric.rounded(.towardZero)) }
-
-        static func roundHalfEven(_ a: Value) -> Value { a.kind == 0 ? nothing : saturated(a.numeric.rounded(.toNearestOrEven)) }
-
-        static func roundHalfUp(_ a: Value) -> Value { a.kind == 0 ? nothing : saturated(a.numeric.rounded(.toNearestOrAwayFromZero)) }
-
-        static func roundHalfDown(_ a: Value) -> Value { a.kind == 0 ? nothing : saturated(roundHalfDown(a.numeric)) }
-
-        static func radians(_ a: Value) -> Value { a.kind == 0 ? nothing : float(radians(a.numeric)) }
-
-        static func degrees(_ a: Value) -> Value { a.kind == 0 ? nothing : float(degrees(a.numeric)) }
 
         /// A Vector of three components, nothing where one is nothing or NaN.
         static func vector(_ x: Value, _ y: Value, _ z: Value) -> GesVector? { x.kind == 0 || y.kind == 0 || z.kind == 0 ? nil : vector(x.numeric, y.numeric, z.numeric) }

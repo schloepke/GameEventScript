@@ -339,7 +339,7 @@ internal partial class GesVirtualMachine
         return dst;
     }
 
-    private static GesValue DropFirstRange(in GesValue source, GesFloatRange range, short count)
+    private static GesValue DropFirstRange(GesVirtualMachine vm, in GesValue source, GesFloatRange range, short count)
     {
         var dst = new GesValue();
         var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
@@ -354,12 +354,10 @@ internal partial class GesVirtualMachine
             return dst;
         }
 
-        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, count + 1L) is { } from) dst.SetFloatRange(from, range.To, range.Step);
-        else dst.SetNothing();
-        return dst;
+        return FloatRangeSlice(vm, range, length, count, length - count, reversed: false);
     }
 
-    private static GesValue DropLastRange(in GesValue source, GesFloatRange range, short count)
+    private static GesValue DropLastRange(GesVirtualMachine vm, in GesValue source, GesFloatRange range, short count)
     {
         var dst = new GesValue();
         var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
@@ -374,9 +372,7 @@ internal partial class GesVirtualMachine
             return dst;
         }
 
-        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length - count) is { } to) dst.SetFloatRange(range.From, to, range.Step);
-        else dst.SetNothing();
-        return dst;
+        return FloatRangeSlice(vm, range, length, 0, length - count, reversed: false);
     }
 
     private static GesValue TakeExtremeRange(GesVirtualMachine vm, GesIntegerRange valueRangeInteger, short count, bool highest)
@@ -450,55 +446,25 @@ internal partial class GesVirtualMachine
             return dst;
         }
 
+        // The extreme items are a prefix in step direction, or the reversed suffix against it.
         var takeLength = count < length ? count : length;
-        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is not { } last)
-        {
-            dst.SetNothing();
-            return dst;
-        }
-
-        var ascending = range.Step > 0d;
-        if (highest)
-        {
-            if (ascending)
-            {
-                if (GesRangeMath.GetTerm(last, range.From, -range.Step, takeLength) is { } to) dst.SetFloatRange(last, to, -range.Step);
-                else dst.SetNothing();
-            }
-            else
-            {
-                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, takeLength) is { } to) dst.SetFloatRange(range.From, to, range.Step);
-                else dst.SetNothing();
-            }
-        }
-        else
-        {
-            if (ascending)
-            {
-                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, takeLength) is { } to) dst.SetFloatRange(range.From, to, range.Step);
-                else dst.SetNothing();
-            }
-            else
-            {
-                if (GesRangeMath.GetTerm(last, range.From, -range.Step, takeLength) is { } to) dst.SetFloatRange(last, to, -range.Step);
-                else dst.SetNothing();
-            }
-        }
-        return dst;
+        return highest == range.Step > 0d
+            ? FloatRangeSlice(vm, range, length, length - takeLength, takeLength, reversed: true)
+            : FloatRangeSlice(vm, range, length, 0, takeLength, reversed: false);
     }
 
-    private static GesValue DropExtremeRange(in GesValue source, GesFloatRange range, short count, bool highest)
+    private static GesValue DropExtremeRange(GesVirtualMachine vm, in GesValue source, GesFloatRange range, short count, bool highest)
     {
         if (range.Step > 0d)
         {
             return highest
-                ? DropLastRange(in source, range, count)
-                : DropFirstRange(in source, range, count);
+                ? DropLastRange(vm, in source, range, count)
+                : DropFirstRange(vm, in source, range, count);
         }
 
         return highest
-            ? DropFirstRange(in source, range, count)
-            : DropLastRange(in source, range, count);
+            ? DropFirstRange(vm, in source, range, count)
+            : DropLastRange(vm, in source, range, count);
     }
 
     private static int CompareForOrdering(in GesValue left, in GesValue right)
@@ -507,6 +473,8 @@ internal partial class GesVirtualMachine
         {
             var unitComparison = left.Unit.CompareTo(right.Unit);
             if (unitComparison != 0) return unitComparison;
+            // Two integers compare exactly, as the comparison operators do.
+            if (left.Kind == Integer && right.Kind == Integer) return left.IntegerValue.CompareTo(right.IntegerValue);
             return left.AsNumeric.CompareTo(right.AsNumeric);
         }
 
@@ -572,5 +540,41 @@ internal partial class GesVirtualMachine
             Bytes => 14,
             _ => 8
         };
+    }
+
+    // Items [start, start + count) of a non-empty floating Range with `length` items, last first when reversed. The
+    // result stays a Range when one has exactly these items; otherwise it materializes them as a List, which obeys
+    // MaxRangeItems like the List cast (specs/Semantics/Determinism.md#iteration-and-ranges).
+    internal static GesValue FloatRangeSlice(GesVirtualMachine vm, GesFloatRange range, long length, long start, long count, bool reversed)
+    {
+        var dst = new GesValue();
+        var first = GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, start);
+        var last = GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, start + count - 1);
+        var from = reversed ? last : start == 0 ? range.From : first;
+        var to = reversed ? start == 0 ? range.From : first : start + count == length ? range.To : last;
+        var step = reversed ? -range.Step : range.Step;
+        if (GesRangeMath.IsExactFloatSlice(range.From, range.To, range.Step, length, start, count, reversed, from, to, step))
+        {
+            dst.SetFloatRange(from, to, step);
+            return dst;
+        }
+
+        if (vm._budget is not null && !vm._budget.CheckRangeLengthWithinLimit(count, "Range selection materializes more range items than allowed."))
+        {
+            dst.SetList(vm.EmptyList);
+            return dst;
+        }
+
+        if (count > int.MaxValue)
+        {
+            dst.SetNothing();
+            return dst;
+        }
+
+        var items = new GesValue[(int)count];
+        for (var i = 0; i < items.Length; i++)
+            items[i].SetFloat(GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, reversed ? start + count - 1 - i : start + i));
+        dst.SetList(items);
+        return dst;
     }
 }

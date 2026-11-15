@@ -119,7 +119,7 @@ public sealed class GesSchemaSet
         GesSchemaDocumentCheck.Check(text, syntax.Root!, schema, parameters);
     }
 
-    // The one schema of a source that no other schema of it refers to.
+    // The one schema of a source that no other schema of it refers to; a recursive schema's reference to itself does not count.
     private GesResolvedDeclaration RootSchema(string source)
     {
         var referenced = new HashSet<GesResolvedDeclaration>();
@@ -127,7 +127,7 @@ public sealed class GesSchemaSet
         {
             if (declaration.Scope.SourceName != source || declaration.Kind != GesSchemaKind.Schema) continue;
             foreach (var field in declaration.Fields)
-                foreach (var type in field.Alternatives) CollectReferences(type, referenced);
+                foreach (var type in field.Alternatives) CollectReferences(type, declaration, referenced);
         }
 
         GesResolvedDeclaration? root = null;
@@ -141,11 +141,11 @@ public sealed class GesSchemaSet
         return root ?? throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"The schema source '{source}' has no root schema.");
     }
 
-    private static void CollectReferences(GesResolvedType type, HashSet<GesResolvedDeclaration> referenced)
+    private static void CollectReferences(GesResolvedType type, GesResolvedDeclaration owner, HashSet<GesResolvedDeclaration> referenced)
     {
-        if (type.Reference is { } reference) referenced.Add(reference);
+        if (type.Reference is { } reference && reference != owner) referenced.Add(reference);
         if (type.Element is { } element)
-            foreach (var alternative in element) CollectReferences(alternative, referenced);
+            foreach (var alternative in element) CollectReferences(alternative, owner, referenced);
     }
 
     internal GesResolvedDeclaration Declaration(string root)

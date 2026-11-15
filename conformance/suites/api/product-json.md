@@ -1237,6 +1237,96 @@ message:
 
 ---
 
+## Test: unicode-escape-plus-sign
+
+A `\u` escape requires exactly four hex digits; a leading plus sign is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "unicode-escape-plus-sign"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"type\":\"Text\",\"value\":\"x\\u+061y\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidJson"
+```
+
+---
+
+## Test: unicode-escape-minus-sign
+
+A leading minus sign in a `\u` escape is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "unicode-escape-minus-sign"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"type\":\"Text\",\"value\":\"x\\u-000y\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidJson"
+```
+
+---
+
+## Test: unicode-escape-trailing-nul
+
+Three hex digits followed by a raw NUL character do not form a `\u` escape.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "unicode-escape-trailing-nul"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"type\":\"Text\",\"value\":\"x\\u006\u0000y\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidJson"
+```
+
+---
+
 ## Test: depth-limit
 
 This case verifies depth limit.

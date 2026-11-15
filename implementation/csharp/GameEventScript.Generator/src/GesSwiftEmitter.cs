@@ -80,7 +80,7 @@ internal static partial class GesSwiftEmitter
         {
             if (type.Layout.PackedWidth > 0)
             {
-                if (packed is not null) document.Units.Add(new GesCodeUnit(type.Name, code => GesSwiftModelEmitter.PackedType(code, packed, type.Name, access)));
+                if (packed is not null) document.Units.Add(new GesCodeUnit(type.Name, code => GesSwiftModelEmitter.PackedType(code, packed, type.Name, access, layout.Roots.Contains(type.Name), context.Values)));
 
                 // A wire root's members extend the type at file scope where the wire code declares it, and are an enum
                 // `<Name>Wire` in the wire namespace where the models declare it.

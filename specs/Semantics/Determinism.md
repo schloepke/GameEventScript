@@ -373,6 +373,15 @@ Different indexes may produce the same value at large magnitudes.
 
 Index access, iteration, materialization, and collection operations on a given
 floating range use this same sequence, with ordinary numeric canonicalization.
+Selectors that keep a range, such as `:take first`, `:drop last`, `:take highest`,
+`:reverse` or `:sort`, give exactly the items the same selector gives for the
+materialized List. Their result stays a range only when that range generates
+exactly these items: a prefix that keeps `from` and `step` needs only the same
+item count, and any other slice or reversal additionally requires that every
+term of the source is exact, that is `from` and `step` are integer multiples of
+a common power of two, every term stays below 2^53 of those units, and the last
+term does not pass `to`. Otherwise the selected items materialize as a List,
+which obeys MaxRangeItems like the List cast.
 Membership is exact: a unitless Number is contained if and only if its value
 equals an element at one of the precomputed indexes. A nearby Binary64 value,
 a Quantity, a Percentage, and an Int64 value that only rounds to an element on

@@ -132,8 +132,6 @@ internal partial class GesVirtualMachine
             return dst;
         }
 
-        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length - count + 1L) is { } from) dst.SetFloatRange(from, range.To, range.Step);
-        else dst.SetNothing();
-        return dst;
+        return FloatRangeSlice(vm, range, length, length - count, count, reversed: false);
     }
 }

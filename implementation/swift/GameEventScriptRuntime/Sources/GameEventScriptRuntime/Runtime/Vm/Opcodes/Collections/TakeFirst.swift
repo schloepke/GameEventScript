@@ -19,8 +19,7 @@ extension GesVirtualMachine {
                 guard let from = range.term(at: first), let to = range.term(at: last) else { return setNothing(destination) }
                 return setIntegerRange(destination, from: from, to: to, step: range.step)
             }
-            guard let range = registers[x].floatRangeValue, let from = range.term(at: first), let to = range.term(at: last) else { return setNothing(destination) }
-            return setFloatRange(destination, from: from, to: to, step: range.step)
+            return setFloatRangeSlice(destination, registers[x].floatRangeValue!, start: 0, count: Int64(count), reversed: false)
         }
         if let iterator = registers[x].iteratorValue {
             defer { iterator.close() }

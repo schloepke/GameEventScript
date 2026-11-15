@@ -33,7 +33,7 @@ array order. They escape quote and backslash with a backslash and U+0000–001F
 with lowercase four-digit `\u` escapes; other Unicode scalars remain literal.
 JSON strings use JSON escaping, not GES's doubled-delimiter convention.
 Readers accept JSON whitespace, equivalent JSON escapes and arbitrary object
-property order. Duplicate object properties and unknown/missing properties are
+property order. A `\u` escape consists of exactly four ASCII hex digits. Duplicate object properties and unknown/missing properties are
 errors. No prefix, trailing content, comments or malformed surrogate escape is
 accepted. JSON numeric tokens in this schema are signed decimal integers;
 only the envelope version uses one. GES numeric payloads are strings, avoiding

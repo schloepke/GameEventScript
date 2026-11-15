@@ -1938,6 +1938,88 @@ error:
 
 ---
 
+## Test: delay-number-constructor-unit
+
+This case verifies that `:Number(value, unit)` with a literal time unit is a time quantity delay, also through a local binding; a computed unit compiles and is checked at runtime, and an unknown unit name yields nothing, which rejects the send without a compile error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-number-constructor-unit
+kind: scriptApi
+level: atomic
+sources:
+  - name: "delay-number-constructor-unit.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(unit) {
+  let literal be emit after :Number(0, "s") Ping(value: 1)
+  let named be emit after :Number(0, "second") Ping(value: 2)
+  let span be :Number(0, "s")
+  let bound be emit after span Ping(value: 3)
+  let computed be emit after :Number(0, unit) Ping(value: 4)
+  let unknown be emit after :Number(0, "bogus") Ping(value: 5)
+  emit Done(literal: literal, named: named, bound: bound, computed: computed, unknown: unknown)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input: { args: [{ name: unit, value: { type: ":Text", value: "s" } }] }
+    waiting: false
+    local: [{ name: Ping, args: [{ name: value, value: { type: ":Number.int64", value: "1" } }] }, { name: Ping, args: [{ name: value, value: { type: ":Number.int64", value: "2" } }] }, { name: Ping, args: [{ name: value, value: { type: ":Number.int64", value: "3" } }] }, { name: Ping, args: [{ name: value, value: { type: ":Number.int64", value: "4" } }] }, { name: Done, args: [{ name: literal, value: { type: ":Boolean", value: true } }, { name: named, value: { type: ":Boolean", value: true } }, { name: bound, value: { type: ":Boolean", value: true } }, { name: computed, value: { type: ":Boolean", value: true } }, { name: unknown, value: { type: ":Boolean", value: false } }]}]
+```
+
+---
+
+## Test: delay-number-constructor-distance
+
+This case verifies that `:Number(value, unit)` with a literal distance unit is a statically wrong delay type.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-number-constructor-distance
+kind: compileError
+level: atomic
+sources:
+  - name: "delay-number-constructor-distance.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { emit after :Number(0, "m") Ping() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+```
+
+---
+
 ## Test: if-binding-else
 
 This case verifies if-binding-else.

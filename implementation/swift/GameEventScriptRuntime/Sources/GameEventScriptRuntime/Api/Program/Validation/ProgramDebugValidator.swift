@@ -43,6 +43,10 @@ enum GesProgramDebugValidator {
         if let map = p.sourceMap, let archive = p.sourceArchive {
             if map.sources.count != archive.count { throw GesProgramValidator.failure(.sourceMetadataMismatch, 33) }
             let byID = Dictionary(uniqueKeysWithValues: archive.map { ($0.sourceID, $0) })
+            // Index the mappings once, so each source costs its own size instead of a scan of all mappings
+            // (untrusted input must validate in linear time, specs/ProgramModel.md).
+            var mappings = [[Int]](repeating: [], count: map.sources.count)
+            for (mappingIndex, entry) in map.entries.enumerated() where Int(entry.sourceID) < mappings.count { mappings[Int(entry.sourceID)].append(mappingIndex) }
             for (index, metadata) in map.sources.enumerated() {
                 guard let source = byID[metadata.sourceID], GesText.scalarEqual(source.sourceName, metadata.sourceName), source.utf8Content.count == metadata.sourceByteLength, GesSha256.digest(source.utf8Content) == metadata.sha256 else {
                     throw GesProgramValidator.failure(.sourceMetadataMismatch, 33, index)
@@ -67,7 +71,8 @@ enum GesProgramDebugValidator {
                     }
                 }
                 if lines != metadata.lineStartByteOffsets { throw GesProgramValidator.failure(.sourceMetadataMismatch, 33, index) }
-                for (mappingIndex, entry) in map.entries.enumerated() where entry.sourceID == metadata.sourceID {
+                for mappingIndex in mappings[Int(metadata.sourceID)] {
+                    let entry = map.entries[mappingIndex]
                     if !boundary(entry.sourceStartByteOffset) || !boundary(entry.sourceStartByteOffset + entry.sourceByteLength) { throw GesProgramValidator.failure(.invalidSourceMap, 33, mappingIndex) }
                 }
             }

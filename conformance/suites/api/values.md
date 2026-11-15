@@ -1117,6 +1117,33 @@ literal:
 
 ---
 
+## Test: literal parsing outside a host bounds a Range item count near the Int64 maximum
+
+This public API case parses a one-item Range materialization followed by one whose item count is the Int64 maximum with `ParseLiteralStrict`; the total is compared with the remaining budget, so it reports the limit instead of overflowing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-range-materialization-count-overflow
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "[:List(:Range(from: 1, to: 1)), :List(:Range(from: 1, to: 9223372036854775807)), 7]"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  limit: { name: "MaxRangeItems", limit: 10000 }
+```
+
+---
+
 ## Test: lenient parsing keeps a Handler form with a doubled underscore as Text
 
 This public API case parses a literal whose name breaks the segment rule: it constructs nothing.

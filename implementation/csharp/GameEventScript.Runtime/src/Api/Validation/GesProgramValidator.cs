@@ -104,6 +104,9 @@ internal static class GesProgramValidator
             ValidateTextIndexes(bind.RequiredTags, program.StringConstants.Slices.Count, index);
             ValidateTextIndexes(bind.ExcludedTags, program.StringConstants.Slices.Count, index);
             ValidateBindingText(program, bind, index);
+            // A message-name handler receives exactly one direct `:Message` argument under the fixed synthetic label.
+            if (bind.Kind == MessageNameHandler && (bind.ArgumentNames.Count != 1 || !MatchesAscii(program.StringConstants, bind.ArgumentNames[0], "message")))
+                Throw(GesProgramFormatErrorCode.InvalidProgram, "A message-name handler binding must record exactly the argument name 'message'.", (ushort)GesSectionType.Bindings, index);
             if (bind.Kind is Function or Predicate)
             {
                 var name = program.StringConstants.Resolve(bind.Name);

@@ -385,6 +385,8 @@ Record data. Existing literals remain accepted, and guessing/fallback behavior i
 unchanged. Explicit forms allow disambiguation such as `:Text("123")`.
 As in source, the type name follows its `:` directly: `: Number(5)` and
 `[: Text("a")]` are not typed forms and fail recognition of the complete input.
+A form is selected by its complete type name: `:VectorClock(1)` and `:Point_Of(2)`
+are Record constructors, not Vector or Point forms.
 
 `as :Text` writes Range as `:Range(from: ..., to: ..., step: ...)`, Series as
 `:Series(fibonacci, offset: ...)` or `:Series(factorial, offset: ...)`, Handler as

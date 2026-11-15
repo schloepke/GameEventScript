@@ -38,6 +38,20 @@ extension GesCSharpEmitter {
         return result
     }
 
+    // The test that a value fits a field, as its setter checks it, or nil when every value of the field's type fits; a
+    // wrapping quantized value fits within 2^50 steps of the lower bound, as GesWireRules computes its index.
+    static func packedFits(_ encoding: GesLayoutEncoding, _ value: String) -> String? {
+        switch encoding.kind {
+        case .integer where !encoding.wrapping:
+            "\(value) >= \(long(encoding.lower)) && unchecked((ulong)\(value) - \(unsigned(UInt64(bitPattern: encoding.lower)))) <= \(unsigned(encoding.maxIndex))"
+        case .quantized where encoding.wrapping:
+            "\(value) * \(double(encoding.tenPower)) / \(double(encoding.numerator)) is >= -1125899906842624d and <= 1125899906842624d"
+        case .quantized: "\(value) >= \(bits(encoding.lowerValue)) && \(value) <= \(bits(encoding.upperValue))"
+        case .flags where encoding.width < 64: "(ulong)\(value) <= \(unsigned(full(encoding.width)))"
+        default: nil
+        }
+    }
+
     // The largest valid index of a field, below which a word of its bits is valid; nil when every index of its bits is.
     static func packedLargest(_ encoding: GesLayoutEncoding) -> UInt64? {
         let largest: UInt64 =
@@ -130,6 +144,13 @@ extension GesCSharpEmitter {
         code.line(at)
     }
 
+    // A read names the fields it reads; a word without any bits reads none.
+    static func packedReadPaths(_ code: inout Code, _ word: GesPackedWord, _ paths: String, _ at: String) {
+        if !word.leaves.contains(where: { $0.width > 0 }) { return }
+        code.line(paths)
+        code.line(at)
+    }
+
     // Checks a word field by field and, when its type is wider than its bits, that no bit above them is set, because the
     // writer does not mask what it writes.
     private static func packedChecks(_ code: inout Code, _ word: GesPackedWord, _ raw: String, _ path: String) {
@@ -216,8 +237,7 @@ extension GesCSharpEmitter {
         code.line(sig(true, "int", "Read", "ReadOnlySpan<byte> data, long byteLimit = long.MaxValue"))
         code.open("{")
         code.line("var reader = new GesBitReader(data, byteLimit);")
-        code.line("var paths = __paths;")
-        code.line("const int at = 0;")
+        packedReadPaths(&code, word, "var paths = __paths;", "const int at = 0;")
         packedReadFields(&code, selfValue, "word")
         code.line(set("(\(raw))word"))
         code.line("return reader.Finish();")
@@ -281,8 +301,7 @@ extension GesCSharpEmitter {
         code.line(sig(true, "int", "ReadDelta", "ReadOnlySpan<byte> data, \(name) baseline, long byteLimit = long.MaxValue"))
         code.open("{")
         code.line("var reader = new GesBitReader(data, byteLimit);")
-        code.line("var paths = __paths;")
-        code.line("const int at = 0;")
+        packedReadPaths(&code, word, "var paths = __paths;", "const int at = 0;")
         code.line("if (reader.Read(1, \"\") == 0) \(set("baseline.RawValue"))")
         code.line("else")
         code.open("{")

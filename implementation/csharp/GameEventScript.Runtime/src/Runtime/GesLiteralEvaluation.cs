@@ -131,9 +131,15 @@ internal sealed class GesLiteralEvaluation
     private bool WithinRangeItems(long count, int offset)
     {
         var limit = _context?.RuntimeLimits.MaxRangeItems ?? DataRangeItems;
-        _materializedRangeItems += count;
-        if (limit <= 0 || _materializedRangeItems <= limit)
+        if (limit <= 0)
             return true;
+        // The total never exceeds the limit, so comparing against the remaining budget cannot overflow.
+        if (count <= limit - _materializedRangeItems)
+        {
+            _materializedRangeItems += count;
+            return true;
+        }
+
         if (_context is null)
             throw new GesLiteralLimitException(nameof(GesRuntimeLimits.MaxRangeItems), limit) { Offset = offset };
         _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxRangeItems), "Literal parsing materializes more Range items than the limit.", limit);

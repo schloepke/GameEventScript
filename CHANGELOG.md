@@ -821,6 +821,31 @@ public names and byte-identical compiler output.
 - A unary intrinsic with a parenthesized operand, such as `floor(x)`, and an intrinsic call such as `atan2(y, x)` are power
   bases in both ports: `floor(x) ^ 2` is `(floor x) ^ 2`. C# rejected both, and Swift accepted `-x² ^ 2` and `floor x² ^ 2`,
   which are syntax errors.
+- The compiler no longer overflows its native stack when a predicate, local binding or send delay takes its type from a
+  long chain of function calls; result types are inferred iteratively and once per callable.
+- `parse` and `parse strict` stop with MaxRangeItems when Range item counts near the Int64 maximum add up, instead of
+  trapping (Swift) or returning a partial value (C#).
+- Swift: `let pulse be pulse()` calls the function `pulse` instead of binding the new local as a Handler, and an alias of
+  a Handler binding keeps its signature, so a call through it with a mismatched label yields `nothing`, as in C#.
+- `:Number(0, "s")` and other literal time units are accepted as send delays.
+- Floating Range selectors (take/drop first/last, highest/lowest, `:reverse`, `:sort`) return exactly the items of the
+  materialized List; when no Range reproduces them, they return a List.
+- `:sort`, `:order by` and `:take`/`:drop highest`/`lowest` order integers beyond 2^53 exactly, as `<` and `>` do.
+- `parse` recognizes Record constructors whose names start with `Vector` or `Point`, such as `:VectorClock(1)`.
+- Message JSON readers reject `\u` escapes that are not exactly four ASCII hex digits, such as `\u+061`.
+- Generated models read a document union as the alternative its schema check chose, also inside explicit `:List` and
+  `:Record` forms.
+- Swift generation with `--models` no longer fails on an optional union without a `:Nothing` alternative, and the Swift
+  direct wire-to-model conversion keeps an absent field absent when it defaults to a sibling.
+- C# `--bindings` code for packed models compiles.
+- An empty packed schema generates compiling C# and Swift code, and a packed root field named like a wire member, such as
+  `encoded`, is `generate.nameCollision`.
+- Packed models report a value outside a field's range as `wire.outOfRange` at the field's path in both languages.
+- A `.gesd` file reference `:Schema('file.gess')` selects a single recursive root schema.
+- Program validation takes linear time for call graphs with many repeated calls (C#) and for source maps with many
+  archived sources (Swift).
+- Program validation rejects a message-name handler binding whose argument names are not exactly `message` with
+  `InvalidProgram`, instead of reading such a `.gesb` file without error.
 
 ### Migrating from 0.4.0
 

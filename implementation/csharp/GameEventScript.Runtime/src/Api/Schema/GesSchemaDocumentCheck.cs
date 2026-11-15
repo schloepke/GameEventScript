@@ -35,15 +35,17 @@ internal sealed class GesSchemaDocumentCheck
     private readonly Dictionary<(GesResolvedType Type, GesDocumentNode Value), bool> _holds = new();
     private readonly Dictionary<GesDocumentNode, GesDocumentNode> _resolved = new();
 
-    // The alternative that held for each union of several, by the position of its value and the union's alternatives, so
-    // that converting the checked document takes the alternative the check chose.
-    private readonly Dictionary<(int Start, GesResolvedType[] Alternatives), GesResolvedType> _chosen = new();
+    // The alternative that held for each union of several, by the exact path of its value and the union's alternatives, so
+    // that converting the checked document takes the alternative the check chose. The exact path names each list element by
+    // its index, as `items[2].value`, since the values of an explicit form share the form's position.
+    private readonly Dictionary<(string Position, GesResolvedType[] Alternatives), GesResolvedType> _chosen = new();
 
     // How many records of each schema enclose the value being checked, which a recursive List counts against its depth.
     private readonly Dictionary<GesResolvedDeclaration, int> _levels = new();
 
-    // The path of the value being checked.
+    // The path of the value being checked, and its exact path with list indices.
     private string _path = "";
+    private string _position = "";
 
     private GesSchemaDocumentCheck(GesSchemaParameters? parameters) => _parameters = parameters;
 
@@ -58,7 +60,7 @@ internal sealed class GesSchemaDocumentCheck
         => Failing(text, root, schema, parameters, out _);
 
     // The first error, or null with the alternative that held for each union of several.
-    internal static GesDocumentException? Failing(string text, GesDocumentNode root, GesResolvedDeclaration schema, GesSchemaParameters? parameters, out IReadOnlyDictionary<(int Start, GesResolvedType[] Alternatives), GesResolvedType> chosen)
+    internal static GesDocumentException? Failing(string text, GesDocumentNode root, GesResolvedDeclaration schema, GesSchemaParameters? parameters, out IReadOnlyDictionary<(string Position, GesResolvedType[] Alternatives), GesResolvedType> chosen)
     {
         if (parameters is not null) GesSchemaBinder.CheckParameters(schema, parameters);
         var check = new GesSchemaDocumentCheck(parameters);
@@ -79,11 +81,13 @@ internal sealed class GesSchemaDocumentCheck
 
     internal static string Join(string path, string name) => path.Length == 0 ? name : path + "." + name;
 
-    // Checks a nested value under its path segment: a field name, or `[]` for an element.
-    private void Under(string segment, Action check)
+    // Checks a nested value under its path segment: a field name, or `[]` for the element at an index.
+    private void Under(string segment, Action check, int index = 0)
     {
         var outer = _path;
+        var outerPosition = _position;
         _path = segment == "[]" ? outer + segment : Join(outer, segment);
+        _position = segment == "[]" ? Element(outerPosition, index) : Join(outerPosition, segment);
         try
         {
             check();
@@ -91,8 +95,12 @@ internal sealed class GesSchemaDocumentCheck
         finally
         {
             _path = outer;
+            _position = outerPosition;
         }
     }
+
+    // The exact path of a list element, which converting the checked document follows to the alternatives the check chose.
+    internal static string Element(string position, int index) => position + "[" + index.ToString(CultureInfo.InvariantCulture) + "]";
 
     // A missing field is reported where the value that lacks it starts.
     private void Fields(GesDocumentNode map, GesResolvedDeclaration schema, int start)
@@ -161,7 +169,7 @@ internal sealed class GesSchemaDocumentCheck
 
             if (holds)
             {
-                _chosen[(value.Start, alternatives)] = alternative;
+                _chosen[(_position, alternatives)] = alternative;
                 return;
             }
         }
@@ -185,7 +193,11 @@ internal sealed class GesSchemaDocumentCheck
                 // A document has no geometry literal: a Poly is the List of its points.
                 Require(value, value.Kind == GesDocumentNodeKind.List);
                 if (type.Max is { } polyMax && value.Children.Length > polyMax) throw Fail(OutOfRange, value.Start);
-                foreach (var point in value.Children) Under("[]", () => Spatial(type, Resolved(point), GesDocumentNodeKind.Point));
+                for (var index = 0; index < value.Children.Length; index++)
+                {
+                    var point = value.Children[index];
+                    Under("[]", () => Spatial(type, Resolved(point), GesDocumentNodeKind.Point), index);
+                }
                 break;
             case GesSchemaTypeKind.Tag:
                 Require(value, value.Kind == GesDocumentNodeKind.Tag && (type.Tags is null || Array.IndexOf(type.Tags, value.Name) >= 0));
@@ -204,7 +216,13 @@ internal sealed class GesSchemaDocumentCheck
                 if (type.Recursion is { } recursion && value.Children.Length > 0 && _levels.TryGetValue(recursion, out var reached) && reached >= type.Depth) throw Fail(TooDeep, value.Start);
                 if (type.Max is { } listMax && value.Children.Length > listMax) throw Fail(OutOfRange, value.Start);
                 if (type.Element is { } element)
-                    foreach (var item in value.Children) Under("[]", () => Union(element, item));
+                {
+                    for (var index = 0; index < value.Children.Length; index++)
+                    {
+                        var item = value.Children[index];
+                        Under("[]", () => Union(element, item), index);
+                    }
+                }
                 break;
             case GesSchemaTypeKind.Reference:
                 Reference(type, value);

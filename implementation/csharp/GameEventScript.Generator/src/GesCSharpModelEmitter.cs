@@ -1100,6 +1100,7 @@ internal static class GesCSharpModelEmitter
             code.Line($"internal static {record} Read{type.Name}(in GesValue value, string path)");
             code.Open("{");
             code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names}) ?? throw Failure(value, path);");
+            var fits = PackedFits(type, fields);
             foreach (var index in GesModelPlanner.ReadOrder(fields))
             {
                 var field = fields[index];
@@ -1109,6 +1110,8 @@ internal static class GesCSharpModelEmitter
                 code.Line($"var {held} = {Held(layout, fields, index, type.Name, qualifier, support, type.Name + "Defaults", sibling => "value" + Depth(sibling), missing)};");
                 if (Descends(field.Value)) code.Line($"var field{Depth(index)} = {Read(field.Value, type.Name, held, $"Path(path, {literal})", qualifier, support)};");
                 else code.Line($"if (!{Decode(field.Value, type.Name, held, "out var field" + Depth(index), qualifier, support)}) throw Failure({held}, Path(path, {literal}));");
+                // A value of a packed field's type outside its range is the value path's error, where the setter would throw.
+                if (fits[index] is { } check) code.Line($"if (!({check("field" + Depth(index))})) throw new GesWireException(GesWireException.OutOfRange, Path(path, {literal}));");
             }
 
             var kept = GesModelPlanner.Kept(fields);
@@ -1128,7 +1131,11 @@ internal static class GesCSharpModelEmitter
             code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names});");
             var conditions = new List<string> { "fields is null" };
             for (var index = 0; index < fields.Count; index++)
+            {
                 conditions.Add("!" + Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, qualifier, support, type.Name + "Defaults"), "out var field" + Depth(index), qualifier, support));
+                if (fits[index] is { } check) conditions.Add($"!({check("field" + Depth(index))})");
+            }
+
             for (var index = 0; index < conditions.Count; index++)
                 code.Line((index == 0 ? "if (" : "    || ") + conditions[index] + (index == conditions.Count - 1 ? ") return false;" : ""));
             code.Line($"result = new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
@@ -1310,8 +1317,18 @@ internal static class GesCSharpModelEmitter
             code.Blank();
             code.Line($"private static bool Decode{type.Name}(in GesValue value, out {name} result)");
             code.Open("{");
-            code.Line($"result = {name}.FromGesValue(value)!;");
-            code.Line("return result is not null;");
+            if (type.Packed is not null)
+            {
+                // A packed record is a struct, whose FromGesValue gives a nullable value.
+                code.Line($"var decoded = {name}.FromGesValue(value);");
+                code.Line("result = decoded.GetValueOrDefault();");
+                code.Line("return decoded.HasValue;");
+            }
+            else
+            {
+                code.Line($"result = {name}.FromGesValue(value)!;");
+                code.Line("return result is not null;");
+            }
             code.Close();
             var conversions = new List<GesModelPlanValue>();
             foreach (var field in fields) Conversions(field.Value, conversions);
@@ -1320,6 +1337,22 @@ internal static class GesCSharpModelEmitter
         }
 
         code.Close();
+    }
+
+    // The tests that a converted value fits each field of a packed model, as its setter checks it, by index; null where every
+    // value fits or the model is not packed.
+    private static Func<string, string>?[] PackedFits(GesModelType type, List<GesModelPlanField> fields)
+    {
+        var fits = new Func<string, string>?[fields.Count];
+        if (type.Packed is null) return fits;
+        var bits = GesCSharpEmitter.PackedLayout(type.Packed, type.Packed.Type(type.Name));
+        for (var index = 0; index < fields.Count; index++)
+        {
+            var encoding = bits[index].Field.Encoding;
+            if (GesCSharpEmitter.PackedFits(encoding, "") is not null) fits[index] = value => GesCSharpEmitter.PackedFits(encoding, value)!;
+        }
+
+        return fits;
     }
 
     private static void Conversion(GesSchemaPlanner.Code code, string owner, string qualifier, string support, GesModelPlanValue value, bool plain = false)

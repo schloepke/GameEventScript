@@ -41,9 +41,14 @@ internal sealed class GesSchemaDocumentCheck
     private readonly Dictionary<(string Position, GesResolvedType[] Alternatives), GesResolvedType> _chosen = new();
 
     // Every choice in the order it was made, with the alternative it replaced, so that an alternative that fails takes back
-    // the choices of the unions inside it; and the choices inside each alternative that held, which a cached answer repeats.
+    // the choices of the unions inside it.
     private readonly List<((string Position, GesResolvedType[] Alternatives) Union, GesResolvedType? Replaced)> _choices = new();
-    private readonly Dictionary<(GesResolvedType Type, GesDocumentNode Value), ((string Position, GesResolvedType[] Alternatives) Union, GesResolvedType Alternative)[]> _made = new();
+
+    // The unions directly inside each alternative that held, which a cached answer repeats at its own position. Each records
+    // only its direct unions, whose own cached answers hold the deeper ones, so nesting stores every choice once. `_direct`
+    // collects the direct unions of the alternatives being checked, by exact path, until their alternative answers.
+    private readonly Dictionary<(GesResolvedType Type, GesDocumentNode Value), Made[]> _made = new();
+    private readonly List<Made> _direct = new();
 
     // How many records of each schema enclose the value being checked, which a recursive List counts against its depth.
     private readonly Dictionary<GesResolvedDeclaration, int> _levels = new();
@@ -160,15 +165,16 @@ internal sealed class GesSchemaDocumentCheck
             if (!_holds.TryGetValue((alternative, value), out var holds))
             {
                 var mark = _choices.Count;
+                var direct = _direct.Count;
                 try
                 {
                     Type(alternative, value);
                     holds = true;
-                    var made = new ((string, GesResolvedType[]), GesResolvedType)[_choices.Count - mark];
+                    var made = new Made[_direct.Count - direct];
                     for (var index = 0; index < made.Length; index++)
                     {
-                        var union = _choices[mark + index].Union;
-                        made[index] = (union, _chosen[union]);
+                        var union = _direct[direct + index];
+                        made[index] = union with { Position = Relative(_position, union.Position) };
                     }
 
                     _made[(alternative, value)] = made;
@@ -179,22 +185,45 @@ internal sealed class GesSchemaDocumentCheck
                     Revert(mark);
                 }
 
+                _direct.RemoveRange(direct, _direct.Count - direct);
                 _holds[(alternative, value)] = holds;
             }
             else if (holds)
             {
-                foreach (var (union, made) in _made[(alternative, value)]) Choose(union, made);
+                Repeat(_made[(alternative, value)], _position);
             }
 
             if (holds)
             {
                 Choose((_position, alternatives), alternative);
+                _direct.Add(new Made(_position, alternatives, alternative, value));
                 return;
             }
         }
 
         throw Fail(FieldType, value.Start);
     }
+
+    // A union that chose an alternative for a value, at a path relative to the alternative that encloses it.
+    private readonly record struct Made(string Position, GesResolvedType[] Alternatives, GesResolvedType Alternative, GesDocumentNode Value);
+
+    // Repeats the choices of a cached alternative and of the unions inside it at the position of the value it holds for now.
+    private void Repeat(Made[] made, string position)
+    {
+        foreach (var union in made)
+        {
+            var at = Rebased(position, union.Position);
+            Choose((at, union.Alternatives), union.Alternative);
+            if (_made.TryGetValue((union.Alternative, union.Value), out var inner)) Repeat(inner, at);
+        }
+    }
+
+    // An exact path relative to an enclosing one, empty or starting with `.` or `[`, and back.
+    private static string Relative(string outer, string position)
+        => outer.Length > 0 ? position.Substring(outer.Length) : position.Length == 0 || position[0] == '[' ? position : "." + position;
+
+    private static string Rebased(string outer, string relative)
+        => outer.Length > 0 ? outer + relative : relative.Length > 0 && relative[0] == '.' ? relative.Substring(1) : relative;
 
     private void Choose((string Position, GesResolvedType[] Alternatives) union, GesResolvedType alternative)
     {

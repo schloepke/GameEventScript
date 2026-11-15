@@ -345,7 +345,9 @@ final class GesAstValidator {
     }
 
     private func sendDelay(_ delay: GesExpression, _ types: [String: String]) {
-        if !["unknown", "other", "nothing", "quantity:s", "quantity:second"].contains(infer(delay, types)) {
+        let type = infer(delay, types)
+        let time = type.hasPrefix("quantity:") && GesCompilerSupport.quantityUnit(String(type.dropFirst(9))) == .second
+        if !time && !["unknown", "other", "nothing"].contains(type) {
             report("validate.invalidTypeConstructor", delay.location, symbol: "Quantity(s)", kind: .type, message: "Send delay requires a time quantity, for example 0.2s.")
         }
     }

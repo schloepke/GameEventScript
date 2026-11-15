@@ -39,15 +39,27 @@ struct GesSchemaDocumentCheck {
         }
     }
 
+    // A union that chose an alternative for a value, at a path relative to the alternative that encloses it.
+    private struct Made {
+        let position: String
+        let alternatives: [GesResolvedType]
+        let alternative: GesResolvedType
+        let attempt: Attempt
+    }
+
     // What each alternative of a union answered, so nested unions stay linear, and how many records of each schema enclose
     // the value being checked, which a recursive List counts against its depth.
     private final class Attempts {
         var holds: [Attempt: Bool] = [:]
         var chosen: [Choice: GesResolvedType] = [:]
         // Every choice in the order it was made, with the alternative it replaced, so that an alternative that fails takes
-        // back the choices of the unions inside it; and the choices inside each alternative that held, which a cached answer repeats.
+        // back the choices of the unions inside it.
         var choices: [(union: Choice, replaced: GesResolvedType?)] = []
-        var made: [Attempt: [(union: Choice, alternative: GesResolvedType)]] = [:]
+        // The unions directly inside each alternative that held, which a cached answer repeats at its own position. Each
+        // records only its direct unions, whose own cached answers hold the deeper ones, so nesting stores every choice once.
+        // `direct` collects the direct unions of the alternatives being checked, by exact path, until their alternative answers.
+        var made: [Attempt: [Made]] = [:]
+        var direct: [Made] = []
         var levels: [ObjectIdentifier: Int] = [:]
         // The path of the value being checked, and its exact path with list indices.
         var path = ""
@@ -132,27 +144,50 @@ struct GesSchemaDocumentCheck {
         for alternative in alternatives {
             let attempt = Attempt(type: ObjectIdentifier(alternative), value: value, start: start)
             if let holds = attempts.holds[attempt] {
-                if holds {
-                    for (union, made) in attempts.made[attempt]! { choose(union, made) }
-                    choose(Choice(attempts.position, alternatives), alternative)
-                    return
+                if !holds { continue }
+                repeatChoices(attempts.made[attempt]!, attempts.position)
+            } else {
+                let mark = attempts.choices.count
+                let direct = attempts.direct.count
+                do {
+                    try type(alternative, value, start)
+                    attempts.holds[attempt] = true
+                    let outer = attempts.position
+                    attempts.made[attempt] = attempts.direct[direct...].map { Made(position: Self.relative(outer, $0.position), alternatives: $0.alternatives, alternative: $0.alternative, attempt: $0.attempt) }
+                    attempts.direct.removeSubrange(direct...)
+                } catch is Failure {
+                    // The next alternative may hold; the unions inside this one chose nothing.
+                    revert(mark)
+                    attempts.direct.removeSubrange(direct...)
+                    attempts.holds[attempt] = false
+                    continue
                 }
-                continue
             }
-            let mark = attempts.choices.count
-            do {
-                try type(alternative, value, start)
-                attempts.holds[attempt] = true
-                attempts.made[attempt] = attempts.choices[mark...].map { ($0.union, attempts.chosen[$0.union]!) }
-                choose(Choice(attempts.position, alternatives), alternative)
-                return
-            } catch is Failure {
-                // The next alternative may hold; the unions inside this one chose nothing.
-                revert(mark)
-                attempts.holds[attempt] = false
-            }
+            choose(Choice(attempts.position, alternatives), alternative)
+            attempts.direct.append(Made(position: attempts.position, alternatives: alternatives, alternative: alternative, attempt: attempt))
+            return
         }
         throw fail(Self.fieldType, start)
+    }
+
+    // Repeats the choices of a cached alternative and of the unions inside it at the position of the value it holds for now.
+    private func repeatChoices(_ made: [Made], _ position: String) {
+        for union in made {
+            let at = Self.rebased(position, union.position)
+            choose(Choice(at, union.alternatives), union.alternative)
+            if let inner = attempts.made[union.attempt] { repeatChoices(inner, at) }
+        }
+    }
+
+    // An exact path relative to an enclosing one, empty or starting with `.` or `[`, and back.
+    private static func relative(_ outer: String, _ position: String) -> String {
+        if !outer.isEmpty { return String(position.utf8.dropFirst(outer.utf8.count))! }
+        return position.isEmpty || position.hasPrefix("[") ? position : "." + position
+    }
+
+    private static func rebased(_ outer: String, _ relative: String) -> String {
+        if !outer.isEmpty { return outer + relative }
+        return relative.hasPrefix(".") ? String(relative.dropFirst()) : relative
     }
 
     private func choose(_ union: Choice, _ alternative: GesResolvedType) {

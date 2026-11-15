@@ -6965,6 +6965,59 @@ schema:
 
 ---
 
+## Test: a union checked inside a failed alternative keeps its choice in the next one
+
+The first alternative `:A` checks the union of `box.item` and then fails on `flag`, which takes back that choice; `:B` holds,
+and its cached answer for the same item repeats the choice `:Large` at the item's position, rather than reading the first
+schema whose fields fit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-union-choice-after-failed-alternative
+schemaApi:
+  sources:
+    - "schema :Small as { value: :Number integer between 0 and 9 }\nschema :Large as { value: :Number integer between 10 and 99 }\nschema :Box2 as { item: :Small | :Large }\nschema :A as { box: :Box2, flag: :Boolean }\nschema :B as { box: :Box2, flag: :Number integer between 0 and 9 }\nschema :Holder as { entry: :A | :B }\n"
+  readDocument:
+    text: ":Schema(:Holder)\nentry: [box: [item: [value: 42]], flag: 3]\n"
+    expected: ["Holder"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Holder"
+    value:
+      type: ":Holder"
+      entries:
+        - key: "entry"
+          value:
+            type: ":B"
+            entries:
+              - key: "box"
+                value:
+                  type: ":Map"
+                  entries:
+                    - key: "item"
+                      value:
+                        type: ":Large"
+                        entries:
+                          - key: "value"
+                            value:
+                              type: ":Number.int64"
+                              value: "42"
+              - key: "flag"
+                value:
+                  type: ":Number.int64"
+                  value: "3"
+```
+
+---
+
 ## Test: a union continues on a line that starts with |
 
 A line whose first token is `|` continues the union of the field before it, and the field's marker follows the last alternative.

@@ -26,7 +26,8 @@ extension GesAstValidator {
         switch expression.kind {
         case .assembly(let block): return block.predicate ? "boolean" : "other"
         case .literal(let value):
-            if value.hasUnit { return "quantity:" + String(describing: value.unit) }
+            // Every inferred quantity is named by its canonical symbol, such as `quantity:s`, whatever spelling produced it.
+            if value.hasUnit { return "quantity:" + value.unit.suffix }
             return String(describing: value.valueKind)
         case .name(let name): return types[name] ?? "unknown"
         case .constant(let name): return constants[name].map(child) ?? "unknown"

@@ -1426,6 +1426,33 @@ schema:
 
 ---
 
+## Test: a unitless first component sets the unit of the others
+
+A unitless first component gives the vector no unit, so a later component with a unit is `schema.unitMismatch`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-unit-axis-unitless-first
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Quantity(m) between 0m and 1m step 1cm\n  v: :Vector(m) computed by :Vector(x: 1, y: a)\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 3
+    column: 46
+```
+
+---
+
 ## Test: the vector's unit is the field's
 
 A vector of another unit than the field's is `schema.unitMismatch`.

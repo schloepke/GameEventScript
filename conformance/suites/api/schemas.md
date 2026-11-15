@@ -6967,9 +6967,9 @@ schema:
 
 ## Test: a union checked inside a failed alternative keeps its choice in the next one
 
-The first alternative `:A` checks the union of `box.item` and then fails on `flag`, which takes back that choice; `:B` holds,
-and its cached answer for the same item repeats the choice `:Large` at the item's position, rather than reading the first
-schema whose fields fit.
+The first alternative `:A` checks the union of `box` and the union of `box.item` inside it, then fails on `flag`, which
+takes back both choices. `:B` reaches the same `box` value, whose cached answer `:Box2` repeats the choice `:Large` of the
+union inside it, rather than leaving the item to the first schema whose fields fit.
 
 ### Case description
 
@@ -6978,7 +6978,7 @@ gesBlock: case
 id: read-document-union-choice-after-failed-alternative
 schemaApi:
   sources:
-    - "schema :Small as { value: :Number integer between 0 and 9 }\nschema :Large as { value: :Number integer between 10 and 99 }\nschema :Box2 as { item: :Small | :Large }\nschema :A as { box: :Box2, flag: :Boolean }\nschema :B as { box: :Box2, flag: :Number integer between 0 and 9 }\nschema :Holder as { entry: :A | :B }\n"
+    - "schema :Small as { value: :Number integer between 0 and 9 }\nschema :Large as { value: :Number integer between 10 and 99 }\nschema :Box2 as { item: :Small | :Large }\nschema :A as { box: :Box2 | :Small, flag: :Boolean }\nschema :B as { box: :Box2 | :Small, flag: :Number integer between 0 and 9 }\nschema :Holder as { entry: :A | :B }\n"
   readDocument:
     text: ":Schema(:Holder)\nentry: [box: [item: [value: 42]], flag: 3]\n"
     expected: ["Holder"]
@@ -7000,7 +7000,7 @@ schema:
             entries:
               - key: "box"
                 value:
-                  type: ":Map"
+                  type: ":Box2"
                   entries:
                     - key: "item"
                       value:

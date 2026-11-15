@@ -44,9 +44,10 @@ internal sealed class GesSchemaDocumentCheck
     // the choices of the unions inside it.
     private readonly List<((string Position, GesResolvedType[] Alternatives) Union, GesResolvedType? Replaced)> _choices = new();
 
-    // The unions directly inside each alternative that held, which a cached answer repeats at its own position. Each records
-    // only its direct unions, whose own cached answers hold the deeper ones, so nesting stores every choice once. `_direct`
-    // collects the direct unions of the alternatives being checked, by exact path, until their alternative answers.
+    // The unions directly inside each alternative that held, which a cached answer repeats. Each records only its direct
+    // unions, whose own cached answers hold the deeper ones, so nesting stores every choice once. A value's exact path
+    // follows from the document alone, so a repeated choice keeps its recorded position. `_direct` collects the direct
+    // unions of the alternatives being checked until their alternative answers.
     private readonly Dictionary<(GesResolvedType Type, GesDocumentNode Value), Made[]> _made = new();
     private readonly List<Made> _direct = new();
 
@@ -170,14 +171,7 @@ internal sealed class GesSchemaDocumentCheck
                 {
                     Type(alternative, value);
                     holds = true;
-                    var made = new Made[_direct.Count - direct];
-                    for (var index = 0; index < made.Length; index++)
-                    {
-                        var union = _direct[direct + index];
-                        made[index] = union with { Position = Relative(_position, union.Position) };
-                    }
-
-                    _made[(alternative, value)] = made;
+                    _made[(alternative, value)] = _direct.GetRange(direct, _direct.Count - direct).ToArray();
                 }
                 catch (Failure)
                 {
@@ -190,7 +184,7 @@ internal sealed class GesSchemaDocumentCheck
             }
             else if (holds)
             {
-                Repeat(_made[(alternative, value)], _position);
+                Repeat(_made[(alternative, value)]);
             }
 
             if (holds)
@@ -204,26 +198,18 @@ internal sealed class GesSchemaDocumentCheck
         throw Fail(FieldType, value.Start);
     }
 
-    // A union that chose an alternative for a value, at a path relative to the alternative that encloses it.
+    // A union that chose an alternative for a value at its exact path.
     private readonly record struct Made(string Position, GesResolvedType[] Alternatives, GesResolvedType Alternative, GesDocumentNode Value);
 
-    // Repeats the choices of a cached alternative and of the unions inside it at the position of the value it holds for now.
-    private void Repeat(Made[] made, string position)
+    // Repeats the choices of a cached alternative and of the unions inside it.
+    private void Repeat(Made[] made)
     {
         foreach (var union in made)
         {
-            var at = Rebased(position, union.Position);
-            Choose((at, union.Alternatives), union.Alternative);
-            if (_made.TryGetValue((union.Alternative, union.Value), out var inner)) Repeat(inner, at);
+            Choose((union.Position, union.Alternatives), union.Alternative);
+            if (_made.TryGetValue((union.Alternative, union.Value), out var inner)) Repeat(inner);
         }
     }
-
-    // An exact path relative to an enclosing one, empty or starting with `.` or `[`, and back.
-    private static string Relative(string outer, string position)
-        => outer.Length > 0 ? position.Substring(outer.Length) : position.Length == 0 || position[0] == '[' ? position : "." + position;
-
-    private static string Rebased(string outer, string relative)
-        => outer.Length > 0 ? outer + relative : relative.Length > 0 && relative[0] == '.' ? relative.Substring(1) : relative;
 
     private void Choose((string Position, GesResolvedType[] Alternatives) union, GesResolvedType alternative)
     {

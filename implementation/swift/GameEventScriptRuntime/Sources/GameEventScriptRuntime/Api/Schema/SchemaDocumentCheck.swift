@@ -39,7 +39,7 @@ struct GesSchemaDocumentCheck {
         }
     }
 
-    // A union that chose an alternative for a value, at a path relative to the alternative that encloses it.
+    // A union that chose an alternative for a value at its exact path.
     private struct Made {
         let position: String
         let alternatives: [GesResolvedType]
@@ -55,9 +55,10 @@ struct GesSchemaDocumentCheck {
         // Every choice in the order it was made, with the alternative it replaced, so that an alternative that fails takes
         // back the choices of the unions inside it.
         var choices: [(union: Choice, replaced: GesResolvedType?)] = []
-        // The unions directly inside each alternative that held, which a cached answer repeats at its own position. Each
-        // records only its direct unions, whose own cached answers hold the deeper ones, so nesting stores every choice once.
-        // `direct` collects the direct unions of the alternatives being checked, by exact path, until their alternative answers.
+        // The unions directly inside each alternative that held, which a cached answer repeats. Each records only its
+        // direct unions, whose own cached answers hold the deeper ones, so nesting stores every choice once. A value's exact
+        // path follows from the document alone, so a repeated choice keeps its recorded position. `direct` collects the
+        // direct unions of the alternatives being checked until their alternative answers.
         var made: [Attempt: [Made]] = [:]
         var direct: [Made] = []
         var levels: [ObjectIdentifier: Int] = [:]
@@ -145,15 +146,14 @@ struct GesSchemaDocumentCheck {
             let attempt = Attempt(type: ObjectIdentifier(alternative), value: value, start: start)
             if let holds = attempts.holds[attempt] {
                 if !holds { continue }
-                repeatChoices(attempts.made[attempt]!, attempts.position)
+                repeatChoices(attempts.made[attempt]!)
             } else {
                 let mark = attempts.choices.count
                 let direct = attempts.direct.count
                 do {
                     try type(alternative, value, start)
                     attempts.holds[attempt] = true
-                    let outer = attempts.position
-                    attempts.made[attempt] = attempts.direct[direct...].map { Made(position: Self.relative(outer, $0.position), alternatives: $0.alternatives, alternative: $0.alternative, attempt: $0.attempt) }
+                    attempts.made[attempt] = Array(attempts.direct[direct...])
                     attempts.direct.removeSubrange(direct...)
                 } catch is Failure {
                     // The next alternative may hold; the unions inside this one chose nothing.
@@ -170,24 +170,12 @@ struct GesSchemaDocumentCheck {
         throw fail(Self.fieldType, start)
     }
 
-    // Repeats the choices of a cached alternative and of the unions inside it at the position of the value it holds for now.
-    private func repeatChoices(_ made: [Made], _ position: String) {
+    // Repeats the choices of a cached alternative and of the unions inside it.
+    private func repeatChoices(_ made: [Made]) {
         for union in made {
-            let at = Self.rebased(position, union.position)
-            choose(Choice(at, union.alternatives), union.alternative)
-            if let inner = attempts.made[union.attempt] { repeatChoices(inner, at) }
+            choose(Choice(union.position, union.alternatives), union.alternative)
+            if let inner = attempts.made[union.attempt] { repeatChoices(inner) }
         }
-    }
-
-    // An exact path relative to an enclosing one, empty or starting with `.` or `[`, and back.
-    private static func relative(_ outer: String, _ position: String) -> String {
-        if !outer.isEmpty { return String(position.utf8.dropFirst(outer.utf8.count))! }
-        return position.isEmpty || position.hasPrefix("[") ? position : "." + position
-    }
-
-    private static func rebased(_ outer: String, _ relative: String) -> String {
-        if !outer.isEmpty { return outer + relative }
-        return relative.hasPrefix(".") ? String(relative.dropFirst()) : relative
     }
 
     private func choose(_ union: Choice, _ alternative: GesResolvedType) {

@@ -18,6 +18,9 @@ final class GesAstValidator {
     private(set) var definitions: [String: GesDefinition] = [:]
     private(set) var records: [String: GesRecord] = [:]
     private var diagnostics: [GesDiagnostic] = []
+    // The result types of callables whose inference met no cycle. Such a result depends only on the callee, so every
+    // later inference reuses it instead of inferring the callee again; see CallableResults.
+    var callResults: [String: String] = [:]
 
     init(modules: [GesModule], catalog: (any GesExternalTypeCatalog)?, diagnostics: [GesDiagnostic] = []) {
         self.modules = modules

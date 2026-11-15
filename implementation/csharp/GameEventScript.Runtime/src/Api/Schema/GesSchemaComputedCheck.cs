@@ -676,12 +676,14 @@ internal sealed partial class GesFileScope
 
                 var components = new GesComputedNode?[3];
                 var unit = (GesQuantityUnit?)null;
+                GesComputedNode? firstComponent = null;
                 for (var index = 0; index < children.Length; index++)
                 {
                     var component = Value(children[index], context);
                     if (component.Type != GesComputedType.Number) throw Mismatch(children[index], "a number", component);
-                    if (unit is { } first && component.Unit != first)
-                        throw Error(Code.UnitMismatch, children[index].Offset, $"The components of :{syntax.Name} have one unit, but a {Describe(component)} meets a {Describe(components[start])}.");
+                    if (firstComponent is not null && component.Unit != firstComponent.Unit)
+                        throw Error(Code.UnitMismatch, children[index].Offset, $"The components of :{syntax.Name} have one unit, but a {Describe(component)} meets a {Describe(firstComponent)}.");
+                    firstComponent ??= component;
                     unit = component.Unit;
                     components[start + index] = component;
                 }

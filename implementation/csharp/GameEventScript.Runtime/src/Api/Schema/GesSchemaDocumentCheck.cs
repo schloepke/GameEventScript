@@ -40,6 +40,11 @@ internal sealed class GesSchemaDocumentCheck
     // its index, as `items[2].value`, since the values of an explicit form share the form's position.
     private readonly Dictionary<(string Position, GesResolvedType[] Alternatives), GesResolvedType> _chosen = new();
 
+    // Every choice in the order it was made, with the alternative it replaced, so that an alternative that fails takes back
+    // the choices of the unions inside it; and the choices inside each alternative that held, which a cached answer repeats.
+    private readonly List<((string Position, GesResolvedType[] Alternatives) Union, GesResolvedType? Replaced)> _choices = new();
+    private readonly Dictionary<(GesResolvedType Type, GesDocumentNode Value), ((string Position, GesResolvedType[] Alternatives) Union, GesResolvedType Alternative)[]> _made = new();
+
     // How many records of each schema enclose the value being checked, which a recursive List counts against its depth.
     private readonly Dictionary<GesResolvedDeclaration, int> _levels = new();
 
@@ -154,27 +159,60 @@ internal sealed class GesSchemaDocumentCheck
         {
             if (!_holds.TryGetValue((alternative, value), out var holds))
             {
+                var mark = _choices.Count;
                 try
                 {
                     Type(alternative, value);
                     holds = true;
+                    var made = new ((string, GesResolvedType[]), GesResolvedType)[_choices.Count - mark];
+                    for (var index = 0; index < made.Length; index++)
+                    {
+                        var union = _choices[mark + index].Union;
+                        made[index] = (union, _chosen[union]);
+                    }
+
+                    _made[(alternative, value)] = made;
                 }
                 catch (Failure)
                 {
-                    // The next alternative may hold.
+                    // The next alternative may hold; the unions inside this one chose nothing.
+                    Revert(mark);
                 }
 
                 _holds[(alternative, value)] = holds;
             }
+            else if (holds)
+            {
+                foreach (var (union, made) in _made[(alternative, value)]) Choose(union, made);
+            }
 
             if (holds)
             {
-                _chosen[(_position, alternatives)] = alternative;
+                Choose((_position, alternatives), alternative);
                 return;
             }
         }
 
         throw Fail(FieldType, value.Start);
+    }
+
+    private void Choose((string Position, GesResolvedType[] Alternatives) union, GesResolvedType alternative)
+    {
+        _choices.Add((union, _chosen.TryGetValue(union, out var replaced) ? replaced : null));
+        _chosen[union] = alternative;
+    }
+
+    // Takes back the choices made since the mark, latest first.
+    private void Revert(int mark)
+    {
+        for (var index = _choices.Count - 1; index >= mark; index--)
+        {
+            var (union, replaced) = _choices[index];
+            if (replaced is null) _chosen.Remove(union);
+            else _chosen[union] = replaced;
+        }
+
+        _choices.RemoveRange(mark, _choices.Count - mark);
     }
 
     private void Type(GesResolvedType type, GesDocumentNode value)

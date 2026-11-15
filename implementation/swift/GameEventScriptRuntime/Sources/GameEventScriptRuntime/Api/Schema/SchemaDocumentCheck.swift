@@ -44,6 +44,10 @@ struct GesSchemaDocumentCheck {
     private final class Attempts {
         var holds: [Attempt: Bool] = [:]
         var chosen: [Choice: GesResolvedType] = [:]
+        // Every choice in the order it was made, with the alternative it replaced, so that an alternative that fails takes
+        // back the choices of the unions inside it; and the choices inside each alternative that held, which a cached answer repeats.
+        var choices: [(union: Choice, replaced: GesResolvedType?)] = []
+        var made: [Attempt: [(union: Choice, alternative: GesResolvedType)]] = [:]
         var levels: [ObjectIdentifier: Int] = [:]
         // The path of the value being checked, and its exact path with list indices.
         var path = ""
@@ -129,21 +133,37 @@ struct GesSchemaDocumentCheck {
             let attempt = Attempt(type: ObjectIdentifier(alternative), value: value, start: start)
             if let holds = attempts.holds[attempt] {
                 if holds {
-                    attempts.chosen[Choice(attempts.position, alternatives)] = alternative
+                    for (union, made) in attempts.made[attempt]! { choose(union, made) }
+                    choose(Choice(attempts.position, alternatives), alternative)
                     return
                 }
                 continue
             }
+            let mark = attempts.choices.count
             do {
                 try type(alternative, value, start)
                 attempts.holds[attempt] = true
-                attempts.chosen[Choice(attempts.position, alternatives)] = alternative
+                attempts.made[attempt] = attempts.choices[mark...].map { ($0.union, attempts.chosen[$0.union]!) }
+                choose(Choice(attempts.position, alternatives), alternative)
                 return
             } catch is Failure {
+                // The next alternative may hold; the unions inside this one chose nothing.
+                revert(mark)
                 attempts.holds[attempt] = false
             }
         }
         throw fail(Self.fieldType, start)
+    }
+
+    private func choose(_ union: Choice, _ alternative: GesResolvedType) {
+        attempts.choices.append((union, attempts.chosen[union]))
+        attempts.chosen[union] = alternative
+    }
+
+    // Takes back the choices made since the mark, latest first.
+    private func revert(_ mark: Int) {
+        for (union, replaced) in attempts.choices[mark...].reversed() { attempts.chosen[union] = replaced }
+        attempts.choices.removeSubrange(mark...)
     }
 
     private func type(_ type: GesResolvedType, _ value: GesDocumentNode, _ start: Int) throws {

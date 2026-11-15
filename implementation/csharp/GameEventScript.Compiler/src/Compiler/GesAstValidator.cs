@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Syntax;
@@ -69,10 +71,11 @@ internal static class GesAstValidator
     }
 
     // The program-wide rules of one module; its own source rules are the Syntax validator's.
-    internal static void ValidateModule(GesParsedScript parsedScript, IReadOnlyDictionary<string, GesCallableDefinition> callables,
+    internal static void ValidateModule(GesParsedScript parsedScript, IReadOnlyDictionary<string, GesCallableDefinition> moduleCallables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesExpressionNode> constants, GesCompileOptions options, GesValidationErrors errors)
     {
         _ = options;
+        var callables = new ValidationCallables(moduleCallables);
         for (var typeDefinitionIndex = 0; typeDefinitionIndex < parsedScript.TypeDefinitions.Count; typeDefinitionIndex++)
         {
             var typeDefinition = parsedScript.TypeDefinitions[typeDefinitionIndex];
@@ -121,7 +124,7 @@ internal static class GesAstValidator
     private static void ValidateStatementReferences(
         GesParsedScript parsedScriptContext,
         GesStatementNode statement,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         ValidationScope scope)
@@ -226,7 +229,7 @@ internal static class GesAstValidator
     private static void ValidateStatementBodyReferences(
         GesParsedScript parsedScriptContext,
         GesStatementBodyNode body,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         ValidationScope parentScope)
@@ -252,6 +255,29 @@ internal static class GesAstValidator
     // an explicit stack instead of native recursion (specs/Language.md#functions-and-predicates): while a callable body is classified, a
     // call of a callable without a result records it as missing, and the body is classified again once the missing
     // callable has its result. A call of a callable still on the stack is a cycle and stays unknown.
+    // The callables of a module with the result types of those whose classification met no cycle. Such a result depends
+    // only on the callee, so every later classification reuses it instead of classifying the callee again.
+    private sealed class ValidationCallables(IReadOnlyDictionary<string, GesCallableDefinition> definitions) : IReadOnlyDictionary<string, GesCallableDefinition>
+    {
+        public Dictionary<string, StaticExpressionInfo> Results { get; } = new(StringComparer.Ordinal);
+
+        public GesCallableDefinition this[string key] => definitions[key];
+
+        public IEnumerable<string> Keys => definitions.Keys;
+
+        public IEnumerable<GesCallableDefinition> Values => definitions.Values;
+
+        public int Count => definitions.Count;
+
+        public bool ContainsKey(string key) => definitions.ContainsKey(key);
+
+        public bool TryGetValue(string key, [MaybeNullWhen(false)] out GesCallableDefinition value) => definitions.TryGetValue(key, out value);
+
+        public IEnumerator<KeyValuePair<string, GesCallableDefinition>> GetEnumerator() => definitions.GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
     private sealed class CallableResults
     {
         public Dictionary<string, StaticExpressionInfo> Results { get; } = new(StringComparer.Ordinal);
@@ -261,6 +287,9 @@ internal static class GesAstValidator
         public HashSet<string> PendingKeys { get; } = new(StringComparer.Ordinal);
 
         public GesCallableDefinition? Missing { get; set; }
+
+        // Whether a call met a callable still on the stack, whose unknown result depends on where the chain started.
+        public bool Cyclic { get; set; }
 
         public void Push(GesCallableDefinition callable, string key)
         {
@@ -301,7 +330,7 @@ internal static class GesAstValidator
     private static void ValidatePredicateResultExpression(
         GesParsedScript parsedScriptContext,
         GesPredicateDefinitionNode predicateDefinition,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         IReadOnlyDictionary<string, GesExpressionNode> constants)
@@ -358,7 +387,7 @@ internal static class GesAstValidator
 
     private static StaticExpressionInfo ClassifyExpression(
         GesExpressionNode expression,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
         CallableResults callableResults)
@@ -473,7 +502,7 @@ internal static class GesAstValidator
         _ => null
     };
 
-    private static readonly Dictionary<string, GesCallableDefinition> NoCallables = new(StringComparer.Ordinal);
+    private static readonly ValidationCallables NoCallables = new(new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal));
     private static readonly Dictionary<string, GesTypeDefinitionNode> NoTypes = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, string> NoDeclaredTypes = new(StringComparer.Ordinal);
 
@@ -502,7 +531,7 @@ internal static class GesAstValidator
     private static void ValidateSeedExpression(
         GesParsedScript parsedScriptContext,
         GesExpressionNode seedExpression,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         IReadOnlyDictionary<string, string> declaredTypes)
@@ -539,7 +568,7 @@ internal static class GesAstValidator
 
     private static StaticExpressionInfo ClassifyMemberAccess(
         GesMemberAccessExpressionNode memberAccess,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
         CallableResults callableResults)
@@ -563,7 +592,7 @@ internal static class GesAstValidator
             _ => StaticExpressionInfo.Unknown
         };
 
-    private static StaticExpressionInfo ClassifyCall(GesCallExpressionNode call, IReadOnlyDictionary<string, GesCallableDefinition> callables, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, string> declaredTypes, CallableResults callableResults)
+    private static StaticExpressionInfo ClassifyCall(GesCallExpressionNode call, ValidationCallables callables, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, string> declaredTypes, CallableResults callableResults)
     {
         var callable = GesCallableSignatures.Resolve(callables, call);
         if (callable is null) return StaticExpressionInfo.Unknown;
@@ -571,8 +600,13 @@ internal static class GesAstValidator
         if (callable.Kind == GesCallableKind.PredicateCall) return StaticExpressionInfo.Boolean;
 
         var callableKey = $"{callable.Kind}:{callable.SignatureId}";
-        if (callableResults.Results.TryGetValue(callableKey, out var known)) return known;
-        if (callableResults.PendingKeys.Contains(callableKey)) return StaticExpressionInfo.Unknown;
+        if (callableResults.Results.TryGetValue(callableKey, out var known) || callables.Results.TryGetValue(callableKey, out known)) return known;
+        if (callableResults.PendingKeys.Contains(callableKey))
+        {
+            callableResults.Cyclic = true;
+            return StaticExpressionInfo.Unknown;
+        }
+
         if (callableResults.Pending.Count > 0)
         {
             callableResults.Missing ??= callable;
@@ -597,12 +631,14 @@ internal static class GesAstValidator
             callableResults.Pop(currentKey);
         }
 
+        if (!callableResults.Cyclic)
+            foreach (var entry in callableResults.Results) callables.Results[entry.Key] = entry.Value;
         return callableResults.Results[callableKey];
     }
 
     private static StaticExpressionInfo ClassifyUnary(
         GesUnaryExpressionNode unary,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
         CallableResults callableResults)
@@ -633,7 +669,7 @@ internal static class GesAstValidator
     private static StaticExpressionInfo ClassifyUnitPreserving(
         GesExpressionNode operand,
         bool vectorMagnitude,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
         CallableResults callableResults)
@@ -646,7 +682,7 @@ internal static class GesAstValidator
 
     private static StaticExpressionInfo ClassifyBinary(
         GesBinaryExpressionNode binary,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
         CallableResults callableResults)
@@ -679,7 +715,7 @@ internal static class GesAstValidator
 
     private static StaticExpressionInfo ClassifyGuardedChoice(
         GesGuardedChoiceExpressionNode guardedChoice,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
         CallableResults callableResults)
@@ -712,7 +748,7 @@ internal static class GesAstValidator
     private static void ValidateExpressionReferences(
         GesParsedScript parsedScriptContext,
         GesExpressionNode expression,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         IReadOnlyDictionary<string, string>? declaredTypes = null)
@@ -906,7 +942,7 @@ internal static class GesAstValidator
     private static void ValidateIterationSourceReferences(
         GesParsedScript parsedScriptContext,
         GesIterationSourceNode source,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         IReadOnlyDictionary<string, string>? declaredTypes = null)
@@ -921,7 +957,7 @@ internal static class GesAstValidator
     private static void ValidateCollectionSelectorReferences(
         GesParsedScript parsedScriptContext,
         GesCollectionSelectorNode selector,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         IReadOnlyDictionary<string, string>? declaredTypes = null)
@@ -966,7 +1002,7 @@ internal static class GesAstValidator
 
     // A call must name a declared signature (name plus ordered labels); otherwise the name has another arity, or no
     // callable exists when every argument is positional. A labeled call to an unknown name is a handler call.
-    private static void ValidateCallExpression(GesParsedScript parsedScriptContext, GesCallExpressionNode call, IReadOnlyDictionary<string, GesCallableDefinition> callables, GesValidationErrors errors)
+    private static void ValidateCallExpression(GesParsedScript parsedScriptContext, GesCallExpressionNode call, ValidationCallables callables, GesValidationErrors errors)
     {
         if (GesCallableSignatures.Resolve(callables, call) is not null) return;
         if (GesCallableSignatures.HasName(callables, call.Name))
@@ -986,7 +1022,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static GesCallableKind FindCallableKind(IReadOnlyDictionary<string, GesCallableDefinition> callables, string name)
+    private static GesCallableKind FindCallableKind(ValidationCallables callables, string name)
     {
         foreach (var callable in callables.Values)
             if (string.Equals(callable.Name, name, StringComparison.Ordinal)) return callable.Kind;
@@ -1076,7 +1112,7 @@ internal static class GesAstValidator
     private static void ValidateTypeConstructorExpression(
         GesParsedScript parsedScriptContext,
         GesTypeConstructorExpressionNode constructor,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        ValidationCallables callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         IReadOnlyDictionary<string, string>? declaredTypes = null)

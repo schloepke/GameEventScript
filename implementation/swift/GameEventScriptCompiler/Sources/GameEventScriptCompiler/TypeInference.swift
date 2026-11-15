@@ -14,6 +14,8 @@ extension GesAstValidator {
         var pending: [String] = []
         var pendingKeys: Set<String> = []
         var missing: String?
+        // Whether a call met a callable still on the stack, whose unknown result depends on where the chain started.
+        var cyclic = false
     }
 
     func infer(_ expression: GesExpression, _ types: [String: String], _ callables: CallableResults = .init()) -> String {
@@ -74,8 +76,12 @@ extension GesAstValidator {
 
     // The inferred result type of a function; see CallableResults.
     private func callResult(_ key: String, _ callables: CallableResults) -> String {
-        if let known = callables.results[key] { return known }
-        if definitions[key]?.expression == nil || callables.pendingKeys.contains(key) { return "unknown" }
+        if let known = callables.results[key] ?? callResults[key] { return known }
+        if definitions[key]?.expression == nil { return "unknown" }
+        if callables.pendingKeys.contains(key) {
+            callables.cyclic = true
+            return "unknown"
+        }
         if !callables.pending.isEmpty {
             if callables.missing == nil { callables.missing = key }
             return "unknown"
@@ -97,6 +103,7 @@ extension GesAstValidator {
             callables.pending.removeLast()
             callables.pendingKeys.remove(current)
         }
+        if !callables.cyclic { callResults.merge(callables.results) { _, new in new } }
         return callables.results[key] ?? "unknown"
     }
 
@@ -108,7 +115,7 @@ extension GesAstValidator {
         guard case .literal(let text) = args[1 - valueIndex].value.kind, text.valueKind == .text, let name = text.textValue else { return "unknown" }
         guard let unit = name.isEmpty ? GesQuantityUnit.none : GesQuantityUnit(quantityName: name) else { return "nothing" }
         if case .literal(let value) = args[valueIndex].value.kind, value.hasUnit, value.unit != unit { return "nothing" }
-        return unit == .none ? "number" : "quantity:" + unit.rawValue
+        return unit == .none ? "number" : "quantity:" + unit.suffix
     }
 
     func validateSeed(_ expression: GesExpression, _ types: [String: String]) {

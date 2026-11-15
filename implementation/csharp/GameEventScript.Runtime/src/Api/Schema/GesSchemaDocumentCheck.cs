@@ -171,7 +171,9 @@ internal sealed class GesSchemaDocumentCheck
                 {
                     Type(alternative, value);
                     holds = true;
-                    _made[(alternative, value)] = _direct.GetRange(direct, _direct.Count - direct).ToArray();
+                    var made = new Made[_direct.Count - direct];
+                    _direct.CopyTo(direct, made, 0, made.Length);
+                    _made[(alternative, value)] = made;
                 }
                 catch (Failure)
                 {

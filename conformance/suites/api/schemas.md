@@ -6967,9 +6967,10 @@ schema:
 
 ## Test: a union checked inside a failed alternative keeps its choice in the next one
 
-The first alternative `:A` checks the union of `box` and the union of `box.item` inside it, then fails on `flag`, which
-takes back both choices. `:B` reaches the same `box` value, whose cached answer `:Box2` repeats the choice `:Large` of the
-union inside it, rather than leaving the item to the first schema whose fields fit.
+The first alternative `:A` checks the unions of `box.item`, `box.item.middle` and `box.item.middle.inner`, then fails on
+`flag`, which takes back all three choices. `:B` checks the same item against the same declaration `:Box2`, whose cached
+answer `:Outer` repeats the choice `:Mid` of the union inside it and, through the cached answer of `:Mid`, the choice
+`:Large` one level deeper, rather than leaving the inner value to the first schema whose fields fit.
 
 ### Case description
 
@@ -6978,9 +6979,9 @@ gesBlock: case
 id: read-document-union-choice-after-failed-alternative
 schemaApi:
   sources:
-    - "schema :Small as { value: :Number integer between 0 and 9 }\nschema :Large as { value: :Number integer between 10 and 99 }\nschema :Box2 as { item: :Small | :Large }\nschema :A as { box: :Box2 | :Small, flag: :Boolean }\nschema :B as { box: :Box2 | :Small, flag: :Number integer between 0 and 9 }\nschema :Holder as { entry: :A | :B }\n"
+    - "schema :Small as { value: :Number integer between 0 and 9 }\nschema :Large as { value: :Number integer between 10 and 99 }\nschema :Mid as { inner: :Small | :Large }\nschema :Outer as { middle: :Mid | :Small }\nschema :Box2 as { item: :Outer | :Small }\nschema :A as { box: :Box2, flag: :Boolean }\nschema :B as { box: :Box2, flag: :Number integer between 0 and 9 }\nschema :Holder as { entry: :A | :B }\n"
   readDocument:
-    text: ":Schema(:Holder)\nentry: [box: [item: [value: 42]], flag: 3]\n"
+    text: ":Schema(:Holder)\nentry: [box: [item: [middle: [inner: [value: 42]]]], flag: 3]\n"
     expected: ["Holder"]
 ```
 
@@ -7000,16 +7001,24 @@ schema:
             entries:
               - key: "box"
                 value:
-                  type: ":Box2"
+                  type: ":Map"
                   entries:
                     - key: "item"
                       value:
-                        type: ":Large"
+                        type: ":Outer"
                         entries:
-                          - key: "value"
+                          - key: "middle"
                             value:
-                              type: ":Number.int64"
-                              value: "42"
+                              type: ":Mid"
+                              entries:
+                                - key: "inner"
+                                  value:
+                                    type: ":Large"
+                                    entries:
+                                      - key: "value"
+                                        value:
+                                          type: ":Number.int64"
+                                          value: "42"
               - key: "flag"
                 value:
                   type: ":Number.int64"

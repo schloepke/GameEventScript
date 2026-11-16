@@ -189,7 +189,7 @@ host language’s similarly named default overload.</p>
 text token. It ignores ASCII space (<code>U+0020</code>) and tab (<code>U+0009</code>) before and after
 the token.
 No whitespace is allowed inside it. The grammar is:</p>
-<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumericText = Padding NumberToken Padding</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Padding     = { " " | "\t" }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumberToken = (Finite | Infinity | "NaN") [Suffix]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Finite      = [Sign] (Digits | GroupedDigits) ["." Digits] [Exponent]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Infinity    = [Sign] "Infinity"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Exponent    = ("e" | "E") [Sign] Digits</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Sign        = "+" | "-"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digits      = Digit {["_"] Digit}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GroupedDigits = FirstGroup "," ThreeDigits {"," ThreeDigits}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">FirstGroup  = Digit [Digit [Digit]]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ThreeDigits = Digit Digit Digit</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digit       = "0".."9"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Suffix      = UnitSpelling | "%"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="NumericText = Padding NumberToken PaddingPadding     = { &quot; &quot; | &quot;\t&quot; }NumberToken = (Finite | Infinity | &quot;NaN&quot;) [Suffix]Finite      = [Sign] (Digits | GroupedDigits) [&quot;.&quot; Digits] [Exponent]Infinity    = [Sign] &quot;Infinity&quot;Exponent    = (&quot;e&quot; | &quot;E&quot;) [Sign] DigitsSign        = &quot;+&quot; | &quot;-&quot;Digits      = Digit {[&quot;_&quot;] Digit}GroupedDigits = FirstGroup &quot;,&quot; ThreeDigits {&quot;,&quot; ThreeDigits}FirstGroup  = Digit [Digit [Digit]]ThreeDigits = Digit Digit DigitDigit       = &quot;0&quot;..&quot;9&quot;Suffix      = UnitSpelling | &quot;%&quot;"><div></div></button></div></figure></div>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumericText = Padding NumberToken Padding</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Padding     = { " " | "\t" }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumberToken = (Finite | Infinity | "NaN") [Suffix] | Hexadecimal</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Hexadecimal = [Sign] "0x" HexDigit {["_"] HexDigit}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">HexDigit    = "0".."9" | "a".."f" | "A".."F"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Finite      = [Sign] (Digits | GroupedDigits) ["." Digits] [Exponent]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Infinity    = [Sign] "Infinity"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Exponent    = ("e" | "E") [Sign] Digits</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Sign        = "+" | "-"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digits      = Digit {["_"] Digit}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GroupedDigits = FirstGroup "," ThreeDigits {"," ThreeDigits}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">FirstGroup  = Digit [Digit [Digit]]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ThreeDigits = Digit Digit Digit</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digit       = "0".."9"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Suffix      = UnitSpelling | "%"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="NumericText = Padding NumberToken PaddingPadding     = { &quot; &quot; | &quot;\t&quot; }NumberToken = (Finite | Infinity | &quot;NaN&quot;) [Suffix] | HexadecimalHexadecimal = [Sign] &quot;0x&quot; HexDigit {[&quot;_&quot;] HexDigit}HexDigit    = &quot;0&quot;..&quot;9&quot; | &quot;a&quot;..&quot;f&quot; | &quot;A&quot;..&quot;F&quot;Finite      = [Sign] (Digits | GroupedDigits) [&quot;.&quot; Digits] [Exponent]Infinity    = [Sign] &quot;Infinity&quot;Exponent    = (&quot;e&quot; | &quot;E&quot;) [Sign] DigitsSign        = &quot;+&quot; | &quot;-&quot;Digits      = Digit {[&quot;_&quot;] Digit}GroupedDigits = FirstGroup &quot;,&quot; ThreeDigits {&quot;,&quot; ThreeDigits}FirstGroup  = Digit [Digit [Digit]]ThreeDigits = Digit Digit DigitDigit       = &quot;0&quot;..&quot;9&quot;Suffix      = UnitSpelling | &quot;%&quot;"><div></div></button></div></figure></div>
 <p><code>UnitSpelling</code> is any unit symbol, ASCII spelling or prefixed spelling listed in
 <a href="/docs/reference/language/#quantities">Language quantities</a>, such as <code>m/s</code>, <code>deg/s</code>, <code>ms</code>,
 <code>kWh</code> or <code>/s</code>. The suffix is the longest spelling that ends the token; it must
@@ -199,6 +199,17 @@ case-sensitive.
 Leading zeroes are allowed in the integer part and exponent. Both <code>e</code> and <code>E</code>,
 an explicit positive exponent sign, and exponent leading zeroes are accepted.
 Thus <code>1000</code>, <code>100.2</code>, <code>1.02e20</code>, <code>1e03</code>, and <code>1E+003</code> are valid inputs.</p>
+<blockquote>
+<p><strong>Since: 0.5.0</strong> — hexadecimal numeric text</p>
+</blockquote>
+<p>A <code>Hexadecimal</code> token is an exact Int64 integer, matching hexadecimal source
+literals: its magnitude may be at most <code>0x7fff_ffff_ffff_ffff</code>, also with a
+minus sign, and a larger magnitude is invalid rather than rounded. The <code>0x</code>
+prefix is lowercase, while digits accept both cases. It has no suffix, so
+<code>0x10m</code> and <code>0x10%</code> are invalid and <code>0x1B</code> is 27, never a byte count. Like any
+token without a suffix, <code>as :Percentage</code> reads it as the ratio itself. Thus <code>0xff</code>, <code>-0x10</code>, <code>+0xFF_FF</code> and <code>0x7fff_ffff_ffff_ffff</code> are
+valid; <code>0x</code>, <code>0X10</code>, <code>0x_1</code>, <code>0x1__2</code>, <code>0x1g</code>, <code>0x1.8</code>, <code>0x10m</code> and
+<code>0x8000_0000_0000_0000</code> are invalid.</p>
 <p>Single underscores may separate adjacent digits, matching numeric source
 literals. They may occur in the integer part, fractional part, or text
 exponent, without imposing a group size. They may not lead, trail, repeat, or
@@ -210,7 +221,7 @@ Thus <code>1,003.24</code> and <code>1,234,567.89</code> are valid, and <code>1,
 <code>1.003</code>. Commas and underscores must not be combined in one numeric token.
 Commas are not allowed in the fractional part or exponent. Separator validation
 precedes removal; a parser must not simply discard all commas or underscores.</p>
-<p>Decimal commas, malformed grouping, hexadecimal notation, non-ASCII digits,
+<p>Decimal commas, malformed grouping, non-ASCII digits,
 trailing signs, multiple suffixes, unknown suffixes, and unconsumed characters
 are invalid. A decimal point requires digits on both sides. An exponent
 requires at least one digit. Examples of invalid input are <code>12,34</code>, <code>100,2</code>,
@@ -232,7 +243,8 @@ In particular, source commas separate arguments and list items: <code>[1,003]</c
 contains two items, <code>1</code> and <code>3</code>, whereas <code>'1,003' as :Number</code> yields <code>1003</code>.
 Source underscores follow the common digit-separator rule. Text-only padding,
 signs, exponent notation, special-value spellings, and comma grouping do not
-implicitly become source-token syntax. Source signs and mathematical constants
+implicitly become source-token syntax; source hexadecimal literals have no
+sign and are owned by <a href="/docs/reference/language/">Language</a>. Source signs and mathematical constants
 retain their expression-level meaning.</p>
 <p>A Percentage literal constructs a Percentage value; <code>as :Number</code> reads the
 numeric ratio as defined below. A common conversion core must preserve this
@@ -533,16 +545,21 @@ non-integer <code>power</code> use the target platform’s IEEE binary64 math li
 the DSL’s unit, domain, absence, and special-value checks. Exact bit identity
 between different correctly rounded or near-correctly-rounded math libraries is
 not required.</p>
+<blockquote>
+<p><strong>Since: 0.5.0</strong> — exact square roots</p>
+</blockquote>
+<p>A power with the exponent 0.5, which <code>sqrt</code> and <code>√</code> lower to, is the correctly rounded IEEE square root rather than the
+library’s <code>pow</code>, so a square root has the same bits on every platform. Like <code>pow</code>, it gives <code>+infinity</code> for <code>-infinity</code>
+and NaN for a negative number. <code>cbrt</code> and <code>∛</code> remain the library power with the binary64 exponent 1/3.</p>
 <p>Constant folding never evaluates these approximations. It folds their exact
 operand subterms, and a power only when base and exponent are integers, the
 exponent is not negative and the exact result does not exceed <code>2^53</code> in
 magnitude. Every other approximation runs on the target platform, so a constant
 expression and the same computation from a runtime value yield one value within
 an execution, including for <code>&lt;</code>, ordering and text conversion.</p>
-<p>Conformance expectations therefore compare finite binary64 results by ULP distance.
-The default is 4096 ULPs, allowing bounded cross-library differences. A test or individual step
-can set <code>maxFloatUlps</code>; <code>0</code> requires bit-exact finite results. NaN/nothing,
-infinities, kinds, units, integers, booleans, text, and structure remain exact.
+<p>Conformance expectations therefore compare finite binary64 results exactly by default, and a case that runs
+such an approximation sets the <a href="/docs/reference/conformance/markdown-format/"><code>comparison</code></a> form <code>binary64: {mode: ulp, maxUlps: n}</code>
+for a bounded ULP distance. NaN/nothing, infinities, kinds, units, integers, booleans, text, and structure remain exact.
 Runtime <code>=</code> is unaffected and always uses its two-ULP rule.</p>
 <h2 id="canonical-conformance-scalar-encoding">Canonical conformance scalar encoding</h2>
 <p>The YAML value schema described here is test interchange data and does not

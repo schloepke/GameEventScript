@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct GesBindingSegment | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Struct GesBindingSegment | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct GesBindingSegment | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Struct GesBindingSegment | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script binding segment.">
+      <meta name="description" content="The immutable BindingSegment (section 0x0004): the program&#39;s exported handlers and callables, imported extensions and external types, outbound message signatures and Record constructors, in encoded order.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,8 @@ Struct GesBindingSegment
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script binding segment.</p>
+  <div class="markdown summary"><p>The immutable BindingSegment (section <code>0x0004</code>): the program's exported handlers and callables, imported
+extensions and external types, outbound message signatures and Record constructors, in encoded order.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -123,43 +124,9 @@ Struct GesBindingSegment
 
 
 
-
-
-  <h2 class="section" id="constructors">Constructors
-</h2>
-
-
-  <a id="GameEventScript_Api_GesBindingSegment__ctor_" data-uid="GameEventScript.Api.GesBindingSegment.#ctor*"></a>
-
-  <h3 id="GameEventScript_Api_GesBindingSegment__ctor_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GesBindingSegment_Entry__" data-uid="GameEventScript.Api.GesBindingSegment.#ctor(System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GesBindingSegment.Entry})">
-  GesBindingSegment(IReadOnlyList&lt;Entry&gt;?)
-  
-  </h3>
-
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script Binding Segment.</p>
+  <h2 id="GameEventScript_Api_GesBindingSegment_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>A <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/default">default</a> instance has no entries.</p>
 </div>
-  <div class="markdown level1 conceptual"></div>
-
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GesBindingSegment(IReadOnlyList&lt;GesBindingSegment.Entry&gt;? entries)</code></pre>
-  </div>
-
-  <h4 class="section">Parameters</h4>
-  <dl class="parameters">
-    <dt><code>entries</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesBindingSegment.html">GesBindingSegment</a>.<a class="xref" href="GameEventScript.Api.GesBindingSegment.Entry.html">Entry</a>&gt;</dt>
-    <dd><p>The entries value.</p>
-</dd>
-  </dl>
-
-
-
-
-
-
-
-
-
-
 
 
   <h2 class="section" id="properties">Properties
@@ -173,7 +140,7 @@ Struct GesBindingSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the entries.</p>
+  <div class="markdown level1 summary"><p>Gets the immutable binding records in encoded order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -205,7 +172,7 @@ Struct GesBindingSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the entry count.</p>
+  <div class="markdown level1 summary"><p>Gets the number of binding records, equal to the count of <a class="xref" href="GameEventScript.Api.GesBindingSegment.html#GameEventScript_Api_GesBindingSegment_Entries">Entries</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -247,7 +214,7 @@ Struct GesBindingSegment
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

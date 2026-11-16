@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesValueMap | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesValueMap | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesValueMap | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesValueMap | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a ges value map, traversed in canonical key order.">
+      <meta name="description" content="The immutable Text-keyed entries of a Map or the fields of a Record, with unique keys sorted by Unicode scalar values; indexing and enumeration follow that canonical order.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,8 @@ Class GesValueMap
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a ges value map, traversed in canonical key order.</p>
+  <div class="markdown summary"><p>The immutable Text-keyed entries of a Map or the fields of a Record, with unique keys sorted by Unicode scalar
+values; indexing and enumeration follow that canonical order.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -150,7 +151,7 @@ Class GesValueMap
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the length.</p>
+  <div class="markdown level1 summary"><p>Gets the number of entries.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -186,7 +187,7 @@ Class GesValueMap
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the contains key operation.</p>
+  <div class="markdown level1 summary"><p>Determines whether the map has an entry for a key, matching Unicode scalars exactly.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -197,14 +198,14 @@ Class GesValueMap
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>key</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The key value.</p>
+    <dd><p>The key to look up.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when the key is present.</p>
 </dd>
   </dl>
 
@@ -225,7 +226,7 @@ Class GesValueMap
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the value.</p>
+  <div class="markdown level1 summary"><p>Looks up the value of a key by binary search, matching Unicode scalars exactly.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -236,14 +237,14 @@ Class GesValueMap
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>key</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The key value.</p>
+    <dd><p>The key to look up.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a>?</dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The stored value, or <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> when the key is absent.</p>
 </dd>
   </dl>
 
@@ -297,7 +298,7 @@ Class GesValueMap
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the key at operation.</p>
+  <div class="markdown level1 summary"><p>Gets the key at a position in canonical key order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -308,14 +309,14 @@ Class GesValueMap
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based position, less than <a class="xref" href="GameEventScript.Runtime.Values.GesValueMap.html#GameEventScript_Runtime_Values_GesValueMap_Length">Length</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The key.</p>
 </dd>
   </dl>
 
@@ -326,6 +327,12 @@ Class GesValueMap
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.indexoutofrangeexception">IndexOutOfRangeException</a></dt>
+    <dd><p>Thrown when <code class="paramref">index</code> is out of range.</p>
+</dd>
+  </dl>
 
 
 
@@ -336,7 +343,7 @@ Class GesValueMap
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the value at operation.</p>
+  <div class="markdown level1 summary"><p>Gets the value at a position in canonical key order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -347,14 +354,14 @@ Class GesValueMap
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based position, less than <a class="xref" href="GameEventScript.Runtime.Values.GesValueMap.html#GameEventScript_Runtime_Values_GesValueMap_Length">Length</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The value.</p>
 </dd>
   </dl>
 
@@ -365,6 +372,12 @@ Class GesValueMap
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.indexoutofrangeexception">IndexOutOfRangeException</a></dt>
+    <dd><p>Thrown when <code class="paramref">index</code> is out of range.</p>
+</dd>
+  </dl>
 
 
 
@@ -385,7 +398,7 @@ Class GesValueMap
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

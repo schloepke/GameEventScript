@@ -88,11 +88,12 @@ and compilation options/errors and depends only on Runtime.</p>
 dictionary, and automatic-runner adapters and depends only on Runtime.</p>
 </li>
 <li>
-<p><code>GameEventScript.Syntax</code> contains optional GES/GESA editor ranges,
-TextMate scopes, incremental states and ANSI rendering, with no GES dependency.</p>
+<p><code>GameEventScript.Syntax</code> contains the lexer, parser and validator and the
+highlighting of whole GES, GESA, GESD and GESS documents with UTF-16 ranges and
+ANSI rendering, with no GES dependency.</p>
 </li>
 <li>
-<p><code>GameEventScript.Generator</code> (since Unreleased) writes typed C# and Swift code
+<p><code>GameEventScript.Generator</code> (since 0.5.0) writes typed C# and Swift code
 for <code>.gess</code> schemas at build time and depends on Runtime and Syntax. Games
 never ship it; the code it generates needs Runtime only.</p>
 </li>
@@ -134,6 +135,17 @@ publishes an artifact.</p>
 The repository package tool rewrites this packaging-only metadata, ZIP entry
 order, and timestamps into a canonical form. Package normalization is permitted
 only before signing. A signed archive is rejected.</p>
+<blockquote>
+<p><strong>Since: 0.5.0</strong> — commit-time timestamps</p>
+</blockquote>
+<p>Every packaged file takes the time of the packed commit, or the current time
+when the working tree has uncommitted changes (<code>SOURCE_DATE_EPOCH</code> overrides
+both), so packing one commit stays byte-identical while a newer build’s DLLs
+are newer. ZIP times have no time zone: the UTC clock time is stored and an
+extracted file shows it as local clock time, the same shift for every package
+on one machine. A build that copies a referenced DLL into its output
+only when date or size differ, as MSBuild’s CopyLocal does, therefore replaces
+the DLL of an older package version.</p>
 <p>Two independent package runs can be compared byte for byte with:</p>
 <div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/verify-csharp-reproducibility.sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">0.1.0-rc.1</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="./scripts/verify-csharp-reproducibility.sh 0.1.0-rc.1"><div></div></button></div></figure></div>
 <p>Generated files exist only under the ignored <code>artifacts/</code> tree:</p>

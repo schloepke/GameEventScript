@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Enum GesDebugInfoOptions | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Enum GesDebugInfoOptions | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Enum GesDebugInfoOptions | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Enum GesDebugInfoOptions | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Defines the supported game event script debug info options values.">
+      <meta name="description" content="Selects which optional debug sections the Compiler emits. Compilation includes all of them by default; size-sensitive builds opt out with .">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -84,7 +84,8 @@ Enum GesDebugInfoOptions
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Defines the supported game event script debug info options values.</p>
+  <div class="markdown summary"><p>Selects which optional debug sections the Compiler emits. Compilation includes all of them by default;
+size-sensitive builds opt out with <a class="xref" href="GameEventScript.Api.GesDebugInfoOptions.html#GameEventScript_Api_GesDebugInfoOptions_None">None</a>.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -106,23 +107,23 @@ public enum GesDebugInfoOptions : byte</code></pre>
   <dl class="parameters">
     <dt id="GameEventScript_Api_GesDebugInfoOptions_All"><code>All = DebugSymbols | SourceMap | SourceArchive</code></dt>
   
-  <dd><p>Identifies the all value.</p>
+  <dd><p>Emits all three debug sections.</p>
 </dd>
     <dt id="GameEventScript_Api_GesDebugInfoOptions_DebugSymbols"><code>DebugSymbols = 1</code></dt>
   
-  <dd><p>Identifies the debug symbols value.</p>
+  <dd><p>Emits the <a class="xref" href="GameEventScript.Api.GesDebugSymbolsSegment.html">GesDebugSymbolsSegment</a> naming parameters and locals.</p>
 </dd>
     <dt id="GameEventScript_Api_GesDebugInfoOptions_None"><code>None = 0</code></dt>
   
-  <dd><p>Identifies the none value.</p>
+  <dd><p>Emits no debug sections.</p>
 </dd>
     <dt id="GameEventScript_Api_GesDebugInfoOptions_SourceArchive"><code>SourceArchive = 4</code></dt>
   
-  <dd><p>Identifies the source archive value.</p>
+  <dd><p>Emits the <a class="xref" href="GameEventScript.Api.GesSourceArchiveSegment.html">GesSourceArchiveSegment</a> embedding the compiler inputs.</p>
 </dd>
     <dt id="GameEventScript_Api_GesDebugInfoOptions_SourceMap"><code>SourceMap = 2</code></dt>
   
-  <dd><p>Identifies the source map value.</p>
+  <dd><p>Emits the <a class="xref" href="GameEventScript.Api.GesSourceMapSegment.html">GesSourceMapSegment</a> mapping code addresses to source ranges.</p>
 </dd>
   </dl>
 
@@ -144,7 +145,7 @@ public enum GesDebugInfoOptions : byte</code></pre>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

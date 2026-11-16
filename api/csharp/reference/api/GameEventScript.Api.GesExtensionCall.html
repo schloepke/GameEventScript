@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesExtensionCall | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesExtensionCall | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesExtensionCall | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesExtensionCall | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a ges extension call.">
+      <meta name="description" content="Reusable call-scoped adapter passed to : it lends the arguments, the host context and its random generator, and receives one result. The last setter call before the callback returns decides the result; without one the result is Nothing. The call must not be retained.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,9 @@ Class GesExtensionCall
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a ges extension call.</p>
+  <div class="markdown summary"><p>Reusable call-scoped adapter passed to <a class="xref" href="GameEventScript.Api.IGesExtensionFunction.html#GameEventScript_Api_IGesExtensionFunction_Invoke_GameEventScript_Api_GesExtensionCall_">Invoke(GesExtensionCall)</a>: it lends the arguments, the
+host context and its random generator, and receives one result. The last setter call before the callback
+returns decides the result; without one the result is Nothing. The call must not be retained.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -143,7 +145,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Initializes a new instance of Ges Extension Call.</p>
+  <div class="markdown level1 summary"><p>Creates an inactive call without context; the runtime supplies context and arguments before each invocation.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -170,7 +172,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Initializes a new instance of Ges Extension Call.</p>
+  <div class="markdown level1 summary"><p>Creates a call bound to a context and without arguments, for invoking a function outside a host.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -181,7 +183,7 @@ Class GesExtensionCall
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>context</code> <a class="xref" href="GameEventScript.Api.GesContext.html">GesContext</a></dt>
-    <dd><p>The context value.</p>
+    <dd><p>The context the function reads.</p>
 </dd>
   </dl>
 
@@ -193,6 +195,12 @@ Class GesExtensionCall
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">context</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+  </dl>
 
 
 
@@ -207,7 +215,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the arguments.</p>
+  <div class="markdown level1 summary"><p>Gets the borrowed arguments in call order, valid only during the invocation.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -239,7 +247,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the context.</p>
+  <div class="markdown level1 summary"><p>Gets the context of the host running the call.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -261,6 +269,12 @@ Class GesExtensionCall
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>The call has no context.</p>
+</dd>
+  </dl>
 
 
 
@@ -271,7 +285,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the random.</p>
+  <div class="markdown level1 summary"><p>Gets the private random generator of the host running the call.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -293,6 +307,12 @@ Class GesExtensionCall
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>The call has no context.</p>
+</dd>
+  </dl>
 
 
 
@@ -303,7 +323,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the result.</p>
+  <div class="markdown level1 summary"><p>Gets the result set so far, or Nothing when no result was set.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -335,7 +355,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the runtime limits.</p>
+  <div class="markdown level1 summary"><p>Gets the runtime limits of the host running the call.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -357,6 +377,12 @@ Class GesExtensionCall
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>The call has no context.</p>
+</dd>
+  </dl>
 
 
 
@@ -371,7 +397,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Sets the boolean.</p>
+  <div class="markdown level1 summary"><p>Sets a Boolean result.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -382,7 +408,7 @@ Class GesExtensionCall
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>value</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The value value.</p>
+    <dd><p>The result value.</p>
 </dd>
   </dl>
 
@@ -404,7 +430,8 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Sets the float.</p>
+  <div class="markdown level1 summary"><p>Sets a Number result through the canonical numeric factory: NaN becomes Nothing, and an integral value
+that fits Int64 is stored as an integer.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -415,10 +442,10 @@ Class GesExtensionCall
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>value</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The value value.</p>
+    <dd><p>The binary64 value.</p>
 </dd>
     <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
-    <dd><p>The unit value.</p>
+    <dd><p>The unit; <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitNone">UnitNone</a> for a plain Number.</p>
 </dd>
   </dl>
 
@@ -440,7 +467,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Sets the integer.</p>
+  <div class="markdown level1 summary"><p>Sets an exact Int64 Number result, a Quantity when a unit is given.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -451,10 +478,10 @@ Class GesExtensionCall
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>value</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
-    <dd><p>The value value.</p>
+    <dd><p>The integer value.</p>
 </dd>
     <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
-    <dd><p>The unit value.</p>
+    <dd><p>The unit; <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitNone">UnitNone</a> for a plain Number.</p>
 </dd>
   </dl>
 
@@ -476,7 +503,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Sets the nothing.</p>
+  <div class="markdown level1 summary"><p>Sets the result to Nothing.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -503,7 +530,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Sets the percentage.</p>
+  <div class="markdown level1 summary"><p>Sets a Percentage result from a ratio.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -514,7 +541,7 @@ Class GesExtensionCall
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>ratio</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The ratio value.</p>
+    <dd><p>The ratio, where 1 represents 100%.</p>
 </dd>
   </dl>
 
@@ -536,7 +563,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Sets the tag.</p>
+  <div class="markdown level1 summary"><p>Sets a Tag result from a bare name without <code>#</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -547,7 +574,7 @@ Class GesExtensionCall
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>tag</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The tag value.</p>
+    <dd><p>The tag name in the portable ASCII name grammar.</p>
 </dd>
   </dl>
 
@@ -559,6 +586,12 @@ Class GesExtensionCall
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">tag</code> is not a valid tag name.</p>
+</dd>
+  </dl>
 
 
 
@@ -569,7 +602,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Sets the text.</p>
+  <div class="markdown level1 summary"><p>Sets a verbatim Text result.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -580,7 +613,7 @@ Class GesExtensionCall
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>text</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The text value.</p>
+    <dd><p>The text; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> becomes the empty Text.</p>
 </dd>
   </dl>
 
@@ -592,6 +625,12 @@ Class GesExtensionCall
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">text</code> is not valid Unicode.</p>
+</dd>
+  </dl>
 
 
 
@@ -602,7 +641,7 @@ Class GesExtensionCall
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Sets the value.</p>
+  <div class="markdown level1 summary"><p>Sets the result to the supplied value.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -613,7 +652,7 @@ Class GesExtensionCall
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>value</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The value value.</p>
+    <dd><p>The result value.</p>
 </dd>
   </dl>
 
@@ -645,7 +684,7 @@ Class GesExtensionCall
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

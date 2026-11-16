@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct GesSchemaWriter | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Struct GesSchemaWriter | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct GesSchemaWriter | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Struct GesSchemaWriter | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="Encodes one top-level record or message into a caller&#39;s buffer without allocating on success. Fields are written in declaration order; a nested schema, Point or Vector is entered with .">
       <link rel="icon" href="../assets/logo.svg">
@@ -416,6 +416,78 @@ declaration order; a nested schema, Point or Vector is entered with <a class="xr
 
 
 
+  <a id="GameEventScript_Api_GesSchemaWriter_WriteBytes_" data-uid="GameEventScript.Api.GesSchemaWriter.WriteBytes*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaWriter_WriteBytes_GameEventScript_Api_GesSchemaField_System_ReadOnlySpan_System_Byte__" data-uid="GameEventScript.Api.GesSchemaWriter.WriteBytes(GameEventScript.Api.GesSchemaField,System.ReadOnlySpan{System.Byte})">
+  WriteBytes(GesSchemaField, ReadOnlySpan&lt;byte&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Writes a <code>:Bytes max n</code> field.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void WriteBytes(GesSchemaField field, ReadOnlySpan&lt;byte&gt; bytes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>field</code> <a class="xref" href="GameEventScript.Api.GesSchemaField.html">GesSchemaField</a></dt>
+    <dd><p>The field's handle.</p>
+</dd>
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The bytes.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaWriter_WriteFlags_" data-uid="GameEventScript.Api.GesSchemaWriter.WriteFlags*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaWriter_WriteFlags_GameEventScript_Api_GesSchemaField_System_UInt64_" data-uid="GameEventScript.Api.GesSchemaWriter.WriteFlags(GameEventScript.Api.GesSchemaField,System.UInt64)">
+  WriteFlags(GesSchemaField, ulong)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Writes a <code>:Flags</code> field as a mask whose bit <code>i</code> sets the member at index <code>i</code> in declared order.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void WriteFlags(GesSchemaField field, ulong mask)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>field</code> <a class="xref" href="GameEventScript.Api.GesSchemaField.html">GesSchemaField</a></dt>
+    <dd><p>The field's handle.</p>
+</dd>
+    <dt><code>mask</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a></dt>
+    <dd><p>The mask; a bit beyond the last member is an unknown tag.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Api_GesSchemaWriter_WriteIndex_" data-uid="GameEventScript.Api.GesSchemaWriter.WriteIndex*"></a>
 
   <h3 id="GameEventScript_Api_GesSchemaWriter_WriteIndex_GameEventScript_Api_GesSchemaField_System_UInt64_" data-uid="GameEventScript.Api.GesSchemaWriter.WriteIndex(GameEventScript.Api.GesSchemaField,System.UInt64)">
@@ -613,7 +685,7 @@ declaration order; a nested schema, Point or Vector is entered with <a class="xr
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

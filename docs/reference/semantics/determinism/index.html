@@ -290,6 +290,7 @@ Top-level dice compare by the sum of their rolls.</li>
 equal to a tag.</li>
 <li>All other present cross-kind pairs are unequal. In particular, a map is not
 equal to a record, and records with different declared types are unequal.</li>
+<li>Bytes require the same bytes in the same order.</li>
 <li>Vector and point require the same kind and unit. Handlers require the same
 signature. Series require the same signature and offset. Ranges require the
 same representation and bounds/step.</li>
@@ -377,11 +378,16 @@ portable heterogeneous rank is:</p>
 <td style="text-align: right">13</td>
 <td>dice when the other value is not numeric-capable</td>
 </tr>
+<tr>
+<td style="text-align: right">14</td>
+<td>bytes</td>
+</tr>
 </tbody>
 </table>
 <p>There is intentionally no rank 7 in the V1 contract. When same-rank supported
 values have no finer ordering, their comparison is equal and stable source
-order is retained.</p>
+order is retained. Bytes order lexicographically by unsigned byte, and a
+shorter prefix comes first.</p>
 <h3 id="highestlowest-slicing">Highest/lowest slicing</h3>
 <p><code>:take highest</code>, <code>:take lowest</code>, <code>:drop highest</code>, and <code>:drop lowest</code> use the
 same selection order for direct collections and iterator pipelines. This order
@@ -442,13 +448,17 @@ Boolean and Dice participate through their numeric views. Otherwise use:</p>
 <td style="text-align: right">12</td>
 <td>map and custom record/external values</td>
 </tr>
+<tr>
+<td style="text-align: right">14</td>
+<td>bytes</td>
+</tr>
 </tbody>
 </table>
 <p>Within rank 1, a Tag follows Boolean, Number and Percentage but precedes Dice;
 numeric-to-numeric comparison still takes precedence. Within rank 12, a Map
 precedes a custom value. Text/Tag pairs of the same kind compare by Unicode
 scalars; vectors/points of the same kind compare units first, then coordinates
-lexicographically. Other same-rank pairs have no finer ordering.</p>
+lexicographically; Bytes compare as in the sort order. Other same-rank pairs have no finer ordering.</p>
 <p>Equal candidates retain source order. <code>take highest/lowest</code> selects successive
 extrema in that stable order; <code>drop highest/lowest</code> removes those candidates and
 retains the original order of the remaining values. Dice results retain their
@@ -458,6 +468,7 @@ canonical descending roll representation.</p>
 <ul>
 <li>lists retain list order;</li>
 <li>dice retain their stored roll order;</li>
+<li>bytes yield their bytes in order as Int64 numbers;</li>
 <li>text and tags yield Unicode scalars in text order;</li>
 <li>vector and point yield <code>x</code>, <code>y</code>, then <code>z</code>;</li>
 <li>maps and records yield values in ascending key order;</li>
@@ -487,6 +498,15 @@ authoritative, so every in-range index has an element even at a rounded endpoint
 Different indexes may produce the same value at large magnitudes.</p>
 <p>Index access, iteration, materialization, and collection operations on a given
 floating range use this same sequence, with ordinary numeric canonicalization.
+Selectors that keep a range, such as <code>:take first</code>, <code>:drop last</code>, <code>:take highest</code>,
+<code>:reverse</code> or <code>:sort</code>, give exactly the items the same selector gives for the
+materialized List. Their result stays a range only when that range generates
+exactly these items: a prefix that keeps <code>from</code> and <code>step</code> needs only the same
+item count, and any other slice or reversal additionally requires that every
+term of the source is exact, that is <code>from</code> and <code>step</code> are integer multiples of
+a common power of two, every term stays below 2^53 of those units, and the last
+term does not pass <code>to</code>. Otherwise the selected items materialize as a List,
+which obeys MaxRangeItems like the List cast.
 Membership is exact: a unitless Number is contained if and only if its value
 equals an element at one of the precomputed indexes. A nearby Binary64 value,
 a Quantity, a Percentage, and an Int64 value that only rounds to an element on

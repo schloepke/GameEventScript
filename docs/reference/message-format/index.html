@@ -85,7 +85,7 @@ contains exactly <code>version: 1</code> and <code>value</code>. A message objec
 are part of the signature. Named labels must be unique; <code>_</code> may repeat.
 Tags use bare lowercase tag names, normalized by the ordinary message API.</p>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — system endpoint names</p>
+<p><strong>Since: 0.5.0</strong> — system endpoint names</p>
 </blockquote>
 <p>The <code>name</code> of a message or Handler starts uppercase: writing or reading the system
 endpoints <code>initialization</code> and <code>undeliverable</code> is <code>message.invalidValue</code>.</p>
@@ -95,7 +95,7 @@ array order. They escape quote and backslash with a backslash and U+0000–001F
 with lowercase four-digit <code>\u</code> escapes; other Unicode scalars remain literal.
 JSON strings use JSON escaping, not GES’s doubled-delimiter convention.
 Readers accept JSON whitespace, equivalent JSON escapes and arbitrary object
-property order. Duplicate object properties and unknown/missing properties are
+property order. A <code>\u</code> escape consists of exactly four ASCII hex digits. Duplicate object properties and unknown/missing properties are
 errors. No prefix, trailing content, comments or malformed surrogate escape is
 accepted. JSON numeric tokens in this schema are signed decimal integers;
 only the envelope version uses one. GES numeric payloads are strings, avoiding
@@ -153,7 +153,11 @@ There are no public Integer/Binary64 value tags.</p>
 </tr>
 <tr>
 <td><code>Dice</code></td>
-<td><code>rolls</code>: positive Int32 decimal numeric strings, descending on output</td>
+<td><code>rolls</code>: positive Int32 numeric strings, decimal and descending on output</td>
+</tr>
+<tr>
+<td><code>Bytes</code></td>
+<td><code>base64</code>: the bytes in padded standard Base64 (RFC 4648 section 4) without line breaks; other spellings, such as missing padding or set unused bits, are invalid</td>
 </tr>
 <tr>
 <td><code>Range</code></td>

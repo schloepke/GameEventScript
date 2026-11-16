@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesSchema | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesSchema | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesSchema | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesSchema | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="The immutable description of one schema, message or message set of a . It can be shared between threads and bound any number of times.">
       <link rel="icon" href="../assets/logo.svg">
@@ -169,6 +169,71 @@ between threads and bound any number of times.</p>
 
 
 
+  <a id="GameEventScript_Api_GesSchema_ComputedFields_" data-uid="GameEventScript.Api.GesSchema.ComputedFields*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchema_ComputedFields" data-uid="GameEventScript.Api.GesSchema.ComputedFields">
+  ComputedFields
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the fields of a schema written <code>computed by</code>, own and taken, in the order their expressions may read
+each other.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesReadOnlyArray&lt;GesSchemaComputedFieldInfo&gt; ComputedFields { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesReadOnlyArray-1.html">GesReadOnlyArray</a>&lt;<a class="xref" href="GameEventScript.Api.GesSchemaComputedFieldInfo.html">GesSchemaComputedFieldInfo</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchema_Constants_" data-uid="GameEventScript.Api.GesSchema.Constants*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchema_Constants" data-uid="GameEventScript.Api.GesSchema.Constants">
+  Constants
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the constants a schema declares with <code>let</code>, in declared order.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesReadOnlyArray&lt;GesSchemaConstantInfo&gt; Constants { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesReadOnlyArray-1.html">GesReadOnlyArray</a>&lt;<a class="xref" href="GameEventScript.Api.GesSchemaConstantInfo.html">GesSchemaConstantInfo</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Api_GesSchema_Fields_" data-uid="GameEventScript.Api.GesSchema.Fields*"></a>
 
   <h3 id="GameEventScript_Api_GesSchema_Fields" data-uid="GameEventScript.Api.GesSchema.Fields">
@@ -223,6 +288,39 @@ between threads and bound any number of times.</p>
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchema_IsAbstract_" data-uid="GameEventScript.Api.GesSchema.IsAbstract*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchema_IsAbstract" data-uid="GameEventScript.Api.GesSchema.IsAbstract">
+  IsAbstract
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the schema is abstract: it only lends its fields with <code>with</code> and is never bound, checked
+against a document or generated as a type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsAbstract { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
     <dd></dd>
   </dl>
 
@@ -297,6 +395,39 @@ between threads and bound any number of times.</p>
 
 
 
+  <a id="GameEventScript_Api_GesSchema_ModelGroup_" data-uid="GameEventScript.Api.GesSchema.ModelGroup*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchema_ModelGroup" data-uid="GameEventScript.Api.GesSchema.ModelGroup">
+  ModelGroup
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the group in which the schema is a model root, <code>default</code> for <code>model</code> without a group, or
+null when it is no model root. Roles are not part of the canonical form or any hash.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? ModelGroup { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Api_GesSchema_Name_" data-uid="GameEventScript.Api.GesSchema.Name*"></a>
 
   <h3 id="GameEventScript_Api_GesSchema_Name" data-uid="GameEventScript.Api.GesSchema.Name">
@@ -304,7 +435,8 @@ between threads and bound any number of times.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the name.</p>
+  <div class="markdown level1 summary"><p>Gets the declared name without the leading <code>:</code>, such as <code>Ship</code>; <a class="xref" href="GameEventScript.Api.GesSchemaSet.html#GameEventScript_Api_GesSchemaSet_Schema_System_String_">Schema(string)</a>
+finds the declaration by it.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -319,6 +451,71 @@ between threads and bound any number of times.</p>
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchema_PackedBits_" data-uid="GameEventScript.Api.GesSchema.PackedBits*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchema_PackedBits" data-uid="GameEventScript.Api.GesSchema.PackedBits">
+  PackedBits
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets how many bits of its word a packed schema's fields take, those of its record on the wire; 0 for a schema
+that is not packed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int PackedBits { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchema_PackedWidth_" data-uid="GameEventScript.Api.GesSchema.PackedWidth*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchema_PackedWidth" data-uid="GameEventScript.Api.GesSchema.PackedWidth">
+  PackedWidth
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the width of a packed schema's word, 8, 16, 32 or 64 bits, or 0 for a schema that is not packed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int PackedWidth { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
     <dd></dd>
   </dl>
 
@@ -393,6 +590,72 @@ between threads and bound any number of times.</p>
 
 
 
+  <a id="GameEventScript_Api_GesSchema_Takes_" data-uid="GameEventScript.Api.GesSchema.Takes*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchema_Takes" data-uid="GameEventScript.Api.GesSchema.Takes">
+  Takes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the schemas whose fields this schema takes with <code>with</code>, in declared order. Their fields are part of
+<a class="xref" href="GameEventScript.Api.GesSchema.html#GameEventScript_Api_GesSchema_Fields">Fields</a>, as if written in place.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesReadOnlyArray&lt;GesSchemaTakeInfo&gt; Takes { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesReadOnlyArray-1.html">GesReadOnlyArray</a>&lt;<a class="xref" href="GameEventScript.Api.GesSchemaTakeInfo.html">GesSchemaTakeInfo</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchema_WireGroup_" data-uid="GameEventScript.Api.GesSchema.WireGroup*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchema_WireGroup" data-uid="GameEventScript.Api.GesSchema.WireGroup">
+  WireGroup
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the group in which the declaration is a wire root, <code>default</code> for <code>wire</code> without a group, or null when
+it is no wire root. Roles are generation metadata: they are not part of the canonical form or any hash.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? WireGroup { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <h2 class="section" id="methods">Methods
 </h2>
 
@@ -436,7 +699,8 @@ between threads and bound any number of times.</p>
   <h4 class="section">Exceptions</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Api.GesSchemaException.html">GesSchemaException</a></dt>
-    <dd><p>The declaration cannot be encoded or a value breaks a rule.</p>
+    <dd><p>The declaration is abstract or cannot be encoded, a reached parameter has no value
+or a value of another kind, or a value breaks a rule.</p>
 </dd>
   </dl>
 
@@ -502,7 +766,7 @@ code with its position, or a <code>schema.</code> code when this is no schema or
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Enum GesSectionFlags | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Enum GesSectionFlags | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Enum GesSectionFlags | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Enum GesSectionFlags | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Defines the supported game event script section flags values.">
+      <meta name="description" content="The SectionFlags word of a section header. Bits outside  and  are invalid in V1.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -84,7 +84,8 @@ Enum GesSectionFlags
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Defines the supported game event script section flags values.</p>
+  <div class="markdown summary"><p>The <code>SectionFlags</code> word of a section header. Bits outside <a class="xref" href="GameEventScript.Api.GesSectionFlags.html#GameEventScript_Api_GesSectionFlags_Required">Required</a> and
+<a class="xref" href="GameEventScript.Api.GesSectionFlags.html#GameEventScript_Api_GesSectionFlags_CompressionMask">CompressionMask</a> are invalid in V1.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -106,15 +107,16 @@ public enum GesSectionFlags : ushort</code></pre>
   <dl class="parameters">
     <dt id="GameEventScript_Api_GesSectionFlags_CompressionMask"><code>CompressionMask = 240</code></dt>
   
-  <dd><p>Identifies the compression mask value.</p>
+  <dd><p>The compression-codec field. Codec zero means uncompressed, the only codec V1 implements; a required section
+with another codec is rejected.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionFlags_None"><code>None = 0</code></dt>
   
-  <dd><p>Identifies the none value.</p>
+  <dd><p>An optional, uncompressed section.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionFlags_Required"><code>Required = 1</code></dt>
   
-  <dd><p>Identifies the required value.</p>
+  <dd><p>The section must be understood to load the program; set exactly on the five required runtime sections.</p>
 </dd>
   </dl>
 
@@ -136,7 +138,7 @@ public enum GesSectionFlags : ushort</code></pre>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

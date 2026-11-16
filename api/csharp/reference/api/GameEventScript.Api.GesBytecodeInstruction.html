@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct GesBytecodeInstruction | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Struct GesBytecodeInstruction | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct GesBytecodeInstruction | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Struct GesBytecodeInstruction | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script bytecode instruction.">
+      <meta name="description" content="One logical bytecode instruction: an opcode, a unit-and-flags byte, three 16-bit operand words and a 64-bit payload, encoded as 16 bytes in .gesb. The named properties are opcode-specific views of the same words; the in-memory layout does not define the encoding.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,9 @@ Struct GesBytecodeInstruction
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script bytecode instruction.</p>
+  <div class="markdown summary"><p>One logical bytecode instruction: an opcode, a unit-and-flags byte, three 16-bit operand words and a 64-bit payload,
+encoded as 16 bytes in <code>.gesb</code>. The named properties are opcode-specific views of the same words; the
+in-memory layout does not define the encoding.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -135,7 +137,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Defines the op code value.</p>
+  <div class="markdown level1 summary"><p>The operation, which determines how the operands are interpreted.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -166,7 +168,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Defines the payload value.</p>
+  <div class="markdown level1 summary"><p>The raw 64-bit payload: an inline literal or four packed 16-bit operands.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -197,7 +199,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Defines the unit and flags value.</p>
+  <div class="markdown level1 summary"><p>The quantity unit ID in bits 0 to 4 and opcode-specific instruction flags in bits 5 to 7.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -233,7 +235,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the as.</p>
+  <div class="markdown level1 summary"><p>Gets or sets payload bits 0 to 15 as a signed operand.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -265,7 +267,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the au.</p>
+  <div class="markdown level1 summary"><p>Gets or sets payload bits 0 to 15 as an unsigned operand.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -297,7 +299,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the bs.</p>
+  <div class="markdown level1 summary"><p>Gets or sets payload bits 16 to 31 as a signed operand.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -329,7 +331,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the bu.</p>
+  <div class="markdown level1 summary"><p>Gets or sets payload bits 16 to 31 as an unsigned operand.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -361,7 +363,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the bind id.</p>
+  <div class="markdown level1 summary"><p>Gets or sets a binding ID, such as an extension, record or external type binding; the second operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -393,7 +395,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the cs.</p>
+  <div class="markdown level1 summary"><p>Gets or sets payload bits 32 to 47 as a signed operand.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -425,7 +427,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the cu.</p>
+  <div class="markdown level1 summary"><p>Gets or sets payload bits 32 to 47 as an unsigned operand.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -457,7 +459,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the condition register.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the register a conditional branch tests; the second operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -489,7 +491,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the count.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the signed local register delta of <a class="xref" href="GameEventScript.Api.GesBytecodeOpCode.html#GameEventScript_Api_GesBytecodeOpCode_RegisterLocals">RegisterLocals</a>; the second operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -521,7 +523,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the ds.</p>
+  <div class="markdown level1 summary"><p>Gets or sets payload bits 48 to 63 as a signed operand.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -553,7 +555,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the du.</p>
+  <div class="markdown level1 summary"><p>Gets or sets payload bits 48 to 63 as an unsigned operand.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -585,7 +587,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the destination register.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the register that receives the result; the first operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -617,7 +619,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the entry address.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the entry address of a called function, predicate or helper routine; the third operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -649,7 +651,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the f64.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the payload bits as an IEEE 754 binary64 literal.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -681,7 +683,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the i64.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the payload bits as a signed 64-bit integer literal.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -713,7 +715,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the immediate x.</p>
+  <div class="markdown level1 summary"><p>Gets or sets a signed 16-bit immediate, such as a range start or a vector start form; the second operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -745,7 +747,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the immediate y.</p>
+  <div class="markdown level1 summary"><p>Gets or sets a second signed 16-bit immediate, such as a range end or a pattern count; the third operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -777,7 +779,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the index.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the 1-based element index of <a class="xref" href="GameEventScript.Api.GesBytecodeOpCode.html#GameEventScript_Api_GesBytecodeOpCode_IndexAccess">IndexAccess</a>; the second operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -809,7 +811,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the list index.</p>
+  <div class="markdown level1 summary"><p>Gets or sets an index-list index, such as an argument register list; the third operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -841,7 +843,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the message destination.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the outbound message binding ID of a send instruction; the first operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -873,7 +875,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the secondary list index.</p>
+  <div class="markdown level1 summary"><p>Gets or sets a second index-list index, such as a tag register list or message shape; the second operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -905,7 +907,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the secondary string index.</p>
+  <div class="markdown level1 summary"><p>Gets or sets a second string-constant index, such as the type name of a custom cast or check; the third operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -937,7 +939,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the string index.</p>
+  <div class="markdown level1 summary"><p>Gets or sets a string-constant index, such as a literal or member name; the second operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -969,7 +971,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the target address.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the code address a branch or call jumps to; the third operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1001,7 +1003,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the type kind.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the type operand as a built-in <a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html">GesBytecodeTypeKind</a>; the third operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1033,7 +1035,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the type operand.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the type operand: a type kind, a series kind or a type-name string index; the third operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1065,7 +1067,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the x register.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the first source register; the second operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1097,7 +1099,7 @@ Struct GesBytecodeInstruction
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the y register.</p>
+  <div class="markdown level1 summary"><p>Gets or sets the second source register; the third operand word.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1139,7 +1141,7 @@ Struct GesBytecodeInstruction
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

@@ -20,7 +20,7 @@ export function createWorkerClient(onProgress) {
 
   function send(payload, timeout = 120000) {
     if (!worker) {
-      const active = new Worker('./worker.mjs?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549', { type: 'module' });
+      const active = new Worker('./worker.mjs?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84', { type: 'module' });
       worker = active;
       onProgress({ phase: 'download', loaded: 0 });
       active.onmessage = ({ data }) => {

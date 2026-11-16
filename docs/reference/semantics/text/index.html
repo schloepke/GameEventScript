@@ -110,7 +110,7 @@ must be non-empty.</p>
 following productions use ASCII only:</p>
 <div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">AsciiLetter        = "A".."Z" | "a".."z"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">LowerLetter        = "a".."z"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">UpperLetter        = "A".."Z"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digit              = "0".."9"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NonZeroDigit       = "1".."9"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumericSuffix      = "_" ("0" | NonZeroDigit { "0".."9" })</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">LowerName          = LowerLetter { AsciiLetter | Digit }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">VariableName       = LowerName [ NumericSuffix ]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">UpperSegment       = UpperLetter { AsciiLetter | Digit }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">UpperName          = UpperSegment { "_" UpperSegment }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">MessageName        = UpperName</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">TagName            = LowerName</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ConstantName       = LowerName</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">TypeName           = UpperName</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ModuleSegment      = LowerLetter { LowerLetter | Digit }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ModuleName         = ModuleSegment { "." ModuleSegment }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">UnlabeledArgument  = "_"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="AsciiLetter        = &quot;A&quot;..&quot;Z&quot; | &quot;a&quot;..&quot;z&quot;LowerLetter        = &quot;a&quot;..&quot;z&quot;UpperLetter        = &quot;A&quot;..&quot;Z&quot;Digit              = &quot;0&quot;..&quot;9&quot;NonZeroDigit       = &quot;1&quot;..&quot;9&quot;NumericSuffix      = &quot;_&quot; (&quot;0&quot; | NonZeroDigit { &quot;0&quot;..&quot;9&quot; })LowerName          = LowerLetter { AsciiLetter | Digit }VariableName       = LowerName [ NumericSuffix ]UpperSegment       = UpperLetter { AsciiLetter | Digit }UpperName          = UpperSegment { &quot;_&quot; UpperSegment }MessageName        = UpperNameTagName            = LowerNameConstantName       = LowerNameTypeName           = UpperNameModuleSegment      = LowerLetter { LowerLetter | Digit }ModuleName         = ModuleSegment { &quot;.&quot; ModuleSegment }UnlabeledArgument  = &quot;_&quot;"><div></div></button></div></figure></div>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — underscores in message and type names</p>
+<p><strong>Since: 0.5.0</strong> — underscores in message and type names</p>
 </blockquote>
 <p>Consequences:</p>
 <ul>
@@ -245,6 +245,14 @@ of source quoting.</p>
 <td><code>:Dice[]</code></td>
 </tr>
 <tr>
+<td>Bytes <code>a0</code>, <code>b7</code>, <code>0b</code></td>
+<td><code>:Bytes("a0b70b")</code></td>
+</tr>
+<tr>
+<td>empty Bytes</td>
+<td><code>:Bytes("")</code></td>
+</tr>
+<tr>
 <td>Vector with components <code>10</code>, <code>20</code>, <code>0</code></td>
 <td><code>:Vector(x: 10, y: 20, z: 0)</code></td>
 </tr>
@@ -304,7 +312,7 @@ Recognition decodes exactly one layer. The contents of a recognized Text literal
 are returned as Text and are not recursively parsed a second time.</p>
 <p>Recognized data literals are <code>nothing</code>, lowercase <code>true</code>/<code>false</code>, Number,
 Percentage, scalar Quantity, quoted Text, <code>#</code> Tag names following the source
-name grammar, Dice result literals, Vector/Point data forms, and recursively
+name grammar, Dice result literals, Bytes literals, Vector/Point data forms, and recursively
 nested Lists/Maps, and the explicit data forms below. A Map recognizes bare <code>LowerName</code>
 keys or quoted Text keys. Quoted keys follow the same single- or double-quoted
 Text rules as values, including doubled delimiters. Map key syntax inside Text
@@ -349,6 +357,16 @@ Dice value and kind for positive Int32 rolls. The guarantee also applies to Dice
 values nested inside Lists and Maps.
 Dice nesting and entries participate in the shared
 <a href="/docs/reference/host-runtime/#literal-parsing-limits">literal parsing limits</a>.</p>
+<p>Bytes recognition uses <code>:Bytes[...]</code> with unsigned, unitless integers from 0 to
+255 in <a href="/docs/reference/semantics/numbers/#text-and-number-conversion">numeric text</a>, separated by
+commas, and the explicit form <code>:Bytes("…")</code> with
+<a href="/docs/reference/language/#bytes">hexadecimal pairs</a>. Both use the runtime whitespace rules
+below; invalid entries or text fail recognition of the complete input.
+<code>parse (value as :Text)</code> reconstructs the same Bytes, also nested inside Lists
+and Maps, and their entries participate in the shared
+<a href="/docs/reference/host-runtime/#literal-parsing-limits">literal parsing limits</a>.
+The <code>utf8</code> forms <code>:Bytes(utf8: "…")</code> and <code>:Text(utf8: :Bytes(…))</code> are recognized
+like the other explicit forms and convert as in <a href="/docs/reference/language/#bytes">Bytes</a>.</p>
 <p>ASCII space/tab and <code>LF</code>, <code>CRLF</code>, or <code>CR</code> may surround a literal and separate
 container elements. They are preserved inside quoted Text. Other whitespace,
 comments, and BOM markers are not trivia for this operation. Comma grouping is
@@ -455,7 +473,7 @@ of <code>nothing</code>; the Text fallback belongs to <code>parse</code>. Resour
 separate from literal-recognition failure and follows the fixed
 <a href="/docs/reference/host-runtime/#literal-parsing-limits">Host runtime parse limits</a>.</p>
 <h3 id="strict-recognition">Strict recognition</h3>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
 <p><code>parse strict</code> applies exactly the same recognition, evaluation and limits as
 <code>parse</code>. The only difference is the recognition-failure result: where <code>parse</code>
 returns the original Text, <code>parse strict</code> produces <code>nothing</code>. Text values must
@@ -506,7 +524,7 @@ operand produces <code>nothing</code> in both modes.</p>
 </tbody>
 </table>
 <h3 id="recognition-outside-a-program">Recognition outside a Program</h3>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
 <p>The public value API exposes the same recognition without a Host as
 <code>ParseLiteral</code> and <code>ParseLiteralStrict</code> (see <a href="/docs/reference/public-api/">Public API</a>). It
 follows the rules of <code>parse</code> and <code>parse strict</code> with these differences:</p>
@@ -533,7 +551,9 @@ Text, Tag, Nothing, List, Map, Dice, Range, built-in Series, Handler, Message an
 Record data. Existing literals remain accepted, and guessing/fallback behavior is
 unchanged. Explicit forms allow disambiguation such as <code>:Text("123")</code>.
 As in source, the type name follows its <code>:</code> directly: <code>: Number(5)</code> and
-<code>[: Text("a")]</code> are not typed forms and fail recognition of the complete input.</p>
+<code>[: Text("a")]</code> are not typed forms and fail recognition of the complete input.
+A form is selected by its complete type name: <code>:VectorClock(1)</code> and <code>:Point_Of(2)</code>
+are Record constructors, not Vector or Point forms.</p>
 <p><code>as :Text</code> writes Range as <code>:Range(from: ..., to: ..., step: ...)</code>, Series as
 <code>:Series(fibonacci, offset: ...)</code> or <code>:Series(factorial, offset: ...)</code>, Handler as
 <code>:Handler(Done(value, _))</code>, Message as <code>:Message(Done(value: ...) with #ready)</code>,

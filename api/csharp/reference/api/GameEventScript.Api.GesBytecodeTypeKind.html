@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Enum GesBytecodeTypeKind | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Enum GesBytecodeTypeKind | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Enum GesBytecodeTypeKind | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Enum GesBytecodeTypeKind | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Defines the supported game event script bytecode type kind values.">
+      <meta name="description" content="Identifies portable value kinds and VM-internal storage kinds used as bytecode type operands.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -84,7 +84,7 @@ Enum GesBytecodeTypeKind
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Defines the supported game event script bytecode type kind values.</p>
+  <div class="markdown summary"><p>Identifies portable value kinds and VM-internal storage kinds used as bytecode type operands.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -105,95 +105,99 @@ Enum GesBytecodeTypeKind
   <dl class="parameters">
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Boolean"><code>Boolean = 2</code></dt>
   
-  <dd><p>Identifies the boolean value.</p>
+  <dd><p>Boolean value.</p>
+</dd>
+    <dt id="GameEventScript_Api_GesBytecodeTypeKind_Bytes"><code>Bytes = 11</code></dt>
+  
+  <dd><p>Identifies an immutable sequence of bytes.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Custom"><code>Custom = 255</code></dt>
   
-  <dd><p>Identifies the custom value.</p>
+  <dd><p>Record or host-defined external value.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Dice"><code>Dice = 33</code></dt>
   
-  <dd><p>Identifies the dice value.</p>
+  <dd><p>Descending Int32 dice rolls.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_DistinctBuilder"><code>DistinctBuilder = 37</code></dt>
   
-  <dd><p>Identifies the distinct builder value.</p>
+  <dd><p>Internal distinct-value construction state.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Float"><code>Float = 4</code></dt>
   
-  <dd><p>Identifies the float value.</p>
+  <dd><p>IEEE 754 binary64 number.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_GroupBuilder"><code>GroupBuilder = 38</code></dt>
   
-  <dd><p>Identifies the group builder value.</p>
+  <dd><p>Internal grouping construction state.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Handler"><code>Handler = 16</code></dt>
   
-  <dd><p>Identifies the handler value.</p>
+  <dd><p>Message-handler signature.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Integer"><code>Integer = 3</code></dt>
   
-  <dd><p>Identifies the integer value.</p>
+  <dd><p>Exact signed Int64 number.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Iterator"><code>Iterator = 48</code></dt>
   
-  <dd><p>Identifies the iterator value.</p>
+  <dd><p>Internal collection iteration state.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_List"><code>List = 32</code></dt>
   
-  <dd><p>Identifies the list value.</p>
+  <dd><p>Ordered immutable value collection.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_ListBuilder"><code>ListBuilder = 35</code></dt>
   
-  <dd><p>Identifies the list builder value.</p>
+  <dd><p>Internal mutable list construction state.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Map"><code>Map = 34</code></dt>
   
-  <dd><p>Identifies the map value.</p>
+  <dd><p>Canonical Text-keyed value map.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_MapBuilder"><code>MapBuilder = 36</code></dt>
   
-  <dd><p>Identifies the map builder value.</p>
+  <dd><p>Internal mutable map construction state.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Message"><code>Message = 17</code></dt>
   
-  <dd><p>Identifies the message value.</p>
+  <dd><p>Message signature, arguments and tags.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Nothing"><code>Nothing = 0</code></dt>
   
-  <dd><p>Identifies the nothing value.</p>
+  <dd><p>Absence of a value.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_OrderBuilder"><code>OrderBuilder = 39</code></dt>
   
-  <dd><p>Identifies the order builder value.</p>
+  <dd><p>Internal sorting construction state.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Percentage"><code>Percentage = 5</code></dt>
   
-  <dd><p>Identifies the percentage value.</p>
+  <dd><p>Binary64 ratio carrying Percentage kind.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Point"><code>Point = 9</code></dt>
   
-  <dd><p>Identifies the point value.</p>
+  <dd><p>Three-coordinate point.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Range"><code>Range = 10</code></dt>
   
-  <dd><p>Identifies the range value.</p>
+  <dd><p>Lazy numeric range.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Series"><code>Series = 49</code></dt>
   
-  <dd><p>Identifies the series value.</p>
+  <dd><p>Lazy built-in numeric series.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Tag"><code>Tag = 6</code></dt>
   
-  <dd><p>Identifies the tag value.</p>
+  <dd><p>Validated tag name.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Text"><code>Text = 7</code></dt>
   
-  <dd><p>Identifies the text value.</p>
+  <dd><p>Unicode text.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeTypeKind_Vector"><code>Vector = 8</code></dt>
   
-  <dd><p>Identifies the vector value.</p>
+  <dd><p>Three-coordinate vector.</p>
 </dd>
   </dl>
 
@@ -215,7 +219,7 @@ Enum GesBytecodeTypeKind
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

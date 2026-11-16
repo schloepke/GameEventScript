@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Enum GesBytecodeOpCode | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Enum GesBytecodeOpCode | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Enum GesBytecodeOpCode | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Enum GesBytecodeOpCode | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Defines the supported game event script bytecode op code values.">
+      <meta name="description" content="Identifies a V1 bytecode instruction. The numeric values are part of the .gesb format; operand layouts and semantics are defined in the bytecode specification.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -84,7 +84,8 @@ Enum GesBytecodeOpCode
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Defines the supported game event script bytecode op code values.</p>
+  <div class="markdown summary"><p>Identifies a V1 bytecode instruction. The numeric values are part of the <code>.gesb</code> format; operand layouts and
+semantics are defined in the bytecode specification.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -105,55 +106,58 @@ Enum GesBytecodeOpCode
   <dl class="parameters">
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Abs"><code>Abs = 102</code></dt>
   
-  <dd><p>Identifies the abs value.</p>
+  <dd><p>Absolute value.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Acos"><code>Acos = 126</code></dt>
   
-  <dd><p>Identifies the acos value.</p>
+  <dd><p>Inverse cosine for unitless numeric input in <code>[-1, 1]</code>; result is radians.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Add"><code>Add = 91</code></dt>
   
-  <dd><p>Identifies the add value.</p>
+  <dd><p>Adds <code>Y</code> to <code>X</code>; the <code>Numeric</code> flag selects scalar arithmetic.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_And"><code>And = 81</code></dt>
   
-  <dd><p>Identifies the and value.</p>
+  <dd><p>Combines <code>X</code> and <code>Y</code> with three-valued logical and, treating <code>nothing</code> as unknown.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_AngleBetween"><code>AngleBetween = 149</code></dt>
   
-  <dd><p>Identifies the angle between value.</p>
+  <dd><p>3D vector/point angle in radians; zero length yields <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_AngleBetween2D"><code>AngleBetween2D = 150</code></dt>
   
-  <dd><p>Identifies the angle between2 d value.</p>
+  <dd><p>2D coordinate angle in radians; zero length yields <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_AngleBetween3D"><code>AngleBetween3D = 151</code></dt>
   
-  <dd><p>Identifies the angle between3 d value.</p>
+  <dd><p>3D coordinate angle in radians; zero length yields <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Asin"><code>Asin = 125</code></dt>
   
-  <dd><p>Identifies the asin value.</p>
+  <dd><p>Inverse sine for unitless numeric input in <code>[-1, 1]</code>; result is radians.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Atan"><code>Atan = 127</code></dt>
   
-  <dd><p>Identifies the atan value.</p>
+  <dd><p>Inverse tangent for unitless numeric input; result is radians.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Atan2"><code>Atan2 = 128</code></dt>
   
-  <dd><p>Identifies the atan2 value.</p>
+  <dd><p><code>atan2(y, x)</code> with matching units; result is radians. <code>(0, 0)</code> yields <code>0</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_BindHandler"><code>BindHandler = 34</code></dt>
   
-  <dd><p>Identifies the bind handler value.</p>
+  <dd><p>Binds ordered argument values to a handler signature. Argument names come from the signature.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Call"><code>Call = 7</code></dt>
   
-  <dd><p>Identifies the call value.</p>
+  <dd><p>Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence
+immediately before the call. With <code>NormalizeResultAsPredicate</code>, the returned value is normalized to boolean
+or <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CallExternal"><code>CallExternal = 9</code></dt>
   
-  <dd><p>Identifies the call external value.</p>
+  <dd><p>Calls a dynamically bound host extension. With <code>NormalizeResultAsPredicate</code>, the result is normalized to
+boolean or <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Cartesian"><code>Cartesian = 224</code></dt>
   
@@ -161,55 +165,62 @@ Enum GesBytecodeOpCode
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Cast"><code>Cast = 20</code></dt>
   
-  <dd><p>Identifies the cast value.</p>
+  <dd><p>Converts <code>X</code> to the declared built-in type. Custom/record types use <code>CastCustom</code>. <code>Cast :Tag</code>
+validates tag syntax; invalid tag text writes <code>nothing</code>. <code>Cast :Vector</code>/<code>:Point</code> structurally
+convert between vectors and points by copying components and unit.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CastCustom"><code>CastCustom = 21</code></dt>
   
-  <dd><p>Identifies the cast custom value.</p>
+  <dd><p>Converts <code>X</code> to a custom/record type identified by <code>Y</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CastNumeric"><code>CastNumeric = 23</code></dt>
   
-  <dd><p>Identifies the cast numeric value.</p>
+  <dd><p>Coerces <code>X</code> through the source-level <code>:Number</code> type, including explicit numeric text parsing; invalid
+text writes <code>nothing</code>. Integral values stay integer; otherwise the result is float.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CastUnit"><code>CastUnit = 22</code></dt>
   
-  <dd><p>Identifies the cast unit value.</p>
+  <dd><p>Converts <code>X</code> to the numeric unit carried in <code>UnitAndFlags</code>. Units are not represented as declared type
+kinds.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Ceil"><code>Ceil = 114</code></dt>
   
-  <dd><p>Identifies the ceil value.</p>
+  <dd><p>Ceils a unitless numeric value and writes an integer.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Chance"><code>Chance = 104</code></dt>
   
-  <dd><p>Identifies the chance value.</p>
+  <dd><p>Draws <code>true</code> with the probability given by <code>X</code> as a ratio or percentage; invalid input writes <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CheckCustomType"><code>CheckCustomType = 25</code></dt>
   
-  <dd><p>Identifies the check custom type value.</p>
+  <dd><p>Writes whether <code>X</code> has the custom/record type identified by <code>Y</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CheckFractional"><code>CheckFractional = 29</code></dt>
   
-  <dd><p>Identifies the check fractional value.</p>
+  <dd><p>Writes whether <code>X</code> has a finite non-integral numeric view. Text is not parsed here.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CheckInteger"><code>CheckInteger = 28</code></dt>
   
-  <dd><p>Identifies the check integer value.</p>
+  <dd><p>Writes whether <code>X</code> has a finite integral numeric view. Booleans and dice are integer. Text is not parsed
+here.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CheckNumeric"><code>CheckNumeric = 27</code></dt>
   
-  <dd><p>Identifies the check numeric value.</p>
+  <dd><p>Writes whether <code>X</code> has a runtime numeric view. Numbers, percentages, booleans (<code>false</code> = <code>0</code>,
+<code>true</code> = <code>1</code>), and dice sums are numeric. Text and tags are not parsed here.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CheckType"><code>CheckType = 24</code></dt>
   
-  <dd><p>Identifies the check type value.</p>
+  <dd><p>Writes whether <code>X</code> has the declared built-in type. Custom/record types use <code>CheckCustomType</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CheckUnit"><code>CheckUnit = 26</code></dt>
   
-  <dd><p>Identifies the check unit value.</p>
+  <dd><p>Writes whether <code>X</code> has the numeric unit carried in <code>UnitAndFlags</code>. Units are not represented as
+declared type kinds.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Clamp"><code>Clamp = 105</code></dt>
   
-  <dd><p>Identifies the clamp value.</p>
+  <dd><p>The only opcode with three direct source registers.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ConstructData"><code>ConstructData = 222</code></dt>
   
@@ -217,43 +228,45 @@ Enum GesBytecodeOpCode
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Contains"><code>Contains = 175</code></dt>
   
-  <dd><p>Identifies the contains value.</p>
+  <dd><p>Text/tag substring, map key, list/dice/range membership, or vector/point component membership.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ContainsAll"><code>ContainsAll = 177</code></dt>
   
-  <dd><p>Identifies the contains all value.</p>
+  <dd><p>Tests whether the container contains every value from the needle sequence. Iterators are consumed until all
+needles match or exhaustion.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ContainsAny"><code>ContainsAny = 176</code></dt>
   
-  <dd><p>Identifies the contains any value.</p>
+  <dd><p>Tests whether the container contains any value from the needle sequence. Iterators are consumed until the first
+match or exhaustion.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ContainsValue"><code>ContainsValue = 180</code></dt>
   
-  <dd><p>Identifies the contains value value.</p>
+  <dd><p>Value membership for map-like containers, vectors, and points.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Cos"><code>Cos = 123</code></dt>
   
-  <dd><p>Identifies the cos value.</p>
+  <dd><p>Cosine. Unitless input is radians; degree input is converted to radians; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Count"><code>Count = 172</code></dt>
   
-  <dd><p>Identifies the count value.</p>
+  <dd><p>Counts collection/string/range/map items or consumes an iterator to count.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateDice"><code>CreateDice = 54</code></dt>
   
-  <dd><p>Identifies the create dice value.</p>
+  <dd><p>Creates a dice value; <code>X</code> and <code>Y</code> are not registers.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateExternalType"><code>CreateExternalType = 66</code></dt>
   
-  <dd><p>Identifies the create external type value.</p>
+  <dd><p>Constructs a host-bound external type value from named staged argument values.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateList"><code>CreateList = 57</code></dt>
   
-  <dd><p>Identifies the create list value.</p>
+  <dd><p>Creates a list from the contiguous staged value sequence immediately before the opcode.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateMap"><code>CreateMap = 58</code></dt>
   
-  <dd><p>Identifies the create map value.</p>
+  <dd><p>Creates a map from key names and the contiguous staged value sequence immediately before the opcode.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreatePoint"><code>CreatePoint = 56</code></dt>
   
@@ -262,35 +275,36 @@ component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateRange"><code>CreateRange = 59</code></dt>
   
-  <dd><p>Identifies the create range value.</p>
+  <dd><p>Creates a range value with implicit step <code>1</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateRangeIterator"><code>CreateRangeIterator = 61</code></dt>
   
-  <dd><p>Identifies the create range iterator value.</p>
+  <dd><p>Creates a VM-internal range iterator with default step <code>+1</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateRangeIteratorShort"><code>CreateRangeIteratorShort = 63</code></dt>
   
-  <dd><p>Identifies the create range iterator short value.</p>
+  <dd><p>Creates a compact literal range iterator.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateRangeIteratorWithStep"><code>CreateRangeIteratorWithStep = 62</code></dt>
   
-  <dd><p>Identifies the create range iterator with step value.</p>
+  <dd><p>Creates a VM-internal range iterator with an explicit step.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateRangeWithStep"><code>CreateRangeWithStep = 60</code></dt>
   
-  <dd><p>Identifies the create range with step value.</p>
+  <dd><p>Creates a range value with explicit step.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateRecord"><code>CreateRecord = 64</code></dt>
   
-  <dd><p>Identifies the create record value.</p>
+  <dd><p>Calls the record constructor bind with staged constructor-parameter values; computed fields are derived inside
+the constructor.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateRecordValue"><code>CreateRecordValue = 65</code></dt>
   
-  <dd><p>Identifies the create record value value.</p>
+  <dd><p>Creates the concrete custom record value from the constructor-produced field map.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateSeries"><code>CreateSeries = 8</code></dt>
   
-  <dd><p>Identifies the create series value.</p>
+  <dd><p>Creates a built-in mathematical series. Supported kinds are <code>Fibonacci</code> and <code>Factorial</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateVector"><code>CreateVector = 55</code></dt>
   
@@ -299,99 +313,102 @@ component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Cross"><code>Cross = 146</code></dt>
   
-  <dd><p>Identifies the cross value.</p>
+  <dd><p>3D vector/point cross product with matching units; result is a unitless vector.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Cross2D"><code>Cross2D = 147</code></dt>
   
-  <dd><p>Identifies the cross2 d value.</p>
+  <dd><p>2D coordinate cross product; result is the scalar z component, unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Cross3D"><code>Cross3D = 148</code></dt>
   
-  <dd><p>Identifies the cross3 d value.</p>
+  <dd><p>3D coordinate cross product; result is a unitless vector.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Default"><code>Default = 69</code></dt>
   
-  <dd><p>Identifies the default value.</p>
+  <dd><p>Writes <code>X</code> when it has a value, otherwise <code>Y</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DegreeFromRadians"><code>DegreeFromRadians = 120</code></dt>
   
-  <dd><p>Identifies the degree from radians value.</p>
+  <dd><p>Converts unitless radians to a degree quantity.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DegreeToRadians"><code>DegreeToRadians = 119</code></dt>
   
-  <dd><p>Identifies the degree to radians value.</p>
+  <dd><p>Converts degrees to unitless radians.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Distance"><code>Distance = 131</code></dt>
   
-  <dd><p>Identifies the distance value.</p>
+  <dd><p>Scalar distance or 3D vector/point distance; matching units are retained.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Distance2D"><code>Distance2D = 132</code></dt>
   
-  <dd><p>Identifies the distance2 d value.</p>
+  <dd><p>2D coordinate distance; matching units are retained.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Distance3D"><code>Distance3D = 133</code></dt>
   
-  <dd><p>Identifies the distance3 d value.</p>
+  <dd><p>3D coordinate distance; matching units are retained.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DistanceSquared"><code>DistanceSquared = 134</code></dt>
   
-  <dd><p>Identifies the distance squared value.</p>
+  <dd><p>Scalar or 3D vector/point squared distance; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DistanceSquared2D"><code>DistanceSquared2D = 135</code></dt>
   
-  <dd><p>Identifies the distance squared2 d value.</p>
+  <dd><p>2D squared coordinate distance; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DistanceSquared3D"><code>DistanceSquared3D = 136</code></dt>
   
-  <dd><p>Identifies the distance squared3 d value.</p>
+  <dd><p>3D squared coordinate distance; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Distinct"><code>Distinct = 194</code></dt>
   
-  <dd><p>Identifies the distinct value.</p>
+  <dd><p>Materializes distinct source items in source order. Supports direct collection fast paths and iterators.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DistinctBuilderAdd"><code>DistinctBuilderAdd = 206</code></dt>
   
-  <dd><p>Identifies the distinct builder add value.</p>
+  <dd><p>Adds the value only when the key was not seen before.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DistinctBuilderCreate"><code>DistinctBuilderCreate = 205</code></dt>
   
-  <dd><p>Identifies the distinct builder create value.</p>
+  <dd><p>Creates a VM-internal builder for <code>distinct by</code> loop lowering.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DistinctBuilderFinish"><code>DistinctBuilderFinish = 207</code></dt>
   
-  <dd><p>Identifies the distinct builder finish value.</p>
+  <dd><p>Materializes the distinct-by builder as a list.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Divide"><code>Divide = 94</code></dt>
   
-  <dd><p>Identifies the divide value.</p>
+  <dd><p>Divides <code>X</code> by <code>Y</code>; the <code>Numeric</code> flag selects scalar arithmetic.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Dot"><code>Dot = 143</code></dt>
   
-  <dd><p>Identifies the dot value.</p>
+  <dd><p>3D vector/point dot product with matching units; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Dot2D"><code>Dot2D = 144</code></dt>
   
-  <dd><p>Identifies the dot2 d value.</p>
+  <dd><p>2D coordinate dot product; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Dot3D"><code>Dot3D = 145</code></dt>
   
-  <dd><p>Identifies the dot3 d value.</p>
+  <dd><p>3D coordinate dot product; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DropFirst"><code>DropFirst = 161</code></dt>
   
-  <dd><p>Identifies the drop first value.</p>
+  <dd><p>Drops the first <code>Y</code> values from a series, list, dice, range, or iterator source.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DropHighest"><code>DropHighest = 166</code></dt>
   
-  <dd><p>Identifies the drop highest value.</p>
+  <dd><p>Drops the highest <code>Y</code> values from a finite list, dice, range, or iterator source; series yields
+<code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DropLast"><code>DropLast = 163</code></dt>
   
-  <dd><p>Identifies the drop last value.</p>
+  <dd><p>Drops the last <code>Y</code> values from a finite list, dice, range, or iterator source; series yields
+<code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_DropLowest"><code>DropLowest = 167</code></dt>
   
-  <dd><p>Identifies the drop lowest value.</p>
+  <dd><p>Drops the lowest <code>Y</code> values from a finite list, dice, range, or iterator source; series yields
+<code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_EmitAfter"><code>EmitAfter = 219</code></dt>
   
@@ -403,319 +420,324 @@ component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_EmitMessage"><code>EmitMessage = 12</code></dt>
   
-  <dd><p>Identifies the emit message value.</p>
+  <dd><p>Emits a statically shaped message without tags.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_EmitMessageValue"><code>EmitMessageValue = 14</code></dt>
   
-  <dd><p>Identifies the emit message value value.</p>
+  <dd><p>Emits a dynamic message value without tags.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_EmitMessageValueWithTags"><code>EmitMessageValueWithTags = 15</code></dt>
   
-  <dd><p>Identifies the emit message value with tags value.</p>
+  <dd><p>Emits a dynamic message value with tags.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_EmitMessageWithTags"><code>EmitMessageWithTags = 13</code></dt>
   
-  <dd><p>Identifies the emit message with tags value.</p>
+  <dd><p>Emits a statically shaped message with tags.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_EndsWith"><code>EndsWith = 174</code></dt>
   
-  <dd><p>Identifies the ends with value.</p>
+  <dd><p>Text/tag raw-text suffix check or list/dice/range sequence suffix check.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_EntriesOfMap"><code>EntriesOfMap = 186</code></dt>
   
-  <dd><p>Identifies the entries of map value.</p>
+  <dd><p>Map/custom-type entries projection; <code>nothing</code> and non-map operands produce <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Equal"><code>Equal = 85</code></dt>
   
-  <dd><p>Identifies the equal value.</p>
+  <dd><p>Writes whether <code>X</code> equals <code>Y</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Exp"><code>Exp = 112</code></dt>
   
-  <dd><p>Identifies the exp value.</p>
+  <dd><p>Natural exponential. Unitless numeric input only; overflow to <code>+Infinity</code> is valid.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_First"><code>First = 187</code></dt>
   
-  <dd><p>Identifies the first value.</p>
+  <dd><p>Returns the first element from list, dice, range, map/custom values, text/tag, or iterator; invalid/empty
+sources -&gt; <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Floor"><code>Floor = 113</code></dt>
   
-  <dd><p>Identifies the floor value.</p>
+  <dd><p>Floors a unitless numeric value and writes an integer.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Greater"><code>Greater = 88</code></dt>
   
-  <dd><p>Identifies the greater value.</p>
+  <dd><p>Compares whether <code>X</code> is greater than <code>Y</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_GreaterOrEqual"><code>GreaterOrEqual = 90</code></dt>
   
-  <dd><p>Identifies the greater or equal value.</p>
+  <dd><p>Compares whether <code>X</code> is greater than or equal to <code>Y</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_GroupBuilderAdd"><code>GroupBuilderAdd = 209</code></dt>
   
-  <dd><p>Identifies the group builder add value.</p>
+  <dd><p>Adds the value to the group identified by the key text.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_GroupBuilderCreate"><code>GroupBuilderCreate = 208</code></dt>
   
-  <dd><p>Identifies the group builder create value.</p>
+  <dd><p>Creates a VM-internal builder for <code>group by</code> loop lowering.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_GroupBuilderFinish"><code>GroupBuilderFinish = 210</code></dt>
   
-  <dd><p>Identifies the group builder finish value.</p>
+  <dd><p>Materializes the group builder as a map from keys to grouped lists.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_HasAll"><code>HasAll = 179</code></dt>
   
-  <dd><p>Identifies the has all value.</p>
+  <dd><p>Truthiness <code>all</code> over list/dice/range/map values/text/tag/vector/point or iterator sources. Empty -&gt;
+<code>true</code>; <code>nothing</code> -&gt; <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_HasAny"><code>HasAny = 178</code></dt>
   
-  <dd><p>Identifies the has any value.</p>
+  <dd><p>Truthiness <code>any</code> over list/dice/range/map values/text/tag/vector/point or iterator sources. Empty -&gt;
+<code>false</code>; <code>nothing</code> -&gt; <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_HasPattern"><code>HasPattern = 215</code></dt>
   
-  <dd><p>Identifies the has pattern value.</p>
+  <dd><p>Tests a dice/card pattern and returns boolean.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_HasValue"><code>HasValue = 67</code></dt>
   
-  <dd><p>Identifies the has value value.</p>
+  <dd><p>Semantic value check; exact complement of <code>IsEmpty</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Hypot2D"><code>Hypot2D = 129</code></dt>
   
-  <dd><p>Identifies the hypot2 d value.</p>
+  <dd><p>2D hypotenuse; matching units are retained in the result.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Hypot3D"><code>Hypot3D = 130</code></dt>
   
-  <dd><p>Identifies the hypot3 d value.</p>
+  <dd><p>3D hypotenuse; matching units are retained in the result.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Implies"><code>Implies = 83</code></dt>
   
-  <dd><p>Identifies the implies value.</p>
+  <dd><p>Combines antecedent <code>X</code> and consequent <code>Y</code> with three-valued implication.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_IndexAccess"><code>IndexAccess = 32</code></dt>
   
-  <dd><p>Identifies the index access value.</p>
+  <dd><p>Reads a statically known positional element.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_IntegerDivide"><code>IntegerDivide = 96</code></dt>
   
-  <dd><p>Identifies the integer divide value.</p>
+  <dd><p>Floor-like integer division operation.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Intersect"><code>Intersect = 182</code></dt>
   
-  <dd><p>Identifies the intersect value.</p>
+  <dd><p>Map key intersection or list/dice multiset intersection; invalid shapes -&gt; <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_IsEmpty"><code>IsEmpty = 68</code></dt>
   
-  <dd><p>Identifies the is empty value.</p>
+  <dd><p>Semantic emptiness check; true for <code>nothing</code>, <code>NaN</code>, and empty text/collections.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_IteratorClose"><code>IteratorClose = 193</code></dt>
   
-  <dd><p>Identifies the iterator close value.</p>
+  <dd><p>Disposes/closes a VM-internal iterator.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_IteratorCreate"><code>IteratorCreate = 190</code></dt>
   
-  <dd><p>Identifies the iterator create value.</p>
+  <dd><p>Creates a VM-internal iterator over a collection or range value. Non-iterable sources write <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_IteratorCreateOrJump"><code>IteratorCreateOrJump = 191</code></dt>
   
-  <dd><p>Identifies the iterator create or jump value.</p>
+  <dd><p>Creates a VM-internal iterator, or writes <code>nothing</code> and jumps to <code>Y</code> when no iterator can be created.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_IteratorNext"><code>IteratorNext = 192</code></dt>
   
-  <dd><p>Identifies the iterator next value.</p>
+  <dd><p>Writes the next item and continues, or jumps to <code>Y</code> when exhausted.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Jump"><code>Jump = 2</code></dt>
   
-  <dd><p>Identifies the jump value.</p>
+  <dd><p>Unconditional branch.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_JumpIfFalse"><code>JumpIfFalse = 4</code></dt>
   
-  <dd><p>Identifies the jump if false value.</p>
+  <dd><p>Branches when <code>X.IsFalse()</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_JumpIfNotTrue"><code>JumpIfNotTrue = 5</code></dt>
   
-  <dd><p>Identifies the jump if not true value.</p>
+  <dd><p>Branches when <code>!X.IsTrue()</code>, including <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_JumpIfNothing"><code>JumpIfNothing = 6</code></dt>
   
-  <dd><p>Identifies the jump if nothing value.</p>
+  <dd><p>Branches when <code>X.Kind</code> is <code>Nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_JumpIfTrue"><code>JumpIfTrue = 3</code></dt>
   
-  <dd><p>Identifies the jump if true value.</p>
+  <dd><p>Branches when <code>X.IsTrue()</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_KeysOfMap"><code>KeysOfMap = 184</code></dt>
   
-  <dd><p>Identifies the keys of map value.</p>
+  <dd><p>Map/custom-type keys projection; <code>nothing</code> and non-map operands produce <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Last"><code>Last = 188</code></dt>
   
-  <dd><p>Identifies the last value.</p>
+  <dd><p>Returns the last element from list, dice, range, map/custom values, text/tag, or iterator; invalid/empty sources
+-&gt; <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LengthSquared"><code>LengthSquared = 137</code></dt>
   
-  <dd><p>Identifies the length squared value.</p>
+  <dd><p>Scalar square or vector/point squared length; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LengthSquared2D"><code>LengthSquared2D = 138</code></dt>
   
-  <dd><p>Identifies the length squared2 d value.</p>
+  <dd><p>2D squared length; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LengthSquared3D"><code>LengthSquared3D = 139</code></dt>
   
-  <dd><p>Identifies the length squared3 d value.</p>
+  <dd><p>3D squared length; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Less"><code>Less = 87</code></dt>
   
-  <dd><p>Identifies the less value.</p>
+  <dd><p>Compares whether <code>X</code> is less than <code>Y</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LessOrEqual"><code>LessOrEqual = 89</code></dt>
   
-  <dd><p>Identifies the less or equal value.</p>
+  <dd><p>Compares whether <code>X</code> is less than or equal to <code>Y</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ListBuilderAdd"><code>ListBuilderAdd = 200</code></dt>
   
-  <dd><p>Identifies the list builder add value.</p>
+  <dd><p>Checks <code>MaxGeneratedCollectionItems</code> before adding an item.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ListBuilderCreate"><code>ListBuilderCreate = 199</code></dt>
   
-  <dd><p>Identifies the list builder create value.</p>
+  <dd><p>Creates a VM-internal list builder for generated collections.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ListBuilderFinish"><code>ListBuilderFinish = 201</code></dt>
   
-  <dd><p>Identifies the list builder finish value.</p>
+  <dd><p>Materializes the list builder as a list.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LoadFalse"><code>LoadFalse = 37</code></dt>
   
-  <dd><p>Identifies the load false value.</p>
+  <dd><p>Loads boolean <code>false</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LoadFloat"><code>LoadFloat = 39</code></dt>
   
-  <dd><p>Identifies the load float value.</p>
+  <dd><p>Loads an inline IEEE-754 <code>Float64</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LoadHandler"><code>LoadHandler = 43</code></dt>
   
-  <dd><p>Identifies the load handler value.</p>
+  <dd><p>Loads a handler literal. The shape list is <code>[messageNameStringIndex, argumentNameStringIndex...]</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LoadInteger"><code>LoadInteger = 38</code></dt>
   
-  <dd><p>Identifies the load integer value.</p>
+  <dd><p>Loads an inline signed <code>Int64</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LoadMessage"><code>LoadMessage = 44</code></dt>
   
-  <dd><p>Identifies the load message value.</p>
+  <dd><p>Loads a statically shaped message value. Shape is <code>[messageNameStringIndex, argumentNameStringIndex...]</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LoadNothing"><code>LoadNothing = 35</code></dt>
   
-  <dd><p>Identifies the load nothing value.</p>
+  <dd><p>Loads <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LoadPercentage"><code>LoadPercentage = 40</code></dt>
   
-  <dd><p>Identifies the load percentage value.</p>
+  <dd><p>Loads an inline percentage ratio as the dedicated percentage value kind.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LoadTag"><code>LoadTag = 42</code></dt>
   
-  <dd><p>Identifies the load tag value.</p>
+  <dd><p>Loads a tag literal.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LoadText"><code>LoadText = 41</code></dt>
   
-  <dd><p>Identifies the load text value.</p>
+  <dd><p>Loads a text literal.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LoadTrue"><code>LoadTrue = 36</code></dt>
   
-  <dd><p>Identifies the load true value.</p>
+  <dd><p>Loads boolean <code>true</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_LogN"><code>LogN = 103</code></dt>
   
-  <dd><p>Identifies the log n value.</p>
+  <dd><p>Natural logarithm.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_MapBuilderAdd"><code>MapBuilderAdd = 203</code></dt>
   
-  <dd><p>Identifies the map builder add value.</p>
+  <dd><p>Adds or overwrites a map entry; empty/nothing keys are skipped.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_MapBuilderCreate"><code>MapBuilderCreate = 202</code></dt>
   
-  <dd><p>Identifies the map builder create value.</p>
+  <dd><p>Creates a VM-internal map builder for generated map projections.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_MapBuilderFinish"><code>MapBuilderFinish = 204</code></dt>
   
-  <dd><p>Identifies the map builder finish value.</p>
+  <dd><p>Materializes the map builder as a map.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Max"><code>Max = 100</code></dt>
   
-  <dd><p>Identifies the max value.</p>
+  <dd><p>Writes the larger of <code>X</code> and <code>Y</code>; also the reduce step of a maximum.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_MemberAccess"><code>MemberAccess = 31</code></dt>
   
-  <dd><p>Identifies the member access value.</p>
+  <dd><p>Reads a named member.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Min"><code>Min = 99</code></dt>
   
-  <dd><p>Identifies the min value.</p>
+  <dd><p>Writes the smaller of <code>X</code> and <code>Y</code>; also the reduce step of a minimum.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Modulo"><code>Modulo = 97</code></dt>
   
-  <dd><p>Identifies the modulo value.</p>
+  <dd><p>Numeric modulo operation.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Move"><code>Move = 30</code></dt>
   
-  <dd><p>Identifies the move value.</p>
+  <dd><p>Copies a register value/reference; the source register remains unchanged.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Multiply"><code>Multiply = 93</code></dt>
   
-  <dd><p>Identifies the multiply value.</p>
+  <dd><p>Multiplies <code>X</code> by <code>Y</code>; the <code>Numeric</code> flag selects scalar arithmetic.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Negate"><code>Negate = 101</code></dt>
   
-  <dd><p>Identifies the negate value.</p>
+  <dd><p>Numeric negation.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Nop"><code>Nop = 0</code></dt>
   
-  <dd><p>Identifies the nop value.</p>
+  <dd><p>No operation.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Normalize"><code>Normalize = 140</code></dt>
   
-  <dd><p>Identifies the normalize value.</p>
+  <dd><p>Normalizes a 3D vector/point and returns a unitless vector; zero length yields <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Normalize2D"><code>Normalize2D = 141</code></dt>
   
-  <dd><p>Identifies the normalize2 d value.</p>
+  <dd><p>Normalizes 2D coordinates and returns a unitless vector with <code>z=0</code>; zero length yields <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Normalize3D"><code>Normalize3D = 142</code></dt>
   
-  <dd><p>Identifies the normalize3 d value.</p>
+  <dd><p>Normalizes 3D coordinates and returns a unitless vector; zero length yields <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Not"><code>Not = 84</code></dt>
   
-  <dd><p>Identifies the not value.</p>
+  <dd><p>Logical negation.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_NotEqual"><code>NotEqual = 86</code></dt>
   
-  <dd><p>Identifies the not equal value.</p>
+  <dd><p>Writes whether <code>X</code> differs from <code>Y</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_OneRandom"><code>OneRandom = 168</code></dt>
   
-  <dd><p>Identifies the one random value.</p>
+  <dd><p>Chooses one random element from a finite list, dice, range, or iterator source; empty/invalid/series sources
+yield <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_OneWeighted"><code>OneWeighted = 170</code></dt>
   
-  <dd><p>Identifies the one weighted value.</p>
+  <dd><p>Selects one item using positive finite weights. Empty/no-positive-weight lists -&gt; <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Or"><code>Or = 80</code></dt>
   
-  <dd><p>Identifies the or value.</p>
+  <dd><p>Combines <code>X</code> and <code>Y</code> with three-valued logical or, treating <code>nothing</code> as unknown.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_OrderBuilderAdd"><code>OrderBuilderAdd = 212</code></dt>
   
-  <dd><p>Identifies the order builder add value.</p>
+  <dd><p>Adds a key/value pair preserving source order for stable ordering.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_OrderBuilderCreate"><code>OrderBuilderCreate = 211</code></dt>
   
-  <dd><p>Identifies the order builder create value.</p>
+  <dd><p>Creates a VM-internal builder for <code>order by</code> loop lowering.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_OrderBuilderFinishAscending"><code>OrderBuilderFinishAscending = 213</code></dt>
   
-  <dd><p>Identifies the order builder finish ascending value.</p>
+  <dd><p>Sorts by stored keys ascending and materializes the ordered values as a list.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_OrderBuilderFinishDescending"><code>OrderBuilderFinishDescending = 214</code></dt>
   
-  <dd><p>Identifies the order builder finish descending value.</p>
+  <dd><p>Sorts by stored keys descending and materializes the ordered values as a list.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ParseLiteral"><code>ParseLiteral = 217</code></dt>
   
@@ -723,11 +745,11 @@ component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Power"><code>Power = 95</code></dt>
   
-  <dd><p>Identifies the power value.</p>
+  <dd><p>Raises <code>X</code> to the power <code>Y</code>; the <code>Numeric</code> flag selects scalar arithmetic.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_PropertyAccess"><code>PropertyAccess = 33</code></dt>
   
-  <dd><p>Identifies the property access value.</p>
+  <dd><p>Reads a dynamic property: integer selectors use index semantics; text/tag selectors use member semantics.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_PublishAfter"><code>PublishAfter = 221</code></dt>
   
@@ -739,91 +761,94 @@ component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_PublishMessage"><code>PublishMessage = 16</code></dt>
   
-  <dd><p>Identifies the publish message value.</p>
+  <dd><p>Publishes a statically shaped message without tags.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_PublishMessageValue"><code>PublishMessageValue = 18</code></dt>
   
-  <dd><p>Identifies the publish message value value.</p>
+  <dd><p>Publishes a dynamic message value without tags.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_PublishMessageValueWithTags"><code>PublishMessageValueWithTags = 19</code></dt>
   
-  <dd><p>Identifies the publish message value with tags value.</p>
+  <dd><p>Publishes a dynamic message value with tags.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_PublishMessageWithTags"><code>PublishMessageWithTags = 17</code></dt>
   
-  <dd><p>Identifies the publish message with tags value.</p>
+  <dd><p>Publishes a statically shaped message with tags.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_RandomPop"><code>RandomPop = 110</code></dt>
   
-  <dd><p>Identifies the random pop value.</p>
+  <dd><p>Restores the previous random scope.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_RandomPush"><code>RandomPush = 108</code></dt>
   
-  <dd><p>Identifies the random push value.</p>
+  <dd><p>Saves the active random state and resets it from a valid dynamic unitless integer seed; an invalid seed retains
+the copied state.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_RandomPushConstant"><code>RandomPushConstant = 109</code></dt>
   
-  <dd><p>Identifies the random push constant value.</p>
+  <dd><p>Saves the active random state and resets it from an inline signed <code>Int64</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_RandomTake"><code>RandomTake = 106</code></dt>
   
-  <dd><p>Identifies the random take value.</p>
+  <dd><p>Takes an integer random value from integer bounds using the current random scope.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_RandomTakeFloat"><code>RandomTakeFloat = 107</code></dt>
   
-  <dd><p>Identifies the random take float value.</p>
+  <dd><p>Takes a float random value from numeric bounds using the current random scope.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_RegisterLocals"><code>RegisterLocals = 1</code></dt>
   
-  <dd><p>Identifies the register locals value.</p>
+  <dd><p>Adds <code>Count &gt; 0</code> active local registers or releases <code>-Count</code> registers when <code>Count &lt; 0</code>.
+Entry prologs reserve only locals beyond preloaded arguments.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Remainder"><code>Remainder = 98</code></dt>
   
-  <dd><p>Identifies the remainder value.</p>
+  <dd><p>Numeric remainder operation.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ReturnValue"><code>ReturnValue = 11</code></dt>
   
-  <dd><p>Identifies the return value value.</p>
+  <dd><p>Returns the value in <code>X</code> from the current frame.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ReturnVoid"><code>ReturnVoid = 10</code></dt>
   
-  <dd><p>Identifies the return void value.</p>
+  <dd><p>Returns no value from the current frame; normal calls map this to DSL <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Reverse"><code>Reverse = 197</code></dt>
   
-  <dd><p>Identifies the reverse value.</p>
+  <dd><p>Reverses list, dice, range, or iterator sources. Dice and iterators materialize lists; ranges stay ranges.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_RoundHalfDown"><code>RoundHalfDown = 118</code></dt>
   
-  <dd><p>Identifies the round half down value.</p>
+  <dd><p>Rounds midpoint values toward zero and writes an integer.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_RoundHalfEven"><code>RoundHalfEven = 116</code></dt>
   
-  <dd><p>Identifies the round half even value.</p>
+  <dd><p>Rounds a unitless numeric value using midpoint-to-even and writes an integer.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_RoundHalfUp"><code>RoundHalfUp = 117</code></dt>
   
-  <dd><p>Identifies the round half up value.</p>
+  <dd><p>Rounds midpoint values away from zero and writes an integer.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Shuffle"><code>Shuffle = 198</code></dt>
   
-  <dd><p>Identifies the shuffle value.</p>
+  <dd><p>Shuffles list, dice, range, or iterator sources. Result is a list.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Sin"><code>Sin = 122</code></dt>
   
-  <dd><p>Identifies the sin value.</p>
+  <dd><p>Sine. Unitless input is radians; degree input is converted to radians; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Single"><code>Single = 189</code></dt>
   
-  <dd><p>Identifies the single value.</p>
+  <dd><p>Returns the only element from list, dice, range, map/custom values, text/tag, or iterator;
+invalid/empty/multiple-element sources -&gt; <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_SortAscending"><code>SortAscending = 195</code></dt>
   
-  <dd><p>Identifies the sort ascending value.</p>
+  <dd><p>Sorts source items ascending. Supports direct list, dice, range, and iterator sources.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_SortDescending"><code>SortDescending = 196</code></dt>
   
-  <dd><p>Identifies the sort descending value.</p>
+  <dd><p>Sorts source items descending. Supports direct list, dice, range, and iterator sources.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_SplitText"><code>SplitText = 223</code></dt>
   
@@ -831,107 +856,111 @@ component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_StageFalse"><code>StageFalse = 48</code></dt>
   
-  <dd><p>Identifies the stage false value.</p>
+  <dd><p>Stages <code>false</code> for the next stage-consuming instruction.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_StageFloat"><code>StageFloat = 50</code></dt>
   
-  <dd><p>Identifies the stage float value.</p>
+  <dd><p>Stages an inline float value.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_StageInteger"><code>StageInteger = 49</code></dt>
   
-  <dd><p>Identifies the stage integer value.</p>
+  <dd><p>Stages an inline integer value.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_StageNothing"><code>StageNothing = 46</code></dt>
   
-  <dd><p>Identifies the stage nothing value.</p>
+  <dd><p>Stages DSL <code>nothing</code> for the next stage-consuming instruction.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_StagePercentage"><code>StagePercentage = 53</code></dt>
   
-  <dd><p>Identifies the stage percentage value.</p>
+  <dd><p>Stages an inline percentage ratio value.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_StageRegister"><code>StageRegister = 45</code></dt>
   
-  <dd><p>Identifies the stage register value.</p>
+  <dd><p>Stages a register value for the next stage-consuming instruction.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_StageTag"><code>StageTag = 52</code></dt>
   
-  <dd><p>Identifies the stage tag value.</p>
+  <dd><p>Stages a tag literal from <code>StringPool</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_StageText"><code>StageText = 51</code></dt>
   
-  <dd><p>Identifies the stage text value.</p>
+  <dd><p>Stages a text literal from <code>StringPool</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_StageTrue"><code>StageTrue = 47</code></dt>
   
-  <dd><p>Identifies the stage true value.</p>
+  <dd><p>Stages <code>true</code> for the next stage-consuming instruction.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_StartsWith"><code>StartsWith = 173</code></dt>
   
-  <dd><p>Identifies the starts with value.</p>
+  <dd><p>Text/tag raw-text prefix check or list/dice/range sequence prefix check.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Subtract"><code>Subtract = 92</code></dt>
   
-  <dd><p>Identifies the subtract value.</p>
+  <dd><p>Subtracts <code>Y</code> from <code>X</code>; the <code>Numeric</code> flag selects scalar arithmetic.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_TakeFirst"><code>TakeFirst = 160</code></dt>
   
-  <dd><p>Identifies the take first value.</p>
+  <dd><p>Takes the first <code>Y</code> values from a series, list, dice, range, or iterator source.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_TakeHighest"><code>TakeHighest = 164</code></dt>
   
-  <dd><p>Identifies the take highest value.</p>
+  <dd><p>Takes the highest <code>Y</code> values from a finite list, dice, range, or iterator source; series yields
+<code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_TakeLast"><code>TakeLast = 162</code></dt>
   
-  <dd><p>Identifies the take last value.</p>
+  <dd><p>Takes the last <code>Y</code> values from a finite list, dice, range, or iterator source; series yields
+<code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_TakeLowest"><code>TakeLowest = 165</code></dt>
   
-  <dd><p>Identifies the take lowest value.</p>
+  <dd><p>Takes the lowest <code>Y</code> values from a finite list, dice, range, or iterator source; series yields
+<code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_TakePattern"><code>TakePattern = 216</code></dt>
   
-  <dd><p>Identifies the take pattern value.</p>
+  <dd><p>Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_TakeRandom"><code>TakeRandom = 169</code></dt>
   
-  <dd><p>Identifies the take random value.</p>
+  <dd><p>Chooses up to <code>Y</code> random elements without replacement. Lists stay lists, dice stay dice, ranges and
+iterators materialize as lists.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_TakeWeighted"><code>TakeWeighted = 171</code></dt>
   
-  <dd><p>Identifies the take weighted value.</p>
+  <dd><p>Selects up to <code>Y</code> items without replacement using positive finite weights. Result is a list.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Tan"><code>Tan = 124</code></dt>
   
-  <dd><p>Identifies the tan value.</p>
+  <dd><p>Tangent. Unitless input is radians; degree input is converted to radians; result is unitless.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Term"><code>Term = 111</code></dt>
   
-  <dd><p>Identifies the term value.</p>
+  <dd><p>Reads a zero-based mathematical series term; non-series sources yield <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Truncate"><code>Truncate = 115</code></dt>
   
-  <dd><p>Identifies the truncate value.</p>
+  <dd><p>Truncates a unitless numeric value toward zero and writes an integer.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Union"><code>Union = 181</code></dt>
   
-  <dd><p>Identifies the union value.</p>
+  <dd><p>Collection union/merge for list, dice, and map shapes; invalid shapes -&gt; <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_ValuesOfMap"><code>ValuesOfMap = 185</code></dt>
   
-  <dd><p>Identifies the values of map value.</p>
+  <dd><p>Map/custom-type values projection; <code>nothing</code> and non-map operands produce <code>nothing</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_WrapDegree"><code>WrapDegree = 121</code></dt>
   
-  <dd><p>Identifies the wrap degree value.</p>
+  <dd><p>Normalizes a degree or unitless numeric value into <code>[0, 360)</code> degrees.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Xor"><code>Xor = 82</code></dt>
   
-  <dd><p>Identifies the xor value.</p>
+  <dd><p>Combines <code>X</code> and <code>Y</code> with three-valued exclusive or, treating <code>nothing</code> as unknown.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Zip"><code>Zip = 183</code></dt>
   
-  <dd><p>Identifies the zip value.</p>
+  <dd><p>List zip into <code>{ left, right }</code> maps up to the shorter length; invalid shapes -&gt; <code>nothing</code>.</p>
 </dd>
   </dl>
 
@@ -953,7 +982,7 @@ component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

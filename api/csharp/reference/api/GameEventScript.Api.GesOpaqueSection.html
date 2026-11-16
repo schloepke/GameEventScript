@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesOpaqueSection | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesOpaqueSection | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesOpaqueSection | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesOpaqueSection | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script opaque section.">
+      <meta name="description" content="An optional section the reader retained without interpreting it under : an unknown optional section, or a known optional section with an unsupported version or compression. The writer re-emits it unchanged after the known sections.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,9 @@ Class GesOpaqueSection
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script opaque section.</p>
+  <div class="markdown summary"><p>An optional section the reader retained without interpreting it under <a class="xref" href="GameEventScript.Api.GesProgramRetention.html#GameEventScript_Api_GesProgramRetention_PreserveAll">PreserveAll</a>:
+an unknown optional section, or a known optional section with an unsupported version or compression. The writer
+re-emits it unchanged after the known sections.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -132,55 +134,6 @@ Class GesOpaqueSection
 
 
 
-  <h2 class="section" id="constructors">Constructors
-</h2>
-
-
-  <a id="GameEventScript_Api_GesOpaqueSection__ctor_" data-uid="GameEventScript.Api.GesOpaqueSection.#ctor*"></a>
-
-  <h3 id="GameEventScript_Api_GesOpaqueSection__ctor_System_UInt16_GameEventScript_Api_GesSectionFlags_System_UInt16_System_Collections_Generic_IReadOnlyList_System_Byte__System_Int32_" data-uid="GameEventScript.Api.GesOpaqueSection.#ctor(System.UInt16,GameEventScript.Api.GesSectionFlags,System.UInt16,System.Collections.Generic.IReadOnlyList{System.Byte},System.Int32)">
-  GesOpaqueSection(ushort, GesSectionFlags, ushort, IReadOnlyList&lt;byte&gt;, int)
-  
-  </h3>
-
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script Opaque Section.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GesOpaqueSection(ushort sectionType, GesSectionFlags flags, ushort sectionVersion, IReadOnlyList&lt;byte&gt; rawPayload, int originalOrdinal)</code></pre>
-  </div>
-
-  <h4 class="section">Parameters</h4>
-  <dl class="parameters">
-    <dt><code>sectionType</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
-    <dd><p>The section type value.</p>
-</dd>
-    <dt><code>flags</code> <a class="xref" href="GameEventScript.Api.GesSectionFlags.html">GesSectionFlags</a></dt>
-    <dd><p>The flags value.</p>
-</dd>
-    <dt><code>sectionVersion</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
-    <dd><p>The section version value.</p>
-</dd>
-    <dt><code>rawPayload</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
-    <dd><p>The raw payload value.</p>
-</dd>
-    <dt><code>originalOrdinal</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The original ordinal value.</p>
-</dd>
-  </dl>
-
-
-
-
-
-
-
-
-
-
-
-
   <h2 class="section" id="properties">Properties
 </h2>
 
@@ -192,7 +145,7 @@ Class GesOpaqueSection
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the flags.</p>
+  <div class="markdown level1 summary"><p>Gets the encoded section flags; <a class="xref" href="GameEventScript.Api.GesSectionFlags.html#GameEventScript_Api_GesSectionFlags_Required">Required</a> is never set on an opaque section.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -224,7 +177,8 @@ Class GesOpaqueSection
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the original ordinal.</p>
+  <div class="markdown level1 summary"><p>Gets the zero-based position of this section among all sections of the file it was read from; unique per
+program, it determines the relative order in which the writer re-emits opaque sections.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -256,7 +210,7 @@ Class GesOpaqueSection
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the raw payload.</p>
+  <div class="markdown level1 summary"><p>Gets the immutable payload bytes exactly as read, excluding the 12-byte section header.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -288,7 +242,7 @@ Class GesOpaqueSection
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the section type.</p>
+  <div class="markdown level1 summary"><p>Gets the raw encoded section type, which may be outside <a class="xref" href="GameEventScript.Api.GesSectionType.html">GesSectionType</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -320,7 +274,7 @@ Class GesOpaqueSection
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the section version.</p>
+  <div class="markdown level1 summary"><p>Gets the encoded section version.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -362,7 +316,7 @@ Class GesOpaqueSection
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

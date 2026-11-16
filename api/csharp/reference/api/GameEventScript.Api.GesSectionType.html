@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Enum GesSectionType | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Enum GesSectionType | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Enum GesSectionType | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Enum GesSectionType | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Defines the supported game event script section type values.">
+      <meta name="description" content="The assigned .gesb section type IDs, listed in canonical writer order. Types 0x0000 and 0xFFFF are invalid; 0x8000–0xFFFD are free for private or experimental optional sections.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -84,7 +84,8 @@ Enum GesSectionType
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Defines the supported game event script section type values.</p>
+  <div class="markdown summary"><p>The assigned <code>.gesb</code> section type IDs, listed in canonical writer order. Types <code>0x0000</code> and <code>0xFFFF</code>
+are invalid; <code>0x8000</code>–<code>0xFFFD</code> are free for private or experimental optional sections.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -105,47 +106,47 @@ Enum GesSectionType
   <dl class="parameters">
     <dt id="GameEventScript_Api_GesSectionType_Bindings"><code>Bindings = 4</code></dt>
   
-  <dd><p>Identifies the bindings value.</p>
+  <dd><p>The required <a class="xref" href="GameEventScript.Api.GesBindingSegment.html">GesBindingSegment</a>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionType_BuildMetadata"><code>BuildMetadata = 48</code></dt>
   
-  <dd><p>Identifies the build metadata value.</p>
+  <dd><p>The optional <a class="xref" href="GameEventScript.Api.GesBuildMetadataSegment.html">GesBuildMetadataSegment</a>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionType_Code"><code>Code = 16</code></dt>
   
-  <dd><p>Identifies the code value.</p>
+  <dd><p>The required <a class="xref" href="GameEventScript.Api.GesCodeSegment.html">GesCodeSegment</a>; V1 has exactly one linear code address space.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionType_DebugSymbols"><code>DebugSymbols = 32</code></dt>
   
-  <dd><p>Identifies the debug symbols value.</p>
+  <dd><p>The optional <a class="xref" href="GameEventScript.Api.GesDebugSymbolsSegment.html">GesDebugSymbolsSegment</a>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionType_NamedCustom"><code>NamedCustom = 65534</code></dt>
   
-  <dd><p>Identifies the named custom value.</p>
+  <dd><p>Reserved for named custom sections; V1 defines no payload and treats it as an unknown section.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionType_ProgramMetadata"><code>ProgramMetadata = 1</code></dt>
   
-  <dd><p>Identifies the program metadata value.</p>
+  <dd><p>The required <a class="xref" href="GameEventScript.Api.GesProgramMetadataSegment.html">GesProgramMetadataSegment</a>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionType_ReservedSignature"><code>ReservedSignature = 64</code></dt>
   
-  <dd><p>Identifies the reserved signature value.</p>
+  <dd><p>Reserved for a future signature section; V1 defines no payload and treats it as an unknown section.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionType_SourceArchive"><code>SourceArchive = 34</code></dt>
   
-  <dd><p>Identifies the source archive value.</p>
+  <dd><p>The optional <a class="xref" href="GameEventScript.Api.GesSourceArchiveSegment.html">GesSourceArchiveSegment</a>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionType_SourceMap"><code>SourceMap = 33</code></dt>
   
-  <dd><p>Identifies the source map value.</p>
+  <dd><p>The optional <a class="xref" href="GameEventScript.Api.GesSourceMapSegment.html">GesSourceMapSegment</a>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionType_StringConstants"><code>StringConstants = 2</code></dt>
   
-  <dd><p>Identifies the string constants value.</p>
+  <dd><p>The required <a class="xref" href="GameEventScript.Api.GesStringConstantSegment.html">GesStringConstantSegment</a>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesSectionType_UInt16IndexLists"><code>UInt16IndexLists = 3</code></dt>
   
-  <dd><p>Identifies the u int16 index lists value.</p>
+  <dd><p>The required <a class="xref" href="GameEventScript.Api.GesUInt16IndexListSegment.html">GesUInt16IndexListSegment</a>.</p>
 </dd>
   </dl>
 
@@ -167,7 +168,7 @@ Enum GesSectionType
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesWireException | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesWireException | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesWireException | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesWireException | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="A value that cannot be encoded, or data that is not a valid encoding. The error names the field path and holds no value from the data, so it can be logged safely.">
       <link rel="icon" href="../assets/logo.svg">
@@ -193,6 +193,45 @@ from the data, so it can be logged safely.</p>
 </dd>
     <dt><code>path</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
     <dd><p>The path of the field; empty for the record as a whole.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesWireException__ctor_" data-uid="GameEventScript.Api.GesWireException.#ctor*"></a>
+
+  <h3 id="GameEventScript_Api_GesWireException__ctor_System_String_System_String_System_String_" data-uid="GameEventScript.Api.GesWireException.#ctor(System.String,System.String,System.String)">
+  GesWireException(string, string, string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates an error with a stable code, a field path and an explanation for people.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesWireException(string code, string path, string detail)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>code</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The stable <code>wire.*</code> code, one of the constants of this type.</p>
+</dd>
+    <dt><code>path</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The path of the field; empty for the record as a whole.</p>
+</dd>
+    <dt><code>detail</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>What the data breaks, such as <code>deeper than depth 3</code>; informative text.</p>
 </dd>
   </dl>
 
@@ -708,6 +747,37 @@ from the data, so it can be logged safely.</p>
 
 
 
+  <h3 id="GameEventScript_Api_GesWireException_TooDeep" data-uid="GameEventScript.Api.GesWireException.TooDeep">
+  TooDeep
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The code <code>wire.tooDeep</code>: a recursive List holds records deeper than its <code>depth</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public const string TooDeep = &quot;wire.tooDeep&quot;</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
   <h3 id="GameEventScript_Api_GesWireException_TooLong" data-uid="GameEventScript.Api.GesWireException.TooLong">
   TooLong
   
@@ -867,6 +937,38 @@ from the data, so it can be logged safely.</p>
 
 
 
+  <a id="GameEventScript_Api_GesWireException_Detail_" data-uid="GameEventScript.Api.GesWireException.Detail*"></a>
+
+  <h3 id="GameEventScript_Api_GesWireException_Detail" data-uid="GameEventScript.Api.GesWireException.Detail">
+  Detail
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets what the data breaks, such as <code>deeper than depth 3</code>, or an empty string; informative text, not a portable comparison value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Detail { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Api_GesWireException_Path_" data-uid="GameEventScript.Api.GesWireException.Path*"></a>
 
   <h3 id="GameEventScript_Api_GesWireException_Path" data-uid="GameEventScript.Api.GesWireException.Path">
@@ -916,7 +1018,7 @@ from the data, so it can be logged safely.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

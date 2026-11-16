@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesSourceMapSource | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesSourceMapSource | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesSourceMapSource | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesSourceMapSource | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script source map source.">
+      <meta name="description" content="Describes one compiler input in the . All offsets and lengths count bytes of the logical UTF-8 source, not UTF-16 code units.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,8 @@ Class GesSourceMapSource
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script source map source.</p>
+  <div class="markdown summary"><p>Describes one compiler input in the <a class="xref" href="GameEventScript.Api.GesSourceMapSegment.html">GesSourceMapSegment</a>. All offsets and lengths count bytes of the
+logical UTF-8 source, not UTF-16 code units.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -132,55 +133,6 @@ Class GesSourceMapSource
 
 
 
-  <h2 class="section" id="constructors">Constructors
-</h2>
-
-
-  <a id="GameEventScript_Api_GesSourceMapSource__ctor_" data-uid="GameEventScript.Api.GesSourceMapSource.#ctor*"></a>
-
-  <h3 id="GameEventScript_Api_GesSourceMapSource__ctor_System_UInt32_System_String_System_UInt32_System_Collections_Generic_IReadOnlyList_System_Byte__System_Collections_Generic_IReadOnlyList_System_UInt32__" data-uid="GameEventScript.Api.GesSourceMapSource.#ctor(System.UInt32,System.String,System.UInt32,System.Collections.Generic.IReadOnlyList{System.Byte},System.Collections.Generic.IReadOnlyList{System.UInt32})">
-  GesSourceMapSource(uint, string, uint, IReadOnlyList&lt;byte&gt;, IReadOnlyList&lt;uint&gt;)
-  
-  </h3>
-
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script Source Map Source.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GesSourceMapSource(uint sourceId, string sourceName, uint sourceByteLength, IReadOnlyList&lt;byte&gt; sha256, IReadOnlyList&lt;uint&gt; lineStartByteOffsets)</code></pre>
-  </div>
-
-  <h4 class="section">Parameters</h4>
-  <dl class="parameters">
-    <dt><code>sourceId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
-    <dd><p>The source id value.</p>
-</dd>
-    <dt><code>sourceName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The source name value.</p>
-</dd>
-    <dt><code>sourceByteLength</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
-    <dd><p>The source byte length value.</p>
-</dd>
-    <dt><code>sha256</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
-    <dd><p>The sha256 value.</p>
-</dd>
-    <dt><code>lineStartByteOffsets</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a>&gt;</dt>
-    <dd><p>The line start byte offsets value.</p>
-</dd>
-  </dl>
-
-
-
-
-
-
-
-
-
-
-
-
   <h2 class="section" id="properties">Properties
 </h2>
 
@@ -192,7 +144,8 @@ Class GesSourceMapSource
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the line start byte offsets.</p>
+  <div class="markdown level1 summary"><p>Gets the UTF-8 byte offset at which each zero-based line starts. The first offset is zero; later offsets are
+strictly increasing UTF-8 boundaries and may equal <a class="xref" href="GameEventScript.Api.GesSourceMapSource.html#GameEventScript_Api_GesSourceMapSource_SourceByteLength">SourceByteLength</a> for a final empty line.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -224,7 +177,7 @@ Class GesSourceMapSource
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the sha256.</p>
+  <div class="markdown level1 summary"><p>Gets the 32 bytes of the SHA-256 hash of the logical UTF-8 source content.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -256,7 +209,7 @@ Class GesSourceMapSource
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the source byte length.</p>
+  <div class="markdown level1 summary"><p>Gets the length of the logical source in UTF-8 bytes.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -288,7 +241,8 @@ Class GesSourceMapSource
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the source id.</p>
+  <div class="markdown level1 summary"><p>Gets the stable source ID, which equals this source's zero-based index in <a class="xref" href="GameEventScript.Api.GesSourceMapSegment.html#GameEventScript_Api_GesSourceMapSegment_Sources">Sources</a>
+and follows the compiler's input order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -320,7 +274,7 @@ Class GesSourceMapSource
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the source name.</p>
+  <div class="markdown level1 summary"><p>Gets the source name as given to the compiler.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -362,7 +316,7 @@ Class GesSourceMapSource
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

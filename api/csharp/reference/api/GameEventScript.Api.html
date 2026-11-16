@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       
       <link rel="icon" href="../assets/logo.svg">
@@ -95,12 +95,13 @@ event-driven execution between components, scripts, and handlers.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgram.html">GameEventScriptProgram</a></dt>
-      <dd><p>Represents a game event script program.</p>
+      <dd><p>The immutable, reusable parsed representation of one <code>.gesb</code> V1 program, produced only by the Compiler or by
+<a class="xref" href="GameEventScript.Api.GameEventScriptProgram.html#GameEventScript_Api_GameEventScriptProgram_Read_System_ReadOnlySpan_System_Byte__GameEventScript_Api_GesProgramReadOptions_">Read(ReadOnlySpan&lt;byte&gt;, GesProgramReadOptions?)</a>, both of which run the complete program validator before returning it.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBinaryFormat.html">GesBinaryFormat</a></dt>
-      <dd><p>Represents a game event script binary format.</p>
+      <dd><p>Fixed constants of the canonical little-endian <code>.gesb</code> V1 container framing.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -110,7 +111,8 @@ event-driven execution between components, scripts, and handlers.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBuildMetadataSegment.html">GesBuildMetadataSegment</a></dt>
-      <dd><p>Represents a game event script build metadata segment.</p>
+      <dd><p>The immutable optional BuildMetadataSegment (section <code>0x0030</code>), which names the producing compiler. Runtime
+behaviour never depends on it.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -132,22 +134,24 @@ validation phase of script compilation.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDebugSymbolsSegment.html">GesDebugSymbolsSegment</a></dt>
-      <dd><p>Represents a game event script debug symbols segment.</p>
+      <dd><p>The immutable optional DebugSymbolsSegment (section <code>0x0020</code>), which names script parameters and locals by
+register and code range. Runtime behaviour never depends on it.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDeclaredExternalTypeCatalog.html">GesDeclaredExternalTypeCatalog</a></dt>
-      <dd><p>Represents a game event script external type catalog.</p>
+      <dd><p>Immutable external type catalog built from a fixed list of definitions.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a></dt>
-      <dd><p>Represents a game event script diagnostic.</p>
+      <dd><p>A portable diagnostic of a source, binary, linking or runtime failure. <a class="xref" href="GameEventScript.Api.GesDiagnostic.html#GameEventScript_Api_GesDiagnostic_Phase">Phase</a> and <a class="xref" href="GameEventScript.Api.GesDiagnostic.html#GameEventScript_Api_GesDiagnostic_Code">Code</a> identify it;
+the optional fields add structured context and are absent when unknown.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDiagnosticCodes.html">GesDiagnosticCodes</a></dt>
-      <dd><p>Represents a game event script diagnostic codes.</p>
+      <dd><p>Defines the stable diagnostic code strings; a code is compared together with its <a class="xref" href="GameEventScript.Api.GesDiagnosticPhase.html">GesDiagnosticPhase</a>, never through the message text.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -175,15 +179,15 @@ documents against record definitions.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDynamicLinkException.html">GesDynamicLinkException</a></dt>
-      <dd><p>Represents an exception thrown when a dynamic linking error occurs
-during the execution of a Game Event Script.
-This exception specifically indicates issues related to the binding or resolution
-of external references required for script execution.</p>
+      <dd><p>Thrown when a Program cannot be linked to a host, for example because of a missing extension or external type
+constructor or an exceeded register or call-depth limit. It carries one or more link-phase diagnostics.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesExtensionCall.html">GesExtensionCall</a></dt>
-      <dd><p>Represents a ges extension call.</p>
+      <dd><p>Reusable call-scoped adapter passed to <a class="xref" href="GameEventScript.Api.IGesExtensionFunction.html#GameEventScript_Api_IGesExtensionFunction_Invoke_GameEventScript_Api_GesExtensionCall_">Invoke(GesExtensionCall)</a>: it lends the arguments, the
+host context and its random generator, and receives one result. The last setter call before the callback
+returns decides the result; without one the result is Nothing. The call must not be retained.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -202,12 +206,13 @@ reusable for subsequently enqueued messages, as for any other runtime error.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesExternalTypeConstructorCall.html">GesExternalTypeConstructorCall</a></dt>
-      <dd><p>Represents a ges external type constructor call.</p>
+      <dd><p>Reusable call-scoped adapter passed to <a class="xref" href="GameEventScript.Api.IGesExternalTypeConstructor.html#GameEventScript_Api_IGesExternalTypeConstructor_Invoke_GameEventScript_Api_GesExternalTypeConstructorCall_">Invoke(GesExternalTypeConstructorCall)</a>: it lends the arguments
+and receives the constructed value. It must not be retained beyond the callback.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesExternalTypeConstructorDefinition.html">GesExternalTypeConstructorDefinition</a></dt>
-      <dd><p>Represents a game event script external type constructor definition.</p>
+      <dd><p>Immutable declarative signature of one external type constructor: the type it builds and its parameters.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -217,29 +222,40 @@ reusable for subsequently enqueued messages, as for any other runtime error.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesExternalTypeDefinition.html">GesExternalTypeDefinition</a></dt>
-      <dd><p>Represents a game event script external type definition.</p>
+      <dd><p>Immutable declarative description of one external type: its name, ordered unique fields and ordered unique
+constructor signatures.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesExternalTypeFieldDefinition.html">GesExternalTypeFieldDefinition</a></dt>
-      <dd><p>Represents a game event script external type field definition.</p>
+      <dd><p>Immutable description of one external type field: its name and declared type. Field values are converted to
+the declared builtin type before a script sees them; Nothing stays Nothing.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesExternalTypeParameterDefinition.html">GesExternalTypeParameterDefinition</a></dt>
-      <dd><p>Represents a game event script external type parameter definition.</p>
+      <dd><p>Immutable description of one external constructor parameter: its argument label, which must name a declared
+field, and its declared type. Arguments are converted to the declared builtin type before the constructor
+sees them; Nothing stays Nothing.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesFatalRuntimeException.html">GesFatalRuntimeException</a></dt>
-      <dd><p>Represents a fatal runtime exception that occurs specifically during the execution
-of a Game Event Script. This exception is meant to signal critical issues that
-cannot be recovered from within the execution of a script's runtime logic.</p>
+      <dd><p>Base class of exceptions that carry a runtime <a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a> and end the current handler with that diagnostic.
+The exception message is the diagnostic's message.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesFloatRange.html">GesFloatRange</a></dt>
       <dd><p>An immutable binary64 range descriptor; terms are computed lazily.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a></dt>
+      <dd><p>The standard geometry library: the external types <code>:Box</code>, <code>:Poly</code> and <code>:Disc</code> over <a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a>,
+<a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a> and <a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a>, and the extension functions <code>:geometry.*</code>, so that hosts and scripts compute alike. A host
+that wants it passes <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html#GameEventScript_Api_GesGeometryLibrary_Catalog_GameEventScript_Api_IGesExternalTypeCatalog_">Catalog(IGesExternalTypeCatalog?)</a> to the compiler and <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html#GameEventScript_Api_GesGeometryLibrary_ExternalTypes_GameEventScript_Api_IGesExternalTypeRegistry_">ExternalTypes(IGesExternalTypeRegistry?)</a> and <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html#GameEventScript_Api_GesGeometryLibrary_Extensions_GameEventScript_Api_IGesExtensionRegistry_">Extensions(IGesExtensionRegistry?)</a> to
+the host, each in front of its own catalog or registry, which resolves what the library does not.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -277,7 +293,17 @@ to normalize, validate, and match message signatures accurately.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesOpaqueSection.html">GesOpaqueSection</a></dt>
-      <dd><p>Represents a game event script opaque section.</p>
+      <dd><p>An optional section the reader retained without interpreting it under <a class="xref" href="GameEventScript.Api.GesProgramRetention.html#GameEventScript_Api_GesProgramRetention_PreserveAll">PreserveAll</a>:
+an unknown optional section, or a known optional section with an unsupported version or compression. The writer
+re-emits it unchanged after the known sections.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a></dt>
+      <dd><p>A closed polygon in the plane z = 0, without a unit: its points in order, the last connecting to the first. A polygon is
+valid with at least three finite points in the plane, no edge of zero length, no two edges that cross or overlap, and an
+area other than zero; the operations of an invalid one give null, as GES operations give <code>nothing</code> for a domain
+failure. Scripts see it as the external type <code>:Poly</code> of <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -292,7 +318,8 @@ to normalize, validate, and match message signatures accurately.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesProgramFormatException.html">GesProgramFormatException</a></dt>
-      <dd><p>Represents a game event script program format exception.</p>
+      <dd><p>Thrown when a <code>.gesb</code> image or a program is malformed, unsupported, exceeds read limits, or violates a program
+invariant. Raised by reading, writing, size calculation, validation and <code>Host.Load</code>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -302,12 +329,14 @@ to normalize, validate, and match message signatures accurately.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesProgramReadLimits.html">GesProgramReadLimits</a></dt>
-      <dd><p>Represents a game event script program read limits.</p>
+      <dd><p>Resource bounds that <a class="xref" href="GameEventScript.Api.GameEventScriptProgram.html#GameEventScript_Api_GameEventScriptProgram_Read_System_ReadOnlySpan_System_Byte__GameEventScript_Api_GesProgramReadOptions_">Read(ReadOnlySpan&lt;byte&gt;, GesProgramReadOptions?)</a> checks before allocating. Exceeding a count limit fails
+with <a class="xref" href="GameEventScript.Api.GesProgramFormatErrorCode.html#GameEventScript_Api_GesProgramFormatErrorCode_TooManyEntries">TooManyEntries</a>, a byte limit with the code named on the property; a
+limit outside its supported range makes Read throw <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentoutofrangeexception">ArgumentOutOfRangeException</a>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesProgramReadOptions.html">GesProgramReadOptions</a></dt>
-      <dd><p>Represents a game event script program read options.</p>
+      <dd><p>Options for <a class="xref" href="GameEventScript.Api.GameEventScriptProgram.html#GameEventScript_Api_GameEventScriptProgram_Read_System_ReadOnlySpan_System_Byte__GameEventScript_Api_GesProgramReadOptions_">Read(ReadOnlySpan&lt;byte&gt;, GesProgramReadOptions?)</a>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -325,10 +354,9 @@ value generation is required, especially in game event scripts.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesRuntimeLimits.html">GesRuntimeLimits</a></dt>
-      <dd><p>Represents runtime execution limits for a game event script, providing control over various
-script execution parameters such as loop iterations, call stack depth, and allowed operations.
-This ensures that scripts execute within predefined boundaries to prevent excessive resource usage
-or infinite execution.</p>
+      <dd><p>The safety limits of one host: work, nesting and collection sizes per handler and the queue of the host. They bound
+time and stack use, not memory (specs/HostRuntime.md). Exceeding most limits stops the active handler with a
+structured runtime-limit observation; the remarks of each property state its exact outcome.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -339,7 +367,29 @@ between threads and bound any number of times.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSchemaAxisInfo.html">GesSchemaAxisInfo</a></dt>
-      <dd><p>The limits of a numeric axis of a Point or Vector.</p>
+      <dd><p>The limits of a numeric axis of a Point, Vector, Box, Poly or Disc, or of the radius of a Disc.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaComputedFieldInfo.html">GesSchemaComputedFieldInfo</a></dt>
+      <dd><p>A field written <code>computed by</code>: a value derived from the other fields that is never encoded or read from a document.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaConstantInfo.html">GesSchemaConstantInfo</a></dt>
+      <dd><p>A constant of a schema, declared as <code>let name be value</code>: never encoded, part of the hash, and generated as a
+static member of the schema's types.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaDefaultEntryInfo.html">GesSchemaDefaultEntryInfo</a></dt>
+      <dd><p>A field that a record literal default names, with its value.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaDefaultInfo.html">GesSchemaDefaultInfo</a></dt>
+      <dd><p>The value a field takes when a value or document leaves it out, declared with <code>default</code>; the wire always
+carries the field.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -347,6 +397,13 @@ between threads and bound any number of times.</p>
       <dd><p>Converts between full records of a schema and deltas against a baseline, the full record the receiver already holds.
 Both directions compare wire values and allocate nothing on success. Data is untrusted: every limit is checked, and invalid
 data fails with a <a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaDocument.html">GesSchemaDocument</a></dt>
+      <dd><p>A GES document read against the schema its header names, as generated models read their documents: the header
+<code>:Schema(:Name)</code> names one of the expected schemas, the document passes the schema's check, and its entries are the
+plain value that a model converts. Errors carry their position and field path.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -382,6 +439,11 @@ values within one session.</p>
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaTakeInfo.html">GesSchemaTakeInfo</a></dt>
+      <dd><p>The fields a schema takes from another with <code>with</code>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSchemaType.html">GesSchemaType</a></dt>
       <dd><p>The type of a field, or one alternative of a union.</p>
 </dd>
@@ -396,12 +458,13 @@ have a field for each of its keys. Time-critical code uses
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSourceArchiveEntry.html">GesSourceArchiveEntry</a></dt>
-      <dd><p>Represents a game event script source archive entry.</p>
+      <dd><p>One embedded compiler input in the <a class="xref" href="GameEventScript.Api.GesSourceArchiveSegment.html">GesSourceArchiveSegment</a>: the exact logical source as UTF-8, without
+the original byte order mark or file encoding.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSourceArchiveSegment.html">GesSourceArchiveSegment</a></dt>
-      <dd><p>Represents a game event script source archive segment.</p>
+      <dd><p>The immutable optional SourceArchiveSegment (section <code>0x0022</code>), which embeds the compiler inputs.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -412,12 +475,14 @@ This class is used to pinpoint the origin of a particular piece of code or error
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSourceMapSegment.html">GesSourceMapSegment</a></dt>
-      <dd><p>Represents a game event script source map segment.</p>
+      <dd><p>The immutable optional SourceMapSegment (section <code>0x0021</code>), which maps code addresses to source byte ranges. It
+is useful without an embedded <a class="xref" href="GameEventScript.Api.GesSourceArchiveSegment.html">GesSourceArchiveSegment</a>; when both are present they must agree.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSourceMapSource.html">GesSourceMapSource</a></dt>
-      <dd><p>Represents a game event script source map source.</p>
+      <dd><p>Describes one compiler input in the <a class="xref" href="GameEventScript.Api.GesSourceMapSegment.html">GesSourceMapSegment</a>. All offsets and lengths count bytes of the
+logical UTF-8 source, not UTF-16 code units.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -443,12 +508,14 @@ Structs
 </h3>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBindingSegment.html">GesBindingSegment</a></dt>
-      <dd><p>Represents a game event script binding segment.</p>
+      <dd><p>The immutable BindingSegment (section <code>0x0004</code>): the program's exported handlers and callables, imported
+extensions and external types, outbound message signatures and Record constructors, in encoded order.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBindingSegment.Entry.html">GesBindingSegment.Entry</a></dt>
-      <dd><p>Represents a game event script binary bind entry.</p>
+      <dd><p>One immutable binding record. In <code>.gesb</code> the argument-name and tag lists are UInt16IndexListSegment indices;
+this model holds their resolved elements, which are string-constant indices.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -466,18 +533,37 @@ on it. Writing allocates nothing.</p>
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+      <dd><p>An axis-aligned box between two corners, without a unit. Creating one orders its corners, so <a class="xref" href="GameEventScript.Api.GesBox.html#GameEventScript_Api_GesBox_Min">Min</a> is never
+above <a class="xref" href="GameEventScript.Api.GesBox.html#GameEventScript_Api_GesBox_Max">Max</a> on an axis; a 2D box has <code>Z</code> 0 on both. Scripts see it as the external type <code>:Box</code> of
+<a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBytecodeInstruction.html">GesBytecodeInstruction</a></dt>
-      <dd><p>Represents a game event script bytecode instruction.</p>
+      <dd><p>One logical bytecode instruction: an opcode, a unit-and-flags byte, three 16-bit operand words and a 64-bit payload,
+encoded as 16 bytes in <code>.gesb</code>. The named properties are opcode-specific views of the same words; the
+in-memory layout does not define the encoding.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesCodeSegment.html">GesCodeSegment</a></dt>
-      <dd><p>Represents a game event script code segment.</p>
+      <dd><p>The immutable CodeSegment (section <code>0x0010</code>): the program's single linear instruction table of at most 65,535
+instructions, each encoded as 16 bytes. A code address is the zero-based index of an instruction in this table.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDebugSymbol.html">GesDebugSymbol</a></dt>
-      <dd><p>Represents a game event script debug symbol.</p>
+      <dd><p>Names one physical register over a half-open range of code addresses. Only explicit script parameters and locals are
+named; compiler temporaries are not.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a></dt>
+      <dd><p>A filled circle in the plane z = 0, without a unit: a centre and a radius. Creating one takes the radius's magnitude. A
+disc is valid with a finite centre in the plane and a finite radius; the operations of an invalid one give null, as GES
+operations give <code>nothing</code> for a domain failure. Scripts see it as the external type <code>:Disc</code> of
+<a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -491,8 +577,17 @@ on it. Writing allocates nothing.</p>
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+      <dd><p>A position with three Binary64 components and no unit, the native counterpart of a GES Point. A 2D point has
+<a class="xref" href="GameEventScript.Api.GesPoint.html#GameEventScript_Api_GesPoint_Z">Z</a> 0. As in the language, a point moves by a <a class="xref" href="GameEventScript.Api.GesVector.html">GesVector</a>, two points give a vector, and a
+point does not scale. The unit belongs to the schema or host and is applied when it converts to or from a
+<a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesProgramMetadataSegment.html">GesProgramMetadataSegment</a></dt>
-      <dd><p>Represents a game event script program metadata segment.</p>
+      <dd><p>The immutable decoded ProgramMetadataSegment (section <code>0x0001</code>) of a <code>.gesb</code> V1 program: module identity,
+program-level resource bounds and the application-owned program version.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -549,7 +644,7 @@ declaration order; a nested schema, Point or Vector is entered with <a class="xr
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSourceMapEntry.html">GesSourceMapEntry</a></dt>
-      <dd><p>Represents a game event script source map entry.</p>
+      <dd><p>Maps a half-open range of code addresses to a range of UTF-8 bytes in one source.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -559,27 +654,38 @@ declaration order; a nested schema, Point or Vector is entered with <a class="xr
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesStringConstantSegment.html">GesStringConstantSegment</a></dt>
-      <dd><p>Represents a game event script string constant segment.</p>
+      <dd><p>The immutable StringConstantSegment (section <code>0x0002</code>): an ordered pool of at most 65,535 strict UTF-8 strings
+that bytecode and bindings reference by zero-based <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a> index. Order and duplicates are program data.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesStringConstantSegment.SliceEntry.html">GesStringConstantSegment.SliceEntry</a></dt>
-      <dd><p>Represents a slice entry.</p>
+      <dd><p>Locates one string entry inside <a class="xref" href="GameEventScript.Api.GesStringConstantSegment.html#GameEventScript_Api_GesStringConstantSegment_Data">Data</a>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesUInt16IndexList.html">GesUInt16IndexList</a></dt>
-      <dd><p>Represents an immutable slice of unsigned 16-bit indices.</p>
+      <dd><p>A read-only view of one list of a <a class="xref" href="GameEventScript.Api.GesUInt16IndexListSegment.html">GesUInt16IndexListSegment</a>, such as an argument register list or a
+message shape; it shares the segment's storage without copying.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesUInt16IndexListSegment.html">GesUInt16IndexListSegment</a></dt>
-      <dd><p>Represents a game event script u int16 index list segment.</p>
+      <dd><p>The immutable UInt16IndexListSegment (section <code>0x0003</code>): at most 65,535 ordered lists of <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a>
+elements that bindings and instructions reference by zero-based list index. The referencing field or opcode defines
+what the elements mean, for example string indices of argument names and tags, or register lists.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesUInt16IndexListSegment.SliceEntry.html">GesUInt16IndexListSegment.SliceEntry</a></dt>
-      <dd><p>Represents a slice entry.</p>
+      <dd><p>Locates one list inside <a class="xref" href="GameEventScript.Api.GesUInt16IndexListSegment.html#GameEventScript_Api_GesUInt16IndexListSegment_Data">Data</a>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesVector.html">GesVector</a></dt>
+      <dd><p>A displacement with three Binary64 components and no unit, the native counterpart of a GES Vector. A 2D vector has
+<a class="xref" href="GameEventScript.Api.GesVector.html#GameEventScript_Api_GesVector_Z">Z</a> 0. The unit belongs to the schema or host that uses the value and is applied when it converts to or
+from a <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a>.</p>
 </dd>
     </dl>
     <h3 id="interfaces">
@@ -592,32 +698,37 @@ Interfaces
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.IGesExtensionFunction.html">IGesExtensionFunction</a></dt>
-      <dd><p>Defines the contract for i game event script extension function.</p>
+      <dd><p>Synchronous host callback that implements one extension function.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.IGesExtensionRegistry.html">IGesExtensionRegistry</a></dt>
-      <dd><p>Defines the contract for i game event script extension registry.</p>
+      <dd><p>Resolves the host's extension functions for the extension imports of a Program while <code>Host.Load</code> links
+it; it is not consulted per invocation.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.IGesExternalTypeCatalog.html">IGesExternalTypeCatalog</a></dt>
-      <dd><p>Defines the contract for i game event script external type catalog.</p>
+      <dd><p>Declarative compile-time description of the external types a host offers: names, fields and constructor
+signatures, without constructors, field accessors or host instances.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.IGesExternalTypeConstructor.html">IGesExternalTypeConstructor</a></dt>
-      <dd><p>Defines the contract for i game event script external type constructor.</p>
+      <dd><p>Host implementation of one declared external type constructor.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.IGesExternalTypeRegistry.html">IGesExternalTypeRegistry</a></dt>
-      <dd><p>Defines the contract for i game event script external type registry.</p>
+      <dd><p>Resolves the host's external type constructors for the constructor imports of a Program while
+<code>Host.Load</code> links it; it is not consulted per call.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.IGesExternalValue.html">IGesExternalValue</a></dt>
-      <dd><p>Defines the contract for i game event script external value.</p>
+      <dd><p>A host object exposed to scripts as a value of a declared external type. The runtime keeps no field values:
+every script field read calls <a class="xref" href="GameEventScript.Api.IGesExternalValue.html#GameEventScript_Api_IGesExternalValue_GetField_System_String_">GetField(string)</a> again, and every conversion to Map, JSON or schema
+encoding reads all declared fields in declaration order.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -657,50 +768,51 @@ Enums
 </h3>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBinaryBindKind.html">GesBinaryBindKind</a></dt>
-      <dd><p>Defines the supported game event script binary bind kind values.</p>
+      <dd><p>Identifies the role of a <a class="xref" href="GameEventScript.Api.GesBindingSegment.html">GesBindingSegment</a> entry: an executable declaration, an outbound message signature
+or a host import.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBytecodeOpCode.html">GesBytecodeOpCode</a></dt>
-      <dd><p>Defines the supported game event script bytecode op code values.</p>
+      <dd><p>Identifies a V1 bytecode instruction. The numeric values are part of the <code>.gesb</code> format; operand layouts and
+semantics are defined in the bytecode specification.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBytecodePatternKind.html">GesBytecodePatternKind</a></dt>
-      <dd><p>Defines the supported game event script bytecode pattern kind values.</p>
+      <dd><p>Identifies the dice pattern of <a class="xref" href="GameEventScript.Api.GesBytecodeOpCode.html#GameEventScript_Api_GesBytecodeOpCode_HasPattern">HasPattern</a> and <a class="xref" href="GameEventScript.Api.GesBytecodeOpCode.html#GameEventScript_Api_GesBytecodeOpCode_TakePattern">TakePattern</a>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBytecodeSeriesKind.html">GesBytecodeSeriesKind</a></dt>
-      <dd><p>Defines the supported game event script bytecode series kind values.</p>
+      <dd><p>Identifies a built-in lazy numeric series for <a class="xref" href="GameEventScript.Api.GesBytecodeOpCode.html#GameEventScript_Api_GesBytecodeOpCode_CreateSeries">CreateSeries</a>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html">GesBytecodeTypeKind</a></dt>
-      <dd><p>Defines the supported game event script bytecode type kind values.</p>
+      <dd><p>Identifies portable value kinds and VM-internal storage kinds used as bytecode type operands.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDebugInfoOptions.html">GesDebugInfoOptions</a></dt>
-      <dd><p>Defines the supported game event script debug info options values.</p>
+      <dd><p>Selects which optional debug sections the Compiler emits. Compilation includes all of them by default;
+size-sensitive builds opt out with <a class="xref" href="GameEventScript.Api.GesDebugInfoOptions.html#GameEventScript_Api_GesDebugInfoOptions_None">None</a>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDebugSymbolKind.html">GesDebugSymbolKind</a></dt>
-      <dd><p>Defines the supported game event script debug symbol kind values.</p>
+      <dd><p>The kind of a named register in <a class="xref" href="GameEventScript.Api.GesDebugSymbolsSegment.html">GesDebugSymbolsSegment</a>; the numeric values are the encoded
+<code>SymbolKind</code> byte.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDiagnosticPhase.html">GesDiagnosticPhase</a></dt>
-      <dd><p>Defines the supported game event script diagnostic phase values.</p>
+      <dd><p>Identifies the pipeline stage in which a diagnostic originated; the numeric values are stable.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDiagnosticSymbolKind.html">GesDiagnosticSymbolKind</a></dt>
-      <dd><p>Defines the different kinds of symbols used within a Game Event Script.
-This enumeration is used to classify the functional or semantic roles
-of various components in a script, enabling the compiler and validation logic
-to process and verify them appropriately.</p>
+      <dd><p>Identifies the role of the optional symbol named by a diagnostic.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -720,17 +832,24 @@ to process and verify them appropriately.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesProgramFormatErrorCode.html">GesProgramFormatErrorCode</a></dt>
-      <dd><p>Defines the supported game event script program format error code values.</p>
+      <dd><p>The stable portable error codes of <a class="xref" href="GameEventScript.Api.GesProgramFormatException.html">GesProgramFormatException</a>. The numeric values are fixed by the
+binary format specification; the diagnostic code is <code>decode.</code> followed by the camel-case name.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesProgramRetention.html">GesProgramRetention</a></dt>
-      <dd><p>Defines the supported game event script program retention values.</p>
+      <dd><p>Selects which optional sections <a class="xref" href="GameEventScript.Api.GameEventScriptProgram.html#GameEventScript_Api_GameEventScriptProgram_Read_System_ReadOnlySpan_System_Byte__GameEventScript_Api_GesProgramReadOptions_">Read(ReadOnlySpan&lt;byte&gt;, GesProgramReadOptions?)</a> keeps. The five required runtime sections
+are always read, and an unknown section flagged as required always fails.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
       <dd><p>Defines the supported game event script bytecode instruction unit values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaDefaultKind.html">GesSchemaDefaultKind</a></dt>
+      <dd><p>The kinds of a field's default.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -745,12 +864,14 @@ to process and verify them appropriately.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSectionFlags.html">GesSectionFlags</a></dt>
-      <dd><p>Defines the supported game event script section flags values.</p>
+      <dd><p>The <code>SectionFlags</code> word of a section header. Bits outside <a class="xref" href="GameEventScript.Api.GesSectionFlags.html#GameEventScript_Api_GesSectionFlags_Required">Required</a> and
+<a class="xref" href="GameEventScript.Api.GesSectionFlags.html#GameEventScript_Api_GesSectionFlags_CompressionMask">CompressionMask</a> are invalid in V1.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSectionType.html">GesSectionType</a></dt>
-      <dd><p>Defines the supported game event script section type values.</p>
+      <dd><p>The assigned <code>.gesb</code> section type IDs, listed in canonical writer order. Types <code>0x0000</code> and <code>0xFFFF</code>
+are invalid; <code>0x8000</code>–<code>0xFFFD</code> are free for private or experimental optional sections.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -776,7 +897,7 @@ to process and verify them appropriately.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

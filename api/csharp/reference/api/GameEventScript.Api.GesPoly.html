@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GesPoly | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GesPoly | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
+      
+      <meta name="description" content="A closed polygon in the plane z = 0, without a unit: its points in order, the last connecting to the first. A polygon is valid with at least three finite points in the plane, no edge of zero length, no two edges that cross or overlap, and an area other than zero; the operations of an invalid one give null, as GES operations give nothing for a domain failure. Scripts see it as the external type :Poly of .">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.GesPoly">
+
+
+
+  <h1 id="GameEventScript_Api_GesPoly" data-uid="GameEventScript.Api.GesPoly" class="text-break">
+Class GesPoly  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>A closed polygon in the plane z = 0, without a unit: its points in order, the last connecting to the first. A polygon is
+valid with at least three finite points in the plane, no edge of zero length, no two edges that cross or overlap, and an
+area other than zero; the operations of an invalid one give null, as GES operations give <code>nothing</code> for a domain
+failure. Scripts see it as the external type <code>:Poly</code> of <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a>.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class GesPoly : IEquatable&lt;GesPoly&gt;</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GesPoly</span></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.iequatable-1">IEquatable</a>&lt;<a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a>&gt;</div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="GameEventScript_Api_GesPoly__ctor_" data-uid="GameEventScript.Api.GesPoly.#ctor*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly__ctor_System_Collections_Generic_IEnumerable_GameEventScript_Api_GesPoint__" data-uid="GameEventScript.Api.GesPoly.#ctor(System.Collections.Generic.IEnumerable{GameEventScript.Api.GesPoint})">
+  GesPoly(IEnumerable&lt;GesPoint&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a polygon from its points, which are copied; validity is checked once.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesPoly(IEnumerable&lt;GesPoint&gt; points)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>points</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a>&gt;</dt>
+    <dd><p>The points in order.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">points</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+  </dl>
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Api_GesPoly_Area_" data-uid="GameEventScript.Api.GesPoly.Area*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_Area" data-uid="GameEventScript.Api.GesPoly.Area">
+  Area
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the signed area: positive when the points run counterclockwise, negative when clockwise; null for an
+invalid polygon.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double? Area { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_Bounds_" data-uid="GameEventScript.Api.GesPoly.Bounds*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_Bounds" data-uid="GameEventScript.Api.GesPoly.Bounds">
+  Bounds
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the smallest box that holds every point, a 2D box; null for an invalid polygon.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesBox? Bounds { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_Centroid_" data-uid="GameEventScript.Api.GesPoly.Centroid*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_Centroid" data-uid="GameEventScript.Api.GesPoly.Centroid">
+  Centroid
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the centre of the area, a point with z 0; null for an invalid polygon.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesPoint? Centroid { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_IsValid_" data-uid="GameEventScript.Api.GesPoly.IsValid*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_IsValid" data-uid="GameEventScript.Api.GesPoly.IsValid">
+  IsValid
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the polygon is a valid simple polygon with an area.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsValid { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_Points_" data-uid="GameEventScript.Api.GesPoly.Points*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_Points" data-uid="GameEventScript.Api.GesPoly.Points">
+  Points
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the points in order.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesReadOnlyArray&lt;GesPoint&gt; Points { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesReadOnlyArray-1.html">GesReadOnlyArray</a>&lt;<a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Api_GesPoly_Contains_" data-uid="GameEventScript.Api.GesPoly.Contains*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_Contains_GameEventScript_Api_GesPoint_" data-uid="GameEventScript.Api.GesPoly.Contains(GameEventScript.Api.GesPoint)">
+  Contains(GesPoint)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Tests whether a point lies in the polygon, its outline included.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool? Contains(GesPoint point)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>point</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The point.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a>?</dt>
+    <dd><p>Whether the polygon holds the point, false for a point outside the plane z = 0, or null when the polygon is
+invalid or the point not finite.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_DistanceTo_" data-uid="GameEventScript.Api.GesPoly.DistanceTo*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_DistanceTo_GameEventScript_Api_GesPoint_" data-uid="GameEventScript.Api.GesPoly.DistanceTo(GameEventScript.Api.GesPoint)">
+  DistanceTo(GesPoint)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the distance from a point to the outline, zero on it, for a point inside as well as outside.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double? DistanceTo(GesPoint point)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>point</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The point.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a>?</dt>
+    <dd><p>The distance, or null when the polygon is invalid or the point not finite.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_Equals_" data-uid="GameEventScript.Api.GesPoly.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_Equals_GameEventScript_Api_GesPoly_" data-uid="GameEventScript.Api.GesPoly.Equals(GameEventScript.Api.GesPoly)">
+  Equals(GesPoly?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compares the points in order.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Equals(GesPoly? other)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>other</code> <a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a></dt>
+    <dd><p>The other polygon.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether both hold equal points in the same order.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_Equals_" data-uid="GameEventScript.Api.GesPoly.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_Equals_System_Object_" data-uid="GameEventScript.Api.GesPoly.Equals(System.Object)">
+  Equals(object?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override bool Equals(object? obj)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>obj</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_FromValue_" data-uid="GameEventScript.Api.GesPoly.FromValue*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_FromValue_GameEventScript_Runtime_Values_GesValue__GameEventScript_Api_GesQuantityUnit_" data-uid="GameEventScript.Api.GesPoly.FromValue(GameEventScript.Runtime.Values.GesValue@,GameEventScript.Api.GesQuantityUnit)">
+  FromValue(in GesValue, GesQuantityUnit)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads a <code>:Poly</code> of exactly the given unit. Units never convert.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesPoly? FromValue(in GesValue value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>value</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The GES value to read.</p>
+</dd>
+    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
+    <dd><p>The expected unit.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a></dt>
+    <dd><p>The polygon, or null when the value is no <code>:Poly</code> of <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a> or has another unit.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_GetHashCode_" data-uid="GameEventScript.Api.GesPoly.GetHashCode*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_GetHashCode" data-uid="GameEventScript.Api.GesPoly.GetHashCode">
+  GetHashCode()
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override int GetHashCode()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_Intersects_" data-uid="GameEventScript.Api.GesPoly.Intersects*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_Intersects_GameEventScript_Api_GesPoly_" data-uid="GameEventScript.Api.GesPoly.Intersects(GameEventScript.Api.GesPoly)">
+  Intersects(GesPoly)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Tests whether two polygons share a point: crossing or touching outlines, or one inside the other.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool? Intersects(GesPoly other)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>other</code> <a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a></dt>
+    <dd><p>The other polygon.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a>?</dt>
+    <dd><p>Whether they intersect, or null when either is invalid.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">other</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GesPoly_ToString_" data-uid="GameEventScript.Api.GesPoly.ToString*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_ToString" data-uid="GameEventScript.Api.GesPoly.ToString">
+  ToString()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Writes the polygon for diagnostics.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override string ToString()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>Its points.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_ToValue_" data-uid="GameEventScript.Api.GesPoly.ToValue*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_ToValue_GameEventScript_Api_GesQuantityUnit_" data-uid="GameEventScript.Api.GesPoly.ToValue(GameEventScript.Api.GesQuantityUnit)">
+  ToValue(GesQuantityUnit)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Converts the polygon to the external value <code>:Poly</code> of <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesValue ToValue(GesQuantityUnit unit = GesQuantityUnit.UnitNone)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
+    <dd><p>The unit of its points.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The GES value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="operators">Operators
+</h2>
+
+
+  <a id="GameEventScript_Api_GesPoly_op_Equality_" data-uid="GameEventScript.Api.GesPoly.op_Equality*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_op_Equality_GameEventScript_Api_GesPoly_GameEventScript_Api_GesPoly_" data-uid="GameEventScript.Api.GesPoly.op_Equality(GameEventScript.Api.GesPoly,GameEventScript.Api.GesPoly)">
+  operator ==(GesPoly?, GesPoly?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compares two polygons by their points.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator ==(GesPoly? left, GesPoly? right)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>left</code> <a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a></dt>
+    <dd><p>The first polygon.</p>
+</dd>
+    <dt><code>right</code> <a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a></dt>
+    <dd><p>The second polygon.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether both are null or equal.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesPoly_op_Inequality_" data-uid="GameEventScript.Api.GesPoly.op_Inequality*"></a>
+
+  <h3 id="GameEventScript_Api_GesPoly_op_Inequality_GameEventScript_Api_GesPoly_GameEventScript_Api_GesPoly_" data-uid="GameEventScript.Api.GesPoly.op_Inequality(GameEventScript.Api.GesPoly,GameEventScript.Api.GesPoly)">
+  operator !=(GesPoly?, GesPoly?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compares two polygons by their points.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator !=(GesPoly? left, GesPoly? right)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>left</code> <a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a></dt>
+    <dd><p>The first polygon.</p>
+</dd>
+    <dt><code>right</code> <a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a></dt>
+    <dd><p>The second polygon.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether they differ.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

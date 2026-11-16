@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct GesCodeSegment | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Struct GesCodeSegment | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct GesCodeSegment | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Struct GesCodeSegment | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script code segment.">
+      <meta name="description" content="The immutable CodeSegment (section 0x0010): the program&#39;s single linear instruction table of at most 65,535 instructions, each encoded as 16 bytes. A code address is the zero-based index of an instruction in this table.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,8 @@ Struct GesCodeSegment
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script code segment.</p>
+  <div class="markdown summary"><p>The immutable CodeSegment (section <code>0x0010</code>): the program's single linear instruction table of at most 65,535
+instructions, each encoded as 16 bytes. A code address is the zero-based index of an instruction in this table.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -123,43 +124,9 @@ Struct GesCodeSegment
 
 
 
-
-
-  <h2 class="section" id="constructors">Constructors
-</h2>
-
-
-  <a id="GameEventScript_Api_GesCodeSegment__ctor_" data-uid="GameEventScript.Api.GesCodeSegment.#ctor*"></a>
-
-  <h3 id="GameEventScript_Api_GesCodeSegment__ctor_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GesBytecodeInstruction__" data-uid="GameEventScript.Api.GesCodeSegment.#ctor(System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GesBytecodeInstruction})">
-  GesCodeSegment(IReadOnlyList&lt;GesBytecodeInstruction&gt;?)
-  
-  </h3>
-
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script Code Segment.</p>
+  <h2 id="GameEventScript_Api_GesCodeSegment_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>A <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/default">default</a> instance has no instructions.</p>
 </div>
-  <div class="markdown level1 conceptual"></div>
-
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GesCodeSegment(IReadOnlyList&lt;GesBytecodeInstruction&gt;? instructions)</code></pre>
-  </div>
-
-  <h4 class="section">Parameters</h4>
-  <dl class="parameters">
-    <dt><code>instructions</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesBytecodeInstruction.html">GesBytecodeInstruction</a>&gt;</dt>
-    <dd><p>The instructions value.</p>
-</dd>
-  </dl>
-
-
-
-
-
-
-
-
-
-
 
 
   <h2 class="section" id="properties">Properties
@@ -173,7 +140,7 @@ Struct GesCodeSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the count.</p>
+  <div class="markdown level1 summary"><p>Gets the number of instructions.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -205,7 +172,7 @@ Struct GesCodeSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the instructions.</p>
+  <div class="markdown level1 summary"><p>Gets the immutable instruction table in code-address order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -237,7 +204,7 @@ Struct GesCodeSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the value at the specified index.</p>
+  <div class="markdown level1 summary"><p>Gets a copy of the instruction at a code address; mutating the returned struct cannot change the program.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -248,7 +215,7 @@ Struct GesCodeSegment
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based code address, which must be less than <a class="xref" href="GameEventScript.Api.GesCodeSegment.html#GameEventScript_Api_GesCodeSegment_Count">Count</a>.</p>
 </dd>
   </dl>
 
@@ -265,6 +232,12 @@ Struct GesCodeSegment
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.indexoutofrangeexception">IndexOutOfRangeException</a></dt>
+    <dd><p>The address is outside the code segment.</p>
+</dd>
+  </dl>
 
 
 
@@ -275,7 +248,7 @@ Struct GesCodeSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the length.</p>
+  <div class="markdown level1 summary"><p>Gets the number of instructions; identical to <a class="xref" href="GameEventScript.Api.GesCodeSegment.html#GameEventScript_Api_GesCodeSegment_Count">Count</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -317,7 +290,7 @@ Struct GesCodeSegment
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

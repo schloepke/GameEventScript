@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesFatalRuntimeException | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesFatalRuntimeException | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesFatalRuntimeException | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesFatalRuntimeException | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a fatal runtime exception that occurs specifically during the execution of a Game Event Script. This exception is meant to signal critical issues that cannot be recovered from within the execution of a script&#39;s runtime logic.">
+      <meta name="description" content="Base class of exceptions that carry a runtime  and end the current handler with that diagnostic. The exception message is the diagnostic&#39;s message.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,9 +83,8 @@ Class GesFatalRuntimeException
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a fatal runtime exception that occurs specifically during the execution
-of a Game Event Script. This exception is meant to signal critical issues that
-cannot be recovered from within the execution of a script's runtime logic.</p>
+  <div class="markdown summary"><p>Base class of exceptions that carry a runtime <a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a> and end the current handler with that diagnostic.
+The exception message is the diagnostic's message.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -178,12 +177,6 @@ cannot be recovered from within the execution of a script's runtime logic.</p>
 
 
 
-  <h2 id="GameEventScript_Api_GesFatalRuntimeException_remarks">Remarks</h2>
-  <div class="markdown level0 remarks"><p>This class provides constructors to initialize the exception with an optional
-message and an inner exception, allowing for detailed context when the exception
-is thrown. It serves as a base class for more specific fatal runtime exceptions
-in the Game Event Script framework.</p>
-</div>
 
 
   <h2 class="section" id="constructors">Constructors
@@ -197,7 +190,8 @@ in the Game Event Script framework.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 summary"><p>Creates the exception for a diagnostic.</p>
+</div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
@@ -207,7 +201,8 @@ in the Game Event Script framework.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>diagnostic</code> <a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a></dt>
-    <dd></dd>
+    <dd><p>The runtime diagnostic to report.</p>
+</dd>
   </dl>
 
 
@@ -218,6 +213,12 @@ in the Game Event Script framework.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when <code class="paramref">diagnostic</code> is null.</p>
+</dd>
+  </dl>
 
 
 
@@ -228,7 +229,8 @@ in the Game Event Script framework.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 summary"><p>Creates the exception for a diagnostic with an underlying cause.</p>
+</div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
@@ -238,9 +240,11 @@ in the Game Event Script framework.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>diagnostic</code> <a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a></dt>
-    <dd></dd>
+    <dd><p>The runtime diagnostic to report.</p>
+</dd>
     <dt><code>innerException</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.exception">Exception</a></dt>
-    <dd></dd>
+    <dd><p>The underlying exception, if any.</p>
+</dd>
   </dl>
 
 
@@ -251,6 +255,12 @@ in the Game Event Script framework.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when <code class="paramref">diagnostic</code> is null.</p>
+</dd>
+  </dl>
 
 
 
@@ -265,7 +275,7 @@ in the Game Event Script framework.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the diagnostic.</p>
+  <div class="markdown level1 summary"><p>Gets the runtime diagnostic that this exception reports.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -307,7 +317,7 @@ in the Game Event Script framework.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

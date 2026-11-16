@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Interface IGesExternalTypeConstructor | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Interface IGesExternalTypeConstructor | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Interface IGesExternalTypeConstructor | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Interface IGesExternalTypeConstructor | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Defines the contract for i game event script external type constructor.">
+      <meta name="description" content="Host implementation of one declared external type constructor.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,7 @@ Interface IGesExternalTypeConstructor
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Defines the contract for i game event script external type constructor.</p>
+  <div class="markdown summary"><p>Host implementation of one declared external type constructor.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -114,7 +114,8 @@ Interface IGesExternalTypeConstructor
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the definition.</p>
+  <div class="markdown level1 summary"><p>Gets the declarative constructor signature this callback implements; linking requires it to match the
+Program's import exactly.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -150,7 +151,8 @@ Interface IGesExternalTypeConstructor
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the invoke operation.</p>
+  <div class="markdown level1 summary"><p>Constructs a value synchronously: reads the borrowed arguments and sets an external value or Nothing on the
+call. Setting no result yields Nothing. The call object and its arguments must not be retained.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -161,7 +163,7 @@ Interface IGesExternalTypeConstructor
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>call</code> <a class="xref" href="GameEventScript.Api.GesExternalTypeConstructorCall.html">GesExternalTypeConstructorCall</a></dt>
-    <dd><p>The call value.</p>
+    <dd><p>The reusable call holding the arguments and receiving the result.</p>
 </dd>
   </dl>
 
@@ -193,7 +195,7 @@ Interface IGesExternalTypeConstructor
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

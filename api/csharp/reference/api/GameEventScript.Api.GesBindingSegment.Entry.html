@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct GesBindingSegment.Entry | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Struct GesBindingSegment.Entry | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct GesBindingSegment.Entry | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Struct GesBindingSegment.Entry | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script binary bind entry.">
+      <meta name="description" content="One immutable binding record. In .gesb the argument-name and tag lists are UInt16IndexListSegment indices; this model holds their resolved elements, which are string-constant indices.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,8 @@ Struct GesBindingSegment.Entry
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script binary bind entry.</p>
+  <div class="markdown summary"><p>One immutable binding record. In <code>.gesb</code> the argument-name and tag lists are UInt16IndexListSegment indices;
+this model holds their resolved elements, which are string-constant indices.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -136,7 +137,8 @@ Struct GesBindingSegment.Entry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Represents a game event script binary bind entry.</p>
+  <div class="markdown level1 summary"><p>One immutable binding record. In <code>.gesb</code> the argument-name and tag lists are UInt16IndexListSegment indices;
+this model holds their resolved elements, which are string-constant indices.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -147,23 +149,32 @@ Struct GesBindingSegment.Entry
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>kind</code> <a class="xref" href="GameEventScript.Api.GesBinaryBindKind.html">GesBinaryBindKind</a></dt>
-    <dd></dd>
+    <dd><p>The binding kind.</p>
+</dd>
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
-    <dd></dd>
+    <dd><p>The string-constant index of the binding name.</p>
+</dd>
     <dt><code>argumentNames</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a>&gt;</dt>
-    <dd></dd>
+    <dd><p>The string-constant indices of the ordered argument labels; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> means none.</p>
+</dd>
     <dt><code>entryAddress</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
-    <dd></dd>
+    <dd><p>The code address of an executable binding's entry, or <code>0xFFFF</code> when there is none.</p>
+</dd>
     <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
-    <dd></dd>
+    <dd><p>The binding ID, or <code>0xFFFF</code> when there is none.</p>
+</dd>
     <dt><code>requiredTags</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a>&gt;</dt>
-    <dd></dd>
+    <dd><p>The string-constant indices of tags a delivery must carry; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> means none.</p>
+</dd>
     <dt><code>excludedTags</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a>&gt;</dt>
-    <dd></dd>
+    <dd><p>The string-constant indices of tags a delivery must not carry; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> means none.</p>
+</dd>
     <dt><code>requiredRegisterCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
-    <dd></dd>
+    <dd><p>The declared register requirement of a message handler.</p>
+</dd>
     <dt><code>requiredCallStackDepth</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
-    <dd></dd>
+    <dd><p>The declared nested call depth of a message handler.</p>
+</dd>
   </dl>
 
 
@@ -188,7 +199,8 @@ Struct GesBindingSegment.Entry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the argument names.</p>
+  <div class="markdown level1 summary"><p>Gets the string-constant indices of the ordered argument labels, which together with <a class="xref" href="GameEventScript.Api.GesBindingSegment.Entry.html#GameEventScript_Api_GesBindingSegment_Entry_Name">Name</a> form
+the signature. Empty when the binding has no arguments.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -220,7 +232,8 @@ Struct GesBindingSegment.Entry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the entry address.</p>
+  <div class="markdown level1 summary"><p>Gets the zero-based code address (instruction index) of an executable binding's <code>RegisterLocals</code> prolog;
+non-executable bindings such as imports use the sentinel <code>0xFFFF</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -252,7 +265,8 @@ Struct GesBindingSegment.Entry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the excluded tags.</p>
+  <div class="markdown level1 summary"><p>Gets the string-constant indices of a handler's <code>without</code> tags, any of which excludes a message; empty
+means none.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -284,7 +298,8 @@ Struct GesBindingSegment.Entry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the id.</p>
+  <div class="markdown level1 summary"><p>Gets the binding ID, unique per kind except for handlers, whose ID is an overload ordinal scoped to their message
+name; <code>0xFFFF</code> means no ID. Every Record binding carries an ID.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -316,7 +331,7 @@ Struct GesBindingSegment.Entry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the kind.</p>
+  <div class="markdown level1 summary"><p>Gets the binding kind. Export kinds occupy <code>0x10</code>–<code>0x1F</code>, import kinds <code>0x20</code>–<code>0x2F</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -348,7 +363,8 @@ Struct GesBindingSegment.Entry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the name.</p>
+  <div class="markdown level1 summary"><p>Gets the string-constant index of the binding name: a message name, callable name, <code>extension.function</code>
+for extension imports, or a type name.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -380,7 +396,8 @@ Struct GesBindingSegment.Entry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the required call stack depth.</p>
+  <div class="markdown level1 summary"><p>Gets a message handler's declared conservative upper bound of nested calls below the handler; zero when it
+calls nothing.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -412,7 +429,8 @@ Struct GesBindingSegment.Entry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the required register count.</p>
+  <div class="markdown level1 summary"><p>Gets a message handler's declared conservative upper bound of VM registers retained while it runs, including
+staged values and all caller frames on its deepest synchronous call path.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -444,7 +462,8 @@ Struct GesBindingSegment.Entry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the required tags.</p>
+  <div class="markdown level1 summary"><p>Gets the string-constant indices of a handler's <code>matching</code> tags, all of which a message must carry to be
+delivered; empty means no requirement.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -486,7 +505,7 @@ Struct GesBindingSegment.Entry
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

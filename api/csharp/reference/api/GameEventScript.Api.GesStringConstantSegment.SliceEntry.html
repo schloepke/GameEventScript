@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct GesStringConstantSegment.SliceEntry | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Struct GesStringConstantSegment.SliceEntry | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct GesStringConstantSegment.SliceEntry | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Struct GesStringConstantSegment.SliceEntry | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a slice entry.">
+      <meta name="description" content="Locates one string entry inside .">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,7 @@ Struct GesStringConstantSegment.SliceEntry
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a slice entry.</p>
+  <div class="markdown summary"><p>Locates one string entry inside <a class="xref" href="GameEventScript.Api.GesStringConstantSegment.html#GameEventScript_Api_GesStringConstantSegment_Data">Data</a>.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -136,12 +136,12 @@ Struct GesStringConstantSegment.SliceEntry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the length.</p>
+  <div class="markdown level1 summary"><p>Gets the entry's length in UTF-8 bytes (not UTF-16 code units).</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public int Length { get; init; }</code></pre>
+    <pre><code class="lang-csharp hljs">public int Length { get; }</code></pre>
   </div>
 
 
@@ -168,12 +168,12 @@ Struct GesStringConstantSegment.SliceEntry
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the start.</p>
+  <div class="markdown level1 summary"><p>Gets the zero-based byte offset of the entry's UTF-8 bytes in <a class="xref" href="GameEventScript.Api.GesStringConstantSegment.html#GameEventScript_Api_GesStringConstantSegment_Data">Data</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public int Start { get; init; }</code></pre>
+    <pre><code class="lang-csharp hljs">public int Start { get; }</code></pre>
   </div>
 
 
@@ -210,7 +210,7 @@ Struct GesStringConstantSegment.SliceEntry
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

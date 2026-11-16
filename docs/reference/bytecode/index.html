@@ -239,14 +239,16 @@ the ASCII grammars in <a href="/docs/reference/semantics/text/">Text semantics</
 shared program validator enforces this for compiler output and loaded binaries.</p>
 <h3 id="numeric-unit-encoding-target">Numeric Unit Encoding Target</h3>
 <p><code>UnitAndFlags</code> is a byte. Its target portable layout is:</p>
-<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">bits 0..4  UnitId        0..31</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">bits 5     NormalizeResultAsPredicate</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">bits 6     WithTags (result-bearing sends only)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">bits 7     Indirect (result-bearing sends only)</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="bits 0..4  UnitId        0..31bits 5     NormalizeResultAsPredicatebits 6     WithTags (result-bearing sends only)bits 7     Indirect (result-bearing sends only)"><div></div></button></div></figure></div>
-<p>Flag meanings are opcode-specific. Result-bearing sends reject bit 5; instructions other than iterator creation reject bits 6 and 7. Iterator creation
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">bits 0..4  UnitId        0..31</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">bits 5     NormalizeResultAsPredicate</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">bits 6     WithTags on result-bearing sends; Numeric on Move and the arithmetic opcodes; Strict on ParseLiteral</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">bits 7     Indirect (result-bearing sends only)</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="bits 0..4  UnitId        0..31bits 5     NormalizeResultAsPredicatebits 6     WithTags on result-bearing sends; Numeric on Move and the arithmetic opcodes; Strict on ParseLiteralbits 7     Indirect (result-bearing sends only)"><div></div></button></div></figure></div>
+<p>Flag meanings are opcode-specific. Result-bearing sends reject bit 5. Bit 6 is defined only for result-bearing sends,
+Move, the arithmetic opcodes that the opcode table marks Numeric (0x40) and ParseLiteral (Strict, 0x40); bit 7 only for
+result-bearing sends; other instructions except iterator creation reject both. Iterator creation
 uses bits 5..7 as the mode field defined below; IteratorNext uses bit 5 for
 component output. Iterator instructions require zero UnitId. Undefined flag combinations are invalid.</p>
 <p>The UnitId map keeps the defined ids stable and reserves
 room for likely game-domain units:</p>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — UnitIds 4 to 18</p>
+<p><strong>Since: 0.5.0</strong> — UnitIds 4 to 18</p>
 </blockquote>
 <table>
 <thead>
@@ -550,12 +552,14 @@ entries subscribe by <code>MessageName</code> and tag filters only; the runtime 
 them with a single direct <code>:Message</code> argument. Message-name handlers count as
 normal delivery and therefore prevent <code>undeliverable</code> fallback when their tag
 filters match. For <code>MessageNameHandler</code> entries, <code>SignatureId</code> still records the
-synthetic message parameter signature such as <code>Damage(message)</code>, but it is
-metadata and not the dispatch key.</p>
+synthetic message parameter signature <code>Damage(message)</code>, but it is metadata
+and not the dispatch key. The label is always <code>message</code>; the name a source
+handler binds the message to, such as <code>incoming_1</code> in <code>on Damage as incoming_1</code>,
+is a local variable and is not encoded in the binding.</p>
 <p>System endpoint entries use reserved lowercase names outside normal message
 casing. Only handler entries may use them: an <code>OutboundMessage</code> entry and the
 message shape of <code>LoadHandler</code> and <code>LoadMessage</code> with such a name are invalid
-(<strong>Since: Unreleased</strong>). The defined endpoints are:</p>
+(<strong>Since: 0.5.0</strong>). The defined endpoints are:</p>
 <div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">initialization</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">undeliverable as message</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="initializationundeliverable as message"><div></div></button></div></figure></div>
 <p><code>initialization</code> is encoded as a <code>MessageHandler</code> entry without
 arguments. It is not normal external dispatch input; the host queues all loaded
@@ -609,7 +613,8 @@ for <code>pc</code>-based execution.</p>
 <li><code>CheckInteger dst src</code></li>
 <li><code>CheckFractional dst src</code></li>
 </ul>
-<p><code>Cast</code> and <code>CheckType</code> use <code>TypeOperand</code> as <code>GesBytecodeTypeKind</code>.
+<p><code>Cast</code> and <code>CheckType</code> use <code>TypeOperand</code> as <code>GesBytecodeTypeKind</code>. Bytes are
+kind <code>0x0B</code>; <code>Cast :Bytes</code> converts as <a href="/docs/reference/language/#bytes">Bytes</a> defines.
 Built-in types are direct kind operands. Custom/external record types use
 <code>CastCustom</code>/<code>CheckCustomType</code> with <code>TypeOperand</code> as the type-name <code>StringPool</code> index.
 Units are not declared type kinds: unit casts and checks use
@@ -2782,7 +2787,7 @@ separate approximate-equality opcode.</p>
 writes <code>nothing</code>. It reads <code>XRegister</code> before writing the destination; source
 and destination may alias. <code>YRegister</code>, payload words, and the unit bits are zero.</p>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — strict literal parsing</p>
+<p><strong>Since: 0.5.0</strong> — strict literal parsing</p>
 </blockquote>
 <p>The only permitted flag is Strict (<code>0x40</code>), which implements <code>parse strict</code>:
 recognition failure writes <code>nothing</code> instead of the original Text. Every other
@@ -3531,7 +3536,7 @@ requires a nonempty Text delimiter; Nothing is not a whitespace request.
 Neither instruction charges synthetic opcode work per item.</p>
 <h3 id="compound-iterator-operand-encoding">Compound iterator operand encoding</h3>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — compound iterator transport</p>
+<p><strong>Since: 0.5.0</strong> — compound iterator transport</p>
 </blockquote>
 <p>Iterator creation modes are Normal=0, Union=1, Intersect=2, Difference=3,
 Lockstep=4, Cartesian=5, Entries=6. Mode 7 is invalid. The mode is encoded as

@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Enum GesBinaryBindKind | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Enum GesBinaryBindKind | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Enum GesBinaryBindKind | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Enum GesBinaryBindKind | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Defines the supported game event script binary bind kind values.">
+      <meta name="description" content="Identifies the role of a  entry: an executable declaration, an outbound message signature or a host import.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -84,7 +84,8 @@ Enum GesBinaryBindKind
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Defines the supported game event script binary bind kind values.</p>
+  <div class="markdown summary"><p>Identifies the role of a <a class="xref" href="GameEventScript.Api.GesBindingSegment.html">GesBindingSegment</a> entry: an executable declaration, an outbound message signature
+or a host import.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -105,35 +106,35 @@ Enum GesBinaryBindKind
   <dl class="parameters">
     <dt id="GameEventScript_Api_GesBinaryBindKind_ExtensionCall"><code>ExtensionCall = 32</code></dt>
   
-  <dd><p>Identifies the extension call value.</p>
+  <dd><p>Import resolved against the host extension registry.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBinaryBindKind_ExternalType"><code>ExternalType = 49</code></dt>
   
-  <dd><p>Identifies the external type value.</p>
+  <dd><p>Import resolved against the host external-type registry.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBinaryBindKind_Function"><code>Function = 18</code></dt>
   
-  <dd><p>Identifies the function value.</p>
+  <dd><p>Script function returning a value.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBinaryBindKind_MessageHandler"><code>MessageHandler = 16</code></dt>
   
-  <dd><p>Identifies the message handler value.</p>
+  <dd><p>Script handler matching a name and ordered argument labels.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBinaryBindKind_MessageNameHandler"><code>MessageNameHandler = 17</code></dt>
   
-  <dd><p>Identifies the message name handler value.</p>
+  <dd><p>Script handler matching a message name regardless of argument labels.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBinaryBindKind_OutboundMessage"><code>OutboundMessage = 33</code></dt>
   
-  <dd><p>Identifies the outbound message value.</p>
+  <dd><p>Message signature used by emit or publish instructions.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBinaryBindKind_Predicate"><code>Predicate = 19</code></dt>
   
-  <dd><p>Identifies the predicate value.</p>
+  <dd><p>Script predicate returning a Boolean result.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBinaryBindKind_Record"><code>Record = 48</code></dt>
   
-  <dd><p>Identifies the record value.</p>
+  <dd><p>Script record constructor.</p>
 </dd>
   </dl>
 
@@ -155,7 +156,7 @@ Enum GesBinaryBindKind
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

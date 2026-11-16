@@ -86,7 +86,7 @@ bind native data.</li>
 <p>These guides track the development checkout. Unreleased features are marked;
 consult the <a href="/docs/changelog/">changelog</a> when targeting a published release.</p>
 <h2 id="data-files-and-schemas">Data files and schemas</h2>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
 <ul>
 <li><a href="/docs/reference/documents/">GES documents</a> (<code>.gesd</code>) hold configuration and content
 written like GES literals. The <a href="/docs/learn/csharp/#read-data-documents">C#</a> and
@@ -117,7 +117,8 @@ describes the native <code>ges</code> command, installation and terminal console
 <div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/clean.sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--dry-run</span><span style="--0:#D6DEEB;--1:#403F53">          </span><span style="--0:#919F9F;--1:#5F636F"># Preview directories and file-data sizes.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/clean.sh</span><span style="--0:#D6DEEB;--1:#403F53">                   </span><span style="--0:#919F9F;--1:#5F636F"># Delete all known repository build outputs.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/clean.sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--artifacts-only</span><span style="--0:#D6DEEB;--1:#403F53">   </span><span style="--0:#919F9F;--1:#5F636F"># Delete only artifacts (also accepts --dry-run).</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="./scripts/clean.sh --dry-run          # Preview directories and file-data sizes../scripts/clean.sh                   # Delete all known repository build outputs../scripts/clean.sh --artifacts-only   # Delete only artifacts (also accepts --dry-run)."><div></div></button></div></figure></div>
 <p>The script requires Python 3 and works from any directory. It removes <code>artifacts</code>,
 root-level <code>bin</code>/<code>obj</code>/<code>TestResults</code>/<code>.build</code>, C# <code>bin</code>/<code>obj</code>/<code>TestResults</code> directories,
-and SwiftPM <code>.build</code> directories. This includes generated packages, reports,
+SwiftPM <code>.build</code> directories, and the <code>bin</code>/<code>obj</code>/<code>TestResults</code>/<code>.build</code> directories below <code>examples</code>. The examples
+build into <code>artifacts</code>; a <code>.build</code> there holds the index an editor creates when it opens an example package. This includes generated packages, reports,
 benchmark runs, local tool installations and Xcode outputs stored under <code>artifacts</code>.
 Build and test scripts recreate their outputs on the next run.</p>
 <p>Tracked content makes cleanup fail before any deletion. Symbolic output-directory

@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesDocumentException | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesDocumentException | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesDocumentException | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesDocumentException | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="GES document text is invalid or exceeds a fixed literal parsing limit.">
       <link rel="icon" href="../assets/logo.svg">
@@ -172,8 +172,8 @@ Class GesDocumentException
 
   <a id="GameEventScript_Api_GesDocumentException__ctor_" data-uid="GameEventScript.Api.GesDocumentException.#ctor*"></a>
 
-  <h3 id="GameEventScript_Api_GesDocumentException__ctor_System_String_System_Int32_System_Int32_System_String_System_Nullable_System_Int32__" data-uid="GameEventScript.Api.GesDocumentException.#ctor(System.String,System.Int32,System.Int32,System.String,System.Nullable{System.Int32})">
-  GesDocumentException(string, int, int, string?, int?)
+  <h3 id="GameEventScript_Api_GesDocumentException__ctor_System_String_System_Int32_System_Int32_System_String_System_Nullable_System_Int32__System_String_System_String_" data-uid="GameEventScript.Api.GesDocumentException.#ctor(System.String,System.Int32,System.Int32,System.String,System.Nullable{System.Int32},System.String,System.String)">
+  GesDocumentException(string, int, int, string?, int?, string, string?)
   
   </h3>
 
@@ -182,7 +182,7 @@ Class GesDocumentException
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GesDocumentException(string code, int line, int column, string? limitName = null, int? limit = null)</code></pre>
+    <pre><code class="lang-csharp hljs">public GesDocumentException(string code, int line, int column, string? limitName = null, int? limit = null, string path = &quot;&quot;, string? message = null)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -201,6 +201,12 @@ Class GesDocumentException
 </dd>
     <dt><code>limit</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
     <dd><p>The exceeded limit value for <code>document.limitExceeded</code>; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><code>path</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The field path that a schema check or a model reports, such as <code>units[].name</code>; otherwise empty.</p>
+</dd>
+    <dt><code>message</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>A message that replaces the default one, which is not part of the contract.</p>
 </dd>
   </dl>
 
@@ -379,6 +385,38 @@ Class GesDocumentException
 
 
 
+  <a id="GameEventScript_Api_GesDocumentException_Path_" data-uid="GameEventScript.Api.GesDocumentException.Path*"></a>
+
+  <h3 id="GameEventScript_Api_GesDocumentException_Path" data-uid="GameEventScript.Api.GesDocumentException.Path">
+  Path
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The field path of a schema check or model error, such as <code>units[].name</code>; empty for a reading error.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Path { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
 
 </article>
 
@@ -396,7 +434,7 @@ Class GesDocumentException
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

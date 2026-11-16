@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesIntegerRange | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesIntegerRange | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesIntegerRange | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesIntegerRange | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="An immutable signed-64 range descriptor. Terms are computed lazily without binary64 conversion.">
       <link rel="icon" href="../assets/logo.svg">
@@ -183,7 +183,7 @@ Class GesIntegerRange
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the from.</p>
+  <div class="markdown level1 summary"><p>Gets the first term.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -215,7 +215,8 @@ Class GesIntegerRange
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the step.</p>
+  <div class="markdown level1 summary"><p>Gets the signed distance between consecutive terms. A step of 0, or a step that points away from
+<a class="xref" href="GameEventScript.Api.GesIntegerRange.html#GameEventScript_Api_GesIntegerRange_To">To</a>, describes an empty range.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -247,7 +248,8 @@ Class GesIntegerRange
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the to.</p>
+  <div class="markdown level1 summary"><p>Gets the inclusive bound; the last term is the last one reached from <a class="xref" href="GameEventScript.Api.GesIntegerRange.html#GameEventScript_Api_GesIntegerRange_From">From</a> by whole steps that
+does not pass it.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -289,7 +291,7 @@ Class GesIntegerRange
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

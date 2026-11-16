@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesSchemaType | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesSchemaType | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesSchemaType | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesSchemaType | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="The type of a field, or one alternative of a union.">
       <link rel="icon" href="../assets/logo.svg">
@@ -143,7 +143,8 @@ Class GesSchemaType
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the axes of an axis block in x, y, z order; empty without a block, when all three are stored in full.</p>
+  <div class="markdown level1 summary"><p>Gets the axes of an axis block in x, y, z, radius order; empty without a block, when every axis is stored in
+full: x, y and z, x and y of a Poly, or x, y and the radius of a Disc.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -190,6 +191,39 @@ Class GesSchemaType
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Api.GesSchemaBound.html">GesSchemaBound</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Depth_" data-uid="GameEventScript.Api.GesSchemaType.Depth*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Depth" data-uid="GameEventScript.Api.GesSchemaType.Depth">
+  Depth
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the <code>depth</code> of a List whose element is the schema that declares it: how many records of that schema
+nest in each other at most; 0 for every other type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Depth { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
     <dd></dd>
   </dl>
 
@@ -328,6 +362,39 @@ Class GesSchemaType
 
 
 
+  <a id="GameEventScript_Api_GesSchemaType_Label_" data-uid="GameEventScript.Api.GesSchemaType.Label*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Label" data-uid="GameEventScript.Api.GesSchemaType.Label">
+  Label
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the label of a union alternative, as in <code>bind: :Loadout_UnitBind</code>, or an empty string; generated code
+names the alternative after it, and it belongs to no hash.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Label { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Api_GesSchemaType_Lower_" data-uid="GameEventScript.Api.GesSchemaType.Lower*"></a>
 
   <h3 id="GameEventScript_Api_GesSchemaType_Lower" data-uid="GameEventScript.Api.GesSchemaType.Lower">
@@ -367,7 +434,7 @@ Class GesSchemaType
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the maximum of a Text in UTF-8 bytes or of a List in elements, if there is one.</p>
+  <div class="markdown level1 summary"><p>Gets the maximum of a Text in UTF-8 bytes, of a List in elements or of a Poly in points, if there is one.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -456,6 +523,39 @@ Class GesSchemaType
 
 
 
+  <a id="GameEventScript_Api_GesSchemaType_TagSet_" data-uid="GameEventScript.Api.GesSchemaType.TagSet*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_TagSet" data-uid="GameEventScript.Api.GesSchemaType.TagSet">
+  TagSet
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the name of the declared tag set a Tag takes its members from, or an empty string; the name belongs to no
+hash and does not change the encoding.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string TagSet { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Api_GesSchemaType_Tags_" data-uid="GameEventScript.Api.GesSchemaType.Tags*"></a>
 
   <h3 id="GameEventScript_Api_GesSchemaType_Tags" data-uid="GameEventScript.Api.GesSchemaType.Tags">
@@ -463,7 +563,7 @@ Class GesSchemaType
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the closed set of a Tag; empty when any tag is allowed.</p>
+  <div class="markdown level1 summary"><p>Gets the closed set of a Tag, empty when any tag is allowed, or the members of Flags in declared order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -495,7 +595,7 @@ Class GesSchemaType
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the unit of a Quantity, Point or Vector.</p>
+  <div class="markdown level1 summary"><p>Gets the unit of a Quantity, Point, Vector, Box, Poly or Disc.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -569,7 +669,7 @@ Class GesSchemaType
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

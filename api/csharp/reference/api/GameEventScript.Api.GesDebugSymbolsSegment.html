@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesDebugSymbolsSegment | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesDebugSymbolsSegment | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesDebugSymbolsSegment | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesDebugSymbolsSegment | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script debug symbols segment.">
+      <meta name="description" content="The immutable optional DebugSymbolsSegment (section 0x0020), which names script parameters and locals by register and code range. Runtime behaviour never depends on it.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,8 @@ Class GesDebugSymbolsSegment
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script debug symbols segment.</p>
+  <div class="markdown summary"><p>The immutable optional DebugSymbolsSegment (section <code>0x0020</code>), which names script parameters and locals by
+register and code range. Runtime behaviour never depends on it.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -132,43 +133,6 @@ Class GesDebugSymbolsSegment
 
 
 
-  <h2 class="section" id="constructors">Constructors
-</h2>
-
-
-  <a id="GameEventScript_Api_GesDebugSymbolsSegment__ctor_" data-uid="GameEventScript.Api.GesDebugSymbolsSegment.#ctor*"></a>
-
-  <h3 id="GameEventScript_Api_GesDebugSymbolsSegment__ctor_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GesDebugSymbol__" data-uid="GameEventScript.Api.GesDebugSymbolsSegment.#ctor(System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GesDebugSymbol})">
-  GesDebugSymbolsSegment(IReadOnlyList&lt;GesDebugSymbol&gt;?)
-  
-  </h3>
-
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script Debug Symbols Segment.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GesDebugSymbolsSegment(IReadOnlyList&lt;GesDebugSymbol&gt;? symbols)</code></pre>
-  </div>
-
-  <h4 class="section">Parameters</h4>
-  <dl class="parameters">
-    <dt><code>symbols</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesDebugSymbol.html">GesDebugSymbol</a>&gt;</dt>
-    <dd><p>The symbols value.</p>
-</dd>
-  </dl>
-
-
-
-
-
-
-
-
-
-
-
-
   <h2 class="section" id="properties">Properties
 </h2>
 
@@ -180,7 +144,7 @@ Class GesDebugSymbolsSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the symbols.</p>
+  <div class="markdown level1 summary"><p>Gets the immutable symbols in encoded order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -222,7 +186,7 @@ Class GesDebugSymbolsSegment
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

@@ -153,10 +153,17 @@ class carries <code>[GesExtension]</code>; its callable methods carry <code>[Ges
 each script argument carries <code>[GesParam]</code>:</p>
 <div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="csharp"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">[GesExtension(</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">combat</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">)]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">public</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">static</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">class</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#FFCB8B;--1:#3B61B0">CombatFunctions</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">[GesFunction(</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">bonus</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#B2CCD6;--1:#3B61B0">GesBytecodeTypeKind</span><span style="--0:#C792EA;--1:#8844AE">.</span><span style="--0:#FAF39F;--1:#111111">Float</span><span style="--0:#D6DEEB;--1:#403F53">)]</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">public</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">static</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">double</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">Bonus</span><span style="--0:#D6DEEB;--1:#403F53">(</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">        </span></span><span style="--0:#D6DEEB;--1:#403F53">[GesParam(</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">energy</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#B2CCD6;--1:#3B61B0">GesBytecodeTypeKind</span><span style="--0:#C792EA;--1:#8844AE">.</span><span style="--0:#FAF39F;--1:#111111">Float</span><span style="--0:#D6DEEB;--1:#403F53">)] </span><span style="--0:#C792EA;--1:#8844AE">double</span><span style="--0:#D6DEEB;--1:#403F53"> energy)</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#096E72">=&gt;</span><span style="--0:#D6DEEB;--1:#403F53"> energy </span><span style="--0:#C792EA;--1:#8844AE">*</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">0.1</span><span style="--0:#D6DEEB;--1:#403F53">;</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="[GesExtension(&quot;combat&quot;)]public static class CombatFunctions{    [GesFunction(&quot;bonus&quot;, GesBytecodeTypeKind.Float)]    public static double Bonus(        [GesParam(&quot;energy&quot;, GesBytecodeTypeKind.Float)] double energy)        => energy * 0.1;}"><div></div></button></div></figure></div>
 <p>Register it on the host builder with
-<code>.WithRegistry(GesBridgeExtensionRegistry.Create(typeof(CombatFunctions)))</code>.
+<code>.WithExtensionRegistry(GesBridgeExtensionRegistry.Create(typeof(CombatFunctions)))</code>.
 The script calls <code>:combat.bonus(energy: 100)</code>. Extension registries and external
-type registries have distinct roles: <code>WithRegistry</code> installs functions;
+type registries have distinct roles: <code>WithExtensionRegistry</code> installs functions;
 <code>WithExternalTypeRegistry</code> installs native types.</p>
+<blockquote>
+<p><strong>Since: 0.5.0</strong> — random generator parameters</p>
+</blockquote>
+<p>A function that draws random numbers takes the host’s generator as a
+<code>GesRandomGenerator</code> parameter, in any position and without <code>[GesParam]</code>. It is
+no script argument, so <code>SpawnSpots([GesParam("count", ...)] int count, GesRandomGenerator random)</code> registers <code>:arena.spawnSpots(count:)</code>, and seeded
+hosts stay deterministic. A function takes at most one such parameter.</p>
 <h2 id="native-messages-and-values">Native messages and values</h2>
 <p><code>host.Subscribe("Done", ["value"], (message, context) =&gt; { ... })</code> adapts a
 delegate to a native message handler and returns an unsubscribe handle. Arguments
@@ -180,10 +187,12 @@ portable <code>IGesNativeMessageHandler</code> and <code>IGesPublishSink</code> 
 <p><code>GesBridgeHostRunner</code> supplies optional synchronization and background
 pumping outside the portable Runtime. A loading host still needs an explicit
 Start.</p>
-<p class="ges-since"><strong>Since: Unreleased — automatic wakeups for delayed messages</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0 — automatic wakeups for delayed messages</strong></p>
 <p>The runner also schedules wakeups for delayed messages.</p>
 <p>Use the runner’s API for a host it owns; do not mix it with unsynchronized raw
-host calls. Callbacks are not implicitly dispatched onto a UI thread. Keep UI
+host calls. <code>Load</code> and <code>Subscribe</code> return a <code>GesBridgeHostRunnerRegistration</code>
+whose <code>IsAttached</code>, <code>StartResult</code> and <code>Detach()</code> go through the runner’s lock, so
+another thread may use them while the runner pumps. Callbacks are not implicitly dispatched onto a UI thread. Keep UI
 marshalling in the application, and dispose runners before their dispatcher.
 For lifecycle and execution-state details, see
 <a href="/docs/reference/host-runtime/#c-automatic-runner">Host runtime</a>.</p>

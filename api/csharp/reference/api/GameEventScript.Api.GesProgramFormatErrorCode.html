@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Enum GesProgramFormatErrorCode | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Enum GesProgramFormatErrorCode | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Enum GesProgramFormatErrorCode | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Enum GesProgramFormatErrorCode | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Defines the supported game event script program format error code values.">
+      <meta name="description" content="The stable portable error codes of . The numeric values are fixed by the binary format specification; the diagnostic code is decode. followed by the camel-case name.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -84,7 +84,8 @@ Enum GesProgramFormatErrorCode
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Defines the supported game event script program format error code values.</p>
+  <div class="markdown summary"><p>The stable portable error codes of <a class="xref" href="GameEventScript.Api.GesProgramFormatException.html">GesProgramFormatException</a>. The numeric values are fixed by the
+binary format specification; the diagnostic code is <code>decode.</code> followed by the camel-case name.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -105,155 +106,155 @@ Enum GesProgramFormatErrorCode
   <dl class="parameters">
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_CyclicCallGraph"><code>CyclicCallGraph = 31</code></dt>
   
-  <dd><p>Identifies the cyclic call graph value.</p>
+  <dd><p>The synchronous call graph contains a cycle.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_DuplicateBindingId"><code>DuplicateBindingId = 25</code></dt>
   
-  <dd><p>Identifies the duplicate binding id value.</p>
+  <dd><p>A binding ID is duplicated within its binding scope.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_DuplicateSection"><code>DuplicateSection = 17</code></dt>
   
-  <dd><p>Identifies the duplicate section value.</p>
+  <dd><p>A singleton known section occurs more than once, or is both parsed and opaque.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_FileSizeMismatch"><code>FileSizeMismatch = 5</code></dt>
   
-  <dd><p>Identifies the file size mismatch value.</p>
+  <dd><p>The header file size differs from the supplied byte count.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_FileTooLarge"><code>FileTooLarge = 6</code></dt>
   
-  <dd><p>Identifies the file too large value.</p>
+  <dd><p>The image exceeds <a class="xref" href="GameEventScript.Api.GesProgramReadLimits.html#GameEventScript_Api_GesProgramReadLimits_MaxFileBytes">MaxFileBytes</a>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidBindingKind"><code>InvalidBindingKind = 24</code></dt>
   
-  <dd><p>Identifies the invalid binding kind value.</p>
+  <dd><p>A binding uses an unassigned kind.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidCallAddress"><code>InvalidCallAddress = 30</code></dt>
   
-  <dd><p>Identifies the invalid call address value.</p>
+  <dd><p>The call graph references an invalid call target.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidDebugSymbol"><code>InvalidDebugSymbol = 33</code></dt>
   
-  <dd><p>Identifies the invalid debug symbol value.</p>
+  <dd><p>A debug symbol is outside its code or register bounds.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidEntryAddress"><code>InvalidEntryAddress = 26</code></dt>
   
-  <dd><p>Identifies the invalid entry address value.</p>
+  <dd><p>An executable binding has an invalid entry address, or a non-executable one lacks the <code>0xFFFF</code> sentinel.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidHeaderFlags"><code>InvalidHeaderFlags = 3</code></dt>
   
-  <dd><p>Identifies the invalid header flags value.</p>
+  <dd><p>The reserved header flags are not zero.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidHeaderSize"><code>InvalidHeaderSize = 4</code></dt>
   
-  <dd><p>Identifies the invalid header size value.</p>
+  <dd><p>The header size is not <a class="xref" href="GameEventScript.Api.GesBinaryFormat.html#GameEventScript_Api_GesBinaryFormat_HeaderSize">HeaderSize</a>, or the image is shorter than the header.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidJumpAddress"><code>InvalidJumpAddress = 29</code></dt>
   
-  <dd><p>Identifies the invalid jump address value.</p>
+  <dd><p>An instruction references an address outside the code segment.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidListIndex"><code>InvalidListIndex = 23</code></dt>
   
-  <dd><p>Identifies the invalid list index value.</p>
+  <dd><p>An index-list reference is out of range or missing.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidMagic"><code>InvalidMagic = 1</code></dt>
   
-  <dd><p>Identifies the invalid magic value.</p>
+  <dd><p>The image does not start with ASCII <code>GESB</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidOpcode"><code>InvalidOpcode = 27</code></dt>
   
-  <dd><p>Identifies the invalid opcode value.</p>
+  <dd><p>An instruction uses an unassigned opcode.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidOperand"><code>InvalidOperand = 28</code></dt>
   
-  <dd><p>Identifies the invalid operand value.</p>
+  <dd><p>An instruction operand, unit or flag is invalid for its opcode.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidPayloadLength"><code>InvalidPayloadLength = 19</code></dt>
   
-  <dd><p>Identifies the invalid payload length value.</p>
+  <dd><p>A payload length does not match its fixed size or declared entry count.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidProgram"><code>InvalidProgram = 38</code></dt>
   
-  <dd><p>Identifies the invalid program value.</p>
+  <dd><p>Another program invariant is violated.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidResourceMetadata"><code>InvalidResourceMetadata = 32</code></dt>
   
-  <dd><p>Identifies the invalid resource metadata value.</p>
+  <dd><p>Declared register or call-depth requirements are lower than the code requires, or inconsistent.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidSectionFlags"><code>InvalidSectionFlags = 12</code></dt>
   
-  <dd><p>Identifies the invalid section flags value.</p>
+  <dd><p>Section or record flags contain unassigned bits, or a required runtime section lacks the Required flag.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidSectionReserved"><code>InvalidSectionReserved = 13</code></dt>
   
-  <dd><p>Identifies the invalid section reserved value.</p>
+  <dd><p>A reserved section-header or payload field is not zero.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidSectionType"><code>InvalidSectionType = 11</code></dt>
   
-  <dd><p>Identifies the invalid section type value.</p>
+  <dd><p>A section uses the invalid type <code>0x0000</code> or <code>0xFFFF</code>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidSourceArchive"><code>InvalidSourceArchive = 35</code></dt>
   
-  <dd><p>Identifies the invalid source archive value.</p>
+  <dd><p>A source-archive entry has a duplicate ID, an invalid name or a byte order mark.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidSourceMap"><code>InvalidSourceMap = 34</code></dt>
   
-  <dd><p>Identifies the invalid source map value.</p>
+  <dd><p>A source-map source or mapping is malformed or out of bounds.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidStringIndex"><code>InvalidStringIndex = 22</code></dt>
   
-  <dd><p>Identifies the invalid string index value.</p>
+  <dd><p>A string-constant index is out of range.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_InvalidUtf8"><code>InvalidUtf8 = 20</code></dt>
   
-  <dd><p>Identifies the invalid utf8 value.</p>
+  <dd><p>A string, name or source payload is not strict UTF-8.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_MissingRequiredSection"><code>MissingRequiredSection = 16</code></dt>
   
-  <dd><p>Identifies the missing required section value.</p>
+  <dd><p>One of the five required runtime sections is missing.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_ReaderLimitExceeded"><code>ReaderLimitExceeded = 37</code></dt>
   
-  <dd><p>Identifies the reader limit exceeded value.</p>
+  <dd><p>A configured byte limit for the source archive or retained opaque sections is exceeded.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_SectionTooLarge"><code>SectionTooLarge = 10</code></dt>
   
-  <dd><p>Identifies the section too large value.</p>
+  <dd><p>A section, a length or the encoded program exceeds the representable V1 or in-memory size range.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_SourceMetadataMismatch"><code>SourceMetadataMismatch = 36</code></dt>
   
-  <dd><p>Identifies the source metadata mismatch value.</p>
+  <dd><p>The source map and the source archive disagree on IDs, names, lengths, hashes or line boundaries.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_TooManyEntries"><code>TooManyEntries = 21</code></dt>
   
-  <dd><p>Identifies the too many entries value.</p>
+  <dd><p>An entry count exceeds its configured or V1 limit.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_TooManySections"><code>TooManySections = 7</code></dt>
   
-  <dd><p>Identifies the too many sections value.</p>
+  <dd><p>The image exceeds <a class="xref" href="GameEventScript.Api.GesProgramReadLimits.html#GameEventScript_Api_GesProgramReadLimits_MaxSectionCount">MaxSectionCount</a>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_TruncatedSectionHeader"><code>TruncatedSectionHeader = 8</code></dt>
   
-  <dd><p>Identifies the truncated section header value.</p>
+  <dd><p>A section header extends beyond the image.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_TruncatedSectionPayload"><code>TruncatedSectionPayload = 9</code></dt>
   
-  <dd><p>Identifies the truncated section payload value.</p>
+  <dd><p>A section payload, or a list within it, extends beyond its bounds.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_UnknownRequiredSection"><code>UnknownRequiredSection = 18</code></dt>
   
-  <dd><p>Identifies the unknown required section value.</p>
+  <dd><p>An unknown section, or a known optional one, carries the Required flag.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_UnsupportedCompression"><code>UnsupportedCompression = 15</code></dt>
   
-  <dd><p>Identifies the unsupported compression value.</p>
+  <dd><p>A required section uses a compression codec other than zero.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_UnsupportedFormatVersion"><code>UnsupportedFormatVersion = 2</code></dt>
   
-  <dd><p>Identifies the unsupported format version value.</p>
+  <dd><p>The header format version is not <a class="xref" href="GameEventScript.Api.GesBinaryFormat.html#GameEventScript_Api_GesBinaryFormat_Version">Version</a>.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramFormatErrorCode_UnsupportedSectionVersion"><code>UnsupportedSectionVersion = 14</code></dt>
   
-  <dd><p>Identifies the unsupported section version value.</p>
+  <dd><p>A required section has an unsupported section version.</p>
 </dd>
   </dl>
 
@@ -275,7 +276,7 @@ Enum GesProgramFormatErrorCode
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

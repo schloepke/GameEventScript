@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesSchemaGenerateOptions | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesSchemaGenerateOptions | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesSchemaGenerateOptions | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesSchemaGenerateOptions | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="How schema code is generated.">
       <link rel="icon" href="../assets/logo.svg">
@@ -198,6 +198,40 @@ Class GesSchemaGenerateOptions
 
 
 
+  <a id="GameEventScript_Generator_GesSchemaGenerateOptions_Bindings_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Bindings*"></a>
+
+  <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_Bindings" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Bindings">
+  Bindings
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets whether generated model types also offer themselves to scripts as external types: a value conversion per
+type and a generated <code>GesTypes</code> catalog and constructor registry that implement the Runtime's external-type
+contracts, without the Bridge, macros or Reflection. Only model generation takes it.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Bindings { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Generator_GesSchemaGenerateOptions_CheckedExclusivity_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.CheckedExclusivity*"></a>
 
   <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_CheckedExclusivity" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.CheckedExclusivity">
@@ -233,6 +267,79 @@ instead of a trap. C# has no such checks, so this does not change C# output.</p>
 
 
 
+  <a id="GameEventScript_Generator_GesSchemaGenerateOptions_Documents_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Documents*"></a>
+
+  <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_Documents" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Documents">
+  Documents
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets whether generated model roots also read GES document text: each root a <code>FromDocument</code> (Swift
+<code>init(document:)</code>) that requires the header <code>:Schema(:Name)</code>, checks the document against the embedded schema
+sources, applies defaults and converts, and one type per generation that reads any root by its header, <code>Document</code>
+inside the namespace and <code>ModelDocument</code> without one. It includes <a class="xref" href="GameEventScript.Generator.GesSchemaGenerateOptions.html#GameEventScript_Generator_GesSchemaGenerateOptions_Values">Values</a>. The code reads text and
+does no file I/O. Only model generation takes it.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Documents { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Generator_GesSchemaGenerateOptions_ExtendNamespace_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.ExtendNamespace*"></a>
+
+  <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_ExtendNamespace" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.ExtendNamespace">
+  ExtendNamespace
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the leading part of the Swift <a class="xref" href="GameEventScript.Generator.GesSchemaGenerateOptions.html#GameEventScript_Generator_GesSchemaGenerateOptions_Namespace">Namespace</a> that another generation of the module declares, or
+null for none, the default. This generation extends it instead of declaring it again: with the namespace
+<code>Game.Panels</code> and <code>Game</code> here it writes <code>extension Game { enum Panels { … } }</code>, and with <code>Game</code> for
+both it writes <code>extension Game { … }</code>. It must be a leading part of the namespace, else <code>generate.usage</code>.
+Wire code with <a class="xref" href="GameEventScript.Generator.GesSchemaGenerateOptions.html#GameEventScript_Generator_GesSchemaGenerateOptions_Models">Models</a> extends the part it shares with the models' namespace on its own. C# merges
+namespaces, so C# generation rejects it with <code>generate.usage</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? ExtendNamespace { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Generator_GesSchemaGenerateOptions_Language_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Language*"></a>
 
   <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_Language" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Language">
@@ -255,6 +362,41 @@ instead of a trap. C# has no such checks, so this does not change C# output.</p>
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Generator.GesSchemaLanguage.html">GesSchemaLanguage</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Generator_GesSchemaGenerateOptions_Models_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Models*"></a>
+
+  <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_Models" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Models">
+  Models
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the namespace of the model code that wire code shares types with, or null for none, the default. With it,
+wire code uses that namespace's packed types instead of declaring its own, so a List of them is one array in both,
+and converts each wire record directly to and from the model of the same schema that a model root of any group
+reaches. An empty string is the global namespace. Only wire generation takes it.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? Models { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
     <dd></dd>
   </dl>
 
@@ -298,6 +440,40 @@ namespace and Swift as nested enums, so that generated names cannot collide with
 
 
 
+  <a id="GameEventScript_Generator_GesSchemaGenerateOptions_Split_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Split*"></a>
+
+  <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_Split" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Split">
+  Split
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets how the code is divided into files. <a class="xref" href="GameEventScript.Generator.GesSchemaSplit.html#GameEventScript_Generator_GesSchemaSplit_None">None</a>, the default, is the single text of
+<code>Generate</code> and <code>GenerateModels</code>; the other choices are the files of <code>GenerateFiles</code> and
+<code>GenerateModelFiles</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesSchemaSplit Split { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Generator.GesSchemaSplit.html">GesSchemaSplit</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Generator_GesSchemaGenerateOptions_Values_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Values*"></a>
 
   <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_Values" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Values">
@@ -306,7 +482,8 @@ namespace and Swift as nested enums, so that generated names cannot collide with
   </h3>
 
   <div class="markdown level1 summary"><p>Gets or sets whether records also convert to and from GES values and messages, through the schema sources the code
-embeds and binds once per type. The conversion allocates and is meant for values from scripts, not the hot path.</p>
+embeds and binds once per type, and whether model types convert to and from the same plain values. The conversion
+allocates and is meant for values from scripts and for converting between models and wire records, not the hot path.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -348,7 +525,7 @@ embeds and binds once per type. The conversion allocates and is meant for values
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

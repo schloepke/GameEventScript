@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Enum GesDiagnosticPhase | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Enum GesDiagnosticPhase | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Enum GesDiagnosticPhase | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Enum GesDiagnosticPhase | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Defines the supported game event script diagnostic phase values.">
+      <meta name="description" content="Identifies the pipeline stage in which a diagnostic originated; the numeric values are stable.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -84,7 +84,7 @@ Enum GesDiagnosticPhase
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Defines the supported game event script diagnostic phase values.</p>
+  <div class="markdown summary"><p>Identifies the pipeline stage in which a diagnostic originated; the numeric values are stable.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -105,27 +105,27 @@ Enum GesDiagnosticPhase
   <dl class="parameters">
     <dt id="GameEventScript_Api_GesDiagnosticPhase_Compile"><code>Compile = 3</code></dt>
   
-  <dd><p>Identifies the compile value.</p>
+  <dd><p>Lowering, resource analysis or bytecode generation.</p>
 </dd>
     <dt id="GameEventScript_Api_GesDiagnosticPhase_Decode"><code>Decode = 4</code></dt>
   
-  <dd><p>Identifies the decode value.</p>
+  <dd><p>Reading or validating a <code>.gesb</code> image or Program; codes are <code>decode.</code> followed by a <a class="xref" href="GameEventScript.Api.GesProgramFormatErrorCode.html">GesProgramFormatErrorCode</a> name.</p>
 </dd>
     <dt id="GameEventScript_Api_GesDiagnosticPhase_Link"><code>Link = 5</code></dt>
   
-  <dd><p>Identifies the link value.</p>
+  <dd><p>Resolving a Program against a host: limits, extensions, external types and the call graph.</p>
 </dd>
     <dt id="GameEventScript_Api_GesDiagnosticPhase_Parse"><code>Parse = 1</code></dt>
   
-  <dd><p>Identifies the parse value.</p>
+  <dd><p>Source tokenization or grammar recognition.</p>
 </dd>
     <dt id="GameEventScript_Api_GesDiagnosticPhase_Runtime"><code>Runtime = 6</code></dt>
   
-  <dd><p>Identifies the runtime value.</p>
+  <dd><p>Execution of script handlers, native handlers, extensions or the publish sink.</p>
 </dd>
     <dt id="GameEventScript_Api_GesDiagnosticPhase_Validate"><code>Validate = 2</code></dt>
   
-  <dd><p>Identifies the validate value.</p>
+  <dd><p>Semantic validation of parsed sources.</p>
 </dd>
   </dl>
 
@@ -147,7 +147,7 @@ Enum GesDiagnosticPhase
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

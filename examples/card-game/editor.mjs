@@ -1,8 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import { diagnosticRange } from './diagnostics.mjs?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549';
-import { foldingRanges } from './editor-folding.mjs?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549';
+import { diagnosticRange } from './diagnostics.mjs?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84';
+import { foldingRanges } from './editor-folding.mjs?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84';
 
 /** CodeMirror owns editing and folding; Swift supplies highlighting and diagnostics. */
 export function attachEditor(input, colors, container, status, engine) {

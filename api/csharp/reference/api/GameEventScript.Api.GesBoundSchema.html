@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesBoundSchema | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesBoundSchema | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesBoundSchema | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesBoundSchema | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="A schema, message or message set bound to parameter values. Immutable; it can be shared between threads.">
       <link rel="icon" href="../assets/logo.svg">
@@ -143,7 +143,8 @@ Class GesBoundSchema
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the hash over the schema hash and the parameter values.</p>
+  <div class="markdown level1 summary"><p>Gets the hash over the schema hash and the parameter values; a member of a bound message set carries the
+set's.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -207,7 +208,8 @@ Class GesBoundSchema
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the schema hash, independent of parameter values.</p>
+  <div class="markdown level1 summary"><p>Gets the schema hash, independent of parameter values. A member of a bound message set carries the set's
+hash, since its records exist only within the set's encoding.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -484,7 +486,7 @@ Class GesBoundSchema
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

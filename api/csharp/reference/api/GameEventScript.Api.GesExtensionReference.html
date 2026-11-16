@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesExtensionReference | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesExtensionReference | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesExtensionReference | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesExtensionReference | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="Represents an immutable normalized extension name, function name, and ordered argument signature.">
       <link rel="icon" href="../assets/logo.svg">
@@ -143,7 +143,7 @@ Class GesExtensionReference
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script Extension Reference.</p>
+  <div class="markdown level1 summary"><p>Creates a reference, normalizing the names and copying the argument labels in their given order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -154,13 +154,14 @@ Class GesExtensionReference
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>extensionName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The extension name value.</p>
+    <dd><p>The lower-case extension namespace, such as <code>math</code>; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> becomes the empty string.</p>
 </dd>
     <dt><code>functionName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The function name value.</p>
+    <dd><p>The lower-case function name, such as <code>distance</code>; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> becomes the empty string.</p>
 </dd>
     <dt><code>argumentLabels</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
-    <dd><p>The argument labels value.</p>
+    <dd><p>The argument labels in call order; a <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> or blank label becomes <code>_</code>, a positional
+argument. <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> means no arguments.</p>
 </dd>
   </dl>
 
@@ -172,6 +173,12 @@ Class GesExtensionReference
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>A name or label violates the lower-case ASCII identifier grammar.</p>
+</dd>
+  </dl>
 
 
 
@@ -218,7 +225,7 @@ Class GesExtensionReference
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the extension name.</p>
+  <div class="markdown level1 summary"><p>Gets the normalized extension namespace.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -250,7 +257,7 @@ Class GesExtensionReference
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the function name.</p>
+  <div class="markdown level1 summary"><p>Gets the normalized function name.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -282,7 +289,7 @@ Class GesExtensionReference
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the signature id.</p>
+  <div class="markdown level1 summary"><p>Gets the canonical identity <code>extension.function(label,...)</code>, with the labels in call order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -324,7 +331,7 @@ Class GesExtensionReference
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

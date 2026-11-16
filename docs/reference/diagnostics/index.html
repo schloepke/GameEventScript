@@ -110,14 +110,14 @@ Validation uses the following semantic codes:</p>
 a visible binding, see <a href="/docs/reference/syntax/#validation">Syntax</a>);</li>
 <li><code>validate.invalidIdentifierCase</code>, <code>validate.invalidMessageCase</code>,
 <code>validate.invalidTypeConstructor</code>, <code>validate.invalidTag</code> (the literal <code>nothing</code> or a
-constant with that value in a tag clause; <strong>Since: Unreleased</strong>).</li>
+constant with that value in a tag clause; <strong>Since: 0.5.0</strong>).</li>
 </ul>
 <p>Compiler lowering/resource analysis uses <code>compile.unsupportedConstruct</code>,
 <code>compile.invalidArity</code>, <code>compile.unresolvedSymbol</code>,
 <code>compile.numericLimitExceeded</code>, <code>compile.cyclicCallGraph</code>,
 <code>compile.invalidResourceMetadata</code>, and <code>compile.invariantViolation</code>.</p>
 <h2 id="compiler-diagnostic-collection">Compiler diagnostic collection</h2>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
 <p>A failing compilation reports every diagnostic of the phase that fails, in a
 defined order, instead of stopping at the first one. Compilation itself still
 stops at the end of that phase.</p>
@@ -147,7 +147,8 @@ order;
 then, module by module in source order, the rules that need other sources or
 the host’s catalog (unknown types, calls and predicate tests, constructors,
 predicate results, seeds and send delays) for its records, predicates,
-functions and handlers; and finally a module-name mismatch between sources,
+functions and handlers; and finally a module-name mismatch between sources
+(<code>validate.invalidIdentifierCase</code> at the differing module declaration),
 which is reported only when no other validation diagnostic exists.</li>
 <li>Lowering and resource analysis stop at the first <code>compile.*</code> diagnostic.</li>
 </ul>
@@ -183,7 +184,7 @@ host cannot enqueue the instance’s initialization snapshot. It carries the
 Program’s module name in <code>programName</code>; its atomicity and retry rules are defined
 in <a href="/docs/reference/host-runtime/#loading-and-startup">Host runtime</a>.</p>
 <h3 id="link-call-sites">Link call sites</h3>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
 <p>A link failure carries a non-empty ordered list of diagnostics; its first one is
 the failure’s diagnostic. A failure of an import that the source calls
 (<code>link.missingExtension</code>, <code>link.missingExternalTypeConstructor</code> and

@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Namespace GameEventScript.Runtime.Values | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Namespace GameEventScript.Runtime.Values | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Namespace GameEventScript.Runtime.Values | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Namespace GameEventScript.Runtime.Values | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       
       <link rel="icon" href="../assets/logo.svg">
@@ -82,7 +82,8 @@ Classes
 </h3>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValueMap.html">GesValueMap</a></dt>
-      <dd><p>Represents a ges value map, traversed in canonical key order.</p>
+      <dd><p>The immutable Text-keyed entries of a Map or the fields of a Record, with unique keys sorted by Unicode scalar
+values; indexing and enumeration follow that canonical order.</p>
 </dd>
     </dl>
     <h3 id="structs">
@@ -90,12 +91,16 @@ Structs
 </h3>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-      <dd><p>Represents a ges value.</p>
+      <dd><p>An immutable GES value: Nothing, a number with optional quantity unit, Boolean, Text, Tag, Vector, Point, Dice,
+Bytes, List, Map, Record, external value, Range, Series, Message or Handler. Equality is strict and structural.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValueArguments.html">GesValueArguments</a></dt>
-      <dd><p>Represents a ges value arguments.</p>
+      <dd><p>Ordered arguments of an extension call or external type constructor. A view lent by the virtual machine reads the caller's registers
+without copying and is valid only during that extension call: once the call has returned, every value access throws
+<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a> while <a class="xref" href="GameEventScript.Runtime.Values.GesValueArguments.html#GameEventScript_Runtime_Values_GesValueArguments_Length">Length</a> stays unchanged. Copy any value needed later. A view created
+from an array borrows that array.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -105,7 +110,8 @@ Structs
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValueSlice.html">GesValueSlice</a></dt>
-      <dd><p>Represents a ges value slice.</p>
+      <dd><p>Read-only view of a contiguous run of values, for example the elements of a List returned by <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_AsList">AsList()</a>.
+The view borrows its storage without copying; indexers return read-only references into that storage.</p>
 </dd>
     </dl>
 
@@ -126,7 +132,7 @@ Structs
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

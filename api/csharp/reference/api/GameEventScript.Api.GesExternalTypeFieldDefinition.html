@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesExternalTypeFieldDefinition | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesExternalTypeFieldDefinition | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesExternalTypeFieldDefinition | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesExternalTypeFieldDefinition | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script external type field definition.">
+      <meta name="description" content="Immutable description of one external type field: its name and declared type. Field values are converted to the declared builtin type before a script sees them; Nothing stays Nothing.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,8 @@ Class GesExternalTypeFieldDefinition
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script external type field definition.</p>
+  <div class="markdown summary"><p>Immutable description of one external type field: its name and declared type. Field values are converted to
+the declared builtin type before a script sees them; Nothing stays Nothing.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -143,7 +144,7 @@ Class GesExternalTypeFieldDefinition
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script External Type Field Definition.</p>
+  <div class="markdown level1 summary"><p>Creates a field of a builtin kind without a unit constraint.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -154,10 +155,10 @@ Class GesExternalTypeFieldDefinition
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The name value.</p>
+    <dd><p>The field name, a lower-case-initial ASCII identifier.</p>
 </dd>
     <dt><code>kind</code> <a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html">GesBytecodeTypeKind</a></dt>
-    <dd><p>The kind value.</p>
+    <dd><p>The builtin kind of the field.</p>
 </dd>
   </dl>
 
@@ -169,6 +170,12 @@ Class GesExternalTypeFieldDefinition
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The name is invalid.</p>
+</dd>
+  </dl>
 
 
 
@@ -179,7 +186,8 @@ Class GesExternalTypeFieldDefinition
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script External Type Field Definition.</p>
+  <div class="markdown level1 summary"><p>Creates a field of a builtin kind with a unit. A non-none unit on a Vector or Point overrides the supplied
+value's unit without rescaling its components.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -190,13 +198,13 @@ Class GesExternalTypeFieldDefinition
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The name value.</p>
+    <dd><p>The field name, a lower-case-initial ASCII identifier.</p>
 </dd>
     <dt><code>kind</code> <a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html">GesBytecodeTypeKind</a></dt>
-    <dd><p>The kind value.</p>
+    <dd><p>The builtin kind of the field.</p>
 </dd>
     <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
-    <dd><p>The unit value.</p>
+    <dd><p>The declared unit.</p>
 </dd>
   </dl>
 
@@ -208,6 +216,12 @@ Class GesExternalTypeFieldDefinition
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The name is invalid, or the unit is a numeric unit and the kind is not <a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html#GameEventScript_Api_GesBytecodeTypeKind_Float">Float</a>, <a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html#GameEventScript_Api_GesBytecodeTypeKind_Vector">Vector</a> or <a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html#GameEventScript_Api_GesBytecodeTypeKind_Point">Point</a>.</p>
+</dd>
+  </dl>
 
 
 
@@ -218,7 +232,7 @@ Class GesExternalTypeFieldDefinition
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script External Type Field Definition.</p>
+  <div class="markdown level1 summary"><p>Creates a field from a type name, which may name a builtin type such as <code>:Quantity(W)</code> or a custom type.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -229,10 +243,10 @@ Class GesExternalTypeFieldDefinition
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The name value.</p>
+    <dd><p>The field name, a lower-case-initial ASCII identifier.</p>
 </dd>
     <dt><code>typeName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The type name value.</p>
+    <dd><p>The declared type name, with or without a leading <code>:</code>.</p>
 </dd>
   </dl>
 
@@ -244,6 +258,12 @@ Class GesExternalTypeFieldDefinition
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The name or type name is invalid.</p>
+</dd>
+  </dl>
 
 
 
@@ -258,7 +278,7 @@ Class GesExternalTypeFieldDefinition
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the kind.</p>
+  <div class="markdown level1 summary"><p>Gets the builtin kind, or <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> when the field is declared with a custom type name.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -290,7 +310,7 @@ Class GesExternalTypeFieldDefinition
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the name.</p>
+  <div class="markdown level1 summary"><p>Gets the normalized field name.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -322,7 +342,7 @@ Class GesExternalTypeFieldDefinition
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the type name.</p>
+  <div class="markdown level1 summary"><p>Gets the normalized declared type name without the leading <code>:</code>, including a unit where one is declared.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -396,7 +416,7 @@ Class GesExternalTypeFieldDefinition
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

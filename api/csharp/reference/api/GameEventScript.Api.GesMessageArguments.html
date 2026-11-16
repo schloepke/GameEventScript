@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesMessageArguments | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesMessageArguments | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesMessageArguments | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesMessageArguments | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="Ordered message arguments. Argument names are part of the message signature and therefore preserve source order.">
       <link rel="icon" href="../assets/logo.svg">
@@ -149,7 +149,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the count.</p>
+  <div class="markdown level1 summary"><p>Gets the number of positional and named arguments.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -181,7 +181,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the empty.</p>
+  <div class="markdown level1 summary"><p>Gets the shared instance without arguments.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -213,7 +213,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the value at the specified index.</p>
+  <div class="markdown level1 summary"><p>Gets the argument value at <code class="paramref">index</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -224,7 +224,7 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
@@ -241,6 +241,12 @@ and therefore preserve source order.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.indexoutofrangeexception">IndexOutOfRangeException</a></dt>
+    <dd><p><code class="paramref">index</code> is outside the argument list.</p>
+</dd>
+  </dl>
 
 
 
@@ -251,7 +257,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the value at the specified index.</p>
+  <div class="markdown level1 summary"><p>Gets the value of the argument with the label <code class="paramref">name</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -262,7 +268,7 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The name value.</p>
+    <dd><p>The argument label. Leading and trailing ASCII whitespace is ignored.</p>
 </dd>
   </dl>
 
@@ -279,6 +285,16 @@ and therefore preserve source order.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.keynotfoundexception">KeyNotFoundException</a></dt>
+    <dd><p>No argument carries the label <code class="paramref">name</code>; positional
+<code>_</code> arguments are never found by name.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">name</code> is not valid Unicode or not a portable lowercase argument label.</p>
+</dd>
+  </dl>
 
 
 
@@ -289,7 +305,8 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the keys.</p>
+  <div class="markdown level1 summary"><p>Gets the normalized labels in argument order, including repeated positional <code>_</code> labels. Each access returns a new sequence that
+serves as its own enumerator, so enumerate one returned instance only once at a time.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -353,7 +370,8 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the values.</p>
+  <div class="markdown level1 summary"><p>Gets the argument values in argument order. Each access returns a new sequence that serves as its own enumerator, so enumerate one
+returned instance only once at a time.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -389,7 +407,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the contains key operation.</p>
+  <div class="markdown level1 summary"><p>Determines whether an argument carries the label <code class="paramref">name</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -400,14 +418,15 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The name value.</p>
+    <dd><p>The argument label. Leading and trailing ASCII whitespace is ignored.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when a named argument has the normalized label; always <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a> for <code>_</code>, an empty
+or a whitespace-only label.</p>
 </dd>
   </dl>
 
@@ -418,6 +437,12 @@ and therefore preserve source order.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">name</code> is not valid Unicode or not a portable lowercase argument label.</p>
+</dd>
+  </dl>
 
 
 
@@ -428,7 +453,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Creates a value.</p>
+  <div class="markdown level1 summary"><p>Creates arguments from an ordered list by copying its labels and values; the order defines the message signature.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -439,14 +464,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>arguments</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesMessageArgument.html">GesMessageArgument</a>&gt;</dt>
-    <dd><p>The arguments value.</p>
+    <dd><p>The arguments in signature order; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> or an empty list yields <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Empty">Empty</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Api.GesMessageArguments.html">GesMessageArguments</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>A new immutable argument list, or <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Empty">Empty</a>.</p>
 </dd>
   </dl>
 
@@ -457,6 +482,12 @@ and therefore preserve source order.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>A named label occurs more than once; the positional label <code>_</code> may repeat.</p>
+</dd>
+  </dl>
 
 
 
@@ -467,7 +498,10 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the as boolean.</p>
+  <div class="markdown level1 summary"><p>Converts the argument at <code class="paramref">index</code> to a Boolean, as <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_AsBoolean">AsBoolean()</a> does.
+A Boolean is returned unchanged; numbers, quantities and Percentages are true when nonzero; a Vector or Point is true when
+any component is nonzero; a Text is true only when it is <code>true</code> (ASCII case-insensitive) or <code>1</code>. Every other kind, including
+Nothing, Tag, Dice, Bytes and the collections, yields <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -478,14 +512,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The converted Boolean.</p>
 </dd>
   </dl>
 
@@ -506,7 +540,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the as boolean.</p>
+  <div class="markdown level1 summary"><p>Converts the argument with the label <code class="paramref">name</code> to a Boolean, as <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_GetAsBoolean_System_Int32_">GetAsBoolean(int)</a> does.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -517,14 +551,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The name value.</p>
+    <dd><p>The argument label. Leading and trailing ASCII whitespace is ignored.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The converted Boolean.</p>
 </dd>
   </dl>
 
@@ -535,6 +569,16 @@ and therefore preserve source order.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.keynotfoundexception">KeyNotFoundException</a></dt>
+    <dd><p>No argument carries the label <code class="paramref">name</code>; positional
+<code>_</code> arguments are never found by name.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">name</code> is not valid Unicode or not a portable lowercase argument label.</p>
+</dd>
+  </dl>
 
 
 
@@ -545,7 +589,10 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the as integer.</p>
+  <div class="markdown level1 summary"><p>Converts the argument at <code class="paramref">index</code> to a signed 64-bit integer, as <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_AsInteger">AsInteger()</a> does.
+Integer values are returned unchanged and Dice yield the sum of their rolls; Boolean yields 1 or 0; binary64 numbers and
+Percentage ratios are truncated toward zero and saturated to the Int64 range. Every other kind, including Nothing, yields 0. A
+quantity's unit is ignored, so the number is read in the value's own unit.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -556,14 +603,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The converted integer.</p>
 </dd>
   </dl>
 
@@ -584,7 +631,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the as integer.</p>
+  <div class="markdown level1 summary"><p>Converts the argument with the label <code class="paramref">name</code> to a signed 64-bit integer, as <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_GetAsInteger_System_Int32_">GetAsInteger(int)</a> does.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -595,14 +642,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The name value.</p>
+    <dd><p>The argument label. Leading and trailing ASCII whitespace is ignored.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The converted integer.</p>
 </dd>
   </dl>
 
@@ -613,6 +660,16 @@ and therefore preserve source order.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.keynotfoundexception">KeyNotFoundException</a></dt>
+    <dd><p>No argument carries the label <code class="paramref">name</code>; positional
+<code>_</code> arguments are never found by name.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">name</code> is not valid Unicode or not a portable lowercase argument label.</p>
+</dd>
+  </dl>
 
 
 
@@ -623,7 +680,10 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the as number.</p>
+  <div class="markdown level1 summary"><p>Converts the argument at <code class="paramref">index</code> to a binary64 number, as <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_AsNumber">AsNumber()</a> does.
+Integer values and Dice sums are converted to binary64 and may round beyond 2^53; binary64 numbers are returned unchanged;
+a Percentage yields its ratio, so 50% is 0.5; Boolean yields 1 or 0. Every other kind, including Nothing, yields NaN. A quantity's unit is
+ignored, so the number is read in the value's own unit.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -634,14 +694,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The converted number, or NaN for a non-numeric argument.</p>
 </dd>
   </dl>
 
@@ -662,7 +722,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the as number.</p>
+  <div class="markdown level1 summary"><p>Converts the argument with the label <code class="paramref">name</code> to a binary64 number, as <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_GetAsNumber_System_Int32_">GetAsNumber(int)</a> does.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -673,14 +733,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The name value.</p>
+    <dd><p>The argument label. Leading and trailing ASCII whitespace is ignored.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The converted number, or NaN for a non-numeric argument.</p>
 </dd>
   </dl>
 
@@ -691,6 +751,16 @@ and therefore preserve source order.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.keynotfoundexception">KeyNotFoundException</a></dt>
+    <dd><p>No argument carries the label <code class="paramref">name</code>; positional
+<code>_</code> arguments are never found by name.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">name</code> is not valid Unicode or not a portable lowercase argument label.</p>
+</dd>
+  </dl>
 
 
 
@@ -701,7 +771,9 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the as text.</p>
+  <div class="markdown level1 summary"><p>Converts the argument at <code class="paramref">index</code> to text, as <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_AsText">AsText()</a> does.
+A Text yields its content and a Tag its name without the leading <code>#</code>. Every other kind yields a newly formatted canonical
+text form, the same as <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_ToString">ToString()</a>, for example <code>nothing</code>, <code>true</code> or <code>:Vector(x: 1, y: 2, z: 3)</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -712,14 +784,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The argument text.</p>
 </dd>
   </dl>
 
@@ -740,7 +812,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the as text.</p>
+  <div class="markdown level1 summary"><p>Converts the argument with the label <code class="paramref">name</code> to text, as <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_GetAsText_System_Int32_">GetAsText(int)</a> does.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -751,14 +823,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The name value.</p>
+    <dd><p>The argument label. Leading and trailing ASCII whitespace is ignored.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The argument text.</p>
 </dd>
   </dl>
 
@@ -769,6 +841,16 @@ and therefore preserve source order.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.keynotfoundexception">KeyNotFoundException</a></dt>
+    <dd><p>No argument carries the label <code class="paramref">name</code>; positional
+<code>_</code> arguments are never found by name.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">name</code> is not valid Unicode or not a portable lowercase argument label.</p>
+</dd>
+  </dl>
 
 
 
@@ -779,7 +861,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the enumerator.</p>
+  <div class="markdown level1 summary"><p>Returns a new enumerator over the label and value pairs in argument order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -791,7 +873,7 @@ and therefore preserve source order.</p>
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerator-1">IEnumerator</a>&lt;<a class="xref" href="GameEventScript.Api.GesMessageArgument.html">GesMessageArgument</a>&gt;</dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>An enumerator that creates each <a class="xref" href="GameEventScript.Api.GesMessageArgument.html">GesMessageArgument</a> on access without copying the argument list.</p>
 </dd>
   </dl>
 
@@ -812,7 +894,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Determines whether has value at.</p>
+  <div class="markdown level1 summary"><p>Determines whether the argument at <code class="paramref">index</code> carries content.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -823,14 +905,15 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> for every number, Boolean, Tag, Vector, Point, Handler, Message and external value, including zero and
+<a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a> for Nothing and for an empty Text, Dice, Bytes, List, Map, Record or Range.</p>
 </dd>
   </dl>
 
@@ -851,7 +934,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the index of operation.</p>
+  <div class="markdown level1 summary"><p>Finds the index of the argument with the label <code class="paramref">name</code>, comparing normalized labels ordinally.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -862,14 +945,15 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The name value.</p>
+    <dd><p>The argument label. Leading and trailing ASCII whitespace is ignored.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The zero-based index, or -1 when no named argument has the label. Positional <code><em></em></code> arguments are never found, so <code></code>, an
+empty or a whitespace-only label returns -1.</p>
 </dd>
   </dl>
 
@@ -880,6 +964,12 @@ and therefore preserve source order.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">name</code> is not valid Unicode or not a portable lowercase argument label.</p>
+</dd>
+  </dl>
 
 
 
@@ -890,7 +980,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Determines whether is nothing at.</p>
+  <div class="markdown level1 summary"><p>Determines whether the argument at <code class="paramref">index</code> is Nothing.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -901,14 +991,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> for Nothing and for a binary64 or Percentage value holding NaN; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
 </dd>
   </dl>
 
@@ -929,7 +1019,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Determines whether is numeric at.</p>
+  <div class="markdown level1 summary"><p>Determines whether the argument at <code class="paramref">index</code> is numeric.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -940,14 +1030,15 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> for numbers and quantities, Percentages, Booleans and Dice; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>, also for
+Vectors and Points.</p>
 </dd>
   </dl>
 
@@ -968,7 +1059,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the kind at operation.</p>
+  <div class="markdown level1 summary"><p>Gets the portable value kind of the argument at <code class="paramref">index</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -979,14 +1070,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html">GesBytecodeTypeKind</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The argument's kind, for example Integer for an integral number or quantity.</p>
 </dd>
   </dl>
 
@@ -1007,7 +1098,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the name at operation.</p>
+  <div class="markdown level1 summary"><p>Gets the normalized label of the argument at <code class="paramref">index</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1018,14 +1109,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The label, or <code>_</code> for a positional argument.</p>
 </dd>
   </dl>
 
@@ -1046,7 +1137,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Returns the to string result for this value.</p>
+  <div class="markdown level1 summary"><p>Formats the arguments as <code>label: value</code> pairs separated by <code>, </code>, in argument order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1058,7 +1149,8 @@ and therefore preserve source order.</p>
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The formatted arguments, with <code>_</code> as the label of positional arguments and each value in its canonical text form, or an
+empty string when there are no arguments.</p>
 </dd>
   </dl>
 
@@ -1079,7 +1171,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the unit at operation.</p>
+  <div class="markdown level1 summary"><p>Gets the quantity unit of the argument at <code class="paramref">index</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1090,14 +1182,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The unit of a quantity, Vector or Point, or <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitNone">UnitNone</a> for a unitless value.</p>
 </dd>
   </dl>
 
@@ -1118,7 +1210,7 @@ and therefore preserve source order.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the value at operation.</p>
+  <div class="markdown level1 summary"><p>Gets the argument value at <code class="paramref">index</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1129,14 +1221,14 @@ and therefore preserve source order.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based argument index; it must be nonnegative and less than <a class="xref" href="GameEventScript.Api.GesMessageArguments.html#GameEventScript_Api_GesMessageArguments_Count">Count</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The stored value.</p>
 </dd>
   </dl>
 
@@ -1147,6 +1239,12 @@ and therefore preserve source order.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.indexoutofrangeexception">IndexOutOfRangeException</a></dt>
+    <dd><p><code class="paramref">index</code> is outside the argument list.</p>
+</dd>
+  </dl>
 
 
 
@@ -1167,7 +1265,7 @@ and therefore preserve source order.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

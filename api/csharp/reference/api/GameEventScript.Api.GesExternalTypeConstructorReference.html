@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesExternalTypeConstructorReference | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesExternalTypeConstructorReference | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesExternalTypeConstructorReference | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesExternalTypeConstructorReference | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="Represents an immutable normalized external type name and constructor argument signature.">
       <link rel="icon" href="../assets/logo.svg">
@@ -143,7 +143,7 @@ Class GesExternalTypeConstructorReference
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script External Type Constructor Reference.</p>
+  <div class="markdown level1 summary"><p>Creates a reference, normalizing the type name and copying the argument labels in ordinal order.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -154,10 +154,10 @@ Class GesExternalTypeConstructorReference
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>typeName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The type name value.</p>
+    <dd><p>The type name, with or without a leading <code>:</code>.</p>
 </dd>
     <dt><code>argumentLabels</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
-    <dd><p>The argument labels value.</p>
+    <dd><p>The argument labels; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> means none.</p>
 </dd>
   </dl>
 
@@ -169,6 +169,12 @@ Class GesExternalTypeConstructorReference
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The type name or a label is invalid.</p>
+</dd>
+  </dl>
 
 
 
@@ -215,7 +221,7 @@ Class GesExternalTypeConstructorReference
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the signature id.</p>
+  <div class="markdown level1 summary"><p>Gets the canonical signature formed by <a class="xref" href="GameEventScript.Api.GesExternalTypeConstructorReference.html#GameEventScript_Api_GesExternalTypeConstructorReference_CreateSignatureId_System_String_System_Collections_Generic_IEnumerable_System_String__">CreateSignatureId(string, IEnumerable&lt;string?&gt;?)</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -247,7 +253,7 @@ Class GesExternalTypeConstructorReference
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the type name.</p>
+  <div class="markdown level1 summary"><p>Gets the normalized type name without the leading <code>:</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -283,7 +289,8 @@ Class GesExternalTypeConstructorReference
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Creates a signature id.</p>
+  <div class="markdown level1 summary"><p>Formats the canonical constructor signature <code>TypeName(label,...)</code>: the normalized type name followed by
+the normalized labels in ordinal order, separated by commas. The function is pure.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -294,17 +301,17 @@ Class GesExternalTypeConstructorReference
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>typeName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The type name value.</p>
+    <dd><p>The type name, with or without a leading <code>:</code>.</p>
 </dd>
     <dt><code>argumentLabels</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
-    <dd><p>The argument labels value.</p>
+    <dd><p>The argument labels in any order; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> means none.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The canonical signature, for example <code>Turret(power,range)</code>.</p>
 </dd>
   </dl>
 
@@ -315,6 +322,12 @@ Class GesExternalTypeConstructorReference
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The type name or a label is invalid.</p>
+</dd>
+  </dl>
 
 
 
@@ -335,7 +348,7 @@ Class GesExternalTypeConstructorReference
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

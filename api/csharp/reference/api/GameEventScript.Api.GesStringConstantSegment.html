@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct GesStringConstantSegment | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Struct GesStringConstantSegment | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct GesStringConstantSegment | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Struct GesStringConstantSegment | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script string constant segment.">
+      <meta name="description" content="The immutable StringConstantSegment (section 0x0002): an ordered pool of at most 65,535 strict UTF-8 strings that bytecode and bindings reference by zero-based  index. Order and duplicates are program data.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,8 @@ Struct GesStringConstantSegment
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script string constant segment.</p>
+  <div class="markdown summary"><p>The immutable StringConstantSegment (section <code>0x0002</code>): an ordered pool of at most 65,535 strict UTF-8 strings
+that bytecode and bindings reference by zero-based <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a> index. Order and duplicates are program data.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -123,46 +124,10 @@ Struct GesStringConstantSegment
 
 
 
-
-
-  <h2 class="section" id="constructors">Constructors
-</h2>
-
-
-  <a id="GameEventScript_Api_GesStringConstantSegment__ctor_" data-uid="GameEventScript.Api.GesStringConstantSegment.#ctor*"></a>
-
-  <h3 id="GameEventScript_Api_GesStringConstantSegment__ctor_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GesStringConstantSegment_SliceEntry__System_Collections_Generic_IReadOnlyList_System_Byte__" data-uid="GameEventScript.Api.GesStringConstantSegment.#ctor(System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GesStringConstantSegment.SliceEntry},System.Collections.Generic.IReadOnlyList{System.Byte})">
-  GesStringConstantSegment(IReadOnlyList&lt;SliceEntry&gt;, IReadOnlyList&lt;byte&gt;)
-  
-  </h3>
-
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script String Constant Segment.</p>
+  <h2 id="GameEventScript_Api_GesStringConstantSegment_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>All entries share one contiguous byte buffer, <a class="xref" href="GameEventScript.Api.GesStringConstantSegment.html#GameEventScript_Api_GesStringConstantSegment_Data">Data</a>, addressed by <a class="xref" href="GameEventScript.Api.GesStringConstantSegment.html#GameEventScript_Api_GesStringConstantSegment_Slices">Slices</a>. A
+<a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/default">default</a> instance is an empty pool on which every index is invalid.</p>
 </div>
-  <div class="markdown level1 conceptual"></div>
-
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GesStringConstantSegment(IReadOnlyList&lt;GesStringConstantSegment.SliceEntry&gt; slices, IReadOnlyList&lt;byte&gt; data)</code></pre>
-  </div>
-
-  <h4 class="section">Parameters</h4>
-  <dl class="parameters">
-    <dt><code>slices</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesStringConstantSegment.html">GesStringConstantSegment</a>.<a class="xref" href="GameEventScript.Api.GesStringConstantSegment.SliceEntry.html">SliceEntry</a>&gt;</dt>
-    <dd><p>The slices value.</p>
-</dd>
-    <dt><code>data</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
-    <dd><p>The data value.</p>
-</dd>
-  </dl>
-
-
-
-
-
-
-
-
-
-
 
 
   <h2 class="section" id="properties">Properties
@@ -176,7 +141,7 @@ Struct GesStringConstantSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the data.</p>
+  <div class="markdown level1 summary"><p>Gets the immutable concatenated UTF-8 bytes of all entries.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -208,7 +173,7 @@ Struct GesStringConstantSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the slices.</p>
+  <div class="markdown level1 summary"><p>Gets the immutable slice table; its <a class="xref" href="GameEventScript.Api.GesReadOnlyArray-1.html#GameEventScript_Api_GesReadOnlyArray_1_Count">Count</a> is the number of string entries.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -244,7 +209,7 @@ Struct GesStringConstantSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Resolves the value.</p>
+  <div class="markdown level1 summary"><p>Decodes a string entry into a new <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>; each call decodes again.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -255,14 +220,14 @@ Struct GesStringConstantSegment
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based entry index, which must be less than the number of <a class="xref" href="GameEventScript.Api.GesStringConstantSegment.html#GameEventScript_Api_GesStringConstantSegment_Slices">Slices</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The decoded string.</p>
 </dd>
   </dl>
 
@@ -273,6 +238,12 @@ Struct GesStringConstantSegment
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.indexoutofrangeexception">IndexOutOfRangeException</a></dt>
+    <dd><p>The index does not name an entry.</p>
+</dd>
+  </dl>
 
 
 
@@ -283,7 +254,7 @@ Struct GesStringConstantSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Resolves the size.</p>
+  <div class="markdown level1 summary"><p>Returns the UTF-8 byte length of a string entry without decoding it.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -294,14 +265,14 @@ Struct GesStringConstantSegment
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
-    <dd><p>The index value.</p>
+    <dd><p>The zero-based entry index, which must be less than the number of <a class="xref" href="GameEventScript.Api.GesStringConstantSegment.html#GameEventScript_Api_GesStringConstantSegment_Slices">Slices</a>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The entry's length in UTF-8 bytes.</p>
 </dd>
   </dl>
 
@@ -312,6 +283,12 @@ Struct GesStringConstantSegment
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.indexoutofrangeexception">IndexOutOfRangeException</a></dt>
+    <dd><p>The index does not name an entry.</p>
+</dd>
+  </dl>
 
 
 
@@ -332,7 +309,7 @@ Struct GesStringConstantSegment
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

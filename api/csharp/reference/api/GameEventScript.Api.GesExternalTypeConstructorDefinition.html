@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesExternalTypeConstructorDefinition | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesExternalTypeConstructorDefinition | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesExternalTypeConstructorDefinition | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesExternalTypeConstructorDefinition | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script external type constructor definition.">
+      <meta name="description" content="Immutable declarative signature of one external type constructor: the type it builds and its parameters.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,7 @@ Class GesExternalTypeConstructorDefinition
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script external type constructor definition.</p>
+  <div class="markdown summary"><p>Immutable declarative signature of one external type constructor: the type it builds and its parameters.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -143,7 +143,7 @@ Class GesExternalTypeConstructorDefinition
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script External Type Constructor Definition.</p>
+  <div class="markdown level1 summary"><p>Creates a constructor signature, copying the parameter sequence and deriving <a class="xref" href="GameEventScript.Api.GesExternalTypeConstructorDefinition.html#GameEventScript_Api_GesExternalTypeConstructorDefinition_SignatureId">SignatureId</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -154,10 +154,10 @@ Class GesExternalTypeConstructorDefinition
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>typeName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The type name value.</p>
+    <dd><p>The type the constructor builds, with or without a leading <code>:</code>.</p>
 </dd>
     <dt><code>parameters</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="GameEventScript.Api.GesExternalTypeParameterDefinition.html">GesExternalTypeParameterDefinition</a>&gt;</dt>
-    <dd><p>The parameters value.</p>
+    <dd><p>The parameters in declaration order.</p>
 </dd>
   </dl>
 
@@ -169,6 +169,15 @@ Class GesExternalTypeConstructorDefinition
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">parameters</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The type name is invalid, or the sequence contains <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> or a repeated parameter name.</p>
+</dd>
+  </dl>
 
 
 
@@ -215,7 +224,8 @@ Class GesExternalTypeConstructorDefinition
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the signature id.</p>
+  <div class="markdown level1 summary"><p>Gets the canonical signature <code>TypeName(label,...)</code> formed by
+<a class="xref" href="GameEventScript.Api.GesExternalTypeConstructorReference.html#GameEventScript_Api_GesExternalTypeConstructorReference_CreateSignatureId_System_String_System_Collections_Generic_IEnumerable_System_String__">CreateSignatureId(string, IEnumerable&lt;string?&gt;?)</a> from the parameter names.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -247,7 +257,7 @@ Class GesExternalTypeConstructorDefinition
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the type name.</p>
+  <div class="markdown level1 summary"><p>Gets the normalized name of the type the constructor builds, without the leading <code>:</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -289,7 +299,7 @@ Class GesExternalTypeConstructorDefinition
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

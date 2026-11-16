@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct GesBitWriter | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Struct GesBitWriter | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct GesBitWriter | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Struct GesBitWriter | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="Writes values of 0 to 64 bits into a caller&#39;s buffer in the bit order of the schema wire format: least significant bit first, bytes in Little Endian order. It knows no schema; generated schema code and  build on it. Writing allocates nothing.">
       <link rel="icon" href="../assets/logo.svg">
@@ -127,8 +127,9 @@ on it. Writing allocates nothing.</p>
 
   <h2 id="GameEventScript_Api_GesBitWriter_remarks">Remarks</h2>
   <div class="markdown level0 remarks"><p>Bits are collected in a 64-bit word that is stored once it is full, so a buffer of the record's byte count suffices; a
-full buffer fails with <code>wire.bufferTooSmall</code>. The writer must not be copied while it is used, since each copy
-holds its own pending bits.</p>
+full buffer fails with <code>wire.bufferTooSmall</code>. A <a class="xref" href="GameEventScript.Api.GesBitWriter.html#GameEventScript_Api_GesBitWriter_Counting">Counting()</a> writer stores nothing and only counts, so
+that a caller learns the exact byte count of a record before it writes it. The writer must not be copied while it is
+used, since each copy holds its own pending bits.</p>
 </div>
 
 
@@ -205,8 +206,76 @@ holds its own pending bits.</p>
 
 
 
+  <a id="GameEventScript_Api_GesBitWriter_RequiredByteCount_" data-uid="GameEventScript.Api.GesBitWriter.RequiredByteCount*"></a>
+
+  <h3 id="GameEventScript_Api_GesBitWriter_RequiredByteCount" data-uid="GameEventScript.Api.GesBitWriter.RequiredByteCount">
+  RequiredByteCount
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets, for a <a class="xref" href="GameEventScript.Api.GesBitWriter.html#GameEventScript_Api_GesBitWriter_Counting">Counting()</a> writer, the bytes a buffer needs for the writes so far, including bits that
+<a class="xref" href="GameEventScript.Api.GesBitWriter.html#GameEventScript_Api_GesBitWriter_Rewind_System_Int64_">Rewind(long)</a> took back; it is at least the count <a class="xref" href="GameEventScript.Api.GesBitWriter.html#GameEventScript_Api_GesBitWriter_Finish">Finish()</a> returns. A writer over a buffer reports
+0.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly int RequiredByteCount { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <h2 class="section" id="methods">Methods
 </h2>
+
+
+  <a id="GameEventScript_Api_GesBitWriter_Counting_" data-uid="GameEventScript.Api.GesBitWriter.Counting*"></a>
+
+  <h3 id="GameEventScript_Api_GesBitWriter_Counting" data-uid="GameEventScript.Api.GesBitWriter.Counting">
+  Counting()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a writer that stores nothing: it accepts every write, and <a class="xref" href="GameEventScript.Api.GesBitWriter.html#GameEventScript_Api_GesBitWriter_Finish">Finish()</a> returns the byte count
+that a buffer needs for the same writes.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesBitWriter Counting()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesBitWriter.html">GesBitWriter</a></dt>
+    <dd><p>The writer.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
 
 
   <a id="GameEventScript_Api_GesBitWriter_Finish_" data-uid="GameEventScript.Api.GesBitWriter.Finish*"></a>
@@ -412,7 +481,7 @@ holds its own pending bits.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

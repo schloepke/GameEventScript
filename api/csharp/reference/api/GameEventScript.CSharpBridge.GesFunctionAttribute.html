@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesFunctionAttribute | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesFunctionAttribute | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesFunctionAttribute | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesFunctionAttribute | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a ges function attribute.">
+      <meta name="description" content="Exposes a method of a  type as the extension function :extension.name(...).">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,7 @@ Class GesFunctionAttribute
   <dl><dt>Assembly</dt><dd>GameEventScript.CSharpBridge.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a ges function attribute.</p>
+  <div class="markdown summary"><p>Exposes a method of a <a class="xref" href="GameEventScript.CSharpBridge.GesExtensionAttribute.html">GesExtensionAttribute</a> type as the extension function <code>:extension.name(...)</code>.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -237,6 +237,12 @@ public sealed class GesFunctionAttribute : Attribute</code></pre>
 
 
 
+  <h2 id="GameEventScript_CSharpBridge_GesFunctionAttribute_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>Each script parameter declares <a class="xref" href="GameEventScript.CSharpBridge.GesParamAttribute.html">GesParamAttribute</a>; the labels and their order form the signature. An optional
+leading <a class="xref" href="GameEventScript.Api.GesExtensionCall.html">GesExtensionCall</a> parameter receives the call, and at most one <a class="xref" href="GameEventScript.Api.GesRandomGenerator.html">GesRandomGenerator</a>
+parameter, in any position, receives the host's generator (<a class="xref" href="GameEventScript.Api.GesExtensionCall.html#GameEventScript_Api_GesExtensionCall_Random">Random</a>); neither is a script
+argument, takes a <a class="xref" href="GameEventScript.CSharpBridge.GesParamAttribute.html">GesParamAttribute</a> or counts toward the four script parameters.</p>
+</div>
 
 
   <h2 class="section" id="constructors">Constructors
@@ -250,7 +256,7 @@ public sealed class GesFunctionAttribute : Attribute</code></pre>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Represents a ges function attribute.</p>
+  <div class="markdown level1 summary"><p>Exposes a method of a <a class="xref" href="GameEventScript.CSharpBridge.GesExtensionAttribute.html">GesExtensionAttribute</a> type as the extension function <code>:extension.name(...)</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -271,6 +277,12 @@ public sealed class GesFunctionAttribute : Attribute</code></pre>
 
 
 
+  <h4 class="section" id="GameEventScript_CSharpBridge_GesFunctionAttribute__ctor_System_String__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Each script parameter declares <a class="xref" href="GameEventScript.CSharpBridge.GesParamAttribute.html">GesParamAttribute</a>; the labels and their order form the signature. An optional
+leading <a class="xref" href="GameEventScript.Api.GesExtensionCall.html">GesExtensionCall</a> parameter receives the call, and at most one <a class="xref" href="GameEventScript.Api.GesRandomGenerator.html">GesRandomGenerator</a>
+parameter, in any position, receives the host's generator (<a class="xref" href="GameEventScript.Api.GesExtensionCall.html#GameEventScript_Api_GesExtensionCall_Random">Random</a>); neither is a script
+argument, takes a <a class="xref" href="GameEventScript.CSharpBridge.GesParamAttribute.html">GesParamAttribute</a> or counts toward the four script parameters.</p>
+</div>
 
 
 
@@ -336,6 +348,42 @@ public sealed class GesFunctionAttribute : Attribute</code></pre>
 </dd>
     <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
     <dd><p>The unit value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GesFunctionAttribute__ctor_" data-uid="GameEventScript.CSharpBridge.GesFunctionAttribute.#ctor*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GesFunctionAttribute__ctor_System_String_GameEventScript_Api_GesQuantityUnit_" data-uid="GameEventScript.CSharpBridge.GesFunctionAttribute.#ctor(System.String,GameEventScript.Api.GesQuantityUnit)">
+  GesFunctionAttribute(string, GesQuantityUnit)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Declares the unit of a numeric, spatial or shape result without restricting its kind.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesFunctionAttribute(string name, GesQuantityUnit unit)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The function name.</p>
+</dd>
+    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
+    <dd><p>The unit attached to the result.</p>
 </dd>
   </dl>
 
@@ -499,7 +547,7 @@ public sealed class GesFunctionAttribute : Attribute</code></pre>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

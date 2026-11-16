@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct GesDisc | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct GesDisc | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
+      
+      <meta name="description" content="A filled circle in the plane z = 0, without a unit: a centre and a radius. Creating one takes the radius&#39;s magnitude. A disc is valid with a finite centre in the plane and a finite radius; the operations of an invalid one give null, as GES operations give nothing for a domain failure. Scripts see it as the external type :Disc of .">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.GesDisc">
+
+
+
+  <h1 id="GameEventScript_Api_GesDisc" data-uid="GameEventScript.Api.GesDisc" class="text-break">
+Struct GesDisc  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>A filled circle in the plane z = 0, without a unit: a centre and a radius. Creating one takes the radius's magnitude. A
+disc is valid with a finite centre in the plane and a finite radius; the operations of an invalid one give null, as GES
+operations give <code>nothing</code> for a domain failure. Scripts see it as the external type <code>:Disc</code> of
+<a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a>.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly struct GesDisc : IEquatable&lt;GesDisc&gt;</code></pre>
+  </div>
+
+
+
+
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.iequatable-1">IEquatable</a>&lt;<a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a>&gt;</div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="GameEventScript_Api_GesDisc__ctor_" data-uid="GameEventScript.Api.GesDisc.#ctor*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc__ctor_GameEventScript_Api_GesPoint_System_Double_" data-uid="GameEventScript.Api.GesDisc.#ctor(GameEventScript.Api.GesPoint,System.Double)">
+  GesDisc(GesPoint, double)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the disc with a centre and a radius; a negative radius counts as its magnitude.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesDisc(GesPoint center, double radius)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>center</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The centre.</p>
+</dd>
+    <dt><code>radius</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd><p>The radius.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc__ctor_" data-uid="GameEventScript.Api.GesDisc.#ctor*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc__ctor_System_Double_" data-uid="GameEventScript.Api.GesDisc.#ctor(System.Double)">
+  GesDisc(double)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the disc around the origin; a negative radius counts as its magnitude.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesDisc(double radius)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>radius</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd><p>The radius.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Api_GesDisc_Area_" data-uid="GameEventScript.Api.GesDisc.Area*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Area" data-uid="GameEventScript.Api.GesDisc.Area">
+  Area
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the area, π·r², unitless like a product of two lengths; null for an invalid disc.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double? Area { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_Bounds_" data-uid="GameEventScript.Api.GesDisc.Bounds*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Bounds" data-uid="GameEventScript.Api.GesDisc.Bounds">
+  Bounds
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the smallest box that holds the disc; null for an invalid disc.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesBox? Bounds { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_Center_" data-uid="GameEventScript.Api.GesDisc.Center*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Center" data-uid="GameEventScript.Api.GesDisc.Center">
+  Center
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the centre.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesPoint Center { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_IsValid_" data-uid="GameEventScript.Api.GesDisc.IsValid*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_IsValid" data-uid="GameEventScript.Api.GesDisc.IsValid">
+  IsValid
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the centre is finite and lies in the plane z = 0 and the radius is finite.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsValid { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_Radius_" data-uid="GameEventScript.Api.GesDisc.Radius*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Radius" data-uid="GameEventScript.Api.GesDisc.Radius">
+  Radius
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the radius, never negative.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double Radius { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Api_GesDisc_Clamp_" data-uid="GameEventScript.Api.GesDisc.Clamp*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Clamp_GameEventScript_Api_GesPoint_" data-uid="GameEventScript.Api.GesDisc.Clamp(GameEventScript.Api.GesPoint)">
+  Clamp(GesPoint)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Moves a point onto the nearest point of the disc.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesPoint? Clamp(GesPoint point)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>point</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The point.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a>?</dt>
+    <dd><p>The point itself in the plane when the disc holds it, otherwise the nearest point of its outline; null for an
+invalid disc or point.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_Contains_" data-uid="GameEventScript.Api.GesDisc.Contains*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Contains_GameEventScript_Api_GesPoint_" data-uid="GameEventScript.Api.GesDisc.Contains(GameEventScript.Api.GesPoint)">
+  Contains(GesPoint)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Tests whether a point lies in the disc, its outline included.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool? Contains(GesPoint point)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>point</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The point.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a>?</dt>
+    <dd><p>Whether it lies within the radius in the plane, false off the plane, or null for an invalid disc or point.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_DistanceTo_" data-uid="GameEventScript.Api.GesDisc.DistanceTo*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_DistanceTo_GameEventScript_Api_GesPoint_" data-uid="GameEventScript.Api.GesDisc.DistanceTo(GameEventScript.Api.GesPoint)">
+  DistanceTo(GesPoint)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the distance from a point to the outline, for points inside and outside.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double? DistanceTo(GesPoint point)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>point</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The point.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a>?</dt>
+    <dd><p>The distance, or null for an invalid disc or point.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_Equals_" data-uid="GameEventScript.Api.GesDisc.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Equals_GameEventScript_Api_GesDisc_" data-uid="GameEventScript.Api.GesDisc.Equals(GameEventScript.Api.GesDisc)">
+  Equals(GesDisc)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compares centre and radius.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Equals(GesDisc other)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>other</code> <a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a></dt>
+    <dd><p>The other disc.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether both are equal.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_Equals_" data-uid="GameEventScript.Api.GesDisc.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Equals_System_Object_" data-uid="GameEventScript.Api.GesDisc.Equals(System.Object)">
+  Equals(object?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override bool Equals(object? obj)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>obj</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_FromValue_" data-uid="GameEventScript.Api.GesDisc.FromValue*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_FromValue_GameEventScript_Runtime_Values_GesValue__GameEventScript_Api_GesQuantityUnit_" data-uid="GameEventScript.Api.GesDisc.FromValue(GameEventScript.Runtime.Values.GesValue@,GameEventScript.Api.GesQuantityUnit)">
+  FromValue(in GesValue, GesQuantityUnit)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads a <code>:Disc</code> of exactly the given unit. Units never convert.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesDisc? FromValue(in GesValue value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>value</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The GES value to read.</p>
+</dd>
+    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
+    <dd><p>The expected unit.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a>?</dt>
+    <dd><p>The disc, or null when the value is no <code>:Disc</code> of <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a> or has another unit.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_GetHashCode_" data-uid="GameEventScript.Api.GesDisc.GetHashCode*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_GetHashCode" data-uid="GameEventScript.Api.GesDisc.GetHashCode">
+  GetHashCode()
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override int GetHashCode()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_Inset_" data-uid="GameEventScript.Api.GesDisc.Inset*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Inset_System_Double_" data-uid="GameEventScript.Api.GesDisc.Inset(System.Double)">
+  Inset(double)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Shrinks the radius by a distance, or grows it when the distance is negative.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesDisc? Inset(double by)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>by</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd><p>The distance.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a>?</dt>
+    <dd><p>The inset disc, or null for an invalid disc, a distance that is not finite or a radius that would turn
+negative.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_Intersects_" data-uid="GameEventScript.Api.GesDisc.Intersects*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Intersects_GameEventScript_Api_GesBox_" data-uid="GameEventScript.Api.GesDisc.Intersects(GameEventScript.Api.GesBox)">
+  Intersects(GesBox)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Tests whether the disc shares a point with a 2D box; touching counts.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool? Intersects(GesBox box)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>box</code> <a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The box.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a>?</dt>
+    <dd><p>Whether they meet, or null for an invalid disc or a box that is not 2D or not finite.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_Intersects_" data-uid="GameEventScript.Api.GesDisc.Intersects*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Intersects_GameEventScript_Api_GesDisc_" data-uid="GameEventScript.Api.GesDisc.Intersects(GameEventScript.Api.GesDisc)">
+  Intersects(GesDisc)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Tests whether two discs share a point; touching discs intersect.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool? Intersects(GesDisc other)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>other</code> <a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a></dt>
+    <dd><p>The other disc.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a>?</dt>
+    <dd><p>Whether they meet, or null when one is invalid.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_Intersects_" data-uid="GameEventScript.Api.GesDisc.Intersects*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_Intersects_GameEventScript_Api_GesPoly_" data-uid="GameEventScript.Api.GesDisc.Intersects(GameEventScript.Api.GesPoly)">
+  Intersects(GesPoly)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Tests whether the disc shares a point with a polygon: the polygon holds the centre, or its outline comes
+within the radius.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool? Intersects(GesPoly poly)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>poly</code> <a class="xref" href="GameEventScript.Api.GesPoly.html">GesPoly</a></dt>
+    <dd><p>The polygon.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a>?</dt>
+    <dd><p>Whether they meet, or null when one is invalid.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_ToString_" data-uid="GameEventScript.Api.GesDisc.ToString*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_ToString" data-uid="GameEventScript.Api.GesDisc.ToString">
+  ToString()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Writes the disc for diagnostics.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override string ToString()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The centre and radius.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_ToValue_" data-uid="GameEventScript.Api.GesDisc.ToValue*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_ToValue_GameEventScript_Api_GesQuantityUnit_" data-uid="GameEventScript.Api.GesDisc.ToValue(GameEventScript.Api.GesQuantityUnit)">
+  ToValue(GesQuantityUnit)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Converts the disc to the external value <code>:Disc</code> of <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesValue ToValue(GesQuantityUnit unit = GesQuantityUnit.UnitNone)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
+    <dd><p>The unit of its centre and radius.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The GES value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="operators">Operators
+</h2>
+
+
+  <a id="GameEventScript_Api_GesDisc_op_Equality_" data-uid="GameEventScript.Api.GesDisc.op_Equality*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_op_Equality_GameEventScript_Api_GesDisc_GameEventScript_Api_GesDisc_" data-uid="GameEventScript.Api.GesDisc.op_Equality(GameEventScript.Api.GesDisc,GameEventScript.Api.GesDisc)">
+  operator ==(GesDisc, GesDisc)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compares centre and radius.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator ==(GesDisc left, GesDisc right)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>left</code> <a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a></dt>
+    <dd><p>The first disc.</p>
+</dd>
+    <dt><code>right</code> <a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a></dt>
+    <dd><p>The second disc.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether both are equal.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDisc_op_Inequality_" data-uid="GameEventScript.Api.GesDisc.op_Inequality*"></a>
+
+  <h3 id="GameEventScript_Api_GesDisc_op_Inequality_GameEventScript_Api_GesDisc_GameEventScript_Api_GesDisc_" data-uid="GameEventScript.Api.GesDisc.op_Inequality(GameEventScript.Api.GesDisc,GameEventScript.Api.GesDisc)">
+  operator !=(GesDisc, GesDisc)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compares centre and radius.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator !=(GesDisc left, GesDisc right)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>left</code> <a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a></dt>
+    <dd><p>The first disc.</p>
+</dd>
+    <dt><code>right</code> <a class="xref" href="GameEventScript.Api.GesDisc.html">GesDisc</a></dt>
+    <dd><p>The second disc.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether one differs.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

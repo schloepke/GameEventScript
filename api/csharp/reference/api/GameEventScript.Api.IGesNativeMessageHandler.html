@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Interface IGesNativeMessageHandler | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Interface IGesNativeMessageHandler | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Interface IGesNativeMessageHandler | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Interface IGesNativeMessageHandler | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       <meta name="description" content="Portable synchronous message handler invoked by a .">
       <link rel="icon" href="../assets/logo.svg">
@@ -114,7 +114,8 @@ Interface IGesNativeMessageHandler
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the handle operation.</p>
+  <div class="markdown level1 summary"><p>Handles one dispatched message synchronously. The host invokes the handler atomically within its serial dispatch, in descending
+priority and then registration order; the call cannot pause. Do not pump the same host reentrantly from the handler.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -125,10 +126,11 @@ Interface IGesNativeMessageHandler
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>message</code> <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
-    <dd><p>The message value.</p>
+    <dd><p>The immutable dispatched message; it may be retained.</p>
 </dd>
     <dt><code>context</code> <a class="xref" href="GameEventScript.Api.GesContext.html">GesContext</a></dt>
-    <dd><p>The context value.</p>
+    <dd><p>The owning host's context with its random stream, limits, <code>Emit</code> and <code>Publish</code>; it must not be
+retained for use after the call returns.</p>
 </dd>
   </dl>
 
@@ -139,6 +141,10 @@ Interface IGesNativeMessageHandler
 
 
 
+  <h4 class="section" id="GameEventScript_Api_IGesNativeMessageHandler_Handle_GameEventScript_Api_GameEventScriptMessage_GameEventScript_Api_GesContext__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>An exception ends only this handler invocation: <a class="xref" href="GameEventScript.Api.GesExtensionFaultException.html">GesExtensionFaultException</a> reports a caller-chosen fault and
+any other exception is reported as <code>runtime.nativeHandlerFailure</code>. The host remains usable for later messages.</p>
+</div>
 
 
 
@@ -160,7 +166,7 @@ Interface IGesNativeMessageHandler
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

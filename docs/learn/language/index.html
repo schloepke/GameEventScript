@@ -107,7 +107,7 @@ functions and tags start with lowercase letters: <code>amount</code>, <code>dama
 A <code>module</code> name such as <code>tutorial.damage</code> identifies the program; it does not
 create a namespace.</p>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — underscores in message and type names</p>
+<p><strong>Since: 0.5.0</strong> — underscores in message and type names</p>
 </blockquote>
 <p>Message and type names can group related names with single underscores:
 <code>Unit_Fire</code>, <code>:Unit_Weapon_Sniper</code>. Each part starts with an uppercase letter, so
@@ -119,6 +119,16 @@ forms no hierarchy: a <code>:Unit_Weapon</code> is no <code>:Unit</code>.</p>
 <p><code>damage(base: 30, bonus: 12)</code> matches <code>damage(base, bonus)</code>. <code>double(21)</code> is
 positional because <code>_ value</code> declares an unlabeled argument. Keep named argument
 order consistent: labels and their order participate in signature matching.</p>
+<blockquote>
+<p><strong>Since: 0.5.0</strong> — names in backticks</p>
+</blockquote>
+<p>A name that is also a GES keyword can be written in backticks. <code>`length`</code>
+is the plain name <code>length</code>, so it reads a field or binding of that name where
+plain <code>length</code> would be the intrinsic. Words that already work as argument
+labels, such as <code>length</code>, <code>e</code> or <code>to</code>, also name record fields and members
+without backticks; any other keyword, such as <code>record</code> or <code>if</code>, needs them:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">record</span><span style="--0:#D6DEEB;--1:#403F53"> :Box </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> {</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--1:#403F53">    </span></span><span style="--0:#D7DBE0;--1:#403F53">length</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#C5E478;--1:#3B61B0">:Number</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C5E478;--1:#3B61B0">`record`</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#C5E478;--1:#3B61B0">:Number</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--1:#403F53">    </span></span><span style="--0:#D7DBE0;--1:#403F53">half</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#C5E478;--1:#3B61B0">:Number</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">computed</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">by</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">`length`</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">/</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">2</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">on</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">Main</span><span style="--0:#D6DEEB;--1:#403F53">(</span><span style="--0:#C5E478;--1:#3B61B0">args</span><span style="--0:#D6DEEB;--1:#403F53">) {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">box</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--1:#403F53"><span style="--0:#D6DEEB"> :Box(</span><span style="--0:#D7DBE0">length</span><span style="--0:#D6DEEB">: </span></span><span style="--0:#F78C6C;--1:#AA0982">8</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">`record`</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">emit</span><span style="--0:#D6DEEB;--1:#403F53"> ConsoleOut(</span><span style="--0:#C5E478;--1:#3B61B0">box</span><span style="--0:#D6DEEB;--1:#403F53">.</span><span style="--0:#C5E478;--1:#3B61B0">length</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#984E4D">' '</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">box</span><span style="--0:#D6DEEB;--1:#403F53">.</span><span style="--0:#C5E478;--1:#3B61B0">half</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#984E4D">' '</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">box</span><span style="--0:#D6DEEB;--1:#403F53">.</span><span style="--0:#C5E478;--1:#3B61B0">`record`</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="record :Box as {    length: :Number,    &#x60;record&#x60;: :Number,    half: :Number computed by &#x60;length&#x60; / 2}on Main(args) {    let box be :Box(length: 8, &#x60;record&#x60;: 1)    emit ConsoleOut(box.length, &#x27; &#x27;, box.half, &#x27; &#x27;, box.&#x60;record&#x60;)}"><div></div></button></div></figure></div>
 <h2 id="values-and-local-bindings">Values and local bindings</h2>
 <p>Use <code>let name be expression</code> to bind a value. Bindings are immutable: compute a
 new value instead of assigning to an existing name.</p>
@@ -156,7 +166,7 @@ arguments that look like numbers. Convert deliberately with <code>as :Number</co
 <code>parse</code> when you want literal recognition. Failed Number conversions yield
 <code>nothing</code>; see <a href="/docs/reference/semantics/numbers/">Number semantics</a> for exact rules.</p>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — <code>parse strict</code></p>
+<p><strong>Since: 0.5.0</strong> — <code>parse strict</code></p>
 </blockquote>
 <p><code>parse</code> returns unrecognized input unchanged as Text, so <code>parse "standard"</code> and
 <code>parse "[1, 2"</code> are both Text. Use <code>parse strict</code> when only complete literals are
@@ -182,9 +192,7 @@ explicit seed; <code>[:reduce acc, item =&gt; expression]</code> uses the first 
 <p>This prints <code>160, 60</code>. An empty fold returns its seed; an empty reduce returns
 <code>nothing</code>.</p>
 <h3 id="combine-sources-and-bind-components">Combine sources and bind components</h3>
-<blockquote>
-<p><strong>Unreleased:</strong> these forms require the current development compiler and runtime.</p>
-</blockquote>
+<p class="ges-since"><strong>Since: 0.4.0</strong></p>
 <p>Use a Cartesian selector when every item from one source should be combined
 with every item from another. Bind the components directly and project the
 result into the data you need:</p>
@@ -273,7 +281,7 @@ sends its starting message. <code>:handler</code> lists registered handlers; <co
 <code>:dump</code> inspect a selected module. Ctrl+N inserts a newline; Enter submits input.
 Temporary input bindings do not persist between submissions.</p>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — GES documents and schemas</p>
+<p><strong>Since: 0.5.0</strong> — GES documents and schemas</p>
 </blockquote>
 <p>Data can live outside scripts. <a href="/docs/reference/documents/">GES documents</a>
 (<code>.gesd</code>) use the same literal syntax for configuration and content, and

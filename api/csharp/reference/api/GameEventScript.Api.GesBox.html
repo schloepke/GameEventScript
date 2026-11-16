@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct GesBox | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct GesBox | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
+      
+      <meta name="description" content="An axis-aligned box between two corners, without a unit. Creating one orders its corners, so  is never above  on an axis; a 2D box has Z 0 on both. Scripts see it as the external type :Box of .">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.GesBox">
+
+
+
+  <h1 id="GameEventScript_Api_GesBox" data-uid="GameEventScript.Api.GesBox" class="text-break">
+Struct GesBox  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>An axis-aligned box between two corners, without a unit. Creating one orders its corners, so <a class="xref" href="GameEventScript.Api.GesBox.html#GameEventScript_Api_GesBox_Min">Min</a> is never
+above <a class="xref" href="GameEventScript.Api.GesBox.html#GameEventScript_Api_GesBox_Max">Max</a> on an axis; a 2D box has <code>Z</code> 0 on both. Scripts see it as the external type <code>:Box</code> of
+<a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a>.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly struct GesBox : IEquatable&lt;GesBox&gt;</code></pre>
+  </div>
+
+
+
+
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.iequatable-1">IEquatable</a>&lt;<a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a>&gt;</div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="GameEventScript_Api_GesBox__ctor_" data-uid="GameEventScript.Api.GesBox.#ctor*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox__ctor_GameEventScript_Api_GesPoint_GameEventScript_Api_GesPoint_" data-uid="GameEventScript.Api.GesBox.#ctor(GameEventScript.Api.GesPoint,GameEventScript.Api.GesPoint)">
+  GesBox(GesPoint, GesPoint)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the box between two opposite corners, in any order.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesBox(GesPoint corner, GesPoint opposite)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>corner</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>One corner.</p>
+</dd>
+    <dt><code>opposite</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The opposite corner.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Api_GesBox_Center_" data-uid="GameEventScript.Api.GesBox.Center*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Center" data-uid="GameEventScript.Api.GesBox.Center">
+  Center
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the centre.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesPoint Center { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_Is2D_" data-uid="GameEventScript.Api.GesBox.Is2D*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Is2D" data-uid="GameEventScript.Api.GesBox.Is2D">
+  Is2D
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether both corners lie in the plane z = 0.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Is2D { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_IsFinite_" data-uid="GameEventScript.Api.GesBox.IsFinite*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_IsFinite" data-uid="GameEventScript.Api.GesBox.IsFinite">
+  IsFinite
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether every component is finite.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsFinite { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_Max_" data-uid="GameEventScript.Api.GesBox.Max*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Max" data-uid="GameEventScript.Api.GesBox.Max">
+  Max
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the corner with the largest components.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesPoint Max { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_MaxX_" data-uid="GameEventScript.Api.GesBox.MaxX*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_MaxX" data-uid="GameEventScript.Api.GesBox.MaxX">
+  MaxX
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the largest x component, <code>Max.X</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double MaxX { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_MaxY_" data-uid="GameEventScript.Api.GesBox.MaxY*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_MaxY" data-uid="GameEventScript.Api.GesBox.MaxY">
+  MaxY
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the largest y component, <code>Max.Y</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double MaxY { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_MaxZ_" data-uid="GameEventScript.Api.GesBox.MaxZ*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_MaxZ" data-uid="GameEventScript.Api.GesBox.MaxZ">
+  MaxZ
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the largest z component, <code>Max.Z</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double MaxZ { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_Min_" data-uid="GameEventScript.Api.GesBox.Min*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Min" data-uid="GameEventScript.Api.GesBox.Min">
+  Min
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the corner with the smallest components.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesPoint Min { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_MinX_" data-uid="GameEventScript.Api.GesBox.MinX*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_MinX" data-uid="GameEventScript.Api.GesBox.MinX">
+  MinX
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the smallest x component, <code>Min.X</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double MinX { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_MinY_" data-uid="GameEventScript.Api.GesBox.MinY*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_MinY" data-uid="GameEventScript.Api.GesBox.MinY">
+  MinY
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the smallest y component, <code>Min.Y</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double MinY { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_MinZ_" data-uid="GameEventScript.Api.GesBox.MinZ*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_MinZ" data-uid="GameEventScript.Api.GesBox.MinZ">
+  MinZ
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the smallest z component, <code>Min.Z</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double MinZ { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_Size_" data-uid="GameEventScript.Api.GesBox.Size*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Size" data-uid="GameEventScript.Api.GesBox.Size">
+  Size
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the extent on each axis.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesVector Size { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesVector.html">GesVector</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Api_GesBox_Clamp_" data-uid="GameEventScript.Api.GesBox.Clamp*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Clamp_GameEventScript_Api_GesPoint_" data-uid="GameEventScript.Api.GesBox.Clamp(GameEventScript.Api.GesPoint)">
+  Clamp(GesPoint)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Moves a point onto the nearest point of the box.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesPoint Clamp(GesPoint point)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>point</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The point.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The point itself when the box holds it, otherwise the nearest point of its boundary.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_Contains_" data-uid="GameEventScript.Api.GesBox.Contains*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Contains_GameEventScript_Api_GesPoint_" data-uid="GameEventScript.Api.GesBox.Contains(GameEventScript.Api.GesPoint)">
+  Contains(GesPoint)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Tests whether a point lies in the box, its boundary included.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Contains(GesPoint point)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>point</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The point.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether the point lies within the corners on every axis.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_Equals_" data-uid="GameEventScript.Api.GesBox.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Equals_GameEventScript_Api_GesBox_" data-uid="GameEventScript.Api.GesBox.Equals(GameEventScript.Api.GesBox)">
+  Equals(GesBox)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compares the corners.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Equals(GesBox other)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>other</code> <a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The other box.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether both corners are equal.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_Equals_" data-uid="GameEventScript.Api.GesBox.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Equals_System_Object_" data-uid="GameEventScript.Api.GesBox.Equals(System.Object)">
+  Equals(object?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override bool Equals(object? obj)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>obj</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_FromCenter_" data-uid="GameEventScript.Api.GesBox.FromCenter*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_FromCenter_GameEventScript_Api_GesPoint_GameEventScript_Api_GesVector_" data-uid="GameEventScript.Api.GesBox.FromCenter(GameEventScript.Api.GesPoint,GameEventScript.Api.GesVector)">
+  FromCenter(GesPoint, GesVector)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the box with a centre and a size; a negative size component counts as its magnitude.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesBox FromCenter(GesPoint center, GesVector size)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>center</code> <a class="xref" href="GameEventScript.Api.GesPoint.html">GesPoint</a></dt>
+    <dd><p>The centre.</p>
+</dd>
+    <dt><code>size</code> <a class="xref" href="GameEventScript.Api.GesVector.html">GesVector</a></dt>
+    <dd><p>The extent on each axis.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The box.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_FromSize_" data-uid="GameEventScript.Api.GesBox.FromSize*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_FromSize_GameEventScript_Api_GesVector_" data-uid="GameEventScript.Api.GesBox.FromSize(GameEventScript.Api.GesVector)">
+  FromSize(GesVector)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the box from the origin to a size; a negative component spans the negative side of its axis.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesBox FromSize(GesVector size)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>size</code> <a class="xref" href="GameEventScript.Api.GesVector.html">GesVector</a></dt>
+    <dd><p>The opposite corner's offset from the origin.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The box.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_FromValue_" data-uid="GameEventScript.Api.GesBox.FromValue*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_FromValue_GameEventScript_Runtime_Values_GesValue__GameEventScript_Api_GesQuantityUnit_" data-uid="GameEventScript.Api.GesBox.FromValue(GameEventScript.Runtime.Values.GesValue@,GameEventScript.Api.GesQuantityUnit)">
+  FromValue(in GesValue, GesQuantityUnit)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads a <code>:Box</code> of exactly the given unit. Units never convert.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesBox? FromValue(in GesValue value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>value</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The GES value to read.</p>
+</dd>
+    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
+    <dd><p>The expected unit.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a>?</dt>
+    <dd><p>The box, or null when the value is no <code>:Box</code> of <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a> or has another unit.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_GetHashCode_" data-uid="GameEventScript.Api.GesBox.GetHashCode*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_GetHashCode" data-uid="GameEventScript.Api.GesBox.GetHashCode">
+  GetHashCode()
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override int GetHashCode()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_Inset_" data-uid="GameEventScript.Api.GesBox.Inset*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Inset_System_Double_" data-uid="GameEventScript.Api.GesBox.Inset(System.Double)">
+  Inset(double)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Moves every side inward by a distance, outward when it is negative: x and y of a 2D box, all three axes otherwise.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesBox? Inset(double by)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>by</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd><p>The distance.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a>?</dt>
+    <dd><p>The inset box, or null when the distance is not finite or the sides would cross.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_Intersects_" data-uid="GameEventScript.Api.GesBox.Intersects*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Intersects_GameEventScript_Api_GesBox_" data-uid="GameEventScript.Api.GesBox.Intersects(GameEventScript.Api.GesBox)">
+  Intersects(GesBox)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Tests whether two boxes share a point; touching boxes intersect.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Intersects(GesBox other)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>other</code> <a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The other box.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether the boxes overlap or touch on every axis.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_ToString_" data-uid="GameEventScript.Api.GesBox.ToString*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_ToString" data-uid="GameEventScript.Api.GesBox.ToString">
+  ToString()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Writes the box for diagnostics.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override string ToString()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The corners.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_ToValue_" data-uid="GameEventScript.Api.GesBox.ToValue*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_ToValue_GameEventScript_Api_GesQuantityUnit_" data-uid="GameEventScript.Api.GesBox.ToValue(GameEventScript.Api.GesQuantityUnit)">
+  ToValue(GesQuantityUnit)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Converts the box to the external value <code>:Box</code> of <a class="xref" href="GameEventScript.Api.GesGeometryLibrary.html">GesGeometryLibrary</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesValue ToValue(GesQuantityUnit unit = GesQuantityUnit.UnitNone)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
+    <dd><p>The unit of its corners.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The GES value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_Union_" data-uid="GameEventScript.Api.GesBox.Union*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_Union_GameEventScript_Api_GesBox_" data-uid="GameEventScript.Api.GesBox.Union(GameEventScript.Api.GesBox)">
+  Union(GesBox)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the smallest box that holds both.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesBox Union(GesBox other)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>other</code> <a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The other box.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The enclosing box.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="operators">Operators
+</h2>
+
+
+  <a id="GameEventScript_Api_GesBox_op_Equality_" data-uid="GameEventScript.Api.GesBox.op_Equality*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_op_Equality_GameEventScript_Api_GesBox_GameEventScript_Api_GesBox_" data-uid="GameEventScript.Api.GesBox.op_Equality(GameEventScript.Api.GesBox,GameEventScript.Api.GesBox)">
+  operator ==(GesBox, GesBox)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compares the corners.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator ==(GesBox left, GesBox right)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>left</code> <a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The first box.</p>
+</dd>
+    <dt><code>right</code> <a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The second box.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether both corners are equal.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesBox_op_Inequality_" data-uid="GameEventScript.Api.GesBox.op_Inequality*"></a>
+
+  <h3 id="GameEventScript_Api_GesBox_op_Inequality_GameEventScript_Api_GesBox_GameEventScript_Api_GesBox_" data-uid="GameEventScript.Api.GesBox.op_Inequality(GameEventScript.Api.GesBox,GameEventScript.Api.GesBox)">
+  operator !=(GesBox, GesBox)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compares the corners.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator !=(GesBox left, GesBox right)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>left</code> <a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The first box.</p>
+</dd>
+    <dt><code>right</code> <a class="xref" href="GameEventScript.Api.GesBox.html">GesBox</a></dt>
+    <dd><p>The second box.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether a corner differs.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

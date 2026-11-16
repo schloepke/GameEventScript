@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Namespace GameEventScript.CSharpBridge | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Namespace GameEventScript.CSharpBridge | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Namespace GameEventScript.CSharpBridge | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Namespace GameEventScript.CSharpBridge | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
       
       <link rel="icon" href="../assets/logo.svg">
@@ -111,6 +111,12 @@ Classes
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeHostRunnerRegistration.html">GesBridgeHostRunnerRegistration</a></dt>
+      <dd><p>A program instance or subscription owned by a <a class="xref" href="GameEventScript.CSharpBridge.GesBridgeHostRunner.html">GesBridgeHostRunner</a>. Every access goes through the runner's
+serialization gate, so another thread may use it while the runner pumps.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeMessage.html">GesBridgeMessage</a></dt>
       <dd><p>C#-specific message construction conveniences. Portable code uses ordered
 <a class="xref" href="GameEventScript.Api.GesMessageArgument.html">GesMessageArgument</a> values directly.</p>
@@ -148,12 +154,19 @@ Classes
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.CSharpBridge.GesFunctionAttribute.html">GesFunctionAttribute</a></dt>
-      <dd><p>Represents a ges function attribute.</p>
+      <dd><p>Exposes a method of a <a class="xref" href="GameEventScript.CSharpBridge.GesExtensionAttribute.html">GesExtensionAttribute</a> type as the extension function <code>:extension.name(...)</code>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.CSharpBridge.GesParamAttribute.html">GesParamAttribute</a></dt>
       <dd><p>Represents a ges param attribute.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesPredicateAttribute.html">GesPredicateAttribute</a></dt>
+      <dd><p>Exposes a method with one parameter and a <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a> or nullable Boolean result as the predicate of
+<code>value is :extension.name</code>. It is registered with one unlabeled argument, whatever its parameter declares; null gives
+<code>nothing</code>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -179,7 +192,7 @@ Classes
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

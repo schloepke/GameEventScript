@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct GesValue | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Struct GesValue | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct GesValue | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Struct GesValue | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a ges value.">
+      <meta name="description" content="An immutable GES value: Nothing, a number with optional quantity unit, Boolean, Text, Tag, Vector, Point, Dice, Bytes, List, Map, Record, external value, Range, Series, Message or Handler. Equality is strict and structural.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,8 @@ Struct GesValue
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a ges value.</p>
+  <div class="markdown summary"><p>An immutable GES value: Nothing, a number with optional quantity unit, Boolean, Text, Tag, Vector, Point, Dice,
+Bytes, List, Map, Record, external value, Range, Series, Message or Handler. Equality is strict and structural.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -130,38 +131,6 @@ constructors.</p>
 </h2>
 
 
-  <a id="GameEventScript_Runtime_Values_GesValue_AsNumeric_" data-uid="GameEventScript.Runtime.Values.GesValue.AsNumeric*"></a>
-
-  <h3 id="GameEventScript_Runtime_Values_GesValue_AsNumeric" data-uid="GameEventScript.Runtime.Values.GesValue.AsNumeric">
-  AsNumeric
-  
-  </h3>
-
-  <div class="markdown level1 summary"><p>Gets the as numeric.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public readonly double AsNumeric { get; }</code></pre>
-  </div>
-
-
-
-
-
-  <h4 class="section">Property Value</h4>
-  <dl class="parameters">
-    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd></dd>
-  </dl>
-
-
-
-
-
-
-
-
   <a id="GameEventScript_Runtime_Values_GesValue_CustomTypeName_" data-uid="GameEventScript.Runtime.Values.GesValue.CustomTypeName*"></a>
 
   <h3 id="GameEventScript_Runtime_Values_GesValue_CustomTypeName" data-uid="GameEventScript.Runtime.Values.GesValue.CustomTypeName">
@@ -169,7 +138,7 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the custom type name.</p>
+  <div class="markdown level1 summary"><p>Gets the type name of a Record or the definition name of an external value, otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -233,7 +202,7 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the float range.</p>
+  <div class="markdown level1 summary"><p>Gets the descriptor of a binary64 Range, otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -265,7 +234,7 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the handler.</p>
+  <div class="markdown level1 summary"><p>Gets the message signature of a Handler value, otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -297,7 +266,8 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets a value indicating whether has unit.</p>
+  <div class="markdown level1 summary"><p>Gets whether a quantity unit is attached, that is, <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_ValueUnit">ValueUnit</a> is one of the defined units other
+than <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitNone">UnitNone</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -329,7 +299,8 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets a value indicating whether has value.</p>
+  <div class="markdown level1 summary"><p>Gets whether the value has content: <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a> for Nothing and for empty Text, Dice, Bytes, List,
+Map, Record or Range; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> otherwise, including <code>false</code>, zero and every external value.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -361,7 +332,8 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the integer range.</p>
+  <div class="markdown level1 summary"><p>Gets the descriptor of an exact Int64 Range, otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>. Empty ranges, including empty
+binary64 inputs, use the canonical empty integer range.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -393,7 +365,8 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets a value indicating whether is nothing.</p>
+  <div class="markdown level1 summary"><p>Gets whether the value is Nothing; a number or Percentage payload holding NaN also counts, although the
+factories never store one.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -425,7 +398,7 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets a value indicating whether is numeric.</p>
+  <div class="markdown level1 summary"><p>Gets whether the value takes part in numeric conversion: a Boolean, number, Percentage or Dice value.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -537,7 +510,7 @@ fields without running a getter, also those a materialized map leaves out; scala
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the message.</p>
+  <div class="markdown level1 summary"><p>Gets the wrapped Message of a Message value, otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -569,7 +542,8 @@ fields without running a getter, also those a materialized map leaves out; scala
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the value kind.</p>
+  <div class="markdown level1 summary"><p>Gets the value's kind, the same type kinds as bytecode casts and checks. Integer and binary64 ranges are both
+<a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html#GameEventScript_Api_GesBytecodeTypeKind_Range">Range</a>; Records and external values are <a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html#GameEventScript_Api_GesBytecodeTypeKind_Custom">Custom</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -601,7 +575,7 @@ fields without running a getter, also those a materialized map leaves out; scala
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the value unit.</p>
+  <div class="markdown level1 summary"><p>Gets the quantity unit of a number, Vector or Point, otherwise <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitNone">UnitNone</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -633,7 +607,7 @@ fields without running a getter, also those a materialized map leaves out; scala
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the x.</p>
+  <div class="markdown level1 summary"><p>Gets the x coordinate of a Vector or Point, or zero for every other kind.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -665,7 +639,7 @@ fields without running a getter, also those a materialized map leaves out; scala
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the y.</p>
+  <div class="markdown level1 summary"><p>Gets the y coordinate of a Vector or Point, or zero for every other kind.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -697,7 +671,7 @@ fields without running a getter, also those a materialized map leaves out; scala
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the z.</p>
+  <div class="markdown level1 summary"><p>Gets the z coordinate of a Vector or Point, or zero for every other kind.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -733,7 +707,9 @@ fields without running a getter, also those a materialized map leaves out; scala
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the as boolean operation.</p>
+  <div class="markdown level1 summary"><p>Applies the portable Boolean conversion: a Boolean as stored; a number or Percentage when nonzero; a Vector or
+Point when a coordinate is nonzero; Text when it is <code>1</code> or ASCII case-insensitive <code>true</code>. Every other
+kind gives <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>, including Dice and non-empty collections.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -745,7 +721,40 @@ fields without running a getter, also those a materialized map leaves out; scala
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The truth value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Runtime_Values_GesValue_AsBytes_" data-uid="GameEventScript.Runtime.Values.GesValue.AsBytes*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_AsBytes" data-uid="GameEventScript.Runtime.Values.GesValue.AsBytes">
+  AsBytes()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the bytes of a Bytes value without copying them.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly ReadOnlySpan&lt;byte&gt; AsBytes()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The stored bytes, or an empty span for other kinds.</p>
 </dd>
   </dl>
 
@@ -766,7 +775,7 @@ fields without running a getter, also those a materialized map leaves out; scala
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the as dice operation.</p>
+  <div class="markdown level1 summary"><p>Returns a copy of a Dice value's rolls in descending order; every other kind gives an empty array.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -778,7 +787,7 @@ fields without running a getter, also those a materialized map leaves out; scala
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>[]</dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>A new array the caller owns.</p>
 </dd>
   </dl>
 
@@ -799,7 +808,9 @@ fields without running a getter, also those a materialized map leaves out; scala
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the as integer operation.</p>
+  <div class="markdown level1 summary"><p>Converts the numeric projection to Int64: an exact integer as stored, a Dice value as its sum, a Boolean as
+<code>1</code> or <code>0</code>, and binary64 or Percentage storage truncated toward zero and saturated at the Int64 bounds.
+Every other kind gives <code>0</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -811,7 +822,7 @@ fields without running a getter, also those a materialized map leaves out; scala
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The integer; the unit is not applied.</p>
 </dd>
   </dl>
 
@@ -832,7 +843,8 @@ fields without running a getter, also those a materialized map leaves out; scala
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the as list operation.</p>
+  <div class="markdown level1 summary"><p>Returns a read-only view of a List's elements without copying them; every other kind, including Map and Range,
+gives an empty slice.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -844,7 +856,7 @@ fields without running a getter, also those a materialized map leaves out; scala
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValueSlice.html">GesValueSlice</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The elements, or <a class="xref" href="GameEventScript.Runtime.Values.GesValueSlice.html#GameEventScript_Runtime_Values_GesValueSlice_Empty">Empty</a>.</p>
 </dd>
   </dl>
 
@@ -899,7 +911,9 @@ External field getters are not invoked; <a class="xref" href="GameEventScript.Ru
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the as number operation.</p>
+  <div class="markdown level1 summary"><p>Returns the numeric projection: a number as stored, a Percentage as its ratio, a Dice value as its sum and a
+Boolean as <code>1</code> or <code>0</code>. Every other kind, including Text, gives NaN; text parsing belongs to the language
+cast.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -911,7 +925,7 @@ External field getters are not invoked; <a class="xref" href="GameEventScript.Ru
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The binary64 number; the unit is not applied.</p>
 </dd>
   </dl>
 
@@ -932,7 +946,8 @@ External field getters are not invoked; <a class="xref" href="GameEventScript.Ru
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the as text operation.</p>
+  <div class="markdown level1 summary"><p>Returns the stored text of a Text value or the name of a Tag without <code>#</code>; every other kind gives the same
+language text as <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_ToString">ToString()</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -944,7 +959,7 @@ External field getters are not invoked; <a class="xref" href="GameEventScript.Ru
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The text.</p>
 </dd>
   </dl>
 
@@ -965,7 +980,9 @@ External field getters are not invoked; <a class="xref" href="GameEventScript.Ru
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Returns the equals result for this value.</p>
+  <div class="markdown level1 summary"><p>Compares strictly and structurally: kinds and units must match, numbers compare by stored integer or binary64
+payload, text and keys by ordinal code units, and collections element by element. External values, iterators
+and builders compare by identity.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -976,14 +993,14 @@ External field getters are not invoked; <a class="xref" href="GameEventScript.Ru
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>other</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The other value.</p>
+    <dd><p>The value to compare with.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when both values are equal.</p>
 </dd>
   </dl>
 
@@ -1004,7 +1021,7 @@ External field getters are not invoked; <a class="xref" href="GameEventScript.Ru
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Returns the equals result for this value.</p>
+  <div class="markdown level1 summary"><p>Compares with a boxed <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a> using <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_Equals_GameEventScript_Runtime_Values_GesValue_">Equals(GesValue)</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1015,14 +1032,14 @@ External field getters are not invoked; <a class="xref" href="GameEventScript.Ru
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>obj</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></dt>
-    <dd><p>The obj value.</p>
+    <dd><p>The object to compare with.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when <code class="paramref">obj</code> is an equal <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a>.</p>
 </dd>
   </dl>
 
@@ -1135,7 +1152,7 @@ whose type name is not a type name.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges boolean operation.</p>
+  <div class="markdown level1 summary"><p>Creates a Boolean value.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1146,14 +1163,53 @@ whose type name is not a type name.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>boolean</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
-    <dd><p>The boolean value.</p>
+    <dd><p>The truth value to store.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Boolean value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Runtime_Values_GesValue_GesBytes_" data-uid="GameEventScript.Runtime.Values.GesValue.GesBytes*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_GesBytes_System_ReadOnlySpan_System_Byte__" data-uid="GameEventScript.Runtime.Values.GesValue.GesBytes(System.ReadOnlySpan{System.Byte})">
+  GesBytes(ReadOnlySpan&lt;byte&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a Bytes value from a copy of the given bytes.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesValue GesBytes(ReadOnlySpan&lt;byte&gt; bytes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The bytes to copy.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The Bytes value.</p>
 </dd>
   </dl>
 
@@ -1174,7 +1230,8 @@ whose type name is not a type name.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges dice operation.</p>
+  <div class="markdown level1 summary"><p>Creates a Dice value from a copy of <code class="paramref">rolls</code>, sorted in descending order, without drawing random
+numbers. The rolls are not validated; the value's number is their sum.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1185,14 +1242,14 @@ whose type name is not a type name.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>rolls</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>[]</dt>
-    <dd><p>The rolls value.</p>
+    <dd><p>The individual rolls.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Dice value.</p>
 </dd>
   </dl>
 
@@ -1213,7 +1270,8 @@ whose type name is not a type name.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Wraps a host-provided external value.</p>
+  <div class="markdown level1 summary"><p>Wraps a host-provided external value and captures its type definition. Field values are not read or kept; each
+read runs the getters. Values from separate calls are not equal, even for the same host object.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1231,7 +1289,7 @@ whose type name is not a type name.</p>
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The external value, whose kind is <a class="xref" href="GameEventScript.Api.GesBytecodeTypeKind.html#GameEventScript_Api_GesBytecodeTypeKind_Custom">Custom</a>.</p>
 </dd>
   </dl>
 
@@ -1242,6 +1300,15 @@ whose type name is not a type name.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when <code class="paramref">value</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>Thrown when <code class="paramref">value</code> provides no type definition.</p>
+</dd>
+  </dl>
 
 
 
@@ -1252,7 +1319,9 @@ whose type name is not a type name.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges float operation.</p>
+  <div class="markdown level1 summary"><p>Creates a number with an optional quantity unit. A finite integral value within the Int64 range is stored as an
+exact integer (so <code>-0.0</code> becomes <code>0</code>), other values including infinities as binary64, and NaN yields
+Nothing without a unit.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1263,17 +1332,17 @@ whose type name is not a type name.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>number</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The number value.</p>
+    <dd><p>The binary64 number.</p>
 </dd>
     <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
-    <dd><p>The unit value.</p>
+    <dd><p>The quantity unit, stored as given; <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitNone">UnitNone</a> for a plain number.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The number value, or Nothing for NaN.</p>
 </dd>
   </dl>
 
@@ -1294,7 +1363,7 @@ whose type name is not a type name.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges handler operation.</p>
+  <div class="markdown level1 summary"><p>Wraps a message signature as a Handler value.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1305,14 +1374,14 @@ whose type name is not a type name.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>signature</code> <a class="xref" href="GameEventScript.Api.GesMessageSignature.html">GesMessageSignature</a></dt>
-    <dd><p>The signature value.</p>
+    <dd><p>The handler's message signature.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Handler value.</p>
 </dd>
   </dl>
 
@@ -1333,7 +1402,7 @@ whose type name is not a type name.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges integer operation.</p>
+  <div class="markdown level1 summary"><p>Creates a number with exact Int64 storage and an optional quantity unit.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1344,17 +1413,17 @@ whose type name is not a type name.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>integer</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
-    <dd><p>The integer value.</p>
+    <dd><p>The exact integer to store.</p>
 </dd>
     <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
-    <dd><p>The unit value.</p>
+    <dd><p>The quantity unit, stored as given; <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitNone">UnitNone</a> for a plain number.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The number value.</p>
 </dd>
   </dl>
 
@@ -1375,7 +1444,7 @@ whose type name is not a type name.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges list operation.</p>
+  <div class="markdown level1 summary"><p>Creates a List from a copy of <code class="paramref">items</code>, so later changes to the array do not affect the value.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1386,14 +1455,14 @@ whose type name is not a type name.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>items</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a>[]</dt>
-    <dd><p>The items value.</p>
+    <dd><p>The elements in order.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The List value.</p>
 </dd>
   </dl>
 
@@ -1426,17 +1495,17 @@ Extra keys or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>keys</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>[]</dt>
-    <dd><p>The keys value.</p>
+    <dd><p>The keys, paired by position with <code class="paramref">values</code>.</p>
 </dd>
     <dt><code>values</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a>[]</dt>
-    <dd><p>The values value.</p>
+    <dd><p>The values, paired by position with <code class="paramref">keys</code>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Map value.</p>
 </dd>
   </dl>
 
@@ -1484,7 +1553,7 @@ Extra keys or values beyond the shorter array are ignored.</p>
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Map value.</p>
 </dd>
   </dl>
 
@@ -1514,7 +1583,7 @@ Extra keys or values beyond the shorter array are ignored.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges message operation.</p>
+  <div class="markdown level1 summary"><p>Wraps an immutable Message as a value without copying it.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1525,14 +1594,14 @@ Extra keys or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>message</code> <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
-    <dd><p>The message value.</p>
+    <dd><p>The Message to wrap.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Message value.</p>
 </dd>
   </dl>
 
@@ -1553,7 +1622,7 @@ Extra keys or values beyond the shorter array are ignored.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges nothing operation.</p>
+  <div class="markdown level1 summary"><p>Returns Nothing, the canonical absence value; equal to <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/default">default</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1565,49 +1634,7 @@ Extra keys or values beyond the shorter array are ignored.</p>
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
-</dd>
-  </dl>
-
-
-
-
-
-
-
-
-
-
-
-  <a id="GameEventScript_Runtime_Values_GesValue_GesNumber_" data-uid="GameEventScript.Runtime.Values.GesValue.GesNumber*"></a>
-
-  <h3 id="GameEventScript_Runtime_Values_GesValue_GesNumber_System_Double_GameEventScript_Api_GesQuantityUnit_" data-uid="GameEventScript.Runtime.Values.GesValue.GesNumber(System.Double,GameEventScript.Api.GesQuantityUnit)">
-  GesNumber(double, GesQuantityUnit)
-  
-  </h3>
-
-  <div class="markdown level1 summary"><p>Performs the ges number operation.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static GesValue GesNumber(double number, GesQuantityUnit unit = GesQuantityUnit.UnitNone)</code></pre>
-  </div>
-
-  <h4 class="section">Parameters</h4>
-  <dl class="parameters">
-    <dt><code>number</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The number value.</p>
-</dd>
-    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
-    <dd><p>The unit value.</p>
-</dd>
-  </dl>
-
-  <h4 class="section">Returns</h4>
-  <dl class="parameters">
-    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>Nothing.</p>
 </dd>
   </dl>
 
@@ -1628,7 +1655,8 @@ Extra keys or values beyond the shorter array are ignored.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges percentage operation.</p>
+  <div class="markdown level1 summary"><p>Creates a Percentage from its ratio, for example <code>0.5</code> for 50%. A finite ratio is stored as Percentage with
+signed zero normalized; an infinite ratio becomes a unitless binary64 infinity, and NaN yields Nothing.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1639,14 +1667,14 @@ Extra keys or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>ratio</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The ratio value.</p>
+    <dd><p>The ratio, where <code>1</code> is 100%.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Percentage, a binary64 infinity, or Nothing.</p>
 </dd>
   </dl>
 
@@ -1667,7 +1695,8 @@ Extra keys or values beyond the shorter array are ignored.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges point operation.</p>
+  <div class="markdown level1 summary"><p>Creates a Point with binary64 coordinates and an optional quantity unit. Signed zeros are normalized and
+infinities are kept; any NaN coordinate yields Nothing.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1678,23 +1707,23 @@ Extra keys or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The x value.</p>
+    <dd><p>The x coordinate.</p>
 </dd>
     <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The y value.</p>
+    <dd><p>The y coordinate.</p>
 </dd>
     <dt><code>z</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The z value.</p>
+    <dd><p>The z coordinate.</p>
 </dd>
     <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
-    <dd><p>The unit value.</p>
+    <dd><p>The quantity unit shared by all coordinates.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Point, or Nothing.</p>
 </dd>
   </dl>
 
@@ -1726,20 +1755,20 @@ Extra keys or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>from</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The from value.</p>
+    <dd><p>The first term.</p>
 </dd>
     <dt><code>to</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The to value.</p>
+    <dd><p>The inclusive bound.</p>
 </dd>
     <dt><code>step</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The step value.</p>
+    <dd><p>The signed distance between terms; zero or the wrong sign gives the canonical empty integer range.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Range value, or Nothing.</p>
 </dd>
   </dl>
 
@@ -1760,7 +1789,8 @@ Extra keys or values beyond the shorter array are ignored.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges range operation.</p>
+  <div class="markdown level1 summary"><p>Creates a lazy exact Int64 range from <code class="paramref">from</code> to <code class="paramref">to</code>, both inclusive. A zero
+step, or a step whose sign points away from <code class="paramref">to</code>, yields the canonical empty integer range.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1771,20 +1801,20 @@ Extra keys or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>from</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
-    <dd><p>The from value.</p>
+    <dd><p>The first term.</p>
 </dd>
     <dt><code>to</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
-    <dd><p>The to value.</p>
+    <dd><p>The inclusive bound.</p>
 </dd>
     <dt><code>step</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
-    <dd><p>The step value.</p>
+    <dd><p>The signed distance between terms.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Range value.</p>
 </dd>
   </dl>
 
@@ -1817,20 +1847,20 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>typeName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The type name value.</p>
+    <dd><p>The Record type name; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> becomes empty.</p>
 </dd>
     <dt><code>keys</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>[]</dt>
-    <dd><p>The keys value.</p>
+    <dd><p>The field names, paired by position with <code class="paramref">values</code>.</p>
 </dd>
     <dt><code>values</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a>[]</dt>
-    <dd><p>The values value.</p>
+    <dd><p>The field values, paired by position with <code class="paramref">keys</code>.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Record value.</p>
 </dd>
   </dl>
 
@@ -1871,7 +1901,7 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>typeName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The type name value.</p>
+    <dd><p>The Record type name; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> becomes empty.</p>
 </dd>
     <dt><code>fields</code> (<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple-system.string,gameeventscript.runtime.values.gesvalue-.name">name</a>, <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple-system.string,gameeventscript.runtime.values.gesvalue-.value">value</a>)[]</dt>
     <dd><p>The ordered field name and value entries.</p>
@@ -1881,7 +1911,7 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Record value.</p>
 </dd>
   </dl>
 
@@ -1911,7 +1941,7 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges tag operation.</p>
+  <div class="markdown level1 summary"><p>Creates a Tag from its name without the leading <code>#</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1922,14 +1952,14 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>tag</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The tag value.</p>
+    <dd><p>The tag name: an ASCII lowercase letter followed by ASCII letters or digits.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Tag value.</p>
 </dd>
   </dl>
 
@@ -1940,6 +1970,13 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>Thrown when <code class="paramref">tag</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>, empty or violates the
+tag name grammar.</p>
+</dd>
+  </dl>
 
 
 
@@ -1950,7 +1987,8 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges text operation.</p>
+  <div class="markdown level1 summary"><p>Creates a Text value that keeps <code class="paramref">text</code> verbatim; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> becomes empty text.
+Equality and ordering use Unicode scalars, not canonical equivalence.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1961,14 +1999,14 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>text</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The text value.</p>
+    <dd><p>The text to store.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Text value.</p>
 </dd>
   </dl>
 
@@ -1979,6 +2017,12 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>Thrown when <code class="paramref">text</code> contains an unpaired UTF-16 surrogate.</p>
+</dd>
+  </dl>
 
 
 
@@ -1989,7 +2033,8 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges vector operation.</p>
+  <div class="markdown level1 summary"><p>Creates a Vector with binary64 coordinates and an optional quantity unit. Signed zeros are normalized and
+infinities are kept; any NaN coordinate yields Nothing.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -2000,23 +2045,23 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The x value.</p>
+    <dd><p>The x coordinate.</p>
 </dd>
     <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The y value.</p>
+    <dd><p>The y coordinate.</p>
 </dd>
     <dt><code>z</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
-    <dd><p>The z value.</p>
+    <dd><p>The z coordinate.</p>
 </dd>
     <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
-    <dd><p>The unit value.</p>
+    <dd><p>The quantity unit shared by all coordinates.</p>
 </dd>
   </dl>
 
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The Vector, or Nothing.</p>
 </dd>
   </dl>
 
@@ -2037,7 +2082,7 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Returns the get hash code result for this value.</p>
+  <div class="markdown level1 summary"><p>Computes a hash code from kind, unit and payload, consistent with <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_Equals_GameEventScript_Runtime_Values_GesValue_">Equals(GesValue)</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -2049,7 +2094,7 @@ duplicate name. Extra names or values beyond the shorter array are ignored.</p>
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The hash code.</p>
 </dd>
   </dl>
 
@@ -2304,7 +2349,8 @@ when <code class="paramref">input</code> is not a complete data literal.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Returns the to string result for this value.</p>
+  <div class="markdown level1 summary"><p>Returns the language text representation: Text unquoted, a Tag with <code>#</code>, numbers with their unit, and
+nested Text in collections quoted.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -2316,7 +2362,7 @@ when <code class="paramref">input</code> is not a complete data literal.</p>
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The text representation.</p>
 </dd>
   </dl>
 
@@ -2347,7 +2393,7 @@ when <code class="paramref">input</code> is not a complete data literal.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesSourceMapSegment | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Class GesSourceMapSegment | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesSourceMapSegment | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Class GesSourceMapSegment | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Represents a game event script source map segment.">
+      <meta name="description" content="The immutable optional SourceMapSegment (section 0x0021), which maps code addresses to source byte ranges. It is useful without an embedded ; when both are present they must agree.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,7 +83,8 @@ Class GesSourceMapSegment
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a game event script source map segment.</p>
+  <div class="markdown summary"><p>The immutable optional SourceMapSegment (section <code>0x0021</code>), which maps code addresses to source byte ranges. It
+is useful without an embedded <a class="xref" href="GameEventScript.Api.GesSourceArchiveSegment.html">GesSourceArchiveSegment</a>; when both are present they must agree.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -132,46 +133,6 @@ Class GesSourceMapSegment
 
 
 
-  <h2 class="section" id="constructors">Constructors
-</h2>
-
-
-  <a id="GameEventScript_Api_GesSourceMapSegment__ctor_" data-uid="GameEventScript.Api.GesSourceMapSegment.#ctor*"></a>
-
-  <h3 id="GameEventScript_Api_GesSourceMapSegment__ctor_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GesSourceMapSource__System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GesSourceMapEntry__" data-uid="GameEventScript.Api.GesSourceMapSegment.#ctor(System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GesSourceMapSource},System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GesSourceMapEntry})">
-  GesSourceMapSegment(IReadOnlyList&lt;GesSourceMapSource&gt;?, IReadOnlyList&lt;GesSourceMapEntry&gt;?)
-  
-  </h3>
-
-  <div class="markdown level1 summary"><p>Initializes a new instance of Game Event Script Source Map Segment.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GesSourceMapSegment(IReadOnlyList&lt;GesSourceMapSource&gt;? sources, IReadOnlyList&lt;GesSourceMapEntry&gt;? entries)</code></pre>
-  </div>
-
-  <h4 class="section">Parameters</h4>
-  <dl class="parameters">
-    <dt><code>sources</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesSourceMapSource.html">GesSourceMapSource</a>&gt;</dt>
-    <dd><p>The sources value.</p>
-</dd>
-    <dt><code>entries</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesSourceMapEntry.html">GesSourceMapEntry</a>&gt;</dt>
-    <dd><p>The entries value.</p>
-</dd>
-  </dl>
-
-
-
-
-
-
-
-
-
-
-
-
   <h2 class="section" id="properties">Properties
 </h2>
 
@@ -183,7 +144,7 @@ Class GesSourceMapSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the entries.</p>
+  <div class="markdown level1 summary"><p>Gets the immutable mappings, ordered by ascending, non-overlapping code ranges.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -215,7 +176,7 @@ Class GesSourceMapSegment
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the sources.</p>
+  <div class="markdown level1 summary"><p>Gets the immutable source table; a source's index equals its <a class="xref" href="GameEventScript.Api.GesSourceMapSource.html#GameEventScript_Api_GesSourceMapSource_SourceId">SourceId</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -257,7 +218,7 @@ Class GesSourceMapSegment
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

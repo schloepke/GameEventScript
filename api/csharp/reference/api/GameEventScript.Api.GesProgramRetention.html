@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Enum GesProgramRetention | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <title>Enum GesProgramRetention | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Enum GesProgramRetention | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      <meta name="title" content="Enum GesProgramRetention | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
       
-      <meta name="description" content="Defines the supported game event script program retention values.">
+      <meta name="description" content="Selects which optional sections  keeps. The five required runtime sections are always read, and an unknown section flagged as required always fails.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -84,7 +84,8 @@ Enum GesProgramRetention
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Defines the supported game event script program retention values.</p>
+  <div class="markdown summary"><p>Selects which optional sections <a class="xref" href="GameEventScript.Api.GameEventScriptProgram.html#GameEventScript_Api_GameEventScriptProgram_Read_System_ReadOnlySpan_System_Byte__GameEventScript_Api_GesProgramReadOptions_">Read(ReadOnlySpan&lt;byte&gt;, GesProgramReadOptions?)</a> keeps. The five required runtime sections
+are always read, and an unknown section flagged as required always fails.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -105,15 +106,17 @@ Enum GesProgramRetention
   <dl class="parameters">
     <dt id="GameEventScript_Api_GesProgramRetention_PreserveAll"><code>PreserveAll = 0</code></dt>
   
-  <dd><p>Identifies the preserve all value.</p>
+  <dd><p>Parses supported known optional sections and retains every other optional section, unknown or with an unsupported
+version or compression, as a <a class="xref" href="GameEventScript.Api.GesOpaqueSection.html">GesOpaqueSection</a>. This is the default.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramRetention_PreserveKnown"><code>PreserveKnown = 1</code></dt>
   
-  <dd><p>Identifies the preserve known value.</p>
+  <dd><p>Parses supported known optional sections and drops all other optional sections.</p>
 </dd>
     <dt id="GameEventScript_Api_GesProgramRetention_RuntimeOnly"><code>RuntimeOnly = 2</code></dt>
   
-  <dd><p>Identifies the runtime only value.</p>
+  <dd><p>Reads only the five required runtime sections; debug symbols, source map, source archive, build metadata and opaque
+sections are dropped.</p>
 </dd>
   </dl>
 
@@ -135,7 +138,7 @@ Enum GesProgramRetention
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (0e88e862dda6)
+          Game Event Script C# API — Unreleased (ecf9e2c87030)
         </div>
       </div>
     </footer>

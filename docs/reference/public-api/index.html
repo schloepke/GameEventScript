@@ -88,13 +88,16 @@ The optional build-time Generator package writes typed schema code; see
 <a href="#schema-code-generation">Schema code generation</a>.</p>
 <h2 id="scope-and-dependency-direction">Scope and dependency direction</h2>
 <p>The portable product modules and independent verification tooling are separated as follows:</p>
-<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GameEventScript Runtime</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">values, messages, program, binary codec, validation, host, VM, literal parsing</span></div></div><div class="ec-line"><div class="code">
-</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GameEventScript Compiler</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">source builder, lexer, parser, validation, optimizer, bytecode generation</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; depends only on GameEventScript Runtime</span></div></div><div class="ec-line"><div class="code">
-</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Independent Conformance runner (Python, repository tooling)</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">Markdown parser, normalized test model, assertions, reports, received output</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; communicates with internal implementation adapters over JSON</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; C# and Swift adapters depend on their Runtime and Compiler; no public Conformance library</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="GameEventScript Runtime  values, messages, program, binary codec, validation, host, VM, literal parsingGameEventScript Compiler  source builder, lexer, parser, validation, optimizer, bytecode generation  -> depends only on GameEventScript RuntimeIndependent Conformance runner (Python, repository tooling)  Markdown parser, normalized test model, assertions, reports, received output  -> communicates with internal implementation adapters over JSON  -> C# and Swift adapters depend on their Runtime and Compiler; no public Conformance library"><div></div></button></div></figure></div>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GameEventScript Syntax</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">lossless lexer and parser, source validation, documents, schema declarations, highlighting</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; depends on no GES module</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GameEventScript Runtime</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">values, messages, program, binary codec, validation, host, VM, literal parsing, schemas</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; depends only on GameEventScript Syntax</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GameEventScript Compiler</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">source builder, binding, validation, optimizer, bytecode generation</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; depends only on GameEventScript Runtime and Syntax</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GameEventScript Generator (build-time)</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">schema generation layout and C#/Swift emitters</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; depends only on GameEventScript Syntax and Runtime; no Runtime or Compiler depends on it</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Independent Conformance runner (Python, repository tooling)</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">Markdown parser, normalized test model, assertions, reports, received output</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; communicates with internal implementation adapters over JSON</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; C# and Swift adapters depend on their Runtime and Compiler; no public Conformance library</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="GameEventScript Syntax  lossless lexer and parser, source validation, documents, schema declarations, highlighting  -> depends on no GES moduleGameEventScript Runtime  values, messages, program, binary codec, validation, host, VM, literal parsing, schemas  -> depends only on GameEventScript SyntaxGameEventScript Compiler  source builder, binding, validation, optimizer, bytecode generation  -> depends only on GameEventScript Runtime and SyntaxGameEventScript Generator (build-time)  schema generation layout and C#/Swift emitters  -> depends only on GameEventScript Syntax and Runtime; no Runtime or Compiler depends on itIndependent Conformance runner (Python, repository tooling)  Markdown parser, normalized test model, assertions, reports, received output  -> communicates with internal implementation adapters over JSON  -> C# and Swift adapters depend on their Runtime and Compiler; no public Conformance library"><div></div></button></div></figure></div>
 <p>Runtime must load and execute precompiled Programs without a source compiler.
 Shared value semantics, text/number conversions, runtime literal parsing, Program
 validation, and declarative external-type definitions remain in Runtime. There
-is no additional shared Core module. Compiler uses these Runtime contracts;
+is no additional shared Core module; Syntax holds only what both source tools and the Runtime read from text. Compiler
+uses these Runtime contracts;
 Runtime never references Compiler or Conformance. Compiler never references
 Conformance or language-specific adapters. Both portable modules remain
 synchronous and independent of filesystem, network, threads, and test frameworks.</p>
@@ -141,8 +144,8 @@ it adds a member. Deprecation may guide migration but does not permit removal
 within a compatible major line.</p>
 <p>Native naming, value/reference representation and error transport may differ
 between languages as specified below; each published language binding retains
-its own source API compatibility. There is no requirement for identical symbol
-names across languages. Native object layout and compiler-generated ABI are not
+its own source API compatibility. Corresponding types and members use the same names in both ports, apart from the
+language-idiomatic mappings that <a href="https://github.com/schloepke/GameEventScript/blob/main/implementation/PortConventions.md">PortConventions</a> lists. Native object layout and compiler-generated ABI are not
 the portable binary interchange contract; <code>.gesb</code> compatibility is owned by
 <a href="/docs/reference/binary-format/#release-and-format-compatibility">Binary format</a>.</p>
 <p>The existing compiler and host builder workflows are the selected baseline;
@@ -271,7 +274,8 @@ It owns snapshots of all inputs needed after an operation returns.</p>
 builder defaults. Ports may choose either builder setters or one options object,
 provided there is one unambiguous resolved configuration. Compilation never
 modifies an earlier Program.</p>
-<p>An empty builder produces the valid empty Program named <code>EmptyModule</code>.
+<p>An empty builder produces a valid empty Program with the derived anonymous name that
+<a href="/docs/reference/language/">Language</a> defines for a compilation without a module name.
 Malformed source fails with one or more structured diagnostics.
 The fixed source nesting limits in <a href="/docs/reference/language/#source-nesting-limits">Language</a>
 apply to every compilation. Exceeding them produces the Parse diagnostic
@@ -331,8 +335,11 @@ There is no free-form public Program constructor.</p>
 </tr>
 </tbody>
 </table>
-<p>All segment entry order, duplicate string constants, instruction bits, source
-bytes, and opaque payload bytes are meaningful immutable data. Resolving a
+<p>Segments and sections are read-only: they have no public constructors, because
+only the Compiler and the binary Reader create Programs
+(<a href="/docs/reference/program-model/">Program model</a>). All segment entry order, duplicate string
+constants, instruction bits, source bytes, and opaque payload bytes are
+meaningful immutable data. Resolving a
 string or index list returns a decoded value/view without mutating Program.
 Out-of-range access fails as an argument/index error for direct low-level API
 use; Reader, Writer, Validator, and Host must report structured format/link
@@ -382,7 +389,7 @@ by <a href="/docs/reference/bytecode/">Bytecode</a>.</p>
 and suffixes. Parse operations return absence for an unknown valid string;
 predicate operations never use locale; formatting returns canonical GES text.</p>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — physical units</p>
+<p><strong>Since: 0.5.0</strong> — physical units</p>
 </blockquote>
 <p><code>QuantityUnit</code> has one member per defined UnitId: C# <code>UnitNone</code>, <code>UnitDegree</code>,
 <code>UnitMeter</code>, <code>UnitSecond</code>, <code>UnitMeterPerSecond</code>, <code>UnitMeterPerSecondSquared</code>,
@@ -478,7 +485,7 @@ Dump allocation is outside the runtime hot path.</p>
 <p><code>MessageSignature</code> is immutable content identified by normalized message name
 plus ordered parameter labels. Tags and values are not part of a signature.</p>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — system endpoint names</p>
+<p><strong>Since: 0.5.0</strong> — system endpoint names</p>
 </blockquote>
 <p>A signature may name a system endpoint to subscribe, but creates no Message from it:
 message creation and JSON decoding reject <code>initialization</code> and <code>undeliverable</code>, as
@@ -551,6 +558,8 @@ struct or another compact representation. Public factory operations create:</p>
 <li>Vector and Point;</li>
 <li>IntegerRange and FloatRange;</li>
 <li>Dice from ordered roll values;</li>
+<li>Bytes from a byte sequence (C# <code>GesBytes(ReadOnlySpan&lt;byte&gt;)</code> copies it, Swift <code>bytes(_:)</code> shares the
+copy-on-write array);</li>
 <li>immutable List and Map;</li>
 <li>Handler signature and Message;</li>
 <li>immutable Record by type name and ordered fields;</li>
@@ -562,7 +571,7 @@ iteration. C# dictionary factories belong to CSharpBridge and delegate to the
 portable ordered factories; their canonical ordering is governed by
 <a href="/docs/reference/semantics/determinism/">Determinism</a>.</p>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — ordered entries, member reads, map traversal</p>
+<p><strong>Since: 0.5.0</strong> — ordered entries, member reads, map traversal</p>
 </blockquote>
 <p>A Map or Record value can be created from ordered key-value entries. The last value
 of a duplicate key wins, and the result has canonical key order. The parallel key and
@@ -586,10 +595,70 @@ the member read never run host code.</p>
 <p>Each port spells these with the language’s own means, without another library.</p>
 <p><code>ValueKind</code>, <code>ValueUnit</code>, <code>HasValue</code>, <code>IsNothing</code>, <code>IsNumeric</code>, <code>HasUnit</code>,
 <code>Length</code>, <code>CustomTypeName</code>, coordinate/range/message/handler views, and typed
-read operations expose the active value. A typed <code>As...</code> operation on an
-incompatible kind follows the public value conversion contract and must never
-expose uninitialized native storage. <code>AsList</code> and <code>AsMap</code> return immutable
-views; <code>AsDice</code> returns an independent ordered copy in the C# mapping.</p>
+read operations expose the active value. A typed <code>As...</code> operation never fails and never exposes uninitialized
+native storage; on another kind it applies the following conversion, which both ports share:</p>
+<table>
+<thead>
+<tr>
+<th>Read</th>
+<th>Integer, Dice</th>
+<th>Float, Percentage</th>
+<th>Boolean</th>
+<th>Text, Tag</th>
+<th>other kinds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AsInteger</code></td>
+<td>the value; a Dice its roll sum</td>
+<td>truncated toward zero and saturated to Int64; NaN gives 0</td>
+<td>1 or 0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>AsNumber</code></td>
+<td>the value as binary64; a Dice its roll sum</td>
+<td>the value; a Percentage its ratio, so 50% is 0.5</td>
+<td>1 or 0</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr>
+<td><code>AsBoolean</code></td>
+<td>not 0; a Dice is false</td>
+<td>not 0</td>
+<td>the value</td>
+<td>a Text <code>1</code> or ASCII case-insensitive <code>true</code>; a Tag is false</td>
+<td>false; a Vector or Point is true when a component is not 0</td>
+</tr>
+<tr>
+<td><code>AsText</code></td>
+<td>the language text</td>
+<td>the language text</td>
+<td>the language text</td>
+<td>the text, or the bare tag name</td>
+<td>the language text</td>
+</tr>
+</tbody>
+</table>
+<p>The language text is the representation of <code>as :Text</code>, the same as <code>ToString()</code> / <code>description</code>. Units are not part of
+these reads; <code>ValueUnit</code> reports them. A read that must not convert checks the kind first: Swift offers kind-strict
+optionals (<code>integerValue</code>, <code>floatValue</code>, <code>textValue</code>, <code>listValue</code>, <code>bytesValue</code>, <code>diceRolls</code>, <code>integerRangeValue</code>,
+<code>floatRangeValue</code>), and C# compares <code>ValueKind</code> before calling an <code>As...</code> read or uses the nullable views
+(<code>IntegerRange</code>, <code>FloatRange</code>, <code>ExternalValue</code>, <code>Message</code>, <code>Handler</code>), since GES has no public <code>Try...</code> contracts.</p>
+<p><code>ValueKind</code> uses the bytecode type kinds of <a href="/docs/reference/bytecode/">Bytecode</a> on purpose: the language’s <code>is</code> checks, casts and the
+<code>.gesb</code> type operands use the same numbering, so a host compares a value’s kind with the same constants as a Program.
+A host observes only Nothing, Boolean, Integer, Float, Percentage, Text, Tag, Vector, Point, Range, Dice, Bytes, List,
+Map, Handler, Message and Custom; the builder and iterator kinds exist only inside the VM’s registers and never reach a
+value a host receives. Range covers both range storages and Custom both Records and external values, as the language
+does; <code>IntegerRange</code> / <code>integerRangeValue</code> and <code>FloatRange</code> / <code>floatRangeValue</code> tell the ranges apart, and
+<code>ExternalValue</code> / <code>externalValue</code> tells an external value from a Record. Renumbering these kinds is therefore a
+change of the bytecode format and of this API alike. <code>AsList</code> and <code>AsMap</code> return immutable
+views; <code>AsDice</code> returns an independent ordered copy in the C# mapping. C#
+<code>AsBytes()</code> returns a read-only span over the stored bytes without copying; Swift
+<code>bytesValue</code> and <code>asBytes</code> return the stored array.</p>
 <p>Numeric register storage is a numeric projection only. Boolean stores 0/1 and Dice
 stores its exact Int64 roll sum (zero for empty Dice). Nonnumeric values have no
 numeric projection; their numeric storage is cleared. Collection counts and cached
@@ -607,8 +676,139 @@ operation that supplied its backing storage.</p>
 <p><code>IntegerRange</code> and <code>FloatRange</code> are immutable triples <code>(from, to, step)</code>; they do
 not enumerate by themselves. Range termination and overflow behavior belong to
 the deterministic language semantics.</p>
+<h4 id="spatial-values">Spatial values</h4>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
+<p><code>GesPoint</code> and <code>GesVector</code> are the native counterparts of the language’s <a href="/docs/reference/language/#vector-and-point">Point and Vector</a>:
+plain values with three Binary64 components <code>x</code>, <code>y</code> and <code>z</code>, where a 2D value has <code>z</code> 0, and with no unit. Generated
+schema code uses them for every spatial field, so hosts in both ports compute with one pair of types.</p>
+<ul>
+<li>A point moves by a vector (<code>point + vector</code>, <code>point - vector</code>) and two points give the vector between them
+(<code>end - start</code>); a vector adds, subtracts, negates, scales and divides by a scalar; a point does not scale.</li>
+<li><code>length</code> and <code>distance(to:)</code> (C# <code>Length</code>, <code>DistanceTo</code>) compute the square root of the summed squares, as the
+language’s <code>length</code> and <code>distance</code> do, so hosts and scripts agree bit for bit; <code>lengthSquared</code>, <code>dot</code>, <code>cross</code> (three
+dimensions) and <code>isFinite</code> follow. <code>normalized</code> is absent for a zero or non-finite vector, as <code>normalize</code> gives <code>nothing</code>.
+<code>zero</code> is the origin.</li>
+<li>Equality compares components with Binary64 equality, so 0 and -0 are equal and hash alike. C# values are mutable structs
+with settable components, like Unity’s <code>Vector3</code>; Swift values are <code>Hashable</code>, <code>Sendable</code> and <code>Codable</code> with <code>var</code>
+components.</li>
+<li><strong>Units.</strong> The schema or host fixes the unit, so the types carry none. Converting to a <code>GesValue</code> takes the unit
+(<code>ToValue(unit)</code>, Swift <code>value(unit:)</code>) and yields <code>nothing</code> when a component is NaN, as the language does. Converting
+back takes the expected unit (<code>FromValue(value, unit)</code>, Swift <code>init?(_:unit:)</code>) and gives absence for a value of another
+kind or another unit: units never convert.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>C#</th>
+<th>Swift</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>types</td>
+<td><code>struct GesPoint</code>, <code>struct GesVector</code> with <code>X</code>, <code>Y</code>, <code>Z</code></td>
+<td><code>struct GesPoint</code>, <code>struct GesVector</code> with <code>x</code>, <code>y</code>, <code>z</code></td>
+</tr>
+<tr>
+<td>operations</td>
+<td><code>Zero</code>, <code>IsFinite</code>, <code>Length</code>, <code>LengthSquared</code>, <code>Normalized</code>, <code>Dot</code>, <code>Cross</code>, <code>DistanceTo</code>, operators and the compound assignments C# derives from them</td>
+<td><code>zero</code>, <code>init()</code>, <code>isFinite</code>, <code>length</code>, <code>lengthSquared</code>, <code>normalized</code>, <code>dot(_:)</code>, <code>cross(_:)</code>, <code>distance(to:)</code>, operators, <code>+=</code>, <code>-=</code>, <code>*=</code>, <code>/=</code></td>
+</tr>
+<tr>
+<td>conversion</td>
+<td><code>ToValue(unit)</code>, <code>static FromValue(value, unit)</code> returning a nullable value</td>
+<td><code>value(unit:)</code>, <code>init?(_:unit:)</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="geometry-library">Geometry library</h4>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
+<p><code>GesBox</code>, <code>GesPoly</code> and <code>GesDisc</code> are unitless shapes built on the spatial values, the same in both ports, and
+<code>GesGeometryLibrary</code> offers them to scripts as external types with a standard extension library, so that a host and its scripts compute alike.
+Game logic, such as rounded hulls, bearings or sensor sectors, stays in hosts.</p>
+<ul>
+<li><strong><code>GesBox</code></strong> is an axis-aligned box. It is created from two corners in any order (C# <code>new GesBox(a, b)</code>, Swift
+<code>GesBox(_:_:)</code>), from a centre and a size (<code>FromCenter</code>, <code>init(center:size:)</code>), whose negative components count as
+their magnitude, or from the origin to a size (<code>FromSize</code>, <code>init(size:)</code>), where a negative component spans the negative
+side, so <code>min</code> is never above <code>max</code>. <code>MinX</code> through <code>MaxZ</code> (Swift <code>minX</code> through <code>maxZ</code>) read the corners’ components for
+host code; they are no script fields. It is 2D when <code>z</code> is 0 on both corners. <code>size</code>, <code>center</code>,
+<code>contains(point)</code> and <code>intersects(box)</code> include the boundary; <code>union</code> encloses both; <code>inset(by:)</code> moves the sides of x and
+y, and in 3D also of z, inward or outward for a negative distance, and is absent when the sides would cross or the
+distance is not finite; <code>clamp</code> returns the nearest point of the box. Equality compares the corners.</li>
+<li><strong><code>GesPoly</code></strong> is a closed polygon in the plane z = 0: its points in order, the last connecting to the first (C# a sealed
+class with <code>Points</code>, Swift a <code>Hashable</code>, <code>Sendable</code>, <code>Codable</code> struct with <code>points</code>). It is valid with at least three
+finite points with <code>z</code> 0, no edge of zero length, no two edges that cross, touch or fold back over each other, and an area
+other than 0. An invalid polygon exists, but <code>area</code> (signed: positive counterclockwise), <code>bounds</code>, <code>centroid</code>,
+<code>contains(point)</code> (the outline counts as inside), <code>distance(to:)</code> (to the outline, for points inside and outside) and
+<code>intersects(poly)</code> (crossing or touching outlines, or one inside the other) are absent, as GES operations give <code>nothing</code>
+for a domain failure. Equality compares the points in order.</li>
+<li><strong><code>GesDisc</code></strong> is a filled circle in the plane z = 0: a centre and a radius (C# a readonly struct with <code>Center</code> and
+<code>Radius</code>, Swift a <code>Hashable</code>, <code>Sendable</code>, <code>Codable</code> struct with <code>center</code> and <code>radius</code>). It is created from a centre and a
+radius (C# <code>new GesDisc(center, radius)</code>, Swift <code>GesDisc(center:radius:)</code>) or from a radius around the origin
+(<code>new GesDisc(radius)</code>, <code>GesDisc(radius:)</code>), and keeps the radius’s magnitude, also when decoded. It is valid with a
+finite centre whose <code>z</code> is 0 and a finite radius; an invalid disc exists, but its operations are absent. <code>area</code> is π·r²;
+<code>bounds</code> is the 2D box around it; <code>contains(point)</code> includes the outline and is false for a point off the plane;
+<code>distance(to:)</code> is the distance to the outline, for points inside and outside; <code>clamp</code> (Swift <code>clamp(_:)</code>) returns the
+nearest point of the disc; <code>inset(by:)</code> shrinks the radius, grows it for a negative distance and is absent when the radius
+would turn negative or the distance is not finite. <code>intersects</code> takes a disc (the centres within both radii), a box,
+which must be 2D and finite, and is met at its point nearest to the centre, or a polygon, which holds the centre or whose
+outline comes within the radius. Equality compares centre and radius.</li>
+<li>All three convert to and from a <code>GesValue</code> like the spatial values, with an explicit unit, as the external values <code>:Box</code>,
+<code>:Poly</code> and <code>:Disc</code> of the library; another value or unit converts to absence.</li>
+<li><strong><code>GesGeometryLibrary</code></strong> provides <code>Catalog(next)</code> for the compiler and <code>ExternalTypes(next)</code> and <code>Extensions(next)</code> for
+the host (Swift <code>catalog(next:)</code>, <code>externalTypes(next:)</code>, <code>extensions(next:)</code>), each resolving the library first and
+everything else through <code>next</code>. Registering it takes the type names <code>Box</code>, <code>Poly</code> and <code>Disc</code>.
+<ul>
+<li><code>:Box(lower: p, upper: q)</code> takes two corners and <code>:Box(center: p, size: v)</code> a centre and a size, all of one unit, which
+the value keeps; its fields are <code>lower</code>, <code>upper</code>, <code>center</code> and <code>size</code>. <code>:Poly(points: [...])</code> takes a list of Points of
+one unit and has the field <code>points</code>. <code>:Disc(center: p, radius: r)</code> takes a centre and a radius of one unit and
+<code>:Disc(radius: r)</code> a radius around the origin, whose unit the origin takes; its fields are <code>center</code> and <code>radius</code>. The
+radius follows its declared Number type, so a Percentage is its unitless ratio, as for any external constructor. Another
+kind or a mixed unit constructs <code>nothing</code>. <code>min</code> and <code>max</code> are GES keywords,
+so the corner fields are <code>lower</code> and <code>upper</code>.</li>
+<li>The functions are <code>:geometry.size</code>, <code>center</code>, <code>union(_, _)</code>, <code>inset(_, by:)</code> and <code>nearest(_, point)</code> of boxes
+(<code>clamp</code> is a GES keyword); <code>bounds</code>, <code>area</code>, <code>distance(_, point)</code> and <code>centroid</code> of polygons, where <code>bounds</code> of a box is
+the box; <code>center</code>, <code>bounds</code>, <code>area</code>, <code>distance(_, point)</code>, <code>inset(_, by:)</code> and <code>nearest(_, point)</code> of discs; and
+<code>contains(_, point)</code> and <code>intersects(_, _)</code> of all, where a 2D box meets a polygon as the polygon of its outline and a disc
+meets each shape as <code>GesDisc.intersects</code> does, in either order. <code>area</code> is unitless, like <code>dot</code>; <code>distance</code> and a disc’s
+<code>radius</code> have the unit. Another kind, another unit or an invalid polygon or disc gives <code>nothing</code>. The functions have no purity contract, so the compiler treats them as effectful like every host call.</li>
+</ul>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>C#</th>
+<th>Swift</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>box</td>
+<td><code>readonly struct GesBox</code> with <code>Min</code>, <code>Max</code>, <code>Is2D</code>, <code>IsFinite</code>, <code>Size</code>, <code>Center</code>, <code>Contains</code>, <code>Intersects</code>, <code>Union</code>, <code>Inset</code>, <code>Clamp</code>, <code>ToValue</code>, <code>FromValue</code></td>
+<td><code>struct GesBox</code> with <code>min</code>, <code>max</code>, <code>is2D</code>, <code>isFinite</code>, <code>size</code>, <code>center</code>, <code>contains(_:)</code>, <code>intersects(_:)</code>, <code>union(_:)</code>, <code>inset(by:)</code>, <code>clamp(_:)</code>, <code>value(unit:)</code>, <code>init?(_:unit:)</code></td>
+</tr>
+<tr>
+<td>polygon</td>
+<td><code>sealed class GesPoly</code> with <code>Points</code>, <code>IsValid</code>, <code>Area</code>, <code>Bounds</code>, <code>Centroid</code>, <code>Contains</code>, <code>DistanceTo</code>, <code>Intersects</code>, <code>ToValue</code>, <code>FromValue</code></td>
+<td><code>struct GesPoly</code> with <code>points</code>, <code>isValid</code>, <code>area</code>, <code>bounds</code>, <code>centroid</code>, <code>contains(_:)</code>, <code>distance(to:)</code>, <code>intersects(_:)</code>, <code>value(unit:)</code>, <code>init?(_:unit:)</code></td>
+</tr>
+<tr>
+<td>disc</td>
+<td><code>readonly struct GesDisc</code> with <code>Center</code>, <code>Radius</code>, <code>IsValid</code>, <code>Area</code>, <code>Bounds</code>, <code>Contains</code>, <code>DistanceTo</code>, <code>Clamp</code>, <code>Inset</code>, <code>Intersects</code>, <code>ToValue</code>, <code>FromValue</code></td>
+<td><code>struct GesDisc</code> with <code>center</code>, <code>radius</code>, <code>isValid</code>, <code>area</code>, <code>bounds</code>, <code>contains(_:)</code>, <code>distance(to:)</code>, <code>clamp(_:)</code>, <code>inset(by:)</code>, <code>intersects(_:)</code>, <code>value(unit:)</code>, <code>init?(_:unit:)</code></td>
+</tr>
+<tr>
+<td>library</td>
+<td><code>static class GesGeometryLibrary</code> with <code>Namespace</code>, <code>Types</code>, <code>Catalog</code>, <code>ExternalTypes</code>, <code>Extensions</code></td>
+<td><code>enum GesGeometryLibrary</code> with <code>namespace</code>, <code>types</code>, <code>catalog(next:)</code>, <code>externalTypes(next:)</code>, <code>extensions(next:)</code></td>
+</tr>
+</tbody>
+</table>
 <h4 id="literal-parsing">Literal parsing</h4>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
 <p><code>Value</code> recognizes one complete data literal from Text without a Host, with the
 rules of <code>parse</code> and <code>parse strict</code> as owned by
 <a href="/docs/reference/semantics/text/#recognition-outside-a-program">Text semantics</a>:</p>
@@ -641,7 +841,7 @@ Exceeding a fixed parsing limit fails with <code>GesLiteralLimitException</code>
 and the numeric <code>Limit</code>/<code>limit</code>. C# rejects a null input with
 <code>ArgumentNullException</code> and unpaired surrogates with <code>ArgumentException</code>.</p>
 <h4 id="documents">Documents</h4>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
 <p><code>Document</code> is an immutable <a href="/docs/reference/documents/">GES document</a>: a Map or Record root
 with an optional schema reference, read from and printed to <code>.gesd</code> text.</p>
 <table>
@@ -695,8 +895,8 @@ with an optional schema reference, read from and printed to <code>.gesd</code> t
 </tr>
 <tr>
 <td>reading error</td>
-<td><code>GesDocumentException</code> with <code>Code</code>, <code>Line</code>, <code>Column</code>, <code>LimitName</code>, <code>Limit</code></td>
-<td><code>GesDocumentError</code> with <code>code</code>, <code>line</code>, <code>column</code>, <code>limitName</code>, <code>limit</code>, <code>message</code></td>
+<td><code>GesDocumentException</code> with <code>Code</code>, <code>Line</code>, <code>Column</code>, <code>LimitName</code>, <code>Limit</code>, <code>Path</code></td>
+<td><code>GesDocumentError</code> with <code>code</code>, <code>line</code>, <code>column</code>, <code>limitName</code>, <code>limit</code>, <code>path</code>, <code>message</code></td>
 </tr>
 <tr>
 <td>single-value printer</td>
@@ -709,7 +909,8 @@ with an optional schema reference, read from and printed to <code>.gesd</code> t
 specification; C# throws <code>ArgumentException</code> and Swift <code>GesApiError.invalidArgument</code>.
 A schema reference validates its name the same way. Reading throws only the
 document error, whose <code>Code</code> is one of the stable <code>document.*</code> codes; C# also
-rejects a null text and unpaired surrogates like <code>ParseLiteral</code>. Printing never
+rejects a null text and unpaired surrogates like <code>ParseLiteral</code>. <code>Path</code> (Swift <code>path</code>) is empty for a reading error and names the field of a schema check or model error, as
+<code>GesSchemaDocument</code> reports them. Printing never
 fails: documents cannot contain values without literal text. The single-value
 printer rejects the same values as the document constructor: External values,
 Dice rolls below 1 and Records whose type name is not a <code>TypeName</code>. Indentation is
@@ -717,7 +918,7 @@ limited to <code>MaximumIndentation</code>/<code>maximumIndentation</code> (100)
 an indentation outside 0 to 100 and a line width below 1; Swift prints such values
 clamped to that range. Equality compares the root values and schema references.</p>
 <h3 id="schemas">Schemas</h3>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
 <p>GES schemas (<a href="/docs/reference/schemas/">Schemas</a>) live in Runtime. Apart from the value path, they use neither
 <code>GesValue</code> nor the VM, and report their own error types.</p>
 <table>
@@ -750,14 +951,19 @@ clamped to that range. Equality compares the root values and schema references.<
 <td><code>checkDocument(_:parameters:)</code></td>
 </tr>
 <tr>
+<td>document read as a model reads it</td>
+<td><code>sealed class GesSchemaDocument</code> with <code>static Read(schemas, text, params expected)</code>, <code>Schema</code>, <code>Value</code>, <code>Locate(GesWireException)</code> and the constant <code>SchemaMismatch</code></td>
+<td><code>struct GesSchemaDocument</code> with <code>init(_:schemas:expected:) throws(GesDocumentError)</code>, <code>schema</code>, <code>value</code>, <code>error(for:)</code> and the constant <code>schemaMismatch</code></td>
+</tr>
+<tr>
 <td>description</td>
-<td><code>sealed class GesSchema</code> with <code>Name</code>, <code>Kind</code>, <code>Hash</code>, <code>CanonicalForm</code>, <code>Parameters</code>, <code>Fields</code>, <code>Tags</code>, <code>Members</code>, <code>Bind(parameters)</code>, <code>CheckDocument(text, parameters)</code></td>
-<td><code>final class GesSchema</code> with <code>name</code>, <code>kind</code>, <code>hash</code>, <code>canonicalForm</code>, <code>parameters</code>, <code>fields</code>, <code>tags</code>, <code>members</code>, <code>bind(parameters:)</code>, <code>checkDocument(_:parameters:)</code></td>
+<td><code>sealed class GesSchema</code> with <code>Name</code>, <code>Kind</code>, <code>WireGroup</code>, <code>ModelGroup</code>, <code>IsAbstract</code>, <code>PackedWidth</code>, <code>PackedBits</code>, <code>Takes</code>, <code>Hash</code>, <code>CanonicalForm</code>, <code>Parameters</code>, <code>Fields</code>, <code>ComputedFields</code>, <code>Constants</code>, <code>Tags</code>, <code>Members</code>, <code>Bind(parameters)</code>, <code>CheckDocument(text, parameters)</code></td>
+<td><code>final class GesSchema</code> with <code>name</code>, <code>kind</code>, <code>wireGroup</code>, <code>modelGroup</code>, <code>isAbstract</code>, <code>packedWidth</code>, <code>packedBits</code>, <code>takes</code>, <code>hash</code>, <code>canonicalForm</code>, <code>parameters</code>, <code>fields</code>, <code>computedFields</code>, <code>constants</code>, <code>tags</code>, <code>members</code>, <code>bind(parameters:)</code>, <code>checkDocument(_:parameters:)</code></td>
 </tr>
 <tr>
 <td>description parts</td>
-<td><code>enum GesSchemaKind</code>, <code>GesSchemaTypeKind</code>; <code>sealed class GesSchemaParameterInfo</code>, <code>GesSchemaFieldInfo</code>, <code>GesSchemaType</code>, <code>GesSchemaAxisInfo</code>; <code>readonly struct GesSchemaBound</code> with <code>ToDouble()</code></td>
-<td><code>enum GesSchemaKind</code>, <code>GesSchemaTypeKind</code>; <code>struct GesSchemaParameterInfo</code>, <code>GesSchemaFieldInfo</code>, <code>GesSchemaType</code>, <code>GesSchemaAxisInfo</code>, <code>GesSchemaBound</code> with <code>doubleValue</code></td>
+<td><code>enum GesSchemaKind</code>, <code>GesSchemaTypeKind</code>, <code>GesSchemaDefaultKind</code>; <code>sealed class GesSchemaParameterInfo</code>, <code>GesSchemaConstantInfo</code> (a <code>let</code> with <code>Name</code>, <code>Kind</code>, <code>Unit</code>, <code>IsInteger</code> and <code>Value</code>), <code>GesSchemaFieldInfo</code> (with <code>Default</code>), <code>GesSchemaDefaultInfo</code> (a field’s <code>default</code> with <code>Kind</code>, <code>Number</code>, <code>Boolean</code>, <code>Name</code> and <code>Entries</code>, the fields of a record literal), <code>GesSchemaDefaultEntryInfo</code> (with <code>Name</code> and <code>Value</code>), <code>GesSchemaTakeInfo</code> (a <code>with</code> with <code>Schema</code>, <code>IsAllOptional</code>, <code>Without</code> and <code>IsUnchanged</code>), <code>GesSchemaComputedFieldInfo</code> (a field written <code>computed by</code> with <code>Name</code>, <code>Kind</code>, <code>Unit</code>, <code>IsOptional</code> and <code>Expression</code>, the prefix form of the canonical form), <code>GesSchemaType</code> (with <code>TagSet</code>, the name of a declared tag set, <code>Label</code>, the label of a union alternative, and <code>Depth</code>, the depth of a recursive List or 0), <code>GesSchemaAxisInfo</code>; <code>readonly struct GesSchemaBound</code> with <code>ToDouble()</code></td>
+<td><code>enum GesSchemaKind</code>, <code>GesSchemaTypeKind</code>, <code>GesSchemaDefaultKind</code>; <code>struct GesSchemaParameterInfo</code>, <code>GesSchemaConstantInfo</code> (with <code>name</code>, <code>kind</code>, <code>unit</code>, <code>isInteger</code> and <code>value</code>), <code>GesSchemaFieldInfo</code> (with <code>defaultValue</code>), <code>GesSchemaDefaultInfo</code> (with <code>kind</code>, <code>number</code>, <code>boolean</code>, <code>name</code> and <code>entries</code>), <code>GesSchemaDefaultEntryInfo</code> (with <code>name</code> and <code>value</code>), <code>GesSchemaTakeInfo</code> (with <code>schema</code>, <code>isAllOptional</code>, <code>without</code> and <code>isUnchanged</code>), <code>GesSchemaComputedFieldInfo</code> (with <code>name</code>, <code>kind</code>, <code>unit</code>, <code>isOptional</code> and <code>expression</code>), <code>GesSchemaType</code> (with <code>tagSet</code>, <code>label</code> and <code>depth</code>), <code>GesSchemaAxisInfo</code>, <code>GesSchemaBound</code> with <code>doubleValue</code></td>
 </tr>
 <tr>
 <td>parameters</td>
@@ -776,12 +982,12 @@ clamped to that range. Equality compares the root values and schema references.<
 </tr>
 <tr>
 <td>writer</td>
-<td><code>ref struct GesSchemaWriter(schema, Span&lt;byte&gt;)</code>: <code>SelectMember</code>, <code>SelectAlternative</code>, <code>WriteBoolean</code>, <code>WriteInteger</code>, <code>WriteNumber</code>, <code>WriteIndex</code>, <code>WriteTag</code>, <code>WriteText</code>, <code>BeginList</code>, <code>BeginNested</code>, <code>WriteAbsent</code>, <code>Finish</code></td>
+<td><code>ref struct GesSchemaWriter(schema, Span&lt;byte&gt;)</code>: <code>SelectMember</code>, <code>SelectAlternative</code>, <code>WriteBoolean</code>, <code>WriteInteger</code>, <code>WriteNumber</code>, <code>WriteIndex</code>, <code>WriteTag</code>, <code>WriteFlags</code>, <code>WriteText</code>, <code>WriteBytes</code>, <code>BeginList</code>, <code>BeginNested</code>, <code>WriteAbsent</code>, <code>Finish</code></td>
 <td><code>struct GesSchemaWriter(_:into:)</code> over an <code>UnsafeMutableRawBufferPointer</code>, with the same operations</td>
 </tr>
 <tr>
 <td>reader</td>
-<td><code>ref struct GesSchemaReader(schema, ReadOnlySpan&lt;byte&gt;, byteLimit)</code>: <code>ReadMember</code>, <code>ReadAlternative</code>, <code>ReadKey</code>, <code>ReadPresence</code>, <code>ReadBoolean</code>, <code>ReadInteger</code>, <code>ReadNumber</code>, <code>ReadIndex</code>, <code>ReadTag</code>, <code>ReadText</code>, <code>BeginList</code>, <code>BeginNested</code>, <code>Finish</code></td>
+<td><code>ref struct GesSchemaReader(schema, ReadOnlySpan&lt;byte&gt;, byteLimit)</code>: <code>ReadMember</code>, <code>ReadAlternative</code>, <code>ReadKey</code>, <code>ReadPresence</code>, <code>ReadBoolean</code>, <code>ReadInteger</code>, <code>ReadNumber</code>, <code>ReadIndex</code>, <code>ReadTag</code>, <code>ReadFlags</code>, <code>ReadText</code>, <code>ReadBytes</code>, <code>BeginList</code>, <code>BeginNested</code>, <code>Finish</code></td>
 <td><code>struct GesSchemaReader(_:data:byteLimit:)</code> over an <code>UnsafeRawBufferPointer</code>, with the same operations</td>
 </tr>
 <tr>
@@ -796,18 +1002,18 @@ clamped to that range. Equality compares the root values and schema references.<
 </tr>
 <tr>
 <td>wire error</td>
-<td><code>GesWireException(code, path)</code> with <code>Code</code>, <code>Path</code> and a public constant per <code>wire.*</code> code</td>
-<td><code>GesWireError(code:path:)</code> with <code>code</code>, <code>path</code> and a static constant per code</td>
+<td><code>GesWireException(code, path)</code> and <code>GesWireException(code, path, detail)</code> with <code>Code</code>, <code>Path</code>, <code>Detail</code> (informative, empty unless a code gives one, such as <code>deeper than depth 3</code> for <code>wire.tooDeep</code>) and a public constant per <code>wire.*</code> code</td>
+<td><code>GesWireError(code:path:)</code> and <code>GesWireError(code:path:detail:)</code> with <code>code</code>, <code>path</code>, <code>detail</code> and a static constant per code</td>
 </tr>
 <tr>
 <td>bit writer</td>
-<td><code>ref struct GesBitWriter(Span&lt;byte&gt;)</code>: <code>BitPosition</code>, <code>Write(value, width)</code>, <code>WriteBytes</code>, <code>SetBit</code>, <code>Rewind</code>, <code>Finish</code></td>
-<td><code>struct GesBitWriter(into:)</code>: <code>bitPosition</code>, <code>write(_:width:)</code>, <code>writeBytes(_:)</code>, <code>setBit(_:)</code>, <code>rewind(to:)</code>, <code>finish()</code></td>
+<td><code>ref struct GesBitWriter(Span&lt;byte&gt;)</code>, <code>GesBitWriter.Counting()</code>: <code>BitPosition</code>, <code>RequiredByteCount</code>, <code>Write(value, width)</code>, <code>WriteBytes</code>, <code>SetBit</code>, <code>Rewind</code>, <code>Finish</code></td>
+<td><code>struct GesBitWriter(into:)</code>, <code>GesBitWriter.counting()</code>: <code>bitPosition</code>, <code>requiredByteCount</code>, <code>write(_:width:)</code>, <code>writeBytes(_:)</code> over a raw buffer or a <code>[UInt8]</code>, <code>setBit(_:)</code>, <code>rewind(to:)</code>, <code>finish()</code></td>
 </tr>
 <tr>
 <td>bit reader</td>
-<td><code>ref struct GesBitReader(ReadOnlySpan&lt;byte&gt;, byteLimit)</code>: <code>BitPosition</code>, <code>Read(width, path)</code>, <code>ReadBytes</code>, <code>Require</code>, <code>Seek</code>, <code>Finish</code></td>
-<td><code>struct GesBitReader(data:byteLimit:)</code>: <code>bitPosition</code>, <code>read(_:path:)</code>, <code>readBytes(into:path:)</code>, <code>require(_:path:)</code>, <code>seek(to:)</code>, <code>finish()</code></td>
+<td><code>ref struct GesBitReader(ReadOnlySpan&lt;byte&gt;, byteLimit)</code>: <code>BitPosition</code>, <code>RemainingBits</code>, <code>Read(width, path)</code>, <code>ReadBytes</code>, <code>Require</code>, <code>Seek</code>, <code>Finish</code></td>
+<td><code>struct GesBitReader(data:byteLimit:)</code>: <code>bitPosition</code>, <code>remainingBits</code>, <code>read(_:path:)</code>, <code>readBytes(into:path:)</code>, <code>readBytes(_:into:path:)</code> into a <code>[UInt8]</code> that keeps its capacity, <code>require(_:path:)</code>, <code>seek(to:)</code>, <code>finish()</code></td>
 </tr>
 <tr>
 <td>wire rules</td>
@@ -831,9 +1037,17 @@ clamped to that range. Equality compares the root values and schema references.<
 </tr>
 </tbody>
 </table>
+<p><code>GesSchemaDocument</code> reads a document as <a href="/docs/reference/schemas/#model-documents">generated models</a> do: its header must name one of the
+expected schemas, or the error is <code>document.schemaMismatch</code> at line 1, column 1, naming both; so is an expected name that
+names no concrete <code>schema</code> of the set, such as an abstract schema or a message; the document is then checked
+against that schema, whose error carries its <code>document.*</code> code, position and field path. <code>Value</code> is the Record of the
+document’s entries, with a Box, Poly or Disc written as their corners, points or centre and radius turned into the geometry
+library’s values.
+<code>Locate</code> places a <code>GesWireException</code> of converting it into a model at the deepest entry its path names, a List for an
+element, and keeps its code and path.</p>
 <p><code>GesSyntaxLanguage</code> adds <code>Gess</code> (Swift <code>.gess</code>) for highlighting schema sources.</p>
 <h3 id="schema-code-generation">Schema code generation</h3>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
 <p>The Generator package (C# <code>GameEventScript.Generator</code>, namespace <code>GameEventScript.Generator</code>; Swift product
 <code>GameEventScriptGenerator</code>) computes the <a href="/docs/reference/schemas/#generation-layout">generation layout</a> and writes the
 <a href="/docs/reference/schemas/#tools">generated code</a> that <code>ges schema layout</code> and <code>ges schema generate</code> print, so that build
@@ -854,9 +1068,34 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 <td><code>enum GesSchemaGenerator</code> with <code>layout(_:roots:parameters:)</code> and <code>generate(_:roots:parameters:options:)</code>, throwing and returning the text</td>
 </tr>
 <tr>
+<td>roles</td>
+<td><code>WireRoots(set, group)</code>, <code>ModelRoots(set, group)</code></td>
+<td><code>wireRoots(_:group:)</code>, <code>modelRoots(_:group:)</code></td>
+</tr>
+<tr>
+<td>models</td>
+<td><code>ModelLayout(set, roots)</code>, <code>GenerateModels(set, roots, options)</code></td>
+<td><code>modelLayout(_:roots:)</code>, <code>generateModels(_:roots:options:)</code></td>
+</tr>
+<tr>
+<td>split files</td>
+<td><code>GenerateFiles(set, roots, parameters, options)</code>, <code>GenerateModelFiles(set, roots, options)</code>, returning <code>IReadOnlyList&lt;GesGeneratedFile&gt;</code></td>
+<td><code>generateFiles(_:roots:parameters:options:)</code>, <code>generateModelFiles(_:roots:options:)</code>, returning <code>[GesGeneratedFile]</code></td>
+</tr>
+<tr>
+<td>generated file</td>
+<td><code>sealed class GesGeneratedFile</code> with <code>Path</code>, <code>Text</code></td>
+<td><code>struct GesGeneratedFile</code> with <code>path</code>, <code>text</code></td>
+</tr>
+<tr>
 <td>options</td>
-<td><code>sealed class GesSchemaGenerateOptions</code> with <code>Language</code>, <code>Namespace</code>, <code>Access</code>, <code>Values</code>, <code>CheckedExclusivity</code></td>
-<td><code>struct GesSchemaGenerateOptions</code> with <code>init(language:namespace:access:values:checkedExclusivity:)</code> and the same properties</td>
+<td><code>sealed class GesSchemaGenerateOptions</code> with <code>Language</code>, <code>Namespace</code>, <code>Access</code>, <code>Values</code>, <code>CheckedExclusivity</code>, <code>Bindings</code>, <code>Documents</code>, <code>Split</code>, <code>Models</code>, <code>ExtendNamespace</code></td>
+<td><code>struct GesSchemaGenerateOptions</code> with <code>init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:extendNamespace:)</code> and the same properties</td>
+</tr>
+<tr>
+<td>split</td>
+<td><code>enum GesSchemaSplit</code> with <code>None</code>, <code>Schema</code>, <code>File</code></td>
+<td><code>enum GesSchemaSplit</code> with <code>none</code>, <code>schema</code>, <code>file</code></td>
 </tr>
 <tr>
 <td>target language</td>
@@ -881,6 +1120,23 @@ codes and types (<code>GesSchemaException</code>, <code>GesSchemaError</code>), 
 <code>schema.unknownName</code>; a request that cannot be generated fails with a <code>generate.*</code> code. The options default to C#, no namespace, public access, no value conversion and
 unchecked exclusivity in Swift classes, as the CLI’s defaults do. Equal inputs give identical text in every
 port.</p>
+<blockquote>
+<p><strong>Since: 0.5.0</strong> — roles and models</p>
+</blockquote>
+<p><code>WireRoots</code> and <code>ModelRoots</code> list the <a href="/docs/reference/schemas/#roles">roots of a group</a> in declaration order, empty when it has none.
+<code>ModelLayout</code> and <code>GenerateModels</code> write the <a href="/docs/reference/schemas/#model-layout">model layout</a> and the
+<a href="/docs/reference/schemas/#model-types">model types</a> of schema roots, where <code>Values</code> adds their plain values; a root that is no schema
+fails with <code>generate.usage</code>, and so do the wire-only options <code>CheckedExclusivity</code> and <code>Models</code>; <code>Generate</code> rejects the model-only options
+<code>Bindings</code> and <code>Documents</code> with <code>generate.usage</code>. A reached type without a model type fails with <code>generate.unsupported</code>.</p>
+<blockquote>
+<p><strong>Since: 0.5.0</strong> — split files</p>
+</blockquote>
+<p><code>GenerateFiles</code> and <code>GenerateModelFiles</code> return the <a href="/docs/reference/schemas/#split-output">split output</a> of <code>Generate</code> and
+<code>GenerateModels</code> as files, <code>Split</code> choosing one per declaration (<code>Schema</code>) or per schema source (<code>File</code>): each file’s name
+relative to the output directory and its text, ordered by name, with the manifest <code>.ges-generated.json</code> last. They write
+nothing; the CLI owns the directory. <code>Split</code> stays <code>None</code> for <code>Generate</code> and <code>GenerateModels</code>, and the file methods need
+<code>Schema</code> or <code>File</code>; otherwise they fail with <code>generate.usage</code>. File names that differ only in ASCII case fail with
+<code>generate.nameCollision</code>.</p>
 <h2 id="host-construction-and-lifecycle-api">Host construction and lifecycle API</h2>
 <h3 id="hostbuilder">HostBuilder</h3>
 <p><code>HostBuilder</code> is mutable and single-caller. Every <code>Build()</code> creates an independent
@@ -914,7 +1170,7 @@ reentrancy requirements of those callbacks.</p>
 <td>Copies a finite Binary64 start sequence, optionally selects a deterministic fallback seed, and clears a prior direct seed. Exhaustion continues with the private fallback generator.</td>
 </tr>
 <tr>
-<td><code>WithRegistry(registry)</code></td>
+<td><code>WithExtensionRegistry(registry)</code></td>
 <td>Selects the extension registry. Absence is represented by an empty registry, not null.</td>
 </tr>
 <tr>
@@ -945,10 +1201,11 @@ reentrancy requirements of those callbacks.</p>
 </table>
 <h3 id="runtimelimits">RuntimeLimits</h3>
 <p><code>RuntimeLimits</code> is a configuration snapshot with the following signed integer
-settings: processed events per RunToCompletion call, queued logical
+settings: processed events per ordinary pump call (Start completes its whole
+initial group regardless), queued logical
 messages, execution steps per handler, register values, loop iterations, call
-depth, random scope depth, range items, generated collection items, dice count,
-and dice sides. The exact defaults are part of the public versioned API.</p>
+depth, random scope depth, range items, generated collection items, value
+nesting depth, dice count, and dice sides. The exact defaults are part of the public versioned API.</p>
 <table>
 <thead>
 <tr>
@@ -958,11 +1215,11 @@ and dice sides. The exact defaults are part of the public versioned API.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>MaxProcessedEventsPerRun</code></td>
+<td><code>MaxProcessedMessagesPerRun</code></td>
 <td style="text-align: right">64</td>
 </tr>
 <tr>
-<td><code>MaxQueuedMessagesPerRun</code></td>
+<td><code>MaxQueuedMessages</code></td>
 <td style="text-align: right">0 (unlimited)</td>
 </tr>
 <tr>
@@ -994,6 +1251,10 @@ and dice sides. The exact defaults are part of the public versioned API.</p>
 <td style="text-align: right">10,000</td>
 </tr>
 <tr>
+<td><code>MaxValueDepth</code></td>
+<td style="text-align: right">64</td>
+</tr>
+<tr>
 <td><code>MaxDiceCount</code></td>
 <td style="text-align: right">1,000</td>
 </tr>
@@ -1004,7 +1265,7 @@ and dice sides. The exact defaults are part of the public versioned API.</p>
 </tbody>
 </table>
 <p>A nonpositive value disables the processed-event, queue, execution-step, loop,
-range, generated-item, dice-count, or dice-side limit. A nonpositive register
+range, generated-item, value-depth, dice-count, or dice-side limit. A nonpositive register
 limit selects the portable default capacity of 512. Call depth is clamped to the
 encoded <code>u16</code> range for linking; zero permits only root handlers. Random scope
 depth alone must be in <code>0...65535</code> and is validated at Build. Host.Load checks
@@ -1040,11 +1301,11 @@ rules are in <a href="/docs/reference/host-runtime/">Host runtime</a>.</p>
 <td>True after successful initial Start; later instance failures and queued messages do not reset it.</td>
 </tr>
 <tr>
-<td><code>Subscribe(signature, handler, requiredTags?, excludedTags?, priority = 0)</code></td>
+<td><code>Subscribe(signature, handler, matchingTags?, withoutTags?, priority = 0)</code></td>
 <td>Adds one exact-signature native subscription and returns a Subscription. Inputs are copied/retained as immutable registration data.</td>
 </tr>
 <tr>
-<td><code>SubscribeMessageName(name, handler, requiredTags?, excludedTags?, priority = 0)</code></td>
+<td><code>SubscribeMessageName(name, handler, matchingTags?, withoutTags?, priority = 0)</code></td>
 <td>Adds a native subscription matching every signature of that normalized message name.</td>
 </tr>
 <tr>
@@ -1149,7 +1410,7 @@ or Publish is accepted, before that Emit’s <code>MessageEmitted</code>;</li>
 <code>runtimeLimitReached(_:detail:limit:)</code>, <code>runtimeError(_:)</code>,
 <code>messageScheduled(_:id:deadline:publish:)</code> and <code>messageDiscarded(id:)</code>.</p>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — send IDs, scheduling and discard callbacks, default implementations</p>
+<p><strong>Since: 0.5.0</strong> — send IDs, scheduling and discard callbacks, default implementations</p>
 </blockquote>
 <p><code>id</code> is the send ID defined in <code>HostRuntime.md#send-ids</code>; it is 0 for an Emit
 that was not queued and for a Publish the Host did not accept. The same section
@@ -1163,10 +1424,9 @@ a GES diagnostic, and lies outside Host state/recovery guarantees. This differs
 deliberately from publish-sink exceptions, which the Host contains as specified
 above.</p>
 <h3 id="opcode-instrumentation">Opcode instrumentation</h3>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.5.0</strong></p>
 <p><code>WithProfiler</code> / <code>withProfiler</code> selects an optional synchronous
-<code>IGesProfiler</code> / <code>GesProfiler</code> factory. Swift also accepts
-<code>profiler</code> in its Host initializer. The Host calls
+<code>IGesProfiler</code> / <code>GesProfiler</code> factory. The Host calls
 <code>CreateProgramProfiler(program)</code> / <code>createProgramProfiler(program)</code> once per linked
 load instance, before execution. The result implements
 <code>IGesProgramProfiler</code> / <code>GesProgramProfiler</code> and remains
@@ -1268,6 +1528,12 @@ Exactly one result may be selected through <code>SetNothing</code>, <code>SetVal
 <code>SetBoolean</code>, <code>SetInteger</code>, <code>SetFloat</code>, <code>SetPercentage</code>, <code>SetText</code>, or <code>SetTag</code>;
 the last setter call is the effective result. Omitting a result produces Nothing.</p>
 <p>The callback must not retain the call, arguments, Context, or borrowed values.
+An argument view borrowed from the VM’s registers ends with its call: reading a
+retained view afterwards fails instead of returning another handler’s register
+contents (C# throws <code>InvalidOperationException</code>; Swift reports <code>count</code> 0 and
+<code>nothing</code> for every index). The extension result is written to its destination
+register once the callback returns, so a destination that is also an argument
+keeps the argument’s value while the callback reads it.
 Setters are invalid outside an active invocation. Implementations should reuse
 the adapter and must not allocate it per hot-path invocation after warmup.
 Invoke may throw <code>ExtensionFaultException</code> or an unanticipated exception; see
@@ -1281,10 +1547,12 @@ a normalized name and exactly one portable type description: builtin kind plus
 unit, or custom type name. <code>ExternalTypeConstructorDefinition</code> contains type name,
 ordered unique parameters, and derived SignatureId.</p>
 <p>A Vector or Point declaration without a unit constraint preserves the supplied
-spatial value’s unit. An explicit non-none unit overrides that unit without
-rescaling components. This applies equally to constructor arguments, direct
-field reads, and fields materialized by conversion to Map. A missing spatial
-unit constraint must never silently strip an existing unit.</p>
+spatial value’s unit, and a Number declaration (<code>Float</code> without a unit, or with
+the unit none) preserves a Quantity’s unit while it makes the value binary64. An
+explicit non-none unit overrides that unit without rescaling components. This
+applies equally to constructor arguments, direct field reads, and fields
+materialized by conversion to Map. A missing unit constraint must never silently
+strip an existing unit.</p>
 <p>Constructor arguments and field values follow their declared builtin type before
 a constructor or script sees them. This applies equally to direct field reads
 and fields materialized by conversion to Map, so a field declared
@@ -1433,9 +1701,9 @@ does not define binary or JSON encoding.</p>
 immutable arrays. Their <code>Iterator</code> yields <code>GesMessageArgument</code> pairs
 without creating an intermediate pair array. Returned arrays retain Swift
 copy-on-write semantics; caller mutations cannot change a message.</p>
-<p>The Swift mapping separates the <code>GameEventScriptRuntime</code>,
-<code>GameEventScriptCompiler</code>, and <code>GameEventScriptConformance</code> SwiftPM packages.
-Compiler depends only on Runtime; Conformance depends on both. Runtime has no
+<p>The Swift mapping separates the <code>GameEventScriptSyntax</code>, <code>GameEventScriptRuntime</code>,
+<code>GameEventScriptCompiler</code>, <code>GameEventScriptGenerator</code> and <code>GameEventScriptConformance</code> SwiftPM packages, with the
+dependencies of the diagram above; Conformance depends on Runtime and Compiler. Runtime has no
 dependency on Compiler, a test framework, or Conformance.</p>
 <p><code>GesProgramBuilder.addScript(_:sourceName:)</code> accepts source text and assigns
 an independent source ID to each addition, even when diagnostic names repeat.
@@ -1457,6 +1725,16 @@ sink and registries. Every <code>build()</code> creates an independent Host; the
 initializer is internal. <code>GesProgramBuilder()</code> or
 <code>GameEventScriptProgram.makeBuilder()</code> creates a compiler builder. <code>load</code>, <code>start</code>, <code>isReady</code>, <code>subscribe</code>, <code>receive</code>, <code>executeFrame</code>,
 and <code>runToCompletion</code> retain the host contracts above. The mutable VM is host-private.</p>
+<p><code>GesValue</code> and <code>GameEventScriptMessage</code> are deliberately not <code>Sendable</code>. A value
+may hold an External value, which is a live object of one host whose getters
+read mutable embedding state on every access (see the External types section).
+Declaring them <code>Sendable</code> would
+promise a thread safety that the embedding’s objects cannot give. To forward a
+published Message to a host in another isolation domain, send its
+<code>json()</code> snapshot and rebuild it there with <code>GameEventScriptMessage(json:)</code>:
+the snapshot turns External values into Record snapshots and is plain text.
+The C# port has no compile-time equivalent; the same rule applies to its
+objects.</p>
 <p><code>GameEventScriptProgram</code> is a <code>final</code>, <code>Sendable</code> reference type. Passing it to
 multiple hosts shares one immutable instance rather than copying the Program
 structure. Host-specific links and execution state remain outside that instance.
@@ -1508,6 +1786,8 @@ value for each normalized label. Ordered tuple inputs support positional labels.
 <p><code>GesBridgeValueConvertible</code> defines explicit native conversion.
 Built-in conformances cover Boolean, Text, signed and unsigned fixed-width Swift
 integers, Float/Double, Optional, Array, String-keyed Dictionary and GesValue.
+<code>[UInt8]</code> converts to and from Bytes rather than a List, as C# <code>byte[]</code> does in
+extension parameters, results and external fields.
 Native decoding checks kind and units, rejects fractional or out-of-range integer
 conversion and floating-point precision loss. These conversions do not invoke
 source-language casts. Native integer encoding and decoding are bounded by both
@@ -1556,6 +1836,64 @@ require manual bindings. Annotation misuse is a Swift compile error;
 portable descriptor name/signature validation still occurs when the throwing
 factory executes. Manual descriptors remain available for foreign/generic types
 and throwing getters. Macro expansion adds no GES syntax or portable behavior.</p>
+<p>The C# <code>GesBridgeExternalTypeRegistry.Create(types)</code> reads <code>[GesType]</code>, <code>[GesField]</code>, <code>[GesConstruct]</code> and <code>[GesParam]</code>
+through Reflection and decides each member’s conversion from its CLR type at registration, as the Swift macros and type
+checker do at compile time. A field may hold <code>GesValue</code>, <code>bool</code>, <code>string</code>, <code>byte[]</code>, <code>double</code>, <code>float</code>, <code>long</code>, <code>int</code>,
+<code>short</code>, <code>byte</code>, <code>GesPoint</code>, <code>GesVector</code>, <code>GesBox</code>, <code>GesPoly</code>, <code>GesDisc</code> (with the declared unit), a Message, a Handler signature, a
+nullable form of a value type, or a class with <code>[GesType]</code>; a constructor parameter the same types except Message and
+Handler signature. Any other type, such as <code>decimal</code> or an enum, and an external class that the same registry does not
+register fail <code>Create</code> with <code>ArgumentException</code>. A constructor argument converts strictly as for
+extensions below; one that does not, such as <code>2.7</code> for an <code>int</code> or a value outside its range, is a fault of the call
+(<code>runtime.externalConstructorFailed</code>), as a throwing Swift conversion is. The runtime has already constructed nothing
+for a <code>nothing</code> argument without calling the constructor. A factory may return an instance of a derived class, which
+takes the binding of its nearest registered base class.</p>
+<blockquote>
+<p><strong>Since: 0.5.0</strong> — extensions declared with macros and attributes</p>
+</blockquote>
+<p><code>@GesExtension(namespace)</code> on an enum, struct or final class generates <code>gesExtensions()</code>, the <code>GesBridgeExtension</code> list of
+its methods marked <code>@GesFunction(name, unit:, units:)</code> or <code>@GesPredicate(name, units:)</code>, for a <code>GesBridgeExtensionRegistry</code>.
+The C# Bridge reads the same declarations from <code>[GesExtension]</code>, <code>[GesFunction]</code>, <code>[GesPredicate]</code> and <code>[GesParam]</code> through
+Reflection, and both follow one set of rules:</p>
+<ul>
+<li><strong>Signature.</strong> The namespace comes from the type’s annotation and the name from the function’s, by default the Swift
+method name. Swift takes the argument labels from the Swift labels, <code>_</code> for an unlabeled argument; C# from each
+<code>[GesParam(name, ...)]</code>. A predicate has one parameter, a <code>Bool</code>/<code>bool</code> or optional Boolean result, and is registered with
+one unlabeled argument, as <code>value is :namespace.name</code> calls it. The generated or reflected signatures and the code cannot
+drift apart.</li>
+<li><strong>Conversion.</strong> An argument converts strictly to the parameter’s type, in both bridges alike: an integer only from an
+Integer or an integral Float in its range, a binary64 only from a Float or an Integer it represents exactly, a Boolean
+only from a Boolean, and Nothing only to an Optional (C# nullable value type), which receives nil or null; neither a
+Boolean nor a Percentage converts to a number. The types are numbers, Booleans, Text, <code>GesPoint</code>, <code>GesVector</code>,
+<code>GesBox</code>, <code>GesPoly</code> and <code>GesDisc</code>, Optionals (C# nullable value types), and in Swift every <code>GesBridgeValueConvertible</code>; a <code>GesValue</code>
+parameter receives the raw argument. A declared parameter unit (Swift <code>units: ["distance": .meter]</code>, since Swift has no
+attributes on parameters; C# <code>[GesParam(name, kind, unit)]</code>) must match exactly and is removed; without one the argument
+must be unitless. The result converts back; a declared result unit (<code>unit:</code>, C# <code>[GesFunction(name, kind, unit)]</code> or
+<code>[GesFunction(name, unit)]</code>) is attached to a numeric, spatial or shape result, and an absent Optional or null result is
+<code>nothing</code>.</li>
+<li><strong>Random generator.</strong> A function may take the host’s random generator: a parameter of type <code>GesRandomGenerator</code>
+receives the call’s generator (Swift <code>call.random</code>, C# <code>GesExtensionCall.Random</code>) instead of an argument. It is no script
+argument: it has no label, does not count toward the signature’s labels or arity, takes no unit (Swift <code>units:</code>) and no
+<code>[GesParam]</code>, and does not count toward the C# limit of four script parameters. A function has at most one, in any
+position; a second one is a macro diagnostic (Swift) or fails registration (C#). A predicate takes none. Draws advance the
+host’s stream and follow its random scopes, so seeded runs stay deterministic. <code>@GesFunction func spawnSpots(count: Int, margin: Double, spacing: Double, random: GesRandomGenerator) -&gt; GesValue?</code> registers
+<code>:arena.spawnSpots(count:margin:spacing:)</code> with three script parameters. The Swift macro recognizes the parameter by its
+written type, <code>GesRandomGenerator</code> or <code>GameEventScriptRuntime.GesRandomGenerator</code>, not through a type alias. A C#
+method may still take a leading <code>GesExtensionCall</code> for the whole call context.</li>
+<li><strong>Failures.</strong> An argument that does not convert, or another argument count, gives <code>nothing</code>, as GES operations do for a
+domain failure; an error the method throws stays an extension fault (<code>runtime.extensionCallFailed</code>, or the declared fault).</li>
+<li><strong>Instances.</strong> Instance methods need an instance: Swift generates an instance <code>gesExtensions()</code> that also lists the static
+ones, and C# registers them with <code>GesBridgeExtensionRegistryBuilder.AddInstance(instance)</code>. The registry retains the
+instance (Swift copies a struct and references a class) and calls the methods on it, so a host can expose game state.</li>
+<li><strong>Purity.</strong> GES has no purity contract for host calls, so these functions are effectful like every extension; no
+annotation claims otherwise.</li>
+</ul>
+<p>The macros need approval in Xcode like the type macros; command-line builds pass <code>-skipMacroValidation</code>. Hosts that write
+closures keep working unchanged. C# registration uses Reflection, so IL2CPP code stripping must preserve the annotated
+types (a <code>link.xml</code> entry or <code>[Preserve]</code>). It also builds its typed adapters with <code>MakeGenericType</code> over value types,
+which needs generic sharing for value types at run time: IL2CPP with full generic sharing (Unity 2022 and later) or a
+JIT; NativeAOT and older IL2CPP versions are not supported. A C# attributed function takes at most four script
+parameters; a longer one fails at registration, while Swift has no such limit. A
+<a href="https://github.com/schloepke/GameEventScript/blob/main/BACKLOG.md#language">source generator</a> would remove both limits.</p>
 <p><code>GesBridgeHostRunner</code> is an optional synchronized embedding adapter.
 It takes exclusive ownership through Swift 6 sending parameters and serializes
 Host access and lifecycle operations with one recursive lock. Transferred Host,
@@ -1569,9 +1907,12 @@ ownership transfer. Recursive receives only enqueue; recursive pumping fails.
 Automatic pumps continue scheduling while ready queued work remains.
 <code>lastResult</code> is a synchronized snapshot of the most recent completed pump.
 <code>isReady</code> reports the startup barrier; a registration’s <code>startResult</code> reports its
-instance initialization. C# exposes the same outcome through runner.GetStartResult(instance).
-Runner-owned handles use stable registration IDs, retain their runner and detach
-idempotently under its lock. Closing rejects further work, detaches owned
+instance initialization. Both runners return a runner-owned <code>GesBridgeHostRunnerRegistration</code> from loading and
+subscribing (C# <code>RegistrationId</code>, <code>IsAttached</code>, <code>StartResult</code>, <code>Detach()</code>), never the host’s own handles, whose
+methods would bypass the lock; both subscribe by exact signature with optional tag filters, and C# also by name and
+labels. Runner-owned handles use stable registration IDs, retain their runner and detach
+idempotently under its lock. A pending delayed wake-up also retains its runner, so delayed work is delivered after
+the last outside reference is gone, as immediate work is. Closing rejects further work, detaches owned
 registrations and releases the Host; an already executing pump may finish.
 Blocking on another caller while inside a callback is outside this contract.</p>
 <h3 id="portable-language-mappings">Portable language mappings</h3>
@@ -1687,21 +2028,20 @@ see <a href="/docs/reference/language/#range">Language</a>. API names that accep
 input representation, not a promise of unnormalized internal storage.</p>
 <h2 id="idle-duration-api">Idle duration API</h2>
 <p class="ges-since"><strong>Since: 0.3.0</strong></p>
-<p>C# Host and CSharpHostRunner expose <code>long? IdleDurationMicroseconds</code>; Swift Host
-and SwiftHostRunner expose <code>Int64? idleDurationMicroseconds</code>. These are read-only
+<p>The C# Host and <code>GesBridgeHostRunner</code> expose <code>long? IdleDurationMicroseconds</code>; the Swift Host
+and <code>GesBridgeHostRunner</code> expose <code>Int64? idleDurationMicroseconds</code>. These are read-only
 observations using the configured monotonic clock. Their lifecycle, reset and
 absence rules are owned by <a href="/docs/reference/host-runtime/#idle-duration-observation">Host Runtime</a>.
 Runner reads are serialized through the ownership gate; a disposed/closed runner
 returns no value. Reading does not schedule work or produce notifications.</p>
 <h3 id="compound-collection-instruction-identifiers">Compound collection instruction identifiers</h3>
 <blockquote>
-<p><strong>Since: Unreleased</strong> — Cartesian opcode</p>
+<p><strong>Since: 0.5.0</strong> — Cartesian opcode</p>
 </blockquote>
 <p>The public bytecode opcode enumeration assigns <code>Cartesian</code> the stable value
 0xE0. Its operands and reserved fields are owned by <a href="/docs/reference/bytecode/">Bytecode</a>.
 Iterator modes and component output reuse existing instruction words and the
 UInt16 list pool; no mutable iterator is added to the portable Program API.</p>
-<p>The numeric instruction flag (bit <code>0x40</code> of <code>UnitAndFlags</code>) applies to Move, Add, Subtract,
-Multiply, Divide, Power, IntegerDivide, Modulo, Remainder, Min, Max, Negate, Abs and Clamp only. The same bit retains WithTags semantics on result-bearing sends;
-interpret flags by opcode.</p>
+<p>The meaning of instruction flag bits, such as the numeric flag of <code>UnitAndFlags</code>, depends on the opcode and is owned by
+<a href="/docs/reference/bytecode/">Bytecode</a>; interpret flags by opcode.</p>
 </div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/PublicApi.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/reference/host-runtime/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Host runtime specification</span></span></a><a href="/docs/reference/diagnostics/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Portable diagnostics specification</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

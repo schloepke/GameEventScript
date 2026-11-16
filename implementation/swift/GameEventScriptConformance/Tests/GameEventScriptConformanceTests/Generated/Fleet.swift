@@ -9,7 +9,9 @@
 import GameEventScriptRuntime
 
 /// The namespace `Generated` of generated schema types.
-enum Generated {
+enum Generated {}
+
+extension Generated {
     /// The schema `:Banner`, read and written without allocation once its storage has grown.
     final class Banner {
         /// The schema hash, independent of parameter values.
@@ -42,10 +44,18 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -79,16 +89,14 @@ enum Generated {
             if self.mottoUTF8.count > 16 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
             if !self.mottoUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
             try writer.write(UInt64(self.mottoUTF8.count), width: 5)
-            for byte in self.mottoUTF8 { try writer.write(UInt64(byte), width: 8) }
+            try writer.writeBytes(self.mottoUTF8)
         }
 
         func __readFields(_ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) {
             do {
                 let count = Int(try reader.read(5, path: paths[at + 0]))
                 if count > 16 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                try reader.require(count * 8, path: paths[at + 0])
-                self.mottoUTF8.removeAll(keepingCapacity: true)
-                for _ in 0..<count { self.mottoUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                try reader.readBytes(count, into: &self.mottoUTF8, path: paths[at + 0])
                 if !self.mottoUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
             }
         }
@@ -142,10 +150,22 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Banner) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Banner) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -198,7 +218,7 @@ enum Generated {
                     if self.mottoUTF8.count > 16 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
                     if !self.mottoUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
                     try writer.write(UInt64(self.mottoUTF8.count), width: 5)
-                    for byte in self.mottoUTF8 { try writer.write(UInt64(byte), width: 8) }
+                    try writer.writeBytes(self.mottoUTF8)
                     set0 = true
                 }
                 if set0 {
@@ -226,9 +246,7 @@ enum Generated {
                     do {
                         let count = Int(try reader.read(5, path: paths[at + 0]))
                         if count > 16 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                        try reader.require(count * 8, path: paths[at + 0])
-                        self.mottoUTF8.removeAll(keepingCapacity: true)
-                        for _ in 0..<count { self.mottoUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                        try reader.readBytes(count, into: &self.mottoUTF8, path: paths[at + 0])
                         if !self.mottoUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
                     }
                     if try __same0(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 0]) }
@@ -295,6 +313,16 @@ enum Generated {
         @exclusivity(unchecked) var flag: Banner = Banner()
         @exclusivity(unchecked) private var __shipsPool: [Ship] = []
 
+        /// Sets `ships` to `count` elements that the record reuses, as a read does; their fields keep earlier values until they are set.
+        func setShipsCount(_ count: Int) {
+            precondition(count >= 0, "A count is not negative.")
+            self.ships.removeAll(keepingCapacity: true)
+            for position in 0..<count {
+                if position == self.__shipsPool.count { self.__shipsPool.append(Ship()) }
+                self.ships.append(self.__shipsPool[position])
+            }
+        }
+
         /// Creates a record with every field at its zero value.
         init() {}
 
@@ -307,10 +335,18 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -357,7 +393,7 @@ enum Generated {
                 if self.modeTextUTF8.count > 8 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 16]) }
                 if !self.modeTextUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 16]) }
                 try writer.write(UInt64(self.modeTextUTF8.count), width: 4)
-                for byte in self.modeTextUTF8 { try writer.write(UInt64(byte), width: 8) }
+                try writer.writeBytes(self.modeTextUTF8)
 
             }
             try self.flag.__writeFields(&writer, paths, at + 18)
@@ -395,9 +431,7 @@ enum Generated {
                     do {
                         let count = Int(try reader.read(4, path: paths[at + 16]))
                         if count > 8 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 16]) }
-                        try reader.require(count * 8, path: paths[at + 16])
-                        self.modeTextUTF8.removeAll(keepingCapacity: true)
-                        for _ in 0..<count { self.modeTextUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 16]))) }
+                        try reader.readBytes(count, into: &self.modeTextUTF8, path: paths[at + 16])
                         if !self.modeTextUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 16]) }
                     }
 
@@ -761,10 +795,22 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Fleet) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Fleet) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -849,7 +895,7 @@ enum Generated {
                         if self.modeTextUTF8.count > 8 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 16]) }
                         if !self.modeTextUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 16]) }
                         try writer.write(UInt64(self.modeTextUTF8.count), width: 4)
-                        for byte in self.modeTextUTF8 { try writer.write(UInt64(byte), width: 8) }
+                        try writer.writeBytes(self.modeTextUTF8)
 
                     }
                     set14 = true
@@ -872,7 +918,7 @@ enum Generated {
                             if self.modeTextUTF8.count > 8 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 16]) }
                             if !self.modeTextUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 16]) }
                             try writer.write(UInt64(self.modeTextUTF8.count), width: 4)
-                            for byte in self.modeTextUTF8 { try writer.write(UInt64(byte), width: 8) }
+                            try writer.writeBytes(self.modeTextUTF8)
                             set14 = true
                         }
 
@@ -980,9 +1026,7 @@ enum Generated {
                                 do {
                                     let count = Int(try reader.read(4, path: paths[at + 16]))
                                     if count > 8 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 16]) }
-                                    try reader.require(count * 8, path: paths[at + 16])
-                                    self.modeTextUTF8.removeAll(keepingCapacity: true)
-                                    for _ in 0..<count { self.modeTextUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 16]))) }
+                                    try reader.readBytes(count, into: &self.modeTextUTF8, path: paths[at + 16])
                                     if !self.modeTextUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 16]) }
                                 }
                                 if try __same16(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 16]) }
@@ -990,9 +1034,7 @@ enum Generated {
                                 do {
                                     let count = Int(try reader.read(4, path: paths[at + 16]))
                                     if count > 8 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 16]) }
-                                    try reader.require(count * 8, path: paths[at + 16])
-                                    self.modeTextUTF8.removeAll(keepingCapacity: true)
-                                    for _ in 0..<count { self.modeTextUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 16]))) }
+                                    try reader.readBytes(count, into: &self.modeTextUTF8, path: paths[at + 16])
                                     if !self.modeTextUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 16]) }
                                 }
                             }
@@ -1084,10 +1126,18 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -1220,10 +1270,22 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Pose) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Pose) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -1449,10 +1511,18 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -1513,7 +1583,7 @@ enum Generated {
             if self.nameUTF8.count > 12 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 8]) }
             if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 8]) }
             try writer.write(UInt64(self.nameUTF8.count), width: 4)
-            for byte in self.nameUTF8 { try writer.write(UInt64(byte), width: 8) }
+            try writer.writeBytes(self.nameUTF8)
             if self.cargo.count > 4 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 9]) }
             try writer.write(UInt64(self.cargo.count), width: 3)
             for item in self.cargo {
@@ -1546,9 +1616,7 @@ enum Generated {
             do {
                 let count = Int(try reader.read(4, path: paths[at + 8]))
                 if count > 12 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 8]) }
-                try reader.require(count * 8, path: paths[at + 8])
-                self.nameUTF8.removeAll(keepingCapacity: true)
-                for _ in 0..<count { self.nameUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 8]))) }
+                try reader.readBytes(count, into: &self.nameUTF8, path: paths[at + 8])
                 if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 8]) }
             }
             do {
@@ -1718,10 +1786,30 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Ship) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            let paths = Self.__paths
+            let key = try Self.__wire0(self.id, paths, 0)
+            if try key != Self.__wire0(baseline.id, paths, 0) { throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }
+            try writer.write(key, width: 16)
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Ship) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            let paths = Self.__paths
+            let key = try Self.__wire0(self.id, paths, 0)
+            if try key != Self.__wire0(baseline.id, paths, 0) { throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }
+            try writer.write(key, width: 16)
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -1862,7 +1950,7 @@ enum Generated {
                     if self.nameUTF8.count > 12 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 8]) }
                     if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 8]) }
                     try writer.write(UInt64(self.nameUTF8.count), width: 4)
-                    for byte in self.nameUTF8 { try writer.write(UInt64(byte), width: 8) }
+                    try writer.writeBytes(self.nameUTF8)
                     set8 = true
                 }
                 if set8 {
@@ -2002,9 +2090,7 @@ enum Generated {
                     do {
                         let count = Int(try reader.read(4, path: paths[at + 8]))
                         if count > 12 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 8]) }
-                        try reader.require(count * 8, path: paths[at + 8])
-                        self.nameUTF8.removeAll(keepingCapacity: true)
-                        for _ in 0..<count { self.nameUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 8]))) }
+                        try reader.readBytes(count, into: &self.nameUTF8, path: paths[at + 8])
                         if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 8]) }
                     }
                     if try __same8(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 8]) }

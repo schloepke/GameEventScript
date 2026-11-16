@@ -55,6 +55,15 @@ here.
   registry and extensions. Decide whether `WithExternalTypeCatalog` remains as a
   convenience, and whether the Bridges generate declaration modules. Schedule
   after the Syntax module rework, on its source-neutral declaration set.
+  Also evaluate importing `.gess` schemas as the source of record shapes, so
+  the compiler checks field names, Tag sets and `:Flags` members (for example a
+  misspelled `#enmy`) against them. Schemas cannot declare external functions
+  and predicates; those stay in declaration modules.
+- Offer a C# incremental source generator for `[GesExtension]` and `[GesType]` declarations, so that
+  Unity IL2CPP builds need neither Reflection nor `link.xml` entries for annotated types, with the
+  same rules as the Reflection registries and the Swift macros. Generated adapters would also lift the
+  four-parameter limit of attributed functions and the need for value-type generic sharing at run time
+  (`MakeGenericType`), which excludes NativeAOT and IL2CPP before Unity 2022 (specs/PublicApi.md).
 - Bind selected schema parameters of generated code at run time: `ges schema generate
   --dynamic-param name` would turn only the constants that depend on the named parameters into
   fields of a generated binding value, created from `GesSchemaParameters` and checked against the
@@ -64,6 +73,10 @@ here.
 - Provide a base for publish/subscribe transport of messages and data, outside Runtime, in a
   `GesNetwork` module or in `GesBridge`; decide which. It frames records, maps channels to message
   sets or schemas and carries the hash at connection setup (specs/Schemas.md#extension-points).
+- Extend packed schemas (specs/Schemas.md#packed-schemas): `optional` fields as a presence bit, spatial fields with
+  fixed axes, computed fields over the word, and a block copy of a List of packed records between the bit reader or
+  writer and an array of words when the bit position is byte-aligned, which needs new public bit-primitive API. Also a
+  raw-word conversion for scripts that pass packed records on without reading their fields.
 - Add schema elapsed-time references to the performance corpus: writer, reader and value path
   on Bot-sized records, with budgets per measured profile.
 - Run the schema byte and vector suites, generated schema code (`ges schema generate --language csharp`)
@@ -94,6 +107,9 @@ here.
   and is not required for 1.0. Revisit only for a demonstrated application need;
   portable literals and JSON already reconstruct data, and external snapshots
   become Records. See the [language scope review](docs/guide/distribution/Packages.md#language-scope-review-for-10).
+- A portable per-value size limit (Text scalars and List, Dice and Bytes items) checked by concatenation and
+  conversion to Text, so that a host can run untrusted Programs without an outside memory bound. Runtime limits
+  bound work and nesting today, not memory (specs/HostRuntime.md#memory).
 
 ## Language ports and distribution
 
@@ -105,9 +121,30 @@ here.
   preserve the independently measured zero-allocation dispatch contract.
 - Implement Go and Rust as additional planned language ports, preserving the
   same portable Core, `.gesb` format, and shared Markdown Conformance contracts.
+- Add TypeScript/JavaScript as a target language of schema code generation
+  (`ges schema generate --language typescript`): wire records and models with the
+  same layout, byte-identical encoding and goldens as C# and Swift, checked by
+  `compare-schema-generation.py` and compiled by `test-generated-schemas.py`.
+  JavaScript numbers are binary64, so Int64 fields need `bigint` or a checked
+  safe-integer range.
+- Consider a GES-to-JavaScript transpiler that turns a Program into a
+  JavaScript module with a small runtime for host, queue and values, verified
+  against the shared Markdown Conformance; it must keep the VM's deterministic
+  ordering, randomness and exact Int64 semantics.
+- Add Godot support for schemas: a GDExtension that does wire, delta and
+  document encoding natively (built on the Rust port, or on the C# port for
+  Godot .NET projects, which can use the generated C# code directly), plus
+  GDScript model generation (`ges schema generate --language gdscript --model`)
+  with typed classes the extension fills. GDScript runs as interpreted bytecode,
+  so a pure GDScript wire codec remains an optional later fallback for low
+  rates; it would need byte-identical goldens like the other languages.
 - Add an independent CI job with build, unit tests, strict shared Conformance,
   canonical `.gesb` fixtures and cross-language result comparison for every new
   implementation. A future C runtime additionally requires sanitizer jobs.
+- Consider a `Sendable` Swift message snapshot type for forwarding between
+  isolation domains without the JSON text round trip. `GesValue` and
+  `GameEventScriptMessage` stay non-`Sendable` because External values are live
+  host objects (specs/PublicApi.md#swift).
 - Add Maven publication with the real Kotlin implementation; do not introduce
   empty package scaffolds.
 - Consider a C runtime and optional thin C++ facade when gaming adoption or a
@@ -115,6 +152,8 @@ here.
 - A portable standard-extension library is not required for the 1.0 language
   baseline. Define one only after its contracts and shared Conformance cases
   exist; keep language-specific extensions with their implementations until then.
+  The geometry library (`GesGeometryLibrary`, specs/PublicApi.md#geometry-library) is the first
+  such library; follow its pattern of overlays in front of the host's own registries.
 
 ## Developer tooling
 
@@ -143,12 +182,24 @@ here.
 - Consider reusable Unity editor hot-reload integration when extracting the
   editor package. Existing CLI `:reload` and the consuming Swift application's
   editor already reload programs through the existing host lifecycle. Keep file watching, threading and Unity dependencies in adapters.
+- Check whether IL2CPP contracts the C# Runtime's floating arithmetic, and keep products out of sums where it does. The VM
+  computes `number + percentage` as `a + a * b`, distances as sums of squares and floating Range elements as `from + i * step`
+  in single expressions, which a C++ compiler under `-ffp-contract=on` may fuse into one rounding, unlike .NET and Swift;
+  specs/Semantics/Determinism.md requires separate operations. Generated computed-field code already avoids the shape
+  (specs/Schemas.md#tools); measure on a device build before changing the hot path.
 - After the Kotlin port is stable, build a dedicated IntelliJ plugin with native
   `.ges`/`.gesa` support beyond portable TextMate highlighting and `.region`
   folding. Keep the portable dump and TextMate bundles free of IntelliJ-specific
   markers in the meantime.
 
 ## Performance and optimizer follow-ups
+
+- Scope-based register reuse for named locals: today every `let`, loop and `if let` binding pins its own register for the
+  whole routine, so the frame grows with the number of bindings rather than with the values live at once (a generated
+  handler with about 1,300 bindings exceeds the default 512 registers). Give named registers intervals from their first
+  write to the end of their scope, extended across loop back edges, allocate them with the temporaries' linear scan in
+  both compilers, keep debug symbols per range, and measure the performance corpus. Deferred because it changes every
+  bytecode snapshot and should land with the instruction-format review before 1.0.
 
 - Investigate the Swift/C# execution-time gap observed with release 0.3.0 on
   the same machine and the same precompiled `compute-benchmark.gesb`. User

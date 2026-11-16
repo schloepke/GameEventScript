@@ -10,6 +10,9 @@
       "include": "#comments"
     },
     {
+      "include": "#names"
+    },
+    {
       "include": "#types"
     },
     {
@@ -67,7 +70,7 @@
     "numbers": {
       "patterns": [
         {
-          "match": "-?\\b\\d[\\d_]*(?:\\.\\d[\\d_]*)?(?:[eE][+-]?\\d+)?[^\\s,(){}|#]*",
+          "match": "-?\\b\\d[\\d_]*(?:\\.\\d[\\d_]*)?(?:[eE][+-]?\\d+)?[^\\s,(){}\\[\\]|#]*",
           "name": "constant.numeric.gameeventscript.schema"
         }
       ]
@@ -75,7 +78,15 @@
     "keywords": {
       "patterns": [
         {
-          "match": "\\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|tags)\\b",
+          "match": "\\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|depth|tags|wire|model|let|default|true|false|abstract|packed|with|all|without|computed|by|when|otherwise|or|not|of|min|clamp|abs|has|sqrt|cbrt|sin|cos|tan|asin|acos|atan2|atan|hypot|exp|ln|floor|ceil|truncate|round|rad|deg)\\b",
+          "name": "keyword.other.gameeventscript.schema"
+        },
+        {
+          "match": "(?<=\\bround )half\\b",
+          "name": "keyword.other.gameeventscript.schema"
+        },
+        {
+          "match": "(?<=\\bhalf )(?:even|up|down)\\b",
           "name": "keyword.other.gameeventscript.schema"
         }
       ]
@@ -91,12 +102,24 @@
     "punctuation": {
       "patterns": [
         {
+          "match": "[√∛^²³]",
+          "name": "keyword.operator.arithmetic.gameeventscript.schema"
+        },
+        {
           "match": "[|]",
           "name": "keyword.operator.union.gameeventscript.schema"
         },
         {
-          "match": "[,:{}()]",
+          "match": "[,:{}()\\[\\]]",
           "name": "punctuation.separator.gameeventscript.schema"
+        }
+      ]
+    },
+    "names": {
+      "patterns": [
+        {
+          "match": "`[a-z][A-Za-z0-9]*`",
+          "name": "variable.other.quoted.gameeventscript.schema"
         }
       ]
     }

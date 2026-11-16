@@ -20,8 +20,7 @@ extension GesVirtualMachine {
                 guard let from = range.term(at: first), let to = preserveEnd ? range.to : range.term(at: last) else { return setNothing(destination) }
                 return setIntegerRange(destination, from: from, to: to, step: range.step)
             }
-            guard let range = registers[x].floatRangeValue, let from = range.term(at: first), let to = preserveEnd ? range.to : range.term(at: last) else { return setNothing(destination) }
-            return setFloatRange(destination, from: from, to: to, step: range.step)
+            return setFloatRangeSlice(destination, registers[x].floatRangeValue!, start: first - 1, count: last - first + 1, reversed: false)
         }
         guard let values = GesCollectionOperators.materialize(registers[x], ranges: false) else { return setNothing(destination) }
         let number = min(count, values.count)

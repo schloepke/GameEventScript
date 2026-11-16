@@ -234,7 +234,7 @@
           "match": "\\b(unit)(:(?:none|degree|meter|second))\\b"
         },
         {
-          "match": "\\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|List|Dice|Map|ListBuilder|MapBuilder|DistinctBuilder|GroupBuilder|OrderBuilder|Iterator|Series|Custom)\\b",
+          "match": "\\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Bytes|Handler|Message|List|Dice|Map|ListBuilder|MapBuilder|DistinctBuilder|GroupBuilder|OrderBuilder|Iterator|Series|Custom)\\b",
           "name": "support.type.bytecode.gameeventscript.assembler"
         },
         {

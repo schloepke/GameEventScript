@@ -72,7 +72,6 @@ static class GameEventScript.Api.GesBinaryFormat
   field static System.UInt32 HeaderSize
   field static System.UInt32 SectionHeaderSize
 struct GameEventScript.Api.GesBindingSegment
-  ctor GesBindingSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesBindingSegment.Entry> entries)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesBindingSegment.Entry> Entries { get }
   property System.UInt16 EntryCount { get }
 struct GameEventScript.Api.GesBindingSegment.Entry
@@ -94,6 +93,7 @@ struct GameEventScript.Api.GesBitReader
   method System.Void Require(System.Int64 bits, System.String path)
   method System.Void Seek(System.Int64 bit)
   property System.Int64 BitPosition { get }
+  property System.Int64 RemainingBits { get }
 struct GameEventScript.Api.GesBitWriter
   ctor GesBitWriter(System.Span<System.Byte> buffer)
   method System.Int32 Finish()
@@ -101,6 +101,8 @@ struct GameEventScript.Api.GesBitWriter
   method System.Void SetBit(System.Int64 bit)
   method System.Void Write(System.UInt64 value, System.Int32 width)
   method System.Void WriteBytes(System.ReadOnlySpan<System.Byte> bytes)
+  method static GameEventScript.Api.GesBitWriter Counting()
+  property System.Int32 RequiredByteCount { get }
   property System.Int64 BitPosition { get }
 sealed class GameEventScript.Api.GesBoundSchema
   method GameEventScript.Api.GesBoundSchema Member(System.String name)
@@ -112,8 +114,36 @@ sealed class GameEventScript.Api.GesBoundSchema
   property System.String Name { get }
   property System.UInt64 BindingHash { get }
   property System.UInt64 Hash { get }
+struct GameEventScript.Api.GesBox
+  ctor GesBox(GameEventScript.Api.GesPoint corner, GameEventScript.Api.GesPoint opposite)
+  method GameEventScript.Api.GesBox Union(GameEventScript.Api.GesBox other)
+  method GameEventScript.Api.GesBox? Inset(System.Double by)
+  method GameEventScript.Api.GesPoint Clamp(GameEventScript.Api.GesPoint point)
+  method GameEventScript.Runtime.Values.GesValue ToValue(GameEventScript.Api.GesQuantityUnit unit)
+  method System.Boolean Contains(GameEventScript.Api.GesPoint point)
+  method System.Boolean Equals(GameEventScript.Api.GesBox other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean Intersects(GameEventScript.Api.GesBox other)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static GameEventScript.Api.GesBox FromCenter(GameEventScript.Api.GesPoint center, GameEventScript.Api.GesVector size)
+  method static GameEventScript.Api.GesBox FromSize(GameEventScript.Api.GesVector size)
+  method static GameEventScript.Api.GesBox? FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesBox left, GameEventScript.Api.GesBox right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesBox left, GameEventScript.Api.GesBox right)
+  property GameEventScript.Api.GesPoint Center { get }
+  property GameEventScript.Api.GesPoint Max { get }
+  property GameEventScript.Api.GesPoint Min { get }
+  property GameEventScript.Api.GesVector Size { get }
+  property System.Boolean Is2D { get }
+  property System.Boolean IsFinite { get }
+  property System.Double MaxX { get }
+  property System.Double MaxY { get }
+  property System.Double MaxZ { get }
+  property System.Double MinX { get }
+  property System.Double MinY { get }
+  property System.Double MinZ { get }
 sealed class GameEventScript.Api.GesBuildMetadataSegment
-  ctor GesBuildMetadataSegment(System.String compilerId, System.String compilerVersion)
   property System.String CompilerId { get }
   property System.String CompilerVersion { get }
 struct GameEventScript.Api.GesBytecodeInstruction
@@ -375,6 +405,7 @@ enum GameEventScript.Api.GesBytecodeTypeKind
   enum-field Vector = 8
   enum-field Point = 9
   enum-field Range = 10
+  enum-field Bytes = 11
   enum-field Handler = 16
   enum-field Message = 17
   enum-field List = 32
@@ -389,7 +420,6 @@ enum GameEventScript.Api.GesBytecodeTypeKind
   enum-field Series = 49
   enum-field Custom = 255
 struct GameEventScript.Api.GesCodeSegment
-  ctor GesCodeSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesBytecodeInstruction> instructions)
   property GameEventScript.Api.GesBytecodeInstruction Item { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesBytecodeInstruction> Instructions { get }
   property System.Int32 Count { get }
@@ -438,7 +468,6 @@ enum GameEventScript.Api.GesDebugSymbolKind
   enum-field Parameter = 1
   enum-field Local = 2
 sealed class GameEventScript.Api.GesDebugSymbolsSegment
-  ctor GesDebugSymbolsSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesDebugSymbol> symbols)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesDebugSymbol> Symbols { get }
 sealed class GameEventScript.Api.GesDeclaredExternalTypeCatalog
   ctor GesDeclaredExternalTypeCatalog(System.Collections.Generic.IEnumerable<GameEventScript.Api.GesExternalTypeDefinition> types)
@@ -538,6 +567,29 @@ enum GameEventScript.Api.GesDiagnosticSymbolKind
   enum-field Message = 5
   enum-field Variable = 6
   enum-field GlobalDefinition = 7
+struct GameEventScript.Api.GesDisc
+  ctor GesDisc(GameEventScript.Api.GesPoint center, System.Double radius)
+  ctor GesDisc(System.Double radius)
+  method GameEventScript.Api.GesDisc? Inset(System.Double by)
+  method GameEventScript.Api.GesPoint? Clamp(GameEventScript.Api.GesPoint point)
+  method GameEventScript.Runtime.Values.GesValue ToValue(GameEventScript.Api.GesQuantityUnit unit)
+  method System.Boolean Equals(GameEventScript.Api.GesDisc other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean? Contains(GameEventScript.Api.GesPoint point)
+  method System.Boolean? Intersects(GameEventScript.Api.GesBox box)
+  method System.Boolean? Intersects(GameEventScript.Api.GesDisc other)
+  method System.Boolean? Intersects(GameEventScript.Api.GesPoly poly)
+  method System.Double? DistanceTo(GameEventScript.Api.GesPoint point)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static GameEventScript.Api.GesDisc? FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesDisc left, GameEventScript.Api.GesDisc right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesDisc left, GameEventScript.Api.GesDisc right)
+  property GameEventScript.Api.GesBox? Bounds { get }
+  property GameEventScript.Api.GesPoint Center { get }
+  property System.Boolean IsValid { get }
+  property System.Double Radius { get }
+  property System.Double? Area { get }
 sealed class GameEventScript.Api.GesDocument
   ctor GesDocument(GameEventScript.Runtime.Values.GesValue value, GameEventScript.Api.GesDocumentSchema schema)
   method System.Boolean Equals(GameEventScript.Api.GesDocument other)
@@ -549,12 +601,13 @@ sealed class GameEventScript.Api.GesDocument
   property GameEventScript.Runtime.Values.GesValue Value { get }
   property GameEventScript.Runtime.Values.GesValueMap Entries { get }
 sealed class GameEventScript.Api.GesDocumentException
-  ctor GesDocumentException(System.String code, System.Int32 line, System.Int32 column, System.String limitName, System.Int32? limit)
+  ctor GesDocumentException(System.String code, System.Int32 line, System.Int32 column, System.String limitName, System.Int32? limit, System.String path, System.String message)
   property System.Int32 Column { get }
   property System.Int32 Line { get }
   property System.Int32? Limit { get }
   property System.String Code { get }
   property System.String LimitName { get }
+  property System.String Path { get }
 sealed class GameEventScript.Api.GesDocumentFormat
   ctor GesDocumentFormat()
   field static System.Int32 MaximumIndentation
@@ -671,10 +724,17 @@ sealed class GameEventScript.Api.GesFloatRange
   property System.Double From { get }
   property System.Double Step { get }
   property System.Double To { get }
+static class GameEventScript.Api.GesGeometryLibrary
+  field static System.String Namespace
+  method static GameEventScript.Api.IGesExtensionRegistry Extensions(GameEventScript.Api.IGesExtensionRegistry next)
+  method static GameEventScript.Api.IGesExternalTypeCatalog Catalog(GameEventScript.Api.IGesExternalTypeCatalog next)
+  method static GameEventScript.Api.IGesExternalTypeRegistry ExternalTypes(GameEventScript.Api.IGesExternalTypeRegistry next)
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesExternalTypeDefinition> Types { get }
 sealed class GameEventScript.Api.GesHostBuilder
   ctor GesHostBuilder()
   method GameEventScript.Api.GameEventScriptHost Build()
   method GameEventScript.Api.GesHostBuilder WithClock(GameEventScript.Api.IGesClock clock)
+  method GameEventScript.Api.GesHostBuilder WithExtensionRegistry(GameEventScript.Api.IGesExtensionRegistry registry)
   method GameEventScript.Api.GesHostBuilder WithExternalTypeRegistry(GameEventScript.Api.IGesExternalTypeRegistry registry)
   method GameEventScript.Api.GesHostBuilder WithProfiler(GameEventScript.Api.IGesProfiler profiler)
   method GameEventScript.Api.GesHostBuilder WithPublishSink(GameEventScript.Api.IGesPublishSink publishSink)
@@ -682,7 +742,6 @@ sealed class GameEventScript.Api.GesHostBuilder
   method GameEventScript.Api.GesHostBuilder WithRandomSeed(System.Int64 seed)
   method GameEventScript.Api.GesHostBuilder WithRandomSequence(System.Collections.Generic.IReadOnlyList<System.Double> values)
   method GameEventScript.Api.GesHostBuilder WithRandomSequence(System.Collections.Generic.IReadOnlyList<System.Double> values, System.Int64 fallbackSeed)
-  method GameEventScript.Api.GesHostBuilder WithRegistry(GameEventScript.Api.IGesExtensionRegistry registry)
   method GameEventScript.Api.GesHostBuilder WithRuntimeLimits(GameEventScript.Api.GesRuntimeLimits limits)
   method GameEventScript.Api.GesHostBuilder WithRuntimeObserver(GameEventScript.Api.IGesRuntimeObserver observer)
 sealed class GameEventScript.Api.GesIntegerRange
@@ -746,12 +805,48 @@ sealed class GameEventScript.Api.GesMessageSignature
   property System.String Name { get }
   property System.String SignatureId { get }
 sealed class GameEventScript.Api.GesOpaqueSection
-  ctor GesOpaqueSection(System.UInt16 sectionType, GameEventScript.Api.GesSectionFlags flags, System.UInt16 sectionVersion, System.Collections.Generic.IReadOnlyList<System.Byte> rawPayload, System.Int32 originalOrdinal)
   property GameEventScript.Api.GesReadOnlyArray<System.Byte> RawPayload { get }
   property GameEventScript.Api.GesSectionFlags Flags { get }
   property System.Int32 OriginalOrdinal { get }
   property System.UInt16 SectionType { get }
   property System.UInt16 SectionVersion { get }
+struct GameEventScript.Api.GesPoint
+  ctor GesPoint(System.Double x, System.Double y, System.Double z)
+  method GameEventScript.Runtime.Values.GesValue ToValue(GameEventScript.Api.GesQuantityUnit unit)
+  method System.Boolean Equals(GameEventScript.Api.GesPoint other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Double DistanceTo(GameEventScript.Api.GesPoint other)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static GameEventScript.Api.GesPoint op_Addition(GameEventScript.Api.GesPoint point, GameEventScript.Api.GesVector vector)
+  method static GameEventScript.Api.GesPoint op_Subtraction(GameEventScript.Api.GesPoint point, GameEventScript.Api.GesVector vector)
+  method static GameEventScript.Api.GesPoint? FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
+  method static GameEventScript.Api.GesVector op_Subtraction(GameEventScript.Api.GesPoint end, GameEventScript.Api.GesPoint start)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesPoint left, GameEventScript.Api.GesPoint right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesPoint left, GameEventScript.Api.GesPoint right)
+  property GameEventScript.Api.GesPoint Zero { get }
+  property System.Boolean IsFinite { get }
+  property System.Double X { get set }
+  property System.Double Y { get set }
+  property System.Double Z { get set }
+sealed class GameEventScript.Api.GesPoly
+  ctor GesPoly(System.Collections.Generic.IEnumerable<GameEventScript.Api.GesPoint> points)
+  method GameEventScript.Runtime.Values.GesValue ToValue(GameEventScript.Api.GesQuantityUnit unit)
+  method System.Boolean Equals(GameEventScript.Api.GesPoly other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean? Contains(GameEventScript.Api.GesPoint point)
+  method System.Boolean? Intersects(GameEventScript.Api.GesPoly other)
+  method System.Double? DistanceTo(GameEventScript.Api.GesPoint point)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static GameEventScript.Api.GesPoly FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesPoly left, GameEventScript.Api.GesPoly right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesPoly left, GameEventScript.Api.GesPoly right)
+  property GameEventScript.Api.GesBox? Bounds { get }
+  property GameEventScript.Api.GesPoint? Centroid { get }
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesPoint> Points { get }
+  property System.Boolean IsValid { get }
+  property System.Double? Area { get }
 enum GameEventScript.Api.GesProfilePhase
   enum-field StateCheck = 0
   enum-field BudgetCheck = 1
@@ -820,7 +915,6 @@ sealed class GameEventScript.Api.GesProgramInstance
   property GameEventScript.Api.GesStartResult? StartResult { get }
   property System.Boolean IsAttached { get }
 struct GameEventScript.Api.GesProgramMetadataSegment
-  ctor GesProgramMetadataSegment(System.String moduleName, System.UInt16 requiredRegisterCount, System.UInt16 requiredCallStackDepth, System.UInt64 programVersion)
   property System.String ModuleName { get }
   property System.UInt16 RequiredCallStackDepth { get }
   property System.UInt16 RequiredRegisterCount { get }
@@ -908,21 +1002,30 @@ sealed class GameEventScript.Api.GesRuntimeLimits
   property System.Int32 MaxExecutionSteps { get set }
   property System.Int32 MaxGeneratedCollectionItems { get set }
   property System.Int32 MaxLoopIterations { get set }
-  property System.Int32 MaxProcessedEventsPerRun { get set }
-  property System.Int32 MaxQueuedMessagesPerRun { get set }
+  property System.Int32 MaxProcessedMessagesPerRun { get set }
+  property System.Int32 MaxQueuedMessages { get set }
   property System.Int32 MaxRandomScopeDepth { get set }
   property System.Int32 MaxRangeItems { get set }
   property System.Int32 MaxRegisterValues { get set }
+  property System.Int32 MaxValueDepth { get set }
 sealed class GameEventScript.Api.GesSchema
   method GameEventScript.Api.GesBoundSchema Bind(GameEventScript.Api.GesSchemaParameters parameters)
   method System.Void CheckDocument(System.String text, GameEventScript.Api.GesSchemaParameters parameters)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchema> Members { get }
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaComputedFieldInfo> ComputedFields { get }
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaConstantInfo> Constants { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaFieldInfo> Fields { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaParameterInfo> Parameters { get }
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaTakeInfo> Takes { get }
   property GameEventScript.Api.GesReadOnlyArray<System.String> Tags { get }
   property GameEventScript.Api.GesSchemaKind Kind { get }
+  property System.Boolean IsAbstract { get }
+  property System.Int32 PackedBits { get }
+  property System.Int32 PackedWidth { get }
   property System.String CanonicalForm { get }
+  property System.String ModelGroup { get }
   property System.String Name { get }
+  property System.String WireGroup { get }
   property System.UInt64 Hash { get }
 sealed class GameEventScript.Api.GesSchemaAxisInfo
   property GameEventScript.Api.GesSchemaBound? Delta { get }
@@ -938,15 +1041,48 @@ struct GameEventScript.Api.GesSchemaBound
   property System.Int32 Exponent { get }
   property System.Int64 Significand { get }
   property System.String Parameter { get }
+sealed class GameEventScript.Api.GesSchemaComputedFieldInfo
+  property GameEventScript.Api.GesQuantityUnit Unit { get }
+  property GameEventScript.Api.GesSchemaTypeKind Kind { get }
+  property System.Boolean IsOptional { get }
+  property System.String Expression { get }
+  property System.String Name { get }
+sealed class GameEventScript.Api.GesSchemaConstantInfo
+  property GameEventScript.Api.GesQuantityUnit Unit { get }
+  property GameEventScript.Api.GesSchemaBound Value { get }
+  property GameEventScript.Api.GesSchemaTypeKind Kind { get }
+  property System.Boolean IsInteger { get }
+  property System.String Name { get }
 struct GameEventScript.Api.GesSchemaDecoded
   property GameEventScript.Runtime.Values.GesValue Value { get }
   property System.Int32 ByteCount { get }
+sealed class GameEventScript.Api.GesSchemaDefaultEntryInfo
+  property GameEventScript.Api.GesSchemaDefaultInfo Value { get }
+  property System.String Name { get }
+sealed class GameEventScript.Api.GesSchemaDefaultInfo
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaDefaultEntryInfo> Entries { get }
+  property GameEventScript.Api.GesSchemaBound? Number { get }
+  property GameEventScript.Api.GesSchemaDefaultKind Kind { get }
+  property System.Boolean Boolean { get }
+  property System.String Name { get }
+enum GameEventScript.Api.GesSchemaDefaultKind
+  enum-field Number = 0
+  enum-field Boolean = 1
+  enum-field Tag = 2
+  enum-field Field = 3
+  enum-field Record = 4
 static class GameEventScript.Api.GesSchemaDelta
   method static GameEventScript.Api.GesSchemaDeltaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> delta, System.ReadOnlySpan<System.Byte> baseline, System.Span<System.Byte> buffer, System.Int64 byteLimit)
   method static System.Int32 Encode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> record, System.ReadOnlySpan<System.Byte> baseline, System.Span<System.Byte> buffer)
 struct GameEventScript.Api.GesSchemaDeltaDecoded
   property System.Int32 ByteCount { get }
   property System.Int32 DeltaByteCount { get }
+sealed class GameEventScript.Api.GesSchemaDocument
+  field static System.String SchemaMismatch
+  method GameEventScript.Api.GesDocumentException Locate(GameEventScript.Api.GesWireException error)
+  method static GameEventScript.Api.GesSchemaDocument Read(GameEventScript.Api.GesSchemaSet schemas, System.String text, System.String[] expected)
+  property GameEventScript.Runtime.Values.GesValue Value { get }
+  property System.String Schema { get }
 static class GameEventScript.Api.GesSchemaDump
   method static GameEventScript.Api.GesSchemaDumpResult Read(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data)
   method static GameEventScript.Api.GesSchemaDumpResult Read(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, System.ReadOnlySpan<System.Byte> baseline)
@@ -962,6 +1098,7 @@ struct GameEventScript.Api.GesSchemaField
   property System.String Path { get }
 sealed class GameEventScript.Api.GesSchemaFieldInfo
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaType> Alternatives { get }
+  property GameEventScript.Api.GesSchemaDefaultInfo Default { get }
   property System.Boolean IsKey { get }
   property System.Boolean IsOptional { get }
   property System.Boolean IsUnlabeled { get }
@@ -987,11 +1124,13 @@ struct GameEventScript.Api.GesSchemaReader
   method System.Int32 BeginList(GameEventScript.Api.GesSchemaField field)
   method System.Int32 Finish()
   method System.Int32 ReadAlternative(GameEventScript.Api.GesSchemaField field)
+  method System.Int32 ReadBytes(GameEventScript.Api.GesSchemaField field, System.Span<System.Byte> destination)
   method System.Int32 ReadMember()
   method System.Int32 ReadTag(GameEventScript.Api.GesSchemaField field)
   method System.Int32 ReadText(GameEventScript.Api.GesSchemaField field, System.Span<System.Byte> destination)
   method System.Int64 ReadInteger(GameEventScript.Api.GesSchemaField field)
   method System.Int64 ReadKey()
+  method System.UInt64 ReadFlags(GameEventScript.Api.GesSchemaField field)
   method System.UInt64 ReadIndex(GameEventScript.Api.GesSchemaField field)
   method System.Void BeginNested(GameEventScript.Api.GesSchemaField field)
 sealed class GameEventScript.Api.GesSchemaSet
@@ -1004,6 +1143,11 @@ struct GameEventScript.Api.GesSchemaSource
   ctor GesSchemaSource(System.String name, System.String text)
   property System.String Name { get }
   property System.String Text { get }
+sealed class GameEventScript.Api.GesSchemaTakeInfo
+  property GameEventScript.Api.GesReadOnlyArray<System.String> Without { get }
+  property GameEventScript.Api.GesSchema Schema { get }
+  property System.Boolean IsAllOptional { get }
+  property System.Boolean IsUnchanged { get }
 sealed class GameEventScript.Api.GesSchemaType
   property GameEventScript.Api.GesQuantityUnit Unit { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaAxisInfo> Axes { get }
@@ -1017,7 +1161,10 @@ sealed class GameEventScript.Api.GesSchemaType
   property GameEventScript.Api.GesSchemaTypeKind Kind { get }
   property System.Boolean IsInteger { get }
   property System.Boolean IsWrapping { get }
+  property System.Int32 Depth { get }
   property System.Int64? Max { get }
+  property System.String Label { get }
+  property System.String TagSet { get }
 enum GameEventScript.Api.GesSchemaTypeKind
   enum-field Boolean = 0
   enum-field Number = 1
@@ -1036,6 +1183,11 @@ enum GameEventScript.Api.GesSchemaTypeKind
   enum-field Message = 14
   enum-field Handler = 15
   enum-field Nothing = 16
+  enum-field Bytes = 17
+  enum-field Flags = 18
+  enum-field Box = 19
+  enum-field Poly = 20
+  enum-field Disc = 21
 static class GameEventScript.Api.GesSchemaValues
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, GameEventScript.Runtime.Values.GesValue baseline, System.Int64 byteLimit)
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, System.Int64 byteLimit)
@@ -1051,6 +1203,8 @@ struct GameEventScript.Api.GesSchemaWriter
   method System.Void SelectMember(System.Int32 member)
   method System.Void WriteAbsent(GameEventScript.Api.GesSchemaField field)
   method System.Void WriteBoolean(GameEventScript.Api.GesSchemaField field, System.Boolean value)
+  method System.Void WriteBytes(GameEventScript.Api.GesSchemaField field, System.ReadOnlySpan<System.Byte> bytes)
+  method System.Void WriteFlags(GameEventScript.Api.GesSchemaField field, System.UInt64 mask)
   method System.Void WriteIndex(GameEventScript.Api.GesSchemaField field, System.UInt64 index)
   method System.Void WriteInteger(GameEventScript.Api.GesSchemaField field, System.Int64 value)
   method System.Void WriteNumber(GameEventScript.Api.GesSchemaField field, System.Double value)
@@ -1073,13 +1227,11 @@ enum GameEventScript.Api.GesSectionType
   enum-field ReservedSignature = 64
   enum-field NamedCustom = 65534
 sealed class GameEventScript.Api.GesSourceArchiveEntry
-  ctor GesSourceArchiveEntry(System.UInt32 sourceId, System.String sourceName, System.Collections.Generic.IReadOnlyList<System.Byte> utf8Content)
   method System.String ResolveText()
   property GameEventScript.Api.GesReadOnlyArray<System.Byte> Utf8Content { get }
   property System.String SourceName { get }
   property System.UInt32 SourceId { get }
 sealed class GameEventScript.Api.GesSourceArchiveSegment
-  ctor GesSourceArchiveSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesSourceArchiveEntry> sources)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSourceArchiveEntry> Sources { get }
 sealed class GameEventScript.Api.GesSourceLocation
   ctor GesSourceLocation(System.String SourceName, System.Int32? Line, System.Int32? Column, System.Int32? EndLine, System.Int32? EndColumn, System.String ModuleName, System.UInt32? SourceId)
@@ -1113,11 +1265,9 @@ struct GameEventScript.Api.GesSourceMapEntry
   property System.UInt32 SourceId { get set }
   property System.UInt32 SourceStartByteOffset { get set }
 sealed class GameEventScript.Api.GesSourceMapSegment
-  ctor GesSourceMapSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesSourceMapSource> sources, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesSourceMapEntry> entries)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSourceMapEntry> Entries { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSourceMapSource> Sources { get }
 sealed class GameEventScript.Api.GesSourceMapSource
-  ctor GesSourceMapSource(System.UInt32 sourceId, System.String sourceName, System.UInt32 sourceByteLength, System.Collections.Generic.IReadOnlyList<System.Byte> sha256, System.Collections.Generic.IReadOnlyList<System.UInt32> lineStartByteOffsets)
   property GameEventScript.Api.GesReadOnlyArray<System.Byte> Sha256 { get }
   property GameEventScript.Api.GesReadOnlyArray<System.UInt32> LineStartByteOffsets { get }
   property System.String SourceName { get }
@@ -1136,14 +1286,13 @@ enum GameEventScript.Api.GesStartState
   enum-field RuntimeError = 1
   enum-field RuntimeLimitReached = 2
 struct GameEventScript.Api.GesStringConstantSegment
-  ctor GesStringConstantSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesStringConstantSegment.SliceEntry> slices, System.Collections.Generic.IReadOnlyList<System.Byte> data)
   method System.Int32 ResolveSize(System.UInt16 index)
   method System.String Resolve(System.UInt16 index)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesStringConstantSegment.SliceEntry> Slices { get }
   property GameEventScript.Api.GesReadOnlyArray<System.Byte> Data { get }
 struct GameEventScript.Api.GesStringConstantSegment.SliceEntry
-  property System.Int32 Length { get set }
-  property System.Int32 Start { get set }
+  property System.Int32 Length { get }
+  property System.Int32 Start { get }
 sealed class GameEventScript.Api.GesSubscription
   method System.Boolean Unsubscribe()
   property System.Boolean IsSubscribed { get }
@@ -1152,15 +1301,41 @@ struct GameEventScript.Api.GesUInt16IndexList
   property System.Int32 Start { get }
   property System.UInt16 Item { get }
 struct GameEventScript.Api.GesUInt16IndexListSegment
-  ctor GesUInt16IndexListSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesUInt16IndexListSegment.SliceEntry> slices, System.Collections.Generic.IReadOnlyList<System.UInt16> data)
   method GameEventScript.Api.GesUInt16IndexList Resolve(System.UInt16 index)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesUInt16IndexListSegment.SliceEntry> Slices { get }
   property GameEventScript.Api.GesReadOnlyArray<System.UInt16> Data { get }
 struct GameEventScript.Api.GesUInt16IndexListSegment.SliceEntry
-  property System.Int32 Length { get set }
-  property System.Int32 Start { get set }
+  property System.Int32 Length { get }
+  property System.Int32 Start { get }
+struct GameEventScript.Api.GesVector
+  ctor GesVector(System.Double x, System.Double y, System.Double z)
+  method GameEventScript.Api.GesVector Cross(GameEventScript.Api.GesVector other)
+  method GameEventScript.Runtime.Values.GesValue ToValue(GameEventScript.Api.GesQuantityUnit unit)
+  method System.Boolean Equals(GameEventScript.Api.GesVector other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Double Dot(GameEventScript.Api.GesVector other)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static GameEventScript.Api.GesVector op_Addition(GameEventScript.Api.GesVector left, GameEventScript.Api.GesVector right)
+  method static GameEventScript.Api.GesVector op_Division(GameEventScript.Api.GesVector vector, System.Double divisor)
+  method static GameEventScript.Api.GesVector op_Multiply(GameEventScript.Api.GesVector vector, System.Double scale)
+  method static GameEventScript.Api.GesVector op_Multiply(System.Double scale, GameEventScript.Api.GesVector vector)
+  method static GameEventScript.Api.GesVector op_Subtraction(GameEventScript.Api.GesVector left, GameEventScript.Api.GesVector right)
+  method static GameEventScript.Api.GesVector op_UnaryNegation(GameEventScript.Api.GesVector vector)
+  method static GameEventScript.Api.GesVector? FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesVector left, GameEventScript.Api.GesVector right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesVector left, GameEventScript.Api.GesVector right)
+  property GameEventScript.Api.GesVector Zero { get }
+  property GameEventScript.Api.GesVector? Normalized { get }
+  property System.Boolean IsFinite { get }
+  property System.Double Length { get }
+  property System.Double LengthSquared { get }
+  property System.Double X { get set }
+  property System.Double Y { get set }
+  property System.Double Z { get set }
 sealed class GameEventScript.Api.GesWireException
   ctor GesWireException(System.String code, System.String path)
+  ctor GesWireException(System.String code, System.String path, System.String detail)
   field static System.String BufferTooSmall
   field static System.String FieldOrder
   field static System.String InvalidCount
@@ -1177,11 +1352,13 @@ sealed class GameEventScript.Api.GesWireException
   field static System.String NothingValue
   field static System.String OutOfRange
   field static System.String OverlappingBuffers
+  field static System.String TooDeep
   field static System.String TooLong
   field static System.String Truncated
   field static System.String TypeMismatch
   field static System.String UnknownTag
   property System.String Code { get }
+  property System.String Detail { get }
   property System.String Path { get }
 static class GameEventScript.Api.GesWireRules
   method static System.Boolean IsTagName(System.ReadOnlySpan<System.Byte> bytes)
@@ -1243,6 +1420,7 @@ sealed class GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder
   method GameEventScript.Api.IGesExtensionRegistry Build()
   method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder Add(System.Type extensionType)
   method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder Add<T>()
+  method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder AddInstance(System.Object instance)
   method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder AddRange(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
 sealed class GameEventScript.CSharpBridge.GesBridgeExternalTypeRegistry
   method GameEventScript.Api.GesExternalTypeDefinition Resolve(System.String typeName)
@@ -1258,19 +1436,22 @@ static class GameEventScript.CSharpBridge.GesBridgeHostExtensions
   method static GameEventScript.CSharpBridge.GesBridgeHostRunner RunAutomatically(GameEventScript.Api.GameEventScriptHost host)
 sealed class GameEventScript.CSharpBridge.GesBridgeHostRunner
   method GameEventScript.Api.GesExecutionResult RunToCompletion()
-  method GameEventScript.Api.GesProgramInstance Load(GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)
   method GameEventScript.Api.GesStartResult Start()
-  method GameEventScript.Api.GesStartResult? GetStartResult(GameEventScript.Api.GesProgramInstance instance)
-  method GameEventScript.Api.GesSubscription Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler, System.Int32 priority)
-  method System.Boolean Detach(GameEventScript.Api.GesProgramInstance instance)
+  method GameEventScript.CSharpBridge.GesBridgeHostRunnerRegistration Load(GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)
+  method GameEventScript.CSharpBridge.GesBridgeHostRunnerRegistration Subscribe(GameEventScript.Api.GesMessageSignature signature, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
+  method GameEventScript.CSharpBridge.GesBridgeHostRunnerRegistration Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler, System.Int32 priority)
   method System.Boolean Receive(GameEventScript.Api.GameEventScriptMessage message)
-  method System.Boolean Unsubscribe(GameEventScript.Api.GesSubscription subscription)
   method System.Void Dispose()
   method static GameEventScript.CSharpBridge.GesBridgeHostRunner Create(GameEventScript.Api.GameEventScriptHost host)
   property GameEventScript.Api.GesExecutionResult? LastResult { get }
   property System.Boolean IsIdle { get }
   property System.Boolean IsReady { get }
   property System.Int64? IdleDurationMicroseconds { get }
+sealed class GameEventScript.CSharpBridge.GesBridgeHostRunnerRegistration
+  method System.Boolean Detach()
+  property GameEventScript.Api.GesStartResult? StartResult { get }
+  property System.Boolean IsAttached { get }
+  property System.Int64 RegistrationId { get }
 static class GameEventScript.CSharpBridge.GesBridgeMessage
   method static GameEventScript.Api.GameEventScriptMessage Create(GameEventScript.Api.GesMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, GameEventScript.Runtime.Values.GesValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
   method static GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IEnumerable<System.String> tags, System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] arguments)
@@ -1301,6 +1482,7 @@ sealed class GameEventScript.CSharpBridge.GesFunctionAttribute
   ctor GesFunctionAttribute(System.String name)
   ctor GesFunctionAttribute(System.String name, GameEventScript.Api.GesBytecodeTypeKind returnKind)
   ctor GesFunctionAttribute(System.String name, GameEventScript.Api.GesBytecodeTypeKind returnKind, GameEventScript.Api.GesQuantityUnit unit)
+  ctor GesFunctionAttribute(System.String name, GameEventScript.Api.GesQuantityUnit unit)
   property GameEventScript.Api.GesBytecodeTypeKind? ReturnKind { get }
   property GameEventScript.Api.GesQuantityUnit ReturnUnit { get }
   property System.String Name { get }
@@ -1313,9 +1495,15 @@ sealed class GameEventScript.CSharpBridge.GesParamAttribute
   property GameEventScript.Api.GesQuantityUnit Unit { get }
   property System.String Name { get }
   property System.String TypeName { get }
+sealed class GameEventScript.CSharpBridge.GesPredicateAttribute
+  ctor GesPredicateAttribute(System.String name)
+  property System.String Name { get }
 sealed class GameEventScript.CSharpBridge.GesTypeAttribute
   ctor GesTypeAttribute(System.String typeName)
   property System.String TypeName { get }
+sealed class GameEventScript.Generator.GesGeneratedFile
+  property System.String Path { get }
+  property System.String Text { get }
 sealed class GameEventScript.Generator.GesGeneratorException
   property System.String Code { get }
 enum GameEventScript.Generator.GesSchemaAccess
@@ -1325,15 +1513,30 @@ sealed class GameEventScript.Generator.GesSchemaGenerateOptions
   ctor GesSchemaGenerateOptions()
   property GameEventScript.Generator.GesSchemaAccess Access { get set }
   property GameEventScript.Generator.GesSchemaLanguage Language { get set }
+  property GameEventScript.Generator.GesSchemaSplit Split { get set }
+  property System.Boolean Bindings { get set }
   property System.Boolean CheckedExclusivity { get set }
+  property System.Boolean Documents { get set }
   property System.Boolean Values { get set }
+  property System.String ExtendNamespace { get set }
+  property System.String Models { get set }
   property System.String Namespace { get set }
 static class GameEventScript.Generator.GesSchemaGenerator
+  method static System.Collections.Generic.IReadOnlyList<GameEventScript.Generator.GesGeneratedFile> GenerateFiles(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Api.GesSchemaParameters parameters, GameEventScript.Generator.GesSchemaGenerateOptions options)
+  method static System.Collections.Generic.IReadOnlyList<GameEventScript.Generator.GesGeneratedFile> GenerateModelFiles(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Generator.GesSchemaGenerateOptions options)
+  method static System.Collections.Generic.IReadOnlyList<System.String> ModelRoots(GameEventScript.Api.GesSchemaSet set, System.String group)
+  method static System.Collections.Generic.IReadOnlyList<System.String> WireRoots(GameEventScript.Api.GesSchemaSet set, System.String group)
   method static System.String Generate(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Api.GesSchemaParameters parameters, GameEventScript.Generator.GesSchemaGenerateOptions options)
+  method static System.String GenerateModels(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Generator.GesSchemaGenerateOptions options)
   method static System.String Layout(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Api.GesSchemaParameters parameters)
+  method static System.String ModelLayout(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots)
 enum GameEventScript.Generator.GesSchemaLanguage
   enum-field CSharp = 0
   enum-field Swift = 1
+enum GameEventScript.Generator.GesSchemaSplit
+  enum-field None = 0
+  enum-field Schema = 1
+  enum-field File = 2
 struct GameEventScript.Runtime.Values.GesValue
   method GameEventScript.Runtime.Values.GesValue? ReadField(System.String name)
   method GameEventScript.Runtime.Values.GesValueMap AsMap()
@@ -1346,12 +1549,14 @@ struct GameEventScript.Runtime.Values.GesValue
   method System.Int32 GetHashCode()
   method System.Int32[] AsDice()
   method System.Int64 AsInteger()
+  method System.ReadOnlySpan<System.Byte> AsBytes()
   method System.String AsText()
   method System.String Format(GameEventScript.Api.GesDocumentFormat format)
   method System.String ToJson()
   method System.String ToString()
   method static GameEventScript.Runtime.Values.GesValue FromJson(System.String json)
   method static GameEventScript.Runtime.Values.GesValue GesBoolean(System.Boolean boolean)
+  method static GameEventScript.Runtime.Values.GesValue GesBytes(System.ReadOnlySpan<System.Byte> bytes)
   method static GameEventScript.Runtime.Values.GesValue GesDice(System.Int32[] rolls)
   method static GameEventScript.Runtime.Values.GesValue GesExternal(GameEventScript.Api.IGesExternalValue value)
   method static GameEventScript.Runtime.Values.GesValue GesFloat(System.Double number, GameEventScript.Api.GesQuantityUnit unit)
@@ -1362,7 +1567,6 @@ struct GameEventScript.Runtime.Values.GesValue
   method static GameEventScript.Runtime.Values.GesValue GesMap(System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] entries)
   method static GameEventScript.Runtime.Values.GesValue GesMessage(GameEventScript.Api.GameEventScriptMessage message)
   method static GameEventScript.Runtime.Values.GesValue GesNothing()
-  method static GameEventScript.Runtime.Values.GesValue GesNumber(System.Double number, GameEventScript.Api.GesQuantityUnit unit)
   method static GameEventScript.Runtime.Values.GesValue GesPercentage(System.Double ratio)
   method static GameEventScript.Runtime.Values.GesValue GesPoint(System.Double x, System.Double y, System.Double z, GameEventScript.Api.GesQuantityUnit unit)
   method static GameEventScript.Runtime.Values.GesValue GesRange(System.Double from, System.Double to, System.Double step)
@@ -1386,7 +1590,6 @@ struct GameEventScript.Runtime.Values.GesValue
   property System.Boolean HasValue { get }
   property System.Boolean IsNothing { get }
   property System.Boolean IsNumeric { get }
-  property System.Double AsNumeric { get }
   property System.Double X { get }
   property System.Double Y { get }
   property System.Double Z { get }

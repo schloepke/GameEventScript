@@ -4,9 +4,12 @@
 // Wire values, comparison, copying, quantization and deltas of generated Swift types. Comparison and deltas use wire values:
 // indices and stored bits, never raw doubles. Local names carry the node of their value, as in the C# output.
 extension GesSwiftEmitter {
+    // The level argument that a recursive List's own helpers take.
+    static func level(_ value: GesPlanValue) -> String { value.depth > 0 ? ", level" : "" }
+
     static func isScalar(_ value: GesPlanValue) -> Bool {
         switch value.encoding.kind {
-        case .boolean, .integer, .quantized, .float, .tag: true
+        case .boolean, .integer, .quantized, .float, .tag, .flags: true
         default: false
         }
     }
@@ -14,6 +17,10 @@ extension GesSwiftEmitter {
     static func scalars(_ value: GesPlanValue) -> [GesPlanValue] {
         var result: [GesPlanValue] = isScalar(value) ? [value] : []
         result += value.axes
+        for corner in value.corners {
+            if isScalar(corner) { result.append(corner) }
+            result += corner.axes
+        }
         for alternative in value.alternatives { result += scalars(alternative) }
         if value.item == nil, let element = value.element { result += scalars(element) }
         return result
@@ -29,7 +36,7 @@ extension GesSwiftEmitter {
             for value in scalars(field.value) { helpers(&code, value) }
         }
         code.blank()
-        code.open("func __same(_ other: \(type.name), _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {")
+        code.open("func __same(_ other: \(type.name), _ paths: [String], _ at: Int\(levelParameter(type))) throws(GesWireError) -> Bool {")
         for field in type.fields {
             if field.optional {
                 code.line("if self.has\(field.base) != other.has\(field.base) { return false }")
@@ -56,7 +63,7 @@ extension GesSwiftEmitter {
             code.close()
         }
         code.blank()
-        code.open("\(mutating)func __quantize(_ paths: [String], _ at: Int) throws(GesWireError) {")
+        code.open("\(mutating)func __quantize(_ paths: [String], _ at: Int\(levelParameter(type))) throws(GesWireError) {")
         for field in type.fields {
             if field.optional {
                 code.open("if self.has\(field.base) {")
@@ -114,6 +121,9 @@ extension GesSwiftEmitter {
             code.line("if value.isNaN { \(fail("notRepresentable", value)) }")
             if encoding.range { code.line("if value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue)) { \(fail("outOfRange", value)) }") }
             code.line("return (value == 0 ? 0.0 : value).bitPattern")
+        case .flags:
+            if encoding.width < 64 { code.line("if value.rawValue > \(full(encoding.width)) { \(fail("unknownTag", value)) }") }
+            code.line("return value.rawValue")
         default:
             code.line("UInt64(value.rawValue)")
         }
@@ -126,7 +136,12 @@ extension GesSwiftEmitter {
             code.line("if value.isNaN || wire == 0x8000_0000_0000_0000\(encoding.range ? " || value.isInfinite" : "") { \(fail("invalidNumber", value)) }")
             if encoding.range { code.line("if value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue)) { \(fail("outOfRange", value)) }") }
         } else if encoding.kind != .boolean {
-            let largest = encoding.kind == .tag ? UInt64(encoding.tags.count) - 1 : encoding.maxIndex
+            let largest =
+                switch encoding.kind {
+                case .tag: UInt64(encoding.tags.count) - 1
+                case .flags: full(encoding.width)
+                default: encoding.maxIndex
+                }
             if largest < full(encoding.width) { code.line("if wire > \(largest) { \(fail("invalidIndex", value)) }") }
         }
         code.line("return wire")
@@ -141,12 +156,13 @@ extension GesSwiftEmitter {
                 "private static func __value\(node)(_ wire: UInt64) -> Double { GesWireRules.quantizedValue(wire, lower: \(long(encoding.lower)), numerator: \(long(encoding.numerator)), tenPower: \(double(encoding.tenPower))) }"
             )
         case .float: code.line("private static func __value\(node)(_ wire: UInt64) -> Double { Double(bitPattern: wire) }")
+        case .flags: code.line("private static func __value\(node)(_ wire: UInt64) -> \(type) { \(type)(rawValue: wire) }")
         default: code.line("private static func __value\(node)(_ wire: UInt64) -> \(type) { \(type)(rawValue: \(underlying(encoding.tags.count))(wire))! }")
         }
     }
 
     // The UTF-8 storage of a Text in `owner`, "self" or another record.
-    private static func bytes(_ value: GesPlanValue, _ owner: String) -> String { "\(owner).\(GesSchemaPlanner.camel(value.base))UTF8" }
+    private static func bytes(_ value: GesPlanValue, _ owner: String) -> String { storage(value, owner) }
 
     // Returns false from the enclosing function when the wire values of a and b differ.
     private static func same(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String, _ ownerA: String, _ ownerB: String) {
@@ -154,24 +170,30 @@ extension GesSwiftEmitter {
         switch value.encoding.kind {
         case .boolean:
             code.line("if \(a) != \(b) { return false }")
-        case .integer, .quantized, .float, .tag:
+        case .integer, .quantized, .float, .tag, .flags:
             code.line("if try Self.__wire\(node)(\(a), paths, at) != Self.__wire\(node)(\(b), paths, at) { return false }")
-        case .text:
+        case .text, .bytes:
             code.line("if \(bytes(value, ownerA)) != \(bytes(value, ownerB)) { return false }")
         case .point, .vector:
             for axis in value.axes { same(&code, axis, a + "." + member(axis.base), b + "." + member(axis.base), ownerA, ownerB) }
+        case .box, .disc:
+            for corner in value.corners { same(&code, corner, a + "." + member(corner.base), b + "." + member(corner.base), ownerA, ownerB) }
+        case .schema where value.packed != nil:
+            code.line("if \(a).rawValue != \(b).rawValue { return false }")
         case .schema:
-            code.line("if !(try \(a).__same(\(b), paths, at + \(value.node + 1))) { return false }")
+            code.line("if !(try \(a).__same(\(b), paths, at + \(value.node + 1)\(nextLevel(value)))) { return false }")
         case .list:
+            if value.depth > 0 { openLevels(&code, value, "\(a).count + \(b).count") }
             code.line("if \(a).count != \(b).count { return false }")
             code.open("for index\(node) in 0..<\(a).count {")
             let element = value.element!
             if value.item != nil {
-                code.line("if !(try \(a)[index\(node)].__same(\(b)[index\(node)], paths, at + \(element.node))) { return false }")
+                code.line("if !(try \(a)[index\(node)].__same(\(b)[index\(node)], paths, at + \(element.node)\(itemLevel(element)))) { return false }")
             } else {
                 same(&code, element, "\(a)[index\(node)]", "\(b)[index\(node)]", ownerA, ownerB)
             }
             code.close()
+            if value.depth > 0 { code.close() }
         case .union:
             code.line("if \(a) != \(b) { return false }")
             code.line("switch \(a) {")
@@ -250,7 +272,7 @@ extension GesSwiftEmitter {
     private static func copy(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String, _ ownerB: String) {
         let node = String(value.node)
         switch value.encoding.kind {
-        case .text:
+        case .text, .bytes:
             code.line("\(bytes(value, "self")).removeAll(keepingCapacity: true)")
             code.line("\(bytes(value, "self")).append(contentsOf: \(bytes(value, ownerB)))")
         case .schema where value.isClass:
@@ -292,19 +314,42 @@ extension GesSwiftEmitter {
             code.line("\(target) = Self.__value\(node)(try Self.__wire\(node)(\(target), paths, at))")
         case .point, .vector:
             for axis in value.axes { quantize(&code, axis, target + "." + member(axis.base)) }
+        case .box where quantized(value):
+            // A box is immutable: its corners are quantized as Points and make a new box, still in order.
+            code.open("do {")
+            for corner in value.corners {
+                code.line("var \(corner.label)\(node) = \(target).\(member(corner.base))")
+                quantize(&code, corner, corner.label + node)
+            }
+            code.line("\(target) = GesBox(lower\(node), upper\(node))")
+            code.close()
+        case .disc where quantized(value):
+            // A disc is immutable: its centre and radius are quantized and make a new disc.
+            code.open("do {")
+            for part in value.corners {
+                code.line("\(binding(quantized(part))) \(part.label)\(node) = \(target).\(member(part.base))")
+                quantize(&code, part, part.label + node)
+            }
+            if value.corners.count == 1 { code.line("let radius\(node) = \(target).radius") }
+            code.line("\(target) = GesDisc(center: center\(node), radius: radius\(node))")
+            code.close()
+        case .schema where value.packed != nil:
+            break
         case .schema:
-            code.line("try \(target).__quantize(paths, at + \(value.node + 1))")
-        case .list where quantized(value.element!):
+            code.line("try \(target).__quantize(paths, at + \(value.node + 1)\(nextLevel(value)))")
+        case .list where quantized(value):
             let element = value.element!
+            if value.depth > 0 { openLevels(&code, value, target + ".count") }
             code.open("for index\(node) in 0..<\(target).count {")
             if value.item != nil {
-                code.line("try \(target)[index\(node)].__quantize(paths, at + \(element.node))")
+                code.line("try \(target)[index\(node)].__quantize(paths, at + \(element.node)\(itemLevel(element)))")
             } else if element.encoding.kind == .schema {
-                code.line("try \(target)[index\(node)].__quantize(paths, at + \(element.node + 1))")
+                code.line("try \(target)[index\(node)].__quantize(paths, at + \(element.node + 1)\(nextLevel(element)))")
             } else {
                 quantize(&code, element, "\(target)[index\(node)]")
             }
             code.close()
+            if value.depth > 0 { code.close() }
         case .union where value.alternatives.contains(where: quantized):
             code.line("switch \(target) {")
             for alternative in value.alternatives {
@@ -318,10 +363,15 @@ extension GesSwiftEmitter {
         }
     }
 
+    // A Point without axes, the centre of a Disc whose block names only the radius, which transmits nothing.
+    private static func empty(_ value: GesPlanValue) -> Bool { value.encoding.kind == .point && value.axes.isEmpty }
+
     private static func quantized(_ value: GesPlanValue) -> Bool {
         switch value.encoding.kind {
-        case .quantized, .schema: true
+        case .schema: value.packed == nil
+        case .quantized: true
         case .point, .vector: value.axes.contains(where: quantized)
+        case .box, .disc: value.corners.contains(where: quantized)
         case .union: value.alternatives.contains(where: quantized)
         case .list: value.item.map { quantized($0.fields[0].value) } ?? quantized(value.element!)
         default: false
@@ -336,20 +386,33 @@ extension GesSwiftEmitter {
         code.line("/// - Throws: `GesWireError` when a value does not fit its field, the keys differ, or the buffer is too small.")
         code.open("\(access)func writeDelta(against baseline: \(type.name), into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {")
         code.line("var writer = GesBitWriter(into: buffer)")
+        var body: [String] = []
         if let key {
-            code.line("let paths = Self.__paths")
-            code.line("let key = try Self.__wire0(\(target(key.base)), paths, 0)")
-            code.line("if try key != Self.__wire0(\(other("baseline", key.base)), paths, 0) { throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }")
-            code.line("try writer.write(key, width: \(key.value.encoding.width))")
+            body.append("let paths = Self.__paths")
+            body.append("let key = try Self.__wire0(\(target(key.base)), paths, 0)")
+            body.append("if try key != Self.__wire0(\(other("baseline", key.base)), paths, 0) { throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }")
+            body.append("try writer.write(key, width: \(key.value.encoding.width))")
         }
-        code.line("_ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)")
-        code.line("return try writer.finish()")
+        body.append("_ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)")
+        body.append("return try writer.finish()")
+        for line in body { code.line(line) }
         code.close()
         code.blank()
-        code.line("/// Writes what differs from a baseline into a new array of its exact size.")
+        code.line("/// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.")
+        code.line("/// - Throws: `GesWireError` when a value does not fit its field or the keys differ.")
+        code.open("\(access)func deltaEncodedByteCount(against baseline: \(type.name)) throws(GesWireError) -> Int {")
+        code.line("var writer = GesBitWriter.counting()")
+        for line in body { code.line(line) }
+        code.close()
+        code.blank()
+        code.line("/// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for")
+        code.line("/// the elements that the writer tries and takes back, so that the largest delta is not allocated.")
         code.line("/// - Throws: `GesWireError` when a value does not fit its field or the keys differ.")
         code.open("\(access)func deltaEncoded(against baseline: \(type.name)) throws(GesWireError) -> [UInt8] {")
-        code.line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)")
+        code.line("var writer = GesBitWriter.counting()")
+        for line in body.dropLast() { code.line(line) }
+        code.line("_ = try writer.finish()")
+        code.line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)")
         code.line("defer { buffer.deallocate() }")
         code.line("let count = try writeDelta(against: baseline, into: buffer)")
         code.line("return Array(buffer[0..<count])")
@@ -397,13 +460,13 @@ extension GesSwiftEmitter {
         let count = String(type.fields.count)
         let counted = key == nil ? count : "top ? \(type.fields.count - 1) : \(count)"
         code.blank()
-        code.open("func __writeDelta(_ baseline: \(type.name), _ writer: inout GesBitWriter, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {")
+        code.open("func __writeDelta(_ baseline: \(type.name), _ writer: inout GesBitWriter, _ paths: [String], _ at: Int, _ top: Bool\(levelParameter(type))) throws(GesWireError) -> Bool {")
         if type.fields.isEmpty {
             // A schema without fields has no change bits and never changes.
             code.line("false")
             code.close()
             code.blank()
-            code.open("\(mutating)func __readDelta(_ baseline: \(type.name), _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {")
+            code.open("\(mutating)func __readDelta(_ baseline: \(type.name), _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool\(levelParameter(type))) throws(GesWireError) -> Bool {")
             code.line("false")
             code.close()
             return
@@ -431,7 +494,7 @@ extension GesSwiftEmitter {
         code.line("return changed")
         code.close()
         code.blank()
-        code.open("\(mutating)func __readDelta(_ baseline: \(type.name), _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {")
+        code.open("\(mutating)func __readDelta(_ baseline: \(type.name), _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool\(levelParameter(type))) throws(GesWireError) -> Bool {")
         code.line("let fieldCount = \(counted)")
         code.line("try reader.require(fieldCount, path: at == 0 ? \"\" : paths[at - 1])")
         code.line("let changeBits = reader.bitPosition")
@@ -495,7 +558,7 @@ extension GesSwiftEmitter {
         switch encoding.kind {
         case .boolean:
             code.line("if \(a) != \(b) { \(set) = true }")
-        case .integer, .quantized, .float, .tag:
+        case .integer, .quantized, .float, .tag, .flags:
             code.open("do {")
             code.line("let value\(node) = try Self.__wire\(node)(\(a), paths, at)")
             code.line("let held\(node) = try Self.__wire\(node)(\(b), paths, at)")
@@ -509,9 +572,9 @@ extension GesSwiftEmitter {
             code.close()
             code.close()
         case .list where encoding.keyed:
-            code.line("if try __writeKeyed\(node)(baseline, &writer, paths, at) { \(set) = true }")
-        case .text, .list:
-            code.open("if !(try __same\(node)(baseline, paths, at)) {")
+            code.line("if try __writeKeyed\(node)(baseline, &writer, paths, at\(level(value))) { \(set) = true }")
+        case .text, .bytes, .list:
+            code.open("if !(try __same\(node)(baseline, paths, at\(level(value)))) {")
             write(&code, value, a)
             code.line("\(set) = true")
             code.close()
@@ -529,12 +592,42 @@ extension GesSwiftEmitter {
                 code.close()
                 code.close()
             }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("if \(a).\(member(axis)) != 0 { \(fail("typeMismatch", value)) }") }
             code.line("if !\(set) { writer.rewind(to: first\(node)) }")
+            code.close()
+        case .box, .disc:
+            // A nested delta of the corners, each one of a Point, or of a disc's centre and radius.
+            code.open("do {")
+            code.line("let first\(node) = writer.bitPosition")
+            code.line("try writer.write(0, width: \(value.corners.count))")
+            for (index, corner) in value.corners.enumerated() {
+                if empty(corner) {
+                    // A centre without axes transmits nothing: its change bit stays clear, and it must lie at the origin.
+                    for axis in GesSchemaPlanner.omitted(corner) { code.line("if \(a).\(member(corner.base)).\(member(axis)) != 0 { \(fail("typeMismatch", corner)) }") }
+                    continue
+                }
+                code.open("do {")
+                code.line("var set\(corner.node) = false")
+                deltaPayload(&code, corner, a + "." + member(corner.base), b + "." + member(corner.base), "set\(corner.node)")
+                code.open("if set\(corner.node) {")
+                code.line("writer.setBit(first\(node) + \(index))")
+                code.line("\(set) = true")
+                code.close()
+                code.close()
+            }
+            if value.encoding.kind == .disc && value.corners.count == 1 { code.line("if \(a).radius != 0 { \(fail("typeMismatch", value)) }") }
+            code.line("if !\(set) { writer.rewind(to: first\(node)) }")
+            code.close()
+        case .schema where value.packed != nil:
+            // A packed record changes as a whole: its word follows the change bit.
+            code.open("if \(a).rawValue != \(b).rawValue {")
+            packedWrite(&code, value, a)
+            code.line("\(set) = true")
             code.close()
         case .schema:
             code.open("do {")
             code.line("let start\(node) = writer.bitPosition")
-            code.open("if try \(a).__writeDelta(\(b), &writer, paths, at + \(value.node + 1), false) {")
+            code.open("if try \(a).__writeDelta(\(b), &writer, paths, at + \(value.node + 1), false\(nextLevel(value))) {")
             code.line("\(set) = true")
             code.close("} else {")
             code.line("    writer.rewind(to: start\(node))")
@@ -596,7 +689,7 @@ extension GesSwiftEmitter {
         switch encoding.kind {
         case .boolean:
             code.line("\(a) = !\(b)")
-        case .integer where encoding.deltaRange == 0, .quantized where encoding.deltaRange == 0, .float, .tag:
+        case .integer where encoding.deltaRange == 0, .quantized where encoding.deltaRange == 0, .float, .tag, .flags:
             code.open("do {")
             code.line("let held\(node) = try Self.__wire\(node)(\(b), paths, at)")
             code.line("let value\(node) = try Self.__read\(node)(&reader, paths, at)")
@@ -613,10 +706,10 @@ extension GesSwiftEmitter {
             code.line("    )")
             code.line(")")
         case .list where encoding.keyed:
-            code.line("try __readKeyed\(node)(baseline, &reader, paths, at)")
-        case .text, .list:
+            code.line("try __readKeyed\(node)(baseline, &reader, paths, at\(level(value)))")
+        case .text, .bytes, .list:
             read(&code, value, a)
-            code.line("if try __same\(node)(baseline, paths, at) { \(fail("invalidDelta", value)) }")
+            code.line("if try __same\(node)(baseline, paths, at\(level(value))) { \(fail("invalidDelta", value)) }")
         case .point, .vector:
             code.open("do {")
             code.line("try reader.require(\(value.axes.count), path: \(path(value)))")
@@ -638,10 +731,50 @@ extension GesSwiftEmitter {
                 code.line("}")
                 code.close()
             }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("\(a).\(member(axis)) = 0") }
             code.line("if !changed\(node) { \(fail("invalidDelta", value)) }")
             code.close()
+        case .box, .disc:
+            // The corners start as the baseline's; the box orders what the delta changes. A disc takes its centre and radius
+            // likewise.
+            code.open("do {")
+            code.line("try reader.require(\(value.corners.count), path: \(path(value)))")
+            code.line("let bits\(node) = reader.bitPosition")
+            code.line("reader.seek(to: bits\(node) + \(value.corners.count))")
+            code.line("var changed\(node) = false")
+            for (index, corner) in value.corners.enumerated() {
+                let cornerNode = String(corner.node)
+                code.line("\(binding(!empty(corner))) \(corner.label)\(node) = \(b).\(member(corner.base))")
+                if empty(corner) {
+                    // A centre without axes never changes, so its change bit must be clear in the canonical delta.
+                    code.open("do {")
+                    code.line("let payload\(cornerNode) = reader.bitPosition")
+                    code.line("reader.seek(to: bits\(node) + \(index))")
+                    code.line("if try reader.read(1, path: \(path(corner))) == 1 { \(fail("invalidDelta", corner)) }")
+                    code.line("reader.seek(to: payload\(cornerNode))")
+                    code.close()
+                    continue
+                }
+                code.open("do {")
+                code.line("let payload\(cornerNode) = reader.bitPosition")
+                code.line("reader.seek(to: bits\(node) + \(index))")
+                code.line("let set\(cornerNode) = try reader.read(1, path: \(path(corner))) == 1")
+                code.line("reader.seek(to: payload\(cornerNode))")
+                code.open("if set\(cornerNode) {")
+                readDeltaPayload(&code, corner, corner.label + node, b + "." + member(corner.base))
+                code.line("changed\(node) = true")
+                code.close()
+                code.close()
+            }
+            code.line("if !changed\(node) { \(fail("invalidDelta", value)) }")
+            if value.encoding.kind == .disc && value.corners.count == 1 { code.line("let radius\(node) = 0.0") }
+            code.line(value.encoding.kind == .disc ? "\(a) = GesDisc(center: center\(node), radius: radius\(node))" : "\(a) = GesBox(lower\(node), upper\(node))")
+            code.close()
+        case .schema where value.packed != nil:
+            packedRead(&code, value, a)
+            code.line("if \(a).rawValue == \(b).rawValue { \(fail("invalidDelta", value)) }")
         case .schema:
-            code.line("if !(try \(a).__readDelta(\(b), &reader, paths, at + \(value.node + 1), false)) { \(fail("invalidDelta", value)) }")
+            code.line("if !(try \(a).__readDelta(\(b), &reader, paths, at + \(value.node + 1), false\(nextLevel(value)))) { \(fail("invalidDelta", value)) }")
         case .union:
             code.open("do {")
             code.line("let choice\(node) = try reader.read(\(width), path: \(path(value)))")
@@ -678,9 +811,9 @@ extension GesSwiftEmitter {
     }
 
     private static func sameHelper(_ code: inout Code, _ value: GesPlanValue, _ type: String) {
-        if value.encoding.kind == .text || value.encoding.kind == .list {
+        if value.encoding.kind == .text || value.encoding.kind == .bytes || value.encoding.kind == .list {
             code.blank()
-            code.open("private func __same\(value.node)(_ baseline: \(type), _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {")
+            code.open("private func __same\(value.node)(_ baseline: \(type), _ paths: [String], _ at: Int\(value.depth > 0 ? ", _ level: Int" : "")) throws(GesWireError) -> Bool {")
             same(&code, value, target(value.base), other("baseline", value.base), "self", "baseline")
             code.line("return true")
             code.close()

@@ -140,4 +140,39 @@ public sealed class GesBridgeHostRunnerTests
             releaseWorker.Set();
         }
     }
+
+    /// <summary>Verifies that receives, registration handles and disposal from other threads go through the runner gate
+    /// while it pumps.</summary>
+    [TestMethod]
+    public void ConcurrentReceivesDetachesAndDisposalAreSerialized()
+    {
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        using var runner = host.RunAutomatically();
+        runner.Start();
+        var delivered = 0;
+        using var all = new CountdownEvent(400);
+        var counted = runner.Subscribe("Ping", [], (_, _) =>
+        {
+            Interlocked.Increment(ref delivered);
+            all.Signal();
+        });
+        var noisy = runner.Subscribe(GesMessageSignature.Create("Ping", []), (_, _) => Thread.SpinWait(50), ["loud"]);
+        var threads = Enumerable.Range(0, 4).Select(_ => new Thread(() =>
+        {
+            for (var index = 0; index < 100; index++) Assert.IsTrue(runner.Receive(GameEventScriptMessage.Create("Ping")));
+        })).ToArray();
+        foreach (var thread in threads) thread.Start();
+        Assert.IsTrue(noisy.Detach(), "A registration detaches from another thread while the runner pumps.");
+        foreach (var thread in threads) thread.Join();
+        Assert.IsTrue(all.Wait(TimeSpan.FromSeconds(10)));
+        Assert.AreEqual(400, delivered);
+        Assert.IsFalse(noisy.IsAttached);
+        Assert.IsTrue(counted.IsAttached);
+        Assert.IsNull(counted.StartResult, "A subscription has no start result.");
+
+        runner.Receive(GameEventScriptMessage.Create("Ping"));
+        runner.Dispose();
+        Assert.ThrowsExactly<ObjectDisposedException>(() => runner.Receive(GameEventScriptMessage.Create("Ping")));
+        Assert.IsTrue(counted.Detach(), "A handle still detaches after disposal.");
+    }
 }

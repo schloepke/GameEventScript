@@ -660,10 +660,12 @@ def normalized(value):
     """Numeric transport text in its canonical spelling, so that `0` and `0.0` compare by their binary64 value."""
     if isinstance(value, dict):
         kind = value.get('type', '')
-        numeric = isinstance(kind, str) and kind in (':Percentage', ':Number.binary64', ':Quantity.binary64', ':Vector', ':Point')
+        numeric = isinstance(kind, str) and kind in (':Percentage', ':Number.binary64', ':Quantity.binary64', ':Vector', ':Point', ':Disc')
         result = {}
         for key, item in value.items():
-            result[key] = canonical_text(parsed_number(item)) if numeric and key in ('value', 'x', 'y', 'z') and isinstance(item, str) else normalized(item)
+            # Infinities have one spelling already; the canonical metric text covers finite numbers only.
+            finite = numeric and key in ('value', 'x', 'y', 'z', 'radius') and isinstance(item, str) and math.isfinite(float(parsed_number(item)))
+            result[key] = canonical_text(parsed_number(item)) if finite else normalized(item)
         return result
     if isinstance(value, list):
         return [normalized(item) for item in value]

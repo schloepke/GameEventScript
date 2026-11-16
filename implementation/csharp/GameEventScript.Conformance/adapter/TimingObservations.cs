@@ -69,7 +69,7 @@ internal static class TimingObservations
         }
         GesProgramInstance Load(GameEventScriptProgram program)
         {
-            var host = GameEventScriptHost.CreateBuilder().WithRegistry(new RuntimeFixtures()).WithExternalTypeRegistry(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Registry).WithRuntimeLimits(limits).Build();
+            var host = GameEventScriptHost.CreateBuilder().WithExtensionRegistry(GesGeometryLibrary.Extensions(new RuntimeFixtures())).WithExternalTypeRegistry(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Registry).WithRuntimeLimits(limits).Build();
             host.Start();
             return host.Load(program);
         }

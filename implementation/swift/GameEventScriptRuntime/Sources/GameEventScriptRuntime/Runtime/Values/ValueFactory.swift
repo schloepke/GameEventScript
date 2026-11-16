@@ -24,6 +24,8 @@ struct GesValueFactory: GesValueOutput {
 
     func dice(_ value: [Int32]) -> GesValue { .dice(value) }
 
+    func bytes(_ value: [UInt8]) -> GesValue { .bytes(value) }
+
     func list(_ value: [GesValue]) -> GesValue { .list(value) }
 
     func map(_ value: [GesMapEntry]) -> GesValue { .map(value) }

@@ -1306,6 +1306,74 @@ steps:
 
 ---
 
+## Test: external-number-declarations-keep-units
+
+A constructor parameter or field declared as a Number without a unit keeps a Quantity's unit and makes the value
+binary64, as a Point or Vector declaration without a unit keeps its unit; a unitless value stays unitless.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-number-declarations-keep-units
+kind: scriptApi
+level: atomic
+requires:
+  core: [external-types]
+sources:
+  - name: "external number declarations keep units.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module externalnumberdeclarationskeepunits
+on Start {
+  let meters be :NumberProbe(value: 5m)
+  let plain be :NumberProbe(value: 2)
+  emit Fields(value: meters.value, sum: meters.value + 1m, plain: plain.value, stored: meters.stored)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: "Fields"
+        args:
+          - name: "value"
+            value:
+              type: ":Quantity.int64"
+              value: "5"
+              unit: ":meter"
+          - name: "sum"
+            value:
+              type: ":Quantity.int64"
+              value: "6"
+              unit: ":meter"
+          - name: "plain"
+            value:
+              type: ":Number.int64"
+              value: "2"
+          - name: "stored"
+            value:
+              type: ":Quantity.int64"
+              value: "3"
+              unit: ":meter"
+```
+
+---
+
 ## Test: external-field-reads-follow-declared-types
 
 This case checks that values returned by an external field follow the field's declared type, both for direct reads and for Map materialization.

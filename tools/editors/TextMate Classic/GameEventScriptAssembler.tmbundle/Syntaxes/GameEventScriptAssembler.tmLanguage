@@ -368,7 +368,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|List|Dice|Map|ListBuilder|MapBuilder|DistinctBuilder|GroupBuilder|OrderBuilder|Iterator|Series|Custom)\b</string>
+					<string>\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Bytes|Handler|Message|List|Dice|Map|ListBuilder|MapBuilder|DistinctBuilder|GroupBuilder|OrderBuilder|Iterator|Series|Custom)\b</string>
 					<key>name</key>
 					<string>support.type.bytecode.gameeventscript.assembler</string>
 				</dict>

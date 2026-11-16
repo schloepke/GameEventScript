@@ -1237,6 +1237,96 @@ message:
 
 ---
 
+## Test: unicode-escape-plus-sign
+
+A `\u` escape requires exactly four hex digits; a leading plus sign is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "unicode-escape-plus-sign"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"type\":\"Text\",\"value\":\"x\\u+061y\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidJson"
+```
+
+---
+
+## Test: unicode-escape-minus-sign
+
+A leading minus sign in a `\u` escape is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "unicode-escape-minus-sign"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"type\":\"Text\",\"value\":\"x\\u-000y\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidJson"
+```
+
+---
+
+## Test: unicode-escape-trailing-nul
+
+Three hex digits followed by a raw NUL character do not form a `\u` escape.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "unicode-escape-trailing-nul"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"type\":\"Text\",\"value\":\"x\\u006\u0000y\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidJson"
+```
+
+---
+
 ## Test: depth-limit
 
 This case verifies depth limit.
@@ -1531,6 +1621,198 @@ messageApi:
     name: "Done"
     args: []
   json: "{\"message\":{\"args\":[],\"name\":\"undeliverable\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: bytes
+
+Bytes travel as padded standard Base64.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "bytes"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"base64\":\"oLcL\",\"type\":\"Bytes\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"base64\":\"oLcL\",\"type\":\"Bytes\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
+## Test: bytes-empty
+
+Empty Bytes are the empty Base64 text.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "bytes-empty"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"base64\":\"\",\"type\":\"Bytes\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"base64\":\"\",\"type\":\"Bytes\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
+## Test: bytes-padding
+
+A final group of one or two bytes is padded.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "bytes-padding"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"base64\":\"oLc=\",\"type\":\"Bytes\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"base64\":\"oLc=\",\"type\":\"Bytes\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
+## Test: bytes-noncanonical
+
+Base64 whose unused bits are set has no canonical spelling and is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "bytes-noncanonical"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"base64\":\"oLd=\",\"type\":\"Bytes\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: bytes-unpadded
+
+Base64 without its padding is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "bytes-unpadded"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"base64\":\"oLc\",\"type\":\"Bytes\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: bytes-url-alphabet
+
+Only the standard alphabet is accepted.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "bytes-url-alphabet"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"base64\":\"-_8=\",\"type\":\"Bytes\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
 ```
 
 ### Expectation

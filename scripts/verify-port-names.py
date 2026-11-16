@@ -86,6 +86,8 @@ PLATFORM_ONLY = {
     ("swift", "Bridge", "GesTypeMacro"): "Swift macro implementation; C# uses Reflection on attributes",
     ("swift", "Bridge", "GesFieldMacro"): "Swift macro implementation; C# uses Reflection on attributes",
     ("swift", "Bridge", "GesConstructMacro"): "Swift macro implementation; C# uses Reflection on attributes",
+    ("swift", "Bridge", "GesExtensionMacro"): "Swift macro implementation; C# uses Reflection on attributes",
+    ("swift", "Bridge", "GesFunctionMacro"): "Swift macro implementation; C# uses Reflection on attributes",
 }
 
 # Technical types exempt from the prefix rule.

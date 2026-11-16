@@ -17,10 +17,13 @@ namespace GameEventScript.Api;
 public readonly struct GesMessageArgument
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script Message Argument.
+    /// Creates an argument from a label and a value. The label is normalized: leading and trailing ASCII whitespace is removed, and
+    /// <see langword="null"/>, empty or whitespace-only labels become the positional label <c>_</c>.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <param name="value">The value value.</param>
+    /// <param name="name">The external argument label, or <see langword="null"/> for a positional argument.</param>
+    /// <param name="value">The argument value; it is stored as given.</param>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is not valid Unicode or, after trimming, neither <c>_</c> nor a portable
+    /// lowercase argument label.</exception>
     public GesMessageArgument(string? name, GesValue value)
     {
         Name = GesMessageSignature.NormalizeParameterName(name);
@@ -28,12 +31,12 @@ public readonly struct GesMessageArgument
     }
 
     /// <summary>
-    /// Gets the name.
+    /// Gets the normalized external label, or <c>_</c> for a positional argument.
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// Gets the value.
+    /// Gets the argument value.
     /// </summary>
     public GesValue Value { get; }
 }
@@ -45,7 +48,7 @@ public readonly struct GesMessageArgument
 public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument>
 {
     /// <summary>
-    /// Gets the empty.
+    /// Gets the shared instance without arguments.
     /// </summary>
     public static GesMessageArguments Empty { get; } = new([], []);
 
@@ -56,10 +59,14 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
     {
         _names = names;
         _values = values;
+        NestingDepth = GesValue.ContainerDepth(values);
     }
 
+    // A Message is one level deeper than its deepest argument (specs/HostRuntime.md#value-nesting).
+    internal long NestingDepth { get; }
+
     /// <summary>
-    /// Gets the count.
+    /// Gets the number of positional and named arguments.
     /// </summary>
     public int Count => _values.Length;
 
@@ -69,74 +76,85 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
     public IReadOnlyList<string> SignatureLabels => _names;
 
     /// <summary>
-    /// Gets the keys.
+    /// Gets the normalized labels in argument order, including repeated positional <c>_</c> labels. Each access returns a new sequence that
+    /// serves as its own enumerator, so enumerate one returned instance only once at a time.
     /// </summary>
     public IEnumerable<string> Keys => new KeyEnumerable(_names);
 
     /// <summary>
-    /// Gets the values.
+    /// Gets the argument values in argument order. Each access returns a new sequence that serves as its own enumerator, so enumerate one
+    /// returned instance only once at a time.
     /// </summary>
     public IEnumerable<GesValue> Values => new ValueEnumerable(this);
 
     /// <summary>
-    /// Gets the value at the specified index.
+    /// Gets the argument value at <paramref name="index"/>.
     /// </summary>
-    /// <param name="index">The index value.</param>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <exception cref="IndexOutOfRangeException"><paramref name="index"/> is outside the argument list.</exception>
     public GesValue this[int index] => ValueAt(index);
 
     /// <summary>
-    /// Gets the value at the specified index.
+    /// Gets the value of the argument with the label <paramref name="name"/>.
     /// </summary>
-    /// <param name="name">The name value.</param>
+    /// <param name="name">The argument label. Leading and trailing ASCII whitespace is ignored.</param>
+    /// <exception cref="System.Collections.Generic.KeyNotFoundException">No argument carries the label <paramref name="name"/>; positional
+    /// <c>_</c> arguments are never found by name.</exception>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is not valid Unicode or not a portable lowercase argument label.</exception>
     public GesValue this[string name] => ValueAt(IndexOfRequired(name));
 
     /// <summary>
-    /// Performs the name at operation.
+    /// Gets the normalized label of the argument at <paramref name="index"/>.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns>The label, or <c>_</c> for a positional argument.</returns>
     public string NameAt(int index) => _names[index];
 
     /// <summary>
-    /// Performs the kind at operation.
+    /// Gets the portable value kind of the argument at <paramref name="index"/>.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns>The argument's kind, for example Integer for an integral number or quantity.</returns>
     public GesBytecodeTypeKind KindAt(int index) => _values[index].Kind;
 
     /// <summary>
-    /// Performs the unit at operation.
+    /// Gets the quantity unit of the argument at <paramref name="index"/>.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns>The unit of a quantity, Vector or Point, or <see cref="GesQuantityUnit.UnitNone"/> for a unitless value.</returns>
     public GesQuantityUnit UnitAt(int index) => _values[index].Unit;
 
     /// <summary>
-    /// Determines whether has value at.
+    /// Determines whether the argument at <paramref name="index"/> carries content.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns><see langword="true"/> for every number, Boolean, Tag, Vector, Point, Handler, Message and external value, including zero and
+    /// <see langword="false"/>; <see langword="false"/> for Nothing and for an empty Text, Dice, Bytes, List, Map, Record or Range.</returns>
     public bool HasValueAt(int index) => _values[index].HasValue;
 
     /// <summary>
-    /// Determines whether is nothing at.
+    /// Determines whether the argument at <paramref name="index"/> is Nothing.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns><see langword="true"/> for Nothing and for a binary64 or Percentage value holding NaN; otherwise <see langword="false"/>.</returns>
     public bool IsNothingAt(int index) => _values[index].IsNothing;
 
     /// <summary>
-    /// Determines whether is numeric at.
+    /// Determines whether the argument at <paramref name="index"/> is numeric.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns><see langword="true"/> for numbers and quantities, Percentages, Booleans and Dice; otherwise <see langword="false"/>, also for
+    /// Vectors and Points.</returns>
     public bool IsNumericAt(int index) => _values[index].IsNumeric;
 
     /// <summary>
-    /// Gets the as integer.
+    /// Converts the argument at <paramref name="index"/> to a signed 64-bit integer, as <see cref="GesValue.AsInteger"/> does.
+    /// Integer values are returned unchanged and Dice yield the sum of their rolls; Boolean yields 1 or 0; binary64 numbers and
+    /// Percentage ratios are truncated toward zero and saturated to the Int64 range. Every other kind, including Nothing, yields 0. A
+    /// quantity's unit is ignored, so the number is read in the value's own unit.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns>The converted integer.</returns>
     public long GetAsInteger(int index)
     {
         ref readonly var value = ref _values[index];
@@ -150,17 +168,23 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
     }
 
     /// <summary>
-    /// Gets the as integer.
+    /// Converts the argument with the label <paramref name="name"/> to a signed 64-bit integer, as <see cref="GetAsInteger(int)"/> does.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="name">The argument label. Leading and trailing ASCII whitespace is ignored.</param>
+    /// <returns>The converted integer.</returns>
+    /// <exception cref="System.Collections.Generic.KeyNotFoundException">No argument carries the label <paramref name="name"/>; positional
+    /// <c>_</c> arguments are never found by name.</exception>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is not valid Unicode or not a portable lowercase argument label.</exception>
     public long GetAsInteger(string name) => GetAsInteger(IndexOfRequired(name));
 
     /// <summary>
-    /// Gets the as number.
+    /// Converts the argument at <paramref name="index"/> to a binary64 number, as <see cref="GesValue.AsNumber"/> does.
+    /// Integer values and Dice sums are converted to binary64 and may round beyond 2^53; binary64 numbers are returned unchanged;
+    /// a Percentage yields its ratio, so 50% is 0.5; Boolean yields 1 or 0. Every other kind, including Nothing, yields NaN. A quantity's unit is
+    /// ignored, so the number is read in the value's own unit.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns>The converted number, or NaN for a non-numeric argument.</returns>
     public double GetAsNumber(int index)
     {
         ref readonly var value = ref _values[index];
@@ -174,17 +198,23 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
     }
 
     /// <summary>
-    /// Gets the as number.
+    /// Converts the argument with the label <paramref name="name"/> to a binary64 number, as <see cref="GetAsNumber(int)"/> does.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="name">The argument label. Leading and trailing ASCII whitespace is ignored.</param>
+    /// <returns>The converted number, or NaN for a non-numeric argument.</returns>
+    /// <exception cref="System.Collections.Generic.KeyNotFoundException">No argument carries the label <paramref name="name"/>; positional
+    /// <c>_</c> arguments are never found by name.</exception>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is not valid Unicode or not a portable lowercase argument label.</exception>
     public double GetAsNumber(string name) => GetAsNumber(IndexOfRequired(name));
 
     /// <summary>
-    /// Gets the as boolean.
+    /// Converts the argument at <paramref name="index"/> to a Boolean, as <see cref="GesValue.AsBoolean"/> does.
+    /// A Boolean is returned unchanged; numbers, quantities and Percentages are true when nonzero; a Vector or Point is true when
+    /// any component is nonzero; a Text is true only when it is <c>true</c> (ASCII case-insensitive) or <c>1</c>. Every other kind, including
+    /// Nothing, Tag, Dice, Bytes and the collections, yields <see langword="false"/>.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns>The converted Boolean.</returns>
     public bool GetAsBoolean(int index)
     {
         ref readonly var value = ref _values[index];
@@ -199,47 +229,60 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
     }
 
     /// <summary>
-    /// Gets the as boolean.
+    /// Converts the argument with the label <paramref name="name"/> to a Boolean, as <see cref="GetAsBoolean(int)"/> does.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="name">The argument label. Leading and trailing ASCII whitespace is ignored.</param>
+    /// <returns>The converted Boolean.</returns>
+    /// <exception cref="System.Collections.Generic.KeyNotFoundException">No argument carries the label <paramref name="name"/>; positional
+    /// <c>_</c> arguments are never found by name.</exception>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is not valid Unicode or not a portable lowercase argument label.</exception>
     public bool GetAsBoolean(string name) => GetAsBoolean(IndexOfRequired(name));
 
     /// <summary>
-    /// Gets the as text.
+    /// Converts the argument at <paramref name="index"/> to text, as <see cref="GesValue.AsText"/> does.
+    /// A Text yields its content and a Tag its name without the leading <c>#</c>. Every other kind yields a newly formatted canonical
+    /// text form, the same as <see cref="GesValue.ToString"/>, for example <c>nothing</c>, <c>true</c> or <c>:Vector(x: 1, y: 2, z: 3)</c>.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns>The argument text.</returns>
     public string GetAsText(int index) => _values[index].TextValue.Length > 0 || _values[index].Kind is GesBytecodeTypeKind.Text or GesBytecodeTypeKind.Tag
         ? _values[index].TextValue
         : _values[index].ToText;
 
     /// <summary>
-    /// Gets the as text.
+    /// Converts the argument with the label <paramref name="name"/> to text, as <see cref="GetAsText(int)"/> does.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="name">The argument label. Leading and trailing ASCII whitespace is ignored.</param>
+    /// <returns>The argument text.</returns>
+    /// <exception cref="System.Collections.Generic.KeyNotFoundException">No argument carries the label <paramref name="name"/>; positional
+    /// <c>_</c> arguments are never found by name.</exception>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is not valid Unicode or not a portable lowercase argument label.</exception>
     public string GetAsText(string name) => GetAsText(IndexOfRequired(name));
 
     /// <summary>
-    /// Performs the value at operation.
+    /// Gets the argument value at <paramref name="index"/>.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based argument index; it must be nonnegative and less than <see cref="Count"/>.</param>
+    /// <returns>The stored value.</returns>
+    /// <exception cref="IndexOutOfRangeException"><paramref name="index"/> is outside the argument list.</exception>
     public GesValue ValueAt(int index) => _values[index];
 
     /// <summary>
-    /// Performs the contains key operation.
+    /// Determines whether an argument carries the label <paramref name="name"/>.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="name">The argument label. Leading and trailing ASCII whitespace is ignored.</param>
+    /// <returns><see langword="true"/> when a named argument has the normalized label; always <see langword="false"/> for <c>_</c>, an empty
+    /// or a whitespace-only label.</returns>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is not valid Unicode or not a portable lowercase argument label.</exception>
     public bool ContainsKey(string name) => IndexOf(name) >= 0;
 
     /// <summary>
-    /// Performs the index of operation.
+    /// Finds the index of the argument with the label <paramref name="name"/>, comparing normalized labels ordinally.
     /// </summary>
-    /// <param name="name">The name value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="name">The argument label. Leading and trailing ASCII whitespace is ignored.</param>
+    /// <returns>The zero-based index, or -1 when no named argument has the label. Positional <c>_</c> arguments are never found, so <c>_</c>, an
+    /// empty or a whitespace-only label returns -1.</returns>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is not valid Unicode or not a portable lowercase argument label.</exception>
     public int IndexOf(string name)
     {
         var normalizedName = GesMessageSignature.NormalizeParameterName(name);
@@ -260,17 +303,18 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
     }
 
     /// <summary>
-    /// Gets the enumerator.
+    /// Returns a new enumerator over the label and value pairs in argument order.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>An enumerator that creates each <see cref="GesMessageArgument"/> on access without copying the argument list.</returns>
     public IEnumerator<GesMessageArgument> GetEnumerator() => new PairEnumerator(this);
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     /// <summary>
-    /// Returns the to string result for this value.
+    /// Formats the arguments as <c>label: value</c> pairs separated by <c>, </c>, in argument order.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The formatted arguments, with <c>_</c> as the label of positional arguments and each value in its canonical text form, or an
+    /// empty string when there are no arguments.</returns>
     public override string ToString()
     {
         if (_values.Length == 0)
@@ -293,10 +337,11 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
     }
 
     /// <summary>
-    /// Creates a value.
+    /// Creates arguments from an ordered list by copying its labels and values; the order defines the message signature.
     /// </summary>
-    /// <param name="arguments">The arguments value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="arguments">The arguments in signature order; <see langword="null"/> or an empty list yields <see cref="Empty"/>.</param>
+    /// <returns>A new immutable argument list, or <see cref="Empty"/>.</returns>
+    /// <exception cref="ArgumentException">A named label occurs more than once; the positional label <c>_</c> may repeat.</exception>
     public static GesMessageArguments Create(IReadOnlyList<GesMessageArgument>? arguments)
     {
         if (arguments is null || arguments.Count == 0)

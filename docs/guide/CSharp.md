@@ -35,7 +35,7 @@ checkout instead; see the [implementation guide](../../implementation/csharp/REA
 | Compiler | When your application compiles source text |
 | CSharpBridge | Delegate callbacks, native bindings and optional background pumping |
 | Syntax | Optional editor or terminal highlighting |
-| Generator | Build tools that generate typed schema code; not shipped with a game (since Unreleased) |
+| Generator | Build tools that generate typed schema code; not shipped with a game (since 0.5.0) |
 
 ## Compile and execute a rule
 
@@ -156,7 +156,7 @@ rather than mixing runner calls with unsynchronized raw host access.
 
 ## Read data documents
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Configuration and content files can use [GES documents](../../specs/Documents.md)
 (`.gesd`), whose values are written like GES literals. GES does not touch the
@@ -183,7 +183,7 @@ header is a reference for your application; GES does not validate it.
 
 ## Send data compactly with a schema
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A [schema](../../specs/Schemas.md) (`.gess`) describes a data format with ranges and steps and
 yields a very compact binary encoding. The writer and reader allocate nothing on success and need no VM.

@@ -1,0 +1,36 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The fixture of the checked-in computed code: the static form in plain binary64 and Boolean code, with guards, fallbacks,
+// percentages, sums, three-valued logic, functions and a name in backticks, and the dynamic form where whole numbers beyond
+// 2^53 could meet.
+wire(computed) model(computed) schema :Reactor as {
+  energy: :Quantity(J) between 0J and 1MJ step 1J
+  duration: :Quantity(s) between 0s and 60s step 1ms
+  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration
+  boost: :Percentage between 0% and 50% step 1%
+  boosted: :Quantity(W) computed by power + boost
+  trim: :Number between -10 and 10 step 0.5 optional
+  level: :Number computed by trim default 0
+  trimmed: :Number optional computed by trim * 2
+  marked: :Boolean computed by trim has value and trim > 1
+  cells: :List(:Cell) max 8
+  load: :Quantity(W) computed by cells[:sum cell => cell.draw]
+  cellCount: :Number computed by cells[:count]
+  steady: :Boolean computed by not (energy / duration > 1kW)
+  balanced: :Boolean computed by energy / duration = power
+  ticks: :Number integer
+  doubled: :Number computed by ticks * 2 + 1
+  span: :Quantity(m) between 0m and 100m step 0.01m
+  area: :Quantity(m²) computed by span²
+  side: :Quantity(m) computed by sqrt area
+  reach: :Quantity(m) computed by hypot(span, side)
+  heading: :Quantity(°) between 0° and 360° step 0.5°
+  lean: :Number computed by sin heading
+  length: :Number between 0 and 10 step 0.5
+  half: :Number computed by `length` / 2
+  settled: :Number computed by floor (ticks / 3) + 1
+}
+
+schema :Cell as {
+  draw: :Quantity(W) between 0W and 5kW step 1W
+}

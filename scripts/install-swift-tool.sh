@@ -5,7 +5,7 @@ set -euo pipefail
 
 usage() {
     echo "Usage: $0 [--tool-path DIRECTORY]"
-    echo "Build the Swift packages, then install or update ges (default: \$HOME/.local/bin)."
+    echo "Build the Swift CLI package, then install or update ges (default: \$HOME/.local/bin)."
 }
 ges_destination="$HOME/.local/bin"
 case "$#" in
@@ -41,7 +41,10 @@ check_destination() {
     fi
 }
 check_destination
-"$ges_root/scripts/build-swift.sh"
+# Build only the CLI package: it compiles Runtime, Compiler, Syntax and Generator once in its own scratch path.
+swift build --package-path "$ges_root/implementation/swift/GameEventScriptTool" \
+    --scratch-path "$ges_root/artifacts/swift/tool" \
+    --disable-build-manifest-caching --configuration release --product ges
 ges_product="$ges_root/artifacts/swift/tool/release/ges"
 "$ges_product" --version
 mkdir -p "$ges_destination"

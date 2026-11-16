@@ -14,7 +14,11 @@ internal static class Program
 {
     private const string RuntimePackage = "GameEventScript.Runtime";
     private const string SyntaxPackage = "GameEventScript.Syntax";
-    private static readonly DateTimeOffset CanonicalTimestamp = new(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
+    // Every entry takes one timestamp: the commit time that the caller passes, or 2000-01-01 without one. A newer commit gives
+    // newer files, so that a build copying a package's DLL by date and size replaces the old one; one commit packs alike.
+    // A ZIP time has no time zone: the UTC clock time is written, and extraction reads it as local clock time, which shifts
+    // every package's files by the same offset on one machine, so a newer commit still gives newer files there.
+    private static DateTimeOffset CanonicalTimestamp = new(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private static readonly PackageDefinition[] Packages =
     [
@@ -29,8 +33,9 @@ internal static class Program
     {
         try
         {
-            if (arguments.Length != 4 || arguments[0] != "prepare")
-                throw new ArgumentException("Usage: prepare <package-directory> <version> <repository-root>");
+            if (arguments.Length is not (4 or 5) || arguments[0] != "prepare")
+                throw new ArgumentException("Usage: prepare <package-directory> <version> <repository-root> [<unix-seconds>]");
+            if (arguments.Length == 5) CanonicalTimestamp = Timestamp(arguments[4]);
 
             var packageDirectory = Path.GetFullPath(arguments[1]);
             var version = arguments[2];
@@ -50,6 +55,16 @@ internal static class Program
             Console.Error.WriteLine(exception.Message);
             return 1;
         }
+    }
+
+    // A ZIP time has two-second resolution and covers 1980 to 2107, so the time is rounded down to an even second there.
+    private static DateTimeOffset Timestamp(string text)
+    {
+        if (!long.TryParse(text, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var seconds))
+            throw new ArgumentException($"The timestamp '{text}' is no count of Unix seconds.");
+        var time = DateTimeOffset.FromUnixTimeSeconds(seconds - (seconds % 2));
+        if (time.Year is < 1980 or > 2107) throw new ArgumentException($"The timestamp '{text}' lies outside the ZIP range from 1980 to 2107.");
+        return time;
     }
 
     private static void Normalize(string packagePath)

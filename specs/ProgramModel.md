@@ -100,22 +100,35 @@ The portable public API has exactly two program-producing operations:
   program validator before returning the decoded program.
 
 There is no public free-form `GameEventScriptProgram` constructor or public
-factory that combines arbitrary segments. Public segment constructors are data
-helpers only and cannot create a program. Internal compiler builders and
+factory that combines arbitrary segments, and the segment and section types
+have no public constructors either (C# `internal`, Swift `@_spi(Compiler)`):
+their values are read from a Program, never assembled by an embedding. Small
+value records inside them (binding entries, debug symbols, source mappings and
+instructions) keep public initializers. Internal compiler builders and
 test-only friend access are implementation details and do not extend the
 portable construction contract.
 
-Validation is deliberately repeated at output and execution trust boundaries:
+Validation costs time linear in the Program's size: a list, string or source
+shared by many references is checked once, so an untrusted file cannot make
+validation quadratic. One `Encode`/`ToArray` call validates once.
+
+Validation guards the output and execution trust boundaries:
 
 - the writer validates before calculating or writing the canonical encoding;
 - `Host.Load` validates before checking host resource limits, resolving any
   executable binding, allocating VM capacity, registering handlers, or queuing
   initialization.
 
-This repetition is intentional. A writer and a host must not rely on the claimed
-origin of a program, on a prior validation performed by another component, or on
-language-specific visibility rules. Validation failure leaves the destination
-buffer and host state unchanged.
+A Program instance remembers its own successful validation. Its data is
+immutable, so the result holds for the instance's lifetime, and the writer and
+`Host.Load` skip the repeated check for an already validated instance, which
+includes every instance the Reader or the Compiler returns. Loading one compiled
+Program into many hosts therefore costs no repeated linear pass. A writer and a
+host still never rely on the claimed origin of a program, on a flag stored in
+its data, or on language-specific visibility rules: only the instance's own
+completed validation counts, and an instance created without validation (for
+example through test-only friend access) is validated at both boundaries.
+Validation failure leaves the destination buffer and host state unchanged.
 
 ## Representation independence
 

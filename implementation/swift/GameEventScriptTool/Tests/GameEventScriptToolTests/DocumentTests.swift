@@ -8,7 +8,12 @@ import XCTest
 /// Verifies the document check and format commands and the console's :show, like the C# CLI tests.
 final class DocumentTests: XCTestCase {
     private let valid = ":Schema(:DriveUnit)\n// Engine\nid: 'drive'\nmass: 550kg, ready:\nmount: :Vector(x: 0m, y: -0.8m)\n"
-    private let tool = ToolTests()
+    // swift-corelibs-xctest on Linux creates a test case only from a name and a closure.
+    #if canImport(Darwin)
+        private let tool = ToolTests()
+    #else
+        private let tool = ToolTests(name: "DocumentTests.tool", testClosure: { _ in })
+    #endif
 
     override func setUpWithError() throws { try tool.setUpWithError() }
 

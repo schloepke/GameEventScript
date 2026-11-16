@@ -127,6 +127,31 @@ internal class GesIntIterator(int[] values) : IGesIterator, IDisposable
     }
 }
 
+// Yields each byte as an Int64 number from 0 to 255.
+internal class GesBytesIterator(byte[] values) : IGesIterator, IDisposable
+{
+    private int _current;
+    private byte[]? _values = values;
+
+    public GesIteratorResult Next()
+    {
+        if (_values == null || _current >= _values.Length)
+        {
+            _values = null;
+            return default;
+        }
+
+        var value = default(GesValue);
+        value.SetInteger(_values[_current++]);
+        return new GesIteratorResult(in value);
+    }
+
+    public void Dispose()
+    {
+        _values = null;
+    }
+}
+
 internal class GesStringIterator(string stringValue) : IGesIterator, IDisposable
 {
     private int _utf16Offset;

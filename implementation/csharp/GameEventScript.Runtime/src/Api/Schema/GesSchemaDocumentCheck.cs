@@ -17,12 +17,16 @@ internal sealed class GesSchemaDocumentCheck
     internal const string UnknownField = "document.unknownField";
     internal const string FieldType = "document.fieldType";
     internal const string OutOfRange = "document.outOfRange";
+    internal const string TooDeep = "document.tooDeep";
 
-    private sealed class Failure(string code, int offset) : Exception(code)
+    private sealed class Failure(string code, int offset, string path) : Exception(code)
     {
         internal string Code { get; } = code;
 
         internal int Offset { get; } = offset;
+
+        // The value path of the field that fails, as the value path and generated code name it, such as `units[].name`.
+        internal string Path { get; } = path;
     }
 
     private readonly GesSchemaParameters? _parameters;
@@ -31,36 +35,113 @@ internal sealed class GesSchemaDocumentCheck
     private readonly Dictionary<(GesResolvedType Type, GesDocumentNode Value), bool> _holds = new();
     private readonly Dictionary<GesDocumentNode, GesDocumentNode> _resolved = new();
 
+    // The alternative that held for each union of several, by the exact path of its value and the union's alternatives, so
+    // that converting the checked document takes the alternative the check chose. The exact path names each list element by
+    // its index, as `items[2].value`, since the values of an explicit form share the form's position.
+    private readonly Dictionary<(string Position, GesResolvedType[] Alternatives), GesResolvedType> _chosen = new();
+
+    // Every choice in the order it was made, with the alternative it replaced, so that an alternative that fails takes back
+    // the choices of the unions inside it.
+    private readonly List<((string Position, GesResolvedType[] Alternatives) Union, GesResolvedType? Replaced)> _choices = new();
+
+    // The unions directly inside each alternative that held, which a cached answer repeats. Each records only its direct
+    // unions, whose own cached answers hold the deeper ones, so nesting stores every choice once. A value's exact path
+    // follows from the document alone, so a repeated choice keeps its recorded position. `_direct` collects the direct
+    // unions of the alternatives being checked until their alternative answers.
+    private readonly Dictionary<(GesResolvedType Type, GesDocumentNode Value), Made[]> _made = new();
+    private readonly List<Made> _direct = new();
+
+    // How many records of each schema enclose the value being checked, which a recursive List counts against its depth.
+    private readonly Dictionary<GesResolvedDeclaration, int> _levels = new();
+
+    // The path of the value being checked, and its exact path with list indices.
+    private string _path = "";
+    private string _position = "";
+
     private GesSchemaDocumentCheck(GesSchemaParameters? parameters) => _parameters = parameters;
 
     internal static void Check(string text, GesDocumentNode root, GesResolvedDeclaration schema, GesSchemaParameters? parameters)
     {
+        if (Failing(text, root, schema, parameters) is { } failure)
+            throw new GesSchemaException(failure.Code, "", failure.Line, failure.Column, $"The document breaks its schema ({failure.Code}) at line {failure.Line}, column {failure.Column}.");
+    }
+
+    // The first error of a document against its schema, with its position and field path, or null.
+    internal static GesDocumentException? Failing(string text, GesDocumentNode root, GesResolvedDeclaration schema, GesSchemaParameters? parameters)
+        => Failing(text, root, schema, parameters, out _);
+
+    // The first error, or null with the alternative that held for each union of several.
+    internal static GesDocumentException? Failing(string text, GesDocumentNode root, GesResolvedDeclaration schema, GesSchemaParameters? parameters, out IReadOnlyDictionary<(string Position, GesResolvedType[] Alternatives), GesResolvedType> chosen)
+    {
         if (parameters is not null) GesSchemaBinder.CheckParameters(schema, parameters);
+        var check = new GesSchemaDocumentCheck(parameters);
+        chosen = check._chosen;
         try
         {
-            new GesSchemaDocumentCheck(parameters).Fields(root, schema, 0);
+            check.Fields(root, schema, 0);
+            return null;
         }
         catch (Failure failure)
         {
             var (line, column) = GesDocumentSyntax.Location(text, failure.Offset);
-            throw new GesSchemaException(failure.Code, "", line, column, $"The document breaks its schema ({failure.Code}) at line {line}, column {column}.");
+            return new GesDocumentException(failure.Code, line, column, path: failure.Path);
         }
     }
 
+    private Failure Fail(string code, int offset, string? path = null) => new(code, offset, path ?? _path);
+
+    internal static string Join(string path, string name) => path.Length == 0 ? name : path + "." + name;
+
+    // Checks a nested value under its path segment: a field name, or `[]` for the element at an index.
+    private void Under(string segment, Action check, int index = 0)
+    {
+        var outer = _path;
+        var outerPosition = _position;
+        _path = segment == "[]" ? outer + segment : Join(outer, segment);
+        _position = segment == "[]" ? Element(outerPosition, index) : Join(outerPosition, segment);
+        try
+        {
+            check();
+        }
+        finally
+        {
+            _path = outer;
+            _position = outerPosition;
+        }
+    }
+
+    // The exact path of a list element, which converting the checked document follows to the alternatives the check chose.
+    internal static string Element(string position, int index) => position + "[" + index.ToString(CultureInfo.InvariantCulture) + "]";
+
     // A missing field is reported where the value that lacks it starts.
     private void Fields(GesDocumentNode map, GesResolvedDeclaration schema, int start)
+    {
+        _levels.TryGetValue(schema, out var level);
+        _levels[schema] = level + 1;
+        try
+        {
+            CheckFields(map, schema, start);
+        }
+        finally
+        {
+            if (level == 0) _levels.Remove(schema);
+            else _levels[schema] = level;
+        }
+    }
+
+    private void CheckFields(GesDocumentNode map, GesResolvedDeclaration schema, int start)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < map.Labels.Length; index++)
         {
             var field = Array.Find(schema.Fields, candidate => candidate.Name == map.Labels[index]);
-            if (field is null) throw new Failure(UnknownField, map.KeyOffsets[index]);
+            if (field is null) throw Fail(UnknownField, map.KeyOffsets[index], Join(_path, map.Labels[index]));
             seen.Add(field.Name);
-            Union(field, map.Children[index]);
+            Under(field.Name, () => Union(field, map.Children[index]));
         }
 
         foreach (var field in schema.Fields)
-            if (!seen.Contains(field.Name) && field.Marker != GesSchemaFieldMarker.Optional && !Array.Exists(field.Alternatives, alternative => alternative.Kind == GesSchemaTypeKind.Nothing)) throw new Failure(MissingField, start);
+            if (!seen.Contains(field.Name) && field.Default is null && field.Marker != GesSchemaFieldMarker.Optional && !Array.Exists(field.Alternatives, alternative => alternative.Kind == GesSchemaTypeKind.Nothing)) throw Fail(MissingField, start, Join(_path, field.Name));
     }
 
     private void Union(GesResolvedField field, GesDocumentNode value)
@@ -84,23 +165,71 @@ internal sealed class GesSchemaDocumentCheck
         {
             if (!_holds.TryGetValue((alternative, value), out var holds))
             {
+                var mark = _choices.Count;
+                var direct = _direct.Count;
                 try
                 {
                     Type(alternative, value);
                     holds = true;
+                    var made = new Made[_direct.Count - direct];
+                    _direct.CopyTo(direct, made, 0, made.Length);
+                    _made[(alternative, value)] = made;
                 }
                 catch (Failure)
                 {
-                    // The next alternative may hold.
+                    // The next alternative may hold; the unions inside this one chose nothing.
+                    Revert(mark);
                 }
 
+                _direct.RemoveRange(direct, _direct.Count - direct);
                 _holds[(alternative, value)] = holds;
             }
+            else if (holds)
+            {
+                Repeat(_made[(alternative, value)]);
+            }
 
-            if (holds) return;
+            if (holds)
+            {
+                Choose((_position, alternatives), alternative);
+                _direct.Add(new Made(_position, alternatives, alternative, value));
+                return;
+            }
         }
 
-        throw new Failure(FieldType, value.Start);
+        throw Fail(FieldType, value.Start);
+    }
+
+    // A union that chose an alternative for a value at its exact path.
+    private readonly record struct Made(string Position, GesResolvedType[] Alternatives, GesResolvedType Alternative, GesDocumentNode Value);
+
+    // Repeats the choices of a cached alternative and of the unions inside it.
+    private void Repeat(Made[] made)
+    {
+        foreach (var union in made)
+        {
+            Choose((union.Position, union.Alternatives), union.Alternative);
+            if (_made.TryGetValue((union.Alternative, union.Value), out var inner)) Repeat(inner);
+        }
+    }
+
+    private void Choose((string Position, GesResolvedType[] Alternatives) union, GesResolvedType alternative)
+    {
+        _choices.Add((union, _chosen.TryGetValue(union, out var replaced) ? replaced : null));
+        _chosen[union] = alternative;
+    }
+
+    // Takes back the choices made since the mark, latest first.
+    private void Revert(int mark)
+    {
+        for (var index = _choices.Count - 1; index >= mark; index--)
+        {
+            var (union, replaced) = _choices[index];
+            if (replaced is null) _chosen.Remove(union);
+            else _chosen[union] = replaced;
+        }
+
+        _choices.RemoveRange(mark, _choices.Count - mark);
     }
 
     private void Type(GesResolvedType type, GesDocumentNode value)
@@ -113,29 +242,62 @@ internal sealed class GesSchemaDocumentCheck
             case GesSchemaTypeKind.Quantity: Number(type, value); break;
             case GesSchemaTypeKind.Point: Spatial(type, value, GesDocumentNodeKind.Point); break;
             case GesSchemaTypeKind.Vector: Spatial(type, value, GesDocumentNodeKind.Vector); break;
+            case GesSchemaTypeKind.Box: Box(type, value); break;
+            case GesSchemaTypeKind.Disc: Disc(type, value); break;
+            case GesSchemaTypeKind.Poly:
+                // A document has no geometry literal: a Poly is the List of its points.
+                Require(value, value.Kind == GesDocumentNodeKind.List);
+                if (type.Max is { } polyMax && value.Children.Length > polyMax) throw Fail(OutOfRange, value.Start);
+                for (var index = 0; index < value.Children.Length; index++)
+                {
+                    var point = value.Children[index];
+                    Under("[]", () => Spatial(type, Resolved(point), GesDocumentNodeKind.Point), index);
+                }
+                break;
             case GesSchemaTypeKind.Tag:
                 Require(value, value.Kind == GesDocumentNodeKind.Tag && (type.Tags is null || Array.IndexOf(type.Tags, value.Name) >= 0));
-                if (type.Max is { } tagMax && Encoding.UTF8.GetByteCount(value.Name) > tagMax) throw new Failure(OutOfRange, value.Start);
+                if (type.Max is { } tagMax && Encoding.UTF8.GetByteCount(value.Name) > tagMax) throw Fail(OutOfRange, value.Start);
                 break;
             case GesSchemaTypeKind.Text:
                 Require(value, value.Kind == GesDocumentNodeKind.Text);
-                if (type.Max is { } textMax && Encoding.UTF8.GetByteCount(value.Name) > textMax) throw new Failure(OutOfRange, value.Start);
+                if (type.Max is { } textMax && Encoding.UTF8.GetByteCount(value.Name) > textMax) throw Fail(OutOfRange, value.Start);
+                break;
+            case GesSchemaTypeKind.Bytes:
+                Require(value, value.Kind == GesDocumentNodeKind.Bytes);
+                if (type.Max is { } bytesMax && value.Bytes.Length > bytesMax) throw Fail(OutOfRange, value.Start);
                 break;
             case GesSchemaTypeKind.List:
                 Require(value, value.Kind == GesDocumentNodeKind.List);
-                if (type.Max is { } listMax && value.Children.Length > listMax) throw new Failure(OutOfRange, value.Start);
+                if (type.Recursion is { } recursion && value.Children.Length > 0 && _levels.TryGetValue(recursion, out var reached) && reached >= type.Depth) throw Fail(TooDeep, value.Start);
+                if (type.Max is { } listMax && value.Children.Length > listMax) throw Fail(OutOfRange, value.Start);
                 if (type.Element is { } element)
-                    foreach (var item in value.Children) Union(element, item);
+                {
+                    for (var index = 0; index < value.Children.Length; index++)
+                    {
+                        var item = value.Children[index];
+                        Under("[]", () => Union(element, item), index);
+                    }
+                }
                 break;
             case GesSchemaTypeKind.Reference:
                 Reference(type, value);
                 break;
             case GesSchemaTypeKind.Map: Require(value, value.Kind == GesDocumentNodeKind.Map); break;
+            case GesSchemaTypeKind.Flags:
+                // Each key names a member and each value is a Boolean.
+                Require(value, value.Kind == GesDocumentNodeKind.Map);
+                for (var index = 0; index < value.Labels.Length; index++)
+                {
+                    if (Array.IndexOf(type.Tags!, value.Labels[index]) < 0) throw Fail(FieldType, value.KeyOffsets[index]);
+                    Require(value.Children[index], Resolved(value.Children[index]).Kind == GesDocumentNodeKind.Boolean);
+                }
+
+                break;
             case GesSchemaTypeKind.Range: Require(value, IsForm(value, "range")); break;
             case GesSchemaTypeKind.Series: Require(value, IsForm(value, "series")); break;
             case GesSchemaTypeKind.Dice:
                 Require(value, value.Kind == GesDocumentNodeKind.Dice);
-                if (type.Max is { } diceMax && value.Rolls.Length > diceMax) throw new Failure(OutOfRange, value.Start);
+                if (type.Max is { } diceMax && value.Rolls.Length > diceMax) throw Fail(OutOfRange, value.Start);
                 foreach (var roll in value.Rolls) Numeric(type.Constraints, true, roll, roll, value);
                 break;
             case GesSchemaTypeKind.Message: Require(value, value.Kind == GesDocumentNodeKind.Message || IsForm(value, "message")); break;
@@ -171,13 +333,92 @@ internal sealed class GesSchemaDocumentCheck
         Numeric(type.Constraints, number.Kind == GesNumberLiteralKind.Integer, number.IntegerValue, number.FloatValue, value);
     }
 
+    // A document has no geometry literal: a Box is the Map of its corners, as Points, or a Record "Box" of them.
+    private void Box(GesResolvedType type, GesDocumentNode value)
+    {
+        var fields = value;
+        if (IsForm(value, "record"))
+        {
+            var positions = GesLiteralForms.Positions("record", value.Labels);
+            Require(value, positions is not null);
+            var name = Resolved(value.Children[Array.IndexOf(positions!, 0)]);
+            Require(value, name.Kind == GesDocumentNodeKind.Text && name.Name == "Box");
+            fields = value.Children[Array.IndexOf(positions!, 1)];
+        }
+
+        fields = Resolved(fields);
+        Require(value, fields.Kind == GesDocumentNodeKind.Map);
+        var seen = 0;
+        for (var index = 0; index < fields.Labels.Length; index++)
+        {
+            var corner = fields.Labels[index] switch { "lower" => 1, "upper" => 2, _ => 0 };
+            if (corner == 0) throw Fail(UnknownField, fields.KeyOffsets[index], Join(_path, fields.Labels[index]));
+            seen |= corner;
+            Under(fields.Labels[index], () => Spatial(type, Resolved(fields.Children[index]), GesDocumentNodeKind.Point));
+        }
+
+        if (seen != 3) throw Fail(MissingField, value.Start);
+    }
+
+    // A Disc is the Map of its centre, a Point, and its radius, a number of the unit, or a Record "Disc" of them.
+    private void Disc(GesResolvedType type, GesDocumentNode value)
+    {
+        var fields = value;
+        if (IsForm(value, "record"))
+        {
+            var positions = GesLiteralForms.Positions("record", value.Labels);
+            Require(value, positions is not null);
+            var name = Resolved(value.Children[Array.IndexOf(positions!, 0)]);
+            Require(value, name.Kind == GesDocumentNodeKind.Text && name.Name == "Disc");
+            fields = value.Children[Array.IndexOf(positions!, 1)];
+        }
+
+        fields = Resolved(fields);
+        Require(value, fields.Kind == GesDocumentNodeKind.Map);
+        var seen = 0;
+        for (var index = 0; index < fields.Labels.Length; index++)
+        {
+            var part = fields.Labels[index] switch { "center" => 1, "radius" => 2, _ => 0 };
+            if (part == 0) throw Fail(UnknownField, fields.KeyOffsets[index], Join(_path, fields.Labels[index]));
+            seen |= part;
+            var child = Resolved(fields.Children[index]);
+            if (part == 1) Under("center", () => Spatial(type, child, GesDocumentNodeKind.Point));
+            else Under("radius", () => Radius(type, child));
+        }
+
+        if (seen != 3) throw Fail(MissingField, value.Start);
+    }
+
+    // A radius of the Disc's unit, whose magnitude lies within the block's radius, as a disc takes the magnitude, or zero when
+    // the block leaves it out.
+    private void Radius(GesResolvedType type, GesDocumentNode value)
+    {
+        Require(value, value.Kind == GesDocumentNodeKind.Number && value.Number.Kind != GesNumberLiteralKind.Percentage && value.Number.Unit == type.Unit);
+        var number = value.Number;
+        if (type.Axes is not { } axes) return;
+        var declared = Array.Find(axes, candidate => candidate.Axis == "radius");
+        // long.MinValue has no Int64 magnitude, so it is checked as its binary64 magnitude.
+        var integer = number.Kind == GesNumberLiteralKind.Integer && number.IntegerValue != long.MinValue;
+        var whole = integer ? Math.Abs(number.IntegerValue) : 0;
+        var fraction = Math.Abs(integer ? number.IntegerValue : number.Kind == GesNumberLiteralKind.Integer ? (double)number.IntegerValue : number.FloatValue);
+        if (declared is null) Require(value, integer ? whole == 0 : fraction == 0);
+        else Numeric(declared.Constraints, integer, whole, fraction, value);
+    }
+
     private void Spatial(GesResolvedType type, GesDocumentNode value, GesDocumentNodeKind kind)
     {
         Require(value, value.Kind == kind && value.Unit == type.Unit);
-        if (type.Axes is not { } axes) return;
-        foreach (var axis in "xyz")
+        if (type.Axes is not { } axes)
         {
-            var component = axis == 'x' ? value.X : axis == 'y' ? value.Y : value.Z;
+            // Without a block the points of a Poly and the centre of a Disc lie in the plane z = 0, as with a block that
+            // declares no z.
+            if (type.Kind is GesSchemaTypeKind.Poly or GesSchemaTypeKind.Disc) Require(value, value.Z == 0);
+            return;
+        }
+
+        foreach (var axis in new[] { "x", "y", "z" })
+        {
+            var component = axis == "x" ? value.X : axis == "y" ? value.Y : value.Z;
             var declared = Array.Find(axes, candidate => candidate.Axis == axis);
             if (declared is null) Require(value, component == 0);
             else Numeric(declared.Constraints, false, 0, component, value);
@@ -188,19 +429,19 @@ internal sealed class GesSchemaDocumentCheck
     {
         if (constraints.Integer)
         {
-            if (!isInteger && (number != Math.Floor(number) || number >= 9223372036854775808d || number < -9223372036854775808d)) throw new Failure(FieldType, value.Start);
+            if (!isInteger && (number != Math.Floor(number) || number >= 9223372036854775808d || number < -9223372036854775808d)) throw Fail(FieldType, value.Start);
             if (!isInteger) integer = (long)number;
             isInteger = true;
         }
 
         if (constraints.Wrapping)
         {
-            if (!isInteger && (double.IsNaN(number) || double.IsInfinity(number))) throw new Failure(OutOfRange, value.Start);
+            if (!isInteger && (double.IsNaN(number) || double.IsInfinity(number))) throw Fail(OutOfRange, value.Start);
             return;
         }
 
-        if (Bound(constraints.Lower) is { } lower && Below(isInteger, integer, number, lower)) throw new Failure(OutOfRange, value.Start);
-        if (Bound(constraints.Upper) is { } upper && Above(isInteger, integer, number, upper)) throw new Failure(OutOfRange, value.Start);
+        if (Bound(constraints.Lower) is { } lower && Below(isInteger, integer, number, lower)) throw Fail(OutOfRange, value.Start);
+        if (Bound(constraints.Upper) is { } upper && Above(isInteger, integer, number, upper)) throw Fail(OutOfRange, value.Start);
     }
 
     private static bool Below(bool isInteger, long integer, double number, GesSchemaDecimal bound)
@@ -229,8 +470,8 @@ internal sealed class GesSchemaDocumentCheck
 
     private static bool IsForm(GesDocumentNode value, string name) => value.Kind == GesDocumentNodeKind.Form && value.Name == name;
 
-    private static void Require(GesDocumentNode value, bool holds)
+    private void Require(GesDocumentNode value, bool holds)
     {
-        if (!holds) throw new Failure(FieldType, value.Start);
+        if (!holds) throw Fail(FieldType, value.Start);
     }
 }

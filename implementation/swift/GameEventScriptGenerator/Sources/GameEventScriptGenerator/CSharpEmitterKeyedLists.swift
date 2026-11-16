@@ -27,6 +27,7 @@ extension GesCSharpEmitter {
         let positionWidth = String(encoding.positionWidth)
         let max = String(encoding.maxCount)
         let pool = "__\(value.base)Pool"
+        let next = nextLevel(element)
 
         code.blank()
         code.line("private static bool __Ascending\(node)(List<\(name)> list, string[] paths, int at)")
@@ -42,16 +43,25 @@ extension GesCSharpEmitter {
         code.close()
 
         code.blank()
-        code.line("private bool __WriteKeyed\(node)(\(owner) baseline, ref GesBitWriter writer, string[] paths, int at)")
+        code.line("private bool __WriteKeyed\(node)(\(owner) baseline, ref GesBitWriter writer, string[] paths, int at\(value.depth > 0 ? ", int level" : ""))")
         code.open("{")
         code.line("var list = \(value.base);")
         code.line("var held = baseline.\(value.base);")
+        if value.depth > 0 {
+            // At its depth the List is no longer keyed: it holds nothing and never changes.
+            code.line("if (level >= \(value.depth))")
+            code.open("{")
+            code.line("if (list.Count + held.Count > 0) throw new GesWireException(GesWireException.TooDeep, \(path(value)), \"deeper than depth \(value.depth)\");")
+            code.line("return false;")
+            code.close()
+            code.blank()
+        }
         code.line("if (list.Count > \(max) || held.Count > \(max)) \(fail("TooLong", value))")
         code.line("var listAscending = __Ascending\(node)(list, paths, at);")
         code.line("var heldAscending = __Ascending\(node)(held, paths, at);")
         code.line("if (!listAscending || !heldAscending)")
         code.open("{")
-        code.line("if (__Same\(node)(baseline, paths, at)) return false;")
+        code.line("if (__Same\(node)(baseline, paths, at\(level(value)))) return false;")
         code.line("writer.Write(1, 1);")
         write(&code, value, "list")
         code.line("return true;")
@@ -80,7 +90,7 @@ extension GesCSharpEmitter {
         code.open("{")
         match(&code, "list", "held", at)
         code.line("if (kept) continue;")
-        code.line("list[position].__WriteFields(ref writer, paths, \(at));")
+        code.line("list[position].__WriteFields(ref writer, paths, \(at)\(next));")
         code.line("added++;")
         code.close()
         code.line("__SetCount(ref writer, countBit, added, \(width));")
@@ -95,7 +105,7 @@ extension GesCSharpEmitter {
         code.line("if (!kept) continue;")
         code.line("var start = writer.BitPosition;")
         code.line("writer.Write((ulong)position, \(positionWidth));")
-        code.line("if (list[other].__WriteDelta(held[position], ref writer, paths, \(at), true)) changed++;")
+        code.line("if (list[other].__WriteDelta(held[position], ref writer, paths, \(at), true\(next))) changed++;")
         code.line("else writer.Rewind(start);")
         code.close()
         code.line("__SetCount(ref writer, countBit, changed, \(width));")
@@ -108,16 +118,26 @@ extension GesCSharpEmitter {
         // they are read, an added key that the baseline holds at that element. A first pass validates the added elements;
         // the merge then reads them again where they belong.
         code.blank()
-        code.line("private void __ReadKeyed\(node)(\(owner) baseline, ref GesBitReader reader, string[] paths, int at)")
+        code.line("private void __ReadKeyed\(node)(\(owner) baseline, ref GesBitReader reader, string[] paths, int at\(value.depth > 0 ? ", int level" : ""))")
         code.open("{")
         code.line("var held = baseline.\(value.base);")
+        if value.depth > 0 {
+            // At its depth the List takes no bits, so a change there is none.
+            code.line("if (level >= \(value.depth))")
+            code.open("{")
+            code.line("\(value.base).Clear();")
+            code.line("if (__Same\(node)(baseline, paths, at, level)) \(fail("InvalidDelta", value))")
+            code.line("return;")
+            code.close()
+            code.blank()
+        }
         code.line("if (reader.Read(1, \(path(value))) == 1)")
         code.open("{")
         read(&code, value, value.base)
         code.line("var listAscending = __Ascending\(node)(\(value.base), paths, at);")
         code.line("var heldAscending = __Ascending\(node)(held, paths, at);")
         code.line("if (listAscending && heldAscending) \(fail("InvalidDelta", value))")
-        code.line("if (__Same\(node)(baseline, paths, at)) \(fail("InvalidDelta", value))")
+        code.line("if (__Same\(node)(baseline, paths, at\(level(value)))) \(fail("InvalidDelta", value))")
         code.line("return;")
         code.close()
         code.blank()
@@ -149,10 +169,10 @@ extension GesCSharpEmitter {
         code.line("reader.Seek(start);")
         if element.isClass {
             code.line("if (\(pool).Count == 0) \(pool).Add(new \(name)());")
-            code.line("\(pool)[0].__ReadFields(ref reader, paths, \(at));")
+            code.line("\(pool)[0].__ReadFields(ref reader, paths, \(at)\(next));")
         } else {
             code.line("var scratch = new \(name)();")
-            code.line("scratch.__ReadFields(ref reader, paths, \(at));")
+            code.line("scratch.__ReadFields(ref reader, paths, \(at)\(next));")
         }
 
         code.close()
@@ -188,7 +208,7 @@ extension GesCSharpEmitter {
         code.open("{")
         slot(&code, element, name, pool)
         code.line("reader.Seek(changedCursor);")
-        code.line("if (!item.__ReadDelta(element, ref reader, paths, \(at), true)) \(fail("InvalidDelta", element))")
+        code.line("if (!item.__ReadDelta(element, ref reader, paths, \(at), true\(next))) \(fail("InvalidDelta", element))")
         code.line("changedCursor = reader.BitPosition;")
         code.line("list.Add(item);")
         code.line("var before = nextChanged;")
@@ -248,7 +268,7 @@ extension GesCSharpEmitter {
     private static func readAdded(_ code: inout Code, _ value: GesPlanValue, _ name: String, _ at: String, _ pool: String, _ global: String) {
         slot(&code, value.element!, name, pool)
         code.line("reader.Seek(addedCursor);")
-        code.line("item.__ReadFields(ref reader, paths, \(at));")
+        code.line("item.__ReadFields(ref reader, paths, \(at)\(nextLevel(value.element!)));")
         code.line("addedCursor = reader.BitPosition;")
         code.line("list.Add(item);")
         code.line("if (--addedLeft > 0) addedOrder = \(global)\(name).__ReadKeyOrder(ref reader, paths, \(at));")

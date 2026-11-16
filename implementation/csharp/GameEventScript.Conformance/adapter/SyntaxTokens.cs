@@ -25,7 +25,8 @@ internal static class SyntaxTokens
                 var fragment = GesSyntaxParser.Parse(text, fragment: true);
                 var sourceName = source.TryGetProperty("name", out var name) ? name.GetString()! : "";
                 var language = sourceName.EndsWith(".gesa", StringComparison.Ordinal) ? GesSyntaxLanguage.Gesa
-                    : sourceName.EndsWith(".gesd", StringComparison.Ordinal) ? GesSyntaxLanguage.Gesd : GesSyntaxLanguage.Ges;
+                    : sourceName.EndsWith(".gesd", StringComparison.Ordinal) ? GesSyntaxLanguage.Gesd
+                    : sourceName.EndsWith(".gess", StringComparison.Ordinal) ? GesSyntaxLanguage.Gess : GesSyntaxLanguage.Ges;
                 var highlight = new GesSyntaxHighlighter(language, int.MaxValue).Highlight(text);
                 var scalarOffsets = ScalarOffsets(text);
                 sources[test.GetProperty("id").GetString()! + "#" + index++] = new
@@ -50,8 +51,9 @@ internal static class SyntaxTokens
 
     private static int IndexOf(IReadOnlyList<GesHighlightDiagnostic> diagnostics, GesHighlightDiagnostic diagnostic)
     {
+        // Equal diagnostics map to the first, as in the Swift adapter, which compares values.
         for (var i = 0; i < diagnostics.Count; i++)
-            if (ReferenceEquals(diagnostics[i], diagnostic)) return i;
+            if (diagnostics[i].Code == diagnostic.Code && diagnostics[i].Start == diagnostic.Start && diagnostics[i].Length == diagnostic.Length && diagnostics[i].Message == diagnostic.Message) return i;
         return -1;
     }
 

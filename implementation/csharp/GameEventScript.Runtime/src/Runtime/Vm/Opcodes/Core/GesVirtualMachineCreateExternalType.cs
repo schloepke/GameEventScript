@@ -94,7 +94,8 @@ internal partial class GesVirtualMachine
                     converted = CastValue(in source, Boolean, this, destinationRegister);
                     break;
                 case "Number":
-                    converted = CastValue(in source, Float, this, destinationRegister);
+                    // A number keeps its unit for a declaration without one; the declared type then makes it binary64.
+                    converted = source.Kind is Integer or Float ? source : CastValue(in source, Float, this, destinationRegister);
                     break;
                 case "numeric":
                     converted = CastNumericValue(in source, this);
@@ -107,6 +108,9 @@ internal partial class GesVirtualMachine
                     break;
                 case "Text":
                     converted = CastValue(in source, Text, this, destinationRegister);
+                    break;
+                case "Bytes":
+                    converted = CastValue(in source, Bytes, this, destinationRegister);
                     break;
                 case "Vector":
                     converted = CastValue(in source, Vector, this, destinationRegister);

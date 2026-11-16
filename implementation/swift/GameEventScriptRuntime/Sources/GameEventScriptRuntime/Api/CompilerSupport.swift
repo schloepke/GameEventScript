@@ -73,7 +73,8 @@
             sourceMap: sourceMap,
             sourceArchive: sourceArchive,
             buildMetadata: buildMetadata,
-            opaqueSections: []
+            opaqueSections: [],
+            validated: true
         )
         try result.validate()
         return result

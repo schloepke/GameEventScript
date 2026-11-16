@@ -128,9 +128,17 @@ final class RunWorkspace {
             }
         }
         for (draft, index, path, bytes) in writes {
-            let url = URL(fileURLWithPath: path)
+            // A symbolic link keeps pointing at its file: the replacement goes to the link's final target, and it keeps
+            // that file's permissions.
+            let url = draft.id == 0 ? URL(fileURLWithPath: path) : URL(fileURLWithPath: path).resolvingSymlinksInPath()
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            if draft.id == 0 { try bytes.write(to: url, options: .withoutOverwriting) } else { try bytes.write(to: url, options: .atomic) }
+            if draft.id == 0 {
+                try bytes.write(to: url, options: .withoutOverwriting)
+            } else {
+                let permissions = try? FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions]
+                try bytes.write(to: url, options: .atomic)
+                if let permissions { try FileManager.default.setAttributes([.posixPermissions: permissions], ofItemAtPath: url.path) }
+            }
             draft.baseline[index] = bytes
         }
         if let newPath {

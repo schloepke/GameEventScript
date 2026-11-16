@@ -85,6 +85,7 @@ enum GesSchemaNumbers {
 
     // The error of Text bytes on the wire, if any.
     static func textError(_ node: GesSchemaNode, _ bytes: UnsafeRawBufferPointer) -> String? {
+        if node.isBytes { return nil }
         if node.isTagText { return GesWireRules.isTagName(bytes) ? nil : GesWireError.invalidTag }
         return GesWireRules.isValidUTF8(bytes) ? nil : GesWireError.invalidText
     }
@@ -205,17 +206,42 @@ public struct GesSchemaWriter {
         leave(node.after)
     }
 
+    /// Writes a `:Flags` field as a mask whose bit `i` sets the member at index `i` in declared order.
+    /// - Throws: `GesWireError` when the mask sets a bit beyond the last member.
+    public mutating func writeFlags(_ field: GesSchemaField, _ mask: UInt64) throws(GesWireError) {
+        try current(field)
+        let node = schema.nodes[field.index]
+        if node.kind != .flags { throw GesWireError(GesWireError.typeMismatch, field.path) }
+        if mask > node.maxIndex { throw GesWireError(GesWireError.unknownTag, field.path) }
+        try presence(node)
+        try put(mask, node.width)
+        leave(node.after)
+    }
+
     /// Writes a Text from its UTF-8 bytes, or a `:Tag max n` from its name without `#`.
     /// - Throws: `GesWireError` when the bytes are too long, not valid UTF-8 or no valid tag name.
     public mutating func writeText(_ field: GesSchemaField, _ utf8: UnsafeRawBufferPointer) throws(GesWireError) {
         try current(field)
         let node = schema.nodes[field.index]
-        if node.kind != .text { throw GesWireError(GesWireError.typeMismatch, field.path) }
+        if node.kind != .text || node.isBytes { throw GesWireError(GesWireError.typeMismatch, field.path) }
         if Int64(utf8.count) > node.maxCount { throw GesWireError(GesWireError.tooLong, field.path) }
         if let code = GesSchemaNumbers.textError(node, utf8) { throw GesWireError(code, field.path) }
         try presence(node)
         try put(UInt64(utf8.count), node.width)
         try bits.writeBytes(utf8)
+        leave(node.after)
+    }
+
+    /// Writes a `:Bytes max n` field.
+    /// - Throws: `GesWireError` when the field is no Bytes or the bytes exceed its maximum.
+    public mutating func writeBytes(_ field: GesSchemaField, _ bytes: UnsafeRawBufferPointer) throws(GesWireError) {
+        try current(field)
+        let node = schema.nodes[field.index]
+        if node.kind != .text || !node.isBytes { throw GesWireError(GesWireError.typeMismatch, field.path) }
+        if Int64(bytes.count) > node.maxCount { throw GesWireError(GesWireError.tooLong, field.path) }
+        try presence(node)
+        try put(UInt64(bytes.count), node.width)
+        try bits.writeBytes(bytes)
         leave(node.after)
     }
 
@@ -225,6 +251,7 @@ public struct GesSchemaWriter {
         try current(field)
         let node = schema.nodes[field.index]
         if node.kind != .list { throw GesWireError(GesWireError.typeMismatch, field.path) }
+        if count > 0 && node.depthLimit > 0 { throw GesWireError.tooDeep(field.path, node.depthLimit) }
         if count < 0 || Int64(count) > node.maxCount { throw GesWireError(GesWireError.tooLong, field.path) }
         try presence(node)
         try put(UInt64(count), node.width)
@@ -442,6 +469,16 @@ public struct GesSchemaReader {
         return Int(index)
     }
 
+    /// Reads a `:Flags` field as a mask whose bit `i` sets the member at index `i` in declared order.
+    /// - Throws: `GesWireError` when the data ends early.
+    public mutating func readFlags(_ field: GesSchemaField) throws(GesWireError) -> UInt64 {
+        try enter(field, .flags)
+        let node = schema.nodes[field.index]
+        let mask = try get(node.width, field.index)
+        leave(node.after)
+        return mask
+    }
+
     /// Reads a Text into a caller's buffer as validated UTF-8, or a `:Tag max n` as a validated name without `#`.
     /// - Parameter destination: The buffer; its maximum is the field's `max`.
     /// - Returns: The number of bytes.
@@ -449,6 +486,7 @@ public struct GesSchemaReader {
     public mutating func readText(_ field: GesSchemaField, into destination: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {
         try enter(field, .text)
         let node = schema.nodes[field.index]
+        if node.isBytes { throw GesWireError(GesWireError.typeMismatch, field.path) }
         let count = try get(node.width, field.index)
         if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, field.path) }
         if count > UInt64(destination.count) { throw GesWireError(GesWireError.bufferTooSmall, field.path) }
@@ -457,6 +495,38 @@ public struct GesSchemaReader {
         if let code = GesSchemaNumbers.textError(node, UnsafeRawBufferPointer(rebasing: destination[0..<Int(count)])) { throw GesWireError(code, field.path) }
         leave(node.after)
         return Int(count)
+    }
+
+    /// Reads a `:Bytes max n` field into a caller's buffer.
+    /// - Returns: The number of bytes.
+    /// - Throws: `GesWireError` when the field is no Bytes, the data is invalid or the buffer is too small.
+    public mutating func readBytes(_ field: GesSchemaField, into destination: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {
+        try enter(field, .text)
+        let node = schema.nodes[field.index]
+        if !node.isBytes { throw GesWireError(GesWireError.typeMismatch, field.path) }
+        let count = try get(node.width, field.index)
+        if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, field.path) }
+        if count > UInt64(destination.count) { throw GesWireError(GesWireError.bufferTooSmall, field.path) }
+        try bits.readBytes(into: UnsafeMutableRawBufferPointer(rebasing: destination[0..<Int(count)]), path: field.path)
+        leave(node.after)
+        return Int(count)
+    }
+
+    /// Reads Bytes and allocates only what the data holds, for the value path.
+    mutating func readBytesValue(_ field: GesSchemaField) throws(GesWireError) -> [UInt8] {
+        try enter(field, .text)
+        let node = schema.nodes[field.index]
+        let count = try get(node.width, field.index)
+        if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, field.path) }
+        try bits.require(Int(count) * 8, path: field.path)
+        var bytes = [UInt8](repeating: 0, count: Int(count))
+        var index = 0
+        while index < bytes.count {
+            bytes[index] = UInt8(truncatingIfNeeded: try get(8, field.index))
+            index += 1
+        }
+        leave(node.after)
+        return bytes
     }
 
     /// Reads a Text and allocates only what the data holds, for the rare paths that build a string.

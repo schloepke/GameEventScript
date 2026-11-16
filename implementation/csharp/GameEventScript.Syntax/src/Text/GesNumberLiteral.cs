@@ -63,6 +63,12 @@ internal readonly struct GesNumberLiteral
         while (start < end && text[start] is ' ' or '\t') start++;
         while (end > start && text[end - 1] is ' ' or '\t') end--;
         if (start == end) return default;
+        if (IsHexadecimal(text, start, end))
+        {
+            if (percentageMagnitude) return default;
+            var hex = ReadHexadecimal(text, start, end);
+            return percentage && hex.IsValid ? Percentage(hex.IntegerValue) : hex;
+        }
 
         var unit = GesQuantityUnit.UnitNone;
         var percent = percentageMagnitude || text[end - 1] == '%';
@@ -184,6 +190,43 @@ internal readonly struct GesNumberLiteral
             ? double.IsFinite(number) ? Percentage(number) : Nothing
             : Float(number, unit);
     }
+
+    // A sign followed by `0x` starts the hexadecimal form, which is checked before unit suffixes because `B` and other
+    // suffix letters are hexadecimal digits.
+    private static bool IsHexadecimal(string text, int start, int end)
+    {
+        if (text[start] is '+' or '-') start++;
+        return end - start >= 2 && text[start] == '0' && text[start + 1] == 'x';
+    }
+
+    // An exact Int64 from hexadecimal digits with `_` between digits; no unit, percentage or fraction, and a magnitude
+    // above Int64.MaxValue is invalid also with a minus sign.
+    private static GesNumberLiteral ReadHexadecimal(string text, int start, int end)
+    {
+        var negative = text[start] == '-';
+        if (text[start] is '+' or '-') start++;
+        var position = start + 2;
+        if (position == end) return default;
+        ulong magnitude = 0;
+        while (position < end)
+        {
+            var digit = HexDigit(text[position]);
+            if (digit < 0 || magnitude > long.MaxValue >> 4) return default;
+            magnitude = magnitude << 4 | (uint)digit;
+            if (magnitude > long.MaxValue) return default;
+            position++;
+            if (position < end && text[position] == '_' && position + 1 < end && HexDigit(text[position + 1]) >= 0) position++;
+        }
+        return Integer(negative ? -(long)magnitude : (long)magnitude, GesQuantityUnit.UnitNone);
+    }
+
+    internal static int HexDigit(char value) => value switch
+    {
+        >= '0' and <= '9' => value - '0',
+        >= 'a' and <= 'f' => value - 'a' + 10,
+        >= 'A' and <= 'F' => value - 'A' + 10,
+        _ => -1
+    };
 
     // The energy spellings Wh and kWh multiply the mantissa digits exactly by a non-decimal factor before rounding.
     // They carry a unit, so the caller has already rejected percentage decoding.

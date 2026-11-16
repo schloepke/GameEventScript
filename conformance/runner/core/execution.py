@@ -1,6 +1,9 @@
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
 """Complete suite execution with explicit optional measurement providers."""
+import sys
+import time
+
 from core.corpus import InvalidDocument
 from core.runner import case_request, requests, verify, CORE, OPTIONAL
 from core.transport import execute
@@ -42,7 +45,11 @@ def run(cases, command, fixtures, timeout=60, profiles=()):
             raise InvalidDocument('Requested measurement profile unavailable on this adapter', 'conformance.runner.missingPerformanceProfile')
     regular = [case for case in cases if case.kind != 'performance']
     if regular:
-        base = verify(regular, execute(command, requests(regular, fixtures), timeout), fixtures)
+        started = time.monotonic()
+        observations = execute(command, requests(regular, fixtures), timeout)
+        # The elapsed time shows how much of the deadline a batch uses before it can become a timeout.
+        print(f'Adapter batch: {len(regular)} cases in {time.monotonic() - started:.1f} s of a {timeout:.0f} s deadline.', file=sys.stderr)
+        base = verify(regular, observations, fixtures)
     else:
         description = description or execute([*command, '--describe'], {}, timeout)
         identity = description.get('implementation')

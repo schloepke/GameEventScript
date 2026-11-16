@@ -20,6 +20,31 @@
         }
       ]
     },
+    "names": {
+      "comment": "A name in backticks is a plain name, whatever word it holds. The keyword-like words of an argument label are names before a label colon and after a member dot.",
+      "patterns": [
+        {
+          "match": "(`)([a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?)(`)",
+          "name": "variable.other.quoted.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.variable.begin.gameeventscript"
+            },
+            "3": {
+              "name": "punctuation.definition.variable.end.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": "\\b(?:to|nothing|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)(?=[ \\t]*:(?![A-Za-z:]))",
+          "name": "variable.parameter.label.gameeventscript"
+        },
+        {
+          "match": "(?<=[A-Za-z0-9_)\\]`]\\.)(?:to|nothing|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)\\b",
+          "name": "variable.other.member.gameeventscript"
+        }
+      ]
+    },
     "comments": {
       "patterns": [
         {
@@ -188,6 +213,10 @@
     },
     "numbers": {
       "patterns": [
+        {
+          "match": "\\b0x[0-9A-Fa-f](?:[0-9A-Fa-f_]*[0-9A-Fa-f])?\\b",
+          "name": "constant.numeric.hex.gameeventscript"
+        },
         {
           "match": "\\b\\d(?:[\\d_]*\\d)?d\\d(?:[\\d_]*\\d)?\\b",
           "name": "constant.numeric.dice.gameeventscript"
@@ -478,7 +507,7 @@
           }
         },
         {
-          "match": "(:Dice)([ \\t\\r\\n]*)(\\[)",
+          "match": "(:Dice|:Bytes)([ \\t\\r\\n]*)(\\[)",
           "name": "meta.literal.dice.gameeventscript",
           "captures": {
             "1": {
@@ -490,7 +519,7 @@
           }
         },
         {
-          "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Record)(?=$|[^A-Za-z0-9_])",
+          "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Bytes|Record)(?=$|[^A-Za-z0-9_])",
           "name": "support.type.primitive.gameeventscript"
         },
         {
@@ -969,6 +998,9 @@
     },
     {
       "include": "#strings"
+    },
+    {
+      "include": "#names"
     },
     {
       "include": "#assembly"

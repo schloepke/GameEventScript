@@ -45,7 +45,7 @@ internal static partial class GesCompiler
         }
 
         private static bool IsAssemblyDataConstructor(GesTypeConstructorExpressionNode constructor)
-            => constructor.TypeName is "record" or "series" || constructor.TypeName is "number" or "range" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "handler"
+            => constructor.TypeName is "record" or "series" || constructor.TypeName is "number" or "range" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "bytes" or "handler"
                 && (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null);
 
         private static (bool Publish, bool Result, bool Delayed, bool Tags)? AssemblySend(GesAssemblyLine line)

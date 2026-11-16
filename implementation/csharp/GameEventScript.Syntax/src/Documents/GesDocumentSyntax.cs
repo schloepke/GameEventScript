@@ -16,6 +16,7 @@ internal enum GesDocumentNodeKind : byte
     List,
     Map,
     Dice,
+    Bytes,
     Vector,
     Point,
     // An explicit form such as `:Range(1, 5)`, constructed by Runtime.
@@ -51,6 +52,8 @@ internal sealed class GesDocumentNode
 
     internal int[] Rolls { get; private init; } = [];
 
+    internal byte[] Bytes { get; private init; } = [];
+
     internal double X { get; private init; }
 
     internal double Y { get; private init; }
@@ -82,6 +85,8 @@ internal sealed class GesDocumentNode
     internal static GesDocumentNode Map(string[] keys, GesDocumentNode[] values, int[]? keyOffsets = null) => new(GesDocumentNodeKind.Map) { KeyOffsets = keyOffsets ?? [], Labels = keys, Children = values };
 
     internal static GesDocumentNode Dice(int[] rolls) => new(GesDocumentNodeKind.Dice) { Rolls = rolls };
+
+    internal static GesDocumentNode BytesValue(byte[] bytes) => new(GesDocumentNodeKind.Bytes) { Bytes = bytes };
 
     internal static GesDocumentNode Spatial(bool point, double x, double y, double z, GesQuantityUnit unit)
         => new(point ? GesDocumentNodeKind.Point : GesDocumentNodeKind.Vector) { X = x, Y = y, Z = z, Unit = unit };

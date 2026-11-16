@@ -1714,6 +1714,172 @@ document:
 
 ---
 
+## Test: hexadecimal numbers are exact integers
+
+This case checks the following contract: Document numbers use the numeric text grammar of `parse`, so `0x` with hexadecimal digits reads as an exact Int64, and printing writes it in decimal.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "hexadecimal-numbers"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "color: 0xff_88_00\noffset: -0x10\nsize: :Vector(0x2, 0x3)"
+  print: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  value:
+    type: ":Map"
+    entries:
+      - key: "color"
+        value:
+          type: ":Number.int64"
+          value: "16746496"
+      - key: "offset"
+        value:
+          type: ":Number.int64"
+          value: "-16"
+      - key: "size"
+        value:
+          type: ":Vector"
+          x: "2"
+          y: "3"
+          z: "0"
+```
+
+---
+
+## Test: an invalid hexadecimal number is an invalid literal
+
+This case checks the following contract: A token starting with `0x` never has a unit suffix, so an invalid one is `document.invalidLiteral` rather than `document.unknownUnit`.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "invalid-hexadecimal-number"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "value: 0x10m"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 1
+    column: 8
+```
+
+---
+
+## Test: Bytes read from both literal forms
+
+Both `:Bytes("…")` with hexadecimal pairs and `:Bytes[…]` with integer literals from 0 to 255 read as Bytes.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "bytes-values"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Bytes(\"A0 b7\")\nb: :Bytes[1, 0xff]\nc: :Bytes[]"
+  print: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  value:
+    type: ":Map"
+    entries:
+      - key: "a"
+        value:
+          type: ":Bytes"
+          value: "a0b7"
+      - key: "b"
+        value:
+          type: ":Bytes"
+          value: "01ff"
+      - key: "c"
+        value:
+          type: ":Bytes"
+          value: ""
+```
+
+---
+
+## Test: A Bytes item above 255 is an invalid literal
+
+Each item of `:Bytes[…]` is an integer literal from 0 to 255.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "bytes-item-out-of-range"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Bytes[256]"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 1
+    column: 4
+```
+
+---
+
+## Test: Invalid hexadecimal Bytes text is an invalid literal
+
+The text of `:Bytes("…")` holds complete hexadecimal pairs; otherwise construction fails at the form.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "bytes-invalid-hex"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Bytes(\"abc\")"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 1
+    column: 4
+```
+
+---
+
 ## Test: malformed numbers are invalid literals
 
 This case checks the following contract: A number token that is neither a literal nor a number with a unit suffix is `document.invalidLiteral`.

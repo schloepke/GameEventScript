@@ -99,7 +99,11 @@ class SwiftDocumentationTests(unittest.TestCase):
                 # One build each for Syntax, SwiftBridge and Generator, and one conformance build for Runtime and Compiler.
                 self.assertEqual(4, len(build_commands))
                 self.assertTrue(all("--build-tests" not in c for c in build_commands))
-                self.assertTrue(all("release" in c and "--disable-build-manifest-caching" in c for c in build_commands))
+                self.assertTrue(all("--disable-build-manifest-caching" in c for c in build_commands))
+                # test-swift.sh builds the unit-test packages in Debug and only the Conformance package in Release.
+                configurations = {c[c.index("--package-path") + 1].rsplit("/", 1)[-1]: c[c.index("--configuration") + 1] for c in build_commands}
+                self.assertEqual({"GameEventScriptSyntax": "debug", "GameEventScriptSwiftBridge": "debug", "GameEventScriptGenerator": "debug",
+                                  "GameEventScriptConformance": "release"}, configurations)
                 self.assertEqual(len(API.PACKAGES), sum("-output-dir" in c for c in commands))
                 self.assertNotIn("GameEventScriptConformance", API.PACKAGES)
 

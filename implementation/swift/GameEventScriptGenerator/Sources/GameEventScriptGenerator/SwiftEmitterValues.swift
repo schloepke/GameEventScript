@@ -36,10 +36,10 @@ extension GesSwiftEmitter {
     }
 
     // The embedded sources, parsed when a type first converts a value; a different binding hash fails each conversion.
-    static func valuesHolder(_ code: inout Code, _ layout: GesSchemaLayout, _ holder: String) {
+    static func valuesHolder(_ code: inout Code, _ layout: GesSchemaLayout, _ holder: String, shared: Bool) {
         code.blank()
-        code.line("/// The schema sources of this file, which the conversion to and from GES values binds once per type.")
-        code.open("private enum \(holder) {")
+        code.line("/// The schema sources of \(shared ? "the generated files" : "this file"), which the conversion to and from GES values binds once per type.")
+        code.open("\(shared ? "" : "private ")enum \(holder) {")
         code.line("/// The embedded sources no longer bind like the generated code.")
         code.line("struct Mismatch: Error {}")
         code.blank()

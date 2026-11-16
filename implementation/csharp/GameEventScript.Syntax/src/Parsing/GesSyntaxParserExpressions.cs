@@ -43,6 +43,8 @@ internal sealed partial class GesSyntaxParser
             }
             else if (Match(Emit) || Match(Publish))
             {
+                // As in a statement send, the message may stand on the next line.
+                SkipNewLines();
                 ParsePublishMessageExpression();
                 ParseOptionalTagExpressions();
                 lines++;
@@ -285,7 +287,7 @@ internal sealed partial class GesSyntaxParser
     private bool IsValuesOfOperator()
     {
         var first = _reader.PeekSignificant(0);
-        if (first.Kind != Identifier || !string.Equals(first.Text, "values", StringComparison.Ordinal)) return false;
+        if (!first.IsWord("values")) return false;
 
         return _reader.PeekSignificant(1).Kind == Of;
     }
@@ -461,7 +463,20 @@ internal sealed partial class GesSyntaxParser
     private Expression ParsePowerExpression()
     {
         var start = _tree.Mark();
-        var expression = ParsePowerBaseExpression();
+        var startToken = CurrentIndex;
+        Expression expression;
+        if (ParseKeywordUnaryOperator())
+        {
+            _tree.StartNodeAt(start, GesSyntaxNodeKind.UnaryExpression);
+            SkipNewLines();
+            var parenthesized = Is(LeftParen);
+            var keywordOperand = ParseUnaryIntrinsicOperand();
+            // A root lowers to a power whose exponent has no depth of its own, so it measures as the unary operators do.
+            expression = FinishNode(Node(keywordOperand.Depth, startToken));
+            // Only an operand in parentheses directly after the intrinsic word makes the intrinsic a power base.
+            if (!parenthesized) return expression;
+        }
+        else expression = ParsePowerBaseExpression();
 
         if (Match(OperatorPower))
         {
@@ -500,25 +515,21 @@ internal sealed partial class GesSyntaxParser
             var operation = Advance().Kind;
             var opToken = PreviousIndex;
             // `strict` directly after `parse` on the same line is always the mode word, never an operand.
-            if (operation == KeywordParse && Current.Kind == Identifier && Current.Text == "strict") AdvanceKeyword();
+            // The mode word stands on the line of `parse`; inside parentheses a line break is trivia, so compare lines.
+            if (operation == KeywordParse && Current.IsWord("strict") && Current.Line == Previous.EndLine) AdvanceKeyword();
             if (operation != KeywordParse) SkipNewLines();
             var operand = ParseUnaryExpression();
             var shape = operation == OperatorMinus && operand.Shape is Shape.Number or Shape.Numeric ? Shape.NegatedNumeric : Shape.None;
             return FinishNode(Node(operand.Depth, opToken, shape));
         }
 
-        if (ParseIntrinsicCallExpression() is { } intrinsicCall) return intrinsicCall;
-        var start = _tree.Mark();
-        var startToken = CurrentIndex;
-        if (!ParseKeywordUnaryOperator()) return ParsePowerExpression();
-        _tree.StartNodeAt(start, GesSyntaxNodeKind.UnaryExpression);
-        // A root lowers to a power whose exponent has no depth of its own, so it measures as the unary operators do.
-        var keywordOperand = ParseUnaryIntrinsicOperand();
-        return FinishNode(Node(keywordOperand.Depth, startToken));
+        return ParsePowerExpression();
     }
 
     private Expression ParsePowerBaseExpression()
     {
+        if (ParseIntrinsicCallExpression() is { } intrinsicCall) return intrinsicCall;
+
         if (Is(Series))
         {
             _tree.StartNode(GesSyntaxNodeKind.SeriesExpression);
@@ -649,7 +660,7 @@ internal sealed partial class GesSyntaxParser
             {
                 _tree.StartNodeAt(start, GesSyntaxNodeKind.MemberAccessExpression);
                 SkipNewLines();
-                ExpectIdentifier();
+                ExpectFieldName();
                 Role(GesSyntaxRole.Member);
                 expression = FinishNode(Merged(expression.Depth, expression));
                 continue;
@@ -956,7 +967,7 @@ internal sealed partial class GesSyntaxParser
         if (Current.Kind == Identifier)
         {
             var lookahead = _reader.PeekSignificant(1);
-            if (lookahead.Kind == Comma || lookahead.Kind == Identifier && string.Equals(lookahead.Text, "where", StringComparison.Ordinal)) depth = ParseBoundWhere();
+            if (lookahead.Kind == Comma || lookahead.IsWord("where")) depth = ParseBoundWhere();
         }
 
         SkipNewLines();
@@ -1042,7 +1053,8 @@ internal sealed partial class GesSyntaxParser
             return FinishNode(ParseTypeConstructorExpressionCore());
         }
 
-        if (Current.Kind == TypeName && string.Equals(Current.Text, ":Dice", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket)) return ParseDiceLiteralExpression();
+        if (Current.Kind == TypeName && string.Equals(Current.Text, ":Dice", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket)) return ParseDiceLiteralExpression(bytes: false);
+        if (Current.Kind == TypeName && string.Equals(Current.Text, ":Bytes", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket)) return ParseDiceLiteralExpression(bytes: true);
 
         if (IsWord("from"))
         {
@@ -1054,11 +1066,12 @@ internal sealed partial class GesSyntaxParser
         if (Is(KeywordRandom))
         {
             var randomStart = _tree.Mark();
+            var randomToken = _tree.TokenCount;
             Advance();
             SkipNewLines();
             if (Match(With)) return WrapNode(randomStart, GesSyntaxNodeKind.SeededRandomExpression, ParseSeededRandomExpression());
 
-            return WrapNode(randomStart, GesSyntaxNodeKind.RandomExpression, ParseRandomExpression());
+            return WrapNode(randomStart, GesSyntaxNodeKind.RandomExpression, ParseRandomExpression(randomToken));
         }
 
         if (Is(Roll) && IsNextSignificantWord("dice"))
@@ -1208,16 +1221,8 @@ internal sealed partial class GesSyntaxParser
             return WrapNode(start, GesSyntaxNodeKind.HandlerLiteralExpression, Node(0, startToken));
         }
 
-        var argument = _tree.Mark();
-        var depth = WrapNode(argument, GesSyntaxNodeKind.Argument, ParseExpression().Depth);
-        while (Match(Comma))
-        {
-            SkipNewLines();
-            argument = _tree.Mark();
-            depth = Deepest(depth, WrapNode(argument, GesSyntaxNodeKind.Argument, ParseExpression().Depth));
-        }
-
-        SkipNewLines();
+        // A positional first argument may be followed by labeled ones, as in `scale(2, factor: 3)` for `scale(_ value, factor)`.
+        var depth = ParseArgumentListAfterFirstArgument(ParseArgument(), RightParen);
         Expect(RightParen);
         return WrapNode(start, GesSyntaxNodeKind.CallExpression, Node(depth, startToken));
     }
@@ -1243,10 +1248,10 @@ internal sealed partial class GesSyntaxParser
         return Node(depth, startToken);
     }
 
-    // A Dice literal reads as a constructor over a list of its values.
-    private Expression ParseDiceLiteralExpression()
+    // A Dice or Bytes literal reads as a constructor over a list of its values.
+    private Expression ParseDiceLiteralExpression(bool bytes)
     {
-        _tree.StartNode(GesSyntaxNodeKind.DiceLiteralExpression);
+        _tree.StartNode(bytes ? GesSyntaxNodeKind.BytesLiteralExpression : GesSyntaxNodeKind.DiceLiteralExpression);
         Advance();
         var startToken = PreviousIndex;
         SkipNewLines();
@@ -1259,7 +1264,8 @@ internal sealed partial class GesSyntaxParser
             while (true)
             {
                 var token = Expect(GesTokenKind.Float);
-                if (!GesNumberText.IsPositiveInt32(token.Text)) throw new ParseException("Dice literals require positive Int32 numeric literals.", token);
+                if (bytes ? !GesNumberText.IsByte(token.Text) : !GesNumberText.IsPositiveInt32(token.Text))
+                    throw new ParseException(bytes ? "Bytes literals require integer literals from 0 to 255." : "Dice literals require positive Int32 numeric literals.", token);
                 depth = 1;
                 SkipNewLines();
                 if (!Match(Comma)) break;
@@ -1306,7 +1312,7 @@ internal sealed partial class GesSyntaxParser
         else if (Match(In))
         {
             SkipNewLines();
-            if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
+            if (Current.IsWord("from"))
             {
                 throw new ParseException("Direct ranges are not allowed after 'in'; use ':select item from ... to ...' or iterate a range value", Current);
             }
@@ -1366,9 +1372,9 @@ internal sealed partial class GesSyntaxParser
 
     private bool IsMapLiteralEntryStart() => Current.Kind == Identifier && _reader.PeekSignificant(1).Kind == Colon;
 
-    private Expression ParseRandomExpression()
+    // The range starts at `random`, also when a line break follows it.
+    private Expression ParseRandomExpression(int startToken)
     {
-        var startToken = PreviousIndex;
         MatchWord("from");
         SkipNewLines();
         var from = ParseRangeBoundExpression();
@@ -1441,7 +1447,7 @@ internal sealed partial class GesSyntaxParser
         if (parenthesized) depth = ParseArgumentListAfterLeftParen();
         else if (Current.Kind == Of) depth = ParseOfArgumentList();
         else if (IsArgumentLabelStart()) depth = ParseUngroupedLabeledArgumentList();
-        else if (IsExtensionUnaryArgumentStart() && !(_choiceConditionDepth == _delimiterDepth && Current.Kind == Identifier && Current.Text == "then")) depth = ParseUnaryExpression().Depth;
+        else if (IsExtensionUnaryArgumentStart() && !(_choiceConditionDepth == _delimiterDepth && Current.IsWord("then"))) depth = ParseUnaryExpression().Depth;
 
         var expression = WrapNode(start, GesSyntaxNodeKind.ExtensionCallExpression, Node(depth, startToken));
         return parenthesized ? ParsePostfixSuffixes(expression, start) : expression;
@@ -1452,9 +1458,11 @@ internal sealed partial class GesSyntaxParser
         var startToken = CurrentIndex;
         var typeToken = Current;
         var typeName = GesText.CanonicalTypeName(ParseTypeName());
+        // A type name that starts no constructor is itself the unexpected token, also after a quantity unit; the failure
+        // leaves a following line break unread, so recovery stops there and the next statement parses.
+        if (_reader.PeekSignificant(0).Kind != LeftParen) throw new ParseException($"Unexpected token '{typeToken.Text}'", typeToken);
         SkipNewLines();
-        // A type name that starts no constructor is itself the unexpected token, also after a quantity unit.
-        if (!Match(LeftParen)) throw new ParseException($"Unexpected token '{typeToken.Text}'", typeToken);
+        Advance();
         if (typeName == "handler" && _reader.PeekSignificant(0).Kind == Message)
         {
             // The handler literal of this data form adds no level of its own.
@@ -1543,7 +1551,7 @@ internal sealed partial class GesSyntaxParser
 
     private GesToken ParseDiceSideCountToken()
     {
-        if (Is(Identifier))
+        if (Is(Identifier) && !Current.IsQuotedName)
         {
             var token = Current;
             if (string.Equals(token.Text, "d", StringComparison.Ordinal))

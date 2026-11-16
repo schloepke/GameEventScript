@@ -17,6 +17,7 @@ enum GesProgramResourceValidator {
         var maximumFrames = registers
         var frames = [Int](repeating: -1, count: p.code.count)
         var stages = frames
+        let lists = GesProgramListMembers(p)
 
         func invalid(_ index: Int) -> GesProgramFormatError { GesProgramValidator.failure(.invalidResourceMetadata, 16, index) }
 
@@ -72,7 +73,7 @@ enum GesProgramResourceValidator {
                     if !(0...65535).contains(frame) { throw invalid(index) }
                 }
                 maximumFrames[routine] = max(maximumFrames[routine], frame)
-                try GesProgramValidator.validateFrame(p, i, index, frame)
+                try GesProgramValidator.validateFrame(p, i, index, frame, lists)
                 if opcode.isStage { stage += 1 }
                 registers[routine] = max(registers[routine], frame + stage)
                 if let target = callee(i) {
@@ -90,14 +91,14 @@ enum GesProgramResourceValidator {
         var routine = -1
         for index in p.code.indices {
             if routine + 1 < entries.count && index == entries[routine + 1] { routine += 1 }
-            if frames[index] < 0 { try GesProgramValidator.validateFrame(p, p.code[index], index, routine < 0 ? 0 : maximumFrames[routine]) }
+            if frames[index] < 0 { try GesProgramValidator.validateFrame(p, p.code[index], index, routine < 0 ? 0 : maximumFrames[routine], lists) }
         }
         for (index, symbol) in (p.debugSymbols?.symbols ?? []).enumerated() {
             let position = entries.partitionPoint { $0 > Int(symbol.codeStart) } - 1
             let end = position + 1 < entries.count ? entries[position + 1] : p.code.count
             if position < 0 || UInt64(symbol.codeStart) + UInt64(symbol.codeLength) > UInt64(end) || Int(symbol.registerID) >= maximumFrames[position] { throw GesProgramValidator.failure(.invalidDebugSymbol, 32, index) }
         }
-        try GesProgramInternalValueValidator.validate(p, entries, frames)
+        try GesProgramInternalValueValidator.validate(p, entries, frames, lists)
         for (index, binding) in p.bindings.enumerated() where binding.isHandler {
             let routine = indexes[Int(binding.entryAddress)]!
             if Int(binding.requiredRegisterCount) < registers[routine] || Int(binding.requiredCallStackDepth) < depths[routine] { throw GesProgramValidator.failure(.invalidResourceMetadata, 4, index) }

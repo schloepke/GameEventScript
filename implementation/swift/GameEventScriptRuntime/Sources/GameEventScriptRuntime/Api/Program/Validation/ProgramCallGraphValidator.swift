@@ -27,10 +27,17 @@ enum GesProgramCallGraphValidator {
         }
 
         var calls = [[Int]](repeating: [], count: entries.count)
+        // lastCaller[target] holds the routine that last added the edge, so each edge is deduplicated in constant time and the
+        // whole graph costs time linear in the code size (specs/ProgramModel.md).
+        var lastCaller = [Int](repeating: -1, count: entries.count)
         for routine in entries.indices {
             let end = routine + 1 < entries.count ? entries[routine + 1] : p.code.count
-            var seen: Set<Int> = []
-            for index in entries[routine]..<end { if let target = callee(p.code[index]), seen.insert(target).inserted { calls[routine].append(target) } }
+            for index in entries[routine]..<end {
+                if let target = callee(p.code[index]), lastCaller[target] != routine {
+                    lastCaller[target] = routine
+                    calls[routine].append(target)
+                }
+            }
         }
         // No recursion: malformed or deep programs cannot exhaust the native stack.
         var states = [UInt8](repeating: 0, count: entries.count)

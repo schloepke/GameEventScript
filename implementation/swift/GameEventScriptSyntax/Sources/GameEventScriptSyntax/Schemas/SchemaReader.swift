@@ -6,7 +6,7 @@
 @_spi(Syntax) public struct GesSchemaSourceReader {
     private typealias Code = GesSchemaDiagnostic
 
-    private struct Failure: Error {
+    struct Failure: Error {
         let offset: Int
         let message: String
         var code = GesSchemaDiagnostic.syntax
@@ -14,9 +14,10 @@
 
     private static let maximumTypeNesting = 32
 
-    private let bytes: [UInt8]
-    private var position = 0
+    let bytes: [UInt8]
+    var position = 0
     private var typeNesting = 0
+    var expressionNesting = 0
 
     private init(_ bytes: [UInt8]) { self.bytes = bytes }
 
@@ -44,9 +45,97 @@
 
     private mutating func declaration() throws -> GesSchemaDeclarationSyntax {
         let offset = position
+        var wire: String?
+        var model: String?
+        var wordOffset = position
+        var written = word()
+        while written == "wire" || written == "model" {
+            var group = "default"
+            if consume(40) {
+                let groupOffset = position
+                group = word()
+                if !GesNames.plain(group) { throw Failure(offset: groupOffset, message: "A role group is a lowercase name.", code: Code.invalidRole) }
+                try expect(41)
+            }
+            if (written == "wire" ? wire : model) != nil {
+                throw Failure(offset: wordOffset, message: "The declaration is already a \(written) root.", code: Code.duplicateRole)
+            }
+            if written == "wire" { wire = group } else { model = group }
+            skipSpaces()
+            wordOffset = position
+            written = word()
+        }
+        var isAbstract = false
+        if written == "abstract" && position < bytes.count && (bytes[position] == 32 || bytes[position] == 9) {
+            if wire != nil || model != nil {
+                throw Failure(offset: offset, message: "An abstract schema only lends its fields and takes no role.", code: Code.invalidRole)
+            }
+            isAbstract = true
+            skipSpaces()
+            wordOffset = position
+            written = word()
+            if written != "schema" { throw Failure(offset: wordOffset, message: "Expected 'schema' after 'abstract'.") }
+        }
+        // `packed` or `packed(width)` makes a schema one machine word of 8, 16, 32 or 64 bits.
+        var isPacked = false
+        var packedWidth = 0
+        var packedOffset = 0
+        if written == "packed" && position < bytes.count && (bytes[position] == 32 || bytes[position] == 9 || bytes[position] == 40) {
+            if isAbstract { throw Failure(offset: wordOffset, message: "An abstract schema is not packed.") }
+            isPacked = true
+            packedOffset = wordOffset
+            if consume(40) {
+                skipSpaces()
+                let widthOffset = position
+                switch word() {
+                case "8": packedWidth = 8
+                case "16": packedWidth = 16
+                case "32": packedWidth = 32
+                case "64": packedWidth = 64
+                default: throw Failure(offset: widthOffset, message: "A packed width is 8, 16, 32 or 64.")
+                }
+                skipSpaces()
+                try expect(41)
+            }
+            skipSpaces()
+            wordOffset = position
+            written = word()
+            if written != "schema" { throw Failure(offset: wordOffset, message: "Expected 'schema' after 'packed'.") }
+        }
+        if wire != nil || model != nil {
+            if written == "constant" || written == "parameter" || written == "tags" {
+                throw Failure(offset: offset, message: "Only a schema, message or message set can be a root.", code: Code.invalidRole)
+            }
+            if model != nil && (written == "message" || written == "messages") {
+                throw Failure(offset: offset, message: "A model root is a schema.", code: Code.invalidRole)
+            }
+        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags"].contains(written) && atRoleEnd() {
+            throw Failure(offset: offset, message: "'\(written)' is no role; a root is marked wire or model.", code: Code.invalidRole)
+        }
+        var result = try declaration(offset: offset, wordOffset: wordOffset, word: written)
+        result.isAbstract = isAbstract
+        result.isPacked = isPacked
+        result.packedWidth = packedWidth
+        result.packedOffset = packedOffset
+        result.wireGroup = wire
+        result.modelGroup = model
+        return result
+    }
+
+    /// Whether an unknown word stands where a role does: before a group or a declaration keyword.
+    private mutating func atRoleEnd() -> Bool {
+        if position < bytes.count && bytes[position] == 40 { return true }
+        let start = position
+        skipSpaces()
+        let role = position > start && (atWord("schema") || atWord("message") || atWord("messages") || atWord("abstract") || atWord("packed"))
+        position = start
+        return role
+    }
+
+    private mutating func declaration(offset: Int, wordOffset: Int, word written: String) throws -> GesSchemaDeclarationSyntax {
         var result = GesSchemaDeclarationSyntax()
         result.offset = offset
-        switch word() {
+        switch written {
         case "constant":
             skipSpaces()
             if !consume(36) { throw failure("Expected a constant name.") }
@@ -81,10 +170,21 @@
             skipTrivia()
             try expect(123)
             skipSeparators()
+            var sequence = 0
             while !consume(125) {
-                result.fields.append(try field(allowUnlabeled: false))
+                if let declared = try letDeclaration() {
+                    result.lets.append(declared)
+                } else if var with = try withEntry(result.fields.count) {
+                    with.sequence = sequence
+                    result.withs.append(with)
+                } else {
+                    var entry = try field(allowUnlabeled: false, allowDefault: true)
+                    entry.sequence = sequence
+                    if entry.computed == nil { result.fields.append(entry) } else { result.computed.append(entry) }
+                }
                 try endEntry(125)
                 skipSeparators()
+                sequence += 1
             }
         case "message":
             skipSpaces()
@@ -98,7 +198,7 @@
                     try expect(44)
                     skipTrivia()
                 }
-                result.fields.append(try field(allowUnlabeled: true))
+                result.fields.append(try field(allowUnlabeled: true, allowDefault: false))
                 skipTrivia()
             }
             skipSpaces()
@@ -121,13 +221,75 @@
                 skipTrivia()
             } while consume(44)
             try expect(41)
+        case "tags":
+            result.kind = .tagSet
+            result.name = try typeName()
+            skipSpaces()
+            try expectWord("as")
+            skipSpaces()
+            result.tags = try tagSet()
         default:
-            throw Failure(offset: offset, message: "Expected constant, parameter, schema, message or messages.")
+            throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message or messages.")
         }
         return result
     }
 
-    private mutating func field(allowUnlabeled: Bool) throws -> GesSchemaFieldSyntax {
+    /// `let name be value`; a field named let is followed by its colon instead of a name.
+    private mutating func letDeclaration() throws -> GesSchemaLetSyntax? {
+        let offset = position
+        if !atWord("let") { return nil }
+        _ = word()
+        skipSpaces()
+        if position >= bytes.count || !GesNames.lower(bytes[position]) {
+            position = offset
+            return nil
+        }
+        let letName = try name(GesNames.plain, "let name")
+        skipSpaces()
+        try expectWord("be")
+        skipSpaces()
+        if position < bytes.count && GesNames.lower(bytes[position]) { throw failure("A let is a literal or a constant.") }
+        return GesSchemaLetSyntax(name: letName, value: try value(), offset: offset)
+    }
+
+    /// `with :Name [all optional] [without (a, b)]`; a field named with is followed by its colon instead of a type name.
+    private mutating func withEntry(_ fieldsBefore: Int) throws -> GesSchemaWithSyntax? {
+        let offset = position
+        if !atWord("with") { return nil }
+        _ = word()
+        skipSpaces()
+        if position == offset + 4 || position + 1 >= bytes.count || bytes[position] != 58 || !GesNames.upper(bytes[position + 1]) {
+            position = offset
+            return nil
+        }
+        var result = GesSchemaWithSyntax()
+        result.offset = offset
+        result.position = fieldsBefore
+        result.name = try typeName()
+        skipSpaces()
+        if atWord("all") {
+            _ = word()
+            skipSpaces()
+            try expectWord("optional")
+            result.allOptional = true
+            skipSpaces()
+        }
+        if atWord("without") {
+            _ = word()
+            skipSpaces()
+            try expect(40)
+            repeat {
+                skipTrivia()
+                result.withoutOffsets.append(position)
+                result.without.append(try name(GesNames.plain, "field name"))
+                skipTrivia()
+            } while consume(44)
+            try expect(41)
+        }
+        return result
+    }
+
+    private mutating func field(allowUnlabeled: Bool, allowDefault: Bool) throws -> GesSchemaFieldSyntax {
         let offset = position
         var unlabeled = false
         if allowUnlabeled && consume(95) {
@@ -148,18 +310,102 @@
             _ = word()
             marker = .key
         }
-        return GesSchemaFieldSyntax(name: fieldName, unlabeled: unlabeled, alternatives: alternatives, marker: marker, offset: offset)
+        var fallback: GesSchemaDefaultSyntax?
+        skipSpaces()
+        if atWord("computed") {
+            if !allowDefault { throw failure("A message argument is not computed.") }
+            _ = word()
+            skipSpaces()
+            try expectWord("by")
+            skipTrivia()
+            expressionNesting = 0
+            let expression = try readExpression()
+            var result = GesSchemaFieldSyntax(name: fieldName, unlabeled: unlabeled, alternatives: alternatives, marker: marker, defaultValue: nil, offset: offset)
+            result.computed = expression
+            return result
+        }
+        if allowDefault && atWord("default") {
+            let start = position
+            _ = word()
+            skipSpaces()
+            fallback = try defaultValue(start)
+        }
+        return GesSchemaFieldSyntax(name: fieldName, unlabeled: unlabeled, alternatives: alternatives, marker: marker, defaultValue: fallback, offset: offset)
     }
 
-    private mutating func union() throws -> [GesSchemaTypeSyntax] {
-        var alternatives = [try type()]
-        skipSpaces()
-        while consume(124) {
+    /// A tag, `true`, `false`, a record literal, or a value: a number, a constant, or the name of a let or a sibling field.
+    private mutating func defaultValue(_ offset: Int) throws -> GesSchemaDefaultSyntax {
+        position < bytes.count && bytes[position] == 91 ? try recordDefault(offset, depth: 1) : try entryValue(offset)
+    }
+
+    /// `[:]`, or `[name: value, ...]` with comma-separated entries; comments and line breaks may stand between the tokens.
+    private mutating func recordDefault(_ offset: Int, depth: Int) throws -> GesSchemaDefaultSyntax {
+        if depth > Self.maximumTypeNesting { throw failure("Record defaults nest at most \(Self.maximumTypeNesting) levels.") }
+        try expect(91)
+        skipTrivia()
+        if consume(58) {
             skipTrivia()
-            alternatives.append(try type())
+            try expect(93)
+            return GesSchemaDefaultSyntax(record: [], offset: offset)
+        }
+        var entries: [GesSchemaRecordEntrySyntax] = []
+        repeat {
+            skipTrivia()
+            let start = position
+            let entryName = try name(GesNames.plain, "field name")
+            skipTrivia()
+            try expect(58)
+            skipTrivia()
+            let entry = position < bytes.count && bytes[position] == 91 ? try recordDefault(position, depth: depth + 1) : try entryValue(position)
+            entries.append(GesSchemaRecordEntrySyntax(name: entryName, value: entry, offset: start))
+            skipTrivia()
+        } while consume(44)
+        try expect(93)
+        return GesSchemaDefaultSyntax(record: entries, offset: offset)
+    }
+
+    private mutating func entryValue(_ offset: Int) throws -> GesSchemaDefaultSyntax {
+        if consume(35) { return GesSchemaDefaultSyntax(tag: try name(GesNames.plain, "tag name"), offset: offset) }
+        for written in ["true", "false"] where atWord(written) {
+            _ = word()
+            return GesSchemaDefaultSyntax(boolean: written == "true", offset: offset)
+        }
+        return GesSchemaDefaultSyntax(value: try value(), offset: offset)
+    }
+
+    // Alternatives separated by `|`, which may end a line or start the next one; comments and blank lines may stand between.
+    private mutating func union() throws -> [GesSchemaTypeSyntax] {
+        var alternatives = [try alternative()]
+        skipSpaces()
+        while consumeBar() {
+            skipTrivia()
+            alternatives.append(try alternative())
             skipSpaces()
         }
         return alternatives
+    }
+
+    // A `|` on this line, or as the first token of a later line, which continues the union; a field never starts with it.
+    private mutating func consumeBar() -> Bool {
+        let start = position
+        skipTrivia()
+        if consume(124) { return true }
+        position = start
+        return false
+    }
+
+    // A type with an optional label in front, as in `bind: :Loadout_UnitBind`; a type itself starts with ':'.
+    private mutating func alternative() throws -> GesSchemaTypeSyntax {
+        guard position < bytes.count, GesNames.lower(bytes[position]) else { return try type() }
+        let offset = position
+        let label = try name(GesNames.plain, "alternative label")
+        skipSpaces()
+        try expect(58)
+        skipSpaces()
+        var result = try type()
+        result.label = label
+        result.labelOffset = offset
+        return result
     }
 
     private mutating func type() throws -> GesSchemaTypeSyntax {
@@ -182,17 +428,34 @@
             result.unit = unit
             result.kind = unit == .none ? .number : .quantity
             result.constraints = try constraints()
-        case .point, .vector:
-            result.kind = written == "Point" ? .point : .vector
+        case .point, .vector, .box, .poly, .disc:
+            let kind = GesSchemaTypeNames.kind(written)!
+            result.kind = kind
             if position < bytes.count && bytes[position] == 40 { result.unit = try unit() ?? .none }
             skipSpaces()
+            // A polygon lies in the plane z = 0, so it has a count and only the axes x and y; a disc lies there too and has a radius.
+            if kind == .poly { try maximum(&result) }
             if consume(123) {
                 var axes: [GesSchemaAxisSyntax] = []
                 skipSeparators()
                 while !consume(125) {
                     let axisOffset = position
                     let axis = word()
-                    if axis != "x" && axis != "y" && axis != "z" { throw Failure(offset: axisOffset, message: "Expected the axis x, y or z.") }
+                    let valid =
+                        switch kind {
+                        case .poly: axis == "x" || axis == "y"
+                        case .disc: axis == "x" || axis == "y" || axis == "radius"
+                        default: axis == "x" || axis == "y" || axis == "z"
+                        }
+                    if !valid {
+                        let message =
+                            switch kind {
+                            case .poly: "Expected the axis x or y of a Poly."
+                            case .disc: "Expected the axis x or y or the radius of a Disc."
+                            default: "Expected the axis x, y or z."
+                            }
+                        throw Failure(offset: axisOffset, message: message)
+                    }
                     skipSpaces()
                     axes.append(GesSchemaAxisSyntax(axis: axis, constraints: try constraints(), offset: axisOffset))
                     try endEntry(125)
@@ -203,10 +466,13 @@
             }
         case .tag:
             result.kind = .tag
-            if position < bytes.count && bytes[position] == 40 { result.tags = try tagSet() } else { result.max = try maximum() }
-        case .text:
-            result.kind = .text
-            result.max = try maximum()
+            if position < bytes.count && bytes[position] == 40 { result.tags = try tagSet() } else { try maximum(&result) }
+        case .flags:
+            result.kind = .flags
+            result.tags = try tagSet()
+        case .text, .bytes:
+            result.kind = written == "Text" ? .text : .bytes
+            try maximum(&result)
         case .list:
             result.kind = .list
             if consume(40) {
@@ -219,14 +485,15 @@
                 try expect(41)
                 typeNesting -= 1
                 skipSpaces()
-                result.max = try maximum()
+                try maximum(&result)
+                try depth(&result)
             }
         case .map: result.kind = .map
         case .range: result.kind = .range
         case .series: result.kind = .series
         case .dice:
             result.kind = .dice
-            result.max = try maximum()
+            try maximum(&result)
             result.constraints = try constraints()
         case .message: result.kind = .message
         case .handler: result.kind = .handler
@@ -260,19 +527,57 @@
         return unit
     }
 
-    private mutating func maximum() throws -> Int64? {
-        if !atWord("max") { return nil }
+    /// A whole number, or the name of a let that holds one.
+    private mutating func maximum(_ type: inout GesSchemaTypeSyntax) throws {
+        if !atWord("max") { return }
+        _ = word()
+        skipSpaces()
+        if position < bytes.count && GesNames.lower(bytes[position]) {
+            type.maxOffset = position
+            type.maxName = try name(GesNames.plain, "let name")
+            skipSpaces()
+            return
+        }
+        // Up to 12 decimal digits without a leading zero; a single `_` may separate two digits, as in number literals.
+        let start = position
+        var value: Int64 = 0
+        var digits = 0
+        while position < bytes.count {
+            let byte = bytes[position]
+            if GesNames.digit(byte) {
+                value = value * 10 + Int64(byte - 48)
+                digits += 1
+            } else if byte != 95 || digits == 0 || position + 1 >= bytes.count || !GesNames.digit(bytes[position + 1]) {
+                break
+            }
+            position += 1
+            if digits > 12 { break }
+        }
+        if digits == 0 || digits > 12 || (bytes[start] == 48 && digits > 1) {
+            throw Failure(offset: start, message: "Expected a whole number.")
+        }
+        skipSpaces()
+        type.max = value
+        type.maxOffset = start
+    }
+
+    /// The depth of a recursive List: 1 to 999 without a leading zero.
+    private mutating func depth(_ type: inout GesSchemaTypeSyntax) throws {
+        if !atWord("depth") { return }
+        type.depthOffset = position
         _ = word()
         skipSpaces()
         let start = position
-        while position < bytes.count && GesNames.digit(bytes[position]) { position += 1 }
-        if start == position || position - start > 12 || (bytes[start] == 48 && position - start > 1) {
-            throw Failure(offset: start, message: "Expected a whole number.")
+        var value = 0
+        while position < bytes.count && GesNames.digit(bytes[position]) && position - start < 3 {
+            value = value * 10 + Int(bytes[position] - 48)
+            position += 1
         }
-        var value: Int64 = 0
-        for byte in bytes[start..<position] { value = value * 10 + Int64(byte - 48) }
+        if position == start || bytes[start] == 48 || (position < bytes.count && GesNames.digit(bytes[position])) {
+            throw Failure(offset: start, message: "Expected a depth from 1 to 999.")
+        }
         skipSpaces()
-        return value
+        type.depth = value
     }
 
     private mutating func tagSet() throws -> [String] {
@@ -303,11 +608,11 @@
             }
             try expectWord("between")
             skipSpaces()
-            result.lower = try bound()
+            result.lower = try value()
             skipSpaces()
             try expectWord("and")
             skipSpaces()
-            result.upper = try bound()
+            result.upper = try value()
             skipSpaces()
         }
         if atWord("step") {
@@ -327,22 +632,19 @@
         return result
     }
 
-    private mutating func bound() throws -> GesSchemaValueSyntax {
-        if position < bytes.count && GesNames.lower(bytes[position]) {
-            var result = GesSchemaValueSyntax()
-            result.offset = position
-            result.parameter = try name(GesNames.plain, "parameter name")
-            return result
-        }
-        return try value()
-    }
-
+    /// A literal, a constant, or the name of a let or parameter.
     private mutating func value() throws -> GesSchemaValueSyntax {
         let offset = position
         if consume(36) {
             var result = GesSchemaValueSyntax()
             result.offset = offset
             result.constant = try name(GesNames.plain, "constant name")
+            return result
+        }
+        if position < bytes.count && GesNames.lower(bytes[position]) {
+            var result = GesSchemaValueSyntax()
+            result.offset = offset
+            result.name = try name(GesNames.plain, "name")
             return result
         }
         return try literal()
@@ -367,9 +669,9 @@
         return result
     }
 
-    private func isLiteralEnd(_ index: Int) -> Bool {
+    func isLiteralEnd(_ index: Int) -> Bool {
         switch bytes[index] {
-        case 32, 9, 13, 10, 44, 40, 41, 123, 125, 124, 35: return true
+        case 32, 9, 13, 10, 44, 40, 41, 123, 125, 91, 93, 124, 35: return true
         case 47: return index + 1 < bytes.count && bytes[index + 1] == 47
         default: return false
         }
@@ -388,20 +690,20 @@
         while consume(44) { skipTrivia() }
     }
 
-    private mutating func skipSpaces() {
+    mutating func skipSpaces() {
         while position < bytes.count && (bytes[position] == 32 || bytes[position] == 9) { position += 1 }
     }
 
-    private mutating func skipSpacesAndComments() {
+    mutating func skipSpacesAndComments() {
         skipSpaces()
         if atComment { skipLine() }
     }
 
-    private mutating func skipLine() {
+    mutating func skipLine() {
         while position < bytes.count && bytes[position] != 13 && bytes[position] != 10 { position += 1 }
     }
 
-    private mutating func skipTrivia() {
+    mutating func skipTrivia() {
         while position < bytes.count {
             let byte = bytes[position]
             if byte == 32 || byte == 9 || byte == 13 || byte == 10 {
@@ -414,31 +716,31 @@
         }
     }
 
-    private var atComment: Bool { position + 1 < bytes.count && bytes[position] == 47 && bytes[position + 1] == 47 }
+    var atComment: Bool { position + 1 < bytes.count && bytes[position] == 47 && bytes[position + 1] == 47 }
 
-    private mutating func consume(_ byte: UInt8) -> Bool {
+    mutating func consume(_ byte: UInt8) -> Bool {
         guard position < bytes.count && bytes[position] == byte else { return false }
         position += 1
         return true
     }
 
-    private mutating func expect(_ byte: UInt8) throws {
+    mutating func expect(_ byte: UInt8) throws {
         if !consume(byte) { throw failure("Expected '\(Character(Unicode.Scalar(byte)))'.") }
     }
 
-    private func atWord(_ written: String) -> Bool {
+    func atWord(_ written: String) -> Bool {
         let scalars = Array(written.utf8)
         guard position + scalars.count <= bytes.count, bytes[position..<(position + scalars.count)].elementsEqual(scalars) else { return false }
         let end = position + scalars.count
         return end == bytes.count || !GesNames.alnum(bytes[end])
     }
 
-    private mutating func expectWord(_ written: String) throws {
+    mutating func expectWord(_ written: String) throws {
         if !atWord(written) { throw failure("Expected '\(written)'.") }
         position += written.utf8.count
     }
 
-    private mutating func word() -> String {
+    mutating func word() -> String {
         let start = position
         while position < bytes.count && GesNames.alnum(bytes[position]) { position += 1 }
         return String(decoding: bytes[start..<position], as: UTF8.self)
@@ -450,7 +752,7 @@
         return try name(GesNames.type, "type name")
     }
 
-    private mutating func name(_ valid: (String) -> Bool, _ description: String) throws -> String {
+    mutating func name(_ valid: (String) -> Bool, _ description: String) throws -> String {
         let start = position
         var written = word()
         if position > start && GesNames.upper(bytes[start]) {
@@ -464,7 +766,7 @@
         return written
     }
 
-    private func failure(_ message: String) -> Failure { Failure(offset: position, message: message) }
+    func failure(_ message: String) -> Failure { Failure(offset: position, message: message) }
 }
 
 /// Reads schema literals exactly, with the number grammar and spelling table of GES literals.

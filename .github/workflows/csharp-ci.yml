@@ -47,6 +47,16 @@ jobs:
           python3 scripts/test-port-names.py
           python3 scripts/verify-port-names.py
 
+      - name: Verify runtime diagnostic codes against the catalog
+        run: |
+          python3 scripts/verify-runtime-codes.py --self-test
+          python3 scripts/verify-runtime-codes.py
+
+      - name: Verify license headers outside the C# license test
+        run: |
+          python3 scripts/verify-license-headers.py --self-test
+          python3 scripts/verify-license-headers.py
+
       - name: Verify publication package selection
         run: |
           python3 scripts/test-publish-csharp-packages.py
@@ -54,13 +64,14 @@ jobs:
           python3 scripts/test-csharp-tool-install.py
           python3 scripts/test-release-upgrade-controls.py
           python3 scripts/test-release-performance-controls.py
+          python3 scripts/test-require-verified-release.py
 
       - name: Install pinned .NET SDK and test runtime
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: |
             8.0.x
-            10.0.201
+            10.0.404
 
       - name: Restore solution
         run: dotnet restore GameEventScript.sln
@@ -75,6 +86,10 @@ jobs:
       - name: Run shared corpus and managed allocation gate
         run: sh scripts/test-csharp-conformance.sh
 
+      # The timing-only scenarios are measured on a self-hosted runner; their behavior is checked on every change.
+      - name: Verify performance scenario behavior without timing
+        run: python3 scripts/test-performance-correctness.py --profile csharp-dotnet-release-macos-arm64 --output artifacts/csharp/conformance-results/PerformanceCorrectness.json --adapter dotnet artifacts/csharp/conformance-adapter/bin/Release/net10.0/GameEventScript.ConformanceAdapter.dll
+
       - name: Verify C# formatting
         run: dotnet format GameEventScript.sln --no-restore --verify-no-changes
 
@@ -86,6 +101,12 @@ jobs:
 
       - name: Verify CLI editor and save sessions
         run: python3 scripts/test-cli-editor.py dotnet artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll
+
+      - name: Verify the in-process benchmark contract
+        run: python3 scripts/test-cli-bench.py --csharp artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll
+
+      - name: Verify the C# guide examples
+        run: python3 scripts/test-guide-examples.py --language csharp
 
       - name: Run non-performance tests
         run: dotnet test GameEventScript.sln --configuration Release --no-restore --filter "TestCategory!=Performance"

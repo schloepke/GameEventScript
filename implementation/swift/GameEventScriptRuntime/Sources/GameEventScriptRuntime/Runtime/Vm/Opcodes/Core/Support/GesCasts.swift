@@ -36,11 +36,23 @@ enum GesCasts {
                 rolls.append(Int32(number))
             }
             return sink.dice(rolls)
+        case .bytes:
+            if value.kind == .bytes { return sink.copy(value) }
+            if let text = value.textValue, value.kind == .text { return GesBytesText.parse(text).map { sink.bytes($0) } ?? sink.nothing }
+            guard let values = value.listValue else { return sink.nothing }
+            var bytes: [UInt8] = []
+            bytes.reserveCapacity(values.count)
+            for value in values {
+                guard let number = value.integerValue, value.unit == .none, number >= 0, number <= 255 else { return sink.nothing }
+                bytes.append(UInt8(number))
+            }
+            return sink.bytes(bytes)
         case .list:
             if value.kind == .list { return sink.copy(value) }
             if let text = value.textValue { return sink.list(text.unicodeScalars.map { .text(String($0)) }) }
             if value.spatialValue != nil { return sink.list([.float(value.x, unit: value.unit), .float(value.y, unit: value.unit), .float(value.z, unit: value.unit)]) }
             if let dice = value.diceRolls { return sink.list(dice.map { .integer(Int64($0)) }) }
+            if let bytes = value.bytesValue { return sink.list(bytes.map { .integer(Int64($0)) }) }
             if value.integerRangeValue != nil || value.floatRangeValue != nil {
                 let count = value.integerRangeValue?.count ?? value.floatRangeValue!.count
                 if count > Int32.max { return sink.nothing }
@@ -102,6 +114,7 @@ enum GesCasts {
         case .message: value.kind == .message
         case .list: value.kind == .list
         case .dice: value.kind == .dice
+        case .bytes: value.kind == .bytes
         case .map: value.kind == .map || value.kind == .record || value.kind == .external
         case .series: value.kind == .series
         default: false

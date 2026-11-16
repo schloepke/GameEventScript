@@ -25,7 +25,10 @@ internal sealed partial class GesBinaryBuilder
         => BeginRoutine(GesBinaryBindKind.MessageHandler, messageName, argumentNames, id, requiredTags, excludedTags);
 
     public GesBinaryRoutineScope BeginMessageNameHandler(string messageName, string messageArgumentName = "message", ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
-        => BeginRoutine(GesBinaryBindKind.MessageNameHandler, messageName, [messageArgumentName], id, requiredTags, excludedTags);
+        // The binding records the fixed label `message`; the source name stays a local (specs/Bytecode.md#bindings).
+        => BeginRoutine(DeclareRoutine(GesBinaryBindKind.MessageNameHandler, messageName, [messageArgumentName], id, requiredTags, excludedTags, bindArgumentNames: [MessageNameHandlerLabel]));
+
+    internal const string MessageNameHandlerLabel = "message";
 
     public GesBinaryRoutineScope BeginFunction(string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null) => BeginRoutine(GesBinaryBindKind.Function, name, argumentNames, id);
 
@@ -38,7 +41,7 @@ internal sealed partial class GesBinaryBuilder
     private GesBinaryRoutineScope BeginRoutine(GesBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames, ushort? id, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
         => BeginRoutine(DeclareRoutine(kind, name, argumentNames, id, requiredTags, excludedTags));
 
-    public RoutinePlan DeclareRoutine(GesBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
+    public RoutinePlan DeclareRoutine(GesBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null, IReadOnlyList<string>? bindArgumentNames = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Routine name must be non-empty.", nameof(name));
         if (kind is null && id.HasValue) throw new ArgumentException("Helper routines cannot have bind ids.", nameof(id));
@@ -49,7 +52,7 @@ internal sealed partial class GesBinaryBuilder
         var entryLabel = AddLabel(name);
         var routine = new RoutinePlan(routineId, parentRoutineId, kind, name, entryLabel, CopyStringList(argumentNames));
         _routines.Add(routine);
-        if (kind.HasValue) routine.Bind = AddBind(kind.Value, name, routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags);
+        if (kind.HasValue) routine.Bind = AddBind(kind.Value, name, bindArgumentNames ?? routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags);
 
         return routine;
     }

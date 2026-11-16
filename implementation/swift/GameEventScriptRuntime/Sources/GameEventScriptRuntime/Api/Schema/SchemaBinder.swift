@@ -59,6 +59,8 @@ public final class GesSchemaParameters {
     case group
     case union
     case nothing
+    // One bit per member of a :Flags set, in declared order, as one mask of `width` bits.
+    case flags
 }
 
 // The numbers of one field of a bound layout, free of references so that the hot path never counts them. A subtree occupies
@@ -73,6 +75,12 @@ public final class GesSchemaParameters {
     @_spi(Generator) public var hasRange = false
     @_spi(Generator) public var isTagBit = false
     @_spi(Generator) public var isTagText = false
+    /// A record of a packed schema, whose delta is its whole word.
+    @_spi(Generator) public var packed = false
+    /// A `:Bytes max n`: a Text on the wire whose bytes need not be UTF-8.
+    @_spi(Generator) public var isBytes = false
+    /// The `depth` of a recursive List at its deepest level, which holds no element; 0 otherwise.
+    @_spi(Generator) public var depthLimit = 0
     @_spi(Generator) public var width = 0
     @_spi(Generator) public var next = 0
     @_spi(Generator) public var after = 0
@@ -102,9 +110,13 @@ public final class GesSchemaParameters {
     @_spi(Generator) public var name = ""
     @_spi(Generator) public var path = ""
     @_spi(Generator) public var tags: [String] = []
+    /// The named tag set of a Tag, or empty.
+    @_spi(Generator) public var tagSet = ""
     @_spi(Generator) public var valueKind = GesSchemaTypeKind.nothing
     @_spi(Generator) public var unit = GesQuantityUnit.none
     @_spi(Generator) public var schemaName = ""
+    /// The value a value or document that leaves the field out takes, for the field's first node.
+    var defaultValue: GesResolvedDefault?
 }
 
 /// A schema, message or message set bound to parameter values. Immutable; it can be shared between threads.
@@ -115,9 +127,10 @@ public final class GesBoundSchema: Sendable {
     public let name: String
     /// The size of the largest encoding in bytes, of a full record or of a delta.
     public let maxByteCount: Int
-    /// The schema hash, independent of parameter values.
+    /// The schema hash, independent of parameter values. A member of a bound message set carries the set's hash, since
+    /// its records exist only within the set's encoding.
     public let hash: UInt64
-    /// The hash over the schema hash and the parameter values.
+    /// The hash over the schema hash and the parameter values; a member of a bound message set carries the set's.
     public let bindingHash: UInt64
     @_spi(Generator) public let kind: GesSchemaKind
     @_spi(Generator) public let nodes: [GesSchemaNode]
@@ -131,6 +144,8 @@ public final class GesBoundSchema: Sendable {
     // The labels of a message's arguments, `_` for an unlabeled one.
     let labels: [String]
     private let fields: [String: Int]
+    /// The computed fields of every reached schema that has any, by schema name, which decoding derives.
+    let computed: [String: [GesSchemaComputedFieldInfo]]
 
     init(
         schema: GesSchema,
@@ -163,6 +178,12 @@ public final class GesBoundSchema: Sendable {
         var fields: [String: Int] = [:]
         for (index, info) in infos.enumerated() { fields[info.path] = index }
         self.fields = fields
+        var declarations: [GesResolvedDeclaration] = []
+        var reached: [String: GesSchemaTypeSyntax] = [:]
+        try? GesSchemaCanonical.reach(schema.declaration, &declarations, &reached)
+        var computed: [String: [GesSchemaComputedFieldInfo]] = [:]
+        for declaration in declarations where !declaration.computed.isEmpty { computed[declaration.name] = declaration.computed.map(GesSchemaComputedFieldInfo.init) }
+        self.computed = computed
     }
 
     /// Whether the first field is a key that a reader can take first.
@@ -196,7 +217,7 @@ public struct GesSchemaField: Sendable {
 
 /// Builds the layout of a declaration for fixed parameter values.
 enum GesSchemaBinder {
-    static let maximumByteCount: Int64 = 10_485_760
+    static let maximumByteCount: Int64 = 67_108_864
     private static let maximumNodeCount = 1_048_576
     private static let largestSteps: Int64 = 1 << 50
     private static let largestMultiple: Int64 = 1 << 53
@@ -258,6 +279,53 @@ enum GesSchemaBinder {
     }
 
     // A fractional field compares in binary64, so its bounds must keep their meaning there.
+    // A let is an integer when it is a whole unitless number within Int64, and otherwise a binary64 in base units, which must
+    // keep its meaning there as a bound does.
+    static func checkLet(_ scope: GesFileScope, _ declared: GesResolvedLet) throws -> Bool {
+        if declared.kind == .number && declared.value.exponent >= 0 && scale(declared.value.significand, declared.value.exponent) != nil { return true }
+        guard let binary = Double(declared.value.canonical), binary.isFinite, binary != 0 || declared.value.significand == 0 else {
+            throw scope.error(Code.tooWide, declared.offset, "A let lies beyond binary64.")
+        }
+        return false
+    }
+
+    /// A numeric default lies in the range, a wrapping one below its upper bound, on the step and, for an integer field, is
+    /// whole within Int64; a fractional one keeps its meaning in binary64. Bounds that a parameter without a value decides stay
+    /// unchecked.
+    static func checkDefault(_ scope: GesFileScope, _ constraints: GesResolvedConstraints, _ value: GesSchemaDecimal, _ offset: Int, _ parameters: GesSchemaParameters?) throws {
+        if constraints.integer {
+            if value.exponent < 0 || scale(value.significand, value.exponent) == nil {
+                throw scope.error(Code.invalidDefault, offset, "The default of an integer field is whole and within Int64.")
+            }
+        } else {
+            guard let binary = Double(value.canonical), binary.isFinite, binary != 0 || value.significand == 0 else {
+                throw scope.error(Code.tooWide, offset, "A default lies beyond binary64.")
+            }
+        }
+
+        func resolved(_ bound: GesResolvedValue?) -> GesSchemaDecimal? {
+            guard let bound else { return nil }
+            return bound.isParameter ? parameters?.value(bound.parameter)?.number : bound.value
+        }
+
+        if let lower = resolved(constraints.lower), compare(value, lower) < 0 {
+            throw scope.error(Code.invalidDefault, offset, "A default lies within the field's range.")
+        }
+        if let upper = resolved(constraints.upper) {
+            let order = compare(value, upper)
+            if order > 0 || (order == 0 && constraints.wrapping) { throw scope.error(Code.invalidDefault, offset, "A default lies within the field's range.") }
+        }
+        if let step = constraints.step, step.value.significand > 0 {
+            // value / step is whole: value · 10^k is a multiple of p for the step p · 10^-k.
+            let exponent = step.value.exponent
+            let k = exponent < 0 ? -exponent : 0
+            let shift = value.exponent + k
+            guard let p = scale(step.value.significand, exponent < 0 ? 0 : exponent), shift >= 0, let scaled = scale(value.significand, shift), scaled % p == 0 else {
+                throw scope.error(Code.invalidDefault, offset, "A default lies on the field's step.")
+            }
+        }
+    }
+
     private static func checkBinary(_ scope: GesFileScope, _ value: GesSchemaDecimal, _ origin: GesResolvedValue) throws {
         guard let binary = Double(value.canonical), binary.isFinite, binary != 0 || value.significand == 0 else {
             throw scope.error(Code.tooWide, origin.offset, "A bound of a fractional field lies beyond binary64.")
@@ -334,9 +402,58 @@ enum GesSchemaBinder {
         var nodes: [GesSchemaNode] = []
         var infos: [GesSchemaNodeInfo] = []
         let parameters: GesSchemaParameters
+        // How many records of each schema enclose the node being added, which a recursive List counts against its depth.
+        var levels: [ObjectIdentifier: Int] = [:]
+    }
+
+    // A packed schema holds only fields of a fixed width that no parameter decides: integers and quantized numbers with a range,
+    // Booleans, closed Tags, Flags and packed schemas, with neither `optional`, a key nor `delta within`. Its bits, those of
+    // its record on the wire, fit its word. Nested packed schemas are checked first, since their bits count here.
+    static func checkPacked(_ declaration: GesResolvedDeclaration) throws {
+        if declaration.packedWidth > 0 { return }
+        let scope = declaration.scope
+        if let computed = declaration.computed.first { throw scope.error(Code.packedField, computed.offset, "A packed schema holds no computed field.") }
+        for field in declaration.fields {
+            if field.marker != .none {
+                throw scope.error(Code.packedField, field.offset, "A packed schema holds no \(field.marker == .key ? "key" : "optional field"), since its width is fixed.")
+            }
+            if field.alternatives.count != 1 { throw scope.error(Code.packedField, field.offset, "A packed schema holds no union, since its width is fixed.") }
+            let type = field.alternatives[0]
+            let constraints = type.constraints
+            let fixedNumber =
+                (type.kind == .number || type.kind == .percentage || type.kind == .quantity)
+                && constraints.lower.map { !$0.isParameter } == true && constraints.upper.map { !$0.isParameter } == true && constraints.delta == nil
+                && (constraints.integer || constraints.step.map { !$0.isParameter } == true)
+            let accepted: Bool
+            switch type.kind {
+            case .boolean, .flags: accepted = true
+            case .tag: accepted = type.tags != nil
+            case .reference: accepted = type.reference!.isPacked
+            default: accepted = fixedNumber
+            }
+            if !accepted {
+                throw scope.error(
+                    Code.packedField,
+                    type.offset,
+                    "A packed field is an integer or quantized number with a range and no delta range, a Boolean, a closed Tag, Flags or a packed schema."
+                )
+            }
+            if type.kind == .reference { try checkPacked(type.reference!) }
+        }
+        var build = Build(parameters: GesSchemaParameters())
+        for field in declaration.fields { try addField(&build, field.scope, field, "", 0, top: false) }
+        var bits = 0
+        for node in build.nodes { bits += node.width }
+        let width = declaration.syntax.packedWidth
+        if bits > 64 || (width > 0 && bits > width) {
+            throw scope.error(Code.packedTooWide, declaration.syntax.packedOffset, "'\(declaration.name)' has \(bits) bits, more than \(width > 0 ? width : 64).")
+        }
+        declaration.packedBits = bits
+        declaration.packedWidth = width > 0 ? width : bits <= 8 ? 8 : bits <= 16 ? 16 : bits <= 32 ? 32 : 64
     }
 
     static func bind(_ root: GesResolvedDeclaration, _ parameters: GesSchemaParameters) throws -> GesBoundSchema {
+        if root.isAbstract { throw root.scope.error(Code.invalidAbstract, root.offset, "'\(root.name)' is abstract; it is never encoded.") }
         var declarations: [GesResolvedDeclaration] = []
         var reached: [String: GesSchemaTypeSyntax] = [:]
         try GesSchemaCanonical.reach(root, &declarations, &reached)
@@ -390,7 +507,8 @@ enum GesSchemaBinder {
 
     private static func bindNodes(_ declaration: GesResolvedDeclaration, _ parameters: GesSchemaParameters, _ hash: UInt64, _ bindingHash: UInt64) throws -> GesBoundSchema {
         var build = Build(parameters: parameters)
-        for field in declaration.fields { try addField(&build, declaration.scope, field, "", 0, top: true) }
+        build.levels[ObjectIdentifier(declaration)] = 1
+        for field in declaration.fields { try addField(&build, field.scope, field, "", 0, top: true) }
         for tag in declaration.tags {
             var node = GesSchemaNode()
             node.kind = .boolean
@@ -405,7 +523,8 @@ enum GesSchemaBinder {
         }
         seal(&build.nodes)
         var bits = cost(build.nodes, 0, build.nodes.count)
-        if declaration.kind == .schema { bits = max(bits, deltaCost(build.nodes)) }
+        // A packed record's delta is a change bit and its whole word.
+        if declaration.kind == .schema { bits = max(bits, declaration.packedWidth > 0 ? 1 + bits : deltaCost(build.nodes)) }
         if bits > maximumByteCount * 8 { throw declaration.scope.error(Code.tooLarge, declaration.offset, "The largest encoding of '\(declaration.name)' exceeds \(maximumByteCount) bytes.") }
         return GesBoundSchema(
             schema: declaration.schema!,
@@ -473,6 +592,8 @@ enum GesSchemaBinder {
         switch node.kind {
         case .boolean, .nothing:
             return 0
+        case .group where node.packed:
+            return fullCost(nodes, index)
         case .group:
             return deltaCost(nodes, index + 1, node.next)
         case .list where node.keyedElements:
@@ -541,7 +662,23 @@ enum GesSchemaBinder {
 
     private static func addField(_ build: inout Build, _ scope: GesFileScope, _ field: GesResolvedField, _ prefix: String, _ lists: Int, top: Bool) throws {
         let path = prefix.isEmpty ? field.name : prefix + "." + field.name
+        let index = build.infos.count
         try addUnion(&build, scope, field.alternatives, field.name, path, optional: field.marker == .optional, key: top && field.marker == .key, lists)
+        guard let fallback = field.defaultValue else { return }
+        if fallback.kind == .number { try checkDefault(scope, field.alternatives[0].constraints, fallback.value, fallback.offset, build.parameters) }
+        if fallback.kind == .record { try checkRecord(scope, fallback, build.parameters) }
+        build.infos[index].defaultValue = fallback
+    }
+
+    /// The numbers of a record literal against the bounds its parameters decide.
+    private static func checkRecord(_ scope: GesFileScope, _ fallback: GesResolvedDefault, _ parameters: GesSchemaParameters?) throws {
+        for entry in fallback.record?.entries ?? [] {
+            if entry.value.kind == .number {
+                try checkDefault(scope, entry.field.alternatives[0].constraints, entry.value.value, entry.value.offset, parameters)
+            } else if entry.value.kind == .record {
+                try checkRecord(scope, entry.value, parameters)
+            }
+        }
     }
 
     private static func addUnion(_ build: inout Build, _ scope: GesFileScope, _ alternatives: [GesResolvedType], _ name: String, _ path: String, optional: Bool, key: Bool, _ lists: Int) throws {
@@ -609,13 +746,25 @@ enum GesSchemaBinder {
             }
             node.kind = .tag
             info.tags = tags
+            info.tagSet = type.tagSet
             node.maxIndex = UInt64(tags.count) - 1
             node.width = bitLength(node.maxIndex)
-        case .text:
-            guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A Text without max has no hard limit.") }
+        case .flags:
+            let members = type.tags ?? []
+            node.kind = .flags
+            info.tags = members
+            node.width = members.count
+            node.maxIndex = members.count == 64 ? .max : (1 << UInt64(members.count)) - 1
+        case .text, .bytes:
+            guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) without max has no hard limit.") }
             node.kind = .text
+            node.isBytes = type.kind == .bytes
             node.maxCount = max
             node.width = bitLength(UInt64(max))
+        case .list where type.recursion.map { (build.levels[ObjectIdentifier($0)] ?? 0) >= type.depth } ?? false:
+            // The deepest level of a recursive List holds no element: it is empty, so it takes no bits and no list nesting.
+            node.kind = .list
+            node.depthLimit = type.depth
         case .list:
             guard let element = type.element, let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A List without element type and max has no hard limit.") }
             if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
@@ -645,16 +794,36 @@ enum GesSchemaBinder {
             build.infos.append(rollInfo)
         case .point, .vector:
             node.kind = .group
-            if let axes = type.axes {
-                for axis in axes { try addAxis(&build, scope, axis.axis, axis.constraints, path, type.offset) }
-            } else {
-                for axis in ["x", "y", "z"] { try addAxis(&build, scope, axis, GesResolvedConstraints(), path, type.offset) }
-            }
+            try addAxes(&build, scope, type, path, ["x", "y", "z"])
+        case .box:
+            // Two corners of the axes of the block, each a Point; the value orders them.
+            node.kind = .group
+            try addCorner(&build, scope, type, "lower", path + ".lower", ["x", "y", "z"])
+            try addCorner(&build, scope, type, "upper", path + ".upper", ["x", "y", "z"])
+        case .disc:
+            // A centre Point in the plane z = 0 and a radius, of the axes of the block.
+            node.kind = .group
+            try addCorner(&build, scope, type, "center", path + ".center", ["x", "y"])
+            try addAxes(&build, scope, type, path, ["radius"])
+        case .poly:
+            // A List of Points in the plane z = 0.
+            guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A Poly without max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+            node.kind = .list
+            node.maxCount = max
+            node.width = bitLength(UInt64(max))
+            node.positionWidth = bitLength(UInt64(max - 1))
+            try addCorner(&build, scope, type, "[]", path + "[]", ["x", "y"])
+            if !build.nodes[(index + 1)...].contains(where: { $0.width > 0 || $0.optional }) { throw scope.error(Code.notEncodable, type.offset, "A Poly point without bits has a count that no data limits.") }
         case .reference:
             node.kind = .group
             info.schemaName = type.referenceName
             let reference = type.reference!
-            for field in reference.fields { try addField(&build, reference.scope, field, path, lists, top: false) }
+            node.packed = reference.isPacked
+            let level = build.levels[ObjectIdentifier(reference)] ?? 0
+            build.levels[ObjectIdentifier(reference)] = level + 1
+            for field in reference.fields { try addField(&build, field.scope, field, path, lists, top: false) }
+            build.levels[ObjectIdentifier(reference)] = level == 0 ? nil : level
         default:
             throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")
         }
@@ -664,8 +833,124 @@ enum GesSchemaBinder {
     }
 
     // References expand into nodes, so a small source can ask for more than any encoding holds.
+    // The encodability of a wire root as far as it is known without parameter values: the same conditions as binding, in
+    // the same depth-first order, so that `check` reports what binding would. Bounds that a parameter decides stay binding
+    // errors.
+    static func checkEncodable(_ root: GesResolvedDeclaration) throws {
+        var known: Set<EncodableVisit> = []
+        var levels: [ObjectIdentifier: Int] = [:]
+        if root.kind == .messages {
+            for member in root.members { try checkEncodable(member, 0, &known, &levels) }
+            return
+        }
+        try checkEncodable(root, 0, &known, &levels)
+    }
+
+    private struct EncodableVisit: Hashable {
+        let declaration: ObjectIdentifier
+        let lists: Int
+        let level: Int
+    }
+
+    private static func checkEncodable(_ declaration: GesResolvedDeclaration, _ lists: Int, _ known: inout Set<EncodableVisit>, _ levels: inout [ObjectIdentifier: Int]) throws {
+        let outer = levels[ObjectIdentifier(declaration)] ?? 0
+        guard known.insert(EncodableVisit(declaration: ObjectIdentifier(declaration), lists: lists, level: outer + 1)).inserted else { return }
+        levels[ObjectIdentifier(declaration)] = outer + 1
+        for field in declaration.fields {
+            if field.alternatives.count == 1 {
+                try checkEncodable(field.scope, field.alternatives[0], lists, &known, &levels)
+            } else {
+                for alternative in field.alternatives where alternative.kind != .nothing { try checkEncodable(field.scope, alternative, lists, &known, &levels) }
+            }
+        }
+        levels[ObjectIdentifier(declaration)] = outer == 0 ? nil : outer
+    }
+
+    private static func checkEncodable(_ scope: GesFileScope, _ type: GesResolvedType, _ lists: Int, _ known: inout Set<EncodableVisit>, _ levels: inout [ObjectIdentifier: Int]) throws {
+        switch type.kind {
+        case .boolean, .point, .vector, .box, .disc:
+            for axis in type.axes ?? [] { try checkWrapping(scope, axis.constraints, type.offset) }
+        case .poly:
+            if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Poly without max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+            for axis in type.axes ?? [] { try checkWrapping(scope, axis.constraints, type.offset) }
+            if type.axes?.isEmpty == true { throw scope.error(Code.notEncodable, type.offset, "A Poly point without bits has a count that no data limits.") }
+        case .number, .percentage, .quantity:
+            try checkWrapping(scope, type.constraints, type.offset)
+        case .tag:
+            if type.tags == nil && type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Tag without a set or max has no hard limit.") }
+        case .flags:
+            break
+        case .text, .bytes:
+            if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) without max has no hard limit.") }
+        case .list where type.recursion.map { (levels[ObjectIdentifier($0)] ?? 0) >= type.depth } ?? false:
+            break
+        case .list:
+            guard let element = type.element, type.max != nil else { throw scope.error(Code.notEncodable, type.offset, "A List without element type and max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+            if element.count == 1 {
+                try checkEncodable(scope, element[0], lists + 1, &known, &levels)
+            } else {
+                for alternative in element where alternative.kind != .nothing { try checkEncodable(scope, alternative, lists + 1, &known, &levels) }
+            }
+            if !hasBits(element) { throw scope.error(Code.notEncodable, type.offset, "A List element without bits has a count that no data limits.") }
+        case .dice:
+            if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Dice without max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+        case .reference:
+            try checkEncodable(type.reference!, lists, &known, &levels)
+        default:
+            throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")
+        }
+    }
+
+    private static func checkWrapping(_ scope: GesFileScope, _ constraints: GesResolvedConstraints, _ offset: Int) throws {
+        if constraints.wrapping && constraints.step == nil && !constraints.integer {
+            throw scope.error(Code.notEncodable, offset, "A wrapping field without a step or integer has no index and is only for documents.")
+        }
+    }
+
+    // Whether an element takes bits whatever the parameters: only a Tag of one tag, a Nothing and a schema of such fields have none.
+    private static func hasBits(_ alternatives: [GesResolvedType]) -> Bool { alternatives.count > 1 || hasBits(alternatives[0]) }
+
+    private static func hasBits(_ type: GesResolvedType) -> Bool {
+        switch type.kind {
+        case .tag: return type.tags?.count != 1
+        case .nothing: return false
+        case .point, .vector, .box, .disc: return type.axes.map { !$0.isEmpty } ?? true
+        case .reference: return type.reference!.fields.contains { $0.marker == .optional || hasBits($0.alternatives) }
+        default: return true
+        }
+    }
+
     private static func checkNodeCount(_ build: Build, _ scope: GesFileScope, _ offset: Int) throws {
         if build.nodes.count >= maximumNodeCount { throw scope.error(Code.tooLarge, offset, "A bound layout has at most \(maximumNodeCount) fields.") }
+    }
+
+    // The axes of a block among `all`, the letters x, y and z or the word radius, or each of them as a binary64 without one.
+    private static func addAxes(_ build: inout Build, _ scope: GesFileScope, _ type: GesResolvedType, _ path: String, _ all: [String]) throws {
+        if let axes = type.axes {
+            for axis in axes where all.contains(axis.axis) { try addAxis(&build, scope, axis.axis, axis.constraints, path, type.offset) }
+        } else {
+            for axis in all { try addAxis(&build, scope, axis, GesResolvedConstraints(), path, type.offset) }
+        }
+    }
+
+    // A corner of a Box, a point of a Poly or the centre of a Disc: a Point of the type's unit and axes.
+    private static func addCorner(_ build: inout Build, _ scope: GesFileScope, _ type: GesResolvedType, _ name: String, _ path: String, _ all: [String]) throws {
+        try checkNodeCount(build, scope, type.offset)
+        let index = build.nodes.count
+        var node = GesSchemaNode()
+        node.kind = .group
+        var info = GesSchemaNodeInfo()
+        info.name = name
+        info.path = path
+        info.valueKind = .point
+        info.unit = type.unit
+        build.nodes.append(node)
+        build.infos.append(info)
+        try addAxes(&build, scope, type, path, all)
+        build.nodes[index].next = build.nodes.count
     }
 
     private static func addAxis(_ build: inout Build, _ scope: GesFileScope, _ axis: String, _ constraints: GesResolvedConstraints, _ path: String, _ offset: Int) throws {

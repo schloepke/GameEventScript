@@ -269,6 +269,8 @@ def controls(expected, observed):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skip-build", action="store_true", help="Use adapters already built by test-swift.sh")
+    parser.add_argument("--skip-swift-build", action="store_true",
+                        help="Build only the C# adapter; the Swift adapter that swift test built in Release is current")
     args = parser.parse_args()
     OUTPUT.mkdir(parents=True, exist_ok=True)
     summary = OUTPUT / "summary.json"
@@ -277,6 +279,7 @@ def main():
         stale.unlink()
     if not args.skip_build:
         subprocess.run(["dotnet", "build", str(CSHARP_PROJECT), "--configuration", "Release"], cwd=ROOT, check=True)
+    if not args.skip_build and not args.skip_swift_build:
         subprocess.run(["swift", "build", "--package-path", str(SWIFT_PACKAGE), "--scratch-path", str(SWIFT_SCRATCH),
                         "--disable-build-manifest-caching", "--configuration", "release"], cwd=ROOT, check=True)
     expected = documents()

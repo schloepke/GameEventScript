@@ -14,16 +14,19 @@ public sealed class GesDocumentException : Exception
     /// <param name="column">The 1-based column of the offending position, in Unicode scalars.</param>
     /// <param name="limitName">The stable name of the exceeded limit for <c>document.limitExceeded</c>; otherwise <see langword="null"/>.</param>
     /// <param name="limit">The exceeded limit value for <c>document.limitExceeded</c>; otherwise <see langword="null"/>.</param>
-    public GesDocumentException(string code, int line, int column, string? limitName = null, int? limit = null)
-        : base(limitName is null
-            ? $"Invalid GES document ({code}) at line {line}, column {column}."
-            : $"GES document exceeds {limitName} ({limit}) at line {line}, column {column}.")
+    /// <param name="path">The field path that a schema check or a model reports, such as <c>units[].name</c>; otherwise empty.</param>
+    /// <param name="message">A message that replaces the default one, which is not part of the contract.</param>
+    public GesDocumentException(string code, int line, int column, string? limitName = null, int? limit = null, string path = "", string? message = null)
+        : base(message ?? (limitName is null
+            ? $"Invalid GES document ({code}) at line {line}, column {column}{(string.IsNullOrEmpty(path) ? "" : $", field '{path}'")}."
+            : $"GES document exceeds {limitName} ({limit}) at line {line}, column {column}."))
     {
         Code = code ?? throw new ArgumentNullException(nameof(code));
         Line = line;
         Column = column;
         LimitName = limitName;
         Limit = limit;
+        Path = path ?? "";
     }
 
     /// <summary>The stable error code, such as <c>document.unquotedText</c>; see the GES document specification.</summary>
@@ -40,4 +43,7 @@ public sealed class GesDocumentException : Exception
 
     /// <summary>The exceeded limit value for <c>document.limitExceeded</c>.</summary>
     public int? Limit { get; }
+
+    /// <summary>The field path of a schema check or model error, such as <c>units[].name</c>; empty for a reading error.</summary>
+    public string Path { get; }
 }

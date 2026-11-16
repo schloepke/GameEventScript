@@ -22,7 +22,7 @@ Compiler product; a precompiled application needs only Runtime and Bridge.
 
 ## Annotation-based external types
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Import `GameEventScriptSwiftBridge` and annotate the native data you want to expose:
 
@@ -169,7 +169,7 @@ let extensions = try GesBridgeExtensionRegistry([
         try call.setNativeValue(number * 2)
     }
 ])
-let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withRegistry(extensions).build()
+let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withExtensionRegistry(extensions).build()
 // A loaded script can call :app.double(21).
 ```
 

@@ -8,6 +8,7 @@ internal static class Program
     private static int Main(string[] args)
     {
         if (args.Length == 2 && args[0] == "--source-nesting") return SourceNestingProbe.Run(args[1], 512 * 1024);
+        if (args.Length == 1 && args[0] == "--call-chain") return CallChainProbe.Run(512 * 1024);
         if (args.Length == 2 && args[0] == "--probe") return Probe(args[1]);
         return 64;
     }

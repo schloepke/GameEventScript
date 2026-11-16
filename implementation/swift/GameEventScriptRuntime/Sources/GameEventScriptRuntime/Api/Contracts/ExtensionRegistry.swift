@@ -7,3 +7,8 @@ public protocol GesExtensionRegistry {
     /// linking.
     func resolve(_ reference: GesExtensionReference) throws -> (any GesExtensionFunction)?
 }
+
+// The registry of a host without extensions: absence is an empty registry, as in C#, so the Context's registry is never nil.
+struct GesEmptyExtensionRegistry: GesExtensionRegistry {
+    func resolve(_ reference: GesExtensionReference) throws -> (any GesExtensionFunction)? { nil }
+}

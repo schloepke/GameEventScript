@@ -147,10 +147,7 @@ public sealed class GesProgramBuilder
             errors.Add(conflictModule, $"Name '{conflictName}' is declared as both a predicate and a function", conflictName, GlobalDefinition, ValidatePredicateFunctionConflict, conflictNode);
         }
 
-        foreach (var module in modules)
-        {
-            GesAstValidator.ValidateModule(module, callables, validationTypeDefinitions, constants, compileOptions, errors);
-        }
+        GesAstValidator.ValidateModules(modules, callables, validationTypeDefinitions, constants, errors);
 
         errors.ThrowIfAny();
 

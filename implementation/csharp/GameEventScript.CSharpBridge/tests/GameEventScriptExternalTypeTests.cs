@@ -86,7 +86,7 @@ public sealed class GameEventScriptExternalTypeTests
         var received = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypeRegistry(registry)
-            .WithRegistry(GesBridgeExtensionRegistry.Create(typeof(AimExtensionFunctions)))
+            .WithExtensionRegistry(GesBridgeExtensionRegistry.Create(typeof(AimExtensionFunctions)))
             .Build().StartForTest();
         host.Load(bytecode);
         host.Subscribe("Done", ["score", "lead", "distance", "integerDistance"], (message, _) => received.Add(message));
@@ -136,6 +136,136 @@ public sealed class GameEventScriptExternalTypeTests
         extendedFunction.Invoke(extendedCall);
         Assert.AreEqual(2, extendedCall.Result.AsInteger());
     }
+
+    private static (GameEventScriptMessage? Done, GesExecutionResult Result) RunCrate(string arguments, string fields)
+    {
+        var registry = GesBridgeExternalTypeRegistry.Create(typeof(CrateValue));
+        var program = new GesProgramBuilder()
+            .WithExternalTypeCatalog(registry)
+            .AddScript("on Start {\n  let crate be :Crate(" + arguments + ")\n  emit Done(" + fields + ")\n}")
+            .Compile();
+        var host = GameEventScriptHost.CreateBuilder().WithExternalTypeRegistry(registry).Build().StartForTest();
+        host.Load(program);
+        GameEventScriptMessage? done = null;
+        host.Subscribe("Done", ["built", "count", "active", "weight"], (message, _) => done = message);
+        Assert.IsTrue(host.Receive(Create("Start")));
+        var result = host.RunToCompletion();
+        return (done, result);
+    }
+
+    [TestMethod]
+    public void ConstructorArgumentsConvertStrictly()
+    {
+        const string fields = "built: crate is :Crate, count: crate.count, active: crate.active, weight: crate.weight";
+        var (done, result) = RunCrate("name: 'box', count: 3.0, active: true, weight: 7", fields);
+        Assert.IsNotNull(done, result.Diagnostic?.Message);
+        Assert.IsTrue(done.Arguments[0].AsBoolean());
+        Assert.AreEqual(3L, done.Arguments[1].AsInteger(), "An integral Float converts to an int parameter.");
+        Assert.IsTrue(done.Arguments[2].AsBoolean());
+        Assert.AreEqual(7L, done.Arguments[3].AsInteger(), "A nullable parameter receives a present value.");
+
+        // Nothing constructs nothing before the constructor is called.
+        var (absent, _) = RunCrate("name: 'box', count: 3, active: true, weight: nothing", "built: crate is :Crate, count: 0, active: 0, weight: 0");
+        Assert.IsFalse(absent!.Arguments[0].AsBoolean());
+
+        // A fraction or an out-of-range number for an integer parameter is a fault of the call, as in Swift.
+        foreach (var arguments in new[] { "name: 'box', count: 2.7, active: true, weight: 1", "name: 'box', count: 3, active: true, weight: 3000000000" })
+        {
+            var (failed, faulted) = RunCrate(arguments, fields);
+            Assert.IsNull(failed, arguments);
+            Assert.AreEqual("runtime.externalConstructorFailed", faulted.Diagnostic?.Code, arguments);
+        }
+    }
+
+    [TestMethod]
+    public void RegistrationRejectsMembersWithoutAConversion()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => GesBridgeExternalTypeRegistry.Create(typeof(DecimalField)));
+        Assert.ThrowsExactly<ArgumentException>(() => GesBridgeExternalTypeRegistry.Create(typeof(EnumParameter)));
+        Assert.ThrowsExactly<ArgumentException>(() => GesBridgeExternalTypeRegistry.Create(typeof(Holder)), "The held type is not registered.");
+        Assert.IsNotNull(GesBridgeExternalTypeRegistry.Create(typeof(Holder), typeof(CrateValue)).Resolve("Holder"));
+    }
+
+    [TestMethod]
+    public void FactoriesMayReturnDerivedInstances()
+    {
+        var registry = GesBridgeExternalTypeRegistry.Create(typeof(ShapeValue));
+        var program = new GesProgramBuilder().WithExternalTypeCatalog(registry).AddScript("on Start {\n  emit Done(side: :Shape(side: 2).side)\n}").Compile();
+        var host = GameEventScriptHost.CreateBuilder().WithExternalTypeRegistry(registry).Build().StartForTest();
+        host.Load(program);
+        GameEventScriptMessage? done = null;
+        host.Subscribe("Done", ["side"], (message, _) => done = message);
+        Assert.IsTrue(host.Receive(Create("Start")));
+        host.RunToCompletion();
+        Assert.AreEqual(2L, done!.Arguments[0].AsInteger());
+    }
+
+    [GesType("Crate")]
+    private sealed class CrateValue
+    {
+        [GesConstruct]
+        public CrateValue(
+            [GesParam("name", GesBytecodeTypeKind.Text)] string name,
+            [GesParam("count", GesBytecodeTypeKind.Float)] int count,
+            [GesParam("active", GesBytecodeTypeKind.Boolean)] bool active,
+            [GesParam("weight", GesBytecodeTypeKind.Float)] int? weight)
+        {
+            Name = name;
+            Count = count;
+            Active = active;
+            Weight = weight;
+        }
+
+        [GesField("name", GesBytecodeTypeKind.Text)]
+        public string Name { get; }
+
+        [GesField("count", GesBytecodeTypeKind.Float)]
+        public int Count { get; }
+
+        [GesField("active", GesBytecodeTypeKind.Boolean)]
+        public bool Active { get; }
+
+        [GesField("weight", GesBytecodeTypeKind.Float)]
+        public int? Weight { get; }
+    }
+
+    [GesType("DecimalField")]
+    private sealed class DecimalField
+    {
+        [GesField("price", GesBytecodeTypeKind.Float)]
+        public decimal Price { get; } = 1m;
+    }
+
+    [GesType("EnumParameter")]
+    private sealed class EnumParameter
+    {
+        [GesConstruct]
+        public EnumParameter([GesParam("mode", GesBytecodeTypeKind.Float)] DayOfWeek mode) => Mode = (int)mode;
+
+        [GesField("mode", GesBytecodeTypeKind.Float)]
+        public int Mode { get; }
+    }
+
+    [GesType("Holder")]
+    private sealed class Holder
+    {
+        [GesField("crate", "Crate")]
+        public CrateValue? Crate { get; }
+    }
+
+    [GesType("Shape")]
+    private class ShapeValue
+    {
+        protected ShapeValue(long side) => Side = side;
+
+        [GesField("side", GesBytecodeTypeKind.Float)]
+        public long Side { get; }
+
+        [GesConstruct]
+        public static ShapeValue Square([GesParam("side", GesBytecodeTypeKind.Float)] long side) => new SquareValue(side);
+    }
+
+    private sealed class SquareValue(long side) : ShapeValue(side);
 
     [GesType("Aim")]
     private sealed class AimValue

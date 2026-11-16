@@ -44,11 +44,11 @@ internal static partial class GesSwiftEmitter
     }
 
     // The embedded sources, parsed when a type first converts a value; a different binding hash fails each conversion.
-    private static void ValuesHolder(GesSchemaPlanner.Code code, GesSchemaLayout layout, string holder)
+    private static void ValuesHolder(GesSchemaPlanner.Code code, GesSchemaLayout layout, string holder, bool shared)
     {
         code.Blank();
-        code.Line("/// The schema sources of this file, which the conversion to and from GES values binds once per type.");
-        code.Open($"private enum {holder} {{");
+        code.Line($"/// The schema sources of {(shared ? "the generated files" : "this file")}, which the conversion to and from GES values binds once per type.");
+        code.Open($"{(shared ? "" : "private ")}enum {holder} {{");
         code.Line("/// The embedded sources no longer bind like the generated code.");
         code.Line("struct Mismatch: Error {}");
         code.Blank();

@@ -22,7 +22,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT = ROOT / "artifacts/swift/constructor-forms/report.json"
-SWIFT = [str(ROOT / "artifacts/swift/tool/release/ges")]
+SWIFT = [str(ROOT / "artifacts/swift/tool/debug/ges")]
 CSHARP = ["dotnet", str(ROOT / "artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll")]
 HEAD = "record :Hit as {\n  a: :Number\n}\n\non Main(args) {\n"
 

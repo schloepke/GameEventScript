@@ -117,6 +117,12 @@ final class GesSyntaxBinder {
             return try advance().text
         }
 
+        // A record field name, which may be one of the keyword-like words of an argument label.
+        mutating func fieldName() throws -> String {
+            guard self.is(.identifier) || isOwnToken && GesSyntaxParser.labelKeywords.contains(current.kind) else { throw Mismatch(token: position) }
+            return try advance().text
+        }
+
         mutating func newlines() throws {
             while self.is(.newLine) { try advance() }
         }
@@ -131,7 +137,7 @@ final class GesSyntaxBinder {
     let source: GesSource
     var module = ""
 
-    static let builtinTypeNames: Set<String> = ["Nothing", "Number", "Boolean", "Percentage", "Vector", "Point", "Series", "Tag", "Text", "List", "Range", "Message", "Handler", "Map", "Dice", "Record"]
+    static let builtinTypeNames: Set<String> = ["Nothing", "Number", "Boolean", "Percentage", "Vector", "Point", "Series", "Tag", "Text", "List", "Range", "Message", "Handler", "Map", "Dice", "Bytes", "Record"]
 
     static let mathConstants: [GesTokenKind: Double] = [.mathConstantPi: Double.pi, .mathConstantE: 2.718281828459045, .mathConstantTau: Double.pi * 2, .mathConstantInfinity: Double.infinity]
 
@@ -265,7 +271,8 @@ final class GesSyntaxBinder {
         var c = cursor(field)
         let fieldStart = c.current
         let unlabeled = try c.match(.underscore)
-        let name = try c.identifier()
+        if unlabeled { try c.newlines() }
+        let name = try c.fieldName()
         try c.expect(.colon)
         try c.newlines()
         let type = try typeName(c.takeNode(.typeReference))
@@ -416,9 +423,11 @@ final class GesSyntaxBinder {
             try c.expectWord("asm")
             kind = .assembly(try assemblyBlock(&c, nil, allowSend: true))
         case .emitStatement, .publishStatement:
-            // A delayed send statement is a send expression directly after its keyword.
-            if let send = node.children.first, send.kind == .sendExpression, send.firstToken == node.firstToken + 1 {
+            // A delayed send statement is a send expression after its keyword that starts at `after`; a send expression
+            // as the sent value, as in `emit emit Done()`, starts with its own keyword and binds as an ordinary value.
+            if let send = node.children.first, send.kind == .sendExpression, ![.emit, .publish].contains(c.tokens[send.firstToken].kind) {
                 let publish = try c.advance().kind == .publish
+                try c.newlines()
                 let send = try bindSend(c.takeNode(.sendExpression), publish: publish, start: start)
                 return GesStatement(kind: .expression(send), location: send.location)
             }

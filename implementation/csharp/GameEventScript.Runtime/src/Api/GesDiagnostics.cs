@@ -8,254 +8,138 @@ using System.Collections.Generic;
 
 namespace GameEventScript.Api;
 
-/// <summary>
-/// Defines the supported game event script diagnostic phase values.
-/// </summary>
+/// <summary>Identifies the pipeline stage in which a diagnostic originated; the numeric values are stable.</summary>
 public enum GesDiagnosticPhase
 {
-    /// <summary>
-    /// Identifies the parse value.
-    /// </summary>
+    /// <summary>Source tokenization or grammar recognition.</summary>
     Parse = 1,
-    /// <summary>
-    /// Identifies the validate value.
-    /// </summary>
+    /// <summary>Semantic validation of parsed sources.</summary>
     Validate = 2,
-    /// <summary>
-    /// Identifies the compile value.
-    /// </summary>
+    /// <summary>Lowering, resource analysis or bytecode generation.</summary>
     Compile = 3,
-    /// <summary>
-    /// Identifies the decode value.
-    /// </summary>
+    /// <summary>Reading or validating a <c>.gesb</c> image or Program; codes are <c>decode.</c> followed by a <see cref="GesProgramFormatErrorCode"/> name.</summary>
     Decode = 4,
-    /// <summary>
-    /// Identifies the link value.
-    /// </summary>
+    /// <summary>Resolving a Program against a host: limits, extensions, external types and the call graph.</summary>
     Link = 5,
-    /// <summary>
-    /// Identifies the runtime value.
-    /// </summary>
+    /// <summary>Execution of script handlers, native handlers, extensions or the publish sink.</summary>
     Runtime = 6
 }
 
-/// <summary>
-/// Represents a game event script diagnostic codes.
-/// </summary>
+/// <summary>Defines the stable diagnostic code strings; a code is compared together with its <see cref="GesDiagnosticPhase"/>, never through the message text.</summary>
 public static class GesDiagnosticCodes
 {
     /// <summary>Initialization failed because a configured runtime safety limit was exhausted.</summary>
     public const string RuntimeInitializationLimitReached = "runtime.initializationLimitReached";
-    /// <summary>
-    /// Defines the parse syntax value.
-    /// </summary>
+    /// <summary>Malformed source syntax.</summary>
     public const string ParseSyntax = "parse.syntax";
     /// <summary>Source exceeds the portable expression or statement nesting limit.</summary>
     public const string ParseSourceNestingExceeded = "parse.sourceNestingExceeded";
-    /// <summary>
-    /// Defines the validate duplicate type value.
-    /// </summary>
+    /// <summary>A record type is declared more than once, or also declared by an external type.</summary>
     public const string ValidateDuplicateType = "validate.duplicateType";
-    /// <summary>
-    /// Defines the validate duplicate predicate value.
-    /// </summary>
+    /// <summary>Two predicates share the same signature (name plus ordered argument labels).</summary>
     public const string ValidateDuplicatePredicate = "validate.duplicatePredicate";
-    /// <summary>
-    /// Defines the validate duplicate function value.
-    /// </summary>
+    /// <summary>Two functions share the same signature (name plus ordered argument labels).</summary>
     public const string ValidateDuplicateFunction = "validate.duplicateFunction";
-    /// <summary>
-    /// Defines the validate predicate function conflict value.
-    /// </summary>
+    /// <summary>A predicate and a function share a base name.</summary>
     public const string ValidatePredicateFunctionConflict = "validate.predicateFunctionConflict";
-    /// <summary>
-    /// Defines the validate missing callable value.
-    /// </summary>
+    /// <summary>A call names no existing predicate or function.</summary>
     public const string ValidateMissingCallable = "validate.missingCallable";
-    /// <summary>
-    /// Defines the validate invalid predicate value.
-    /// </summary>
+    /// <summary>A predicate does not yield a Boolean or nothing, or an <c>is</c> test names no predicate with the required parameter count.</summary>
     public const string ValidateInvalidPredicate = "validate.invalidPredicate";
-    /// <summary>
-    /// Defines the validate wrong predicate arity value.
-    /// </summary>
+    /// <summary>A predicate call matches a predicate name but none of its argument-label signatures.</summary>
     public const string ValidateWrongPredicateArity = "validate.wrongPredicateArity";
-    /// <summary>
-    /// Defines the validate wrong function arity value.
-    /// </summary>
+    /// <summary>A function call matches a function name but none of its argument-label signatures.</summary>
     public const string ValidateWrongFunctionArity = "validate.wrongFunctionArity";
-    /// <summary>
-    /// Defines the validate duplicate handler parameter value.
-    /// </summary>
+    /// <summary>A handler declares the same parameter name or label more than once.</summary>
     public const string ValidateDuplicateHandlerParameter = "validate.duplicateHandlerParameter";
-    /// <summary>
-    /// Defines the validate duplicate definition parameter value.
-    /// </summary>
+    /// <summary>A predicate, function or record declares the same parameter name or label more than once.</summary>
     public const string ValidateDuplicateDefinitionParameter = "validate.duplicateDefinitionParameter";
-    /// <summary>
-    /// Defines the validate duplicate publish argument value.
-    /// </summary>
+    /// <summary>A message construction or send repeats an argument label.</summary>
     public const string ValidateDuplicatePublishArgument = "validate.duplicatePublishArgument";
-    /// <summary>
-    /// Defines the validate duplicate variable value.
-    /// </summary>
+    /// <summary>A binding name is declared twice in the same scope.</summary>
     public const string ValidateDuplicateVariable = "validate.duplicateVariable";
-    /// <summary>
-    /// Defines the validate duplicate constant value.
-    /// </summary>
+    /// <summary>A program-wide constant is declared more than once.</summary>
     public const string ValidateDuplicateConstant = "validate.duplicateConstant";
-    /// <summary>
-    /// Defines the validate shadowed variable value.
-    /// </summary>
+    /// <summary>A lexical binding shadows a visible ancestor binding.</summary>
     public const string ValidateShadowedVariable = "validate.shadowedVariable";
-    /// <summary>
-    /// Defines the validate unresolved variable value: a bare name without a visible binding of its own source.
-    /// </summary>
+    /// <summary>A bare name has no visible binding in its own source.</summary>
     public const string ValidateUnresolvedVariable = "validate.unresolvedVariable";
-    /// <summary>
-    /// Defines the validate invalid identifier case value.
-    /// </summary>
+    /// <summary>A name, label, member, map key or module name violates its spelling rules, or sources declare mismatching modules.</summary>
     public const string ValidateInvalidIdentifierCase = "validate.invalidIdentifierCase";
-    /// <summary>
-    /// Defines the validate invalid message case value.
-    /// </summary>
+    /// <summary>A message name violates the message spelling rules.</summary>
     public const string ValidateInvalidMessageCase = "validate.invalidMessageCase";
-    /// <summary>
-    /// Defines the validate invalid type constructor value.
-    /// </summary>
+    /// <summary>A type name, type constructor, conversion target or send delay type is unknown or invalid.</summary>
     public const string ValidateInvalidTypeConstructor = "validate.invalidTypeConstructor";
 
     /// <summary>
     /// A tag clause contains the literal <c>nothing</c>.
     /// </summary>
     public const string ValidateInvalidTag = "validate.invalidTag";
-    /// <summary>
-    /// Defines the compile unsupported construct value.
-    /// </summary>
+    /// <summary>The compiler cannot lower a construct to bytecode.</summary>
     public const string CompileUnsupportedConstruct = "compile.unsupportedConstruct";
-    /// <summary>
-    /// Defines the compile invalid arity value.
-    /// </summary>
+    /// <summary>A lowered intrinsic or handler form has the wrong number of arguments or parameters.</summary>
     public const string CompileInvalidArity = "compile.invalidArity";
-    /// <summary>
-    /// Defines the compile unresolved symbol value.
-    /// </summary>
+    /// <summary>Lowering cannot resolve a constant, callable, predicate or record constructor.</summary>
     public const string CompileUnresolvedSymbol = "compile.unresolvedSymbol";
-    /// <summary>
-    /// Defines the compile numeric limit exceeded value.
-    /// </summary>
+    /// <summary>A value that lowering must encode exceeds its operand range.</summary>
     public const string CompileNumericLimitExceeded = "compile.numericLimitExceeded";
-    /// <summary>
-    /// Defines the compile cyclic call graph value.
-    /// </summary>
+    /// <summary>The synchronous call graph contains recursion, which is not allowed.</summary>
     public const string CompileCyclicCallGraph = "compile.cyclicCallGraph";
-    /// <summary>
-    /// Defines the compile invalid resource metadata value.
-    /// </summary>
+    /// <summary>Register, call-depth or call-target metadata cannot be computed within the portable limits.</summary>
     public const string CompileInvalidResourceMetadata = "compile.invalidResourceMetadata";
-    /// <summary>
-    /// Defines the compile invariant violation value.
-    /// </summary>
+    /// <summary>An internal compiler invariant failed.</summary>
     public const string CompileInvariantViolation = "compile.invariantViolation";
-    /// <summary>
-    /// Defines the link required register count exceeded value.
-    /// </summary>
+    /// <summary>The Program requires more registers than the host allows.</summary>
     public const string LinkRequiredRegisterCountExceeded = "link.requiredRegisterCountExceeded";
-    /// <summary>
-    /// Defines the link required call stack depth exceeded value.
-    /// </summary>
+    /// <summary>The Program requires a deeper call stack than the host allows.</summary>
     public const string LinkRequiredCallStackDepthExceeded = "link.requiredCallStackDepthExceeded";
     /// <summary>
     /// Loading requires an initialization message but the host's logical-message queue is full.
     /// </summary>
     public const string LinkInitializationQueueFull = "link.initializationQueueFull";
-    /// <summary>
-    /// Defines the link invalid extension reference value.
-    /// </summary>
+    /// <summary>An extension binding has a malformed <c>namespace.function</c> name.</summary>
     public const string LinkInvalidExtensionReference = "link.invalidExtensionReference";
-    /// <summary>
-    /// Defines the link missing extension value.
-    /// </summary>
+    /// <summary>The host registry has no extension function for a referenced signature.</summary>
     public const string LinkMissingExtension = "link.missingExtension";
-    /// <summary>
-    /// Defines the link missing external type constructor value.
-    /// </summary>
+    /// <summary>The host registry has no constructor for a referenced external type.</summary>
     public const string LinkMissingExternalTypeConstructor = "link.missingExternalTypeConstructor";
-    /// <summary>
-    /// Defines the link mismatched external type constructor value.
-    /// </summary>
+    /// <summary>A registered external type constructor does not match the referenced signature.</summary>
     public const string LinkMismatchedExternalTypeConstructor = "link.mismatchedExternalTypeConstructor";
-    /// <summary>
-    /// Defines the link cyclic call graph value.
-    /// </summary>
+    /// <summary>The Program's synchronous call graph contains a cycle.</summary>
     public const string LinkCyclicCallGraph = "link.cyclicCallGraph";
-    /// <summary>
-    /// Defines the link invalid program value.
-    /// </summary>
+    /// <summary>The Program violates a call-graph or binding invariant that linking requires.</summary>
     public const string LinkInvalidProgram = "link.invalidProgram";
-    /// <summary>
-    /// Defines the runtime vm state conflict value.
-    /// </summary>
+    /// <summary>The virtual machine was asked to start a message while it is not ready.</summary>
     public const string RuntimeVmStateConflict = "runtime.vmStateConflict";
-    /// <summary>
-    /// Defines the runtime preparation failed value.
-    /// </summary>
+    /// <summary>The virtual machine could not prepare a handler entry, for example because of an invalid entry address.</summary>
     public const string RuntimePreparationFailed = "runtime.preparationFailed";
-    /// <summary>
-    /// Defines the runtime instruction pointer out of range value.
-    /// </summary>
+    /// <summary>The instruction pointer left the code segment.</summary>
     public const string RuntimeInstructionPointerOutOfRange = "runtime.instructionPointerOutOfRange";
-    /// <summary>
-    /// Defines the runtime illegal opcode value.
-    /// </summary>
+    /// <summary>The virtual machine fetched an opcode it cannot execute.</summary>
     public const string RuntimeIllegalOpcode = "runtime.illegalOpcode";
-    /// <summary>
-    /// Defines the runtime register overflow value.
-    /// </summary>
+    /// <summary>Register storage could not grow to the required size.</summary>
     public const string RuntimeRegisterOverflow = "runtime.registerOverflow";
-    /// <summary>
-    /// Defines the runtime call stack overflow value.
-    /// </summary>
+    /// <summary>A call exceeded the call stack capacity.</summary>
     public const string RuntimeCallStackOverflow = "runtime.callStackOverflow";
-    /// <summary>
-    /// Defines the runtime random stack underflow value.
-    /// </summary>
+    /// <summary>A random scope pop would cross the active handler, native or extension boundary.</summary>
     public const string RuntimeRandomStackUnderflow = "runtime.randomStackUnderflow";
-    /// <summary>
-    /// Defines the runtime random scope imbalance value.
-    /// </summary>
+    /// <summary>A successfully returning native or extension callback left random scopes open.</summary>
     public const string RuntimeRandomScopeImbalance = "runtime.randomScopeImbalance";
-    /// <summary>
-    /// Defines the runtime invalid record constructor value.
-    /// </summary>
+    /// <summary>A record constructor call references a missing or malformed constructor binding or passes the wrong argument count.</summary>
     public const string RuntimeInvalidRecordConstructor = "runtime.invalidRecordConstructor";
-    /// <summary>
-    /// Defines the runtime invalid extension binding value.
-    /// </summary>
+    /// <summary>An extension call references a missing, mismatched or unbound extension binding.</summary>
     public const string RuntimeInvalidExtensionBinding = "runtime.invalidExtensionBinding";
-    /// <summary>
-    /// Defines the runtime invalid external type binding value.
-    /// </summary>
+    /// <summary>An external type construction or field access references a missing or mismatched binding.</summary>
     public const string RuntimeInvalidExternalTypeBinding = "runtime.invalidExternalTypeBinding";
-    /// <summary>
-    /// Defines the runtime invalid message shape value.
-    /// </summary>
+    /// <summary>A message or handler construction has a signature shape that does not match its argument registers.</summary>
     public const string RuntimeInvalidMessageShape = "runtime.invalidMessageShape";
-    /// <summary>
-    /// Defines the runtime invalid series kind value.
-    /// </summary>
+    /// <summary>A series construction names an unknown built-in series kind.</summary>
     public const string RuntimeInvalidSeriesKind = "runtime.invalidSeriesKind";
-    /// <summary>
-    /// Defines the runtime unhandled failure value.
-    /// </summary>
+    /// <summary>Execution failed with an unexpected exception or entered an error state without a diagnostic.</summary>
     public const string RuntimeUnhandledFailure = "runtime.unhandledFailure";
-    /// <summary>
-    /// Defines the runtime native handler failure value.
-    /// </summary>
+    /// <summary>A native handler threw an exception other than a <see cref="GesExtensionFaultException"/>.</summary>
     public const string RuntimeNativeHandlerFailure = "runtime.nativeHandlerFailure";
-    /// <summary>
-    /// Defines the runtime publish sink failure value.
-    /// </summary>
+    /// <summary>The publish sink threw; the outbound attempt is rejected while local dispatch is unchanged.</summary>
     public const string RuntimePublishSinkFailure = "runtime.publishSinkFailure";
     /// <summary>
     /// An extension function threw an exception other than a deliberately reported
@@ -279,11 +163,9 @@ public static class GesDiagnosticCodes
     /// </summary>
     internal const string RuntimeCodePrefix = "runtime.";
 
-    /// <summary>
-    /// Performs the decode operation.
-    /// </summary>
-    /// <param name="code">The code value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <summary>Returns the decode-phase diagnostic code for a format error code: <c>decode.</c> followed by the lower-camel-case name.</summary>
+    /// <param name="code">The binary format error code.</param>
+    /// <returns>The diagnostic code, for example <c>decode.invalidMagic</c> for <see cref="GesProgramFormatErrorCode.InvalidMagic"/>.</returns>
     public static string Decode(GesProgramFormatErrorCode code)
     {
         var name = code.ToString();
@@ -309,17 +191,18 @@ internal static class GesRuntimeExceptionText
 }
 
 /// <summary>
-/// Represents a game event script diagnostic.
+/// A portable diagnostic of a source, binary, linking or runtime failure. <see cref="Phase"/> and <see cref="Code"/> identify it;
+/// the optional fields add structured context and are absent when unknown.
 /// </summary>
-/// <param name="Phase">The phase value.</param>
-/// <param name="Code">The code value.</param>
-/// <param name="Message">The message value.</param>
-/// <param name="Symbol">The symbol value.</param>
-/// <param name="SymbolKind">The symbol kind value.</param>
-/// <param name="SourceLocation">The source location value.</param>
-/// <param name="ProgramName">The program name value.</param>
-/// <param name="HandlerName">The handler name value.</param>
-/// <param name="TechnicalDetails">The technical details value.</param>
+/// <param name="Phase">The pipeline stage that reported the diagnostic.</param>
+/// <param name="Code">The stable machine-readable code, such as <c>validate.missingCallable</c>.</param>
+/// <param name="Message">The human-readable explanation; it may change and is not a comparison key.</param>
+/// <param name="Symbol">The affected symbol, such as a name or signature ID, when available.</param>
+/// <param name="SymbolKind">The role of <paramref name="Symbol"/>.</param>
+/// <param name="SourceLocation">The source range that caused the diagnostic, when available.</param>
+/// <param name="ProgramName">The module name of the affected Program; the host fills it for handler failures when absent.</param>
+/// <param name="HandlerName">The signature of the affected handler; the host fills it for handler failures when absent.</param>
+/// <param name="TechnicalDetails">Non-normative implementation details for logs, such as exception text or byte positions.</param>
 public sealed record GesDiagnostic(
     GesDiagnosticPhase Phase,
     string Code,
@@ -331,132 +214,64 @@ public sealed record GesDiagnostic(
     string? HandlerName = null,
     string? TechnicalDetails = null)
 {
-    /// <summary>
-    /// Returns the to string result for this value.
-    /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <summary>Formats the diagnostic as <c>[code] message</c> for display.</summary>
+    /// <returns>The code in brackets followed by the message.</returns>
     public override string ToString() => $"[{Code}] {Message}";
 }
 
-/// <summary>
-/// Defines the different kinds of symbols used within a Game Event Script.
-/// This enumeration is used to classify the functional or semantic roles
-/// of various components in a script, enabling the compiler and validation logic
-/// to process and verify them appropriately.
-/// </summary>
-/// <remarks>
-/// Each value in this enum corresponds to a distinct type of script element,
-/// such as type definitions, predicates, functions, event handlers, or variables. These classifications
-/// are critical for parsing, symbol resolution, and error reporting during
-/// the compilation and validation phases of Game Event Scripts.
-/// </remarks>
+/// <summary>Identifies the role of the optional symbol named by a diagnostic.</summary>
 public enum GesDiagnosticSymbolKind
 {
-    /// <summary>
-    /// Represents an unidentified or unclassified symbol encountered during the processing of a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This value indicates that the symbol does not match any predefined category within the GesDiagnosticSymbolKind enum.
-    /// It is commonly used as a fallback or default classification when a symbol cannot be resolved or identified.
-    /// This may occur due to incomplete, missing, or corrupted script content.
-    /// </remarks>
+    /// <summary>No specific symbol category is available.</summary>
     Unknown,
 
-    /// <summary>
-    /// Represents a type definition within a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This symbol kind is used to identify custom type declarations or
-    /// references to predefined types within the script. Type definitions
-    /// play a key role in dictating the structure, relationships, and constraints
-    /// of data used across the script. Ensuring proper type declaration and
-    /// usage is crucial for successful compilation and runtime behavior.
-    /// </remarks>
+    /// <summary>A source record type or an external type.</summary>
     Type,
 
-    /// <summary>
-    /// Represents a predicate defined within a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// A predicate specifies reusable boolean logic within the script.
-    /// </remarks>
+    /// <summary>A declared predicate.</summary>
     Predicate,
 
-    /// <summary>
-    /// Represents a function defined within a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// A function specifies reusable value-producing logic within the script.
-    /// </remarks>
+    /// <summary>A declared function.</summary>
     Function,
 
-    /// <summary>
-    /// Represents a handler definition within a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// A handler specifies the logic or actions to be executed when a certain game event occurs.
-    /// It is a key part in defining the behavior and responses to triggers within the script framework.
-    /// </remarks>
+    /// <summary>A message handler.</summary>
     Handler,
 
-    /// <summary>
-    /// Represents a message symbol used within a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This symbol indicates a textual or informational component in the script, often used for communication
-    /// or descriptive purposes during the execution of game events. It may correspond to user-defined messages
-    /// or system-generated content within the script's structure.
-    /// </remarks>
+    /// <summary>A message signature or a message being sent.</summary>
     Message,
 
-    /// <summary>
-    /// Represents a variable defined or referenced within a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This symbol is used to identify variables in the script, which may hold values that can influence the behavior
-    /// or state of the events being processed. Variables can be either local to specific script contexts or global,
-    /// depending on their declaration.
-    /// </remarks>
+    /// <summary>A lexical variable binding.</summary>
     Variable,
 
-    /// <summary>
-    /// Represents a global definition within a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// A global definition typically denotes a script-level declaration that is accessible throughout the entire
-    /// scope of the script. This symbol kind is used to define global variables, constants, or other constructs
-    /// that are not tied to a specific local or nested context within the script.
-    /// </remarks>
+    /// <summary>A program-wide definition, such as a constant, a module or a callable referenced by name.</summary>
     GlobalDefinition
 }
 
 /// <summary>
-/// Represents a fatal runtime exception that occurs specifically during the execution
-/// of a Game Event Script. This exception is meant to signal critical issues that
-/// cannot be recovered from within the execution of a script's runtime logic.
+/// Base class of exceptions that carry a runtime <see cref="GesDiagnostic"/> and end the current handler with that diagnostic.
+/// The exception message is the diagnostic's message.
 /// </summary>
-/// <remarks>
-/// This class provides constructors to initialize the exception with an optional
-/// message and an inner exception, allowing for detailed context when the exception
-/// is thrown. It serves as a base class for more specific fatal runtime exceptions
-/// in the Game Event Script framework.
-/// </remarks>
 public abstract class GesFatalRuntimeException : Exception
 {
-    /// <inheritdoc />
+    /// <summary>Creates the exception for a diagnostic.</summary>
+    /// <param name="diagnostic">The runtime diagnostic to report.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="diagnostic"/> is null.</exception>
     protected GesFatalRuntimeException(GesDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
     {
         Diagnostic = diagnostic;
     }
 
-    /// <inheritdoc />
+    /// <summary>Creates the exception for a diagnostic with an underlying cause.</summary>
+    /// <param name="diagnostic">The runtime diagnostic to report.</param>
+    /// <param name="innerException">The underlying exception, if any.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="diagnostic"/> is null.</exception>
     protected GesFatalRuntimeException(GesDiagnostic diagnostic, Exception? innerException) : base(RequireDiagnostic(diagnostic).Message, innerException)
     {
         Diagnostic = diagnostic;
     }
 
     /// <summary>
-    /// Gets the diagnostic.
+    /// Gets the runtime diagnostic that this exception reports.
     /// </summary>
     public GesDiagnostic Diagnostic { get; }
 
@@ -482,7 +297,7 @@ public abstract class GesFatalRuntimeException : Exception
 public sealed class GesExtensionFaultException : GesFatalRuntimeException
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script Extension Fault Exception.
+    /// Creates a deliberate runtime fault with a caller-chosen code.
     /// </summary>
     /// <param name="code">
     /// A stable code in the caller's own namespace, for example <c>"myExtension.outOfStock"</c>.
@@ -543,26 +358,18 @@ internal sealed class GesCallbackFailureException : GesFatalRuntimeException
 }
 
 /// <summary>
-/// Represents an exception thrown when a dynamic linking error occurs
-/// during the execution of a Game Event Script.
-/// This exception specifically indicates issues related to the binding or resolution
-/// of external references required for script execution.
+/// Thrown when a Program cannot be linked to a host, for example because of a missing extension or external type
+/// constructor or an exceeded register or call-depth limit. It carries one or more link-phase diagnostics.
 /// </summary>
-/// <remarks>
-/// This exception is typically used to signal problems encountered when attempting
-/// to dynamically bind extensions or external references in the context of the script's
-/// runtime environment. It provides relevant error details to help diagnose and resolve
-/// issues during the linking process.
-/// </remarks>
 public sealed class GesDynamicLinkException : Exception
 {
     // The message stays short for a Program with many call sites; Diagnostics holds them all.
     private const int MaxMessageLocations = 8;
 
-    /// <summary>
-    /// Initializes a new instance of Game Event Script Dynamic Link Exception.
-    /// </summary>
-    /// <param name="diagnostic">The diagnostic value.</param>
+    /// <summary>Creates the exception for a failure with a single diagnostic.</summary>
+    /// <param name="diagnostic">The link-phase diagnostic.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="diagnostic"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="diagnostic"/> is not in the link phase.</exception>
     public GesDynamicLinkException(GesDiagnostic diagnostic) : base(BuildMessage([RequireDiagnostic(diagnostic)]))
     {
         if (diagnostic.Phase != GesDiagnosticPhase.Link)

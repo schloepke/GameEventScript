@@ -14,6 +14,7 @@
     /// A Map with the UTF-8 offsets of its keys and values, which schema checks report.
     case map(keys: [String], values: [GesDocumentNode], keyOffsets: [Int], valueOffsets: [Int])
     case dice([Int32])
+    case bytes([UInt8])
     case spatial(point: Bool, x: Double, y: Double, z: Double, unit: GesQuantityUnit)
     /// An explicit form such as `:Range(1, 5)` with its lowercase type, labels (`_` when unlabeled), arguments and
     /// the UTF-8 offset of its `:`, where construction errors point.

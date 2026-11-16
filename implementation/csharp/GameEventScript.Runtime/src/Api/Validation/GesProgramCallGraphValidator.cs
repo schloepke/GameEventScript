@@ -60,6 +60,10 @@ internal static class GesProgramCallGraphValidator
 
         var calls = new List<int>[entries.Length];
         for (var index = 0; index < calls.Length; index++) calls[index] = [];
+        // lastCaller[target] holds the routine that last added the edge, so each edge is deduplicated in constant time and the
+        // whole graph costs time linear in the code size (specs/ProgramModel.md).
+        var lastCaller = new int[entries.Length];
+        Array.Fill(lastCaller, -1);
         for (var routineIndex = 0; routineIndex < entries.Length; routineIndex++)
         {
             var start = entries[routineIndex];
@@ -70,7 +74,7 @@ internal static class GesProgramCallGraphValidator
                 switch (instruction.OpCode)
                 {
                     case GesBytecodeOpCode.Call:
-                        AddCall(calls[routineIndex], instruction.TargetAddress, entryIndexes);
+                        AddCall(calls, routineIndex, instruction.TargetAddress, entryIndexes, lastCaller);
                         break;
                     case GesBytecodeOpCode.CreateRecord:
                         if (!recordEntriesById.TryGetValue(instruction.BindId, out var recordEntry))
@@ -79,13 +83,13 @@ internal static class GesProgramCallGraphValidator
                                 $"Record-constructor bind id '{instruction.BindId}' was not found.", instruction.BindId.ToString());
                         }
 
-                        AddCall(calls[routineIndex], recordEntry, entryIndexes);
+                        AddCall(calls, routineIndex, recordEntry, entryIndexes, lastCaller);
                         break;
                     case GesBytecodeOpCode.CastCustom:
                         var typeName = program.StringConstants.Resolve(instruction.SecondaryStringIndex);
                         if (recordEntriesByName.TryGetValue(typeName, out var castRecordEntry))
                         {
-                            AddCall(calls[routineIndex], castRecordEntry, entryIndexes);
+                            AddCall(calls, routineIndex, castRecordEntry, entryIndexes, lastCaller);
                         }
 
                         break;
@@ -109,7 +113,7 @@ internal static class GesProgramCallGraphValidator
     private static bool IsExecutableBind(GesBinaryBindKind kind)
         => kind is MessageHandler or MessageNameHandler or Function or Predicate or Record;
 
-    private static void AddCall(List<int> calls, ushort targetAddress, IReadOnlyDictionary<ushort, int> entryIndexes)
+    private static void AddCall(List<int>[] calls, int routineIndex, ushort targetAddress, IReadOnlyDictionary<ushort, int> entryIndexes, int[] lastCaller)
     {
         if (!entryIndexes.TryGetValue(targetAddress, out var targetIndex))
         {
@@ -117,12 +121,9 @@ internal static class GesProgramCallGraphValidator
                 $"Call target address '{targetAddress}' is not a routine entry point.", targetAddress.ToString());
         }
 
-        for (var index = 0; index < calls.Count; index++)
-        {
-            if (calls[index] == targetIndex) return;
-        }
-
-        calls.Add(targetIndex);
+        if (lastCaller[targetIndex] == routineIndex) return;
+        lastCaller[targetIndex] = routineIndex;
+        calls[routineIndex].Add(targetIndex);
     }
 
     private static void RejectCycle(

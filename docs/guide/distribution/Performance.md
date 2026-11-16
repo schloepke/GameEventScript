@@ -3,7 +3,7 @@
 
 # Performance and allocation release checks
 
-Release 0.4.0 uses the existing checked-in performance budgets. Verification
+Release 0.5.0 uses the existing checked-in performance budgets. Verification
 never recalibrates or relaxes them. These are implementation regression checks,
 not cross-language speed comparisons or promises for all supported platforms.
 The initial 0.4.0 findings are [resolved and documented](../../development/Release040Performance.md).
@@ -15,7 +15,7 @@ each final release candidate still requires its own clean revision-bound evidenc
 | Gate | Scope | Where it runs |
 | --- | --- | --- |
 | C# allocation tests | Native allocation assertions and shared Markdown allocation workloads; zero budgets remain exactly zero | Ordinary C# CI, Release, `TestCategory=Allocation` |
-| C# measured performance | Shared elapsed-time workloads (`csharp-dotnet-release-macos-arm64`), shared managed allocation profile (`csharp-dotnet-release-managed`), native performance/allocation tests | Manual C# Performance Gate, macOS ARM64 self-hosted runner; .NET SDK 10.0.201 and .NET 8 runtime |
+| C# measured performance | Shared elapsed-time workloads (`csharp-dotnet-release-macos-arm64`), shared managed allocation profile (`csharp-dotnet-release-managed`), native performance/allocation tests | Manual C# Performance Gate, macOS ARM64 self-hosted runner; .NET SDK 10.0.404 and .NET 8 runtime |
 | Swift measured performance | Shared workloads, correctness and GESA checks; elapsed time, requested allocation bytes/counts and instrumentation controls | Separate local Release run on the qualified `swift-6.4-release-macos27-arm64-m3max` host |
 
 Swift's ordinary CI deliberately does not measure timing on generic hosted

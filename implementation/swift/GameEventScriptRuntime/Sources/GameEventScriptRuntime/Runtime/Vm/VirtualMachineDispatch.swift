@@ -11,7 +11,8 @@ extension GesVirtualMachine {
         let count = matchArguments ? message.arguments.count : 1
         guard ensureRegisterCapacity(count) else { return }
         frameLength = count
-        if matchArguments { for index in 0..<count { setValue(index, message.arguments[index]) } } else { setMessage(0, message) }
+        // Arguments come from the queue unchecked: only values a handler builds count against MaxValueDepth.
+        if matchArguments { for index in 0..<count { registers[index] = message.arguments[index] } } else { registers[0].setMessage(message) }
         processing = true
     }
 
@@ -31,6 +32,7 @@ extension GesVirtualMachine {
         var executed = 0
         // The linked Program and the lazily created budget are fixed for the whole slice.
         let runtimeBudget = context.budget
+        useLimits(of: runtimeBudget)
         let code = linked?.program.code.instructions ?? []
         let reserved = runtimeBudget.reserve(budget)
         do {
@@ -43,7 +45,7 @@ extension GesVirtualMachine {
                 if executed >= reserved { break }
                 instrumentation.phaseStarting(.fetch)
                 if ip < 0 || ip >= code.count {
-                    raiseError("runtime.illegalInstructionPointer")
+                    raiseError(GesDiagnosticCodes.runtimeInstructionPointerOutOfRange)
                     break
                 }
                 let instruction = code[ip]
@@ -176,7 +178,7 @@ extension GesVirtualMachine {
                     createIterator(d, value, context, checkRangeLimit: true)
                 case .createRecord:
                     guard let binding = linked!.records[instruction.word1] else {
-                        raiseError("runtime.invalidRecordBinding")
+                        raiseError(GesDiagnosticCodes.runtimeInvalidRecordConstructor)
                         break
                     }
                     call(Int(binding.entryAddress), destination: d)

@@ -66,7 +66,7 @@ ModuleName         = ModuleSegment { "." ModuleSegment }
 UnlabeledArgument  = "_"
 ```
 
-> **Since: Unreleased** — underscores in message and type names
+> **Since: 0.5.0** — underscores in message and type names
 
 Consequences:
 
@@ -158,6 +158,8 @@ of source quoting.
 | empty Map | `[:]` |
 | Dice containing rolls `6`, `3`, `1` | `:Dice[6, 3, 1]` |
 | empty Dice | `:Dice[]` |
+| Bytes `a0`, `b7`, `0b` | `:Bytes("a0b70b")` |
+| empty Bytes | `:Bytes("")` |
 | Vector with components `10`, `20`, `0` | `:Vector(x: 10, y: 20, z: 0)` |
 | Point with components `1m`, `2m`, `0m` | `:Point(x: 1m, y: 2m, z: 0m)` |
 
@@ -218,7 +220,7 @@ are returned as Text and are not recursively parsed a second time.
 
 Recognized data literals are `nothing`, lowercase `true`/`false`, Number,
 Percentage, scalar Quantity, quoted Text, `#` Tag names following the source
-name grammar, Dice result literals, Vector/Point data forms, and recursively
+name grammar, Dice result literals, Bytes literals, Vector/Point data forms, and recursively
 nested Lists/Maps, and the explicit data forms below. A Map recognizes bare `LowerName`
 keys or quoted Text keys. Quoted keys follow the same single- or double-quoted
 Text rules as values, including doubled delimiters. Map key syntax inside Text
@@ -268,6 +270,17 @@ Dice value and kind for positive Int32 rolls. The guarantee also applies to Dice
 values nested inside Lists and Maps.
 Dice nesting and entries participate in the shared
 [literal parsing limits](../HostRuntime.md#literal-parsing-limits).
+
+Bytes recognition uses `:Bytes[...]` with unsigned, unitless integers from 0 to
+255 in [numeric text](Numbers.md#text-and-number-conversion), separated by
+commas, and the explicit form `:Bytes("…")` with
+[hexadecimal pairs](../Language.md#bytes). Both use the runtime whitespace rules
+below; invalid entries or text fail recognition of the complete input.
+`parse (value as :Text)` reconstructs the same Bytes, also nested inside Lists
+and Maps, and their entries participate in the shared
+[literal parsing limits](../HostRuntime.md#literal-parsing-limits).
+The `utf8` forms `:Bytes(utf8: "…")` and `:Text(utf8: :Bytes(…))` are recognized
+like the other explicit forms and convert as in [Bytes](../Language.md#bytes).
 
 ASCII space/tab and `LF`, `CRLF`, or `CR` may surround a literal and separate
 container elements. They are preserved inside quoted Text. Other whitespace,
@@ -319,7 +332,7 @@ separate from literal-recognition failure and follows the fixed
 
 ### Strict recognition
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `parse strict` applies exactly the same recognition, evaluation and limits as
 `parse`. The only difference is the recognition-failure result: where `parse`
@@ -341,7 +354,7 @@ operand produces `nothing` in both modes.
 
 ### Recognition outside a Program
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 The public value API exposes the same recognition without a Host as
 `ParseLiteral` and `ParseLiteralStrict` (see [Public API](../PublicApi.md)). It
@@ -372,6 +385,8 @@ Record data. Existing literals remain accepted, and guessing/fallback behavior i
 unchanged. Explicit forms allow disambiguation such as `:Text("123")`.
 As in source, the type name follows its `:` directly: `: Number(5)` and
 `[: Text("a")]` are not typed forms and fail recognition of the complete input.
+A form is selected by its complete type name: `:VectorClock(1)` and `:Point_Of(2)`
+are Record constructors, not Vector or Point forms.
 
 `as :Text` writes Range as `:Range(from: ..., to: ..., step: ...)`, Series as
 `:Series(fibonacci, offset: ...)` or `:Series(factorial, offset: ...)`, Handler as

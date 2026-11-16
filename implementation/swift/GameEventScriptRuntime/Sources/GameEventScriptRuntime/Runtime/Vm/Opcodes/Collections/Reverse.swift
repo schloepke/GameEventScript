@@ -7,6 +7,7 @@ extension GesVirtualMachine {
         let x = frameStart + sourceRegister
         if registers[x].integerRangeValue != nil || registers[x].floatRangeValue != nil {
 
+            if let range = registers[x].floatRangeValue, range.count > 0 { return setFloatRangeSlice(destination, range, start: 0, count: range.count, reversed: true) }
             return GesCollectionOperators.reverseRange(registers[x].registerValue, sink: output(destination))
         }
         guard let values = GesCollectionOperators.materialize(registers[x], ranges: false) else { return setNothing(destination) }

@@ -29,6 +29,10 @@ internal partial class GesVirtualMachine
                 if (index < dices.Length) SetInteger(destinationRegister, dices[(int)index]);
                 else SetNothing(destinationRegister);
                 return;
+            case Bytes when obj.ObjectValue is byte[] bytes:
+                if (index < bytes.Length) SetInteger(destinationRegister, bytes[(int)index]);
+                else SetNothing(destinationRegister);
+                return;
             case Vector or Point when obj.ObjectValue is GesSpatialValue vp:
                 switch (index)
                 {

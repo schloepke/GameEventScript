@@ -147,14 +147,15 @@
         if bytes[position] != 58 { return 0 }
         if startsWord(":Vector") { return 3 }
         if startsWord(":Point") { return 4 }
-        return starts(":Dice[") ? 0 : 2
+        return starts(":Dice[") || starts(":Bytes[") ? 0 : 2
     }
 
-    // Text, Dice rolls or an unquoted token; `value` dispatches Vectors and Points itself.
+    // Text, Dice rolls, Bytes or an unquoted token; `value` dispatches Vectors and Points itself.
     private mutating func leaf(depth: Int) -> GesDocumentNode? {
         if position == bytes.count { return fail(Code.unexpectedToken, position) }
         if bytes[position] == 34 || bytes[position] == 39 { return quotedValue() }
-        return starts(":Dice") ? dice(depth: depth) : scalar()
+        if starts(":Bytes") { return dice(depth: depth, bytes: true) }
+        return starts(":Dice") ? dice(depth: depth, bytes: false) : scalar()
     }
 
     private mutating func quotedValue() -> GesDocumentNode? {
@@ -232,7 +233,7 @@
         let open = position
         // `:Dice [...]` with whitespace is the Dice result literal, read after this form fails.
         guard consume(40) else {
-            if type != "dice" { fail(Code.invalidLiteral, formStart) }
+            if type != "dice" && type != "bytes" { fail(Code.invalidLiteral, formStart) }
             return nil
         }
         whitespace()
@@ -434,14 +435,38 @@
         return nil
     }
 
-    // `:Dice` followed by its bracketed rolls, after the explicit `:Dice(...)` form did not apply.
-    private mutating func dice(depth: Int) -> GesDocumentNode? {
+    // `:Dice` or `:Bytes` followed by its bracketed values, after the explicit `:Dice(...)` or `:Bytes(...)` form did
+    // not apply.
+    private mutating func dice(depth: Int, bytes isBytes: Bool) -> GesDocumentNode? {
         let valueStart = position
-        position += 5
+        position += isBytes ? 6 : 5
         whitespace()
         if position == bytes.count || bytes[position] != 91 { return fail(Code.invalidLiteral, valueStart) }
         if depth >= 64 { return setLimit("MaxLiteralDepth", 64, position) }
-        return readDice(formStart: valueStart)
+        return isBytes ? readBytes(formStart: valueStart) : readDice(formStart: valueStart)
+    }
+
+    // `:Bytes[...]` holds integer literals from 0 to 255.
+    private mutating func readBytes(formStart: Int) -> GesDocumentNode? {
+        let open = position
+        position += 1
+        whitespace()
+        if consume(93) { return .bytes([]) }
+        if position == bytes.count { return fail(Code.unclosedBracket, open) }
+        var values: [UInt8] = []
+        while position < bytes.count {
+            if !item() { return nil }
+            if !GesNames.digit(bytes[position]) { return fail(Code.invalidLiteral, formStart) }
+            guard let item = value(depth: 0) else { return nil }
+            guard case .number(let number) = item, number.kind == .integer, number.unit == .none, number.integerValue >= 0, number.integerValue <= 255 else {
+                return fail(Code.invalidLiteral, formStart)
+            }
+            values.append(UInt8(number.integerValue))
+            let next = separator(93, open)
+            if next < 0 { return nil }
+            if next > 0 { return .bytes(values) }
+        }
+        return nil
     }
 
     private mutating func readDice(formStart: Int) -> GesDocumentNode? {
@@ -632,6 +657,8 @@
     private func hasUnknownUnit(_ start: Int, _ end: Int) -> Bool {
         var index = start
         if index < end && (bytes[index] == 43 || bytes[index] == 45) { index += 1 }
+        // An invalid hexadecimal number has no unit suffix.
+        if end - index >= 2 && bytes[index] == 48 && bytes[index + 1] == 120 { return false }
         var digits = skipDigits(&index, end)
         if index < end && bytes[index] == 46 {
             index += 1

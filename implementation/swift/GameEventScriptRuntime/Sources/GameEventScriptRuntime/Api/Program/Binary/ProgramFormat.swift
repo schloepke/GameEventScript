@@ -81,6 +81,52 @@ public enum GesProgramFormatErrorCode: Int, Sendable, CaseIterable {
     case invalidProgram = 38
 }
 
+extension GesProgramFormatErrorCode {
+    // The reason an error of this code gives when its throw site names no more specific one.
+    var explanation: String {
+        switch self {
+        case .invalidMagic: "The file does not start with ASCII 'GESB'."
+        case .unsupportedFormatVersion: "The file uses an unsupported format version."
+        case .invalidHeaderFlags: "V1 file-header flags must be zero."
+        case .invalidHeaderSize: "The file header size is invalid or the file is shorter than its header."
+        case .fileSizeMismatch: "Header FileSize does not equal the supplied byte count."
+        case .fileTooLarge: "The .gesb file exceeds MaxFileBytes."
+        case .tooManySections: "The file exceeds MaxSectionCount."
+        case .truncatedSectionHeader: "A section header is truncated."
+        case .truncatedSectionPayload: "A section payload is truncated."
+        case .sectionTooLarge: "A section exceeds the portable size range."
+        case .invalidSectionType: "A section type is invalid."
+        case .invalidSectionFlags: "Section flags are invalid."
+        case .invalidSectionReserved: "A reserved field must be zero."
+        case .unsupportedSectionVersion: "A required section has an unsupported version."
+        case .unsupportedCompression: "A required section uses an unsupported compression codec."
+        case .missingRequiredSection: "A required section is missing."
+        case .duplicateSection: "A singleton section occurs more than once."
+        case .unknownRequiredSection: "An unknown or optional section is marked Required."
+        case .invalidPayloadLength: "A section payload has an invalid length."
+        case .invalidUtf8: "A string contains invalid UTF-8."
+        case .tooManyEntries: "An entry count exceeds its configured or V1 limit."
+        case .invalidStringIndex: "A string index is invalid."
+        case .invalidListIndex: "A list index is invalid."
+        case .invalidBindingKind: "A binding kind is invalid."
+        case .duplicateBindingId: "A binding ID is duplicated in its binding scope."
+        case .invalidEntryAddress: "A binding has an invalid entry address."
+        case .invalidOpcode: "An instruction has an invalid opcode."
+        case .invalidOperand: "An instruction has an invalid operand."
+        case .invalidJumpAddress: "An instruction references an address outside CodeSegment."
+        case .invalidCallAddress: "A call references an invalid routine."
+        case .cyclicCallGraph: "Calls form a cycle."
+        case .invalidResourceMetadata: "Program resource requirements do not match its bindings."
+        case .invalidDebugSymbol: "A debug symbol is invalid."
+        case .invalidSourceMap: "The SourceMap is invalid."
+        case .invalidSourceArchive: "The SourceArchive is invalid."
+        case .sourceMetadataMismatch: "SourceMap and SourceArchive do not agree."
+        case .readerLimitExceeded: "A reader limit is exceeded."
+        case .invalidProgram: "The program violates a structural invariant."
+        }
+    }
+}
+
 /// A stable format error and its optional location in the encoded or parsed program.
 public struct GesProgramFormatError: Error, Sendable {
     /// Stable error classification for machine-readable handling.
@@ -95,9 +141,11 @@ public struct GesProgramFormatError: Error, Sendable {
     public let message: String
 
     /// Creates a format error with optional encoded and logical location context.
-    public init(_ code: GesProgramFormatErrorCode, message: String = "Invalid GES program", byteOffset: Int? = nil, sectionType: UInt16? = nil, entryIndex: Int? = nil) {
+    ///
+    /// Without a message, the error explains its code, so every failure has a human-readable reason.
+    public init(_ code: GesProgramFormatErrorCode, message: String? = nil, byteOffset: Int? = nil, sectionType: UInt16? = nil, entryIndex: Int? = nil) {
         self.code = code
-        self.message = message
+        self.message = message ?? code.explanation
         self.byteOffset = byteOffset
         self.sectionType = sectionType
         self.entryIndex = entryIndex

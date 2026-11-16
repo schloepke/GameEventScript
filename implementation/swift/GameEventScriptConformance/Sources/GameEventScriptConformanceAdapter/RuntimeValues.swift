@@ -56,6 +56,15 @@ enum RuntimeValues {
         return try GameEventScriptMessage(name: node.text("name"), arguments: arguments, tags: node.values("tags").compactMap(\.stringValue))
     }
 
+    // A lowercase hexadecimal digit of the Bytes transport.
+    private static func hexDigit(_ byte: UInt8) throws -> UInt8 {
+        switch byte {
+        case 48...57: return byte - 48
+        case 97...102: return byte - 87
+        default: throw ConformanceExecutionError.invalidInput("Invalid bytes")
+        }
+    }
+
     static func decode(_ node: Input, mutateSource: Bool = false) throws -> GesValue {
         let type = try node.text("type")
         let unit = try unit(node)
@@ -74,6 +83,10 @@ enum RuntimeValues {
             let result = GesValue.list(items)
             if mutateSource && !items.isEmpty { items[0] = .nothing }
             return result
+        case ":Bytes":
+            let text = Array(try node.text("value").utf8)
+            guard text.count % 2 == 0 else { throw ConformanceExecutionError.invalidInput("Invalid bytes") }
+            return .bytes(try stride(from: 0, to: text.count, by: 2).map { try hexDigit(text[$0]) << 4 | hexDigit(text[$0 + 1]) })
         case ":Dice":
             var rolls = try node.values("rolls").map { value in
                 guard let result = Int32(value.numberValue ?? value.stringValue ?? "") else { throw ConformanceExecutionError.invalidInput("Invalid roll") }
@@ -85,6 +98,13 @@ enum RuntimeValues {
         case ":Range.int64": return try .integerRange(from: integer(node.text("from")), to: integer(node.text("to")), step: integer(node.text("step")))
         case ":Range.binary64": return try .floatRange(from: parseNumber(node.text("from")), to: parseNumber(node.text("to")), step: parseNumber(node.text("step")))
         case ":Message": return try .message(decodeMessage(node.required("message")))
+        case ":Box" where node["entries"] == nil:
+            // A shape of the geometry library: unitless Points and the unit of the whole shape. A Record of that name has entries.
+            return GesBox(try unitlessPoint(node.required("lower")), try unitlessPoint(node.required("upper"))).value(unit: unit)
+        case ":Poly" where node["entries"] == nil:
+            return GesPoly(try node.values("points").map(unitlessPoint)).value(unit: unit)
+        case ":Disc" where node["entries"] == nil:
+            return GesDisc(center: try unitlessPoint(node.required("center")), radius: try parseNumber(node.text("radius"))).value(unit: unit)
         default:
             let nodes = node.values("entries")
             var keys = try nodes.map { try $0.text("key") }
@@ -112,7 +132,32 @@ extension RuntimeValues {
         ["name": value.name, "tags": value.tags, "args": try (0..<value.arguments.count).map { ["name": value.arguments.nameAt($0), "value": try encode(value.arguments[$0])] as [String: Any] }]
     }
 
+    private static func unitlessPoint(_ node: Input) throws -> GesPoint {
+        guard try node.text("type") == ":Point", node["unit"] == nil else { throw ConformanceExecutionError.invalidInput("A geometry point is a unitless :Point.") }
+        return GesPoint(x: try parseNumber(node.text("x")), y: try parseNumber(node.text("y")), z: try parseNumber(node.text("z")))
+    }
+
+    private static func unitless(_ point: GesPoint) -> [String: Any] { ["type": ":Point", "x": numberText(point.x), "y": numberText(point.y), "z": numberText(point.z)] }
+
+    // A Box, Poly or Disc of the geometry library; its unit is no public property, so it is read by reflection.
+    private static func geometry(_ value: GesValue) -> [String: Any]? {
+        guard let external = value.externalValue, let unit = Mirror(reflecting: external).children.first(where: { $0.label == "unit" })?.value as? GesQuantityUnit else { return nil }
+        var result: [String: Any]
+        if let box = GesBox(value, unit: unit) {
+            result = ["type": ":Box", "lower": unitless(box.min), "upper": unitless(box.max)]
+        } else if let poly = GesPoly(value, unit: unit) {
+            result = ["type": ":Poly", "points": poly.points.map(unitless)]
+        } else if let disc = GesDisc(value, unit: unit) {
+            result = ["type": ":Disc", "center": unitless(disc.center), "radius": numberText(disc.radius)]
+        } else {
+            return nil
+        }
+        if unit != .none { result["unit"] = ":" + String(describing: unit) }
+        return result
+    }
+
     static func encode(_ value: GesValue) throws -> [String: Any] {
+        if let geometry = geometry(value) { return geometry }
         var result: [String: Any]
         switch value.valueKind {
         case .nothing: return ["type": ":Nothing"]
@@ -122,6 +167,9 @@ extension RuntimeValues {
             result = ["type": (value.unit == .none ? ":Number." : ":Quantity.") + (value.valueKind == .integer ? "int64" : "binary64"), "value": value.valueKind == .integer ? String(value.integerValue!) : numberText(value.asNumber)]
         case .percentage: return ["type": ":Percentage", "value": numberText(value.asNumber)]
         case .dice: return ["type": ":Dice", "rolls": value.diceRolls ?? []]
+        case .bytes:
+            let digits = Array("0123456789abcdef")
+            return ["type": ":Bytes", "value": String((value.bytesValue ?? []).flatMap { [digits[Int($0 >> 4)], digits[Int($0 & 15)]] })]
         case .list: return ["type": ":List", "items": try (value.listValue ?? []).map(encode)]
         case .message: return ["type": ":Message", "message": try encodeMessage(value.messageValue!)]
         case .vector, .point:

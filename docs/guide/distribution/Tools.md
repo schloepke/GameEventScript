@@ -39,7 +39,7 @@ The CLI has a separate SwiftPM package. With a compatible Swift toolchain
 installed, clone the release and build/run the CLI:
 
 ```sh
-git clone --branch 0.4.0 --depth 1 https://github.com/schloepke/GameEventScript.git
+git clone --branch 0.5.0 --depth 1 https://github.com/schloepke/GameEventScript.git
 cd GameEventScript
 swift run --package-path implementation/swift/GameEventScriptTool --scratch-path artifacts/swift/cli --disable-build-manifest-caching --configuration release ges --help
 ```
@@ -190,7 +190,10 @@ GitHub environment with release approval requirements before enabling publicatio
 The publication job uses GitHub's `GITHUB_TOKEN` with `contents: write`, accepts
 only the complete verified set from that run, and attaches archives plus the
 combined checksum file to the existing release. It never changes the release
-text, creates a release automatically or overwrites an existing download.
+text, creates a release automatically or overwrites an existing download. After an
+interrupted upload, running it again attaches only the missing files: a download
+that is already attached with the same bytes is kept, and one with other bytes stops
+the run.
 
 After publishing the Swift archives, update `Formula/ges.rb` in the
 [Homebrew tap](https://github.com/schloepke/homebrew-gameeventscript) with the

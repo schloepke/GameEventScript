@@ -54,7 +54,7 @@ def main():
             fixture = 'on Main(args) { emit ConsoleOut(\'Hello' + newline + '"World"\') }\n'
             source.write_bytes(fixture.encode("utf-8"))
             check("verbose text escaping " + label, ["run", str(source), "--verbose"],
-                  stdout='Hello\n"World"\n', stderr='Hello' + escaped + '\\u0022World\\u0022')
+                  stdout='Hello\n"World"\n', stderr='Hello' + escaped + '\\"World\\"')
         source.write_text('on Main(args) { emit after 0.01s Tick() }\non Tick { emit ConsoleOut("delayed"); emit ErrorCode(7) }', encoding="utf-8")
         check("delayed delivery and exit code", ["run", str(source), "-q"], stdout="delayed\n", exit_code=7)
 

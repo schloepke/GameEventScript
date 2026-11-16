@@ -292,8 +292,8 @@ sequence means no debug segments. Its default is all three values.
 written as canonical `.gesb`, read again, and only then used by the test.
 Enabling it implicitly requires the core capability `program-binary`.
 
-`runtimeLimits` uses the exact portable names `maxProcessedEventsPerRun`,
-`maxQueuedMessagesPerRun`, `maxExecutionSteps`, `maxRegisterValues`,
+`runtimeLimits` uses the exact portable names `maxProcessedMessagesPerRun`,
+`maxQueuedMessages`, `maxExecutionSteps`, `maxRegisterValues`,
 `maxLoopIterations`, `maxCallDepth`, `maxRandomScopeDepth`, `maxRangeItems`,
 `maxGeneratedCollectionItems`, `maxDiceCount`, and `maxDiceSides`. Values are
 positive integers. Omitted fields use Core defaults.
@@ -679,6 +679,7 @@ Values use the existing portable conformance shape:
 | `:List` | ordered `items` value sequence |
 | `:Map` | `entries`, an ordered sequence of `{ key, value }` |
 | `:Dice` | ordered Int32 `rolls` |
+| `:Bytes` | `value`: lowercase hexadecimal Text with two digits per byte |
 | `:Range.int64`, `:Range.binary64` | numeric strings `from`, `to`, `step`; the variant fixes all three storage kinds |
 | `:Message` | nested `message` |
 | any declared custom type | ordered `entries` sequence |
@@ -844,7 +845,7 @@ value:
   equalHash: true
 ```
 
-> **Since: Unreleased** — member access input
+> **Since: 0.5.0** — member access input
 
 Alternatively, `valueApi.access` reads members and traverses a Map or Record, and
 allows no other `valueApi` field. It holds either `value` or `external`, an
@@ -886,7 +887,7 @@ access:
     - { key: a, value: { type: ":Number.int64", value: "1" } }
 ```
 
-> **Since: Unreleased** — literal parsing input
+> **Since: 0.5.0** — literal parsing input
 
 Alternatively, `valueApi.literal` parses `text` through the public literal
 parsing API, with `mode` `lenient` or `strict`, and allows no other `valueApi`
@@ -912,7 +913,7 @@ literal:
 
 ### `schemaApi`
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Requires `schema-api` and no GES source. `schemaApi.sources` lists schema source texts, named
 `schema0.gess` and so on; `root` names a declaration and `parameters` maps parameter names to
@@ -928,7 +929,7 @@ contains any of `error` (`code` with optional `line` and `column`; it stands alo
 
 ### `documentApi`
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 Requires `document-api` and no GES source. `documentApi.text` reads
 [GES document](../Documents.md) text through the public document API; it may use

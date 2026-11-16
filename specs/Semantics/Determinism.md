@@ -240,6 +240,7 @@ The script operators `=` and `<>` use script equality:
   equal to a tag.
 - All other present cross-kind pairs are unequal. In particular, a map is not
   equal to a record, and records with different declared types are unequal.
+- Bytes require the same bytes in the same order.
 - Vector and point require the same kind and unit. Handlers require the same
   signature. Series require the same signature and offset. Ranges require the
   same representation and bounds/step.
@@ -290,10 +291,12 @@ portable heterogeneous rank is:
 | 11 | list |
 | 12 | map |
 | 13 | dice when the other value is not numeric-capable |
+| 14 | bytes |
 
 There is intentionally no rank 7 in the V1 contract. When same-rank supported
 values have no finer ordering, their comparison is equal and stable source
-order is retained.
+order is retained. Bytes order lexicographically by unsigned byte, and a
+shorter prefix comes first.
 
 ### Highest/lowest slicing
 
@@ -318,12 +321,13 @@ Boolean and Dice participate through their numeric views. Otherwise use:
 | 10 | handler |
 | 11 | list |
 | 12 | map and custom record/external values |
+| 14 | bytes |
 
 Within rank 1, a Tag follows Boolean, Number and Percentage but precedes Dice;
 numeric-to-numeric comparison still takes precedence. Within rank 12, a Map
 precedes a custom value. Text/Tag pairs of the same kind compare by Unicode
 scalars; vectors/points of the same kind compare units first, then coordinates
-lexicographically. Other same-rank pairs have no finer ordering.
+lexicographically; Bytes compare as in the sort order. Other same-rank pairs have no finer ordering.
 
 Equal candidates retain source order. `take highest/lowest` selects successive
 extrema in that stable order; `drop highest/lowest` removes those candidates and
@@ -336,6 +340,7 @@ Iteration order is never inherited from a platform hash container:
 
 - lists retain list order;
 - dice retain their stored roll order;
+- bytes yield their bytes in order as Int64 numbers;
 - text and tags yield Unicode scalars in text order;
 - vector and point yield `x`, `y`, then `z`;
 - maps and records yield values in ascending key order;
@@ -368,6 +373,15 @@ Different indexes may produce the same value at large magnitudes.
 
 Index access, iteration, materialization, and collection operations on a given
 floating range use this same sequence, with ordinary numeric canonicalization.
+Selectors that keep a range, such as `:take first`, `:drop last`, `:take highest`,
+`:reverse` or `:sort`, give exactly the items the same selector gives for the
+materialized List. Their result stays a range only when that range generates
+exactly these items: a prefix that keeps `from` and `step` needs only the same
+item count, and any other slice or reversal additionally requires that every
+term of the source is exact, that is `from` and `step` are integer multiples of
+a common power of two, every term stays below 2^53 of those units, and the last
+term does not pass `to`. Otherwise the selected items materialize as a List,
+which obeys MaxRangeItems like the List cast.
 Membership is exact: a unitless Number is contained if and only if its value
 equals an element at one of the precomputed indexes. A nearby Binary64 value,
 a Quantity, a Percentage, and an Int64 value that only rounds to an element on

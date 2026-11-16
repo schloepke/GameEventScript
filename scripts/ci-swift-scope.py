@@ -22,10 +22,15 @@ CARD_WEB_FILES = {"examples/card-game/web/" + name for name in (
 )}
 
 
+# Guides whose code blocks scripts/test-guide-examples.py compiles and runs with the Swift tools.
+GUIDE_EXAMPLES = {"docs/guide/Swift.md", "docs/guide/Schemas.md", "docs/guide/Language.md"}
+
+
 def requires_swift(paths):
     # This is deliberately an allowlist of irrelevant inputs. New directories,
     # specs, Markdown conformance cases, scripts and workflow edits run all gates.
-    return any(path not in DOC_FILES and path not in CARD_WEB_FILES and not path.startswith(("docs/", "website/")) for path in paths)
+    return any(path in GUIDE_EXAMPLES or (path not in DOC_FILES and path not in CARD_WEB_FILES and not path.startswith(("docs/", "website/")))
+               for path in paths)
 
 
 def changed_paths(event_name, event, repository=ROOT):

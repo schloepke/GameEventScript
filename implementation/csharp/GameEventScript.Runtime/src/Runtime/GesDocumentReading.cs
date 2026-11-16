@@ -73,6 +73,7 @@ internal static class GesDocumentReading
             GesBytecodeTypeKind.Vector => GesDocumentNode.Spatial(false, value.X, value.Y, value.Z, value.ValueUnit),
             GesBytecodeTypeKind.Point => GesDocumentNode.Spatial(true, value.X, value.Y, value.Z, value.ValueUnit),
             GesBytecodeTypeKind.Dice => GesDocumentNode.Dice(value.AsDice()),
+            GesBytecodeTypeKind.Bytes => GesDocumentNode.BytesValue(value.AsBytes().ToArray()),
             GesBytecodeTypeKind.List => GesDocumentNode.List(Nodes(value.AsList(), start)),
             GesBytecodeTypeKind.Map => MapNode(value.AsMap()!, start),
             GesBytecodeTypeKind.Custom when value.CustomTypeName is { } name => GesDocumentNode.Form("record", ["_", "_"], [GesDocumentNode.Text(name), MapNode(value.AsMap()!, start)], start),
@@ -120,6 +121,12 @@ internal static class GesDocumentReading
                 var dice = new GesValue();
                 dice.SetDice(node.Rolls);
                 return dice;
+            }
+            case GesDocumentNodeKind.Bytes:
+            {
+                var bytes = new GesValue();
+                bytes.SetBytes(node.Bytes);
+                return bytes;
             }
             case GesDocumentNodeKind.List:
             {

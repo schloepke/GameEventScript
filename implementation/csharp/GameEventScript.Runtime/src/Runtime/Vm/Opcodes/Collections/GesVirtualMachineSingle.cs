@@ -22,6 +22,10 @@ internal partial class GesVirtualMachine
                 if (dice.Length == 1) SetInteger(destinationRegister, dice[0]);
                 else SetNothing(destinationRegister);
                 return;
+            case Bytes when source.ObjectValue is byte[] bytes:
+                if (bytes.Length == 1) SetInteger(destinationRegister, bytes[0]);
+                else SetNothing(destinationRegister);
+                return;
             case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
                 if (GesRangeMath.GetLength(range.From, range.To, range.Step) == 1) SetInteger(destinationRegister, range.From);
                 else SetNothing(destinationRegister);

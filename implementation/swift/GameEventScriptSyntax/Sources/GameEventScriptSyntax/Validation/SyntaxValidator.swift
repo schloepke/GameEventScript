@@ -688,7 +688,7 @@
 
     // The canonical name of a source type name without its colon; built-in types are lowercase, such as `number`.
     static func canonicalTypeName(_ typeName: String) -> String {
-        ["Record", "Nothing", "Boolean", "Number", "Percentage", "Vector", "Point", "Series", "Range", "Message", "Handler", "Tag", "Text", "List", "Map", "Dice"].contains(typeName)
+        ["Record", "Nothing", "Boolean", "Number", "Percentage", "Vector", "Point", "Series", "Range", "Message", "Handler", "Tag", "Text", "List", "Map", "Dice", "Bytes"].contains(typeName)
             ? typeName.lowercased() : typeName
     }
 }

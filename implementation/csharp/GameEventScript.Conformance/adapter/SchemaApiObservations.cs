@@ -10,7 +10,7 @@ internal static class SchemaApiObservations
 {
     internal static void Validate(JsonElement input)
     {
-        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document");
+        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument");
         if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("encode"));
         if (input.GetProperty("baseline").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("baseline"));
     }
@@ -34,7 +34,7 @@ internal static class SchemaApiObservations
 
                 var value = RuntimeValues.Decode(parameter.GetProperty("value"));
                 if (value.ValueKind == GesBytecodeTypeKind.Integer) parameters.With(name, value.AsInteger(), value.ValueUnit);
-                else parameters.With(name, value.AsNumeric, value.ValueUnit);
+                else parameters.With(name, value.AsNumber(), value.ValueUnit);
             }
             var root = input.GetProperty("root").GetString();
             if (root is not null)
@@ -46,6 +46,7 @@ internal static class SchemaApiObservations
             }
 
             if (input.GetProperty("document").GetString() is { } document) result["document"] = Check(set, document, root, parameters);
+            if (input.GetProperty("readDocument") is { ValueKind: JsonValueKind.Object } reading) result["readDocument"] = ReadDocument(set, reading);
             if (input.GetProperty("bind").GetBoolean())
             {
                 var bound = set.Schema(root!).Bind(parameters);
@@ -74,9 +75,35 @@ internal static class SchemaApiObservations
     }
 
     // Only what differs from the default, so that expectations stay readable.
+    private static Dictionary<string, object?> DescribeDefault(GesSchemaDefaultInfo fallback)
+    {
+        var described = new Dictionary<string, object?> { ["kind"] = fallback.Kind.ToString() };
+        if (fallback.Number is { } number) described["value"] = Text(number);
+        else if (fallback.Kind == GesSchemaDefaultKind.Boolean) described["value"] = fallback.Boolean;
+        else if (fallback.Kind == GesSchemaDefaultKind.Record)
+            described["entries"] = fallback.Entries.Select(entry => new Dictionary<string, object?> { ["name"] = entry.Name, ["value"] = DescribeDefault(entry.Value) }).ToArray();
+        else described["name"] = fallback.Name;
+        return described;
+    }
+
     private static Dictionary<string, object?> Describe(GesSchema schema)
     {
         var result = new Dictionary<string, object?> { ["name"] = schema.Name, ["kind"] = schema.Kind.ToString() };
+        if (schema.WireGroup is { } wire) result["wireGroup"] = wire;
+        if (schema.ModelGroup is { } model) result["modelGroup"] = model;
+        if (schema.IsAbstract) result["abstract"] = true;
+        if (schema.PackedWidth > 0)
+        {
+            result["packedWidth"] = schema.PackedWidth;
+            result["packedBits"] = schema.PackedBits;
+        }
+        if (schema.Takes.Count > 0) result["takes"] = schema.Takes.Select(take =>
+        {
+            var entry = new Dictionary<string, object?> { ["schema"] = take.Schema.Name };
+            if (take.IsAllOptional) entry["allOptional"] = true;
+            if (take.Without.Count > 0) entry["without"] = take.Without.ToArray();
+            return entry;
+        }).ToArray();
         if (schema.Parameters.Count > 0) result["parameters"] = schema.Parameters.Select(parameter => Unit(new Dictionary<string, object?> { ["name"] = parameter.Name, ["kind"] = parameter.Kind.ToString() }, parameter.Unit)).ToArray();
         if (schema.Fields.Count > 0) result["fields"] = schema.Fields.Select(field =>
         {
@@ -84,6 +111,22 @@ internal static class SchemaApiObservations
             if (field.IsUnlabeled) entry["unlabeled"] = true;
             if (field.IsOptional) entry["optional"] = true;
             if (field.IsKey) entry["key"] = true;
+            if (field.Default is { } fallback) entry["default"] = DescribeDefault(fallback);
+
+            return entry;
+        }).ToArray();
+        if (schema.ComputedFields.Count > 0) result["computed"] = schema.ComputedFields.Select(field =>
+        {
+            var entry = Unit(new Dictionary<string, object?> { ["name"] = field.Name, ["kind"] = field.Kind.ToString() }, field.Unit);
+            if (field.IsOptional) entry["optional"] = true;
+            entry["expression"] = field.Expression;
+            return entry;
+        }).ToArray();
+        if (schema.Constants.Count > 0) result["constants"] = schema.Constants.Select(constant =>
+        {
+            var entry = Unit(new Dictionary<string, object?> { ["name"] = constant.Name, ["kind"] = constant.Kind.ToString() }, constant.Unit);
+            if (constant.IsInteger) entry["integer"] = true;
+            entry["value"] = Text(constant.Value);
             return entry;
         }).ToArray();
         if (schema.Tags.Count > 0) result["tags"] = schema.Tags.ToArray();
@@ -98,6 +141,7 @@ internal static class SchemaApiObservations
         if (type.Tags.Count > 0) result["tags"] = type.Tags.ToArray();
         if (type.Max is { } max) result["max"] = max;
         if (type.Element.Count > 0) result["element"] = type.Element.Select(Describe).ToArray();
+        if (type.Depth > 0) result["depth"] = type.Depth;
         if (type.Axes.Count > 0) result["axes"] = type.Axes.Select(axis =>
         {
             var entry = new Dictionary<string, object?> { ["name"] = axis.Name };
@@ -137,6 +181,21 @@ internal static class SchemaApiObservations
         catch (GesSchemaException exception)
         {
             return new { error = new { code = exception.Code, line = exception.Line, column = exception.Column } };
+        }
+    }
+
+    // Reads a document as generated models do: the header names an expected schema, and the entries are checked against it.
+    private static object ReadDocument(GesSchemaSet set, JsonElement input)
+    {
+        RuntimeValues.Fields(input, "text", "expected");
+        try
+        {
+            var document = GesSchemaDocument.Read(set, input.GetProperty("text").GetString()!, input.GetProperty("expected").EnumerateArray().Select(name => name.GetString()!).ToArray());
+            return new { schema = document.Schema, value = RuntimeValues.Encode(document.Value) };
+        }
+        catch (GesDocumentException exception)
+        {
+            return new { error = new { code = exception.Code, line = exception.Line, column = exception.Column, path = exception.Path } };
         }
     }
 

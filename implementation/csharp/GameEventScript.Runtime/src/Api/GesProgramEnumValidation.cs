@@ -36,6 +36,7 @@ internal static class GesProgramEnumValidation
             or GesBytecodeTypeKind.Vector
             or GesBytecodeTypeKind.Point
             or GesBytecodeTypeKind.Range
+            or GesBytecodeTypeKind.Bytes
             or GesBytecodeTypeKind.Handler
             or GesBytecodeTypeKind.Message
             or GesBytecodeTypeKind.List

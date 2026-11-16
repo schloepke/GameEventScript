@@ -8,10 +8,8 @@ extension GesVirtualMachine {
         if valueMessage {
             message = value(Int(i.word1)).messageValue
         } else {
-            guard let signature = linked!.outbound[i.word0] else {
-                raiseError("runtime.invalidMessageBinding")
-                return
-            }
+            // As in C#, an outbound binding the linked Program lacks sends nothing; validation keeps it unreachable.
+            guard let signature = linked!.outbound[i.word0] else { return }
             message = signature.makeMessage(values(i.word2))
         }
         guard var message else { return }

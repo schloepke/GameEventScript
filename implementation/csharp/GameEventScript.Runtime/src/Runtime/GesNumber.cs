@@ -52,9 +52,16 @@ internal static class GesNumber
             unit = powered;
         }
 
-        var left = value.AsNumeric;
-        return GesValue.GesFloat(double.IsNaN(left) ? double.NaN : Math.Pow(left, right), unit);
+        return GesValue.GesFloat(Power(value.AsNumeric, right), unit);
     }
+
+    // A binary64 power: NaN for NaN, the platform's pow, and for the exponent 0.5, which `sqrt` and `√` lower to, the correctly
+    // rounded square root, so that a root has the same bits on every platform.
+    internal static double Power(double left, double right)
+        => double.IsNaN(left) || double.IsNaN(right) ? double.NaN : right == 0.5d ? SquareRoot(left) : Math.Pow(left, right);
+
+    // The square root that pow gives for the exponent 0.5: correctly rounded, and +infinity for -infinity.
+    internal static double SquareRoot(double value) => double.IsNegativeInfinity(value) ? double.PositiveInfinity : Math.Sqrt(value);
 
     internal static bool CanRepresentAsInteger(double value)
         => double.IsFinite(value) &&

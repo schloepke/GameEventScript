@@ -20,12 +20,15 @@ enum GesSelectionOrder {
             case .handler: return 10
             case .list: return 11
             case .map, .record, .external: return 12
+            case .bytes: return 14
             default: return 8
             }
         }
 
         if a.isNumeric && b.isNumeric {
             if a.unit != b.unit { return unit(a.unit) < unit(b.unit) ? -1 : 1 }
+            // Two integers compare exactly, as the comparison operators do.
+            if a.kind == .integer, b.kind == .integer, let av = a.integerValue, let bv = b.integerValue { return av < bv ? -1 : av > bv ? 1 : 0 }
             return a.asNumber < b.asNumber ? -1 : a.asNumber > b.asNumber ? 1 : 0
         }
         if rank(a) != rank(b) { return rank(a) < rank(b) ? -1 : 1 }

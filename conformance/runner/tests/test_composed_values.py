@@ -50,6 +50,27 @@ class ComposedValueTests(unittest.TestCase):
             mutate(observed['message'])
             self.assertFalse(equal(expected, observed, {'mode': 'exact'}))
 
+    def test_geometry_shapes_hold_unitless_points_and_one_unit(self):
+        point = {'type': ':Point', 'x': '1', 'y': '2', 'z': '0'}
+        box = {'type': ':Box', 'lower': point, 'upper': {**point, 'x': '3'}, 'unit': ':meter'}
+        self.assertEqual(value(box), value({**box, 'unit': 'm'}))
+        ulp = {'mode': 'ulp', 'maxUlps': 1}
+        self.assertTrue(equal(value(box), value({**box, 'upper': {**point, 'x': '3.0000000000000004'}}), ulp))
+        self.assertFalse(equal(value(box), value({**box, 'unit': ':second'}), ulp))
+        poly = {'type': ':Poly', 'points': [point, point]}
+        self.assertEqual(poly, value(poly))
+        self.assertFalse(equal(value(poly), value({**poly, 'points': [point]}), ulp))
+        disc = {'type': ':Disc', 'center': point, 'radius': '2', 'unit': ':meter'}
+        self.assertEqual(value(disc), value({**disc, 'unit': 'm'}))
+        self.assertTrue(equal(value(disc), value({**disc, 'radius': '2.0000000000000004'}), ulp))
+        self.assertFalse(equal(value(disc), value({**disc, 'radius': '3'}), ulp))
+        self.assertFalse(equal(value(disc), value({**disc, 'center': {**point, 'x': '3'}}), ulp))
+        for raw in [{**box, 'lower': {**point, 'unit': ':meter'}}, {**box, 'lower': {**point, 'type': ':Vector'}},
+                    {'type': ':Box', 'lower': point}, {**poly, 'points': point}, {**poly, 'extra': True},
+                    {'type': ':Disc', 'center': point}, {**disc, 'radius': 2}, {**disc, 'center': {**point, 'unit': ':meter'}}]:
+            with self.assertRaises(InvalidDocument):
+                value(raw)
+
     def test_invalid_composite_fields_rejected(self):
         for raw in [{'type': ':Vector', 'x': '1', 'y': '2'},
                     {'type': ':Point', 'x': '1', 'y': '2', 'z': '3', 'unit': 'lb'},

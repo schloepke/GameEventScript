@@ -10,7 +10,9 @@ public final class GameEventScriptHost {
     private let externalTypes: (any GesExternalTypeRegistry)?
     private let limits: GesRuntimeLimits
     private let clock: GesClockSource?
-    private var delayed: [GesDelayedMessage] = []
+    // Whether the active handler already reported a runtime error; its random-scope cleanup is then expected recovery.
+    private var activeHandlerFailed = false
+    private var delayed = GesDelayedQueue()
     // Host-local send IDs start at 1; 0 reports a send without an ID.
     private var lastSendID: Int64 = 0
     private let sink: (any GesPublishSink)?
@@ -101,7 +103,7 @@ public final class GameEventScriptHost {
     ///   initialization, script execution or after failed initial startup. Failed linking adds no registrations.
     public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GesProgramInstance {
         guard !starting, !executingScript, startupResult == nil || isReady else { throw GesApiError.invalidOperation("Loading is not allowed during initialization, script execution, or after a failed start") }
-        try program.validate()
+        try program.ensureValid()
         let registers = min(65535, limits.maxRegisterValues > 0 ? limits.maxRegisterValues : 512)
         let depth = min(65535, max(0, limits.maxCallDepth))
         if program.requiredRegisterCount > registers {
@@ -219,8 +221,8 @@ public final class GameEventScriptHost {
         while remaining > 0 {
             if active == nil {
                 if !starting { promoteDelayed() }
-                if limits.maxProcessedEventsPerRun > 0 && processed >= limits.maxProcessedEventsPerRun && (starting ? startupQueue.count : queue.count) > 0 {
-                    context.reportLimit("MaxProcessedEventsPerRun", limits.maxProcessedEventsPerRun)
+                if !starting && limits.maxProcessedMessagesPerRun > 0 && processed >= limits.maxProcessedMessagesPerRun && queue.count > 0 {
+                    context.reportLimit("MaxProcessedMessagesPerRun", limits.maxProcessedMessagesPerRun)
                     limitReached = true
                     break
                 }
@@ -268,6 +270,7 @@ public final class GameEventScriptHost {
                 continue
             }
             activeHandler = next
+            activeHandlerFailed = false
             randomBoundary = context.beginHandler()
             observer?.dispatchStarted(active!.message, id: active!.id, signatureID: next.dispatchSignature)
             if let handler = next.native {
@@ -342,7 +345,7 @@ public final class GameEventScriptHost {
             let matches = (exact[message.signatureId] ?? []).contains { $0.matches(message) } || (byName[message.name] ?? []).contains { $0.matches(message) }
             let fallback = message.name != "undeliverable" && ((exact["undeliverable(message)"] ?? []).contains { $0.matches(message) } || (byName["undeliverable"] ?? []).contains { $0.matches(message) })
             if queueFull && (matches || fallback) {
-                context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
+                context.budget.exhaust("MaxQueuedMessages", limits.maxQueuedMessages)
                 return false
             }
             if publish { _ = self.publish(message) } else { _ = emit(message) }
@@ -364,19 +367,13 @@ public final class GameEventScriptHost {
             return !context.budget.isExhausted
         }
         if queueFull {
-            context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
+            context.budget.exhaust("MaxQueuedMessages", limits.maxQueuedMessages)
             return false
         }
         lastSendID += 1
         let pending = GesPendingMessage(message: message, exact: exact, names: names, id: lastSendID, initializationOutputID: initializationInstance?.registrationID ?? 0)
         let entry = GesDelayedMessage(deadline: now + microseconds, pending: pending, publish: publish, owner: initializationInstance)
-        var lo = 0
-        var hi = delayed.count
-        while lo < hi {
-            let mid = lo + (hi - lo) / 2
-            if delayed[mid].deadline <= entry.deadline { lo = mid + 1 } else { hi = mid }
-        }
-        delayed.insert(entry, at: lo)
+        delayed.add(entry)
         idleSinceMicroseconds = nil
         observer?.messageScheduled(message, id: entry.id, deadline: entry.deadline, publish: publish)
         if publish {
@@ -393,9 +390,9 @@ public final class GameEventScriptHost {
     private func promoteDelayed() {
         guard !delayed.isEmpty else { return }
         let now = elapsedMicroseconds
-        while let entry = delayed.first, entry.deadline <= now {
+        while let next = delayed.first, next.deadline <= now {
             // Failed initializations removed their entries already, so every due entry is delivered.
-            delayed.removeFirst()
+            let entry = delayed.removeFirst()
             let local = entry.pending.hasRecipients
             if local { queue.enqueue(entry.pending) }
             if entry.publish {
@@ -450,6 +447,7 @@ public final class GameEventScriptHost {
         if value.programName == nil { value.programName = activeHandler?.instance?.program.moduleName }
         if value.handlerName == nil { value.handlerName = activeHandler?.dispatchSignature }
         if diagnostic == nil { diagnostic = value }
+        if activeHandler != nil { activeHandlerFailed = true }
         if initializationInstance != nil && initializationDiagnostic == nil { initializationDiagnostic = GesStartDiagnostic(value) }
         observer?.runtimeError(value)
     }
@@ -460,7 +458,8 @@ public final class GameEventScriptHost {
 
     private func completeHandler() {
         let fault = context.endBoundary(randomBoundary)
-        if (initializationInstance != nil ? initializationDiagnostic == nil : diagnostic == nil) && !context.budget.isExhausted {
+        // Only this handler's own failure suppresses the scope diagnostics, not one of an earlier handler or message.
+        if !activeHandlerFailed && !context.budget.isExhausted {
             if fault == .boundaryUnderflow { record(runtimeDiagnostic("runtime.randomStackUnderflow")) }
             if fault == .unbalanced { record(runtimeDiagnostic("runtime.randomScopeImbalance")) }
         }
@@ -470,7 +469,7 @@ public final class GameEventScriptHost {
         if let handler { observer?.dispatchCompleted(active!.message, id: active!.id, signatureID: handler.dispatchSignature) }
     }
 
-    private var queueFull: Bool { limits.maxQueuedMessagesPerRun > 0 && pendingMessageCount >= limits.maxQueuedMessagesPerRun }
+    private var queueFull: Bool { limits.maxQueuedMessages > 0 && pendingMessageCount >= limits.maxQueuedMessages }
 
     // Enqueues under a fresh send ID, or under the ID a publish reserved. Returns that ID, or 0 when nothing was enqueued.
     private func enqueue(_ message: GameEventScriptMessage, initializationOutput: Bool = false, reservedID: Int64 = 0) -> Int64 {
@@ -484,9 +483,9 @@ public final class GameEventScriptHost {
         }
         if queueFull {
             if initializationOutput {
-                context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
+                context.budget.exhaust("MaxQueuedMessages", limits.maxQueuedMessages)
             } else {
-                observer?.runtimeLimitReached("MaxQueuedMessagesPerRun", detail: "Message queue limit reached. Dropped '" + message.name + "'.", limit: limits.maxQueuedMessagesPerRun)
+                observer?.runtimeLimitReached("MaxQueuedMessages", detail: "Message queue limit reached. Dropped '" + message.name + "'.", limit: limits.maxQueuedMessages)
             }
             return 0
         }
@@ -611,6 +610,7 @@ extension GameEventScriptHost {
                 startupQueue.clear(reportingTo: observer)
                 queue.clear(reportingTo: observer)
                 clearDelayed()
+                discardDeferredPublications(startupPublications)
                 startupPublications.removeAll(keepingCapacity: true)
                 return result
             }
@@ -646,26 +646,38 @@ extension GameEventScriptHost {
         )
         initializationFailure = instance.startResult
         _ = instance.detach()
+        let publications = initializationPublications
         initializationPublications.removeAll(keepingCapacity: true)
         initializationInstance = nil
         initializationDiagnostic = nil
         active = nil
         // A failure during start fails the whole group, which then discards and reports every entry in one pass.
-        if starting { return }
+        if starting {
+            startupPublications.append(contentsOf: publications)
+            return
+        }
         queue.removeFailedRecipients(discardingOutputsFrom: instance.registrationID, reportingTo: observer)
         removeFailedDelayed()
+        discardDeferredPublications(publications)
+    }
+
+    // A deferred publication with a local queue entry was reported with that entry; one that only waited for the sink is
+    // reported here, in send-ID order, so every send ID of a failed initialization reaches the observer.
+    private func discardDeferredPublications(_ publications: [GesDeferredPublication]) {
+        guard let observer else { return }
+        for publication in publications where !publication.localAccepted { observer.messageDiscarded(id: publication.id) }
     }
 
     // Removes entries abandoned by a failed initialization. Each is reported in deadline order before the array
     // changes, so a throwing observer cannot leave it inconsistent.
     private func removeFailedDelayed() {
-        if let observer { for entry in delayed where entry.isAbandoned { observer.messageDiscarded(id: entry.id) } }
+        if let observer { for entry in delayed.inOrder where entry.isAbandoned { observer.messageDiscarded(id: entry.id) } }
         delayed.removeAll { $0.isAbandoned }
     }
 
     // Discards every delayed entry, reporting each in deadline order.
     private func clearDelayed() {
-        if let observer { for entry in delayed { observer.messageDiscarded(id: entry.id) } }
+        if let observer { for entry in delayed.inOrder { observer.messageDiscarded(id: entry.id) } }
         delayed.removeAll()
     }
 

@@ -142,6 +142,7 @@ private final class GesMessageJsonCodec {
         case .vector, .point:
             let spatial = value.spatialValue!
             return Self.typed(value.kind == .vector ? "Vector" : "Point", [("x", .text(GesNumber.format(spatial.x))), ("y", .text(GesNumber.format(spatial.y))), ("z", .text(GesNumber.format(spatial.z))), ("unit", .text(value.unit.suffix))])
+        case .bytes: return Self.typed("Bytes", [("base64", .text(Base64.encode(value.bytesValue!)))])
         case .dice:
             guard value.diceRolls!.allSatisfy({ $0 > 0 }) else { throw GesJson.error() }
             return Self.typed("Dice", [("rolls", .list(value.diceRolls!.map { .text(String($0)) }))])
@@ -222,6 +223,10 @@ private final class GesMessageJsonCodec {
             let z = try Self.number(get("z")).asNumber
             let unit = try Self.unit(get("unit"))
             return type == "Vector" ? .vector(x: x, y: y, z: z, unit: unit) : .point(x: x, y: y, z: z, unit: unit)
+        case "Bytes":
+            try fields("base64")
+            guard let bytes = Base64.decode(try Self.string(get("base64"))) else { throw GesJson.error() }
+            return .bytes(bytes)
         case "Dice":
             try fields("rolls")
             return .dice(
@@ -257,5 +262,55 @@ private final class GesMessageJsonCodec {
             return .message(try decodeMessage(get("value"), depth + 1))
         default: throw GesJson.error()
         }
+    }
+}
+
+// The padded standard Base64 alphabet of Bytes in Message JSON, without Foundation.
+private enum Base64 {
+    private static let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".utf8)
+
+    static func encode(_ bytes: [UInt8]) -> String {
+        var output: [UInt8] = []
+        output.reserveCapacity((bytes.count + 2) / 3 * 4)
+        var index = 0
+        while index < bytes.count {
+            let count = min(3, bytes.count - index)
+            var group = UInt32(bytes[index]) << 16
+            if count > 1 { group |= UInt32(bytes[index + 1]) << 8 }
+            if count > 2 { group |= UInt32(bytes[index + 2]) }
+            for position in 0..<4 {
+                output.append(position <= count ? alphabet[Int(group >> UInt32(18 - 6 * position) & 63)] : UInt8(ascii: "="))
+            }
+            index += 3
+        }
+        return String(decoding: output, as: UTF8.self)
+    }
+
+    // Only the canonical padded spelling without whitespace decodes, so every value has one text.
+    static func decode(_ text: String) -> [UInt8]? {
+        let input = Array(text.utf8)
+        guard input.count % 4 == 0 else { return nil }
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(input.count / 4 * 3)
+        var index = 0
+        while index < input.count {
+            var group: UInt32 = 0
+            var padding = 0
+            for position in 0..<4 {
+                let character = input[index + position]
+                if character == UInt8(ascii: "=") {
+                    guard index + 4 == input.count, position >= 2 else { return nil }
+                    padding += 1
+                    continue
+                }
+                guard padding == 0, let value = alphabet.firstIndex(of: character) else { return nil }
+                group |= UInt32(value) << UInt32(18 - 6 * position)
+            }
+            bytes.append(UInt8(group >> 16 & 255))
+            if padding < 2 { bytes.append(UInt8(group >> 8 & 255)) }
+            if padding < 1 { bytes.append(UInt8(group & 255)) }
+            index += 4
+        }
+        return encode(bytes) == text ? bytes : nil
     }
 }

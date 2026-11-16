@@ -68,7 +68,7 @@ functions and tags start with lowercase letters: `amount`, `damage`, `#critical`
 A `module` name such as `tutorial.damage` identifies the program; it does not
 create a namespace.
 
-> **Since: Unreleased** — underscores in message and type names
+> **Since: 0.5.0** — underscores in message and type names
 
 Message and type names can group related names with single underscores:
 `Unit_Fire`, `:Unit_Weapon_Sniper`. Each part starts with an uppercase letter, so
@@ -90,6 +90,27 @@ on Main(args) {
 `damage(base: 30, bonus: 12)` matches `damage(base, bonus)`. `double(21)` is
 positional because `_ value` declares an unlabeled argument. Keep named argument
 order consistent: labels and their order participate in signature matching.
+
+> **Since: 0.5.0** — names in backticks
+
+A name that is also a GES keyword can be written in backticks. `` `length` ``
+is the plain name `length`, so it reads a field or binding of that name where
+plain `length` would be the intrinsic. Words that already work as argument
+labels, such as `length`, `e` or `to`, also name record fields and members
+without backticks; any other keyword, such as `record` or `if`, needs them:
+
+```ges
+record :Box as {
+    length: :Number,
+    `record`: :Number,
+    half: :Number computed by `length` / 2
+}
+
+on Main(args) {
+    let box be :Box(length: 8, `record`: 1)
+    emit ConsoleOut(box.length, ' ', box.half, ' ', box.`record`)
+}
+```
 
 ## Values and local bindings
 
@@ -154,7 +175,7 @@ arguments that look like numbers. Convert deliberately with `as :Number`, or use
 `parse` when you want literal recognition. Failed Number conversions yield
 `nothing`; see [Number semantics](../../specs/Semantics/Numbers.md) for exact rules.
 
-> **Since: Unreleased** — `parse strict`
+> **Since: 0.5.0** — `parse strict`
 
 `parse` returns unrecognized input unchanged as Text, so `parse "standard"` and
 `parse "[1, 2"` are both Text. Use `parse strict` when only complete literals are
@@ -223,7 +244,7 @@ This prints `160, 60`. An empty fold returns its seed; an empty reduce returns
 
 ### Combine sources and bind components
 
-> **Unreleased:** these forms require the current development compiler and runtime.
+> **Since: 0.4.0**
 
 Use a Cartesian selector when every item from one source should be combined
 with every item from another. Bind the components directly and project the
@@ -340,7 +361,7 @@ sends its starting message. `:handler` lists registered handlers; `:source` and
 `:dump` inspect a selected module. Ctrl+N inserts a newline; Enter submits input.
 Temporary input bindings do not persist between submissions.
 
-> **Since: Unreleased** — GES documents and schemas
+> **Since: 0.5.0** — GES documents and schemas
 
 Data can live outside scripts. [GES documents](../../specs/Documents.md)
 (`.gesd`) use the same literal syntax for configuration and content, and

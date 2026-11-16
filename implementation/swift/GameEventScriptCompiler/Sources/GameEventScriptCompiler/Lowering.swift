@@ -135,7 +135,12 @@ extension GesCompiler {
         scope.values[name] = d
         _ = try expression(value, r, scope, destination: d)
         if knownNonList(value, r, scope) { r.nonListBindings.insert(d) }
-        if case .handler(_, let parameters) = value.kind { scope.handlers[name] = parameters.map(\.label) }
+        // As C# ClassifyHandlerSignature: a Handler literal or an alias of a binding with a known signature.
+        switch value.kind {
+        case .handler(_, let parameters): scope.handlers[name] = parameters.map(\.label)
+        case .name(let other): if let labels = scope.handler(other) { scope.handlers[name] = labels }
+        default: break
+        }
         return d
     }
 
@@ -308,9 +313,15 @@ extension GesCompiler {
 
     func callExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         guard case .call(let name, let arguments) = e.kind else { preconditionFailure() }
-        if let handler = scope.get(name) {
+        // Calls resolve in the callable namespace first, as in C#; only other names bind a local Handler.
+        if !callableNames.contains(name), let handler = scope.get(name) {
             let regs = try arguments.map { try expression($0.value, r, scope) }
-            if let labels = scope.handler(name), labels != arguments.map(\.label) { r.emit(.loadNothing, d) } else { r.emit(.bindHandler, d, handler, builder.list(regs)) }
+            // As in C#, an unlabeled argument fits its position; a labeled one must name the parameter there.
+            if let labels = scope.handler(name), labels.count != arguments.count || zip(arguments, labels).contains(where: { $0.label != "_" && $0.label != $1 }) {
+                r.emit(.loadNothing, d)
+            } else {
+                r.emit(.bindHandler, d, handler, builder.list(regs))
+            }
             return
         }
         let key = try callableKey(name, arguments, e.location)
@@ -326,7 +337,8 @@ extension GesCompiler {
         if let definition = definitions.values.first(where: { $0.name == name }) {
             throw compileError(definition.kind == "predicate" ? "validate.wrongPredicateArity" : "validate.wrongFunctionArity", location, symbol: name, kind: definition.kind == "predicate" ? .predicate : .function)
         }
-        throw compileError("validate.missingCallable", location, symbol: name, kind: .globalDefinition)
+        // The validator reports unknown positional calls; a labeled one reaching lowering is unresolved, as in C#.
+        throw compileError("compile.unresolvedSymbol", location, symbol: name, kind: .globalDefinition, phase: .compile)
     }
 
     func predicateExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
@@ -485,7 +497,7 @@ extension GesCompiler {
     static let splitTypes: Set<String> = ["__split", "__splitWhitespace"]
 
     // Built-in types whose constructor builds data from labeled or several arguments instead of casting one value.
-    static let dataTypes: Set<String> = ["number", "range", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"]
+    static let dataTypes: Set<String> = ["number", "range", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "bytes", "handler"]
 
     func constructor(_ type: String, _ arguments: [GesArgument], _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         if Self.splitTypes.contains(type) { return try splitText(arguments, d, r, scope) }

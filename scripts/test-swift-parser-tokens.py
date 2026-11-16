@@ -17,12 +17,18 @@ CSHARP = """
 
     private static bool IsExtensionFunctionNameKind(GesTokenKind kind)
         => kind is Identifier or IntrinsicAbs;
+
+    private static bool IsExtensionOperandKind(GesTokenKind kind)
+        => kind is Identifier or Float or Text or MathConstantPi;
 """
 SWIFT = """
     static let intrinsicNames: Set<GesTokenKind> = [
         .intrinsicAbs,
     ]
     static let labelKeywords: Set<GesTokenKind> = intrinsicNames.union([.to])
+    static let extensionOperandKinds: Set<GesTokenKind> = [
+        .text, .mathConstantPi,
+    ]
 """
 
 
@@ -43,6 +49,12 @@ class ParserTokenTests(unittest.TestCase):
         found = TOKENS.differences(CSHARP, SWIFT.replace(".intrinsicAbs,", ".intrinsicAbs, .intrinsicLn,"))
         self.assertEqual(2, len(found))
         self.assertIn("intrinsicLn", found[0])
+
+    def test_missing_extension_operand_fails(self):
+        found = TOKENS.differences(CSHARP, SWIFT.replace(".text, .mathConstantPi,", ".text,"))
+        self.assertEqual(1, len(found))
+        self.assertIn("extension call operands", found[0])
+        self.assertIn("mathConstantPi", found[0])
 
     def test_missing_declarations_fail(self):
         with self.assertRaises(RuntimeError):

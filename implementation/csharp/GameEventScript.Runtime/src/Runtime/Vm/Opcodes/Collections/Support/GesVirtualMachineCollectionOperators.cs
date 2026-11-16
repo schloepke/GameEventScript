@@ -98,6 +98,35 @@ internal partial class GesVirtualMachine
 
                 SetBoolean(dst, true);
                 return;
+            case Bytes when source.ObjectValue is byte[] bytes:
+                if (bytes.Length == 0)
+                {
+                    SetBoolean(dst, requireAll);
+                    return;
+                }
+
+                if (!requireAll)
+                {
+                    for (var i = 0; i < bytes.Length; i++)
+                    {
+                        if (bytes[i] == 0) continue;
+                        SetBoolean(dst, true);
+                        return;
+                    }
+
+                    SetBoolean(dst, false);
+                    return;
+                }
+
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    if (bytes[i] != 0) continue;
+                    SetBoolean(dst, false);
+                    return;
+                }
+
+                SetBoolean(dst, true);
+                return;
             case Map when source.ObjectValue is GesValueMap map:
             {
                 var list = map.ValueList;
@@ -218,28 +247,12 @@ internal partial class GesVirtualMachine
                 return;
             case GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
             {
+                // An integer Range decides without visiting items: it has a nonzero item unless it is just 0, and every item is
+                // nonzero unless it contains 0.
                 var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
-                var value = range.From;
-                for (var i = 0L; i < length; i++)
-                {
-                    if (value != 0)
-                    {
-                        if (!requireAll)
-                        {
-                            SetBoolean(dst, true);
-                            return;
-                        }
-                    }
-                    else if (requireAll)
-                    {
-                        SetBoolean(dst, false);
-                        return;
-                    }
-
-                    value += range.Step;
-                }
-
-                SetBoolean(dst, requireAll);
+                if (length == 0) SetBoolean(dst, requireAll);
+                else if (requireAll) SetBoolean(dst, !GesRangeMath.Contains(range.From, range.To, range.Step, 0));
+                else SetBoolean(dst, length > 1 || range.From != 0);
                 return;
             }
             case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
@@ -247,6 +260,12 @@ internal partial class GesVirtualMachine
                 var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
                 {
+                    if (!ChargeRangeItem())
+                    {
+                        SetNothing(dst);
+                        return;
+                    }
+
                     var value = GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     if (value != 0d && double.IsFinite(value))
                     {
@@ -331,6 +350,27 @@ internal partial class GesVirtualMachine
 
                 SetBoolean(dst, requireAll);
                 return;
+            case Bytes when a.ObjectValue is byte[] bytes:
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    candidate.SetInteger(bytes[i]);
+                    if (ContainsHelper(candidate, b) == true)
+                    {
+                        if (!requireAll)
+                        {
+                            SetBoolean(dst, true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        SetBoolean(dst, false);
+                        return;
+                    }
+                }
+
+                SetBoolean(dst, requireAll);
+                return;
             case Text or Tag:
             {
                 var text = a.TextValue;
@@ -363,6 +403,12 @@ internal partial class GesVirtualMachine
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
+                    if (!ChargeRangeItem())
+                    {
+                        SetNothing(dst);
+                        return;
+                    }
+
                     candidate.SetInteger(value);
                     value += range.Step;
                     if (ContainsHelper(candidate, b) == true)
@@ -388,6 +434,12 @@ internal partial class GesVirtualMachine
                 var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
                 {
+                    if (!ChargeRangeItem())
+                    {
+                        SetNothing(dst);
+                        return;
+                    }
+
                     var value = GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     candidate.SetFloat(value);
                     if (ContainsHelper(candidate, b) == true)
@@ -432,6 +484,14 @@ internal partial class GesVirtualMachine
                 }
 
                 break;
+            case Bytes when a.ObjectValue is byte[] bytes:
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    candidate.SetInteger(bytes[i]);
+                    candidates.Add(in candidate);
+                }
+
+                break;
             case Text or Tag:
             {
                 var text = a.TextValue;
@@ -451,6 +511,13 @@ internal partial class GesVirtualMachine
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
+                    if (!ChargeRangeItem())
+                    {
+                        if (iterator is IDisposable exhausted) exhausted.Dispose();
+                        SetNothing(dst);
+                        return;
+                    }
+
                     candidate.SetInteger(value);
                     value += range.Step;
                     candidates.Add(in candidate);
@@ -463,6 +530,13 @@ internal partial class GesVirtualMachine
                 var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
                 {
+                    if (!ChargeRangeItem())
+                    {
+                        if (iterator is IDisposable exhausted) exhausted.Dispose();
+                        SetNothing(dst);
+                        return;
+                    }
+
                     var value = GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     candidate.SetFloat(value);
                     candidates.Add(in candidate);
@@ -559,6 +633,15 @@ internal partial class GesVirtualMachine
                 for (var i = 0; i < dice.Length; i++)
                 {
                     if (dice[i] != a.IntegerValue) continue;
+                    return true;
+                }
+
+                return false;
+            case Bytes when b.ObjectValue is byte[] bytes:
+                if (a.Kind is not Integer || a.Unit is not GesQuantityUnit.UnitNone) return false;
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    if (bytes[i] != a.IntegerValue) continue;
                     return true;
                 }
 

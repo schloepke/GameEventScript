@@ -60,6 +60,7 @@ internal enum GesSyntaxNodeKind : byte
     HandlerLiteralExpression,
     ListLiteralExpression,
     DiceLiteralExpression,
+    BytesLiteralExpression,
     CollectionFactoryExpression,
     GeneratedCollectionExpression,
     MapLiteralExpression,

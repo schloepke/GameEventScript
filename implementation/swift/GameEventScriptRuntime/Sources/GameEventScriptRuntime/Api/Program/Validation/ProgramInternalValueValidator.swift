@@ -3,7 +3,7 @@
 
 // Follow one producer at a time, matching C# without an instruction/register matrix.
 enum GesProgramInternalValueValidator {
-    static func validate(_ p: GameEventScriptProgram, _ entries: [Int], _ frames: [Int]) throws {
+    static func validate(_ p: GameEventScriptProgram, _ entries: [Int], _ frames: [Int], _ lists: GesProgramListMembers) throws {
         var visited: [Int] = []
         var pending: [Int] = []
         var routine = -1
@@ -37,11 +37,11 @@ enum GesProgramInternalValueValidator {
                     if operand == .targetRegister {
                         overwritten = overwritten || i.word0 == register
                     } else if operand == .targetRegisterList {
-                        overwritten = overwritten || p.uint16IndexLists[Int(i.word0)].contains(register)
+                        overwritten = overwritten || lists.contains(Int(i.word0), register)
                     } else if operand.isRegister && i.register(operand, position) == register {
                         if !allows(i, operand, kind) { throw GesProgramValidator.failure(.invalidOperand, 16, address) }
                     } else if [.argumentRegisterList, .itemRegisterList, .valueRegisterList, .captureRegisterList, .sourceRegisterList, .tagRegisterList].contains(operand) {
-                        if p.uint16IndexLists[Int(i.list(operand))].contains(register) { throw GesProgramValidator.failure(.invalidOperand, 16, address) }
+                        if lists.contains(Int(i.list(operand)), register) { throw GesProgramValidator.failure(.invalidOperand, 16, address) }
                     }
                 }
                 if overwritten || i.opcode == .iteratorClose && i.word1 == register || [.returnVoid, .returnValue].contains(i.opcode) { continue }

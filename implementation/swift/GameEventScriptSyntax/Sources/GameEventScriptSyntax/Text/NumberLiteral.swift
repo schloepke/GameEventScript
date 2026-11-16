@@ -49,6 +49,11 @@
     @_spi(Syntax) public static func read(_ input: String, percentage: Bool = false, allowGrouping: Bool = true, percentageMagnitude: Bool = false) -> GesNumberLiteral {
         var text = trim(input)
         guard !text.isEmpty else { return .invalid }
+        if isHexadecimal(text) {
+            if percentageMagnitude { return .invalid }
+            let hex = readHexadecimal(text)
+            return percentage && hex.isValid ? Self.percentage(Double(hex.integerValue)) : hex
+        }
         var unit: GesQuantityUnit = .none
         // A unit suffix scales the decimal value by factor × 10^exponent; a percentage by 10^-2.
         var shift = percentageMagnitude || text.hasSuffix("%") ? -2 : 0
@@ -131,6 +136,42 @@
         if !underscores && !grouping && shift == 0 && factor == 1 { decimal = text } else { decimal = (negative ? "-" : "") + String(decoding: digits, as: UTF8.self) + "e" + String(exponent - Int64(fractionalDigits) + Int64(shift)) }
         guard let number = Double(decimal) else { return .invalid }
         return percentage ? number.isFinite ? Self.percentage(number) : .nothingValue : float(number, unit: unit)
+    }
+
+    // A sign followed by `0x` starts the hexadecimal form, which is checked before unit suffixes because `B` and other
+    // suffix letters are hexadecimal digits.
+    private static func isHexadecimal(_ text: String) -> Bool {
+        var bytes = text.utf8[...]
+        if bytes.first == 43 || bytes.first == 45 { bytes = bytes.dropFirst() }
+        return bytes.starts(with: "0x".utf8)
+    }
+
+    // An exact Int64 from hexadecimal digits with `_` between digits; no unit, percentage or fraction, and a magnitude
+    // above Int64.max is invalid also with a minus sign.
+    private static func readHexadecimal(_ text: String) -> GesNumberLiteral {
+        let bytes = Array(text.utf8)
+        let negative = bytes[0] == 45
+        var position = bytes[0] == 43 || bytes[0] == 45 ? 3 : 2
+        if position == bytes.count { return .invalid }
+        var magnitude: UInt64 = 0
+        while position < bytes.count {
+            guard let digit = hexDigit(UnicodeScalar(bytes[position])), magnitude <= UInt64(Int64.max) >> 4 else { return .invalid }
+            magnitude = magnitude << 4 | UInt64(digit)
+            if magnitude > UInt64(Int64.max) { return .invalid }
+            position += 1
+            if position + 1 < bytes.count && bytes[position] == 95 && hexDigit(UnicodeScalar(bytes[position + 1])) != nil { position += 1 }
+        }
+        return integer(negative ? -Int64(magnitude) : Int64(magnitude), unit: .none)
+    }
+
+    /// The value of an ASCII hexadecimal digit, or nil for any other scalar.
+    @_spi(Syntax) public static func hexDigit(_ scalar: UnicodeScalar) -> Int? {
+        switch scalar.value {
+        case 48...57: Int(scalar.value - 48)
+        case 97...102: Int(scalar.value - 87)
+        case 65...70: Int(scalar.value - 55)
+        default: nil
+        }
     }
 
     // The longest unit suffix spelling ending the text; it belongs to the number only when it directly follows a digit

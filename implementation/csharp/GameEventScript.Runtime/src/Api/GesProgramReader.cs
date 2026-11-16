@@ -153,18 +153,22 @@ internal static class GesProgramReader
         var reader = Reader(bytes, section);
         var count = reader.ReadCount(limits.MaxStringEntries);
         var slices = new GesStringConstantSegment.SliceEntry[count];
-        var data = new List<byte>();
+        // The pool bytes are at most the section payload; copy each string as a span into one buffer.
+        var data = new byte[reader.Remaining];
+        var used = 0;
         for (var index = 0; index < count; index++)
         {
             var length = reader.ReadLength();
             var value = reader.ReadBytes(length, index);
             try { _ = StrictUtf8.GetString(value); }
             catch (DecoderFallbackException exception) { throw Format(GesProgramFormatErrorCode.InvalidUtf8, "StringConstantSegment contains invalid UTF-8.", reader.AbsoluteOffset - length, section.Type, index, exception); }
-            slices[index] = new GesStringConstantSegment.SliceEntry { Start = data.Count, Length = length };
-            for (var byteIndex = 0; byteIndex < value.Length; byteIndex++) data.Add(value[byteIndex]);
+            slices[index] = new GesStringConstantSegment.SliceEntry { Start = used, Length = length };
+            value.CopyTo(data.AsSpan(used));
+            used += length;
         }
         reader.RequireEnd();
-        return new GesStringConstantSegment(slices, data.ToArray());
+        Array.Resize(ref data, used);
+        return GesStringConstantSegment.FromOwned(slices, data);
     }
 
     private static GesUInt16IndexListSegment ReadIndexLists(ReadOnlySpan<byte> bytes, SectionDescriptor section, GesProgramReadLimits limits)
@@ -172,16 +176,18 @@ internal static class GesProgramReader
         var reader = Reader(bytes, section);
         var count = reader.ReadCount(limits.MaxIndexLists);
         var slices = new GesUInt16IndexListSegment.SliceEntry[count];
-        var data = new List<ushort>();
+        var data = new ushort[reader.Remaining / 2];
+        var used = 0;
         for (var index = 0; index < count; index++)
         {
             var elementCount = reader.ReadLength();
             if (elementCount > reader.Remaining / 2) Throw(GesProgramFormatErrorCode.TruncatedSectionPayload, "Index list exceeds its section payload.", reader.AbsoluteOffset, section.Type, index);
-            slices[index] = new GesUInt16IndexListSegment.SliceEntry { Start = data.Count, Length = elementCount };
-            for (var element = 0; element < elementCount; element++) data.Add(reader.ReadUInt16());
+            slices[index] = new GesUInt16IndexListSegment.SliceEntry { Start = used, Length = elementCount };
+            for (var element = 0; element < elementCount; element++) data[used++] = reader.ReadUInt16();
         }
         reader.RequireEnd();
-        return new GesUInt16IndexListSegment(slices, data.ToArray());
+        Array.Resize(ref data, used);
+        return GesUInt16IndexListSegment.FromOwned(slices, data);
     }
 
     private static GesBindingSegment ReadBindings(ReadOnlySpan<byte> bytes, SectionDescriptor section, GesStringConstantSegment strings, GesUInt16IndexListSegment lists, GesProgramReadLimits limits)

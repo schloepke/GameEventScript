@@ -38,6 +38,8 @@ internal static partial class GesSwiftEmitter
         var max = encoding.MaxCount.ToString(CultureInfo.InvariantCulture);
         var target = Target(value.Base);
         var pool = $"self.__{GesSchemaPlanner.Camel(value.Base)}Pool";
+        var next = NextLevel(element);
+        var depth = value.Depth.ToString(CultureInfo.InvariantCulture);
 
         code.Blank();
         code.Open($"private static func __ascending{node}(_ list: [{name}], _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {{");
@@ -51,14 +53,23 @@ internal static partial class GesSwiftEmitter
         code.Close();
 
         code.Blank();
-        code.Open($"private func __writeKeyed{node}(_ baseline: {owner}, _ writer: inout GesBitWriter, _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {{");
+        code.Open($"private func __writeKeyed{node}(_ baseline: {owner}, _ writer: inout GesBitWriter, _ paths: [String], _ at: Int{(value.Depth > 0 ? ", _ level: Int" : "")}) throws(GesWireError) -> Bool {{");
         code.Line($"let list = {target}");
         code.Line($"let held = {Other("baseline", value.Base)}");
+        if (value.Depth > 0)
+        {
+            // At its depth the List is no longer keyed: it holds nothing and never changes.
+            code.Open($"if level >= {depth} {{");
+            code.Line($"if list.count + held.count > 0 {{ throw GesWireError(code: GesWireError.tooDeep, path: {Path(value)}, detail: \"deeper than depth {depth}\") }}");
+            code.Line("return false");
+            code.Close();
+        }
+
         code.Line($"if list.count > {max} || held.count > {max} {{ {Throw("tooLong", value)} }}");
         code.Line($"let listAscending = try Self.__ascending{node}(list, paths, at)");
         code.Line($"let heldAscending = try Self.__ascending{node}(held, paths, at)");
         code.Open("if !listAscending || !heldAscending {");
-        code.Line($"if try __same{node}(baseline, paths, at) {{ return false }}");
+        code.Line($"if try __same{node}(baseline, paths, at{Level(value)}) {{ return false }}");
         code.Line("try writer.write(1, width: 1)");
         Write(code, value, "list");
         code.Line("return true");
@@ -83,7 +94,7 @@ internal static partial class GesSwiftEmitter
         code.Open("for position in 0..<list.count {");
         Match(code, "list", "held", at);
         code.Line("if kept { continue }");
-        code.Line($"try list[position].__writeFields(&writer, paths, {at})");
+        code.Line($"try list[position].__writeFields(&writer, paths, {at}{next})");
         code.Line("added += 1");
         code.Close();
         code.Line($"Self.__setCount(&writer, countBit, added, {width})");
@@ -96,7 +107,7 @@ internal static partial class GesSwiftEmitter
         code.Line("if !kept { continue }");
         code.Line("let start = writer.bitPosition");
         code.Line($"try writer.write(UInt64(position), width: {positionWidth})");
-        code.Open($"if try list[other].__writeDelta(held[position], &writer, paths, {at}, true) {{");
+        code.Open($"if try list[other].__writeDelta(held[position], &writer, paths, {at}, true{next}) {{");
         code.Line("changed += 1");
         code.Close("} else {");
         code.Line("    writer.rewind(to: start)");
@@ -109,14 +120,24 @@ internal static partial class GesSwiftEmitter
         code.Close();
 
         code.Blank();
-        code.Open($"private func __readKeyed{node}(_ baseline: {owner}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) {{");
+        code.Open($"private func __readKeyed{node}(_ baseline: {owner}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int{(value.Depth > 0 ? ", _ level: Int" : "")}) throws(GesWireError) {{");
         code.Line($"let held = {Other("baseline", value.Base)}");
+        if (value.Depth > 0)
+        {
+            // At its depth the List takes no bits, so a change there is none.
+            code.Open($"if level >= {depth} {{");
+            code.Line($"{target}.removeAll(keepingCapacity: true)");
+            code.Line($"if try __same{node}(baseline, paths, at, level) {{ {Throw("invalidDelta", value)} }}");
+            code.Line("return");
+            code.Close();
+        }
+
         code.Open($"if try reader.read(1, path: {Path(value)}) == 1 {{");
         Read(code, value, target);
         code.Line($"let listAscending = try Self.__ascending{node}({target}, paths, at)");
         code.Line($"let heldAscending = try Self.__ascending{node}(held, paths, at)");
         code.Line($"if listAscending && heldAscending {{ {Throw("invalidDelta", value)} }}");
-        code.Line($"if try __same{node}(baseline, paths, at) {{ {Throw("invalidDelta", value)} }}");
+        code.Line($"if try __same{node}(baseline, paths, at{Level(value)}) {{ {Throw("invalidDelta", value)} }}");
         code.Line("return");
         code.Close();
         code.Line($"if !(try Self.__ascending{node}(held, paths, at)) {{ {Throw("invalidDelta", value)} }}");
@@ -151,12 +172,12 @@ internal static partial class GesSwiftEmitter
         if (element.IsClass)
         {
             code.Line($"if {pool}.isEmpty {{ {pool}.append({name}()) }}");
-            code.Line($"try {pool}[0].__readFields(&reader, paths, {at})");
+            code.Line($"try {pool}[0].__readFields(&reader, paths, {at}{next})");
         }
         else
         {
             code.Line($"var scratch = {name}()");
-            code.Line($"try scratch.__readFields(&reader, paths, {at})");
+            code.Line($"try scratch.__readFields(&reader, paths, {at}{next})");
         }
 
         code.Close();
@@ -186,7 +207,7 @@ internal static partial class GesSwiftEmitter
         code.Indent();
         Slot(code, element, name, target, pool);
         code.Line("reader.seek(to: changedCursor)");
-        code.Line($"if !(try item.__readDelta(element, &reader, paths, {at}, true)) {{ {Throw("invalidDelta", element)} }}");
+        code.Line($"if !(try item.__readDelta(element, &reader, paths, {at}, true{next})) {{ {Throw("invalidDelta", element)} }}");
         code.Line("changedCursor = reader.bitPosition");
         code.Line($"{target}.append(item)");
         code.Line("let before = nextChanged");
@@ -248,7 +269,7 @@ internal static partial class GesSwiftEmitter
     {
         Slot(code, value.Element!, name, target, pool);
         code.Line("reader.seek(to: addedCursor)");
-        code.Line($"try item.__readFields(&reader, paths, {at})");
+        code.Line($"try item.__readFields(&reader, paths, {at}{NextLevel(value.Element!)})");
         code.Line("addedCursor = reader.bitPosition");
         code.Line($"{target}.append(item)");
         code.Line("addedLeft -= 1");

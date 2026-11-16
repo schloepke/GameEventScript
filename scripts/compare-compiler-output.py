@@ -18,6 +18,7 @@ with --update-baseline. Reports and workspaces stay below artifacts/compiler-com
 """
 
 import argparse
+import importlib.util
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
@@ -31,7 +32,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / "artifacts" / "compiler-comparison"
-SWIFT_CLI = ROOT / "artifacts/swift/tool/release/ges"
+SWIFT_CLI = ROOT / "artifacts/swift/tool/debug/ges"
 CSHARP_CLI = ROOT / "artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll"
 BASELINE = ROOT / "scripts" / "compiler-output-baseline.txt"
 SECTION_NAMES = {0: "header", 0x01: "metadata", 0x02: "strings", 0x03: "indexLists", 0x04: "bindings", 0x10: "code",
@@ -237,6 +238,8 @@ def main(argv=None):
     parser.add_argument("--csharp", type=Path, default=CSHARP_CLI, help="C# GameEventScript.Tool.dll")
     parser.add_argument("--kind", default="supported", help="Corpus kind filter passed to the runner")
     parser.add_argument("--update-baseline", action="store_true", help="Record the current differences as the baseline")
+    parser.add_argument("--mutants", type=int, default=0,
+                        help="Also compile this many seeded mutants of single-source corpus programs; every one must compile or fail alike")
     args = parser.parse_args(argv)
     for path in (args.swift, args.csharp):
         if not path.exists():
@@ -274,7 +277,32 @@ def main(argv=None):
     else:
         print(f"Compiler output verified ({len(baseline)} baselined differences remain).")
     examples = report_stale_examples(args)
-    return 1 if new or resolved else examples
+    mutants = compare_mutants(unique, args) if args.mutants else 0
+    return 1 if new or resolved or mutants else examples
+
+
+def compare_mutants(unique, args):
+    """Seeded mutants of single-source programs, made by the syntax roundtrip's mutation, must compile to identical bytes
+    or be rejected with equal diagnostics in both ports. They are not baselined: a difference fails at once."""
+    import random
+    spec = importlib.util.spec_from_file_location("syntax_roundtrip", ROOT / "scripts" / "test-syntax-roundtrip.py")
+    roundtrip = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(roundtrip)
+    rng = random.Random(roundtrip.MUTATION_SEED)
+    originals = [program for _, program in sorted(unique.items()) if len(program["sources"]) == 1]
+    mutants = {}
+    for index in range(args.mutants):
+        program = rng.choice(originals)
+        name, text = program["sources"][0]
+        mutant = {"case": f"mutant/{index:05d}", "program": "main", "sources": [(name, roundtrip.mutate(text, rng))], "debug": program["debug"]}
+        mutants[hashlib.sha256(json.dumps([mutant["sources"], mutant["debug"]]).encode("utf-8")).hexdigest()] = mutant
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
+        results = list(pool.map(lambda item: compare(item[0], item[1], ["dotnet", str(args.csharp)], [str(args.swift)]), mutants.items()))
+    different = [result for result in results if result["verdict"] not in ("identical", "both-rejected")]
+    for result in different[:40]:
+        print(f"mutant difference: {result['case']} {result['verdict']} {result['workspace']}")
+    print(f"{len(results)} mutants: {len(results) - len(different)} agree, {len(different)} differ.")
+    return 1 if different else 0
 
 
 if __name__ == "__main__":

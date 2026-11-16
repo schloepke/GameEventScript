@@ -19,8 +19,7 @@ extension GesVirtualMachine {
                 guard let from = range.term(at: first), let to = range.term(at: last) else { return setNothing(destination) }
                 return setIntegerRange(destination, from: from, to: to, step: range.step)
             }
-            guard let range = registers[x].floatRangeValue, let from = range.term(at: first), let to = range.term(at: last) else { return setNothing(destination) }
-            return setFloatRange(destination, from: from, to: to, step: range.step)
+            return setFloatRangeSlice(destination, registers[x].floatRangeValue!, start: 0, count: Int64(count), reversed: false)
         }
         if let iterator = registers[x].iteratorValue {
             defer { iterator.close() }
@@ -28,9 +27,16 @@ extension GesVirtualMachine {
             while values.count < count, let value = iterator.next() { values.append(value) }
             return setList(destination, values)
         }
+        if let bytes = registers[x].bytesValue { return setByteSlice(destination, x, bytes, 0..<min(count, bytes.count)) }
         guard let values = GesCollectionOperators.materialize(registers[x], ranges: false) else { return setNothing(destination) }
         let number = min(count, values.count)
         let result = Array(values.prefix(number))
         return registers[x].kind == .dice ? setDice(destination, result.map { Int32($0.asInteger) }) : setList(destination, result)
+    }
+
+    // Bytes are immutable, so a slice covering the whole source reuses it.
+    func setByteSlice(_ destination: Int, _ x: Int, _ bytes: [UInt8], _ range: Range<Int>) {
+        if range.count == bytes.count { return setValue(destination, registers[x].registerValue) }
+        setBytes(destination, Array(bytes[range]))
     }
 }

@@ -7,16 +7,19 @@ import os
 import sys
 
 
+# The jobs whose results the aggregate check requires, by the environment variable that carries each result.
+JOBS = ("NATIVE_RESULT", "DISTRIBUTION_RESULT", "MINIMUM_RESULT", "LINUX_RESULT")
+
+
 def accepted(scope_result, run_swift, results):
     if scope_result != "success" or run_swift not in ("true", "false"):
         return False
     expected = "success" if run_swift == "true" else "skipped"
-    return len(results) == 3 and all(result == expected for result in results)
+    return len(results) == len(JOBS) and all(result == expected for result in results)
 
 
 if __name__ == "__main__":
-    results = [os.environ.get(name) for name in
-               ("NATIVE_RESULT", "DISTRIBUTION_RESULT", "SYNTAX_RESULT")]
+    results = [os.environ.get(name) for name in JOBS]
     success = accepted(os.environ.get("SCOPE_RESULT"), os.environ.get("RUN_SWIFT"), results)
     print("Swift verification passed." if success else f"Swift verification failed: {results}")
     sys.exit(0 if success else 1)

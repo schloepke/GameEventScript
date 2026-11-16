@@ -50,8 +50,8 @@ internal partial class GesVirtualMachine
                     break;
                 }
 
-                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) SetFloatRange(destinationRegister, last, range.From, -range.Step);
-                else SetNothing(destinationRegister);
+                var reversed = FloatRangeSlice(this, range, length, 0, length, reversed: true);
+                SetValue(destinationRegister, in reversed);
                 break;
             }
             case Iterator when source.ObjectValue is IGesIterator iterator:

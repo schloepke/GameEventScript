@@ -3,7 +3,7 @@
 
 # GES documents
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 This document owns GES documents: human-editable data files whose values are
 written exactly like GES data literals. The standard file extension is `.gesd`.
@@ -70,7 +70,7 @@ key        = LowerName | quoted Text
   of the text is a key-only entry with the value `true`, as in Map literals.
 - Every value is one complete data literal as recognized by `parse`:
   `nothing`, Booleans, Numbers, Percentages, Quantities including prefixed unit
-  spellings, quoted Text, Tags, Lists, Maps, Dice, Vector, Point and the
+  spellings, quoted Text, Tags, Lists, Maps, Dice, Bytes, Vector, Point and the
   [explicit data forms](Semantics/Text.md#explicit-data-forms). Explicit forms
   construct their values with the same rules as `parse`, except that a failed
   construction is an error rather than `nothing` (see [Strictness](#strictness)).
@@ -149,7 +149,7 @@ decide how to interpret the document.
 
 ### Checking against a schema
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A schema is a declaration in a `.gess` file, written in the one schema language of
 [GES schemas](Schemas.md), which also describes the compact binary encoding.
@@ -157,7 +157,8 @@ A schema is a declaration in a `.gess` file, written in the one schema language 
 to a file and its root schema. Plain reading stays as specified here; the separate
 operation [`CheckDocument`](Schemas.md#document-checking) of a schema set reports missing,
 unknown and mistyped fields and values out of range with their document positions, without
-implicit unit casts. A schema has no computed fields.
+implicit unit casts. A document never sets a schema's [computed fields](Schemas.md#computed-fields); one that does fails
+with `document.unknownField`.
 
 ## Errors
 
@@ -195,7 +196,9 @@ when it starts with an optional sign and a decimal digit, or a sign or `.`
 followed by a decimal digit, and its longest numeric prefix
 `[+-]? (Digits ["." [Digits]] | "." Digits) [("e" | "E") [+-]? Digits]`, where
 `Digits` is a decimal digit followed by digits or `_`, is followed by an ASCII
-letter, `°` or `/`. An explicit form whose arguments are themselves valid but do
+letter, `°` or `/`. A token that starts with an optional sign and `0x` is never
+a number with a unit; an invalid one such as `0x10m` or `0x` is
+`document.invalidLiteral`. An explicit form whose arguments are themselves valid but do
 not form a valid constructor call, such as a Vector with mixed units, reports
 `document.invalidLiteral` at the `:` of the form; an invalid nested argument
 reports its own error first.

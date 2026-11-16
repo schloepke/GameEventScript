@@ -21,7 +21,7 @@ consult the [changelog](../../CHANGELOG.md) when targeting a published release.
 
 ## Data files and schemas
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 - [GES documents](../../specs/Documents.md) (`.gesd`) hold configuration and content
   written like GES literals. The [C#](CSharp.md#read-data-documents) and
@@ -59,7 +59,8 @@ describes the native `ges` command, installation and terminal console.
 
 The script requires Python 3 and works from any directory. It removes `artifacts`,
 root-level `bin`/`obj`/`TestResults`/`.build`, C# `bin`/`obj`/`TestResults` directories,
-and SwiftPM `.build` directories. This includes generated packages, reports,
+SwiftPM `.build` directories, and the `bin`/`obj`/`TestResults`/`.build` directories below `examples`. The examples
+build into `artifacts`; a `.build` there holds the index an editor creates when it opens an example package. This includes generated packages, reports,
 benchmark runs, local tool installations and Xcode outputs stored under `artifacts`.
 Build and test scripts recreate their outputs on the next run.
 

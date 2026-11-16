@@ -437,3 +437,362 @@ steps:
           - name: right
             value: { type: ":Number.int64", value: "6144" }
 ```
+
+---
+
+## Test: record fields use keyword-like words plainly and any keyword in backticks
+
+This case verifies that the keyword-like words of an argument label name record fields in a declaration and after `.` without backticks, that any keyword in backticks names a field, and that a field name in backticks reads the field inside a `computed by` expression, where the plain word keeps its keyword meaning.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: backtick-record-fields
+```
+
+### Source code under test
+
+```ges
+record :Shape as {
+  length: :Quantity(m),
+  e: :Number,
+  `record`: :Number,
+  half: :Quantity(m) computed by `length` / 2,
+  sum: :Number computed by `e` + `record`,
+  euler: :Boolean computed by e > 2 and `e` = 1
+}
+
+on Start {
+  let s be :Shape(length: 4m, e: 1, `record`: 7)
+  emit Done(length: s.length, half: s.half, e: s.e, quoted: s.`e`, `record`: s.`record`, sum: s.sum, euler: s.euler)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  execute:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: length
+            value: { type: ":Quantity.int64", value: "4", unit: ":meter" }
+          - name: half
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: e
+            value: { type: ":Number.int64", value: "1" }
+          - name: quoted
+            value: { type: ":Number.int64", value: "1" }
+          - name: record
+            value: { type: ":Number.int64", value: "7" }
+          - name: sum
+            value: { type: ":Number.int64", value: "8" }
+          - name: euler
+            value: { type: ":Boolean", value: true }
+```
+
+---
+
+## Test: names in backticks bind locals, parameters and labels
+
+This case verifies that a name in backticks is the plain name for local bindings, parameters, argument labels, map keys and reads, including keywords and a derivation suffix, and that a contextual word in backticks is a name rather than the word.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: backtick-locals-and-labels
+```
+
+### Source code under test
+
+```ges
+function scale(`to`, by) be `to` * by
+
+on Start {
+  let `if` be 3
+  let `from` be 2
+  let `strict` be '5'
+  let x_1 be 4
+  let keys be [`to`: 1, `empty`: 2]
+  emit Done(`if`: `if`, plain: scale(to: `if`, by: `x_1`), quoted: scale(`to`: `from`, `by`: x_1), parsed: parse `strict`, key: keys.`empty`)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  execute:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: if
+            value: { type: ":Number.int64", value: "3" }
+          - name: plain
+            value: { type: ":Number.int64", value: "12" }
+          - name: quoted
+            value: { type: ":Number.int64", value: "8" }
+          - name: parsed
+            value: { type: ":Number.int64", value: "5" }
+          - name: key
+            value: { type: ":Number.int64", value: "2" }
+```
+
+---
+
+## Test: empty backticks are not a name
+
+This case verifies that a pair of backticks without a name between them is a syntax error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: backtick-empty
+kind: compileError
+```
+
+### Source code under test
+
+```ges
+on Start { let `` be 1; emit Done }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: an unclosed backtick is not a name
+
+This case verifies that a backtick without a closing backtick on its line is a syntax error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: backtick-unclosed
+kind: compileError
+```
+
+### Source code under test
+
+```ges
+on Start { let `value be 1; emit Done }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: a line break ends a backtick name
+
+This case verifies that the closing backtick must stand on the line of the opening one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: backtick-line-break
+kind: compileError
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let `value
+  ` be 1
+  emit Done
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: an uppercase name in backticks is not a name
+
+This case verifies that a backtick name holds only the lowercase name form, not a message or type name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: backtick-uppercase
+kind: compileError
+```
+
+### Source code under test
+
+```ges
+on Start { let `Fire` be 1; emit Done }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: a space in backticks is not a name
+
+This case verifies that a backtick name holds exactly one name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: backtick-space
+kind: compileError
+```
+
+### Source code under test
+
+```ges
+on Start { let `a b` be 1; emit Done }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: an invalid suffix in backticks is not a name
+
+This case verifies that a backtick name follows the binding-name suffix rule, which forbids leading zeroes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: backtick-invalid-suffix
+kind: compileError
+```
+
+### Source code under test
+
+```ges
+on Start { let `value_01` be 1; emit Done }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: other keywords need backticks as field names
+
+This case verifies that only the keyword-like words of an argument label name a record field without backticks.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: plain-keyword-field
+kind: compileError
+```
+
+### Source code under test
+
+```ges
+record :Flags as { if: :Boolean }
+on Start { emit Done }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: other keywords need backticks after a member dot
+
+This case verifies that only the keyword-like words of an argument label read a record field after `.` without backticks.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: plain-keyword-member
+kind: compileError
+```
+
+### Source code under test
+
+```ges
+record :Flags as { `if`: :Boolean }
+on Start { let flags be :Flags(`if`: true); emit Done(value: flags.if) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```

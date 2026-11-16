@@ -47,7 +47,7 @@ Validation uses the following semantic codes:
   a visible binding, see [Syntax](Syntax.md#validation));
 - `validate.invalidIdentifierCase`, `validate.invalidMessageCase`,
   `validate.invalidTypeConstructor`, `validate.invalidTag` (the literal `nothing` or a
-  constant with that value in a tag clause; **Since: Unreleased**).
+  constant with that value in a tag clause; **Since: 0.5.0**).
 
 Compiler lowering/resource analysis uses `compile.unsupportedConstruct`,
 `compile.invalidArity`, `compile.unresolvedSymbol`,
@@ -56,7 +56,7 @@ Compiler lowering/resource analysis uses `compile.unsupportedConstruct`,
 
 ## Compiler diagnostic collection
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A failing compilation reports every diagnostic of the phase that fails, in a
 defined order, instead of stopping at the first one. Compilation itself still
@@ -87,7 +87,8 @@ stops at the end of that phase.
   then, module by module in source order, the rules that need other sources or
   the host's catalog (unknown types, calls and predicate tests, constructors,
   predicate results, seeds and send delays) for its records, predicates,
-  functions and handlers; and finally a module-name mismatch between sources,
+  functions and handlers; and finally a module-name mismatch between sources
+  (`validate.invalidIdentifierCase` at the differing module declaration),
   which is reported only when no other validation diagnostic exists.
 - Lowering and resource analysis stop at the first `compile.*` diagnostic.
 
@@ -127,7 +128,7 @@ in [Host runtime](HostRuntime.md#loading-and-startup).
 
 ### Link call sites
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 A link failure carries a non-empty ordered list of diagnostics; its first one is
 the failure's diagnostic. A failure of an import that the source calls

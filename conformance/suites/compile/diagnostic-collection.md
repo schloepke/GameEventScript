@@ -1368,3 +1368,44 @@ errors:
     line: 3
     column: 31
 ```
+
+---
+
+## Test: parse leaves the token after a missing dice pattern unread
+
+A selector that expects a dice pattern does not consume the unexpected token, so a closing brace there still ends the handler and recovery resumes after it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-leaves-token-after-missing-dice-pattern-unread
+kind: compileError
+level: scenario
+sources:
+  - name: "parse-leaves-token-after-missing-dice-pattern-unread.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(first: [1, 2][:take } 2])
+first
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "parse"
+    code: "parse.syntax"
+    line: 2
+    column: 33
+  - phase: "parse"
+    code: "parse.syntax"
+    line: 2
+    column: 35
+```

@@ -44,6 +44,8 @@ public sealed partial class GameEventScriptHost
     private int _stepEmittedMessages;
     private int _stepPublishedMessages;
     private GesDiagnostic? _stepRuntimeDiagnostic;
+    // Whether the active handler already reported a runtime error; its random-scope cleanup is then expected recovery.
+    private bool _activeHandlerFailed;
     private int _pendingVmWarmupCapacity;
     private GesRandomGenerator.ScopeBoundary _activeRandomBoundary;
 
@@ -101,7 +103,7 @@ public sealed partial class GameEventScriptHost
         if (_starting || _executingScript || _startResult is { State: not GesStartState.Ready })
             throw new InvalidOperationException("Loading is not allowed during initialization, script execution, or after a failed start.");
         _ = program ?? throw new ArgumentNullException(nameof(program));
-        program.Validate();
+        program.EnsureValid();
         var maxRegisterCount = Math.Min(
             ushort.MaxValue,
             _limits.MaxRegisterValues > 0 ? _limits.MaxRegisterValues : DefaultRegisterLimit);
@@ -295,9 +297,9 @@ public sealed partial class GameEventScriptHost
             if (!_hasActiveMessage)
             {
                 if (!_starting) PromoteDelayed();
-                if (_limits.MaxProcessedEventsPerRun > 0 && _stepProcessedMessages >= _limits.MaxProcessedEventsPerRun && (_starting ? _startupQueue.Count : _queue.Count) > 0)
+                if (!_starting && _limits.MaxProcessedMessagesPerRun > 0 && _stepProcessedMessages >= _limits.MaxProcessedMessagesPerRun && _queue.Count > 0)
                 {
-                    _context.RecordRuntimeLimitReached(nameof(GesRuntimeLimits.MaxProcessedEventsPerRun), "Message processing limit reached before the host became idle.", _limits.MaxProcessedEventsPerRun);
+                    _context.RecordRuntimeLimitReached(nameof(GesRuntimeLimits.MaxProcessedMessagesPerRun), "Message processing limit reached before the host became idle.", _limits.MaxProcessedMessagesPerRun);
                     runtimeLimitReached = true;
                     break;
                 }
@@ -506,6 +508,7 @@ public sealed partial class GameEventScriptHost
         if (programName != diagnostic.ProgramName || handlerName != diagnostic.HandlerName)
             diagnostic = diagnostic with { ProgramName = programName, HandlerName = handlerName };
         _stepRuntimeDiagnostic ??= diagnostic;
+        if (_activeHandler is not null) _activeHandlerFailed = true;
         if (_initializationInstance is not null) _initializationDiagnostic ??= diagnostic;
         _observer?.RuntimeError(diagnostic);
     }
@@ -532,6 +535,7 @@ public sealed partial class GameEventScriptHost
     private void StartHandler(GesSubscriptionEntry handler)
     {
         _activeHandler = handler;
+        _activeHandlerFailed = false;
         _activeRandomBoundary = _context.BeginHandler();
         _observer?.DispatchStarted(_activeMessage.Message, _activeMessage.Id, handler.DispatchSignatureId);
     }
@@ -540,7 +544,8 @@ public sealed partial class GameEventScriptHost
     {
         var handler = _activeHandler;
         var randomFault = _context.EndRandomBoundary(_activeRandomBoundary);
-        if ((_initializationInstance is not null ? _initializationDiagnostic is null : _stepRuntimeDiagnostic is null) && !_context.RuntimeBudget.IsExhausted)
+        // Only this handler's own failure suppresses the scope diagnostics, not one of an earlier handler or message.
+        if (!_activeHandlerFailed && !_context.RuntimeBudget.IsExhausted)
         {
             if (randomFault == GesRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
             {
@@ -582,17 +587,17 @@ public sealed partial class GameEventScriptHost
         return id;
     }
 
-    private bool IsMessageQueueFull => _limits.MaxQueuedMessagesPerRun > 0 && PendingMessageCount >= _limits.MaxQueuedMessagesPerRun;
+    private bool IsMessageQueueFull => _limits.MaxQueuedMessages > 0 && PendingMessageCount >= _limits.MaxQueuedMessages;
 
     private bool EnqueuePlan(GesPendingMessage message, bool initializationOutput)
     {
         if (IsMessageQueueFull)
         {
             if (initializationOutput)
-                _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun), "Initialization message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
+                _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessages), "Initialization message queue limit reached.", _limits.MaxQueuedMessages);
             else
-                _context.RecordRuntimeLimitReached(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun),
-                    $"Message queue limit reached. Dropped '{message.Message.Name}'.", _limits.MaxQueuedMessagesPerRun);
+                _context.RecordRuntimeLimitReached(nameof(GesRuntimeLimits.MaxQueuedMessages),
+                    $"Message queue limit reached. Dropped '{message.Message.Name}'.", _limits.MaxQueuedMessages);
             return false;
         }
 

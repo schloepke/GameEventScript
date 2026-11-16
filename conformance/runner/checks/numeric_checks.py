@@ -75,7 +75,8 @@ def floating_equal(left, right, config):
 def equal(left, right, config):
     if isinstance(left, dict):
         kind = left.get('type')
-        fields = ('value',) if kind in FLOAT_TYPES else ('x', 'y', 'z') if kind in (':Vector', ':Point') else ('from', 'to', 'step') if kind == ':Range.binary64' else ()
+        fields = (('value',) if kind in FLOAT_TYPES else ('x', 'y', 'z') if kind in (':Vector', ':Point') else ('from', 'to', 'step') if kind == ':Range.binary64'
+                  else ('radius',) if kind == ':Disc' and 'entries' not in left else ())
         if fields:
             numbers = [number(left[field]) for field in fields]
             # The shared corpus uses NaN as the expected spelling of invalid mathematics.
@@ -83,7 +84,7 @@ def equal(left, right, config):
                 return right == {'type': ':Nothing'}
             if not isinstance(right, dict) or left.keys() != right.keys():
                 return False
-            return (all(exact(v, right[k]) for k, v in left.items() if k not in fields)
+            return (all(equal(v, right[k], config) for k, v in left.items() if k not in fields)
                     and all(floating_equal(x, number(right[field]), config) for field, x in zip(fields, numbers)))
     if isinstance(left, dict):
         return isinstance(right, dict) and left.keys() == right.keys() and all(equal(v, right[k], config) for k, v in left.items())
@@ -114,7 +115,8 @@ def validate_authored(node):
         kind = node.get('type')
         fields = (('value',) if kind in FLOAT_TYPES | {':Number.int64', ':Quantity.int64'} else
                   ('x', 'y', 'z') if kind in (':Vector', ':Point') else
-                  ('from', 'to', 'step') if kind in (':Range.int64', ':Range.binary64') else ())
+                  ('from', 'to', 'step') if kind in (':Range.int64', ':Range.binary64') else
+                  ('radius',) if kind == ':Disc' and 'entries' not in node else ())
         for field in fields:
             text = node.get(field)
             if not isinstance(text, str):

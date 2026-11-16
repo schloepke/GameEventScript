@@ -10,20 +10,16 @@ internal sealed class GesRuntimeBudget(GesContext context, GesRuntimeLimits limi
 {
     private long _executionSteps;
     private long _loopIterations;
-    private int _callDepth;
     private bool _exhausted;
 
     public GesRuntimeLimits Limits { get; } = limits;
 
     public bool IsExhausted => _exhausted;
 
-    public bool IsStepping => false;
-
     public void Reset()
     {
         _executionSteps = 0;
         _loopIterations = 0;
-        _callDepth = 0;
         _exhausted = false;
     }
 
@@ -68,32 +64,6 @@ internal sealed class GesRuntimeBudget(GesContext context, GesRuntimeLimits limi
 
         _loopIterations++;
         return true;
-    }
-
-    public bool EnterCallIfAvailable(string detail)
-    {
-        if (_exhausted)
-        {
-            return false;
-        }
-
-        var limit = Limits.MaxCallDepth;
-        if (limit > 0 && _callDepth >= limit)
-        {
-            MarkExhausted("MaxCallDepth", detail, limit);
-            return false;
-        }
-
-        _callDepth++;
-        return true;
-    }
-
-    public void ExitCall()
-    {
-        if (_callDepth > 0)
-        {
-            _callDepth--;
-        }
     }
 
     public bool CheckRangeLengthWithinLimit(long length, string detail)

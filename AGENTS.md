@@ -111,7 +111,9 @@ from another module; compiler-synthesized members are exempt.
 
 Licensing follows `LICENSING.md`. Use exactly `Copyright 2026 Stephan Schlöpke`
 and `SPDX-License-Identifier: Apache-2.0`, retain third-party notices, and honor
-the documented generated, strict-format, and binary exclusions.
+the documented generated, strict-format, and binary exclusions. The C# repository
+test checks C#, Markdown, project and workflow headers; `python3 scripts/verify-license-headers.py`
+(qualified by `--self-test`) checks Swift, C, Python, GES and web sources, and both CIs run it.
 
 `scripts/clean.sh --dry-run` previews repository build-output cleanup;
 `--artifacts-only` limits it to `artifacts`. It retains tracked files, skips
@@ -146,6 +148,9 @@ publish.
   corpus as their sole oracle.
 - Conformance assertions use stable phase/code and structured context, never
   English diagnostic text or implementation-only AST/optimizer shapes.
+- `python3 scripts/verify-runtime-codes.py` requires every `runtime.*` code literal
+  of both Runtimes in the other port and in `specs/Diagnostics.md` (`--self-test`
+  qualifies it); C# CI runs both.
 
 ## Program, bytecode, and binary
 
@@ -211,7 +216,8 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   types); the Compiler validator keeps the rules that need other sources, the
   catalog or the runtime.
   `--trees` checks token coverage, nesting and identical trees, roles and
-  ranges, error nodes included, for every source in both ports.
+  ranges, error nodes included, for every source in both ports; `--mutants N`
+  adds seeded broken variants of the corpus sources (`test-swift.sh` uses 3000).
 - Module identifiers are dot-separated lowercase components with optional
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.
@@ -290,7 +296,8 @@ declarations and highlights them; the `Api/Schema` folder of Runtime checks thei
 computes the canonical form and FNV-1a 64 hash, and holds the allocation-free
 `GesSchemaWriter` and `GesSchemaReader`, the dump and the document check. `GesSchema` is the
 immutable description of one declaration with its fields; binding turns it into the flat layout of `GesBoundSchema`. Apart from `GesSchemaValues`, which converts
-Records and Messages, that folder uses neither `GesValue` nor the VM, which a repository test enforces;
+Records and Messages and builds the value of each record default once while a set loads (`GesResolvedRecord`), that
+folder uses neither `GesValue` nor the VM, which a repository test enforces;
 the document check leaves the construction of explicit forms to Runtime's document reading.
 Unity receives it as a precompiled assembly, so it stays within the `netstandard2.1` API: no
 `BitOperations`, `Unsafe`, `UInt128` or runtime code generation, and the hot path has no
@@ -313,7 +320,27 @@ qualifies each, and `test-swift.sh` runs them. Checked-in goldens of
 `conformance/fixtures/SchemaGeneration/fleet.gess` (C# `Generator/tests/Generated`, Swift Conformance tests) feed
 both allocation gates; the C# test and `compare-schema-generation.py` require them current. Generated Swift classes
 mark stored properties `@exclusivity(unchecked)` unless `--checked-exclusivity`; `scripts/schema_generated_parties.py`
-generates with the checks for the roundtrip, so overlapping accesses in generated code trap there.
+generates with the checks for the roundtrip, so overlapping accesses in generated code trap there. `--out-dir` writes split output
+(one file per declaration or per source, a shared `_<Namespace>` file and the manifest `.ges-generated.json`, specs/Schemas.md#split-output);
+the Generator only returns the files (`GenerateFiles`, `GenerateModelFiles`), while the CLI owns the directory, its cleanup and
+`--check`. `compare-schema-generation.py` compares and `test-generated-schemas.py` compiles the split role fixture. Computed fields
+(`computed by`, specs/Schemas.md#computed-fields) follow the VM exactly: C# `GesSchemaComputed` and Swift `SchemaComputed.swift`
+evaluate them in the value path. Binding marks which reads `has value` guards and rejects a required field that may be absent
+(`schema.computedMayBeAbsent`). The generators analyze each field's ranges (`GesComputedEmitterStatic`, Swift
+`ComputedEmitterStatic.swift`) and emit plain binary64/Boolean code where the bits provably match, else the dynamic form over the
+helper library `GesComputedLibrary` (templates identical in both ports); the goldens of `computed.gess` pin both forms, the
+harness of `test-generated-schemas.py` checks the generated properties, and `scripts/test-computed-fields.py` runs every corpus
+record with computed fields as a script record on both VMs.
+`compare-schema-generation.py` also ratchets a digest of every output against `scripts/schema-generation-baseline.txt`
+(`--update-baseline` after a deliberate change), so a change of existing generated code is visible. A recursive List
+(`:List(:Self) max n depth d`, specs/Schemas.md#recursion) unrolls per level at binding; only the recursive schema's
+generated methods take a level and order its deeper paths last, and every schema without one must generate unchanged
+code. `conformance/fixtures/SchemaGeneration/tree.gess` has checked-in goldens (`TreeWire`, `TreeModel`) and native tests
+in both ports. `:Box` binds as two Point corners, `:Poly` as a List of Points and `:Disc` as a centre Point and a radius
+(specs/Schemas.md#geometry); generated wire code holds `GesBox`, `GesDisc` and a Poly's reusable Points with a `GesPoly`
+view, models `GesBox`, `GesPoly` and `GesDisc`, and
+`conformance/fixtures/SchemaGeneration/geometry.gess` has goldens (`GeometryWire`, `GeometryModel`) and native tests in both
+ports.
 
 ## Host and runtime
 
@@ -474,7 +501,11 @@ It also rejects test-only modules compiled by library consumers. Its isolated
 fixture includes the shared highlighting Markdown, without a Conformance dependency.
 
 Publication is manual and requires a matching version tag, verified NuGet and
-SwiftPM consumers, and the protected `nuget` environment. Preparing or checking
+SwiftPM consumers, and the protected `nuget` environment. Publication jobs also run
+`scripts/require-verified-release.py`, which requires the tagged commit on main with
+successful C# CI and Swift CI runs. A rerun resumes an interrupted publication:
+`scripts/nuget_publication.py` and `collect-cli-release.py` skip what is already
+published with identical contents and fail on differing contents. Preparing or checking
 packages never publishes. See `docs/guide/distribution/Packages.md` for the
 release procedure and required account configuration.
 
@@ -542,6 +573,9 @@ This regenerates build planning, not compiled objects. Keep the same option in
 new native SwiftPM entry points. `python3 scripts/test-swift-incremental.py`
 verifies source discovery and unchanged-build object reuse through the build script.
 Run `./scripts/test-swift.sh` and `python3 scripts/verify-swift-api.py`.
+`./scripts/test-swift-linux.sh` runs the Swift port on Linux without .NET (package tests, the supported corpus,
+CLI process checks); Swift CI runs it in the digest-pinned `swift:6.4.0-jammy` release image and builds Runtime,
+Compiler and Generator with the declared minimum Swift 6.0. Docker reproduces both locally.
 The API snapshot gate invokes the official symbol-graph extractor directly with
 explicit options; Swift Build’s intermediate graphs are not snapshot inputs.
 DocC consumes only explicit `dump-symbol-graph` exports, including extension blocks.
@@ -566,7 +600,8 @@ compiles every corpus program with both CLIs, requires equal ordered diagnostic 
 start positions for rejected programs, checks that checked-in `examples/**/*.gesb` match a
 fresh C# compilation without debug information, and ratchets the remaining differences
 against `scripts/compiler-output-baseline.txt` (`--update-baseline` after a deliberate
-change); its controls are `python3 scripts/test-compiler-output-controls.py`. The full
+change); `--mutants N` also compiles seeded broken variants of single-source programs, which must agree without a
+baseline (`test-swift.sh` uses 1500); its controls are `python3 scripts/test-compiler-output-controls.py`. The full
 Swift test script runs both. `python3 scripts/test-constructor-forms.py` runs a matrix of
 type-constructor forms through both CLIs as source, `parse`, `parse strict` and document
 and requires equal values, codes and first positions; the corpus owns the expected
@@ -574,7 +609,10 @@ results (`--self-test` qualifies the comparison).
 
 `scripts/test-swift.sh` requires every supported shared Markdown case to pass with
 native Swift compilation, checks the performance scenarios for correctness without
-measuring them, and runs the native Conformance, SwiftBridge and CLI tests. Runtime
+measuring them, and runs the native Conformance, SwiftBridge and CLI tests. The
+Syntax, SwiftBridge, Generator and CLI packages build and test in Debug, which
+compiles several times faster; the Conformance package and its adapter stay in
+Release, and the comparison scripts use the Debug `ges`. Runtime
 verification with C#-compiled Programs is a separate report; calibrated performance
 measurement is opt-in.
 
@@ -668,8 +706,11 @@ the `cli-release` environment and an existing GitHub release. Never overwrite as
 Preparing archives does not publish. Run `python3 scripts/test-cli-distribution.py`.
 See `docs/guide/distribution/Tools.md`; all output stays below `artifacts/cli`.
 
-The C# `dotnet ges` and Swift `ges` tools provide `compile`, `check`, `run`, and
-`dump`. The C# NuGet package remains `GameEventScript.Tool`; the installed command is
+The C# `dotnet ges` and Swift `ges` tools provide `compile`, `check`, `run`, `dump` and
+`bench`. `bench` measures a compiled program's steady state in process with identical flags, statistics, text and JSON
+in both CLIs (contract: the C# CLI README, In-process benchmark); `python3 scripts/test-cli-bench.py` checks the
+contract and equal checksums, and `python3 scripts/bench-compare.py` compares the Swift CLI with four .NET
+configurations (JIT, JIT without tiering, ReadyToRun, NativeAOT) in one table. The C# NuGet package remains `GameEventScript.Tool`; the installed command is
 `dotnet-ges`, resolved by `dotnet ges` when the tool directory is on `PATH`.
 `check` uses the complete compiler pipeline without writing a binary or executing
 handlers. `document check` reads `.gesd` files and reports the first error of each
@@ -680,7 +721,8 @@ order. All Programs are loaded into one host before execution. By default it
 drains initialization and then sends one `Main(args)` message, with a List of Text
 values from `--arg`, `--args`, or the remainder after `--`. No implicit parsing
 is applied. Batch execution waits for delayed work; interactive input pumps due work
-while preserving the current prompt and unfinished input. `--args` stops at the next option; `--` stops option parsing entirely.
+while preserving the current prompt and unfinished input, and the end of console input waits for delayed work too
+(`:quit` discards it). `--args` stops at the next option; `--` stops option parsing entirely.
 `--scenario` replaces Main with a separately compiled GES scenario; `--interactive` replaces it with an explicit event console.
 Those modes are mutually exclusive. Missing Main must not implicitly start a REPL.
 

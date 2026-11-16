@@ -5,7 +5,6 @@ final class GesRuntimeBudget {
     unowned let context: GesContext
     var executionSteps = 0
     var loopIterations = 0
-    var callDepth = 0
     private(set) var isExhausted = false
     // Immutable host limits copied once; checks must not retain the unowned context per loop step.
     let limits: GesRuntimeLimits
@@ -18,7 +17,6 @@ final class GesRuntimeBudget {
     func reset() {
         executionSteps = 0
         loopIterations = 0
-        callDepth = 0
         isExhausted = false
     }
 
@@ -50,18 +48,6 @@ final class GesRuntimeBudget {
         loopIterations += 1
         return true
     }
-
-    func enterCall() -> Bool {
-        if isExhausted { return false }
-        if limits.maxCallDepth > 0 && callDepth >= limits.maxCallDepth {
-            exhaust("MaxCallDepth", limits.maxCallDepth)
-            return false
-        }
-        callDepth += 1
-        return true
-    }
-
-    func exitCall() { if callDepth > 0 { callDepth -= 1 } }
 
     func generated(_ count: Int) -> Bool {
         if isExhausted { return false }

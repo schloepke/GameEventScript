@@ -368,12 +368,9 @@ extension GesBinaryBuilder {
                 default: break
                 }
             }
-            if left == .nothing || right == .nothing {
-                switch instruction.opcode {
-                case .equal: return boolean(instruction, left == .nothing && right == .nothing)
-                case .notEqual: return boolean(instruction, left != .nothing || right != .nothing)
-                default: break
-                }
+            // Equality with a nothing operand is nothing, also `nothing = nothing` (specs/Language.md#equality).
+            if left == .nothing || right == .nothing, instruction.opcode == .equal || instruction.opcode == .notEqual {
+                return .init(opcode: .loadNothing, unitAndFlags: 0, word0: instruction.word0, word1: 0, word2: 0, payload: 0)
             }
             return nil
         }
@@ -509,7 +506,9 @@ extension GesBinaryBuilder {
             context.resetRemove()
             for index in 0..<context.count {
                 guard let branch = context.instruction(at: index) else { continue }
-                let inverse: GesBytecodeOpCode? = branch.opcode == .jumpIfTrue ? .jumpIfFalse : branch.opcode == .jumpIfFalse || branch.opcode == .jumpIfNotTrue ? .jumpIfTrue : nil
+                // Only exact inverses under three-valued logic: nothing and other indeterminate values are neither true nor
+                // false, so JumpIfFalse has no inverse opcode and stays.
+                let inverse: GesBytecodeOpCode? = branch.opcode == .jumpIfTrue ? .jumpIfNotTrue : branch.opcode == .jumpIfNotTrue ? .jumpIfTrue : nil
                 // The jump must follow directly; a label between them keeps the jump an entry point.
                 guard let inverse, let jump = context.instruction(at: index + 1), jump.opcode == .jump,
                     context.labelInstructions[Int(branch.word2)] == context.nextInstruction(after: index + 1)

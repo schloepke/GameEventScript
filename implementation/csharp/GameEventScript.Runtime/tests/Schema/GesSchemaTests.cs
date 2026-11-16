@@ -46,6 +46,19 @@ public sealed class GesSchemaTests
     }
 
     [TestMethod]
+    public void MessageSetMembersCarryTheSetHash()
+    {
+        var set = GesSchemaSet.Parse("message Hit(target: :Number integer between 0 and 15)\nmessage Died(target: :Number integer between 0 and 15)\nmessages :Combat as (Hit, Died)\n");
+        var combat = set.Schema("Combat").Bind();
+        var member = combat.Member("Hit");
+        Assert.AreEqual(combat.Hash, member.Hash);
+        Assert.AreEqual(combat.BindingHash, member.BindingHash);
+        Assert.AreEqual(set.Schema("Hit").Hash, set.Schema("Hit").Bind().Hash);
+        Assert.AreNotEqual(set.Schema("Hit").Hash, member.Hash);
+        Assert.AreEqual(set.Schema("Hit").Hash, member.Schema.Hash);
+    }
+
+    [TestMethod]
     public void WriterAndReaderMatchTheWorkedExample()
     {
         var bot = Bot();
@@ -283,7 +296,7 @@ public sealed class GesSchemaTests
         return GesValue.GesRecord(
             "S",
             ["id", "x", "name", "items", "part", "pick"],
-            [GesValue.GesInteger(7), GesValue.GesNumber(x * 40, GesQuantityUnit.UnitMeter), GesValue.GesText(name), GesValue.GesList([GesValue.GesText("a"), GesValue.GesText(name[..1])]), part, part]);
+            [GesValue.GesInteger(7), GesValue.GesFloat(x * 40, GesQuantityUnit.UnitMeter), GesValue.GesText(name), GesValue.GesList([GesValue.GesText("a"), GesValue.GesText(name[..1])]), part, part]);
     }
 
     [TestMethod]
@@ -443,6 +456,31 @@ public sealed class GesSchemaTests
         Assert.AreEqual("wire.invalidIndex", Read(small, field, [7]));
         Assert.AreEqual("wire.invalidPadding", Read(small, field, [0x09]));
         Assert.AreEqual("wire.truncated", Read(small, field, []));
+    }
+
+    [TestMethod]
+    public void ARecordBelowTheDepthNamesTheDepth()
+    {
+        var set = GesSchemaSet.Parse("schema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 2\n}\n");
+        var schema = set.Schema("Bind").Bind();
+        GesValue Bind(string name, params GesValue[] units) => GesValue.GesRecord("Bind", ("name", GesValue.GesText(name)), ("units", GesValue.GesList(units)));
+        var buffer = new byte[schema.MaxByteCount];
+        Assert.IsGreaterThan(0, GesSchemaValues.Encode(schema, Bind("a", Bind("b")), buffer));
+        var error = Assert.ThrowsExactly<GesWireException>(() => GesSchemaValues.Encode(schema, Bind("a", Bind("b", Bind("c"))), buffer));
+        Assert.AreEqual(GesWireException.TooDeep, error.Code);
+        Assert.AreEqual("units[].units", error.Path);
+        Assert.AreEqual("deeper than depth 2", error.Detail);
+        Assert.AreEqual("wire.tooDeep at 'units[].units': deeper than depth 2", error.Message);
+        Assert.AreEqual("", new GesWireException(GesWireException.TooLong, "units").Detail);
+    }
+
+    [TestMethod]
+    public void ReservedNamesPointToBackticks()
+    {
+        var error = Assert.ThrowsExactly<GesSchemaException>(() => GesSchemaSet.Parse("schema :S as { length: :Number, b: :Number computed by length / 2 }"));
+        Assert.AreEqual("schema.invalidExpression", error.Code);
+        StringAssert.Contains(error.Message, "in backticks, as `length`");
+        GesSchemaSet.Parse("schema :S as { length: :Number, b: :Number computed by `length` / 2 }").Schema("S").Bind();
     }
 
     private static string Read(GesBoundSchema schema, GesSchemaField field, byte[] data)

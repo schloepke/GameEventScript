@@ -17,6 +17,7 @@ internal readonly struct GesProgramResourceValidator
     private readonly IReadOnlyDictionary<ushort, ushort> _recordEntriesById;
     private readonly IReadOnlyDictionary<string, ushort> _recordEntriesByName;
     private readonly int[] _workspace;
+    private readonly GesProgramListMembers _lists;
 
     private Span<int> Arguments => _workspace.AsSpan(0, _entries.Length);
     private Span<int> Registers => _workspace.AsSpan(_entries.Length, _entries.Length);
@@ -35,6 +36,7 @@ internal readonly struct GesProgramResourceValidator
     )
     {
         _program = program;
+        _lists = new GesProgramListMembers(program);
         _entries = entries;
         _entryIndexes = entryIndexes;
         _recordEntriesById = recordEntriesById;
@@ -72,7 +74,7 @@ internal readonly struct GesProgramResourceValidator
 
         foreach (var routine in completed) Analyze(routine);
         ValidateInactiveCodeAndDebugSymbols();
-        GesProgramInternalValueValidator.Validate(_program, _entries, Frames);
+        GesProgramInternalValueValidator.Validate(_program, _entries, Frames, _lists);
         for (var index = 0; index < _program.Bindings.Entries.Count; index++)
         {
             var bind = _program.Bindings.Entries[index];
@@ -95,7 +97,7 @@ internal readonly struct GesProgramResourceValidator
         {
             if (routine + 1 < _entries.Length && index == _entries[routine + 1]) routine++;
             if (Frames[index] >= 0) continue;
-            GesProgramValidator.ValidateInstructionFrame(_program, _program.Code[index], index, routine < 0 ? 0 : MaximumFrames[routine]);
+            GesProgramValidator.ValidateInstructionFrame(_program, _program.Code[index], index, routine < 0 ? 0 : MaximumFrames[routine], _lists);
         }
 
         if (_program.DebugSymbols is not { } debug) return;
@@ -135,7 +137,7 @@ internal readonly struct GesProgramResourceValidator
                 if (frame is < 0 or > ushort.MaxValue) Invalid("Local register adjustment exceeds the frame bounds.", index);
             }
             MaximumFrames[routine] = Math.Max(MaximumFrames[routine], frame);
-            GesProgramValidator.ValidateInstructionFrame(_program, instruction, index, frame);
+            GesProgramValidator.ValidateInstructionFrame(_program, instruction, index, frame, _lists);
             if (IsStage(opcode)) stage++;
             Registers[routine] = Math.Max(Registers[routine], frame + stage);
 

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
-using System.Text.Json;
 using GameEventScript.Syntax;
 
 namespace GameEventScript.Tool;
@@ -38,7 +37,7 @@ internal static class RunShow
         }
 
         Console.Error.WriteLine();
-        var header = "// File: " + JsonSerializer.Serialize(path, ToolJsonContext.Default.String);
+        var header = "// File: " + ToolText.Quote(path);
         Console.Error.WriteLine(color ? RunHighlighting.Paint(header, 90) : header);
         var display = Console.IsErrorRedirected ? text : ToolTextDisplay.ExpandTabs(text);
         // An expanded display is highlighted again with the same highlighter, so tabs never change its colors.

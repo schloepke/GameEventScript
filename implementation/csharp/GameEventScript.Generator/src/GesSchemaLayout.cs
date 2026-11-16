@@ -49,6 +49,102 @@ internal sealed class GesLayoutParameter(string name, string type, string unit, 
     internal string Literal { get; } = literal;
 }
 
+// The default of a field: its kind, `number`, `boolean`, `tag`, `field` or `record`, and its value, a canonical decimal in
+// base units, a Boolean, a tag without `#` or a sibling field's name; a record lists the fields it names with their defaults.
+internal sealed class GesLayoutDefault
+{
+    internal GesSchemaDefaultKind Kind;
+    internal string Value = "";
+    internal bool Boolean;
+    internal List<GesLayoutDefaultEntry> Entries = [];
+
+    internal static GesLayoutDefault? Of(GesSchemaFieldInfo field) => field.Default is { } fallback ? Of(fallback) : null;
+
+    private static GesLayoutDefault Of(GesSchemaDefaultInfo fallback)
+    {
+        var result = new GesLayoutDefault
+        {
+            Kind = fallback.Kind,
+            Boolean = fallback.Boolean,
+            Value = fallback.Number is { } number
+                ? number.Significand.ToString(System.Globalization.CultureInfo.InvariantCulture) + "e" + number.Exponent.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : fallback.Name
+        };
+        foreach (var entry in fallback.Entries) result.Entries.Add(new GesLayoutDefaultEntry { Name = entry.Name, Value = Of(entry.Value) });
+        return result;
+    }
+
+    internal void Write(GesSchemaLayoutJson.Writer json)
+    {
+        json.Key("default");
+        json.BeginValueObject();
+        json.String("kind", Kind switch
+        {
+            GesSchemaDefaultKind.Number => "number",
+            GesSchemaDefaultKind.Boolean => "boolean",
+            GesSchemaDefaultKind.Tag => "tag",
+            GesSchemaDefaultKind.Record => "record",
+            _ => "field"
+        });
+        if (Kind == GesSchemaDefaultKind.Record)
+        {
+            json.BeginArray("entries");
+            foreach (var entry in Entries)
+            {
+                json.BeginObject();
+                json.String("name", entry.Name);
+                entry.Value.Write(json);
+                json.EndObject();
+            }
+
+            json.EndArray();
+        }
+        else if (Kind == GesSchemaDefaultKind.Boolean) json.Boolean("value", Boolean);
+        else json.String("value", Value);
+        json.EndObject();
+    }
+}
+
+// A field a record default names, with its value.
+internal sealed class GesLayoutDefaultEntry
+{
+    internal string Name = "";
+    internal GesLayoutDefault Value = null!;
+}
+
+// A `let` of a schema: its kind, unit, exact value in base units and whether it is a whole Number within Int64.
+internal sealed class GesLayoutConstant
+{
+    internal string Name = "";
+    internal string Type = "";
+    internal string Unit = "";
+    internal long Significand;
+    internal int Exponent;
+    internal bool Integer;
+
+    // The unit symbol or `%` that a literal of it ends with, for generated documentation; not part of the JSON.
+    internal string Suffix = "";
+
+    internal string Value => Significand.ToString(System.Globalization.CultureInfo.InvariantCulture) + "e" + Exponent.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    internal static List<GesLayoutConstant> Of(GesSchema schema)
+    {
+        var constants = new List<GesLayoutConstant>();
+        foreach (var constant in schema.Constants)
+            constants.Add(new GesLayoutConstant
+            {
+                Name = constant.Name,
+                Type = GesSchemaLayoutBuilder.TypeName(constant.Kind),
+                Unit = GesSchemaLayoutBuilder.UnitName(constant.Kind, constant.Unit),
+                Significand = constant.Value.Significand,
+                Exponent = constant.Value.Exponent,
+                Integer = constant.IsInteger,
+                Suffix = constant.Kind == GesSchemaTypeKind.Percentage ? "%" : constant.Kind == GesSchemaTypeKind.Quantity ? constant.Unit.ToSuffix() : ""
+            });
+        return constants;
+    }
+}
+
 internal sealed class GesLayoutType
 {
     internal string Name = "";
@@ -59,9 +155,17 @@ internal sealed class GesLayoutType
     internal long MaxByteCount;
     internal List<string> MaxByteCountDepends = [];
     internal List<GesLayoutField> Fields = [];
+    internal List<GesLayoutConstant> Constants = [];
+
+    // The fields written `computed by`, which are never encoded, with their checked expressions.
+    internal GesResolvedComputed[] Computed = [];
     internal List<string> Tags = [];
     internal List<string> Members = [];
     internal int MemberWidth;
+
+    // A packed schema's word: its width of 8, 16, 32 or 64 bits and the bits its fields take; 0 for other types.
+    internal int PackedWidth;
+    internal int PackedBits;
 }
 
 internal sealed class GesLayoutField
@@ -71,6 +175,7 @@ internal sealed class GesLayoutField
     internal bool Optional;
     internal bool Key;
     internal bool Unlabeled;
+    internal GesLayoutDefault? Default;
     internal GesLayoutEncoding Encoding = new();
 }
 
@@ -82,12 +187,16 @@ internal enum GesLayoutKind
     Float,
     Tag,
     Text,
+    Bytes,
     List,
     Point,
     Vector,
+    Box,
     Schema,
     Union,
-    Nothing
+    Nothing,
+    Flags,
+    Disc
 }
 
 internal sealed class GesLayoutEncoding
@@ -102,6 +211,9 @@ internal sealed class GesLayoutEncoding
     internal long Lower;
     internal ulong MaxIndex;
     internal int Width;
+
+    // The bits a field of fixed width takes on the wire: a Boolean has no layout width but takes one bit.
+    internal int Bits => Kind == GesLayoutKind.Boolean ? 1 : Width;
     internal long Numerator;
     internal long TenPower;
     internal double LowerValue;
@@ -110,17 +222,24 @@ internal sealed class GesLayoutEncoding
     internal int DeltaWidth;
     internal List<string> Depends = [];
 
-    // Tag sets, Texts and lists.
+    // Tag sets, Texts and lists. A Tag of a named tag set carries its name.
     internal List<string> Tags = [];
+    internal string TagSet = "";
     internal bool TagName;
     internal long MaxCount;
     internal bool Dice;
+    internal bool Poly;
     internal bool Keyed;
     internal int PositionWidth;
     internal GesLayoutField? Element;
 
-    // Point and Vector axes, union alternatives and schema references.
+    // A recursive List: how many records of its schema nest at most, and 0 for every other List.
+    internal int Depth;
+
+    // Point and Vector axes, the corners lower and upper of a Box or the centre and the radius of a Disc, union alternatives
+    // and schema references. A Disc whose block leaves out the radius has the centre alone.
     internal List<GesLayoutField> Axes = [];
+    internal List<GesLayoutField> Corners = [];
     internal List<GesLayoutField> Alternatives = [];
     internal string Schema = "";
 }
@@ -182,7 +301,9 @@ internal static class GesSchemaLayoutBuilder
             Kind = schema.Kind,
             Hash = bound.Hash,
             BindingHash = bound.BindingHash,
-            MaxByteCount = bound.MaxByteCount
+            MaxByteCount = bound.MaxByteCount,
+            PackedWidth = schema.PackedWidth,
+            PackedBits = schema.PackedBits
         };
         foreach (var parameter in schema.Parameters) type.BindingHashDepends.Add(parameter.Name);
         var depends = new SortedSet<string>(StringComparer.Ordinal);
@@ -196,6 +317,8 @@ internal static class GesSchemaLayoutBuilder
         else
         {
             type.Fields = Fields(schema, bound);
+            type.Constants = GesLayoutConstant.Of(schema);
+            type.Computed = schema.Declaration.Computed;
             foreach (var field in type.Fields) Collect(field, depends);
             foreach (var tag in schema.Tags) type.Tags.Add(tag);
         }
@@ -212,6 +335,7 @@ internal static class GesSchemaLayoutBuilder
         {
             var field = Field(bound.Nodes, ref index, info.Name, info.Alternatives);
             field.Unlabeled = info.IsUnlabeled;
+            field.Default = GesLayoutDefault.Of(info);
             fields.Add(field);
         }
 
@@ -244,7 +368,7 @@ internal static class GesSchemaLayoutBuilder
         foreach (var alternative in alternatives)
         {
             var path = nodes[index].Path;
-            var label = path.Substring(path.LastIndexOf(':') + 1);
+            var label = alternative.Label.Length > 0 ? alternative.Label : path.Substring(path.LastIndexOf(':') + 1);
             var encoding = alternative.Kind == GesSchemaTypeKind.Nothing ? Nothing(ref index) : Encoding(nodes, ref index, alternative);
             union.Alternatives.Add(new GesLayoutField { Name = label, Path = path, Encoding = encoding });
         }
@@ -275,6 +399,17 @@ internal static class GesSchemaLayoutBuilder
             case GesSchemaTypeKind.Tag when node.Kind == GesSchemaNodeKind.Tag:
                 encoding.Kind = GesLayoutKind.Tag;
                 encoding.Tags.AddRange(node.Tags!);
+                encoding.TagSet = node.TagSet ?? "";
+                encoding.Width = node.Width;
+                break;
+            case GesSchemaTypeKind.Flags:
+                encoding.Kind = GesLayoutKind.Flags;
+                encoding.Tags.AddRange(node.Tags!);
+                encoding.Width = node.Width;
+                break;
+            case GesSchemaTypeKind.Bytes:
+                encoding.Kind = GesLayoutKind.Bytes;
+                encoding.MaxCount = node.MaxCount;
                 encoding.Width = node.Width;
                 break;
             case GesSchemaTypeKind.Tag or GesSchemaTypeKind.Text:
@@ -285,6 +420,7 @@ internal static class GesSchemaLayoutBuilder
                 break;
             case GesSchemaTypeKind.List:
                 List(in node, encoding);
+                encoding.Depth = type.Depth;
                 index++;
                 encoding.Element = Field(nodes, ref index, "[]", type.Element);
                 return encoding;
@@ -301,16 +437,42 @@ internal static class GesSchemaLayoutBuilder
                 encoding.Kind = type.Kind == GesSchemaTypeKind.Point ? GesLayoutKind.Point : GesLayoutKind.Vector;
                 encoding.Unit = UnitName(type.Kind, type.Unit);
                 index++;
-                for (var axis = 0; axis < 3 && index < node.Next; axis++)
+                Axes(nodes, ref index, start, type, encoding);
+                return encoding;
+            case GesSchemaTypeKind.Box:
+                // Two corners, each a Point of the block's axes.
+                encoding.Kind = GesLayoutKind.Box;
+                encoding.Unit = UnitName(type.Kind, type.Unit);
+                index++;
+                encoding.Corners.Add(Corner(nodes, ref index, type));
+                encoding.Corners.Add(Corner(nodes, ref index, type));
+                return encoding;
+            case GesSchemaTypeKind.Disc:
+                // The centre, a Point of the block's axes x and y, then the radius, unless the block leaves it out.
+                encoding.Kind = GesLayoutKind.Disc;
+                encoding.Unit = UnitName(type.Kind, type.Unit);
+                var disc = index;
+                index++;
+                encoding.Corners.Add(Corner(nodes, ref index, type));
+                if (index < nodes[disc].Next)
                 {
-                    ref readonly var axisNode = ref nodes[index];
-                    var bounds = type.Axes.Count > 0 ? type.Axes[axis] : null;
-                    var axisEncoding = new GesLayoutEncoding();
-                    Number(in axisNode, GesSchemaTypeKind.Number, GesQuantityUnit.UnitNone, bounds?.Lower, bounds?.Upper, axisEncoding);
-                    encoding.Axes.Add(new GesLayoutField { Name = axisNode.Name, Path = axisNode.Path, Encoding = axisEncoding });
+                    var radius = new GesLayoutEncoding();
+                    GesSchemaAxisInfo? bounds = null;
+                    foreach (var axis in type.Axes)
+                        if (axis.Name == "radius") bounds = axis;
+                    Number(in nodes[index], GesSchemaTypeKind.Number, GesQuantityUnit.UnitNone, bounds?.Lower, bounds?.Upper, radius);
+                    encoding.Corners.Add(new GesLayoutField { Name = nodes[index].Name, Path = nodes[index].Path, Encoding = radius });
                     index++;
                 }
 
+                return encoding;
+            case GesSchemaTypeKind.Poly:
+                // A List of Points with the axes x and y.
+                List(in node, encoding);
+                encoding.Poly = true;
+                encoding.Unit = UnitName(type.Kind, type.Unit);
+                index++;
+                encoding.Element = Corner(nodes, ref index, type);
                 return encoding;
             case GesSchemaTypeKind.Reference:
                 encoding.Kind = GesLayoutKind.Schema;
@@ -326,6 +488,29 @@ internal static class GesSchemaLayoutBuilder
 
         index++;
         return encoding;
+    }
+
+    // The axes of a Point, a Box corner or a Poly point, whose group node ends at `group`'s Next.
+    private static void Axes(GesSchemaNode[] nodes, ref int index, int group, GesSchemaType type, GesLayoutEncoding encoding)
+    {
+        for (var axis = 0; axis < 3 && index < nodes[group].Next; axis++)
+        {
+            ref readonly var axisNode = ref nodes[index];
+            var bounds = type.Axes.Count > 0 ? type.Axes[axis] : null;
+            var axisEncoding = new GesLayoutEncoding();
+            Number(in axisNode, GesSchemaTypeKind.Number, GesQuantityUnit.UnitNone, bounds?.Lower, bounds?.Upper, axisEncoding);
+            encoding.Axes.Add(new GesLayoutField { Name = axisNode.Name, Path = axisNode.Path, Encoding = axisEncoding });
+            index++;
+        }
+    }
+
+    private static GesLayoutField Corner(GesSchemaNode[] nodes, ref int index, GesSchemaType type)
+    {
+        var group = index;
+        var corner = new GesLayoutEncoding { Kind = GesLayoutKind.Point, Unit = UnitName(type.Kind, type.Unit) };
+        index++;
+        Axes(nodes, ref index, group, type, corner);
+        return new GesLayoutField { Name = nodes[group].Name, Path = nodes[group].Path, Encoding = corner };
     }
 
     private static void List(in GesSchemaNode node, GesLayoutEncoding encoding)
@@ -399,6 +584,6 @@ internal static class GesSchemaLayoutBuilder
         return kind == GesSchemaTypeKind.Quantity && unit != GesQuantityUnit.UnitNone ? value + unit.ToSuffix() : value;
     }
 
-    private static string UnitName(GesSchemaTypeKind kind, GesQuantityUnit unit)
-        => kind is GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector && unit != GesQuantityUnit.UnitNone ? unit.ToTypeName() : "none";
+    internal static string UnitName(GesSchemaTypeKind kind, GesQuantityUnit unit)
+        => kind is GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Poly or GesSchemaTypeKind.Disc && unit != GesQuantityUnit.UnitNone ? unit.ToTypeName() : "none";
 }

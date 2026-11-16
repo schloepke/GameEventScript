@@ -30,6 +30,11 @@ enum GesMath {
             if let dice = a.diceRolls { return sink.list(removing(dice.map { .integer(Int64($0)) }, b.listValue!)) }
             return sink.nothing
         }
+        // Bytes join only Bytes, Text and Lists; any other partner yields nothing.
+        if a.kind == .bytes || b.kind == .bytes {
+            if !subtract, let left = a.bytesValue, let right = b.bytesValue { return sink.bytes(left + right) }
+            return sink.nothing
+        }
         if a.kind == .dice || b.kind == .dice {
             if !subtract {
                 if let dice = a.diceRolls, validFace(b) { return sink.dice(dice + [Int32(b.asInteger)]) }

@@ -3,7 +3,7 @@
 
 # Swift Syntax module
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `GameEventScriptSyntax` is the SwiftPM module with the GES lexer, parser,
 single-source validator and GES document and schema readers that Runtime and

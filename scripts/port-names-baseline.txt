@@ -134,7 +134,6 @@ only	csharp	Compiler	GesValidationErrors
 only	csharp	Compiler	GesVariadicTaggedExpressionNode
 only	csharp	Runtime	GesCallbackFailureError
 only	csharp	Runtime	GesCustomObject
-only	csharp	Runtime	GesEmptyExtensionRegistry
 only	csharp	Runtime	GesEmptyExternalTypeCatalog
 only	csharp	Runtime	GesEmptyExternalTypeRegistry
 only	csharp	Runtime	GesExternalTypeValueConverter

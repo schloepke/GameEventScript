@@ -12,6 +12,7 @@ HASH = re.compile(r'[0-9a-f]{16}')
 SCHEMA_CODE = re.compile(r'schema\.[a-zA-Z]+')
 WIRE_CODE = re.compile(r'wire\.[a-zA-Z]+')
 DOCUMENT_CODE = re.compile(r'(document|schema)\.[a-zA-Z]+')
+READ_DOCUMENT_CODE = re.compile(r'(document|wire)\.[a-zA-Z]+')
 NUMERIC_PARAMETERS = {':Number.int64', ':Number.binary64', ':Quantity.int64', ':Quantity.binary64'}
 
 
@@ -91,7 +92,7 @@ def prepare(case):
         raise InvalidDocument('Schema API requires no GES source, Steps or assembler')
     numeric_checks.options(case)
     raw = case.metadata.get('schemaApi')
-    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeExternal', 'baselineExternal', 'externalFields', 'failingField', 'baselineFailingField', 'failingCode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document'}, 'schema API input')
+    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeExternal', 'baselineExternal', 'externalFields', 'failingField', 'baselineFailingField', 'failingCode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document', 'readDocument'}, 'schema API input')
     sources = raw.get('sources')
     if not isinstance(sources, list) or not sources or any(not isinstance(s, str) for s in sources):
         raise InvalidDocument('Schema API requires source texts')
@@ -116,7 +117,7 @@ def prepare(case):
         'sources': sources,
         'root': text(raw['root'], 'root') if 'root' in raw else None,
         'parameters': [{'name': k, 'literal': parameters[k]} if isinstance(parameters[k], str) else {'name': k, 'value': input_value(parameters[k])} for k in sorted(parameters)],
-        'bind': raw.get('bind', 'document' not in raw and 'root' in raw),
+        'bind': raw.get('bind', 'document' not in raw and 'readDocument' not in raw and 'root' in raw),
         'encode': input_value(raw['encode']) if 'encode' in raw else None,
         'encodeExternal': raw.get('encodeExternal', False),
         'baselineExternal': raw.get('baselineExternal', False),
@@ -135,10 +136,11 @@ def prepare(case):
         'deltaDecode': delta_input(raw['deltaDecode'], 'delta') if 'deltaDecode' in raw else None,
         'describe': raw.get('describe', False),
         'document': text(raw['document'], 'document') if 'document' in raw else None,
+        'readDocument': read_document(raw['readDocument']) if 'readDocument' in raw else None,
     }
     closed(case.expected, {'gesBlock', 'schema'}, 'schema expectation')
     expected = case.expected.get('schema')
-    closed(expected, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'dump', 'description', 'document'}, 'schema result')
+    closed(expected, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'dump', 'description', 'document', 'readDocument'}, 'schema result')
     if not expected:
         raise InvalidDocument('Schema expectation requires a result')
     if 'error' in expected:
@@ -219,7 +221,29 @@ def prepare(case):
             positioned(expected['document']['error'], DOCUMENT_CODE)
         elif expected['document'].get('ok') is not True:
             raise InvalidDocument('A document check is ok or has an error')
+    if 'readDocument' in expected:
+        if request['readDocument'] is None:
+            raise InvalidDocument('A read document expectation requires a document to read')
+        wanted = expected['readDocument']
+        if 'error' in wanted:
+            closed(wanted, {'error'}, 'read document result')
+            closed(wanted['error'], {'code', 'line', 'column', 'path'}, 'read document error')
+            positioned({key: v for key, v in wanted['error'].items() if key != 'path'}, READ_DOCUMENT_CODE)
+            if not isinstance(wanted['error'].get('path', ''), str):
+                raise InvalidDocument('A read document error path is text')
+        else:
+            closed(wanted, {'schema', 'value'}, 'read document result')
+            text(wanted.get('schema'), 'read document schema')
+            value(wanted['value'])
     return request
+
+
+def read_document(raw):
+    closed(raw, {'text', 'expected'}, 'read document input')
+    names = raw.get('expected')
+    if not isinstance(names, list) or not names or any(not isinstance(name, str) for name in names):
+        raise InvalidDocument('A read document names the expected schemas')
+    return {'text': text(raw.get('text'), 'read document text'), 'expected': names}
 
 
 def contains(expected, actual):
@@ -235,7 +259,7 @@ def compare(case, observed):
     if set(observed) != {'status', 'schema'} or observed['status'] != 'ok':
         raise InvalidDocument('Invalid schema API outcome')
     actual = observed['schema']
-    closed(actual, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'dump', 'description', 'document'}, 'schema observation')
+    closed(actual, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'dump', 'description', 'document', 'readDocument'}, 'schema observation')
     expected = case.expected['schema']
     differences = []
     def differ(path, wanted, seen):
@@ -280,4 +304,13 @@ def compare(case, observed):
                 differ('document', wanted, seen)
         elif seen != {'ok': True}:
             differ('document', wanted, seen)
+    if 'readDocument' in expected:
+        seen = actual.get('readDocument')
+        wanted = expected['readDocument']
+        if 'error' in wanted:
+            if not isinstance(seen, dict) or not contains({'path': '', **wanted['error']}, seen.get('error')):
+                differ('readDocument', wanted, seen)
+        elif not isinstance(seen, dict) or seen.get('schema') != wanted['schema'] or 'value' not in seen \
+                or not numeric_checks.equal(value(wanted['value']), input_value(seen['value']), numeric_checks.options(case)):
+            differ('readDocument', wanted, seen)
     return ('passed', []) if not differences else ('failed', differences)

@@ -49,8 +49,8 @@ Examples:
 Event console:
   :help                 Show commands, examples, and session behavior.
   :help load            Explain loading a program into the current session.
-  :load "extra.gesb"     Add one source or binary file and run its initialization.
-  :unload <module|ID>  Detach one loaded program.
+  :load "extra.gesb"    Add one source or binary file and run its initialization.
+  :unload <module|ID>   Detach one loaded program.
   :unloadAll            Detach all programs; keep native console handlers.
   :reload               Re-read active programs on a fresh host. Use :help reload for details.
   :list                 List loaded programs/modules and their IDs.
@@ -58,7 +58,10 @@ Event console:
   :dump <module|ID>     Show a loaded program as GESA. Use :help dump for details.
   :source <module|ID>   Show current draft or embedded sources. --color highlights source and dumps.
   :show <file>          Show a .ges, .gesa, .gesd or .gess file and mark its errors, without loading it.
-  :quit                 End the session (or use EOF).
+  :edit [ID]            Edit scratch 0 or a loaded source program. Use :help edit for details.
+  :save [ID]            Save modified drafts; :save 0 "file.ges" saves scratch.
+  :quit                 End the session unless there are unsaved changes (or use EOF).
+  :quit!                Discard unsaved changes and end the session.
 
 ConsoleOut(...) writes to stdout; ConsoleErr(...) writes to stderr.
 ErrorCode(code: 0..255) sets the script exit code; nothing resets it to 0.
@@ -85,7 +88,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         string? profilePath = null;
         RunProfiler? profiler = null;
         long? seed = null;
-        var maxMessages = GesRuntimeLimits.Default.MaxProcessedEventsPerRun;
+        var maxMessages = GesRuntimeLimits.Default.MaxProcessedMessagesPerRun;
         var maxSteps = GesRuntimeLimits.Default.MaxExecutionSteps;
         var verbose = false;
         var quiet = false;
@@ -206,7 +209,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
             try
             {
                 color = color && !PrettyPrompt.PromptConfiguration.HasUserOptedOutFromColor;
-                var session = new RunSession(seed, new GesRuntimeLimits { MaxProcessedEventsPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, profiler: profiler);
+                var session = new RunSession(seed, new GesRuntimeLimits { MaxProcessedMessagesPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, profiler: profiler);
                 for (var index = 0; index < programs.Count; index++) session.Inventory.Load(programs[index], binaryCount > 0 ? [paths[index]] : paths);
                 if (scenario is not null) session.Inventory.Load(scenario, scenarioPaths);
                 var runMain = scenario is null && !interactive;

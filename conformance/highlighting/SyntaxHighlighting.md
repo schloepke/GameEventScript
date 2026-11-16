@@ -158,7 +158,35 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"schema recursive list","language":"gess","source":"schema :Bind as { units: :List(:Bind) max 4 depth 3 }\n","expect":[{"text":":List","kind":"type"},{"text":"max","kind":"keyword"},{"text":"depth","kind":"keyword"},{"text":"3","kind":"number"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"schema record default","language":"gess","source":"schema :C as { a: :Percentage default 1%, m: :Tag(#x, #y) default #x }\nschema :S as { c: :C default [a: 90%, m: #y] }\n","expect":[{"text":"default","occurrence":2,"kind":"keyword"},{"text":"90%","kind":"number"},{"text":"#y","occurrence":1,"kind":"tag"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"schema functions and names in backticks","language":"gess","source":"schema :S as {\n  length: :Number\n  half: :Number computed by sqrt `length` + round half up length2\n}\n","expect":[{"text":"sqrt","kind":"keyword"},{"text":"`length`","kind":"identifier"},{"text":"round","kind":"keyword"},{"text":"half","occurrence":1,"kind":"keyword"},{"text":"up","kind":"keyword"},{"text":"length2","kind":"identifier"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"schema roles","language":"gess","source":"wire(world) model(view) schema :Arena as { size: :Number integer between 1 and 64 }\nwire messages :Events as (Hit)\nmessage Hit()\n","expect":[{"text":"wire","occurrence":0,"kind":"keyword"},{"text":"model","kind":"keyword"},{"text":"schema","kind":"keyword"},{"text":"wire","occurrence":1,"kind":"keyword"},{"text":"messages","kind":"keyword"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"schema role on a constant","language":"gess","source":"wire constant $a be 1\n","expect":[{"text":"wire","kind":"keyword"}],"diagnostics":[{"code":"schema.invalidRole","text":"w"}]}
+```
+
+```highlight
 {"name":"schema source first syntax error","language":"gess","source":"schema :A as { a }\n","expect":[{"text":"schema","kind":"keyword"}],"diagnostics":[{"code":"schema.syntax","text":"}"}]}
+```
+
+```highlight
+{"name":"schema error at the end of the text","language":"gess","source":"schema :A as {\n  a: :Number\n","expect":[{"text":":Number","kind":"type"}],"diagnostics":[{"code":"schema.syntax","text":":Number\n","after":true,"length":0}]}
+```
+
+```highlight
+{"name":"schema error on a scalar outside the BMP","language":"gess","source":"schema :A as { \ud83d\ude00 }\n","expect":[{"text":"schema","kind":"keyword"}],"diagnostics":[{"code":"schema.syntax","text":"\ud83d\ude00"}]}
 ```
 
 ```highlight
@@ -187,6 +215,14 @@ and ANSI text preservation.
 
 ```highlight
 {"name":"extension names","language":"ges","source":"let d be :math.distance(x: 1, y: 2)","expect":[{"text":":math.distance","kind":"builtin"},{"text":"x","kind":"identifier"}]}
+```
+
+```highlight
+{"name":"names in backticks and keyword-like field names","language":"ges","source":"record :Shape as { length: :Number, `if`: :Number, half: :Number computed by `length` / 2 }\nlet s be :Shape(length: 2, `if`: 1)\nlet t be s.length + s.`if` + pi","expect":[{"text":"length","occurrence":0,"kind":"identifier"},{"text":"`if`","occurrence":0,"kind":"identifier"},{"text":"`length`","kind":"identifier"},{"text":"length","occurrence":2,"kind":"identifier"},{"text":"length","occurrence":3,"kind":"identifier"},{"text":"`if`","occurrence":2,"kind":"identifier"},{"text":"pi","kind":"number"}]}
+```
+
+```highlight
+{"name":"invalid names in backticks","language":"ges","source":"on Start() { let a be `` }\non Stop() { let b be `Fire` }\non Go() { let c be `open }","expect":[{"text":"let","occurrence":2,"kind":"keyword"},{"text":"`Fire`","kind":"plain"}],"diagnostics":[{"code":"parse.syntax","text":"``"},{"code":"parse.syntax","text":"`Fire`"},{"code":"parse.syntax","text":"`","occurrence":4}]}
 ```
 
 ```highlight

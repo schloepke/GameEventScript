@@ -84,7 +84,7 @@ python3 conformance/runner/main.py run \
 
 Put `--adapter` last; its remaining arguments are passed literally, without a
 shell. A run uses one fresh process for a batch, with a fresh compiler per case.
-The default batch deadline is 60 seconds (`--timeout` overrides it); input,
+The default batch deadline is 60 seconds plus 0.1 seconds per selected case (`--timeout` overrides it), and a run prints how long the batch took; input,
 stdout and stderr are bounded at 32 MiB each. Process failures, malformed replies
 and timeouts are errors rather than expected compiler failures. On POSIX timeout
 cleanup kills the process group; on Windows it kills the adapter process.

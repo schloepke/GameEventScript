@@ -3,7 +3,7 @@
 
 # Swift Generator module
 
-> **Since: Unreleased**
+> **Since: 0.5.0**
 
 `GameEventScriptGenerator` is the SwiftPM module behind `ges schema layout` and
 `ges schema generate`. It turns `.gess` schemas into typed record code, in Swift or

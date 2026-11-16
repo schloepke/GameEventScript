@@ -23,6 +23,8 @@ public struct GesWireError: Error, Sendable, Equatable {
     public let code: String
     /// The path of the field, such as `position.x`; empty for the record as a whole.
     public let path: String
+    /// What the data breaks, such as `deeper than depth 3`, or empty; informative text, not a portable comparison value.
+    public let detail: String
 
     /// The code `wire.truncated`: the data ends before the record does.
     public static let truncated = "wire.truncated"
@@ -60,6 +62,8 @@ public struct GesWireError: Error, Sendable, Equatable {
     public static let unknownTag = "wire.unknownTag"
     /// The code `wire.tooLong`: a Text, Tag, List or Dice exceeds its `max`.
     public static let tooLong = "wire.tooLong"
+    /// The code `wire.tooDeep`: a recursive List holds records deeper than its `depth`.
+    public static let tooDeep = "wire.tooDeep"
     /// The code `wire.bufferTooSmall`: the caller's buffer is too small.
     public static let bufferTooSmall = "wire.bufferTooSmall"
     /// The code `wire.fieldOrder`: a typed writer or reader uses a field out of order.
@@ -72,10 +76,26 @@ public struct GesWireError: Error, Sendable, Equatable {
     public init(code: String, path: String = "") {
         self.code = code
         self.path = path
+        self.detail = ""
+    }
+
+    /// Creates an error with a stable code, a field path and an explanation for people.
+    /// - Parameters:
+    ///   - code: The stable `wire.*` code, one of the constants of this type.
+    ///   - path: The path of the field; empty for the record as a whole.
+    ///   - detail: What the data breaks, such as `deeper than depth 3`; informative text.
+    public init(code: String, path: String, detail: String) {
+        self.code = code
+        self.path = path
+        self.detail = detail
     }
 
     init(_ code: String, _ path: String = "") {
         self.code = code
         self.path = path
+        self.detail = ""
     }
+
+    // A recursive List at its deepest level holds nothing; data that goes on is deeper than the depth.
+    static func tooDeep(_ path: String, _ depth: Int) -> GesWireError { GesWireError(code: tooDeep, path: path, detail: "deeper than depth \(depth)") }
 }

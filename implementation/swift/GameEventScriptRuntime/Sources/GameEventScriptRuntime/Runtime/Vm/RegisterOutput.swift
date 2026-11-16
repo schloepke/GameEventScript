@@ -26,6 +26,8 @@ struct GesRegisterOutput: GesValueOutput {
 
     func dice(_ value: [Int32]) { state.setDice(index, value) }
 
+    func bytes(_ value: [UInt8]) { state.setBytes(index, value) }
+
     func list(_ value: [GesValue]) { state.setList(index, value) }
 
     func map(_ value: [GesMapEntry]) { state.setMap(index, value) }

@@ -13,12 +13,20 @@ internal static partial class GesSwiftEmitter
 {
     private static string N(int node) => node.ToString(CultureInfo.InvariantCulture);
 
-    private static bool Scalar(GesPlanValue value) => value.Encoding.Kind is GesLayoutKind.Boolean or GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag;
+    // The level argument that a recursive List's own helpers take.
+    private static string Level(GesPlanValue value) => value.Depth > 0 ? ", level" : "";
+
+    private static bool Scalar(GesPlanValue value) => value.Encoding.Kind is GesLayoutKind.Boolean or GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags;
 
     private static IEnumerable<GesPlanValue> Scalars(GesPlanValue value)
     {
         if (Scalar(value)) yield return value;
         foreach (var axis in value.Axes) yield return axis;
+        foreach (var corner in value.Corners)
+        {
+            if (Scalar(corner)) yield return corner;
+            foreach (var axis in corner.Axes) yield return axis;
+        }
         foreach (var alternative in value.Alternatives)
             foreach (var nested in Scalars(alternative)) yield return nested;
         if (value.Item is null && value.Element is not null)
@@ -36,7 +44,7 @@ internal static partial class GesSwiftEmitter
             foreach (var value in Scalars(field.Value)) Helpers(code, value);
 
         code.Blank();
-        code.Open($"func __same(_ other: {type.Name}, _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {{");
+        code.Open($"func __same(_ other: {type.Name}, _ paths: [String], _ at: Int{LevelParameter(type)}) throws(GesWireError) -> Bool {{");
         foreach (var field in type.Fields)
         {
             if (field.Optional)
@@ -70,7 +78,7 @@ internal static partial class GesSwiftEmitter
         }
 
         code.Blank();
-        code.Open($"{mutating}func __quantize(_ paths: [String], _ at: Int) throws(GesWireError) {{");
+        code.Open($"{mutating}func __quantize(_ paths: [String], _ at: Int{LevelParameter(type)}) throws(GesWireError) {{");
         foreach (var field in type.Fields)
         {
             if (field.Optional)
@@ -136,6 +144,10 @@ internal static partial class GesSwiftEmitter
                 if (encoding.Range) code.Line($"if value < {Bits(encoding.LowerValue)} || value > {Bits(encoding.UpperValue)} {{ {Throw("outOfRange", value)} }}");
                 code.Line("return (value == 0 ? 0.0 : value).bitPattern");
                 break;
+            case GesLayoutKind.Flags:
+                if (encoding.Width < 64) code.Line($"if value.rawValue > {Unsigned(Full(encoding.Width))} {{ {Throw("unknownTag", value)} }}");
+                code.Line("return value.rawValue");
+                break;
             default:
                 code.Line("UInt64(value.rawValue)");
                 break;
@@ -153,7 +165,12 @@ internal static partial class GesSwiftEmitter
         }
         else if (encoding.Kind != GesLayoutKind.Boolean)
         {
-            var largest = encoding.Kind == GesLayoutKind.Tag ? (ulong)encoding.Tags.Count - 1 : encoding.MaxIndex;
+            var largest = encoding.Kind switch
+            {
+                GesLayoutKind.Tag => (ulong)encoding.Tags.Count - 1,
+                GesLayoutKind.Flags => Full(encoding.Width),
+                _ => encoding.MaxIndex
+            };
             if (largest < Full(encoding.Width)) code.Line($"if wire > {Unsigned(largest)} {{ {Throw("invalidIndex", value)} }}");
         }
 
@@ -167,12 +184,13 @@ internal static partial class GesSwiftEmitter
             GesLayoutKind.Integer => $"private static func __value{node}(_ wire: UInt64) -> Int64 {{ Int64(bitPattern: {Unsigned(unchecked((ulong)encoding.Lower))} &+ wire) }}",
             GesLayoutKind.Quantized => $"private static func __value{node}(_ wire: UInt64) -> Double {{ GesWireRules.quantizedValue(wire, lower: {Long(encoding.Lower)}, numerator: {Long(encoding.Numerator)}, tenPower: {Double(encoding.TenPower)}) }}",
             GesLayoutKind.Float => $"private static func __value{node}(_ wire: UInt64) -> Double {{ Double(bitPattern: wire) }}",
+            GesLayoutKind.Flags => $"private static func __value{node}(_ wire: UInt64) -> {type} {{ {type}(rawValue: wire) }}",
             _ => $"private static func __value{node}(_ wire: UInt64) -> {type} {{ {type}(rawValue: {Underlying(encoding.Tags.Count)}(wire))! }}"
         });
     }
 
     // The UTF-8 storage of a Text in `owner`, "self" or another record.
-    private static string Bytes(GesPlanValue value, string owner) => $"{owner}.{GesSchemaPlanner.Camel(value.Base)}UTF8";
+    private static string Bytes(GesPlanValue value, string owner) => Storage(value, owner);
 
     // Returns false from the enclosing function when the wire values of a and b differ.
     private static void Same(GesSchemaPlanner.Code code, GesPlanValue value, string a, string b, string ownerA, string ownerB)
@@ -183,25 +201,33 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Boolean:
                 code.Line($"if {a} != {b} {{ return false }}");
                 break;
-            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag:
+            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags:
                 code.Line($"if try Self.__wire{node}({a}, paths, at) != Self.__wire{node}({b}, paths, at) {{ return false }}");
                 break;
-            case GesLayoutKind.Text:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 code.Line($"if {Bytes(value, ownerA)} != {Bytes(value, ownerB)} {{ return false }}");
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Same(code, axis, a + "." + Member(axis.Base), b + "." + Member(axis.Base), ownerA, ownerB);
                 break;
+            case GesLayoutKind.Box or GesLayoutKind.Disc:
+                foreach (var corner in value.Corners) Same(code, corner, a + "." + Member(corner.Base), b + "." + Member(corner.Base), ownerA, ownerB);
+                break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                code.Line($"if {a}.rawValue != {b}.rawValue {{ return false }}");
+                break;
             case GesLayoutKind.Schema:
-                code.Line($"if !(try {a}.__same({b}, paths, at + {N(value.Node + 1)})) {{ return false }}");
+                code.Line($"if !(try {a}.__same({b}, paths, at + {N(value.Node + 1)}{NextLevel(value)})) {{ return false }}");
                 break;
             case GesLayoutKind.List:
+                if (value.Depth > 0) OpenLevels(code, value, $"{a}.count + {b}.count");
                 code.Line($"if {a}.count != {b}.count {{ return false }}");
                 code.Open($"for index{node} in 0..<{a}.count {{");
                 var element = value.Element!;
-                if (value.Item is not null) code.Line($"if !(try {a}[index{node}].__same({b}[index{node}], paths, at + {N(element.Node)})) {{ return false }}");
+                if (value.Item is not null) code.Line($"if !(try {a}[index{node}].__same({b}[index{node}], paths, at + {N(element.Node)}{ItemLevel(element)})) {{ return false }}");
                 else Same(code, element, $"{a}[index{node}]", $"{b}[index{node}]", ownerA, ownerB);
                 code.Close();
+                if (value.Depth > 0) code.Close();
                 break;
             case GesLayoutKind.Union:
                 code.Line($"if {a} != {b} {{ return false }}");
@@ -292,7 +318,7 @@ internal static partial class GesSwiftEmitter
         var node = N(value.Node);
         switch (value.Encoding.Kind)
         {
-            case GesLayoutKind.Text:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 code.Line($"{Bytes(value, "self")}.removeAll(keepingCapacity: true)");
                 code.Line($"{Bytes(value, "self")}.append(contentsOf: {Bytes(value, ownerB)})");
                 break;
@@ -343,16 +369,45 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Quantize(code, axis, target + "." + Member(axis.Base));
                 break;
-            case GesLayoutKind.Schema:
-                code.Line($"try {target}.__quantize(paths, at + {N(value.Node + 1)})");
+            case GesLayoutKind.Box when Quantized(value):
+                // A box is immutable: its corners are quantized as Points and make a new box, still in order.
+                code.Open("do {");
+                foreach (var corner in value.Corners)
+                {
+                    code.Line($"var {corner.Label}{node} = {target}.{Member(corner.Base)}");
+                    Quantize(code, corner, corner.Label + node);
+                }
+
+                code.Line($"{target} = GesBox(lower{node}, upper{node})");
+                code.Close();
                 break;
-            case GesLayoutKind.List when Quantized(value.Element!):
+            case GesLayoutKind.Disc when Quantized(value):
+                // A disc is immutable: its centre and radius are quantized and make a new disc.
+                code.Open("do {");
+                foreach (var part in value.Corners)
+                {
+                    code.Line($"{Binding(Quantized(part))} {part.Label}{node} = {target}.{Member(part.Base)}");
+                    Quantize(code, part, part.Label + node);
+                }
+
+                if (value.Corners.Count == 1) code.Line($"let radius{node} = {target}.radius");
+                code.Line($"{target} = GesDisc(center: center{node}, radius: radius{node})");
+                code.Close();
+                break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                break;
+            case GesLayoutKind.Schema:
+                code.Line($"try {target}.__quantize(paths, at + {N(value.Node + 1)}{NextLevel(value)})");
+                break;
+            case GesLayoutKind.List when Quantized(value):
                 var element = value.Element!;
+                if (value.Depth > 0) OpenLevels(code, value, target + ".count");
                 code.Open($"for index{node} in 0..<{target}.count {{");
-                if (value.Item is not null) code.Line($"try {target}[index{node}].__quantize(paths, at + {N(element.Node)})");
-                else if (element.Encoding.Kind == GesLayoutKind.Schema) code.Line($"try {target}[index{node}].__quantize(paths, at + {N(element.Node + 1)})");
+                if (value.Item is not null) code.Line($"try {target}[index{node}].__quantize(paths, at + {N(element.Node)}{ItemLevel(element)})");
+                else if (element.Encoding.Kind == GesLayoutKind.Schema) code.Line($"try {target}[index{node}].__quantize(paths, at + {N(element.Node + 1)}{NextLevel(element)})");
                 else Quantize(code, element, $"{target}[index{node}]");
                 code.Close();
+                if (value.Depth > 0) code.Close();
                 break;
             case GesLayoutKind.Union when value.Alternatives.Exists(Quantized):
                 code.Line($"switch {target} {{");
@@ -369,10 +424,15 @@ internal static partial class GesSwiftEmitter
         }
     }
 
+    // A Point without axes, the centre of a Disc whose block names only the radius, which transmits nothing.
+    private static bool Empty(GesPlanValue value) => value.Encoding.Kind == GesLayoutKind.Point && value.Axes.Count == 0;
+
     private static bool Quantized(GesPlanValue value) => value.Encoding.Kind switch
     {
-        GesLayoutKind.Quantized or GesLayoutKind.Schema => true,
+        GesLayoutKind.Schema => value.Packed is null,
+        GesLayoutKind.Quantized => true,
         GesLayoutKind.Point or GesLayoutKind.Vector => value.Axes.Exists(Quantized),
+        GesLayoutKind.Box or GesLayoutKind.Disc => value.Corners.Exists(Quantized),
         GesLayoutKind.Union => value.Alternatives.Exists(Quantized),
         GesLayoutKind.List => value.Item is not null ? Quantized(value.Item.Fields[0].Value) : Quantized(value.Element!),
         _ => false
@@ -387,22 +447,35 @@ internal static partial class GesSwiftEmitter
         code.Line("/// - Throws: `GesWireError` when a value does not fit its field, the keys differ, or the buffer is too small.");
         code.Open($"{access}func writeDelta(against baseline: {type.Name}, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {{");
         code.Line("var writer = GesBitWriter(into: buffer)");
+        var body = new List<string>();
         if (key is not null)
         {
-            code.Line("let paths = Self.__paths");
-            code.Line($"let key = try Self.__wire0({Target(key.Base)}, paths, 0)");
-            code.Line($"if try key != Self.__wire0({Other("baseline", key.Base)}, paths, 0) {{ throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }}");
-            code.Line($"try writer.write(key, width: {key.Value.Encoding.Width.ToString(CultureInfo.InvariantCulture)})");
+            body.Add("let paths = Self.__paths");
+            body.Add($"let key = try Self.__wire0({Target(key.Base)}, paths, 0)");
+            body.Add($"if try key != Self.__wire0({Other("baseline", key.Base)}, paths, 0) {{ throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }}");
+            body.Add($"try writer.write(key, width: {key.Value.Encoding.Width.ToString(CultureInfo.InvariantCulture)})");
         }
 
-        code.Line("_ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)");
-        code.Line("return try writer.finish()");
+        body.Add("_ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)");
+        body.Add("return try writer.finish()");
+        foreach (var line in body) code.Line(line);
         code.Close();
         code.Blank();
-        code.Line("/// Writes what differs from a baseline into a new array of its exact size.");
+        code.Line("/// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.");
+        code.Line("/// - Throws: `GesWireError` when a value does not fit its field or the keys differ.");
+        code.Open($"{access}func deltaEncodedByteCount(against baseline: {type.Name}) throws(GesWireError) -> Int {{");
+        code.Line("var writer = GesBitWriter.counting()");
+        foreach (var line in body) code.Line(line);
+        code.Close();
+        code.Blank();
+        code.Line("/// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for");
+        code.Line("/// the elements that the writer tries and takes back, so that the largest delta is not allocated.");
         code.Line("/// - Throws: `GesWireError` when a value does not fit its field or the keys differ.");
         code.Open($"{access}func deltaEncoded(against baseline: {type.Name}) throws(GesWireError) -> [UInt8] {{");
-        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)");
+        code.Line("var writer = GesBitWriter.counting()");
+        for (var index = 0; index < body.Count - 1; index++) code.Line(body[index]);
+        code.Line("_ = try writer.finish()");
+        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)");
         code.Line("defer { buffer.deallocate() }");
         code.Line("let count = try writeDelta(against: baseline, into: buffer)");
         code.Line("return Array(buffer[0..<count])");
@@ -455,14 +528,14 @@ internal static partial class GesSwiftEmitter
         var count = N(type.Fields.Count);
         var counted = key is null ? count : $"top ? {N(type.Fields.Count - 1)} : {count}";
         code.Blank();
-        code.Open($"func __writeDelta(_ baseline: {type.Name}, _ writer: inout GesBitWriter, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {{");
+        code.Open($"func __writeDelta(_ baseline: {type.Name}, _ writer: inout GesBitWriter, _ paths: [String], _ at: Int, _ top: Bool{LevelParameter(type)}) throws(GesWireError) -> Bool {{");
         if (type.Fields.Count == 0)
         {
             // A schema without fields has no change bits and never changes.
             code.Line("false");
             code.Close();
             code.Blank();
-            code.Open($"{mutating}func __readDelta(_ baseline: {type.Name}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {{");
+            code.Open($"{mutating}func __readDelta(_ baseline: {type.Name}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool{LevelParameter(type)}) throws(GesWireError) -> Bool {{");
             code.Line("false");
             code.Close();
             return;
@@ -493,7 +566,7 @@ internal static partial class GesSwiftEmitter
         code.Line("return changed");
         code.Close();
         code.Blank();
-        code.Open($"{mutating}func __readDelta(_ baseline: {type.Name}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {{");
+        code.Open($"{mutating}func __readDelta(_ baseline: {type.Name}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool{LevelParameter(type)}) throws(GesWireError) -> Bool {{");
         code.Line($"let fieldCount = {counted}");
         code.Line("try reader.require(fieldCount, path: at == 0 ? \"\" : paths[at - 1])");
         code.Line("let changeBits = reader.bitPosition");
@@ -567,7 +640,7 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Boolean:
                 code.Line($"if {a} != {b} {{ {set} = true }}");
                 break;
-            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag:
+            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags:
                 code.Open("do {");
                 code.Line($"let value{node} = try Self.__wire{node}({a}, paths, at)");
                 code.Line($"let held{node} = try Self.__wire{node}({b}, paths, at)");
@@ -580,10 +653,10 @@ internal static partial class GesSwiftEmitter
                 code.Close();
                 break;
             case GesLayoutKind.List when encoding.Keyed:
-                code.Line($"if try __writeKeyed{node}(baseline, &writer, paths, at) {{ {set} = true }}");
+                code.Line($"if try __writeKeyed{node}(baseline, &writer, paths, at{Level(value)}) {{ {set} = true }}");
                 break;
-            case GesLayoutKind.Text or GesLayoutKind.List:
-                code.Open($"if !(try __same{node}(baseline, paths, at)) {{");
+            case GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List:
+                code.Open($"if !(try __same{node}(baseline, paths, at{Level(value)})) {{");
                 Write(code, value, a);
                 code.Line($"{set} = true");
                 code.Close();
@@ -605,13 +678,50 @@ internal static partial class GesSwiftEmitter
                     code.Close();
                 }
 
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"if {a}.{Member(axis)} != 0 {{ {Throw("typeMismatch", value)} }}");
                 code.Line($"if !{set} {{ writer.rewind(to: first{node}) }}");
+                code.Close();
+                break;
+            case GesLayoutKind.Box or GesLayoutKind.Disc:
+                // A nested delta of the corners, each one of a Point, or of a disc's centre and radius.
+                code.Open("do {");
+                code.Line($"let first{node} = writer.bitPosition");
+                code.Line($"try writer.write(0, width: {N(value.Corners.Count)})");
+                for (var index = 0; index < value.Corners.Count; index++)
+                {
+                    var corner = value.Corners[index];
+                    if (Empty(corner))
+                    {
+                        // A centre without axes transmits nothing: its change bit stays clear, and it must lie at the origin.
+                        foreach (var axis in GesSchemaPlanner.Omitted(corner)) code.Line($"if {a}.{Member(corner.Base)}.{Member(axis)} != 0 {{ {Throw("typeMismatch", corner)} }}");
+                        continue;
+                    }
+
+                    code.Open("do {");
+                    code.Line($"var set{N(corner.Node)} = false");
+                    DeltaPayload(code, corner, a + "." + Member(corner.Base), b + "." + Member(corner.Base), $"set{N(corner.Node)}");
+                    code.Open($"if set{N(corner.Node)} {{");
+                    code.Line($"writer.setBit(first{node} + {N(index)})");
+                    code.Line($"{set} = true");
+                    code.Close();
+                    code.Close();
+                }
+
+                if (value.Encoding.Kind == GesLayoutKind.Disc && value.Corners.Count == 1) code.Line($"if {a}.radius != 0 {{ {Throw("typeMismatch", value)} }}");
+                code.Line($"if !{set} {{ writer.rewind(to: first{node}) }}");
+                code.Close();
+                break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                // A packed record changes as a whole: its word follows the change bit.
+                code.Open($"if {a}.rawValue != {b}.rawValue {{");
+                PackedWrite(code, value, a);
+                code.Line($"{set} = true");
                 code.Close();
                 break;
             case GesLayoutKind.Schema:
                 code.Open("do {");
                 code.Line($"let start{node} = writer.bitPosition");
-                code.Open($"if try {a}.__writeDelta({b}, &writer, paths, at + {N(value.Node + 1)}, false) {{");
+                code.Open($"if try {a}.__writeDelta({b}, &writer, paths, at + {N(value.Node + 1)}, false{NextLevel(value)}) {{");
                 code.Line($"{set} = true");
                 code.Close("} else {");
                 code.Line($"    writer.rewind(to: start{node})");
@@ -678,7 +788,7 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Boolean:
                 code.Line($"{a} = !{b}");
                 break;
-            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag when encoding.DeltaRange == 0:
+            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags when encoding.DeltaRange == 0:
                 code.Open("do {");
                 code.Line($"let held{node} = try Self.__wire{node}({b}, paths, at)");
                 code.Line($"let value{node} = try Self.__read{node}(&reader, paths, at)");
@@ -695,11 +805,11 @@ internal static partial class GesSwiftEmitter
                 code.Line(")");
                 break;
             case GesLayoutKind.List when encoding.Keyed:
-                code.Line($"try __readKeyed{node}(baseline, &reader, paths, at)");
+                code.Line($"try __readKeyed{node}(baseline, &reader, paths, at{Level(value)})");
                 break;
-            case GesLayoutKind.Text or GesLayoutKind.List:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List:
                 Read(code, value, a);
-                code.Line($"if try __same{node}(baseline, paths, at) {{ {Throw("invalidDelta", value)} }}");
+                code.Line($"if try __same{node}(baseline, paths, at{Level(value)}) {{ {Throw("invalidDelta", value)} }}");
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 code.Open("do {");
@@ -725,11 +835,58 @@ internal static partial class GesSwiftEmitter
                     code.Close();
                 }
 
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"{a}.{Member(axis)} = 0");
                 code.Line($"if !changed{node} {{ {Throw("invalidDelta", value)} }}");
                 code.Close();
                 break;
+            case GesLayoutKind.Box or GesLayoutKind.Disc:
+                // The corners start as the baseline's; the box orders what the delta changes. A disc takes its centre and radius
+                // likewise.
+                code.Open("do {");
+                code.Line($"try reader.require({N(value.Corners.Count)}, path: {Path(value)})");
+                code.Line($"let bits{node} = reader.bitPosition");
+                code.Line($"reader.seek(to: bits{node} + {N(value.Corners.Count)})");
+                code.Line($"var changed{node} = false");
+                for (var index = 0; index < value.Corners.Count; index++)
+                {
+                    var corner = value.Corners[index];
+                    var cornerNode = N(corner.Node);
+                    code.Line($"{Binding(!Empty(corner))} {corner.Label}{node} = {b}.{Member(corner.Base)}");
+                    if (Empty(corner))
+                    {
+                        // A centre without axes never changes, so its change bit must be clear in the canonical delta.
+                        code.Open("do {");
+                        code.Line($"let payload{cornerNode} = reader.bitPosition");
+                        code.Line($"reader.seek(to: bits{node} + {N(index)})");
+                        code.Line($"if try reader.read(1, path: {Path(corner)}) == 1 {{ {Throw("invalidDelta", corner)} }}");
+                        code.Line($"reader.seek(to: payload{cornerNode})");
+                        code.Close();
+                        continue;
+                    }
+
+                    code.Open("do {");
+                    code.Line($"let payload{cornerNode} = reader.bitPosition");
+                    code.Line($"reader.seek(to: bits{node} + {N(index)})");
+                    code.Line($"let set{cornerNode} = try reader.read(1, path: {Path(corner)}) == 1");
+                    code.Line($"reader.seek(to: payload{cornerNode})");
+                    code.Open($"if set{cornerNode} {{");
+                    ReadDeltaPayload(code, corner, corner.Label + node, b + "." + Member(corner.Base));
+                    code.Line($"changed{node} = true");
+                    code.Close();
+                    code.Close();
+                }
+
+                code.Line($"if !changed{node} {{ {Throw("invalidDelta", value)} }}");
+                if (value.Encoding.Kind == GesLayoutKind.Disc && value.Corners.Count == 1) code.Line($"let radius{node} = 0.0");
+                code.Line(value.Encoding.Kind == GesLayoutKind.Disc ? $"{a} = GesDisc(center: center{node}, radius: radius{node})" : $"{a} = GesBox(lower{node}, upper{node})");
+                code.Close();
+                break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                PackedRead(code, value, a);
+                code.Line($"if {a}.rawValue == {b}.rawValue {{ {Throw("invalidDelta", value)} }}");
+                break;
             case GesLayoutKind.Schema:
-                code.Line($"if !(try {a}.__readDelta({b}, &reader, paths, at + {N(value.Node + 1)}, false)) {{ {Throw("invalidDelta", value)} }}");
+                code.Line($"if !(try {a}.__readDelta({b}, &reader, paths, at + {N(value.Node + 1)}, false{NextLevel(value)})) {{ {Throw("invalidDelta", value)} }}");
                 break;
             case GesLayoutKind.Union:
                 code.Open("do {");
@@ -770,10 +927,10 @@ internal static partial class GesSwiftEmitter
 
     private static void SameHelper(GesSchemaPlanner.Code code, GesPlanValue value, string type)
     {
-        if (value.Encoding.Kind is GesLayoutKind.Text or GesLayoutKind.List)
+        if (value.Encoding.Kind is GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List)
         {
             code.Blank();
-            code.Open($"private func __same{N(value.Node)}(_ baseline: {type}, _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {{");
+            code.Open($"private func __same{N(value.Node)}(_ baseline: {type}, _ paths: [String], _ at: Int{(value.Depth > 0 ? ", _ level: Int" : "")}) throws(GesWireError) -> Bool {{");
             Same(code, value, Target(value.Base), Other("baseline", value.Base), "self", "baseline");
             code.Line("return true");
             code.Close();

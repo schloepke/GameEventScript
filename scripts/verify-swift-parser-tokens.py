@@ -5,7 +5,7 @@
 """Fail on drift between the keyword-like name token sets of the C# and Swift source parsers.
 
 C# `IsArgumentLabelKind` and `IsExtensionFunctionNameKind` own which keyword tokens may spell an
-argument label or an extension function name. Swift copies them into `labelKeywords` and
+argument label or record field name, or an extension function name. Swift copies them into `labelKeywords` and
 `intrinsicNames`; both sets must name the same token kinds, apart from the identifier kind that
 each parser checks separately.
 """
@@ -38,12 +38,22 @@ def swift_sets(text):
     return names, names | set(re.findall(r"\.(\w+)", labels[1]))
 
 
+def swift_operands(text):
+    operands = re.search(r"static let extensionOperandKinds: Set<GesTokenKind> = \[([^\]]*)\]", text, re.S)
+    if not operands:
+        raise RuntimeError("Missing Swift extensionOperandKinds")
+    return set(re.findall(r"\.`?(\w+)`?", operands[1]))
+
+
 def differences(csharp, swift):
     """Ordered drift messages; empty when both parsers accept the same keyword tokens."""
     intrinsic, labels = swift_sets(swift)
+    # Swift checks numbers and names through `isNumber` and `isName` instead of listing them.
+    operands = csharp_kinds(csharp, "IsExtensionOperandKind") - {"float", "percentage", "unitNumber"}
     result = []
     for name, expected, actual in (("extension function names", csharp_kinds(csharp, "IsExtensionFunctionNameKind"), intrinsic),
-                                   ("argument labels", csharp_kinds(csharp, "IsArgumentLabelKind"), labels)):
+                                   ("argument labels", csharp_kinds(csharp, "IsArgumentLabelKind"), labels),
+                                   ("extension call operands", operands, swift_operands(swift))):
         if expected != actual:
             result.append(f"{name}: C# only {sorted(expected - actual)}, Swift only {sorted(actual - expected)}")
     return result

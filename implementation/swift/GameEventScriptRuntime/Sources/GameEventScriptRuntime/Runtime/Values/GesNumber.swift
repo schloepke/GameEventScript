@@ -1,6 +1,14 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+#if canImport(Darwin)
+    import Darwin
+#elseif canImport(Glibc)
+    import Glibc
+#elseif canImport(Musl)
+    import Musl
+#endif
+
 /// Explicit signed-64 and binary64 conversion rules shared by runtime values.
 enum GesNumber {
     /// Returns an exact signed-64 value only when the finite input is integral and in range.
@@ -16,6 +24,15 @@ enum GesNumber {
         if value < -9223372036854775808.0 { return .min }
         return Int64(value)
     }
+
+    /// A binary64 power: NaN for NaN, the platform's pow, and for the exponent 0.5, which `sqrt` and `√` lower to, the
+    /// correctly rounded square root, so that a root has the same bits on every platform.
+    static func power(_ left: Double, _ right: Double) -> Double {
+        left.isNaN || right.isNaN ? .nan : right == 0.5 ? squareRoot(left) : pow(left, right)
+    }
+
+    /// The square root that pow gives for the exponent 0.5: correctly rounded, and +infinity for -infinity.
+    static func squareRoot(_ value: Double) -> Double { value == -.infinity ? .infinity : value.squareRoot() }
 
     /// Canonicalizes both IEEE zero encodings to positive zero.
     public static func canonicalZero(_ value: Double) -> Double { value == 0 ? 0 : value }

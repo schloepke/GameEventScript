@@ -20,19 +20,8 @@ extension GesVirtualMachine {
                 guard let from = ordered.term(at: 1), let to = ordered.term(at: n) else { return setNothing(destination) }
                 return setIntegerRange(destination, from: from, to: to, step: step)
             }
-            let range = registers[x].floatRangeValue!
-            guard let from = reverse ? range.term(at: length) : range.term(at: 1) else { return setNothing(destination) }
-            // Evaluate the endpoint from the reversed origin, matching the range's binary64 arithmetic.
-            let step = reverse ? -range.step : range.step
-            let end = reverse ? range.from : range.to
-            if let integerFrom = GesNumber.exactInteger(from), let integerTo = GesNumber.exactInteger(end), let integerStep = GesNumber.exactInteger(step) {
-                let ordered = GesIntegerRange(from: integerFrom, to: integerTo, step: integerStep)
-                guard let selectedFrom = ordered.term(at: 1), let selectedTo = ordered.term(at: n) else { return setNothing(destination) }
-                return setIntegerRange(destination, from: selectedFrom, to: selectedTo, step: integerStep)
-            }
-            let ordered = GesFloatRange(from: from, to: end, step: step)
-            guard let selectedFrom = ordered.term(at: 1), let to = ordered.term(at: n) else { return setNothing(destination) }
-            return setFloatRange(destination, from: selectedFrom, to: to, step: step)
+            // The extreme items are a prefix in step direction, or the reversed suffix against it.
+            return setFloatRangeSlice(destination, registers[x].floatRangeValue!, start: reverse ? length - n : 0, count: n, reversed: reverse)
         }
         guard let values = GesCollectionOperators.materialize(registers[x], ranges: false) else { return setNothing(destination) }
         let number = min(count, values.count)

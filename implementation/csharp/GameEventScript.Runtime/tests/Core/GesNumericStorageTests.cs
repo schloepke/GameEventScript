@@ -19,7 +19,8 @@ public sealed class GesNumericStorageTests
         Assert.AreEqual(4294967295L, value.AsInteger());
         var retained = value;
         value.SetList([GesValue.GesInteger(7)]);
-        Assert.AreEqual(0L, value.IntegerValue);
+        Assert.AreEqual(1L, value.IntegerValue, "A List keeps its nesting depth, not its count, in the numeric word.");
+        Assert.AreEqual(1L, value.NestingDepth);
         Assert.AreEqual(1, value.Length);
         Assert.IsFalse(value.IsNumeric);
         Assert.AreEqual(4294967295L, retained.IntegerValue);

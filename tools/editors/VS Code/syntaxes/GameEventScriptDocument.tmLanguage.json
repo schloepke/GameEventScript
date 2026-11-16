@@ -104,7 +104,7 @@
           "name": "support.function.series.gameeventscript.document"
         },
         {
-          "match": ":(?:Nothing|Number|Percentage|Boolean|Text|Tag|List|Map|Dice|Vector|Point|Range|Series|Message|Handler|Record)\\b",
+          "match": ":(?:Nothing|Number|Percentage|Boolean|Text|Tag|List|Map|Dice|Bytes|Vector|Point|Range|Series|Message|Handler|Record)\\b",
           "name": "support.type.primitive.gameeventscript.document"
         },
         {

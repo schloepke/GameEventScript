@@ -11,135 +11,139 @@ using System.Text;
 namespace GameEventScript.Api;
 
 /// <summary>
-/// Represents a game event script binary format.
+/// Fixed constants of the canonical little-endian <c>.gesb</c> V1 container framing.
 /// </summary>
 public static class GesBinaryFormat
 {
     /// <summary>
-    /// Defines the version value.
+    /// The <c>.gesb</c> format version this implementation reads and writes, stored in the file header.
     /// </summary>
     public const ushort Version = 1;
     /// <summary>
-    /// Defines the header size value.
+    /// The size in bytes of the fixed file header: magic, version, flags, header size and file size.
     /// </summary>
     public const uint HeaderSize = 16;
     /// <summary>
-    /// Defines the section header size value.
+    /// The size in bytes of each section header: type, flags, version, reserved word and payload length.
     /// </summary>
     public const uint SectionHeaderSize = 12;
     /// <summary>
-    /// Defines the magic g value.
+    /// The first byte of the ASCII file magic <c>GESB</c>.
     /// </summary>
     public const byte MagicG = (byte)'G';
     /// <summary>
-    /// Defines the magic e value.
+    /// The second byte of the ASCII file magic <c>GESB</c>.
     /// </summary>
     public const byte MagicE = (byte)'E';
     /// <summary>
-    /// Defines the magic s value.
+    /// The third byte of the ASCII file magic <c>GESB</c>.
     /// </summary>
     public const byte MagicS = (byte)'S';
     /// <summary>
-    /// Defines the magic b value.
+    /// The fourth byte of the ASCII file magic <c>GESB</c>.
     /// </summary>
     public const byte MagicB = (byte)'B';
 }
 
 /// <summary>
-/// Defines the supported game event script section flags values.
+/// The <c>SectionFlags</c> word of a section header. Bits outside <see cref="Required"/> and
+/// <see cref="CompressionMask"/> are invalid in V1.
 /// </summary>
 [Flags]
 public enum GesSectionFlags : ushort
 {
     /// <summary>
-    /// Identifies the none value.
+    /// An optional, uncompressed section.
     /// </summary>
     None = 0,
     /// <summary>
-    /// Identifies the required value.
+    /// The section must be understood to load the program; set exactly on the five required runtime sections.
     /// </summary>
     Required = 0x0001,
     /// <summary>
-    /// Identifies the compression mask value.
+    /// The compression-codec field. Codec zero means uncompressed, the only codec V1 implements; a required section
+    /// with another codec is rejected.
     /// </summary>
     CompressionMask = 0x00F0
 }
 
 /// <summary>
-/// Defines the supported game event script section type values.
+/// The assigned <c>.gesb</c> section type IDs, listed in canonical writer order. Types <c>0x0000</c> and <c>0xFFFF</c>
+/// are invalid; <c>0x8000</c>–<c>0xFFFD</c> are free for private or experimental optional sections.
 /// </summary>
 public enum GesSectionType : ushort
 {
     /// <summary>
-    /// Identifies the program metadata value.
+    /// The required <see cref="GesProgramMetadataSegment"/>.
     /// </summary>
     ProgramMetadata = 0x0001,
     /// <summary>
-    /// Identifies the string constants value.
+    /// The required <see cref="GesStringConstantSegment"/>.
     /// </summary>
     StringConstants = 0x0002,
     /// <summary>
-    /// Identifies the u int16 index lists value.
+    /// The required <see cref="GesUInt16IndexListSegment"/>.
     /// </summary>
     UInt16IndexLists = 0x0003,
     /// <summary>
-    /// Identifies the bindings value.
+    /// The required <see cref="GesBindingSegment"/>.
     /// </summary>
     Bindings = 0x0004,
     /// <summary>
-    /// Identifies the code value.
+    /// The required <see cref="GesCodeSegment"/>; V1 has exactly one linear code address space.
     /// </summary>
     Code = 0x0010,
     /// <summary>
-    /// Identifies the debug symbols value.
+    /// The optional <see cref="GesDebugSymbolsSegment"/>.
     /// </summary>
     DebugSymbols = 0x0020,
     /// <summary>
-    /// Identifies the source map value.
+    /// The optional <see cref="GesSourceMapSegment"/>.
     /// </summary>
     SourceMap = 0x0021,
     /// <summary>
-    /// Identifies the source archive value.
+    /// The optional <see cref="GesSourceArchiveSegment"/>.
     /// </summary>
     SourceArchive = 0x0022,
     /// <summary>
-    /// Identifies the build metadata value.
+    /// The optional <see cref="GesBuildMetadataSegment"/>.
     /// </summary>
     BuildMetadata = 0x0030,
     /// <summary>
-    /// Identifies the reserved signature value.
+    /// Reserved for a future signature section; V1 defines no payload and treats it as an unknown section.
     /// </summary>
     ReservedSignature = 0x0040,
     /// <summary>
-    /// Identifies the named custom value.
+    /// Reserved for named custom sections; V1 defines no payload and treats it as an unknown section.
     /// </summary>
     NamedCustom = 0xFFFE
 }
 
 /// <summary>
-/// Defines the supported game event script debug info options values.
+/// Selects which optional debug sections the Compiler emits. Compilation includes all of them by default;
+/// size-sensitive builds opt out with <see cref="None"/>.
 /// </summary>
 [Flags]
 public enum GesDebugInfoOptions : byte
 {
     /// <summary>
-    /// Identifies the none value.
+    /// Emits no debug sections.
     /// </summary>
     None = 0,
     /// <summary>
-    /// Identifies the debug symbols value.
+    /// Emits the <see cref="GesDebugSymbolsSegment"/> naming parameters and locals.
     /// </summary>
     DebugSymbols = 1 << 0,
     /// <summary>
-    /// Identifies the source map value.
+    /// Emits the <see cref="GesSourceMapSegment"/> mapping code addresses to source ranges.
     /// </summary>
     SourceMap = 1 << 1,
     /// <summary>
-    /// Identifies the source archive value.
+    /// Emits the <see cref="GesSourceArchiveSegment"/> embedding the compiler inputs.
     /// </summary>
     SourceArchive = 1 << 2,
     /// <summary>
-    /// Identifies the all value.
+    /// Emits all three debug sections.
     /// </summary>
     All = DebugSymbols | SourceMap | SourceArchive
 }

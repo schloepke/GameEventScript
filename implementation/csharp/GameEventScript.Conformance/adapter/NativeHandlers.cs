@@ -11,7 +11,7 @@ internal static class NativeHandlers
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var definition in handlers.EnumerateArray())
         {
-            RuntimeValues.Fields(definition, "id", "message", "parameters", "messageName", "priority", "initiallySubscribed", "throw", "faultCode", "faultContext", "emit", "actions");
+            RuntimeValues.Fields(definition, "id", "message", "parameters", "messageName", "priority", "initiallySubscribed", "throw", "faultCode", "faultContext", "emit", "actions", "leakRandomScope");
             var id = definition.GetProperty("id").GetString();
             if (string.IsNullOrEmpty(id) || !ids.Add(id) || string.IsNullOrEmpty(definition.GetProperty("message").GetString())) throw new ArgumentException("Invalid native handler identity.");
             var parameters = definition.GetProperty("parameters").EnumerateArray().Select(p => p.GetString() ?? throw new ArgumentException("Invalid parameter.")).ToArray();
@@ -48,6 +48,7 @@ internal static class NativeHandlers
                 throw new NativeFault(new GesDiagnostic(GesDiagnosticPhase.Runtime, code, "Configured native handler fault.",
                     ProgramName: fault.GetProperty("programName").GetString(), HandlerName: fault.GetProperty("handlerName").GetString()));
             }
+            if (definition.GetProperty("leakRandomScope").GetBoolean()) context.Random.Push();
             scenario.Apply("native/" + definition.GetProperty("id").GetString(), definition.GetProperty("actions"));
             foreach (var emit in definition.GetProperty("emit").EnumerateArray())
             {

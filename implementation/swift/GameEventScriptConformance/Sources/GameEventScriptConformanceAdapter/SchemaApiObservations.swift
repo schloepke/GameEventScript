@@ -33,6 +33,7 @@ enum SchemaApiObservations {
                 if input["describe"]?.boolValue == true { result["description"] = describe(schema) }
             }
             if let document = input["document"]?.stringValue { result["document"] = check(set, document, root, parameters) }
+            if let read = input["readDocument"], read != .null { result["readDocument"] = try readDocument(set, read) }
             if input["bind"]?.boolValue == true, let root {
                 let bound = try set.schema(root).bind(parameters: parameters)
                 result["bindingHash"] = hex(bound.bindingHash)
@@ -61,10 +62,25 @@ enum SchemaApiObservations {
         case .message: result["kind"] = "Message"
         case .messages: result["kind"] = "Messages"
         }
+        if let wire = schema.wireGroup { result["wireGroup"] = wire }
+        if let model = schema.modelGroup { result["modelGroup"] = model }
         if !schema.parameters.isEmpty {
             result["parameters"] = schema.parameters.map { parameter -> [String: Any] in
                 var entry: [String: Any] = ["name": parameter.name, "kind": parameter.kind.rawValue]
                 if parameter.unit != .none { entry["unit"] = parameter.unit.rawValue }
+                return entry
+            }
+        }
+        if schema.isAbstract { result["abstract"] = true }
+        if schema.packedWidth > 0 {
+            result["packedWidth"] = schema.packedWidth
+            result["packedBits"] = schema.packedBits
+        }
+        if !schema.takes.isEmpty {
+            result["takes"] = schema.takes.map { take -> [String: Any] in
+                var entry: [String: Any] = ["schema": take.schema.name]
+                if take.isAllOptional { entry["allOptional"] = true }
+                if !take.without.isEmpty { entry["without"] = take.without }
                 return entry
             }
         }
@@ -74,12 +90,46 @@ enum SchemaApiObservations {
                 if field.isUnlabeled { entry["unlabeled"] = true }
                 if field.isOptional { entry["optional"] = true }
                 if field.isKey { entry["key"] = true }
+                if let fallback = field.defaultValue { entry["default"] = describeDefault(fallback) }
+                return entry
+            }
+        }
+        if !schema.computedFields.isEmpty {
+            result["computed"] = schema.computedFields.map { field -> [String: Any] in
+                var entry: [String: Any] = ["name": field.name, "kind": field.kind.rawValue]
+                if field.unit != .none { entry["unit"] = field.unit.rawValue }
+                if field.isOptional { entry["optional"] = true }
+                entry["expression"] = field.expression
+                return entry
+            }
+        }
+        if !schema.constants.isEmpty {
+            result["constants"] = schema.constants.map { constant -> [String: Any] in
+                var entry: [String: Any] = ["name": constant.name, "kind": constant.kind.rawValue]
+                if constant.unit != .none { entry["unit"] = constant.unit.rawValue }
+                if constant.isInteger { entry["integer"] = true }
+                entry["value"] = text(constant.value)
                 return entry
             }
         }
         if !schema.tags.isEmpty { result["tags"] = schema.tags }
         if !schema.members.isEmpty { result["members"] = schema.members.map(\.name) }
         return result
+    }
+
+    private static func describeDefault(_ fallback: GesSchemaDefaultInfo) -> [String: Any] {
+        let kinds: [GesSchemaDefaultKind: String] = [.number: "Number", .boolean: "Boolean", .tag: "Tag", .field: "Field", .record: "Record"]
+        var described: [String: Any] = ["kind": kinds[fallback.kind]!]
+        if let number = fallback.number {
+            described["value"] = text(number)
+        } else if fallback.kind == .boolean {
+            described["value"] = fallback.boolean
+        } else if fallback.kind == .record {
+            described["entries"] = fallback.entries.map { ["name": $0.name, "value": describeDefault($0.value)] as [String: Any] }
+        } else {
+            described["name"] = fallback.name
+        }
+        return described
     }
 
     private static func describe(_ type: GesSchemaType) -> [String: Any] {
@@ -89,6 +139,7 @@ enum SchemaApiObservations {
         if !type.tags.isEmpty { result["tags"] = type.tags }
         if let max = type.max { result["max"] = max }
         if !type.element.isEmpty { result["element"] = type.element.map(describe) }
+        if type.depth > 0 { result["depth"] = type.depth }
         if !type.axes.isEmpty {
             result["axes"] = type.axes.map { axis -> [String: Any] in
                 var entry: [String: Any] = ["name": axis.name]
@@ -110,6 +161,16 @@ enum SchemaApiObservations {
     }
 
     private static func text(_ bound: GesSchemaBound) -> String { bound.isParameter ? "parameter \(bound.parameter)" : "\(bound.significand)e\(bound.exponent)" }
+
+    // Reads a document as generated models do: the header names an expected schema, and the entries are checked against it.
+    private static func readDocument(_ set: GesSchemaSet, _ input: Input) throws -> [String: Any] {
+        do {
+            let document = try GesSchemaDocument(try input.text("text"), schemas: set, expected: input.values("expected").map { $0.stringValue ?? "" })
+            return ["schema": document.schema, "value": try RuntimeValues.encode(document.value)]
+        } catch let error as GesDocumentError {
+            return ["error": ["code": error.code, "line": error.line, "column": error.column, "path": error.path]]
+        }
+    }
 
     private static func check(_ set: GesSchemaSet, _ document: String, _ root: String?, _ parameters: GesSchemaParameters) -> [String: Any] {
         do {

@@ -6,5 +6,5 @@ import SwiftSyntaxMacros
 
 @main
 struct GesBridgeMacroPlugin: CompilerPlugin {
-    let providingMacros: [Macro.Type] = [GesTypeMacro.self, GesFieldMacro.self, GesConstructMacro.self]
+    let providingMacros: [Macro.Type] = [GesTypeMacro.self, GesFieldMacro.self, GesConstructMacro.self, GesExtensionMacro.self, GesFunctionMacro.self]
 }

@@ -4,23 +4,13 @@
 namespace GameEventScript.Api;
 
 /// <summary>
-/// Represents runtime execution limits for a game event script, providing control over various
-/// script execution parameters such as loop iterations, call stack depth, and allowed operations.
-/// This ensures that scripts execute within predefined boundaries to prevent excessive resource usage
-/// or infinite execution.
+/// The safety limits of one host: work, nesting and collection sizes per handler and the queue of the host. They bound
+/// time and stack use, not memory (specs/HostRuntime.md). Exceeding most limits stops the active handler with a
+/// structured runtime-limit observation; the remarks of each property state its exact outcome.
 /// </summary>
 public sealed class GesRuntimeLimits
 {
-    /// <summary>
-    /// Provides the default configuration for runtime limits used in game event script execution.
-    /// This property returns a shared instance of <see cref="GesRuntimeLimits"/>
-    /// with predefined limits for event processing, execution steps, and loop iterations.
-    /// </summary>
-    /// <remarks>
-    /// The default instance is used as a fallback if no custom limits are specified
-    /// during the creation of a runtime context or host. This ensures that
-    /// reasonable constraints are in place to avoid excessive resource usage during script execution.
-    /// </remarks>
+    /// <summary>A shared instance with the default limits of every property.</summary>
     public static GesRuntimeLimits Default { get; } = new();
 
     /// <summary>
@@ -32,34 +22,35 @@ public sealed class GesRuntimeLimits
     /// after all captured handlers finish. Exactly reaching the limit while draining the queue
     /// completes normally. Otherwise pending messages remain queued for a later pump call.
     /// </remarks>
-    public int MaxProcessedEventsPerRun { get; init; } = 64;
+    public int MaxProcessedMessagesPerRun { get; init; } = 64;
 
     /// <summary>
-    /// Specifies the maximum number of messages that may be waiting in an active
-    /// host or explicit run queue.
+    /// Specifies the maximum number of logical messages a host may hold queued, delayed entries included.
     /// </summary>
     /// <remarks>
-    /// A value less than or equal to zero disables the queue-length limit. When the limit is
-    /// reached, the newest message is discarded, the publish call returns false, and
-    /// the runtime observer is notified when one is configured.
+    /// The default is 0, which like every nonpositive value disables the limit. When it is reached, an Emit or Publish
+    /// statement and a native Emit or Publish drop the local message, report the limit to the observer and continue; a
+    /// result-bearing or delayed send stops its handler with this limit; an initialization snapshot that finds no slot
+    /// fails <c>Load</c> with <c>link.initializationQueueFull</c>.
     /// </remarks>
-    public int MaxQueuedMessagesPerRun { get; init; }
+    public int MaxQueuedMessages { get; init; }
 
     /// <summary>
-    /// Specifies the maximum number of execution steps allowed during the evaluation of a game event script.
-    /// This limit is used to control the computational workload of scripts and to prevent scripts
-    /// from consuming excessive runtime resources or entering infinite execution loops.
+    /// Specifies the maximum number of opcodes one script handler may execute.
     /// </summary>
     /// <remarks>
-    /// The value of this property defines an upper bound on the number of discrete steps
-    /// a script is permitted to execute before being halted. A step typically corresponds to a fundamental
-    /// operation or instruction within the script's runtime environment. Setting this limit ensures
-    /// predictable script performance and safeguards against potential misuse or unintentional excessive
-    /// resource consumption.
+    /// The default is 100,000; a nonpositive value disables the limit. The count persists across frame pauses and
+    /// resets for each handler. Exactly the limit is allowed; a handler that would execute more stops with this limit.
     /// </remarks>
     public int MaxExecutionSteps { get; init; } = 100_000;
 
-    /// <summary>Maximum number of values in the reusable VM register storage of one host.</summary>
+    /// <summary>
+    /// Specifies the maximum number of values in the reusable VM register storage of one host.
+    /// </summary>
+    /// <remarks>
+    /// The default is 512; a nonpositive value selects that portable default. <c>Load</c> rejects a Program whose
+    /// declared register requirement exceeds it.
+    /// </remarks>
     public int MaxRegisterValues { get; init; } = 512;
 
     /// <summary>
@@ -74,16 +65,12 @@ public sealed class GesRuntimeLimits
     public int MaxLoopIterations { get; init; } = 100_000;
 
     /// <summary>
-    /// Defines the maximum allowable depth of the call stack during game event script execution.
-    /// This property sets a limit on the number of nested function or method calls
-    /// in a script, ensuring that scripts terminate within a controlled depth to avoid
-    /// stack overflow or excessive resource consumption.
+    /// Specifies the maximum nesting of function and predicate calls in one handler.
     /// </summary>
     /// <remarks>
-    /// The value of this property is used to monitor and restrict the depth of nested
-    /// calls during script execution. Recursive call graphs are rejected by the compiler and loader.
-    /// If the number of nested calls exceeds this limit,
-    /// the script runtime will halt further execution to prevent resource exhaustion.
+    /// The default is 64. Unlike the other limits, zero is not "disabled": it permits only root handlers, so a Program
+    /// that calls a function or predicate fails <c>Load</c> with <c>link.requiredCallStackDepthExceeded</c>. Values
+    /// are clamped to the encoded u16 range. Call graphs are acyclic, so <c>Load</c> checks the Program's static depth.
     /// </remarks>
     public int MaxCallDepth { get; init; } = 64;
 
@@ -100,17 +87,12 @@ public sealed class GesRuntimeLimits
     public int MaxRandomScopeDepth { get; init; } = 16;
 
     /// <summary>
-    /// Specifies the maximum number of items allowed in a range-based operation
-    /// during game event script execution. This limit helps ensure that range operations,
-    /// such as enumerating over a collection or processing a sequence, do not exhaust
-    /// resources by creating excessively large intermediate collections or performing
-    /// operations on an overly large dataset.
+    /// Specifies the maximum number of items a Range may enumerate or materialize.
     /// </summary>
     /// <remarks>
-    /// This property is commonly used to enforce bounds on script-driven operations that
-    /// involve ranges, such as generating collections or iterating over sequences. If a range
-    /// exceeds the specified limit, the script runtime may terminate execution, or the
-    /// relevant operation could fail as a runtime-limit condition.
+    /// The default is 10,000; a nonpositive value disables the limit. A loop over a longer Range runs no iteration, and a
+    /// List cast or shuffle of one yields an empty List; each reports this limit to the observer while the handler
+    /// continues. Inside <c>parse</c> the limit bounds the total of all Ranges it materializes and stops the handler.
     /// </remarks>
     public int MaxRangeItems { get; init; } = 10_000;
 
@@ -127,29 +109,32 @@ public sealed class GesRuntimeLimits
     public int MaxGeneratedCollectionItems { get; init; } = 10_000;
 
     /// <summary>
-    /// Specifies the maximum number of dice that can be processed during the execution
-    /// of a game event script. This limit ensures controlled usage of resources
-    /// when handling random number generation mechanics in scripts.
+    /// Specifies the maximum nesting depth of a List, Map, Record or Message that a handler constructs.
     /// </summary>
     /// <remarks>
-    /// The value of this property represents the upper bound on the allowable
-    /// number of dice rolls in a single script execution. Exceeding this limit during
-    /// runtime will report a runtime-limit condition and the operation being
-    /// disallowed. This safeguard prevents excessive resource consumption
-    /// caused by handling an unreasonably high number of dice rolls.
+    /// The default is 64; a nonpositive value disables this limit. A List, Map, Record or Message is one level
+    /// deeper than its deepest item, field or argument, and every other value has depth 0, so a List of numbers
+    /// has depth 1. Constructing a deeper value stops the handler with this runtime limit. The bound keeps the
+    /// recursive conversion, comparison and release of script-built values within the native stack. Values
+    /// that native code builds through the API are not checked until a handler nests them further.
+    /// </remarks>
+    public int MaxValueDepth { get; init; } = 64;
+
+    /// <summary>
+    /// Specifies the maximum number of dice one roll may create.
+    /// </summary>
+    /// <remarks>
+    /// The default is 1,000; a nonpositive value disables the limit. A larger roll yields empty Dice and reports this
+    /// limit to the observer; the handler continues.
     /// </remarks>
     public int MaxDiceCount { get; init; } = 1_000;
 
     /// <summary>
-    /// Specifies the maximum number of sides that a single dice can have in a game event script.
-    /// This property imposes an upper limit on how large the side count for any dice roll can be,
-    /// providing a constraint to prevent excessive computational complexity or unrealistic scenarios.
+    /// Specifies the maximum number of sides of one die.
     /// </summary>
     /// <remarks>
-    /// This limit helps ensure that dice rolls remain computationally manageable
-    /// and consistent with the intended design of the game event scripting system.
-    /// Scripts that attempt to define a dice with a side count exceeding this value
-    /// will be terminated or flagged as exceeding runtime limits.
+    /// The default is 1,000,000; a nonpositive value disables the limit. A roll with more sides yields empty Dice and
+    /// reports this limit to the observer; the handler continues.
     /// </remarks>
     public int MaxDiceSides { get; init; } = 1_000_000;
 }

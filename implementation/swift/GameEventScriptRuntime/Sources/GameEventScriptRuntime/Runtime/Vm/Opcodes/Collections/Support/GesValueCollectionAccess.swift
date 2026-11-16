@@ -18,6 +18,9 @@ extension GesValue {
         case .dice:
             let rolls = diceRolls!
             return index < rolls.count ? sink.integer(Int64(rolls[Int(index)])) : sink.nothing
+        case .bytes:
+            let bytes = bytesValue!
+            return index < bytes.count ? sink.integer(Int64(bytes[Int(index)])) : sink.nothing
         case .vector, .point: return index < 3 ? sink.float(index == 0 ? x : index == 1 ? y : z, unit: unit) : sink.nothing
         case .integerRange:
             guard let term = integerRangeValue!.term(at: oneBased) else { return sink.nothing }

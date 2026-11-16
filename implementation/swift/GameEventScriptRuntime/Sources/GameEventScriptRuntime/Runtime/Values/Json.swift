@@ -135,8 +135,20 @@ enum GesJson {
         }
 
         mutating func hex() throws -> UInt32 {
+            // Exactly four ASCII hex digits; signs, spaces and other bytes are rejected.
             if position + 4 > bytes.count { throw error("message.invalidJson") }
-            guard let value = UInt32(String(decoding: bytes[position..<(position + 4)], as: UTF8.self), radix: 16) else { throw error("message.invalidJson") }
+            var value: UInt32 = 0
+            for offset in 0..<4 {
+                let byte = bytes[position + offset]
+                let digit: UInt8
+                switch byte {
+                case 48...57: digit = byte - 48
+                case 97...102: digit = byte - 87
+                case 65...70: digit = byte - 55
+                default: throw error("message.invalidJson")
+                }
+                value = (value << 4) | UInt32(digit)
+            }
             position += 4
             return value
         }

@@ -19,7 +19,7 @@ contains exactly `version: 1` and `value`. A message object contains exactly
 are part of the signature. Named labels must be unique; `_` may repeat.
 Tags use bare lowercase tag names, normalized by the ordinary message API.
 
-> **Since: Unreleased** — system endpoint names
+> **Since: 0.5.0** — system endpoint names
 
 The `name` of a message or Handler starts uppercase: writing or reading the system
 endpoints `initialization` and `undeliverable` is `message.invalidValue`.
@@ -33,7 +33,7 @@ array order. They escape quote and backslash with a backslash and U+0000–001F
 with lowercase four-digit `\u` escapes; other Unicode scalars remain literal.
 JSON strings use JSON escaping, not GES's doubled-delimiter convention.
 Readers accept JSON whitespace, equivalent JSON escapes and arbitrary object
-property order. Duplicate object properties and unknown/missing properties are
+property order. A `\u` escape consists of exactly four ASCII hex digits. Duplicate object properties and unknown/missing properties are
 errors. No prefix, trailing content, comments or malformed surrogate escape is
 accepted. JSON numeric tokens in this schema are signed decimal integers;
 only the envelope version uses one. GES numeric payloads are strings, avoiding
@@ -56,7 +56,8 @@ There are no public Integer/Binary64 value tags.
 | `Map` | `entries`: ordered `{key: Text, value: value-object}` objects |
 | `Record` | `name`: type name; `entries`: Map-style entries |
 | `Vector`, `Point` | `x`, `y`, `z`: numeric Text; `unit`: the Number unit strings |
-| `Dice` | `rolls`: positive Int32 decimal numeric strings, descending on output |
+| `Dice` | `rolls`: positive Int32 numeric strings, decimal and descending on output |
+| `Bytes` | `base64`: the bytes in padded standard Base64 (RFC 4648 section 4) without line breaks; other spellings, such as missing padding or set unused bits, are invalid |
 | `Range` | `from`, `to`, `step`: unitless numeric Text |
 | `Series` | `kind`: `"fibonacci"` or `"factorial"`; `offset`: nonnegative Int64 numeric Text |
 | `Handler` | `name`: message name; `labels`: ordered argument labels |

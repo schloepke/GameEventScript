@@ -199,7 +199,7 @@ public sealed class GameEventScriptCheckRunCommandTests
     /// <param name="value">The configured limit.</param>
     /// <param name="limitName">The expected runtime limit identity.</param>
     [TestMethod]
-    [DataRow("--max-messages", "3", "MaxProcessedEventsPerRun")]
+    [DataRow("--max-messages", "3", "MaxProcessedMessagesPerRun")]
     [DataRow("--max-steps", "1", "MaxExecutionSteps")]
     public void RunConsoleOutsFailureAtRuntimeLimits(string option, string value, string limitName)
     {
@@ -275,6 +275,17 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(string.Empty, run.StandardOutput);
     }
 
+    /// <summary>Verifies that schema formatting keeps a union on one line while it fits and otherwise breaks it before each
+    /// further alternative.</summary>
+    [TestMethod]
+    public void SchemaFormatBreaksLongUnions()
+    {
+        Write("union.gess", "schema :Unit as {\n  shape: point: :Point(m) { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m }\n    | box: :Box(m) { x between 0m and 2000m step 0.1m }\n    // a comment\n    | id: :Text max 64 optional\n  name: :Text max 8 |\n    :Number\n}\n");
+        var format = Run("schema", "format", "union.gess");
+        Assert.AreEqual(0, format.ExitCode, format.StandardError);
+        Assert.AreEqual("schema :Unit as {\n  shape: point: :Point(m) {\n      x between 0m and 2000m step 0.1m\n      y between 0m and 2000m step 0.1m\n    }\n    | box: :Box(m) {\n      x between 0m and 2000m step 0.1m\n    }\n    | id: :Text max 64 optional\n  name: :Text max 8 | :Number\n}\n", format.StandardOutput.Replace("\r\n", "\n"));
+    }
+
     /// <summary>Verifies the schema layout command: several roots, all roots, parameters, output files and usage errors.</summary>
     [TestMethod]
     public void SchemaLayoutCoversSeveralRoots()
@@ -333,6 +344,108 @@ public sealed class GameEventScriptCheckRunCommandTests
         var invalid = Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "swift", "--namespace", "1x");
         Assert.AreEqual(1, invalid.ExitCode);
         StringAssert.Contains(invalid.StandardError, "error generate.invalidNamespace");
+    }
+
+    /// <summary>Verifies that a namespace renamed only in case keeps the generated files, also where the file system ignores case.</summary>
+    [TestMethod]
+    public void SchemaGenerateKeepsFilesRenamedOnlyInCase()
+    {
+        Write("s.gess", "model schema :Alpha as { a: :Number }\n");
+        Assert.AreEqual(0, Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "game.net", "-d", "out").ExitCode);
+        var renamed = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game.Net", "-d", "out");
+        Assert.AreEqual(0, renamed.ExitCode, renamed.StandardError);
+        Assert.AreEqual(0, Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game.Net", "-d", "out", "--check").ExitCode);
+    }
+
+    /// <summary>Verifies schema generate into a directory: the split, the manifest, removed and foreign files, and the check.</summary>
+    [TestMethod]
+    public void SchemaGenerateOwnsItsOutputDirectory()
+    {
+        Write("s.gess", "model schema :Alpha as { a: :Number }\nmodel schema :Beta as { b: :Text }\n");
+        var write = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", "out");
+        Assert.AreEqual(0, write.ExitCode, write.StandardError);
+        var output = Path.Combine(_directory, "out");
+        CollectionAssert.AreEqual(new[] { ".ges-generated.json", "Game.Alpha.g.cs", "Game.Beta.g.cs", "_Game.g.cs" }, Directory.GetFiles(output).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToArray());
+        StringAssert.Contains(File.ReadAllText(Path.Combine(output, ".ges-generated.json")), "\"code\": \"model\"");
+        Assert.AreEqual(0, Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", "out", "--check").ExitCode);
+        var stamp = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(Path.Combine(output, "Game.Alpha.g.cs"), stamp);
+        File.WriteAllText(Path.Combine(output, "Mine.cs"), "// mine\n");
+        File.WriteAllText(Path.Combine(output, "Game.Alpha.g.cs.meta"), "unity\n");
+        Write("s.gess", "model schema :Alpha as { a: :Number }\n");
+        var rewrite = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "--out-dir", "out", "--split", "schema");
+        Assert.AreEqual(0, rewrite.ExitCode, rewrite.StandardError);
+        StringAssert.Contains(rewrite.StandardError, "warning cli.unowned: " + Path.Combine("out", "Mine.cs") + " is not generated and was left alone.");
+        Assert.IsFalse(rewrite.StandardError.Contains(".meta", StringComparison.Ordinal));
+        Assert.IsFalse(File.Exists(Path.Combine(output, "Game.Beta.g.cs")));
+        Assert.AreEqual(stamp, File.GetLastWriteTimeUtc(Path.Combine(output, "Game.Alpha.g.cs")));
+        File.AppendAllText(Path.Combine(output, "Game.Alpha.g.cs"), "// edited\n");
+        File.Delete(Path.Combine(output, "_Game.g.cs"));
+        var check = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", "out", "--check");
+        Assert.AreEqual(1, check.ExitCode);
+        StringAssert.Contains(check.StandardError, "error cli.outdated: " + Path.Combine("out", "Game.Alpha.g.cs") + " differs from the generated code.");
+        StringAssert.Contains(check.StandardError, "error cli.outdated: " + Path.Combine("out", "_Game.g.cs") + " does not exist.");
+        StringAssert.Contains(check.StandardError, "error cli.outdated: " + Path.Combine("out", "Mine.cs") + " is not generated.");
+        var file = Run("schema", "generate", "s.gess", "--model", "default", "--language", "swift", "-d", "files", "--split", "file");
+        Assert.AreEqual(0, file.ExitCode, file.StandardError);
+        CollectionAssert.AreEqual(new[] { ".ges-generated.json", "s.swift" }, Directory.GetFiles(Path.Combine(_directory, "files")).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToArray());
+        var both = Run("schema", "generate", "s.gess", "--model", "default", "--language", "swift", "-o", "x.swift", "-d", "out");
+        Assert.AreEqual(1, both.ExitCode);
+        StringAssert.Contains(both.StandardError, "error generate.usage");
+        var lone = Run("schema", "generate", "s.gess", "--model", "default", "--language", "swift", "--split", "file");
+        Assert.AreEqual(1, lone.ExitCode);
+        StringAssert.Contains(lone.StandardError, "error generate.usage");
+        Assert.AreEqual(2, Run("schema", "generate", "s.gess", "--model", "default", "--language", "swift", "-d", "out", "--split", "type").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "s.gess", "--model", "default", "-d", "out").ExitCode);
+    }
+
+    /// <summary>Verifies the wire and model groups of schema layout and generate, and their usage errors.</summary>
+    [TestMethod]
+    public void SchemaRolesSelectTheRootsOfAGroup()
+    {
+        Write("world.gess", "parameter w: :Quantity(m)\nwire(world) schema :World as {\n  at: :Point(m) { x between 0m and w step 1m }\n  badge: :Badge optional\n}\n");
+        Write("panels.gess", "wire(panels) schema :Badge as { on: :Boolean }\nwire(panels) schema :Panel as { badge: :Badge }\n");
+        Write("view.gess", "model(view) schema :View as {\n  name: :Text\n  at: :Point(m)\n}\n");
+        var wire = Run("schema", "layout", "world.gess", "panels.gess", "view.gess", "--wire", "world", "--param", "w=10m");
+        Assert.AreEqual(0, wire.ExitCode, wire.StandardError);
+        StringAssert.StartsWith(wire.StandardOutput, "{\n  \"layout\": 1,\n  \"roots\": [\n    \"World\"\n  ],");
+        StringAssert.Contains(wire.StandardOutput, "\"name\": \"Badge\"");
+        Assert.IsFalse(wire.StandardOutput.Contains("\"Panel\"", StringComparison.Ordinal));
+        var model = Run("schema", "layout", "world.gess", "panels.gess", "view.gess", "--model", "view");
+        Assert.AreEqual(0, model.ExitCode, model.StandardError);
+        StringAssert.StartsWith(model.StandardOutput, "{\n  \"model\": 1,\n  \"roots\": [\n    \"View\"\n  ],");
+        var swift = Run("schema", "generate", "world.gess", "panels.gess", "view.gess", "--model", "view", "--language", "swift");
+        StringAssert.Contains(swift.StandardOutput, "public struct View: Hashable, Sendable, Codable {");
+        StringAssert.Contains(swift.StandardOutput, "public var at: GesPoint");
+        var csharp = Run("schema", "generate", "world.gess", "panels.gess", "view.gess", "--wire", "world", "--param", "w=10m", "--language", "csharp");
+        StringAssert.Contains(csharp.StandardOutput, "public GesPoint At;");
+        var empty = Run("schema", "generate", "world.gess", "panels.gess", "--wire", "nothing", "--param", "w=10m", "--language", "csharp");
+        Assert.AreEqual(1, empty.ExitCode);
+        StringAssert.Contains(empty.StandardError, "error generate.usage: The files have no wire root in the group 'nothing'.");
+        Assert.AreEqual(1, Run("schema", "layout", "view.gess", "--model", "view", "--param", "w=10m").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--wire", "world").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--root", "View").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--checked-exclusivity").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--models", "Model").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--models", "Model").ExitCode);
+        // Extending a leading part of the namespace concerns Swift alone and is named in the manifest.
+        Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "csharp", "--namespace", "Game.View", "--extend-namespace", "Game").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--extend-namespace", "Game").ExitCode);
+        var extended = Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game");
+        Assert.AreEqual(0, extended.ExitCode);
+        StringAssert.Contains(extended.StandardOutput, "extension Game {");
+        Assert.AreEqual(1, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "View").ExitCode);
+        Assert.AreEqual(0, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game", "-d", "ExtendedView").ExitCode);
+        StringAssert.Contains(File.ReadAllText(Path.Combine(_directory, "ExtendedView", ".ges-generated.json")), "\"extendNamespace\": \"Game\"");
+        // A missing language is reported as such, not as an option that concerns Swift.
+        var noLanguage = Run("schema", "generate", "view.gess", "--model", "view", "--extend-namespace", "Game");
+        Assert.AreEqual(2, noLanguage.ExitCode);
+        StringAssert.Contains(noLanguage.StandardError, "requires --language");
+        Assert.AreEqual(2, Run("schema", "hash", "view.gess", "--model", "view").ExitCode);
+        Write("bad.gess", "wire schema :Bad as { name: :Text }\n");
+        var check = Run("schema", "check", "bad.gess");
+        Assert.AreEqual(1, check.ExitCode);
+        StringAssert.Contains(check.StandardError, "bad.gess(1,29): error schema.notEncodable");
     }
 
     /// <summary>Verifies the schema commands: check, canonical form, hash, formatting, dump and error reports.</summary>

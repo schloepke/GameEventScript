@@ -24,8 +24,13 @@ internal static class GesProgramWriter
     public static int GetEncodedSize(GameEventScriptProgram program)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));
-        program.Validate();
+        program.EnsureValid();
+        return MeasureValidated(program);
+    }
 
+    // The size of a Program that was just validated; the public entries validate once and measure here.
+    private static int MeasureValidated(GameEventScriptProgram program)
+    {
         long size = GesBinaryFormat.HeaderSize;
         size = AddSection(size, 16);
         size = AddSection(size, GetStringConstantsSize(program.StringConstants));
@@ -52,7 +57,7 @@ internal static class GesProgramWriter
     public static byte[] ToArray(GameEventScriptProgram program)
     {
         var result = new byte[GetEncodedSize(program)];
-        Write(program, result);
+        WriteValidated(program, result, result.Length);
         return result;
     }
 
@@ -66,10 +71,13 @@ internal static class GesProgramWriter
     /// <exception cref="GesProgramFormatException">Thrown when the program is invalid or cannot be represented by V1.</exception>
     public static int Write(GameEventScriptProgram program, Span<byte> destination)
     {
-        _ = program ?? throw new ArgumentNullException(nameof(program));
         var size = GetEncodedSize(program);
         if (destination.Length < size) throw new ArgumentException("Destination is smaller than the encoded program.", nameof(destination));
+        return WriteValidated(program, destination, size);
+    }
 
+    private static int WriteValidated(GameEventScriptProgram program, Span<byte> destination, int size)
+    {
         var writer = new SpanWriter(destination[..size]);
         writer.WriteByte(GesBinaryFormat.MagicG);
         writer.WriteByte(GesBinaryFormat.MagicE);
@@ -188,6 +196,7 @@ internal static class GesProgramWriter
     private static void WriteBindings(ref SpanWriter writer, GameEventScriptProgram program)
     {
         writer.WriteUInt32(checked((uint)program.Bindings.Entries.Count));
+        var lists = ListIndexes(program.UInt16IndexLists);
         for (var index = 0; index < program.Bindings.Entries.Count; index++)
         {
             var bind = program.Bindings.Entries[index];
@@ -195,9 +204,9 @@ internal static class GesProgramWriter
             writer.WriteByte(0);
             writer.WriteUInt16(bind.Id);
             writer.WriteUInt16(bind.Name);
-            writer.WriteUInt16(FindList(program.UInt16IndexLists, bind.ArgumentNames));
-            writer.WriteUInt16(FindList(program.UInt16IndexLists, bind.RequiredTags));
-            writer.WriteUInt16(FindList(program.UInt16IndexLists, bind.ExcludedTags));
+            writer.WriteUInt16(FindList(lists, bind.ArgumentNames));
+            writer.WriteUInt16(FindList(lists, bind.RequiredTags));
+            writer.WriteUInt16(FindList(lists, bind.ExcludedTags));
             writer.WriteUInt16(bind.EntryAddress);
             writer.WriteUInt16(bind.RequiredRegisterCount);
             writer.WriteUInt16(bind.RequiredCallStackDepth);
@@ -233,9 +242,11 @@ internal static class GesProgramWriter
 
     private static void WriteDebugSymbols(ref SpanWriter writer, GesDebugSymbolsSegment segment)
     {
-        var names = BuildDebugNames(segment);
-        writer.WriteUInt32(checked((uint)names.Count));
-        for (var index = 0; index < names.Count; index++) writer.WriteString(names[index]);
+        var order = BuildDebugNames(segment);
+        var names = new Dictionary<string, int>(order.Count, StringComparer.Ordinal);
+        for (var index = 0; index < order.Count; index++) names.Add(order[index], index);
+        writer.WriteUInt32(checked((uint)order.Count));
+        for (var index = 0; index < order.Count; index++) writer.WriteString(order[index]);
         writer.WriteUInt32(checked((uint)segment.Symbols.Count));
         for (var index = 0; index < segment.Symbols.Count; index++)
         {
@@ -243,19 +254,21 @@ internal static class GesProgramWriter
             writer.WriteByte((byte)symbol.Kind);
             writer.WriteByte(0);
             writer.WriteUInt16(symbol.RegisterId);
-            writer.WriteUInt32(checked((uint)names.IndexOf(symbol.Name)));
+            writer.WriteUInt32(checked((uint)names[symbol.Name]));
             writer.WriteUInt32(symbol.CodeStart);
             writer.WriteUInt32(symbol.CodeLength);
         }
     }
 
+    // Distinct symbol names in first-occurrence order.
     private static List<string> BuildDebugNames(GesDebugSymbolsSegment segment)
     {
         var names = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < segment.Symbols.Count; index++)
         {
             var name = segment.Symbols[index].Name;
-            if (!names.Contains(name)) names.Add(name);
+            if (seen.Add(name)) names.Add(name);
         }
         return names;
     }
@@ -336,17 +349,26 @@ internal static class GesProgramWriter
         throw Format(GesProgramFormatErrorCode.InvalidStringIndex, "ModuleName is not present in StringConstantSegment.");
     }
 
-    private static ushort FindList(GesUInt16IndexListSegment segment, GesReadOnlyArray<ushort> values)
+    // The first list of each content, keyed by its elements, so every binding finds its lists without a scan.
+    private static Dictionary<string, ushort> ListIndexes(GesUInt16IndexListSegment segment)
     {
+        var indexes = new Dictionary<string, ushort>(segment.Slices.Count, StringComparer.Ordinal);
         for (var index = 0; index < segment.Slices.Count; index++)
         {
-            var candidate = segment.Resolve(checked((ushort)index));
-            if (candidate.Length != values.Count) continue;
-            var equal = true;
-            for (var element = 0; element < candidate.Length; element++)
-                if (candidate[element] != values[element]) { equal = false; break; }
-            if (equal) return checked((ushort)index);
+            var list = segment.Resolve(checked((ushort)index));
+            var key = new char[list.Length];
+            for (var element = 0; element < list.Length; element++) key[element] = (char)list[element];
+            indexes.TryAdd(new string(key), checked((ushort)index));
         }
+
+        return indexes;
+    }
+
+    private static ushort FindList(Dictionary<string, ushort> lists, GesReadOnlyArray<ushort> values)
+    {
+        var key = new char[values.Count];
+        for (var element = 0; element < values.Count; element++) key[element] = (char)values[element];
+        if (lists.TryGetValue(new string(key), out var index)) return index;
         if (values.Count == 0) return ushort.MaxValue;
         throw Format(GesProgramFormatErrorCode.InvalidListIndex, "A binding list is not present in UInt16IndexListSegment.");
     }

@@ -192,6 +192,17 @@ sys.exit(item.get("exit", 0))
         result = run([":edit", ":edit", "emit Ping", ":quit"], [{"text": old}, {"text": ""}])
         assert result.stdout == "", result.stdout
 
+        # Saving through a symbolic link replaces its target, keeps the link and the target's permissions.
+        if os.name == "posix":
+            real = work / "real.ges"
+            real.write_text(old)
+            real.chmod(0o755)
+            link = work / "link.ges"
+            link.symlink_to(real.name)
+            run([":edit 1", ":save 1", ":quit"], [{"text": new}], [link])
+            assert link.is_symlink() and real.read_text() == new, (link.is_symlink(), real.read_text())
+            assert real.stat().st_mode & 0o777 == 0o755, oct(real.stat().st_mode)
+
         original.write_text(old)
         result = run([":edit 1", ":reload", "emit Ping", ":source 1", ":edit 1", ":save 1", ":quit"],
                      [{"text": old, "external": str(original), "external_text": new}, {"text": old}], [original])

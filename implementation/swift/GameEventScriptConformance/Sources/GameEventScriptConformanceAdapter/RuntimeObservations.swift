@@ -36,8 +36,9 @@ final class HostScenario {
     static func makeHost(_ test: Input, observer: (any GesRuntimeObserver)?, publishSink: (any GesPublishSink)?, clock: (any GesClock)? = nil) throws -> GameEventScriptHost {
         var limits = GesRuntimeLimits()
         let setters: [String: WritableKeyPath<GesRuntimeLimits, Int>] = [
-            "maxProcessedEventsPerRun": \.maxProcessedEventsPerRun, "maxQueuedMessagesPerRun": \.maxQueuedMessagesPerRun, "maxExecutionSteps": \.maxExecutionSteps, "maxRegisterValues": \.maxRegisterValues, "maxLoopIterations": \.maxLoopIterations,
-            "maxCallDepth": \.maxCallDepth, "maxRandomScopeDepth": \.maxRandomScopeDepth, "maxRangeItems": \.maxRangeItems, "maxGeneratedCollectionItems": \.maxGeneratedCollectionItems, "maxDiceCount": \.maxDiceCount, "maxDiceSides": \.maxDiceSides,
+            "maxProcessedMessagesPerRun": \.maxProcessedMessagesPerRun, "maxQueuedMessages": \.maxQueuedMessages, "maxExecutionSteps": \.maxExecutionSteps, "maxRegisterValues": \.maxRegisterValues, "maxLoopIterations": \.maxLoopIterations,
+            "maxCallDepth": \.maxCallDepth, "maxRandomScopeDepth": \.maxRandomScopeDepth, "maxRangeItems": \.maxRangeItems, "maxGeneratedCollectionItems": \.maxGeneratedCollectionItems, "maxValueDepth": \.maxValueDepth,
+            "maxDiceCount": \.maxDiceCount, "maxDiceSides": \.maxDiceSides,
         ]
         for entry in test["limits"]?.objectValue ?? [] { if let key = setters[entry.key], let number = entry.value.integerValue { limits[keyPath: key] = number } }
         let random = test["random"]
@@ -55,9 +56,13 @@ final class HostScenario {
         let builder = GameEventScriptHost.makeBuilder()
             .withRandomSequence(sequence, fallbackSeed: seed ?? 0)
             .withRuntimeLimits(limits)
-            .withRegistry(RuntimeFixtures())
+            .withExtensionRegistry(GesGeometryLibrary.extensions(next: RuntimeFixtures()))
         if let observer { builder.withRuntimeObserver(observer) }
-        if test["externalTypeRegistry"]?.stringValue != "absent" { builder.withExternalTypeRegistry(RuntimeFixtures(mismatch: test["externalTypeRegistry"]?.stringValue == "mismatch")) }
+        switch test["externalTypeRegistry"]?.stringValue {
+        case "absent": break
+        case "mismatch": builder.withExternalTypeRegistry(RuntimeFixtures(mismatch: true))
+        default: builder.withExternalTypeRegistry(GesGeometryLibrary.externalTypes(next: RuntimeFixtures()))
+        }
         if let publishSink { builder.withPublishSink(publishSink) }
         if let clock { builder.withClock(clock) }
         return try builder.build()
@@ -187,6 +192,7 @@ private final class RuntimeNativeHandler: GesNativeMessageHandler {
         if let code = definition["faultCode"]?.stringValue {
             throw try GesExtensionFaultError(code: code, message: "Configured native fault", programName: definition["faultContext"]?["programName"]?.stringValue, handlerName: definition["faultContext"]?["handlerName"]?.stringValue)
         }
+        if definition["leakRandomScope"]?.boolValue == true { context.random.push() }
         try scenario.actions(definition.values("actions"), path: "native/" + id)
         for emit in definition.values("emit") {
             if emit["forwardArguments"]?.boolValue == true {

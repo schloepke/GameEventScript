@@ -15,7 +15,7 @@ separate libraries; the CLI and internal Conformance adapter are executables.
 | [`GameEventScript.Runtime`](GameEventScript.Runtime) | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types, GES documents and schemas | Syntax |
 | [`GameEventScript.Compiler`](GameEventScript.Compiler) | Binding of the Syntax tree, validation across sources, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime and Syntax |
 | [`GameEventScript.CSharpBridge`](GameEventScript.CSharpBridge) | Delegate adapters, Reflection/attribute bindings, CLR value conversion and optional automatic host pumping | Runtime |
-| [`GameEventScript.Syntax`](GameEventScript.Syntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting with UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | .NET Standard library |
+| [`GameEventScript.Syntax`](GameEventScript.Syntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting of whole documents with UTF-16 spans and ANSI rendering | .NET Standard library |
 | [`GameEventScript.Generator`](GameEventScript.Generator/README.md) | Generation layout and typed C# and Swift code for `.gess` schemas, used at build time | Runtime and Syntax |
 | [`GameEventScript.Conformance`](GameEventScript.Conformance/README.md) | Internal observation adapter for the independent Python runner | Runtime and Compiler |
 | [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge, Syntax, Generator and PrettyPrompt |
@@ -65,7 +65,7 @@ Open [`GameEventScript.sln`](../../GameEventScript.sln) from the repository root
 in an IDE supporting the repository's .NET SDK. The solution includes the
 libraries, CLI, native tests and supporting verification projects.
 
-Development uses the exact **.NET SDK 10.0.201** pinned in
+Development uses the exact **.NET SDK 10.0.404** pinned in
 [`global.json`](../../global.json). The tests and CLI target **.NET 8** and also
 need its runtime installed. The SDK version does not change the libraries'
 `.NET Standard 2.1` target.

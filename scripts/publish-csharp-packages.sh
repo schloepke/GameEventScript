@@ -29,9 +29,9 @@ for package_id in GameEventScript.Syntax GameEventScript.Runtime GameEventScript
     done
 done
 for package_id in GameEventScript.Syntax GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.Generator; do
-    # dotnet also submits the matching .snupkg to NuGet's symbol server.
-    dotnet nuget push "$package_directory/$package_id.$release_version.nupkg" \
-        --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
+    # dotnet also submits the matching .snupkg to NuGet's symbol server. A package that an earlier, interrupted run
+    # already published with identical contents is skipped, so the release can be run again.
+    python3 "$repository_root/scripts/nuget_publication.py" "$package_directory/$package_id.$release_version.nupkg" "$package_id" "$release_version"
 done
 
 if [ "$#" -eq 3 ]; then

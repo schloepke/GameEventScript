@@ -31,7 +31,7 @@ This scenario verifies a structured link rejection, no leaked instance or handle
 gesBlock: case
 id: "full-queue-reject-and-retry"
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 deferredPrograms:
   - "late"
 compile:
@@ -174,7 +174,7 @@ This scenario verifies that initialization may occupy the last available queue s
 gesBlock: case
 id: "last-slot-accepts-initialization"
 runtimeLimits:
-  maxQueuedMessagesPerRun: 2
+  maxQueuedMessages: 2
 deferredPrograms:
   - "late"
 stepActions:
@@ -248,7 +248,7 @@ This scenario verifies that a full queue does not reject a Program that has no i
 gesBlock: case
 id: "no-initialization-needs-no-slot"
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 deferredPrograms:
   - "late"
 stepActions:
@@ -320,7 +320,7 @@ This scenario verifies that rejecting a load between frames preserves the active
 gesBlock: case
 id: "rejection-preserves-paused-script"
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 deferredPrograms:
   - "late"
 compile:
@@ -440,7 +440,7 @@ This scenario fills the queue from a script handler, catches the expected load r
 gesBlock: case
 id: "native-callback-handles-rejection"
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 deferredPrograms:
   - "late"
 stepActions:
@@ -544,7 +544,7 @@ This scenario verifies that the first successful load consumes the available slo
 gesBlock: case
 id: "successive-loads-reserve-separate-slots"
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 deferredPrograms:
   - "a"
   - "b"
@@ -646,7 +646,7 @@ This scenario verifies that a rejected Program cannot receive previously unmatch
 gesBlock: case
 id: "rejected-load-does-not-register-fallback"
 runtimeLimits:
-  maxQueuedMessagesPerRun: 1
+  maxQueuedMessages: 1
 deferredPrograms:
   - "late"
 stepActions:
@@ -739,7 +739,7 @@ This scenario verifies that filling the final queue slot with initialization doe
 gesBlock: case
 id: "successful-load-preserves-captured-snapshot"
 runtimeLimits:
-  maxQueuedMessagesPerRun: 2
+  maxQueuedMessages: 2
 deferredPrograms:
   - "late"
 stepActions:

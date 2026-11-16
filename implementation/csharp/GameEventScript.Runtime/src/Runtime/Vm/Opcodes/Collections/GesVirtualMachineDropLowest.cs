@@ -24,7 +24,7 @@ internal partial class GesVirtualMachine
                 result = DropExtremeRange(in source, range, count, false);
                 break;
             case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
-                result = DropExtremeRange(in source, range, count, false);
+                result = DropExtremeRange(this, in source, range, count, false);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
                 result = DropExtremeIterator(this, iterator, count, false);

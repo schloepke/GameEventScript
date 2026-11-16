@@ -36,6 +36,8 @@ enum GesComparison {
         if a.isNothing || b.isNothing { return nil }
         if a.isNumeric && b.isNumeric {
             if a.unit != b.unit { return nil }
+            // Two integers compare exactly, as the comparison operators do.
+            if a.kind == .integer, b.kind == .integer, let av = a.integerValue, let bv = b.integerValue { return av < bv ? -1 : av > bv ? 1 : 0 }
             return a.asNumber < b.asNumber ? -1 : a.asNumber > b.asNumber ? 1 : 0
         }
         let left = rank(a.kind)
@@ -46,6 +48,7 @@ enum GesComparison {
             if a.unit != b.unit { return nil }
             for (x, y) in [(av.x, bv.x), (av.y, bv.y), (av.z, bv.z)] { if x != y { return x < y ? -1 : 1 } }
         }
+        if let av = a.bytesValue, let bv = b.bytesValue { return av == bv ? 0 : av.lexicographicallyPrecedes(bv) ? -1 : 1 }
         return 0
     }
 
@@ -79,14 +82,22 @@ enum GesComparison {
     }
 
     static func sorted(_ values: [GesValue], keys: [GesValue]? = nil, descending: Bool = false) -> [GesValue]? {
-        if let numbers = numericSortKeys(keys ?? values) {
-            // Every pair is comparable and order() reduces to binary64 comparison, so a stable
-            // O(n log n) sort yields exactly the insertion-sort result below.
+        // Every pair is comparable and order() reduces to comparing these keys, so a stable O(n log n) sort yields
+        // exactly the insertion-sort result below.
+        switch numericSortKeys(keys ?? values) {
+        case .binary64(let numbers):
             let positions = numbers.indices.sorted { left, right in
                 if numbers[left] != numbers[right] { return descending ? numbers[left] > numbers[right] : numbers[left] < numbers[right] }
                 return left < right
             }
             return positions.map { values[$0] }
+        case .int64(let numbers):
+            let positions = numbers.indices.sorted { left, right in
+                if numbers[left] != numbers[right] { return descending ? numbers[left] > numbers[right] : numbers[left] < numbers[right] }
+                return left < right
+            }
+            return positions.map { values[$0] }
+        case nil: break
         }
         var result = values
         var keys = keys ?? values
@@ -108,16 +119,33 @@ enum GesComparison {
         return result
     }
 
-    // Binary64 sort keys when all keys are numeric with one unit, the case order() never rejects.
-    private static func numericSortKeys(_ keys: [GesValue]) -> [Double]? {
-        guard let unit = keys.first?.unit else { return [] }
+    private enum NumericSortKeys {
+        case binary64([Double])
+        case int64([Int64])
+    }
+
+    // Sort keys when all keys are numeric with one unit and none is NaN, the case order() never rejects: Int64 keys
+    // when all are integers, otherwise binary64 keys, which are exact while every integer stays within ±2^53. Mixed
+    // keys with a larger integer use the insertion sort, as SortNumeric of C#.
+    private static func numericSortKeys(_ keys: [GesValue]) -> NumericSortKeys? {
+        guard let unit = keys.first?.unit else { return .binary64([]) }
+        let exactLimit: Int64 = 1 << 53
         var numbers: [Double] = []
         numbers.reserveCapacity(keys.count)
+        var integers = true
+        var large = false
         for key in keys {
             guard key.isNumeric, key.unit == unit else { return nil }
+            if key.kind == .integer, let value = key.integerValue {
+                if value > exactLimit || value < -exactLimit { large = true }
+            } else {
+                integers = false
+                if key.asNumber.isNaN { return nil }
+            }
             numbers.append(key.asNumber)
         }
-        return numbers
+        if !large { return .binary64(numbers) }
+        return integers ? .int64(keys.map { $0.integerValue! }) : nil
     }
 
     private static func rank(_ kind: GesValueKind) -> Int {
@@ -133,6 +161,7 @@ enum GesComparison {
         case .list: 11
         case .map: 12
         case .dice: 13
+        case .bytes: 14
         default: 8
         }
     }

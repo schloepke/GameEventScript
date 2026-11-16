@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Collections.Generic;
 using GameEventScript.Runtime.Values;
 using static GameEventScript.Api.GesBytecodeTypeKind;
 
@@ -27,9 +28,18 @@ internal partial class GesVirtualMachine
 
                 var result = new GesValue[list.Length];
                 var resultLength = 0;
+                // Short Lists compare pairwise without allocating; longer ones use a hash set to stay linear.
+                var seen = list.Length > GesVmMapBuilder.IndexThreshold ? new HashSet<GesValue>(list.Length) : null;
                 for (var i = 0; i < list.Length; i++)
                 {
                     var item = list[i];
+                    if (seen is not null)
+                    {
+                        if (!seen.Add(item)) continue;
+                        result[resultLength++] = item;
+                        continue;
+                    }
+
                     var found = false;
                     for (var j = 0; j < resultLength; j++)
                     {
@@ -87,20 +97,35 @@ internal partial class GesVirtualMachine
             {
                 var values = new GesValue[16];
                 var count = 0;
+                HashSet<GesValue>? seen = null;
                 try
                 {
                     GesIteratorResult item;
                     while ((item = iterator.Next()).HasValue)
                     {
-                        var found = false;
-                        for (var i = 0; i < count; i++)
+                        if (seen is not null)
                         {
-                            if (!values[i].EqualsValue(in item.Value)) continue;
-                            found = true;
-                            break;
+                            if (!seen.Add(item.Value)) continue;
+                        }
+                        else
+                        {
+                            var found = false;
+                            for (var i = 0; i < count; i++)
+                            {
+                                if (!values[i].EqualsValue(in item.Value)) continue;
+                                found = true;
+                                break;
+                            }
+
+                            if (found) continue;
+                            if (count + 1 == GesVmMapBuilder.IndexThreshold)
+                            {
+                                seen = new HashSet<GesValue>(count * 4);
+                                for (var i = 0; i < count; i++) seen.Add(values[i]);
+                                seen.Add(item.Value);
+                            }
                         }
 
-                        if (found) continue;
                         if (count == values.Length)
                         {
                             var resized = new GesValue[values.Length << 1];

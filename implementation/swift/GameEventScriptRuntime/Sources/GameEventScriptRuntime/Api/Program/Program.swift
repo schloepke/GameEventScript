@@ -37,6 +37,9 @@ public final class GameEventScriptProgram: Sendable {
     public let buildMetadata: GesBuildMetadataSegment?
     /// Preserved opaque sections retained by the selected reader policy.
     public let opaqueSections: [GesOpaqueSection]
+    /// Set only by the Reader and the Compiler, which validate the instance before it escapes and discard it on
+    /// failure. Program data is immutable, so the result holds for every later Load and encode (specs/ProgramModel.md).
+    let isValidated: Bool
 
     init(
         formatVersion: UInt16,
@@ -52,8 +55,10 @@ public final class GameEventScriptProgram: Sendable {
         sourceMap: GesSourceMapSegment?,
         sourceArchive: [GesSourceArchiveEntry]?,
         buildMetadata: GesBuildMetadataSegment?,
-        opaqueSections: [GesOpaqueSection]
+        opaqueSections: [GesOpaqueSection],
+        validated: Bool = false
     ) {
+        isValidated = validated
         self.formatVersion = formatVersion
         metadata = GesProgramMetadataSegment(moduleName: moduleName, requiredRegisterCount: requiredRegisterCount, requiredCallStackDepth: requiredCallStackDepth, programVersion: programVersion)
         self.stringConstants = GesStringConstantSegment(values: stringConstants)
@@ -80,7 +85,7 @@ public struct GesProgramMetadataSegment: Sendable, Equatable {
     public let programVersion: UInt64
 
     /// Creates metadata from already validated values.
-    public init(moduleName: String, requiredRegisterCount: UInt16, requiredCallStackDepth: UInt16, programVersion: UInt64) {
+    @_spi(Compiler) public init(moduleName: String, requiredRegisterCount: UInt16, requiredCallStackDepth: UInt16, programVersion: UInt64) {
         self.moduleName = moduleName
         self.requiredRegisterCount = requiredRegisterCount
         self.requiredCallStackDepth = requiredCallStackDepth
@@ -98,7 +103,7 @@ public struct GesStringConstantSegment: Sendable, RandomAccessCollection {
         public let length: Int
 
         /// Creates a byte range.
-        public init(start: Int, length: Int) {
+        @_spi(Compiler) public init(start: Int, length: Int) {
             self.start = start
             self.length = length
         }
@@ -110,7 +115,7 @@ public struct GesStringConstantSegment: Sendable, RandomAccessCollection {
     init(values: [String]) { self.values = values }
 
     /// Creates a segment from UTF-8 slices; malformed UTF-8 is decoded with replacement characters.
-    public init(slices: [SliceEntry], data: [UInt8]) {
+    @_spi(Compiler) public init(slices: [SliceEntry], data: [UInt8]) {
         values = slices.map { String(decoding: data[$0.start..<($0.start + $0.length)], as: UTF8.self) }
     }
 
@@ -181,7 +186,7 @@ public struct GesUInt16IndexListSegment: Sendable, RandomAccessCollection {
         public let length: Int
 
         /// Creates an element range.
-        public init(start: Int, length: Int) {
+        @_spi(Compiler) public init(start: Int, length: Int) {
             self.start = start
             self.length = length
         }
@@ -193,7 +198,7 @@ public struct GesUInt16IndexListSegment: Sendable, RandomAccessCollection {
     init(lists: [[UInt16]]) { self.lists = lists }
 
     /// Creates a segment from element slices into one shared buffer.
-    public init(slices: [SliceEntry], data: [UInt16]) {
+    @_spi(Compiler) public init(slices: [SliceEntry], data: [UInt16]) {
         self.init(lists: slices.map { Array(data[$0.start..<($0.start + $0.length)]) })
     }
 
@@ -326,7 +331,7 @@ public struct GesBindingSegment: Sendable, RandomAccessCollection {
     public let entries: [Entry]
 
     /// Creates a segment from entries in binding-id order.
-    public init(entries: [Entry]) { self.entries = entries }
+    @_spi(Compiler) public init(entries: [Entry]) { self.entries = entries }
 
     /// Number of entries as encoded in the binary section header.
     public var entryCount: UInt16 { UInt16(truncatingIfNeeded: entries.count) }
@@ -347,7 +352,7 @@ public struct GesCodeSegment: Sendable, RandomAccessCollection {
     public let instructions: [GesBytecodeInstruction]
 
     /// Creates a segment from instructions in address order.
-    public init(instructions: [GesBytecodeInstruction]) { self.instructions = instructions }
+    @_spi(Compiler) public init(instructions: [GesBytecodeInstruction]) { self.instructions = instructions }
 
     /// Number of instructions.
     public var length: Int { instructions.count }
@@ -407,7 +412,7 @@ public struct GesSourceMapSource: Sendable {
     public let lineStartByteOffsets: [UInt32]
 
     /// Creates source identity metadata; the Program validator checks checksum size and line boundaries.
-    public init(sourceID: UInt32, sourceName: String, sourceByteLength: UInt32, sha256: [UInt8], lineStartByteOffsets: [UInt32]) {
+    @_spi(Compiler) public init(sourceID: UInt32, sourceName: String, sourceByteLength: UInt32, sha256: [UInt8], lineStartByteOffsets: [UInt32]) {
         self.sourceID = sourceID
         self.sourceName = sourceName
         self.sourceByteLength = sourceByteLength
@@ -447,7 +452,7 @@ public struct GesSourceMapSegment: Sendable {
     public let entries: [GesSourceMapEntry]
 
     /// Creates an immutable source map from document identities and mappings.
-    public init(sources: [GesSourceMapSource], entries: [GesSourceMapEntry]) {
+    @_spi(Compiler) public init(sources: [GesSourceMapSource], entries: [GesSourceMapEntry]) {
         self.sources = sources
         self.entries = entries
     }
@@ -463,7 +468,7 @@ public struct GesSourceArchiveEntry: Sendable {
     public let utf8Content: [UInt8]
 
     /// Creates archive data; the Program validator verifies UTF-8 and corresponding source metadata.
-    public init(sourceID: UInt32, sourceName: String, utf8Content: [UInt8]) {
+    @_spi(Compiler) public init(sourceID: UInt32, sourceName: String, utf8Content: [UInt8]) {
         self.sourceID = sourceID
         self.sourceName = sourceName
         self.utf8Content = utf8Content
@@ -479,7 +484,7 @@ public struct GesDebugSymbolsSegment: Sendable, RandomAccessCollection {
     public let symbols: [GesDebugSymbol]
 
     /// Creates a segment from symbols in section order.
-    public init(symbols: [GesDebugSymbol]) { self.symbols = symbols }
+    @_spi(Compiler) public init(symbols: [GesDebugSymbol]) { self.symbols = symbols }
 
     /// The first position.
     public var startIndex: Int { 0 }
@@ -497,7 +502,7 @@ public struct GesSourceArchiveSegment: Sendable, RandomAccessCollection {
     public let sources: [GesSourceArchiveEntry]
 
     /// Creates a segment from documents in source-id order.
-    public init(sources: [GesSourceArchiveEntry]) { self.sources = sources }
+    @_spi(Compiler) public init(sources: [GesSourceArchiveEntry]) { self.sources = sources }
 
     /// The first position.
     public var startIndex: Int { 0 }
@@ -517,7 +522,7 @@ public struct GesBuildMetadataSegment: Sendable {
     public let compilerVersion: String
 
     /// Creates compiler provenance metadata.
-    public init(compilerID: String, compilerVersion: String) {
+    @_spi(Compiler) public init(compilerID: String, compilerVersion: String) {
         self.compilerID = compilerID
         self.compilerVersion = compilerVersion
     }
@@ -553,7 +558,7 @@ public struct GesOpaqueSection: Sendable {
     public let originalOrdinal: Int
 
     /// Creates retained section data; the Program validator checks permitted framing and flag values.
-    public init(sectionType: UInt16, flags: GesSectionFlags, sectionVersion: UInt16, rawPayload: [UInt8], originalOrdinal: Int) {
+    @_spi(Compiler) public init(sectionType: UInt16, flags: GesSectionFlags, sectionVersion: UInt16, rawPayload: [UInt8], originalOrdinal: Int) {
         self.sectionType = sectionType
         self.flags = flags
         self.sectionVersion = sectionVersion

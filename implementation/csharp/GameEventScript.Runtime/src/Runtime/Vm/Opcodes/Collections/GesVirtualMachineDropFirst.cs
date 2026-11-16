@@ -22,6 +22,9 @@ internal partial class GesVirtualMachine
             case List when source.ObjectValue is GesValue[] list:
                 result = DropFirstList(list, count);
                 break;
+            case Bytes when source.ObjectValue is byte[] bytes:
+                result = SliceBytes(in source, bytes, ByteCount(bytes, count), bytes.Length - ByteCount(bytes, count));
+                break;
             case Dice when source.ObjectValue is int[] dice:
                 result = DropFirstDice(dice, count);
                 break;
@@ -29,7 +32,7 @@ internal partial class GesVirtualMachine
                 result = DropFirstRange(in source, range, count);
                 break;
             case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
-                result = DropFirstRange(in source, range, count);
+                result = DropFirstRange(this, in source, range, count);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
                 result = DropFirstIterator(this, iterator, count);

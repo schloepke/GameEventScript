@@ -1,0 +1,94 @@
+// The model of the group view: every model field type, built by a client and never sent.
+model(view) schema :WorldView as {
+  tick: :Number integer
+  time: :Quantity(s)
+  arena: :Vector(m)
+  bots: :List(:BotView)
+  badge: :Panel_Badge optional
+  gear: :List(:GearView)
+  preset: :GearPreset optional
+  echo: :RadarEcho optional
+  rig: :Rig default [tuning: [gain: 50%]]
+  tuning: :Tuning default [:]
+  boost: :Tuning default [gain: 150%, mode: #hard, limit: 2km]
+}
+
+schema :BotView as {
+  bot: :Number integer key
+  name: :Text
+  alive: :Boolean
+  health: :Percentage between 0% and 100%
+  speed: :Number
+  heading: :Quantity(°) wrapping between 0° and 360°
+  mood: :Tag(#calm, #angry)
+  team: :Tag
+  position: :Point(m)
+  velocity: :Vector(m)
+  body: :World_Body
+  radar: :RadarView optional
+  facing: :Quantity(°) | :Tag(#north, #south) | :Nothing
+  note: :Text | :Nothing
+  marks: :List(:Point(m))
+  units: :List(:Text | :World_Body)
+  grid: :List(:List(:Number integer))
+  rolls: :Dice
+  seal: :Bytes
+  chunks: :List(:Bytes)
+  status: :Flags(#armed, #cloaked)
+  ranks: :List(:Flags(#gold, #silver))
+  hints: :List(:Side)
+  // Computed fields derive from the others with the rules of a script record; models never store them.
+  fit: :Boolean computed by alive and health >= 50%
+  pace: :Quantity(m/s) optional computed by abs speed * 1m/s when speed has value, otherwise 0m/s
+  traced: :Number computed by marks[:count]
+}
+
+// Defaults fill in what a value leaves out: a literal, or the sibling a field names.
+schema :RadarView as {
+  range: :Quantity(m) default 500m
+  reach: :Quantity(m) default range
+  contacts: :List(:Number integer)
+  side: :Side optional
+  lead: :Side optional default side
+  active: :Boolean default true
+}
+
+// An abstract schema lends its fields with `with`; a model that takes them unchanged adopts its protocol, which requires
+// the fields whose type is shared by name, here all but the closed tag grade.
+abstract schema :Part as {
+  label: :Text
+  side: :Side optional
+}
+
+abstract schema :Gear as {
+  with :Part
+  weight: :Quantity(kg) default 1kg
+  grade: :Tag(#low, #high)
+}
+
+schema :GearView as {
+  slot: :Number integer
+  with :Gear
+}
+
+// `all optional` and `without` change the taken fields, so the preset adopts no protocol.
+schema :GearPreset as { with :GearView all optional without (slot) }
+
+// A plain schema that another takes unchanged adopts its own protocol too.
+schema :RadarEcho as { with :RadarView, strength: :Percentage, depth: :Quantity(m) computed by reach - range * strength }
+
+// A record default fills in a left-out record: the fields its literal names, every other field at its own default.
+schema :Tuning as {
+  gain: :Percentage between 0% and 200% default 100%
+  mode: :Tag(#soft, #hard) default #soft
+  limit: :Quantity(m) default 100m
+  cap: :Quantity(m) default limit
+}
+
+schema :Rig as {
+  note: :Text max 16 optional
+  level: :Number integer between 0 and 9 default 1
+  spare: :Tuning default tuning
+  tuning: :Tuning
+  slot: :Number integer default 0
+}

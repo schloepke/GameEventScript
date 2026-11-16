@@ -84,7 +84,10 @@ class ToolReleaseTests(unittest.TestCase):
         log = self.directory / "calls"
         fake.write_text('#!/usr/bin/env python3\nimport json, os, sys\nwith open(os.environ["TEST_LOG"], "a") as f: f.write(json.dumps(sys.argv[1:]) + "\\n")\n')
         fake.chmod(0o755)
-        env = dict(os.environ, PATH=str(self.directory) + os.pathsep + os.environ["PATH"], TEST_LOG=str(log), NUGET_API_KEY="test-only")
+        # An empty local feed stands in for nuget.org, so the test never contacts it.
+        (self.directory / "feed").mkdir()
+        env = dict(os.environ, PATH=str(self.directory) + os.pathsep + os.environ["PATH"], TEST_LOG=str(log), NUGET_API_KEY="test-only",
+                   GES_NUGET_FLAT_CONTAINER=(self.directory / "feed").as_uri())
         command = [sys.executable, str(ROOT / "scripts/publish-csharp-tools.py"), str(self.directory), VERSION]
         (self.directory / "GameEventScript.Conformance.0.1.0-test.1.nupkg").touch()
         subprocess.run(command, env=env, check=True, capture_output=True)
@@ -92,6 +95,7 @@ class ToolReleaseTests(unittest.TestCase):
         subprocess.run([*command, "--publish"], env=env, check=True, capture_output=True)
         calls = [json.loads(line) for line in log.read_text().splitlines()]
         self.assertEqual([str(path) for path in release_packages(self.directory, VERSION)], [call[2] for call in calls])
+        self.assertTrue(all(call[3] == "--no-symbols" for call in calls))
         log.unlink()
         (self.directory / f"{AOT}.{VERSION}.nupkg").unlink()
         result = subprocess.run([*command, "--publish"], env=env, capture_output=True)

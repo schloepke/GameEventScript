@@ -11,7 +11,7 @@ def prepare(metadata, encode_message):
     result, ids = [], set()
     for index, raw in enumerate(definitions):
         closed(raw, {'id', 'message', 'parameters', 'messageName', 'priority', 'initiallySubscribed',
-                     'throw', 'faultCode', 'faultContext', 'actions', 'emit'}, 'native handler')
+                     'throw', 'faultCode', 'faultContext', 'actions', 'emit', 'leakRandomScope'}, 'native handler')
         identifier = raw.get('id', f'native-{index + 1:04}')
         if not isinstance(identifier, str) or not identifier or identifier in ids:
             raise InvalidDocument('Invalid or duplicate native handler ID')
@@ -22,7 +22,8 @@ def prepare(metadata, encode_message):
         parameters = raw.get('parameters', [])
         if not isinstance(parameters, list) or any(not isinstance(p, str) for p in parameters):
             raise InvalidDocument('Invalid native parameters')
-        flags = {key: raw.get(key, default) for key, default in [('messageName', False), ('initiallySubscribed', True), ('throw', False)]}
+        # `leakRandomScope` opens a random scope and returns without closing it, which only a native handler can do.
+        flags = {key: raw.get(key, default) for key, default in [('messageName', False), ('initiallySubscribed', True), ('throw', False), ('leakRandomScope', False)]}
         if any(type(v) is not bool for v in flags.values()) or (flags['messageName'] and parameters):
             raise InvalidDocument('Invalid native matching or flags')
         priority = raw.get('priority', 0)

@@ -18,6 +18,9 @@ internal partial class GesVirtualMachine
             case List when source.ObjectValue is GesValue[] list:
                 result = TakeLastList(this, list, count);
                 break;
+            case Bytes when source.ObjectValue is byte[] bytes:
+                result = SliceBytes(in source, bytes, bytes.Length - ByteCount(bytes, count), ByteCount(bytes, count));
+                break;
             case Dice when source.ObjectValue is int[] dice:
                 result = TakeLastDice(dice, count);
                 break;
@@ -129,8 +132,6 @@ internal partial class GesVirtualMachine
             return dst;
         }
 
-        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length - count + 1L) is { } from) dst.SetFloatRange(from, range.To, range.Step);
-        else dst.SetNothing();
-        return dst;
+        return FloatRangeSlice(vm, range, length, length - count, count, reversed: false);
     }
 }

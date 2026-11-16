@@ -4,7 +4,7 @@
 
 """Keep the portable Swift libraries free of Foundation and other platform frameworks.
 
-Syntax, Runtime and Compiler may import only each other and the C library of
+Syntax, Runtime, Compiler, Generator and Network may import only each other and the C library of
 their platform, so that WASM and embedded consumers do not ship Foundation.
 Their local manifests may depend only on these local packages.
 """
@@ -15,7 +15,7 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKAGES = ("GameEventScriptSyntax", "GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptGenerator")
+PACKAGES = ("GameEventScriptSyntax", "GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptGenerator", "GameEventScriptNetwork")
 LIBC = {"Darwin", "Glibc", "Musl", "WASILibc", "ucrt", "Android", "Bionic"}
 IMPORT = re.compile(
     r"^[ \t]*(?:@\w+(?:\([^\n)]*\))?[ \t]+)*"

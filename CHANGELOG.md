@@ -10,6 +10,19 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+### Added
+- GES network (specs/Network.md): a `network` declaration in `.gess` sources names the routes between a client and a
+  server with their delivery class (`reliable`, `latest`, `bulk`) and an optional `at most every` rate; Runtime binds
+  it and computes its hash (`GesSchemaSet.Network`, Swift `network(_:)`).
+- The Network package (C# `GameEventScript.Network`, netstandard2.1; Swift `GameEventScriptNetwork`) holds a
+  synchronous session state machine with a handshake over version and network hash, sequence numbers, acknowledgements,
+  keepalive, timeout, a send budget and `network.*` codes, plus an in-process loopback and a seeded simulator.
+- The Network Sockets package (C# `GameEventScript.Network.Sockets` on .NET 8; Swift `GameEventScriptNetworkSockets`
+  over SwiftNIO) carries a session over TCP or WebSocket, including `wss` clients.
+- `ges schema generate --root <Network>` writes the wire types of a network's routes and one type with the network
+  hash, a route index per route and the rate of each `at most every` route (specs/Schemas.md#network-constants).
+- Editor grammars highlight the `network` declaration's keywords in `.gess` sources.
+
 ## [0.5.0] — 2026-11-16
 
 This release adds GES schemas (`.gess`) with exact bit-level encoding, deltas and

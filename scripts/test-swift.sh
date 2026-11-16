@@ -19,6 +19,12 @@ swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBr
 
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptGenerator" \
     --scratch-path "$ges_root/artifacts/swift/generator" --disable-build-manifest-caching --configuration debug
+
+swift test --package-path "$ges_root/implementation/swift/GameEventScriptNetwork" \
+    --scratch-path "$ges_root/artifacts/swift/network" --disable-build-manifest-caching --configuration debug
+
+swift test --package-path "$ges_root/implementation/swift/GameEventScriptNetworkSockets" \
+    --scratch-path "$ges_root/artifacts/swift/networksockets" --disable-build-manifest-caching --configuration debug
 "$ges_root/scripts/test-swift-tool.sh"
 python3 "$ges_root/scripts/verify-swift-bytecode.py"
 python3 "$ges_root/scripts/verify-swift-parser-tokens.py"

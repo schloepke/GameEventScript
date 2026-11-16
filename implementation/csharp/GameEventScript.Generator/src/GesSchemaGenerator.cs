@@ -79,7 +79,7 @@ public static class GesSchemaGenerator
         if (parameters is null) throw new ArgumentNullException(nameof(parameters));
         if (options is null) throw new ArgumentNullException(nameof(options));
         var document = Wire(set, roots, parameters, options, out var layout);
-        return GesCodeFiles.Split(document, options.Split, set.SourceName, files => Manifest(options, model: false, layout.Roots, root => (layout.Type(root).Hash, layout.Type(root).BindingHash), layout.Parameters, files));
+        return GesCodeFiles.Split(document, options.Split, set.SourceName, files => Manifest(options, model: false, layout.Roots, layout.RootHashes, layout.Parameters, files));
     }
 
     private static GesCodeDocument Wire(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaParameters parameters, GesSchemaGenerateOptions options, out GesSchemaLayout layout)
@@ -118,7 +118,7 @@ public static class GesSchemaGenerator
         HashSet<string>? wireNames = null;
         if (modelSpace is not null)
         {
-            wireNames = GesSchemaPlanner.TopLevel(types, GesSchemaPlanner.TagSets(types, ""));
+            wireNames = GesSchemaPlanner.TopLevel(types, GesSchemaPlanner.TagSets(types, ""), layout.Networks);
             foreach (var name in packed)
             {
                 wireNames.Remove(name);

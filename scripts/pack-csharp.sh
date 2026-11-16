@@ -19,7 +19,7 @@ mkdir -p "$package_output"
 cd "$repository_root"
 dotnet restore GameEventScript.sln -p:NuGetAudit=false
 
-for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.Syntax GameEventScript.Generator; do
+for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.Syntax GameEventScript.Generator GameEventScript.Network GameEventScript.Network.Sockets; do
     rm -f "$package_output/$package_id.$release_version.nupkg" "$package_output/$package_id.$release_version.snupkg"
 done
 
@@ -29,6 +29,8 @@ dotnet pack implementation/csharp/GameEventScript.CSharpBridge/src/GameEventScri
 
 dotnet pack implementation/csharp/GameEventScript.Syntax/src/GameEventScript.Syntax.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
 dotnet pack implementation/csharp/GameEventScript.Generator/src/GameEventScript.Generator.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
+dotnet pack implementation/csharp/GameEventScript.Network/src/GameEventScript.Network.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
+dotnet pack implementation/csharp/GameEventScript.Network.Sockets/src/GameEventScript.Network.Sockets.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
 
 # The packaged files take the commit time, so a newer build's DLLs are newer and a copy that compares date and size replaces
 # them; packing one commit stays byte-identical. Uncommitted changes take the current time instead, since the commit time

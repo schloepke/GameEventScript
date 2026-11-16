@@ -20,6 +20,10 @@
 - Swift Runtime package: `implementation/swift/GameEventScriptRuntime`.
 - Swift Compiler package: `implementation/swift/GameEventScriptCompiler`.
 - Swift schema code Generator package: `implementation/swift/GameEventScriptGenerator`.
+- Network session core: C# `implementation/csharp/GameEventScript.Network/src`, Swift
+  `implementation/swift/GameEventScriptNetwork`; socket transports: C#
+  `implementation/csharp/GameEventScript.Network.Sockets/src`, Swift
+  `implementation/swift/GameEventScriptNetworkSockets`. Contract: `specs/Network.md`.
 - Swift native adapters: `implementation/swift/GameEventScriptSwiftBridge`.
 - Swift CLI package and `ges` executable: `implementation/swift/GameEventScriptTool`.
 - Swift Conformance package and adapter: `implementation/swift/GameEventScriptConformance`.
@@ -475,7 +479,8 @@ case counts, so adding a case updates them in the same change.
 
 ## Package distribution
 
-Public NuGet distribution consists of Runtime, Compiler, CSharpBridge, Syntax and Generator,
+Public NuGet distribution consists of Runtime, Compiler, CSharpBridge, Syntax, Generator,
+Network and Network.Sockets (net8.0 only; not in the Unity DLL set),
 with one release version and canonical packages below
 `artifacts/csharp/packages/<version>`. Conformance is not packable. CLI NuGet
 packages are `GameEventScript.Tool` and `GameEventScript.Tool.Aot` plus six RID
@@ -487,9 +492,11 @@ Conformance; its `generator` set (Syntax, Runtime, Generator) is for build tools
 Unity `Editor` folder. Keep the explicit upload allowlist in
 `scripts/publish-csharp-packages.sh`; its fake-client tests never publish.
 
-The root `Package.swift` is the public SwiftPM entry point with five library
+The root `Package.swift` is the public SwiftPM entry point with seven library
 products: GameEventScriptRuntime, GameEventScriptCompiler,
-GameEventScriptSwiftBridge, GameEventScriptSyntax and GameEventScriptGenerator. They use existing sources and share a Git tag/version;
+GameEventScriptSwiftBridge, GameEventScriptSyntax, GameEventScriptGenerator,
+GameEventScriptNetwork and GameEventScriptNetworkSockets. Only NetworkSockets depends on
+SwiftNIO (swift-nio, swift-nio-ssl). They use existing sources and share a Git tag/version;
 local development packages remain separate. CLI and TerminalSupport belong only to the
 separate GameEventScriptTool package; Conformance remains internal.
 The root package requires macOS 10.15 for the SwiftSyntax macro dependency. Three root test targets reuse the existing SwiftBridge,
@@ -798,7 +805,9 @@ Generate public C#/Swift API references first with
 `python3 scripts/build-api-docs.py --language csharp` and `--language swift`.
 Website preparation rejects missing/stale references using source revision and
 input hashes; its failure controls are `python3 scripts/test-api-docs.py`.
-Only Runtime, Compiler, Bridge, Syntax and Generator appear in DocFX/DocC output.
+Only Runtime, Compiler, Bridge, Syntax, Generator, Network and Network Sockets appear in DocFX/DocC output.
+Swift graphs come from `swift-symbolgraph-extract` per module, never `dump-symbol-graph`, which
+fails on SwiftNIO SSL's C headers.
 Transport Swift API output and the final website between CI jobs as tar archives;
 DocC filenames contain colons rejected by GitHub's individual-file artifact upload.
 Swift symbol extraction includes extension blocks; staging also checks public

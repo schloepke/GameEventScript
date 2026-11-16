@@ -273,6 +273,7 @@ discriminator is `gesBlock: case`. It supports:
 | `messageApi` | mapping | `messageApi` only | signature and message input |
 | `valueApi` | mapping | `valueApi` only | portable value construction, comparison, copy or literal parsing input |
 | `schemaApi` | mapping | `schemaApi` only | Schema sources, a root, parameters and what to encode, decode or check |
+| `networkApi` | mapping | `networkApi` only | Schema sources, a network, connection options and scripted session steps |
 | `documentApi` | mapping | `documentApi` only | GES document text or root value, with optional printing |
 | `externalTypeApi` | mapping | `externalTypeApi` only | portable external-type catalog input |
 | `binaryFixture` | mapping | `programBinary` only | immutable `.gesb` fixture manifest entry |
@@ -697,7 +698,7 @@ last-entry-wins semantics before scalar-ordinal key sorting.
 ## Expectation fields by test kind
 
 Supported V1 kinds are `scriptApi`, `compileError`, `loadError`, `messageApi`,
-`valueApi`, `documentApi`, `schemaApi`, `externalTypeApi`, `compileMetadata`, `bytecode`,
+`valueApi`, `documentApi`, `schemaApi`, `networkApi`, `externalTypeApi`, `compileMetadata`, `bytecode`,
 `performance`, and `bytecodeSnapshot`, and `programBinary`. A kind's
 required core capabilities are additive to explicit `requires.core`.
 
@@ -920,12 +921,52 @@ Requires `schema-api` and no GES source. `schemaApi.sources` lists schema source
 literals or to Int64 or Binary64 Number or Quantity values in the `valueApi.value` transport. `encode` holds a value with the `valueApi.value` transport, which `encodeExternal: true` wraps as an adapter-owned external value when it is a Record, with the getter of `failingField` raising an unanticipated platform failure or, with `failingCode`, a deliberate fault with that code, which `encoded` reports as `{ failure: code }`, and of which `externalFields` lists the Record fields to wrap in the same way, `baselineExternal: true` to wrap the Record in `baseline` as well, with the getter of `baselineFailingField` failing in the same way, which `encoded` and `decoded` report, `encodeBuffer` an optional
 buffer size without a `baseline`, `baseline` a value with the same transport that makes `encode` and `decode` work on
 deltas against it, `decode` lowercase hexadecimal bytes, `decodeLimit` an optional byte limit, `key`
-bytes whose key is read, `dump` bytes to dump, `dumpBaseline` the full record that makes `dump` read a delta, `deltaEncode` the bytes of `record` and `baseline` and `deltaDecode` those of `delta` and `baseline` for `GesSchemaDelta`, `describe: true` to observe the root's description, and `document` a document text to check. `bind` overrides whether the
+bytes whose key is read, `dump` bytes to dump, `dumpBaseline` the full record that makes `dump` read a delta, `deltaEncode` the bytes of `record` and `baseline` and `deltaDecode` those of `delta` and `baseline` for `GesSchemaDelta`, `describe: true` to observe the root's description, `document` a document text to check, and `network` the name of a [network](../Network.md#declaration) to bind with the same parameters. `bind` overrides whether the
 root is bound, which by default holds for a root without a document. The expectation `schema`
 contains any of `error` (`code` with optional `line` and `column`; it stands alone), `canonical`,
 `hash`, `bindingHash`, `maxByteCount`, `encoded` (`bytes` or `error` with `code` and optional
-`path`), `decoded` (`value` and `byteCount`, or `error`), `deltaEncoded` (`bytes` or `error`), `deltaDecoded` (`record` and `deltaByteCount`, or `error`), `key`, `dump` (`text` and `valid`), `description` and `document` (`ok: true` or
-`error`). The contract is [GES schemas](../Schemas.md).
+`path`), `decoded` (`value` and `byteCount`, or `error`), `deltaEncoded` (`bytes` or `error`), `deltaDecoded` (`record` and `deltaByteCount`, or `error`), `key`, `dump` (`text` and `valid`), `description`, `document` (`ok: true` or
+`error`) and `network` (`canonical` and `hash` of the bound network). The contract is [GES schemas](../Schemas.md);
+networks are owned by [GES network](../Network.md), *since Unreleased*.
+
+### `networkApi`
+
+> **Since: Unreleased**
+
+Requires `network-api` and no GES source. `networkApi.sources` lists schema source texts as in
+`schemaApi`, `clientSources` optionally different texts for the client, and `network` the
+[network](../Network.md#declaration) both sides bind. `options` and `clientOptions` (default: the
+server's) set the connection options by their portable names (`transport` is `message` or `stream`;
+the others are integers), and `token` is the client's token as lowercase hexadecimal. `link` is
+`loopback` (default), `none`, or a simulated link with `seed`, `latencyMicroseconds` and
+`jitterMicroseconds`; with a link, packets travel through the seeded
+[simulator](../Network.md#simulator), without one only `transmit` and `receive` move them.
+
+`steps` is a list of mappings with exactly one action each: `advance: now` advances both sides (or
+the link), `accept: true` and `refuse: detail` decide on the server, `close` takes `side` and
+`detail`, `send` takes `side`, `route` and `payload`, `receive` takes `side` and hexadecimal
+`bytes`, `transmit: side` and `transportClosed: side` act on one side, and `budget` takes `side`
+and `bytesPerSecond`. A payload is lowercase hexadecimal or a mapping of `length` and `seed` whose
+byte *i* is (*i* + `seed`) mod 251.
+
+The adapter records a trace: `<side> send <status>` for each send, `<side> packet <hex>` for each
+transmitted packet, `<side> error invalidOperation|invalidArgument` for a rejected call, and after
+every step the events of the client and then of the server as `<side> connecting <bytes>`,
+`<side> connected`, `<side> message <route> <bytes>` and `<side> closed <code> peer|local
+"<detail>"`. Bytes print as `-` when empty, as hexadecimal up to 32 bytes, and otherwise as
+`<length>:<FNV-1a 64 hex>`. The expectation `network` holds the exact `trace` and optional `client`
+and `server` mappings with any of `state`, `roundTripMicroseconds`, `queuedSendBytes` and
+`pendingReceiveBytes`, or a standalone `error` with the `code` of a schema error or
+`invalidArgument` for options the connection rejects.
+
+```yaml
+networkApi:
+  sources: ["wire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\nnetwork :Game as {\n  client sends :Commands reliable\n}\n"]
+  network: Game
+  steps:
+    - advance: 0
+    - accept: true
+```
 
 ### `documentApi`
 

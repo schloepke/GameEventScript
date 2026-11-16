@@ -42,6 +42,14 @@ GameEventScript Generator (build-time)
   schema generation layout and C#/Swift emitters
   -> depends only on GameEventScript Syntax and Runtime; no Runtime or Compiler depends on it
 
+GameEventScript Network
+  network declarations bound by Runtime, synchronous session state machine, loopback, simulator
+  -> depends only on GameEventScript Runtime
+
+GameEventScript Network Sockets (optional)
+  TCP and WebSocket transports (.NET 8 sockets; SwiftNIO)
+  -> depends only on GameEventScript Network and Runtime; no portable module depends on it
+
 Independent Conformance runner (Python, repository tooling)
   Markdown parser, normalized test model, assertions, reports, received output
   -> communicates with internal implementation adapters over JSON
@@ -798,6 +806,40 @@ relative to the output directory and its text, ordered by name, with the manifes
 nothing; the CLI owns the directory. `Split` stays `None` for `Generate` and `GenerateModels`, and the file methods need
 `Schema` or `File`; otherwise they fail with `generate.usage`. File names that differ only in ASCII case fail with
 `generate.nameCollision`.
+
+## Network
+
+> **Since: Unreleased**
+
+Runtime binds the `network` declarations of a schema set ([GES network](Network.md#declaration)). The Network
+package (C# `GameEventScript.Network`, netstandard2.1; Swift product `GameEventScriptNetwork`) holds the session
+state machine. It depends on Runtime only, is synchronous and opens no socket, starts no thread and reads no clock.
+The optional Sockets package (C# `GameEventScript.Network.Sockets`, .NET 8; Swift product
+`GameEventScriptNetworkSockets` over SwiftNIO) carries a connection over TCP or WebSocket; only it is asynchronous.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| declaration | `GesSchemaSet.Network(name)` returning `sealed class GesNetwork` with `Name`, `Routes`, `Bind(parameters)` | `network(_:)` (throwing) returning `final class GesNetwork` with `name`, `routes`, `bind(parameters:)` |
+| route | `sealed class GesNetworkRoute` with `Index`, `Channel`, `Side`, `Verb`, `Root`, `DeliveryClass`, `RateMicroseconds` | `final class GesNetworkRoute` with the same properties in lower camel case |
+| route enums | `GesNetworkSide`, `GesNetworkVerb`, `GesNetworkClass` | the same enums |
+| bound network | `sealed class GesBoundNetwork` with `Network`, `Roots`, `CanonicalForm`, `Hash` | `final class GesBoundNetwork` with `network`, `roots`, `canonicalForm`, `hash` |
+| connection | `sealed class GesNetworkConnection` with `CreateClient(network, token, now, options)`, `CreateServer(network, now, options)` | `final class GesNetworkConnection` with `makeClient(network:token:now:options:)`, `makeServer(network:now:options:)` |
+| driving | `Receive(data, now)`, `Advance(now)`, `Transmit(buffer)`, `NextDeadline`, `TransportClosed()` | `receive(_:now:)`, `advance(_:)`, `transmit(into:)`, `nextDeadline`, `transportClosed()` |
+| session control | `Send(route, payload)`, `Accept()`, `Refuse(detail)`, `Close(detail)`, `NextEvent()` | `send(route:payload:)`, `accept()`, `refuse(_:)`, `close(_:)`, `nextEvent()` |
+| state | `State`, `IsClient`, `Transport`, `MaxPacketBytes`, `Now`, `RoundTripMicroseconds`, `PendingReceiveBytes`, `QueuedSendBytes`, settable `SendBudgetBytesPerSecond` | the same properties; `setSendBudgetBytesPerSecond(_:)` |
+| event | `readonly ref struct GesNetworkEvent` with `Kind`, `Route`, `Payload` (span), `Code`, `Detail`, `ByPeer` | `struct GesNetworkEvent` with `kind`, `route`, `payload` (borrowed `UnsafeRawBufferPointer`), `code`, `detail`, `byPeer` |
+| enums | `GesNetworkEventKind`, `GesNetworkState`, `GesNetworkTransport`, `GesNetworkSendStatus` | the same enums |
+| options | `sealed class GesNetworkOptions` with settable limits and timings | `struct GesNetworkOptions` with the same properties |
+| codes | `static class GesNetworkCodes` with `const string` members | `enum GesNetworkCodes` with `static let` members |
+| in-process transports | `GesNetworkLoopback(client, server)`, `GesNetworkSimulator(client, server, seed, latencyMicroseconds, jitterMicroseconds)`, each with `Advance(now)` | `GesNetworkLoopback(client:server:)`, `GesNetworkSimulator(client:server:seed:latencyMicroseconds:jitterMicroseconds:)`, each with `advance(_:)`, both throwing |
+| socket listener | `GesNetworkSocketListener.ListenTcp(endPoint, network, options)`, `ListenWebSocket(endPoint, path, network, options)`, `Accept(now)`, `Dispose()` | `GesNetworkSocketListener.listenTcp(host:port:network:options:)`, `listenWebSocket(host:port:path:network:options:)` (async), `accept(now:)`, `close()` |
+| socket session | `GesNetworkSocketSession.ConnectTcpAsync(host, port, connection, cancellationToken)`, `ConnectWebSocketAsync(uri, connection, cancellationToken)`, `Update(now)`, `Connection`, `Dispose()` | `GesNetworkSocketSession.connectTcp(host:port:connection:)`, `connectWebSocket(url:connection:)` (async), `update(now:)`, `connection`, `close()` |
+
+`Send` never throws; it reports `GesNetworkSendStatus`. An event's payload stays valid until the next
+`NextEvent` call. A peer's violation closes the connection with a `network.*` code and never throws; API misuse
+(a time going back, `Accept` outside a pending handshake, a too-small transmit buffer) throws the port's argument or
+operation error. A socket session's event loop only moves bytes; the connection is touched only where `Update`
+runs.
 
 ## Host construction and lifecycle API
 

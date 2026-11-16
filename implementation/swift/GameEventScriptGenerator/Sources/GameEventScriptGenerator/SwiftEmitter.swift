@@ -53,7 +53,7 @@ enum GesSwiftEmitter {
         }
         let spaceParts = try GesSchemaPlanner.namespace(options.namespace, keywords)
         let space = spaceParts.map { $0 + "." }.joined()
-        var topLevel = GesSchemaPlanner.topLevel(types, sets)
+        var topLevel = GesSchemaPlanner.topLevel(types, sets, layout.networks)
         let conversion = modelLayout.map { ModelConversion($0, models, space) }
         var conversions: [(type: GesPlanType, model: GesModelType)] = []
         if let conversion {
@@ -143,6 +143,9 @@ enum GesSwiftEmitter {
         }
         for set in sets {
             document.units.append(GesCodeUnit(owner: set.name) { code in tagSetDeclaration(&code, set.name, set.tags, access) })
+        }
+        for network in layout.networks {
+            document.units.append(GesCodeUnit(owner: network.name) { code in self.network(&code, network, access) })
         }
         try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: true)
         // Split files reach the sources of another file, so the holder is internal there.
@@ -860,6 +863,25 @@ enum GesSwiftEmitter {
     }
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32" }
+
+    // The constants of a network: its hash, the index of each route and the rate of each topic that has one.
+    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String) {
+        code.line("/// The network `:\(network.name)`: its hash, the index of each route and the rate of each topic that has one.")
+        code.open("\(access)enum \(network.name) {")
+        code.line("/// The network hash over the routes and their bound roots, which the handshake compares.")
+        code.line("\(access)static let hash: UInt64 = 0x\(GesSchemaLayoutJson.hex(network.hash))")
+        for route in network.routes {
+            let name = GesSchemaPlanner.camel(route.name)
+            code.blank()
+            code.line("/// The index of the route `\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`.")
+            code.line("\(access)static let \(name) = \(route.index)")
+            if route.rateMicroseconds == 0 { continue }
+            code.blank()
+            code.line("/// The shortest interval between two updates of the topic `:\(route.root)` in microseconds.")
+            code.line("\(access)static let \(name)EveryMicroseconds: Int64 = \(route.rateMicroseconds)")
+        }
+        code.close()
+    }
 
     // A named tag set, declared once beside the records that use it.
     static func tagSetDeclaration(_ code: inout Code, _ name: String, _ tags: [String], _ access: String) {

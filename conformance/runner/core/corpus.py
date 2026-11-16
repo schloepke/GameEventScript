@@ -16,8 +16,8 @@ DEFAULTS = {'kind', 'level', 'categories', 'tags', 'requires', 'compile', 'runti
 FRONT = DEFAULTS | {'formatVersion', 'suiteId', 'title'}
 CASE = DEFAULTS | {'gesBlock', 'id', 'sources', 'random', 'publishSink', 'externalTypeRegistry',
                    'hostCount', 'deferredPrograms', 'nativeHandlers', 'stepActions', 'messageApi',
-                   'valueApi', 'documentApi', 'schemaApi', 'externalTypeApi', 'binaryFixture', 'performance'}
-KINDS = {'scriptApi', 'compileError', 'loadError', 'messageApi', 'valueApi', 'documentApi', 'schemaApi', 'externalTypeApi',
+                   'valueApi', 'documentApi', 'schemaApi', 'networkApi', 'externalTypeApi', 'binaryFixture', 'performance'}
+KINDS = {'scriptApi', 'compileError', 'loadError', 'messageApi', 'valueApi', 'documentApi', 'schemaApi', 'networkApi', 'externalTypeApi',
          'compileMetadata', 'bytecode', 'bytecodeSnapshot', 'programBinary', 'performance'}
 
 

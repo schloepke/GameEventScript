@@ -174,6 +174,7 @@ COMPUTED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/computed.gess"
 SPATIAL_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/spatial.gess"
 GEOMETRY_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/geometry.gess"
 PACKED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/packed.gess"
+NETWORK_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/network.gess"
 ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
 CSHARP_GENERATED = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
 SWIFT_GENERATED = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
@@ -213,6 +214,9 @@ GOLDENS = (
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--model", "packed", "--values"], "swift", "", SWIFT_GENERATED / "PackedGlobalModel.swift"),
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed", "--values", "--models", ""], "csharp", "GameEventScript.Tests.Generator.Packed.Global", CSHARP_GENERATED / "PackedGlobalWire.g.cs"),
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed", "--values", "--models", ""], "swift", "PackedGlobal", SWIFT_GENERATED / "PackedGlobalWire.swift"),
+    # The constants of a network beside the wire code of its route roots.
+    (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=2km"], "csharp", "GameEventScript.Tests.Generator.Network.Wire", CSHARP_GENERATED / "NetworkWire.g.cs"),
+    (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=2km"], "swift", "NetworkWire", SWIFT_GENERATED / "NetworkWire.swift"),
 )
 # The layouts of the role fixture, which both CLIs must print identically.
 ROLE_LAYOUTS = (["--wire", "world", "--param", "worldWidth=2000m"], ["--wire", "panels"], ["--model", "view"])

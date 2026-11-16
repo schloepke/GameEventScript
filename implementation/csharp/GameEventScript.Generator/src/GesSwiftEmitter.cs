@@ -98,7 +98,8 @@ internal static partial class GesSwiftEmitter
         }
         var sets = GesSchemaPlanner.TagSets(types, "");
         foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
-        context.TopLevel = GesSchemaPlanner.TopLevel(types, sets);
+        foreach (var network in layout.Networks) document.Units.Add(new GesCodeUnit(network.Name, code => Network(code, network, access)));
+        context.TopLevel = GesSchemaPlanner.TopLevel(types, sets, layout.Networks);
         if (modelSpace is not null)
         {
             GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
@@ -920,6 +921,28 @@ internal static partial class GesSwiftEmitter
     }
 
     private static string Underlying(int count) => count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32";
+
+    // The constants of a network: its hash, the index of each route and the rate of each topic that has one.
+    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access)
+    {
+        code.Line($"/// The network `:{network.Name}`: its hash, the index of each route and the rate of each topic that has one.");
+        code.Open($"{access}enum {network.Name} {{");
+        code.Line("/// The network hash over the routes and their bound roots, which the handshake compares.");
+        code.Line($"{access}static let hash: UInt64 = 0x{GesSchemaLayoutJson.Hex(network.Hash)}");
+        foreach (var route in network.Routes)
+        {
+            var name = GesSchemaPlanner.Camel(route.Name);
+            code.Blank();
+            code.Line($"/// The index of the route `{route.Side} {route.Verb} :{route.Root} {route.Class}`.");
+            code.Line($"{access}static let {name} = {route.Index}");
+            if (route.RateMicroseconds == 0) continue;
+            code.Blank();
+            code.Line($"/// The shortest interval between two updates of the topic `:{route.Root}` in microseconds.");
+            code.Line($"{access}static let {name}EveryMicroseconds: Int64 = {route.RateMicroseconds}");
+        }
+
+        code.Close();
+    }
 
     // A named tag set, declared once beside the records that use it.
     internal static void TagSetDeclaration(GesSchemaPlanner.Code code, string name, List<string> tags, string access)

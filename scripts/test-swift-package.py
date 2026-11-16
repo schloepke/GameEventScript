@@ -21,7 +21,7 @@ from verification_workspace import verification_workspace
 ROOT = Path(__file__).resolve().parent.parent
 MACROS = "GameEventScriptSwiftBridgeMacros"
 MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntax",
-           "GameEventScriptGenerator")
+           "GameEventScriptGenerator", "GameEventScriptNetwork", "GameEventScriptNetworkSockets")
 TESTS = {
     "GameEventScriptSwiftBridgeTests": ("GameEventScriptSwiftBridge", ["GameEventScriptSwiftBridge", "GameEventScriptRuntime", "GameEventScriptSyntax"], []),
     "GameEventScriptSwiftBridgeMacrosTests": ("GameEventScriptSwiftBridge", [MACROS], ["SwiftSyntaxMacros", "SwiftSyntaxMacrosTestSupport"]),
@@ -78,7 +78,7 @@ def verify(workspace):
     products = {item["name"]: item for item in description["products"]}
     targets = {item["name"]: item for item in description["targets"]}
     if set(products) - {MACROS} != set(MODULES) or set(targets) != {*MODULES, MACROS, *TESTS}:
-        raise RuntimeError("Distribution must contain only four public libraries, one internal macro target and three shared native test targets.")
+        raise RuntimeError("Distribution must contain only the public libraries, one internal macro target and three shared native test targets.")
     for name, (owner, target_dependencies, product_dependencies) in TESTS.items():
         target = targets[name]
         expected_path = Path("implementation/swift") / owner / "Tests" / name
@@ -90,8 +90,9 @@ def verify(workspace):
         if set(target["sources"]) != authored:
             raise RuntimeError(f"Distribution omits native test sources from {name}")
     dependencies = description.get("dependencies", [])
-    if len(dependencies) != 1 or dependencies[0].get("identity") != "swift-syntax":
-        raise RuntimeError("Only the official swift-syntax build dependency is permitted.")
+    # swift-syntax builds the macros; SwiftNIO serves only the socket transport.
+    if sorted(item.get("identity") for item in dependencies) != ["swift-nio", "swift-nio-ssl", "swift-syntax"]:
+        raise RuntimeError("Only the official swift-syntax, swift-nio and swift-nio-ssl dependencies are permitted.")
     if targets[MACROS].get("type") != "macro":
         raise RuntimeError("Binding code generation must be a build-time macro target.")
     if set(targets[MACROS].get("product_dependencies", [])) != {"SwiftCompilerPlugin", "SwiftSyntax", "SwiftSyntaxBuilder", "SwiftSyntaxMacros"}:
@@ -102,11 +103,16 @@ def verify(workspace):
         # Runtime builds on the Syntax module's lexical tables; Syntax depends on nothing.
         expected = {"GameEventScriptSyntax": [], "GameEventScriptRuntime": ["GameEventScriptSyntax"],
                     "GameEventScriptCompiler": ["GameEventScriptRuntime", "GameEventScriptSyntax"],
-                    "GameEventScriptGenerator": ["GameEventScriptRuntime", "GameEventScriptSyntax"]}.get(module, ["GameEventScriptRuntime"])
+                    "GameEventScriptGenerator": ["GameEventScriptRuntime", "GameEventScriptSyntax"],
+                    "GameEventScriptNetworkSockets": ["GameEventScriptRuntime", "GameEventScriptNetwork"]}.get(module, ["GameEventScriptRuntime"])
         if module == "GameEventScriptSwiftBridge":
             expected.append(MACROS)
         if targets[module].get("target_dependencies", []) != expected:
             raise RuntimeError(f"Unexpected dependency graph for {module}")
+        # Only the socket transport reaches SwiftNIO; the portable modules use no package dependency.
+        sockets = {"NIOCore", "NIOPosix", "NIOWebSocket", "NIOConcurrencyHelpers", "NIOSSL"}
+        if set(targets[module].get("product_dependencies", [])) != (sockets if module == "GameEventScriptNetworkSockets" else set()):
+            raise RuntimeError(f"Unexpected package dependencies for {module}")
         # Explicit source lists in one manifest must not silently omit future sources.
         authored = {str(path.relative_to(repository / targets[module]["path"]))
                     for path in (repository / targets[module]["path"]).rglob("*.swift")}
@@ -146,7 +152,8 @@ let package = Package(name: "{consumer}",
             if list(scratch.rglob(module + ".swiftmodule")) or objects:
                 raise RuntimeError(f"Library consumption compiled test-only module {module}")
         if consumer == "RuntimeConsumer":
-            for module in ("GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptGenerator", MACROS, "SwiftSyntax"):
+            for module in ("GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptGenerator",
+                           "GameEventScriptNetwork", "GameEventScriptNetworkSockets", MACROS, "SwiftSyntax", "NIOCore"):
                 # SwiftPM creates planning directories even for unused products;
                 # only emitted modules or compiled objects indicate a build.
                 objects = [path for directory in scratch.rglob(module + ".build") for path in directory.rglob("*.o")]

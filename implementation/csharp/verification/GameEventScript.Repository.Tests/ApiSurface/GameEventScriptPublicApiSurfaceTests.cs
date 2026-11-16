@@ -7,6 +7,8 @@ using System.Xml.Linq;
 using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
 using GameEventScript.Generator;
+using GameEventScript.Network;
+using GameEventScript.Network.Sockets;
 using GameEventScript.Syntax;
 
 namespace GameEventScript.Tests.Native.ApiSurface;
@@ -102,6 +104,10 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         AssertProductReferences(bridge, "GameEventScript.Runtime", "GameEventScript.Syntax");
         AssertProductReferences(typeof(GesSchemaGenerator).Assembly, "GameEventScript.Runtime", "GameEventScript.Syntax");
         Assert.IsTrue(typeof(GesSchemaGenerator).Assembly.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.Generator")));
+        AssertProductReferences(typeof(GesNetworkConnection).Assembly, "GameEventScript.Runtime");
+        Assert.IsTrue(typeof(GesNetworkConnection).Assembly.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.Network")));
+        AssertProductReferences(typeof(GesNetworkSocketSession).Assembly, "GameEventScript.Network", "GameEventScript.Runtime");
+        Assert.IsTrue(typeof(GesNetworkSocketSession).Assembly.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.Network.Sockets")));
     }
 
     /// <summary>
@@ -316,5 +322,6 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         assembly.GetExportedTypes().Where(type => !type.Name.Contains('<'));
 
     private static Assembly[] PublicAssemblies()
-        => [typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GesBridgeHostRunner).Assembly, typeof(GesSyntaxHighlighter).Assembly, typeof(GesSchemaGenerator).Assembly];
+        => [typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GesBridgeHostRunner).Assembly, typeof(GesSyntaxHighlighter).Assembly, typeof(GesSchemaGenerator).Assembly,
+            typeof(GesNetworkConnection).Assembly, typeof(GesNetworkSocketSession).Assembly];
 }

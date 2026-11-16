@@ -37,7 +37,7 @@ Commands:
   generate   Generate C# or Swift code that writes and reads the records of the roots and every type they reach.
 
 Options:
-  --root <Name>             The schema, message or message set; layout and generate accept several.
+  --root <Name>             The schema, message or message set; layout and generate accept several and a network.
   --all-roots               Make every declaration of the files a root of layout or generate.
   --wire <group>            Make the wire roots of the group the roots, in declaration order; wire alone is the group default.
   --model <group>           Generate plain model types of the model roots of the group instead of wire code.
@@ -299,13 +299,27 @@ Options:
         }
     }
 
+    // Whether a root reaches a parameter; a network reaches the parameters of its route roots.
+    private static bool Reaches(GesSchemaSet set, string root, string name)
+    {
+        foreach (var network in set.Networks)
+        {
+            if (network.Name != root) continue;
+            foreach (var route in network.Routes)
+                if (route.Root.Parameters.Any(parameter => parameter.Name == name)) return true;
+            return false;
+        }
+
+        return set.Schema(root).Parameters.Any(parameter => parameter.Name == name);
+    }
+
     // Prints the layout, or with options the generated code; with check it compares the code with the output file.
     private static int Layout(GesSchemaSet set, List<string> roots, List<(string Name, string Literal)> parameters, string? output, string? outDir, GesSchemaGenerateOptions? options, bool check, bool model)
     {
         var values = new GesSchemaParameters();
         foreach (var (name, literal) in parameters)
         {
-            if (model || !roots.Any(root => set.Schema(root).Parameters.Any(parameter => parameter.Name == name)))
+            if (model || !roots.Any(root => Reaches(set, root, name)))
             {
                 Console.Error.WriteLine($"schema: error schema.unknownName: No root reaches the parameter '{name}'.");
                 return 1;

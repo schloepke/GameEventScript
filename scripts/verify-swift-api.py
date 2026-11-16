@@ -23,7 +23,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntax",
-            "GameEventScriptGenerator")
+            "GameEventScriptGenerator", "GameEventScriptNetwork", "GameEventScriptNetworkSockets")
 SNAPSHOTS = ROOT / "implementation" / "swift" / "api"
 ARTIFACTS = ROOT / "artifacts" / "swift-api"
 RELATIONSHIPS = {
@@ -46,14 +46,25 @@ def ordered_metadata(value):
     return value
 
 
-def module_search_arguments(binary_path):
+def module_search_arguments(binary_path, scratch=None):
     """Support Swift Build products and the Modules directory of older SwiftPM."""
     directory = Path(binary_path)
     modules = directory / "Modules"
     # Never expose the legacy build root to Clang's module discovery: it
     # contains both Foo.build and Foo-tool.build with duplicate module maps.
     # Swift Build instead places its Swift modules directly in Products/Debug.
-    return ["-I", str(modules if modules.is_dir() else directory)]
+    return ["-I", str(modules if modules.is_dir() else directory), *c_module_arguments(directory, scratch)]
+
+
+def c_module_arguments(directory, scratch=None):
+    """Name the module maps of C dependencies such as SwiftNIO's, which Clang cannot discover on its own."""
+    generated = directory.parent.parent / "Intermediates.noindex" / "GeneratedModuleMaps"
+    # Swift Build collects generated maps in one directory; legacy SwiftPM keeps each beside its target's objects.
+    maps = sorted(generated.glob("*.modulemap")) if generated.is_dir() else sorted(directory.glob("*.build/module.modulemap"))
+    # C targets that ship their own map, such as swift-atomics' _AtomicsShims, keep it in their checkout.
+    if scratch is not None:
+        maps += sorted((Path(scratch) / "checkouts").glob("*/Sources/*/include/module.modulemap"))
+    return [argument for path in maps for argument in ("-Xcc", f"-fmodule-map-file={path}")]
 
 
 def command_failure(message, log, output):
@@ -71,6 +82,8 @@ def build_options(package, reuse_local_builds):
             "GameEventScriptSwiftBridge": ("GameEventScriptSwiftBridge", "swiftbridge", "debug"),
             "GameEventScriptSyntax": ("GameEventScriptSyntax", "syntax", "debug"),
             "GameEventScriptGenerator": ("GameEventScriptGenerator", "generator", "debug"),
+            "GameEventScriptNetwork": ("GameEventScriptNetwork", "network", "debug"),
+            "GameEventScriptNetworkSockets": ("GameEventScriptNetworkSockets", "networksockets", "debug"),
         }.get(package, ("GameEventScriptConformance", "conformance", "release"))
         scratch = ROOT / "artifacts/swift" / directory
     else:
@@ -112,7 +125,7 @@ def dump_graphs(swift, package, reuse_local_builds=False, built_paths=None):
                      if sys.platform == "darwin" else shutil.which("swift-symbolgraph-extract"))
         if not extractor:
             raise RuntimeError("swift-symbolgraph-extract must be available on PATH")
-        command = [extractor, "-module-name", package, *module_search_arguments(binary_path), "-target", target,
+        command = [extractor, "-module-name", package, *module_search_arguments(binary_path, options[options.index("--scratch-path") + 1]), "-target", target,
                    "-output-dir", str(export), "-skip-synthesized-members", "-minimum-access-level", "public"]
         if sys.platform == "darwin":
             sdk = subprocess.check_output(["xcrun", "--show-sdk-path"], text=True).strip()

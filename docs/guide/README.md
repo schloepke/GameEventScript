@@ -28,6 +28,8 @@ consult the [changelog](../../CHANGELOG.md) when targeting a published release.
   [Swift](Swift.md#read-data-documents) guides show how to read them.
 - [Describe data with schemas](Schemas.md) (`.gess`) builds a data format step by step: ranges and
   steps, messages and message sets, binding, the hash and document checks.
+- [Connect a client and a server](Network.md) declares a `network`, connects two sides in one
+  process and over TCP or WebSocket, and sends records between them.
 
 ## Instruction-level experiments
 

@@ -70,9 +70,19 @@ here.
   layout; every other constant stays a literal. The `depends` lists of the generation layout
   (specs/Schemas.md#generation-layout) already name those constants. Measure the price against
   the interpreted writer and reader before adopting it; build it only on real demand.
-- Provide a base for publish/subscribe transport of messages and data, outside Runtime, in a
-  `GesNetwork` module or in `GesBridge`; decide which. It frames records, maps channels to message
-  sets or schemas and carries the hash at connection setup (specs/Schemas.md#extension-points).
+- Continue GES network (specs/Network.md) after the session milestone, each step with spec, Conformance and both
+  ports green:
+  - publish/subscribe: a server topic sends only on change against the baseline each subscriber acknowledged, with
+    32 baselines per subscriber in a ring that is also bounded in bytes, and full records after a lost baseline;
+  - datagrams: UDP over IPv4 and IPv6 with acknowledgements, resends, fragmentation for an MTU of about 1200 bytes and
+    NAT keepalive, without ENet;
+  - bulk transfers: `TransferStart(id, kind, size, hash)`, compression `none` (mandatory) or raw Deflate (RFC 1951)
+    through a provider;
+  - encryption: P-256 ECDH, HKDF-SHA256 and AES-256-GCM, optionally X25519 and ChaCha20-Poly1305, with server-key
+    pinning; the spec states that unauthenticated ECDH protects only against passive attackers. Test `AesGcm` and
+    `ECDiffieHellman` on .NET for iOS first;
+  - an observation hook for sent and received packets and events, and replay of a recorded session;
+  - benchmarks with 64 subscribers, a World of about 33 KB and deltas of about 100 bytes.
 - Extend packed schemas (specs/Schemas.md#packed-schemas): `optional` fields as a presence bit, spatial fields with
   fixed axes, computed fields over the word, and a block copy of a List of packed records between the bit reader or
   writer and an array of words when the bit position is byte-aligned, which needs new public bit-primitive API. Also a

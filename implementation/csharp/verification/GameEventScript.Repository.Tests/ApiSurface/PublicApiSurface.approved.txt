@@ -104,6 +104,11 @@ struct GameEventScript.Api.GesBitWriter
   method static GameEventScript.Api.GesBitWriter Counting()
   property System.Int32 RequiredByteCount { get }
   property System.Int64 BitPosition { get }
+sealed class GameEventScript.Api.GesBoundNetwork
+  property GameEventScript.Api.GesNetwork Network { get }
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesBoundSchema> Roots { get }
+  property System.String CanonicalForm { get }
+  property System.UInt64 Hash { get }
 sealed class GameEventScript.Api.GesBoundSchema
   method GameEventScript.Api.GesBoundSchema Member(System.String name)
   method GameEventScript.Api.GesSchemaField Field(System.String path)
@@ -804,6 +809,28 @@ sealed class GameEventScript.Api.GesMessageSignature
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.String Name { get }
   property System.String SignatureId { get }
+sealed class GameEventScript.Api.GesNetwork
+  method GameEventScript.Api.GesBoundNetwork Bind(GameEventScript.Api.GesSchemaParameters parameters)
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesNetworkRoute> Routes { get }
+  property System.String Name { get }
+enum GameEventScript.Api.GesNetworkClass
+  enum-field Reliable = 0
+  enum-field Latest = 1
+  enum-field Bulk = 2
+sealed class GameEventScript.Api.GesNetworkRoute
+  property GameEventScript.Api.GesNetworkClass DeliveryClass { get }
+  property GameEventScript.Api.GesNetworkSide Side { get }
+  property GameEventScript.Api.GesNetworkVerb Verb { get }
+  property GameEventScript.Api.GesSchema Root { get }
+  property System.Int32 Channel { get }
+  property System.Int32 Index { get }
+  property System.Int64 RateMicroseconds { get }
+enum GameEventScript.Api.GesNetworkSide
+  enum-field Client = 0
+  enum-field Server = 1
+enum GameEventScript.Api.GesNetworkVerb
+  enum-field Sends = 0
+  enum-field Publishes = 1
 sealed class GameEventScript.Api.GesOpaqueSection
   property GameEventScript.Api.GesReadOnlyArray<System.Byte> RawPayload { get }
   property GameEventScript.Api.GesSectionFlags Flags { get }
@@ -1134,10 +1161,12 @@ struct GameEventScript.Api.GesSchemaReader
   method System.UInt64 ReadIndex(GameEventScript.Api.GesSchemaField field)
   method System.Void BeginNested(GameEventScript.Api.GesSchemaField field)
 sealed class GameEventScript.Api.GesSchemaSet
+  method GameEventScript.Api.GesNetwork Network(System.String name)
   method GameEventScript.Api.GesSchema Schema(System.String name)
   method System.Void CheckDocument(System.String text, GameEventScript.Api.GesSchemaParameters parameters)
   method static GameEventScript.Api.GesSchemaSet Parse(GameEventScript.Api.GesSchemaSource[] sources)
   method static GameEventScript.Api.GesSchemaSet Parse(System.String text)
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesNetwork> Networks { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchema> Schemas { get }
 struct GameEventScript.Api.GesSchemaSource
   ctor GesSchemaSource(System.String name, System.String text)
@@ -1537,6 +1566,108 @@ enum GameEventScript.Generator.GesSchemaSplit
   enum-field None = 0
   enum-field Schema = 1
   enum-field File = 2
+static class GameEventScript.Network.GesNetworkCodes
+  field static System.String Closed
+  field static System.String Malformed
+  field static System.String MessageTooLarge
+  field static System.String PacketTooLarge
+  field static System.String ProtocolMismatch
+  field static System.String QueueFull
+  field static System.String RateExceeded
+  field static System.String Refused
+  field static System.String SchemaMismatch
+  field static System.String Timeout
+  field static System.String TransportClosed
+  field static System.String UnexpectedRoute
+sealed class GameEventScript.Network.GesNetworkConnection
+  method GameEventScript.Network.GesNetworkEvent NextEvent()
+  method GameEventScript.Network.GesNetworkSendStatus Send(System.Int32 route, System.ReadOnlySpan<System.Byte> payload)
+  method System.Int32 Transmit(System.Span<System.Byte> buffer)
+  method System.Void Accept()
+  method System.Void Advance(System.Int64 now)
+  method System.Void Close(System.String detail)
+  method System.Void Receive(System.ReadOnlySpan<System.Byte> data, System.Int64 now)
+  method System.Void Refuse(System.String detail)
+  method System.Void TransportClosed()
+  method static GameEventScript.Network.GesNetworkConnection CreateClient(GameEventScript.Api.GesBoundNetwork network, System.ReadOnlySpan<System.Byte> token, System.Int64 now, GameEventScript.Network.GesNetworkOptions options)
+  method static GameEventScript.Network.GesNetworkConnection CreateServer(GameEventScript.Api.GesBoundNetwork network, System.Int64 now, GameEventScript.Network.GesNetworkOptions options)
+  property GameEventScript.Api.GesBoundNetwork Network { get }
+  property GameEventScript.Network.GesNetworkState State { get }
+  property GameEventScript.Network.GesNetworkTransport Transport { get }
+  property System.Boolean IsClient { get }
+  property System.Int32 MaxPacketBytes { get }
+  property System.Int64 NextDeadline { get }
+  property System.Int64 Now { get }
+  property System.Int64 PendingReceiveBytes { get }
+  property System.Int64 QueuedSendBytes { get }
+  property System.Int64 RoundTripMicroseconds { get }
+  property System.Int64 SendBudgetBytesPerSecond { get set }
+struct GameEventScript.Network.GesNetworkEvent
+  property GameEventScript.Network.GesNetworkEventKind Kind { get }
+  property System.Boolean ByPeer { get }
+  property System.Int32 Route { get }
+  property System.ReadOnlySpan<System.Byte> Payload { get }
+  property System.String Code { get }
+  property System.String Detail { get }
+enum GameEventScript.Network.GesNetworkEventKind
+  enum-field None = 0
+  enum-field Connecting = 1
+  enum-field Connected = 2
+  enum-field Message = 3
+  enum-field Closed = 4
+sealed class GameEventScript.Network.GesNetworkLoopback
+  ctor GesNetworkLoopback(GameEventScript.Network.GesNetworkConnection client, GameEventScript.Network.GesNetworkConnection server)
+  method System.Void Advance(System.Int64 now)
+  property GameEventScript.Network.GesNetworkConnection Client { get }
+  property GameEventScript.Network.GesNetworkConnection Server { get }
+  property System.Int64 NextDeadline { get }
+  property System.Int64 Now { get }
+sealed class GameEventScript.Network.GesNetworkOptions
+  ctor GesNetworkOptions()
+  property GameEventScript.Network.GesNetworkTransport Transport { get set }
+  property System.Int32 MaxFramesPerSecond { get set }
+  property System.Int32 MaxPacketBytes { get set }
+  property System.Int64 AckDelayMicroseconds { get set }
+  property System.Int64 KeepaliveMicroseconds { get set }
+  property System.Int64 MaxPendingReceiveBytes { get set }
+  property System.Int64 MaxSendQueueBytes { get set }
+  property System.Int64 SendBudgetBytesPerSecond { get set }
+  property System.Int64 TimeoutMicroseconds { get set }
+enum GameEventScript.Network.GesNetworkSendStatus
+  enum-field Queued = 0
+  enum-field NotConnected = 1
+  enum-field QueueFull = 2
+  enum-field MessageTooLarge = 3
+  enum-field InvalidRoute = 4
+sealed class GameEventScript.Network.GesNetworkSimulator
+  ctor GesNetworkSimulator(GameEventScript.Network.GesNetworkConnection client, GameEventScript.Network.GesNetworkConnection server, System.Int64 seed, System.Int64 latencyMicroseconds, System.Int64 jitterMicroseconds)
+  method System.Void Advance(System.Int64 now)
+  property GameEventScript.Network.GesNetworkConnection Client { get }
+  property GameEventScript.Network.GesNetworkConnection Server { get }
+  property System.Int32 PacketsInFlight { get }
+  property System.Int64 NextDeadline { get }
+  property System.Int64 Now { get }
+enum GameEventScript.Network.GesNetworkState
+  enum-field Hello = 0
+  enum-field AwaitHello = 1
+  enum-field AwaitAccept = 2
+  enum-field Connected = 3
+  enum-field Closed = 4
+enum GameEventScript.Network.GesNetworkTransport
+  enum-field Message = 0
+  enum-field Stream = 1
+sealed class GameEventScript.Network.Sockets.GesNetworkSocketListener
+  method GameEventScript.Network.Sockets.GesNetworkSocketSession Accept(System.Int64 now)
+  method System.Void Dispose()
+  method static GameEventScript.Network.Sockets.GesNetworkSocketListener ListenTcp(System.Net.IPEndPoint endPoint, GameEventScript.Api.GesBoundNetwork network, GameEventScript.Network.GesNetworkOptions options)
+  method static GameEventScript.Network.Sockets.GesNetworkSocketListener ListenWebSocket(System.Net.IPEndPoint endPoint, System.String path, GameEventScript.Api.GesBoundNetwork network, GameEventScript.Network.GesNetworkOptions options)
+  property System.Net.IPEndPoint LocalEndPoint { get }
+sealed class GameEventScript.Network.Sockets.GesNetworkSocketSession
+  method System.Void Dispose()
+  method System.Void Update(System.Int64 now)
+  method static System.Threading.Tasks.Task<GameEventScript.Network.Sockets.GesNetworkSocketSession> ConnectTcpAsync(System.String host, System.Int32 port, GameEventScript.Network.GesNetworkConnection connection, System.Threading.CancellationToken cancellationToken)
+  method static System.Threading.Tasks.Task<GameEventScript.Network.Sockets.GesNetworkSocketSession> ConnectWebSocketAsync(System.Uri uri, GameEventScript.Network.GesNetworkConnection connection, System.Threading.CancellationToken cancellationToken)
+  property GameEventScript.Network.GesNetworkConnection Connection { get }
 struct GameEventScript.Runtime.Values.GesValue
   method GameEventScript.Runtime.Values.GesValue? ReadField(System.String name)
   method GameEventScript.Runtime.Values.GesValueMap AsMap()

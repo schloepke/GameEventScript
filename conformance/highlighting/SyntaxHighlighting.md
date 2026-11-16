@@ -178,6 +178,14 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"schema network routes","language":"gess","source":"wire schema :World as { tick: :Boolean }\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Commands reliable\n  server publishes :World latest at most every 50ms\n  server sends :World bulk\n}\n","expect":[{"text":"network","kind":"keyword"},{"text":":Game","kind":"type"},{"text":"client","kind":"keyword"},{"text":"sends","occurrence":0,"kind":"keyword"},{"text":"reliable","kind":"keyword"},{"text":"server","occurrence":0,"kind":"keyword"},{"text":"publishes","kind":"keyword"},{"text":":World","occurrence":1,"kind":"type"},{"text":"latest","kind":"keyword"},{"text":"at","kind":"keyword"},{"text":"most","kind":"keyword"},{"text":"every","kind":"keyword"},{"text":"50ms","kind":"number"},{"text":"bulk","kind":"keyword"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"schema network without routes","language":"gess","source":"network :Game as {\n}\n","expect":[{"text":"network","kind":"keyword"}],"diagnostics":[{"code":"schema.syntax","text":"}"}]}
+```
+
+```highlight
 {"name":"schema source first syntax error","language":"gess","source":"schema :A as { a }\n","expect":[{"text":"schema","kind":"keyword"}],"diagnostics":[{"code":"schema.syntax","text":"}"}]}
 ```
 

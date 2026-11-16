@@ -95,6 +95,26 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case message
     case messages
     case tagSet
+    case network
+}
+
+@_spi(Syntax) public enum GesSchemaRouteClass: Sendable, Equatable {
+    case reliable
+    case latest
+    case bulk
+}
+
+/// One route of a network: `client sends :Root reliable` or `server publishes :Root latest at most every 200ms`.
+@_spi(Syntax) public struct GesSchemaRouteSyntax: Sendable {
+    @_spi(Syntax) public var server = false
+    @_spi(Syntax) public var publishes = false
+    @_spi(Syntax) public var root = ""
+    @_spi(Syntax) public var rootOffset = 0
+    @_spi(Syntax) public var routeClass = GesSchemaRouteClass.reliable
+    @_spi(Syntax) public var classOffset = 0
+    /// The interval of `at most every`, a literal or a constant; nil without one.
+    @_spi(Syntax) public var rate: GesSchemaValueSyntax?
+    @_spi(Syntax) public var offset = 0
 }
 
 /// An exact decimal in lowest terms: no trailing zero in the significand, and zero is 0e0.
@@ -361,6 +381,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var tags: [String] = []
     @_spi(Syntax) public var members: [String] = []
     @_spi(Syntax) public var memberOffsets: [Int] = []
+    /// The routes of a network in declared order.
+    @_spi(Syntax) public var routes: [GesSchemaRouteSyntax] = []
     /// The group of a wire or model root, or nil when the declaration has no such role.
     @_spi(Syntax) public var wireGroup: String?
     @_spi(Syntax) public var modelGroup: String?
@@ -389,6 +411,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public static let packedTooWide = "schema.packedTooWide"
     @_spi(Syntax) public static let invalidExpression = "schema.invalidExpression"
     @_spi(Syntax) public static let computedMayBeAbsent = "schema.computedMayBeAbsent"
+    @_spi(Syntax) public static let invalidRoute = "schema.invalidRoute"
+    @_spi(Syntax) public static let duplicateRoute = "schema.duplicateRoute"
 
     @_spi(Syntax) public let code: String
     /// The UTF-8 offset of the error.

@@ -9,6 +9,8 @@
         <ProjectReference Include="../../GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" />
         <ProjectReference Include="../../GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj" />
         <ProjectReference Include="../../GameEventScript.Generator/src/GameEventScript.Generator.csproj" />
+        <ProjectReference Include="../../GameEventScript.Network/src/GameEventScript.Network.csproj" />
+        <ProjectReference Include="../../GameEventScript.Network.Sockets/src/GameEventScript.Network.Sockets.csproj" />
         <ProjectReference Include="../GameEventScript.RuntimeConsumer/GameEventScript.RuntimeConsumer.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 </Project>

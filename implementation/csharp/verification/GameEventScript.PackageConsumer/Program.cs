@@ -5,6 +5,10 @@ using GameEventScript.Syntax;
 using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
 using GameEventScript.Generator;
+using GameEventScript.Network;
+#if GES_SOCKETS
+using GameEventScript.Network.Sockets;
+#endif
 using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.PackageConsumer;
@@ -31,6 +35,17 @@ internal static class Program
         if (execution.State != GesExecutionState.Completed || result != 42) return Fail("The packaged compiler/runtime/bridge pipeline did not produce 42.");
         var generated = GesSchemaGenerator.Generate(GesSchemaSet.Parse("schema :Ping as {\n  ready: :Boolean\n}\n"), ["Ping"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Namespace = "Consumer" });
         if (!generated.Contains("public partial struct Ping", StringComparison.Ordinal)) return Fail("The packaged generator did not write the schema type.");
+        var network = GesSchemaSet.Parse("wire schema :Ping as { ready: :Boolean }\nnetwork :Game as {\n  server sends :Ping reliable\n}\n").Network("Game").Bind();
+        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0);
+        var server = GesNetworkConnection.CreateServer(network, 0);
+        var loopback = new GesNetworkLoopback(client, server);
+        loopback.Advance(0);
+        server.Accept();
+        loopback.Advance(0);
+        if (client.State != GesNetworkState.Connected) return Fail("The packaged network connection did not connect.");
+#if GES_SOCKETS
+        if (typeof(GesNetworkSocketListener).Assembly.GetName().Name != "GameEventScript.Network.Sockets") return Fail("The packaged socket transport did not load.");
+#endif
 
         Console.WriteLine("C# distribution consumer smoke test passed.");
         return 0;

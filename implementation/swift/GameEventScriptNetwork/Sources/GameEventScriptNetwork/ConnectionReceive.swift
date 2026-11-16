@@ -1,0 +1,355 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+private typealias Wire = GesNetworkWire
+
+extension GesNetworkConnection {
+    /// Passes received bytes: one packet on a message transport, any chunk of the byte stream on a stream transport.
+    ///
+    /// The connection first advances to `now`. Errors close the connection with their code; once closed, received
+    /// bytes are ignored.
+    /// - Parameters:
+    ///   - data: The received bytes; they are not retained.
+    ///   - now: The current time in microseconds, not earlier than `now`.
+    /// - Throws: `GesApiError.invalidArgument` when the time goes back.
+    public func receive(_ data: UnsafeRawBufferPointer, now: Int64) throws {
+        try advance(now)
+        if state == .closed { return }
+        if transport == .message {
+            receivePacket(data)
+            return
+        }
+
+        var data = data
+        while !data.isEmpty && state != .closed {
+            if streamLength == 0 {
+                var position = 0
+                var length: UInt32 = 0
+                let result = Wire.readVarint(data, &position, &length)
+                if result > 0 && !checkStreamLength(length) { return }
+                if result < 0 {
+                    fail(GesNetworkCodes.malformed)
+                    return
+                }
+                if result > 0 && data.count - position >= Int(length) {
+                    let end = position + Int(length)
+                    receivePacket(UnsafeRawBufferPointer(rebasing: data[position..<end]))
+                    data = UnsafeRawBufferPointer(rebasing: data[end...])
+                    continue
+                }
+
+                // The prefix or the packet is incomplete: keep the bytes, which are at most a prefix and a packet.
+                if stream == nil {
+                    stream = UnsafeMutableRawBufferPointer.allocate(byteCount: maxPacketBytes + 5, alignment: 1)
+                }
+                stream!.baseAddress!.copyMemory(from: data.baseAddress!, byteCount: data.count)
+                streamLength = data.count
+                return
+            }
+
+            let buffer = stream!
+            var buffered = 0
+            var packetLength: UInt32 = 0
+            var prefix = Wire.readVarint(UnsafeRawBufferPointer(rebasing: buffer[0..<streamLength]), &buffered, &packetLength)
+            if prefix == 0 {
+                buffer[streamLength] = data[0]
+                streamLength += 1
+                data = UnsafeRawBufferPointer(rebasing: data[1...])
+                prefix = Wire.readVarint(UnsafeRawBufferPointer(rebasing: buffer[0..<streamLength]), &buffered, &packetLength)
+                if prefix < 0 {
+                    fail(GesNetworkCodes.malformed)
+                    return
+                }
+                if prefix == 0 || !checkStreamLength(packetLength) { continue }
+            }
+
+            let end = buffered + Int(packetLength)
+            let take = min(end - streamLength, data.count)
+            if take > 0 { (buffer.baseAddress! + streamLength).copyMemory(from: data.baseAddress!, byteCount: take) }
+            streamLength += take
+            data = UnsafeRawBufferPointer(rebasing: data[take...])
+            if streamLength < end { return }
+            streamLength = 0
+            receivePacket(UnsafeRawBufferPointer(rebasing: buffer[buffered..<end]))
+        }
+    }
+
+    /// Passes received bytes: one packet on a message transport, any chunk of the byte stream on a stream transport.
+    /// - Parameters:
+    ///   - data: The received bytes; they are not retained.
+    ///   - now: The current time in microseconds, not earlier than `now`.
+    /// - Throws: `GesApiError.invalidArgument` when the time goes back.
+    public func receive(_ data: [UInt8], now: Int64) throws {
+        try data.withUnsafeBytes { try receive($0, now: now) }
+    }
+
+    // Checks a stream length prefix; closes the connection and returns false when it is not allowed.
+    private func checkStreamLength(_ length: UInt32) -> Bool {
+        if length == 0 {
+            fail(GesNetworkCodes.malformed)
+        } else if Int(length) > maxPacketBytes {
+            fail(GesNetworkCodes.packetTooLarge)
+        } else {
+            return true
+        }
+        return false
+    }
+
+    private func receivePacket(_ packet: UnsafeRawBufferPointer) {
+        if packet.isEmpty {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+        if packet.count > maxPacketBytes {
+            fail(GesNetworkCodes.packetTooLarge)
+            return
+        }
+
+        lastReceive = now
+        switch packet[0] {
+        case Wire.close:
+            receiveClose(packet)
+        case Wire.hello where !isClient && state == .awaitHello:
+            receiveHello(packet)
+        case Wire.welcome where isClient && state == .hello && helloSent:
+            receiveWelcome(packet)
+        case Wire.data where state == .connected:
+            receiveData(packet)
+        default:
+            fail(GesNetworkCodes.malformed)
+        }
+    }
+
+    private func receiveHello(_ packet: UnsafeRawBufferPointer) {
+        if packet.count < 5 || Wire.readUInt32(packet, 1) != Wire.magic {
+            fail(GesNetworkCodes.protocolMismatch)
+            return
+        }
+
+        var position = 5
+        if !readVersion(packet, &position) { return }
+        if packet.count - position < 8 {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        let hash = Wire.readUInt64(packet, position)
+        position += 8
+        var count: UInt32 = 0
+        if Wire.readVarint(packet, &position, &count) != 1 || count < 1 || count > UInt32(Wire.maximumRoutes) || packet.count - position < 8 * Int(count) {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        let hashes = UnsafeRawBufferPointer(rebasing: packet[position..<position + 8 * Int(count)])
+        position += hashes.count
+        var limit = 0
+        if !readPacketLimit(packet, &position, &limit) { return }
+        var tokenLength: UInt32 = 0
+        if Wire.readVarint(packet, &position, &tokenLength) != 1 || tokenLength > UInt32(Wire.maximumTokenBytes) || packet.count - position < Int(tokenLength) {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        let token = UnsafeRawBufferPointer(rebasing: packet[position..<position + Int(tokenLength)])
+        position += token.count
+        var cookie: UInt32 = 0
+        if Wire.readVarint(packet, &position, &cookie) != 1 || cookie != 0 || position != packet.count {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        if Int(count) != routeCount || hash != network.hash {
+            fail(GesNetworkCodes.schemaMismatch, mismatchDetail(hashes))
+            return
+        }
+
+        peerPacketLimit = limit
+        state = .awaitAccept
+        if !addEvent(.connecting, -1, token, true, "", "", false) { fail(GesNetworkCodes.queueFull) }
+    }
+
+    // The roots of the local routes the client lacks or binds differently; the network name when none differs.
+    private func mismatchDetail(_ hashes: UnsafeRawBufferPointer) -> String {
+        var text = ""
+        let clientCount = hashes.count / 8
+        for index in 0..<routeCount {
+            if index < clientCount && Wire.readUInt64(hashes, 8 * index) == network.roots[index].bindingHash { continue }
+            if !text.isEmpty { text += ", " }
+            text += network.network.routes[index].root.name
+        }
+        return text.isEmpty ? network.network.name : text
+    }
+
+    private func receiveWelcome(_ packet: UnsafeRawBufferPointer) {
+        var position = 1
+        var limit = 0
+        if !readVersion(packet, &position) || !readPacketLimit(packet, &position, &limit) { return }
+        if position != packet.count {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        peerPacketLimit = limit
+        state = .connected
+        _ = addEvent(.connected, -1, UnsafeRawBufferPointer(start: nil, count: 0), false, "", "", false)
+    }
+
+    private func readVersion(_ packet: UnsafeRawBufferPointer, _ position: inout Int) -> Bool {
+        var version: UInt32 = 0
+        if Wire.readVarint(packet, &position, &version) != 1 {
+            fail(GesNetworkCodes.malformed)
+        } else if version != Wire.version {
+            fail(GesNetworkCodes.protocolMismatch)
+        } else {
+            return true
+        }
+        return false
+    }
+
+    private func readPacketLimit(_ packet: UnsafeRawBufferPointer, _ position: inout Int, _ limit: inout Int) -> Bool {
+        var value: UInt32 = 0
+        if Wire.readVarint(packet, &position, &value) != 1 || value < UInt32(Wire.minimumPacketBytes) || value > UInt32(Wire.maximumPacketBytes) {
+            fail(GesNetworkCodes.malformed)
+            return false
+        }
+        limit = Int(value)
+        return true
+    }
+
+    private func receiveClose(_ packet: UnsafeRawBufferPointer) {
+        var position = 1
+        var codeLength: UInt32 = 0
+        if Wire.readVarint(packet, &position, &codeLength) != 1 || codeLength < 1 || codeLength > UInt32(Wire.maximumCodeBytes) || packet.count - position < Int(codeLength) {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        let code = UnsafeRawBufferPointer(rebasing: packet[position..<position + Int(codeLength)])
+        position += code.count
+        for character in code where character < UInt8(ascii: "!") || character > UInt8(ascii: "~") {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        var detailLength: UInt32 = 0
+        if Wire.readVarint(packet, &position, &detailLength) != 1 || detailLength > UInt32(Wire.maximumDetailBytes) || packet.count - position != Int(detailLength) {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        let detail = UnsafeRawBufferPointer(rebasing: packet[position..<packet.count])
+        if !Wire.isValidUtf8(detail) {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        state = .closed
+        dropSending()
+        closePending = false
+        _ = addEvent(.closed, -1, UnsafeRawBufferPointer(start: nil, count: 0), false, String(decoding: code, as: UTF8.self), String(decoding: detail, as: UTF8.self), true)
+    }
+
+    private func receiveData(_ packet: UnsafeRawBufferPointer) {
+        if packet.count < 4 || (packet[1] & ~3) != 0 || Wire.readUInt16(packet, 2) != UInt16(truncatingIfNeeded: receivedCount) {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        var position = 4
+        if (packet[1] & 1) != 0 {
+            if packet.count - position < 6 || !acknowledge(Wire.readUInt16(packet, position)) {
+                fail(GesNetworkCodes.malformed)
+                return
+            }
+            position += 6
+        }
+
+        // A packet with frames asks for acknowledgement.
+        let asks = (packet[1] & 2) != 0
+        if !asks && position < packet.count {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        receivedCount += 1
+        while position < packet.count {
+            if !receiveFrame(packet, &position) { return }
+        }
+
+        if asks && !ackDue {
+            ackDue = true
+            ackDeadline = now + ackDelay
+        }
+    }
+
+    // Applies an acknowledgement; false when it names a sequence not sent or older than the previous one.
+    private func acknowledge(_ sequence: UInt16) -> Bool {
+        if sentCount == 0 { return false }
+        let start = max(ackedIndex, 0)
+        let index = start + Int64(sequence &- UInt16(truncatingIfNeeded: start))
+        if index >= sentCount { return false }
+        if index <= ackedIndex { return true }
+        if sentCount - index <= Int64(Self.sendTimeWindow) && sendAsks[Int(index % Int64(Self.sendTimeWindow))] {
+            let sample = now - sendTimes[Int(index % Int64(Self.sendTimeWindow))]
+            roundTripMicroseconds = roundTripMicroseconds < 0 ? sample : roundTripMicroseconds + (sample - roundTripMicroseconds) / 8
+        }
+        ackedIndex = index
+        return true
+    }
+
+    // Reads one frame; false when it closed the connection.
+    private func receiveFrame(_ packet: UnsafeRawBufferPointer, _ position: inout Int) -> Bool {
+        if frameUnits < Self.microsecondsPerSecond { return fail(GesNetworkCodes.rateExceeded) }
+        frameUnits -= Self.microsecondsPerSecond
+        var channel: UInt32 = 0
+        if Wire.readVarint(packet, &position, &channel) != 1 || channel == 0 || Int(channel) > routeCount { return fail(GesNetworkCodes.malformed) }
+        let route = Int(channel) - 1
+        if localSends[route] { return fail(GesNetworkCodes.unexpectedRoute) }
+        if packet.count - position < 2 { return fail(GesNetworkCodes.malformed) }
+        let id = Wire.readUInt16(packet, position)
+        position += 2
+        var offset: UInt32 = 0
+        var total: UInt32 = 0
+        if Wire.readVarint(packet, &position, &offset) != 1 || Wire.readVarint(packet, &position, &total) != 1 { return fail(GesNetworkCodes.malformed) }
+        if Int64(total) > maxBytes[route] { return fail(GesNetworkCodes.messageTooLarge) }
+        var length: UInt32 = 0
+        if Wire.readVarint(packet, &position, &length) != 1 || packet.count - position < Int(length) { return fail(GesNetworkCodes.malformed) }
+        let chunk = UnsafeRawBufferPointer(rebasing: packet[position..<position + Int(length)])
+        position += chunk.count
+        if (length == 0 && total != 0) || UInt64(offset) + UInt64(length) > UInt64(total) { return fail(GesNetworkCodes.malformed) }
+
+        let assembly: GesNetworkReassembly
+        switch classes[route] {
+        case .reliable: assembly = receiveReliable
+        case .bulk: assembly = receiveBulk
+        case .latest: assembly = receiveLatest[route]!
+        }
+        if offset == 0 {
+            if assembly.active || id != assembly.nextId { return fail(GesNetworkCodes.malformed) }
+            assembly.nextId &+= 1
+            if length == total {
+                return addEvent(.message, route, chunk, true, "", "", false) || fail(GesNetworkCodes.queueFull)
+            }
+            assembly.start(channel, id, total)
+        } else if !assembly.active || assembly.channel != channel || assembly.id != id || assembly.total != total || assembly.received != Int(offset) {
+            return fail(GesNetworkCodes.malformed)
+        }
+
+        pending += Int64(length)
+        if pending > maxPending { return fail(GesNetworkCodes.queueFull) }
+        assembly.append(chunk)
+        if assembly.received != Int(total) { return true }
+        assembly.active = false
+        // The message's bytes are pending already; the event counts them again.
+        pending -= Int64(total)
+        return assembly.withMessage { addEvent(.message, route, $0, true, "", "", false) }
+    }
+
+    // Closes the connection with an error found in received data and returns false.
+    @discardableResult
+    private func fail(_ code: String, _ detail: String = "") -> Bool {
+        closeLocal(code, detail, true)
+        return false
+    }
+}

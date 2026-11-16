@@ -1,0 +1,24 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The fixture of the checked-in network constants: routes in both directions, every class, a topic with a rate and a
+// parameter that enters the network hash.
+parameter worldSize: :Quantity(m)
+
+wire schema :World as {
+  tick: :Number integer between 0 and 65535
+  x: :Quantity(m) between 0m and worldSize step 1m
+}
+
+wire schema :Chunk as {
+  index: :Number integer between 0 and 255
+}
+
+wire messages :Commands as (Move, Fire)
+message Move(x: :Quantity(m) between 0m and worldSize step 1m)
+message Fire()
+
+network :Game as {
+  client sends :Commands reliable
+  server publishes :World latest at most every 50ms
+  server sends :Chunk bulk
+}

@@ -13,6 +13,7 @@
     }
 
     private static let maximumTypeNesting = 32
+    static let maximumRoutes = 64
 
     let bytes: [UInt8]
     var position = 0
@@ -103,13 +104,13 @@
             if written != "schema" { throw Failure(offset: wordOffset, message: "Expected 'schema' after 'packed'.") }
         }
         if wire != nil || model != nil {
-            if written == "constant" || written == "parameter" || written == "tags" {
+            if written == "constant" || written == "parameter" || written == "tags" || written == "network" {
                 throw Failure(offset: offset, message: "Only a schema, message or message set can be a root.", code: Code.invalidRole)
             }
             if model != nil && (written == "message" || written == "messages") {
                 throw Failure(offset: offset, message: "A model root is a schema.", code: Code.invalidRole)
             }
-        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags"].contains(written) && atRoleEnd() {
+        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags", "network"].contains(written) && atRoleEnd() {
             throw Failure(offset: offset, message: "'\(written)' is no role; a root is marked wire or model.", code: Code.invalidRole)
         }
         var result = try declaration(offset: offset, wordOffset: wordOffset, word: written)
@@ -228,9 +229,61 @@
             try expectWord("as")
             skipSpaces()
             result.tags = try tagSet()
+        case "network":
+            result.kind = .network
+            result.name = try typeName()
+            skipSpaces()
+            try expectWord("as")
+            skipTrivia()
+            try expect(123)
+            skipSeparators()
+            if position < bytes.count && bytes[position] == 125 { throw failure("A network has at least one route.") }
+            while !consume(125) {
+                if result.routes.count == Self.maximumRoutes { throw Failure(offset: position, message: "A network has at most 64 routes.", code: Code.tooLarge) }
+                result.routes.append(try route())
+                try endEntry(125)
+                skipSeparators()
+            }
         default:
-            throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message or messages.")
+            throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message, messages or network.")
         }
+        return result
+    }
+
+    /// `client|server sends|publishes :Root reliable|latest|bulk [at most every value]` on one line.
+    private mutating func route() throws -> GesSchemaRouteSyntax {
+        var result = GesSchemaRouteSyntax()
+        result.offset = position
+        let side = word()
+        if side != "client" && side != "server" { throw Failure(offset: result.offset, message: "A route starts with client or server.") }
+        skipSpaces()
+        let verbOffset = position
+        let verb = word()
+        if verb != "sends" && verb != "publishes" { throw Failure(offset: verbOffset, message: "Expected 'sends' or 'publishes'.") }
+        skipSpaces()
+        result.rootOffset = position
+        result.root = try typeName()
+        skipSpaces()
+        result.classOffset = position
+        switch word() {
+        case "reliable": result.routeClass = .reliable
+        case "latest": result.routeClass = .latest
+        case "bulk": result.routeClass = .bulk
+        default: throw Failure(offset: result.classOffset, message: "Expected 'reliable', 'latest' or 'bulk'.")
+        }
+        skipSpaces()
+        if atWord("at") {
+            _ = word()
+            skipSpaces()
+            try expectWord("most")
+            skipSpaces()
+            try expectWord("every")
+            skipSpaces()
+            if position < bytes.count && GesNames.lower(bytes[position]) { throw failure("A rate is a literal or a constant.") }
+            result.rate = try value()
+        }
+        result.server = side == "server"
+        result.publishes = verb == "publishes"
         return result
     }
 

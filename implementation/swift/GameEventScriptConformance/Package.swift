@@ -8,7 +8,7 @@ let package = Package(
     name: "GameEventScriptConformance",
     platforms: [.macOS("10.15.4")],
     products: [.executable(name: "ges-conformance-probe", targets: ["GameEventScriptConformanceTool"]), .executable(name: "ges-conformance-adapter", targets: ["GameEventScriptConformanceAdapter"])],
-    dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler"), .package(path: "../GameEventScriptSwiftBridge"), .package(path: "../GameEventScriptSyntax")],
+    dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler"), .package(path: "../GameEventScriptSwiftBridge"), .package(path: "../GameEventScriptSyntax"), .package(path: "../GameEventScriptNetwork")],
     targets: [
         .target(name: "ConformanceInstrumentation"),
         .executableTarget(
@@ -16,6 +16,7 @@ let package = Package(
             dependencies: [
                 "ConformanceInstrumentation", .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
                 .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"), .product(name: "GameEventScriptSyntax", package: "GameEventScriptSyntax"),
+                .product(name: "GameEventScriptNetwork", package: "GameEventScriptNetwork"),
             ]
         ),
         .executableTarget(

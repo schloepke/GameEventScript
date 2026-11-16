@@ -32,6 +32,8 @@ public final class GesSchemaSet: @unchecked Sendable {
     private var declarations: [String: GesResolvedDeclaration] = [:]
     private var ordered: [GesResolvedDeclaration] = []
     private var tagSetSources: [String: String] = [:]
+    private var networkSources: [String: String] = [:]
+    private var networksByName: [String: GesNetwork] = [:]
 
     /// The sources as given, which generated code embeds to convert to and from GES values.
     @_spi(Generator) public let sources: [GesSchemaSource]
@@ -47,8 +49,9 @@ public final class GesSchemaSet: @unchecked Sendable {
             files.append(GesFileScope(source, syntax))
         }
         var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
+        var networkNames: Set<String> = []
         for file in files {
-            try file.declareNames(&declarations, &ordered, &tagSets)
+            try file.declareNames(&declarations, &ordered, &tagSets, &networkNames)
             for name in tagSets.keys where tagSetSources[name] == nil { tagSetSources[name] = file.sourceName }
         }
         for file in files { try file.resolve(declarations, tagSets) }
@@ -71,6 +74,14 @@ public final class GesSchemaSet: @unchecked Sendable {
             return schema
         }
         for schema in schemas { try schema.complete() }
+        var networks: [GesNetwork] = []
+        for file in files {
+            let start = networks.count
+            try file.resolveNetworks(declarations, &networks)
+            for network in networks[start...] { networkSources[network.name] = file.sourceName }
+        }
+        for network in networks { networksByName[network.name] = network }
+        self.networks = networks
     }
 
     /// Composes the schemas a schema takes before it, so that it copies their complete fields; `with` must not form a cycle.
@@ -101,6 +112,19 @@ public final class GesSchemaSet: @unchecked Sendable {
     /// A declaration by name.
     /// - Throws: `GesSchemaError` when the name is not declared.
     public func schema(_ name: String) throws -> GesSchema { try declaration(name).schema! }
+
+    /// The networks, in source order.
+    public private(set) var networks: [GesNetwork] = []
+
+    /// A network by its exact name, compared by Unicode scalars.
+    /// - Parameter name: The network's name, without the leading `:`.
+    /// - Throws: `GesSchemaError` with `schema.unknownName` when no network has that name.
+    public func network(_ name: String) throws -> GesNetwork {
+        guard let network = networksByName[name] else {
+            throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "Network '\(name)' is not declared.")
+        }
+        return network
+    }
 
     /// Checks a GES document against the schema of its header: a type name, or for a file name the one schema of the source
     /// with that name that no other schema of it refers to. `GesSchema.checkDocument` ignores the header.
@@ -161,10 +185,10 @@ public final class GesSchemaSet: @unchecked Sendable {
         for alternative in type.element ?? [] { collectReferences(alternative, owner, &referenced) }
     }
 
-    /// The name of the source that declares a schema, message, message set or tag set, which places its generated code in
-    /// split output. The name must be declared.
+    /// The name of the source that declares a schema, message, message set, tag set or network, which places its generated
+    /// code in split output. The name must be declared.
     @_spi(Generator) public func sourceName(of name: String) -> String {
-        declarations[name]?.scope.sourceName ?? tagSetSources[name]!
+        declarations[name]?.scope.sourceName ?? networkSources[name] ?? tagSetSources[name]!
     }
 
     func declaration(_ root: String) throws -> GesResolvedDeclaration {
@@ -356,6 +380,8 @@ final class GesFileScope {
     private(set) var constants: [String: GesSchemaValueSyntax] = [:]
     private var own: [GesResolvedDeclaration] = []
     private var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
+    /// The network declarations of this source, resolved once every declaration has its public description.
+    private(set) var networkSyntaxes: [GesSchemaDeclarationSyntax] = []
     /// The lets of the schema being resolved, which its fields can name.
     private var lets: [String: GesResolvedLet] = [:]
     /// Record literals of fields, resolved once every schema is composed, since they name the fields of another schema.
@@ -373,14 +399,14 @@ final class GesFileScope {
         return GesSchemaError(code: code, sourceName: source.name, line: line, column: column, message: message)
     }
 
-    func declareNames(_ all: inout [String: GesResolvedDeclaration], _ ordered: inout [GesResolvedDeclaration], _ tagSets: inout [String: GesSchemaDeclarationSyntax]) throws {
+    func declareNames(_ all: inout [String: GesResolvedDeclaration], _ ordered: inout [GesResolvedDeclaration], _ tagSets: inout [String: GesSchemaDeclarationSyntax], _ networks: inout Set<String>) throws {
         for declaration in syntax.declarations {
             switch declaration.kind {
             case .tagSet:
                 if GesSchemaTypeNames.isBuiltIn(declaration.name) {
                     throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
                 }
-                if all[declaration.name] != nil || tagSets[declaration.name] != nil {
+                if all[declaration.name] != nil || networks.contains(declaration.name) || tagSets[declaration.name] != nil {
                     throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.")
                 }
                 tagSets[declaration.name] = declaration
@@ -388,6 +414,14 @@ final class GesFileScope {
                 for tag in declaration.tags where !members.insert(tag).inserted {
                     throw error(Code.duplicateName, declaration.offset, "Tag '#\(tag)' is listed twice.")
                 }
+            case .network:
+                if GesSchemaTypeNames.isBuiltIn(declaration.name) {
+                    throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
+                }
+                if all[declaration.name] != nil || tagSets[declaration.name] != nil || !networks.insert(declaration.name).inserted {
+                    throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.")
+                }
+                networkSyntaxes.append(declaration)
             case .constant:
                 if constants[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "Constant '\(declaration.name)' is declared twice.") }
                 constants[declaration.name] = declaration.value
@@ -400,7 +434,7 @@ final class GesFileScope {
                 if GesSchemaTypeNames.isBuiltIn(declaration.name) {
                     throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
                 }
-                if all[declaration.name] != nil || tagSets[declaration.name] != nil {
+                if all[declaration.name] != nil || tagSets[declaration.name] != nil || networks.contains(declaration.name) {
                     throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.")
                 }
                 all[declaration.name] = resolved

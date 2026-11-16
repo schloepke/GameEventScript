@@ -32,7 +32,7 @@ extension ToolHelp {
           generate   Generate C# or Swift code that writes and reads the records of the roots and every type they reach.
 
         Options:
-          --root <Name>             The schema, message or message set; layout and generate accept several.
+          --root <Name>             The schema, message or message set; layout and generate accept several and a network.
           --all-roots               Make every declaration of the files a root of layout or generate.
           --wire <group>            Make the wire roots of the group the roots, in declaration order; wire alone is the group default.
           --model <group>           Generate plain model types of the model roots of the group instead of wire code.
@@ -258,6 +258,14 @@ extension Tool {
         }
     }
 
+    // Whether a root reaches a parameter; a network reaches the parameters of its route roots.
+    private static func reaches(_ set: GesSchemaSet, _ root: String, _ name: String) throws -> Bool {
+        if let network = set.networks.first(where: { $0.name == root }) {
+            return network.routes.contains { route in route.root.parameters.contains { $0.name == name } }
+        }
+        return try set.schema(root).parameters.contains { $0.name == name }
+    }
+
     // Prints the layout, or with options the generated code; with check it compares the code with the output file.
     private func layout(
         _ set: GesSchemaSet,
@@ -271,7 +279,7 @@ extension Tool {
     ) throws -> Int {
         let values = GesSchemaParameters()
         for (name, literal) in parameters {
-            if try model || !roots.contains(where: { try set.schema($0).parameters.contains { $0.name == name } }) {
+            if try model || !roots.contains(where: { try Self.reaches(set, $0, name) }) {
                 io.line("schema: error schema.unknownName: No root reaches the parameter '\(name)'.", toError: true)
                 return 1
             }

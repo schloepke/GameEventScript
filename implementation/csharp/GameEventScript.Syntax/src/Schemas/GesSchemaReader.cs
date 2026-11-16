@@ -16,6 +16,7 @@ internal sealed partial class GesSchemaSourceReader
 {
     internal const int MaximumInputScalars = 1048576;
     private const int MaximumTypeNesting = 32;
+    internal const int MaximumRoutes = 64;
 
     private sealed class SyntaxFailure(int offset, string message, string code = Code.Syntax) : Exception(message)
     {
@@ -118,10 +119,10 @@ internal sealed partial class GesSchemaSourceReader
 
         if (wire is not null || model is not null)
         {
-            if (word is "constant" or "parameter" or "tags") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
+            if (word is "constant" or "parameter" or "tags" or "network") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
             if (model is not null && word is "message" or "messages") throw new SyntaxFailure(offset, "A model root is a schema.", Code.InvalidRole);
         }
-        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages" or "tags") && AtRoleEnd())
+        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages" or "tags" or "network") && AtRoleEnd())
             throw new SyntaxFailure(offset, $"'{word}' is no role; a root is marked wire or model.", Code.InvalidRole);
 
         var declaration = ReadDeclaration(offset, wordOffset, word);
@@ -272,9 +273,68 @@ internal sealed partial class GesSchemaSourceReader
                 SkipSpaces();
                 return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.TagSet, Name = name, Offset = offset, Tags = ReadTagSet() };
             }
+            case "network":
+            {
+                var name = ReadTypeName();
+                SkipSpaces();
+                ExpectWord("as");
+                SkipTrivia();
+                Expect('{');
+                var routes = new List<GesSchemaRouteSyntax>();
+                SkipSeparators();
+                if (_position < _text.Length && _text[_position] == '}') throw Failure("A network has at least one route.");
+                while (!Consume('}'))
+                {
+                    if (routes.Count == MaximumRoutes) throw new SyntaxFailure(_position, "A network has at most 64 routes.", Code.TooLarge);
+                    routes.Add(ReadRoute());
+                    EndEntry('}');
+                    SkipSeparators();
+                }
+
+                return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Network, Name = name, Offset = offset, Routes = routes.ToArray() };
+            }
             default:
-                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, tags, schema, message or messages.");
+                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, tags, schema, message, messages or network.");
         }
+    }
+
+    // `client|server sends|publishes :Root reliable|latest|bulk [at most every value]` on one line.
+    private GesSchemaRouteSyntax ReadRoute()
+    {
+        var offset = _position;
+        var side = ReadWord();
+        if (side is not ("client" or "server")) throw new SyntaxFailure(offset, "A route starts with client or server.");
+        SkipSpaces();
+        var verbOffset = _position;
+        var verb = ReadWord();
+        if (verb is not ("sends" or "publishes")) throw new SyntaxFailure(verbOffset, "Expected 'sends' or 'publishes'.");
+        SkipSpaces();
+        var rootOffset = _position;
+        var root = ReadTypeName();
+        SkipSpaces();
+        var classOffset = _position;
+        var routeClass = ReadWord() switch
+        {
+            "reliable" => GesSchemaRouteClass.Reliable,
+            "latest" => GesSchemaRouteClass.Latest,
+            "bulk" => GesSchemaRouteClass.Bulk,
+            _ => throw new SyntaxFailure(classOffset, "Expected 'reliable', 'latest' or 'bulk'.")
+        };
+        SkipSpaces();
+        GesSchemaValueSyntax? rate = null;
+        if (AtWord("at"))
+        {
+            ReadWord();
+            SkipSpaces();
+            ExpectWord("most");
+            SkipSpaces();
+            ExpectWord("every");
+            SkipSpaces();
+            if (_position < _text.Length && GesText.IsAsciiLower(_text[_position])) throw Failure("A rate is a literal or a constant.");
+            rate = ReadValue();
+        }
+
+        return new GesSchemaRouteSyntax { Server = side == "server", Publishes = verb == "publishes", Root = root, RootOffset = rootOffset, Class = routeClass, ClassOffset = classOffset, Rate = rate, Offset = offset };
     }
 
     // `let name be value`; a field named let is followed by its colon instead of a name.

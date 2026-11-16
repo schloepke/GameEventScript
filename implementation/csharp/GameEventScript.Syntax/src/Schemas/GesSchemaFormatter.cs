@@ -80,7 +80,19 @@ internal static class GesSchemaFormatter
                     Tags(declaration.Tags, builder);
                     builder.Append('\n');
                     break;
-                default:
+                case GesSchemaDeclarationKind.Network:
+                    builder.Append("network :").Append(declaration.Name).Append(" as {\n");
+                    foreach (var route in declaration.Routes)
+                    {
+                        builder.Append("  ").Append(route.Server ? "server " : "client ").Append(route.Publishes ? "publishes :" : "sends :").Append(route.Root).Append(' ');
+                        builder.Append(route.Class switch { GesSchemaRouteClass.Reliable => "reliable", GesSchemaRouteClass.Latest => "latest", _ => "bulk" });
+                        if (route.Rate is { } rate) builder.Append(" at most every ").Append(Value(rate));
+                        builder.Append('\n');
+                    }
+
+                    builder.Append("}\n");
+                    break;
+                case GesSchemaDeclarationKind.Messages:
                     builder.Append("messages :").Append(declaration.Name).Append(" as (").Append(string.Join(", ", declaration.Members)).Append(")\n");
                     break;
             }

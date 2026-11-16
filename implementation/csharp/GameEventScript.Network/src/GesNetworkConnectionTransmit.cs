@@ -1,0 +1,209 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+using System;
+using Wire = GameEventScript.Network.GesNetworkWire;
+
+namespace GameEventScript.Network;
+
+public sealed partial class GesNetworkConnection
+{
+    /// <summary>
+    /// Writes the next packet to transmit into the buffer: on a stream transport with its length prefix. Call it
+    /// until it returns 0.
+    /// </summary>
+    /// <param name="buffer">The target, at least 1200 bytes.</param>
+    /// <returns>The number of bytes written; 0 when nothing is due.</returns>
+    /// <exception cref="ArgumentException">The buffer holds fewer than 1200 bytes.</exception>
+    public int Transmit(Span<byte> buffer)
+    {
+        if (buffer.Length < Wire.MinimumPacketBytes) throw new ArgumentException("The buffer holds at least 1200 bytes.", nameof(buffer));
+        // A stream packet is written behind room for the longest prefix of a 65535-byte packet and then moved.
+        var prefix = _transport == GesNetworkTransport.Stream ? 3 : 0;
+        var packet = buffer.Slice(prefix);
+        int length;
+        if (_closePending)
+        {
+            length = WriteClose(packet);
+            _closePending = false;
+        }
+        else if (State == GesNetworkState.Closed)
+        {
+            return 0;
+        }
+        else if (_client && !_helloSent)
+        {
+            length = WriteHello(packet);
+            _helloSent = true;
+        }
+        else if (_welcomePending)
+        {
+            length = WriteWelcome(packet);
+            _welcomePending = false;
+        }
+        else if (State == GesNetworkState.Connected)
+        {
+            length = WriteData(packet, (int)Math.Min(SendPacketLimit, packet.Length));
+            if (length == 0) return 0;
+        }
+        else
+        {
+            return 0;
+        }
+
+        _lastSend = _now;
+        if (prefix == 0) return length;
+        var size = Wire.VarintSize((uint)length);
+        buffer.Slice(prefix, length).CopyTo(buffer.Slice(size));
+        Wire.WriteVarint(buffer, 0, (uint)length);
+        return size + length;
+    }
+
+    private int WriteHello(Span<byte> packet)
+    {
+        packet[0] = Wire.Hello;
+        Wire.WriteUInt32(packet, 1, Wire.Magic);
+        var position = Wire.WriteVarint(packet, 5, Wire.Version);
+        Wire.WriteUInt64(packet, position, Network.Hash);
+        position = Wire.WriteVarint(packet, position + 8, (uint)_routeCount);
+        for (var index = 0; index < _routeCount; index++)
+        {
+            Wire.WriteUInt64(packet, position, Network.Roots[index].BindingHash);
+            position += 8;
+        }
+
+        position = Wire.WriteVarint(packet, position, (uint)_maxPacket);
+        position = Wire.WriteVarint(packet, position, (uint)_token.Length);
+        _token.CopyTo(packet.Slice(position));
+        position += _token.Length;
+        return Wire.WriteVarint(packet, position, 0);
+    }
+
+    private int WriteWelcome(Span<byte> packet)
+    {
+        packet[0] = Wire.Welcome;
+        var position = Wire.WriteVarint(packet, 1, Wire.Version);
+        return Wire.WriteVarint(packet, position, (uint)_maxPacket);
+    }
+
+    private int WriteClose(Span<byte> packet)
+    {
+        packet[0] = Wire.Close;
+        var position = Wire.WriteVarint(packet, 1, (uint)_closeCode.Length);
+        foreach (var character in _closeCode) packet[position++] = (byte)character;
+        position = Wire.WriteVarint(packet, position, (uint)_closeDetail.Length);
+        _closeDetail.CopyTo(packet.Slice(position));
+        return position + _closeDetail.Length;
+    }
+
+    // Writes a data packet when frames, an acknowledgement or the keepalive are due; 0 otherwise.
+    private int WriteData(Span<byte> packet, int limit)
+    {
+        var frames = HasPendingFrames() && (_budget == 0 || _budgetUnits >= 0);
+        var keepalive = _now - _lastSend >= _keepalive;
+        if (!frames && !(_ackDue && _now >= _ackDeadline) && !keepalive) return 0;
+        packet[0] = Wire.Data;
+        packet[1] = 0;
+        Wire.WriteUInt16(packet, 2, (ushort)_sentCount);
+        var position = 4;
+        if (_receivedCount > 0)
+        {
+            packet[1] = 1;
+            Wire.WriteUInt16(packet, position, (ushort)(_receivedCount - 1));
+            var earlier = (int)Math.Min(32, _receivedCount - 1);
+            Wire.WriteUInt32(packet, position + 2, earlier == 32 ? uint.MaxValue : (1u << earlier) - 1);
+            position += 6;
+        }
+
+        var start = position;
+        if (frames)
+        {
+            position = WriteQueue(_sendReliable, ref _nextReliableId, packet, position, limit);
+            for (var route = 0; route < _routeCount; route++)
+            {
+                if (_sendLatest[route] is { } slot) position = WriteLatest(route, slot, packet, position, limit);
+            }
+
+            position = WriteQueue(_sendBulk, ref _nextBulkId, packet, position, limit);
+        }
+
+        // Frames and keepalives ask for acknowledgement; a packet that only acknowledges does not.
+        var asks = position > start || keepalive;
+        if (asks) packet[1] |= 2;
+        _sendTimes[_sentCount % SendTimeWindow] = _now;
+        _sendAsks[_sentCount % SendTimeWindow] = asks;
+        _sentCount++;
+        _ackDue = false;
+        if (position > start && _budget > 0) _budgetUnits -= position * MicrosecondsPerSecond;
+        return position;
+    }
+
+    // Writes fragments of reliable or bulk messages until the packet is full or the queue is empty.
+    private int WriteQueue(GesNetworkSendQueue queue, ref ushort nextId, Span<byte> packet, int position, int limit)
+    {
+        while (queue.Count > 0)
+        {
+            var message = queue.Current;
+            var id = queue.Started ? queue.Id : nextId;
+            var next = WriteFrame(packet, position, limit, (uint)queue.CurrentRoute + 1, id, queue.Offset, message, out var chunk);
+            if (next < 0) break;
+            position = next;
+            if (!queue.Started)
+            {
+                queue.Started = true;
+                queue.Id = nextId++;
+            }
+
+            queue.Offset += chunk;
+            if (queue.Offset < message.Length) break;
+            queue.Pop();
+        }
+
+        return position;
+    }
+
+    // Writes fragments of a latest route's current message and of the newer one that then takes its place.
+    private static int WriteLatest(int route, GesNetworkLatestSlot slot, Span<byte> packet, int position, int limit)
+    {
+        while (slot.HasCurrent)
+        {
+            var message = slot.Current;
+            var id = slot.Started ? slot.Id : slot.NextId;
+            var next = WriteFrame(packet, position, limit, (uint)route + 1, id, slot.Offset, message, out var chunk);
+            if (next < 0) break;
+            position = next;
+            if (!slot.Started)
+            {
+                slot.Started = true;
+                slot.Id = slot.NextId++;
+            }
+
+            slot.Offset += chunk;
+            if (slot.Offset < message.Length) break;
+            slot.Complete();
+        }
+
+        return position;
+    }
+
+    // Writes the largest fragment of a message at its offset that fits; -1 when none fits.
+    private static int WriteFrame(Span<byte> packet, int position, int limit, uint channel, ushort id, int offset, ReadOnlySpan<byte> message, out int chunk)
+    {
+        chunk = 0;
+        var total = message.Length;
+        var space = limit - position - Wire.VarintSize(channel) - 2 - Wire.VarintSize((uint)offset) - Wire.VarintSize((uint)total);
+        if (space < 1) return -1;
+        var remaining = total - offset;
+        var length = Math.Min(remaining, space - 1);
+        while (Wire.VarintSize((uint)length) + length > space) length--;
+        if (length == 0 && remaining > 0) return -1;
+        position = Wire.WriteVarint(packet, position, channel);
+        Wire.WriteUInt16(packet, position, id);
+        position = Wire.WriteVarint(packet, position + 2, (uint)offset);
+        position = Wire.WriteVarint(packet, position, (uint)total);
+        position = Wire.WriteVarint(packet, position, (uint)length);
+        message.Slice(offset, length).CopyTo(packet.Slice(position));
+        chunk = length;
+        return position + length;
+    }
+}

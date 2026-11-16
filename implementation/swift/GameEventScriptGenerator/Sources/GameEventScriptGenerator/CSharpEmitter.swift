@@ -54,7 +54,7 @@ enum GesCSharpEmitter {
         for type in types {
             for field in type.fields { GesSchemaPlanner.qualifyPacked(field.value, models) }
         }
-        var topLevel = GesSchemaPlanner.topLevel(types, sets)
+        var topLevel = GesSchemaPlanner.topLevel(types, sets, layout.networks)
         if options.models != nil { try GesSchemaPlanner.reserveSharedRoots(layout, types, &topLevel) }
         let context = Context(
             layout: layout,
@@ -98,6 +98,9 @@ enum GesCSharpEmitter {
         }
         for set in sets {
             document.units.append(GesCodeUnit(owner: set.name) { code in tagSetDeclaration(&code, set.name, set.tags, access) })
+        }
+        for network in layout.networks {
+            document.units.append(GesCodeUnit(owner: network.name) { code in self.network(&code, network, access) })
         }
         try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: false)
         let shared = options.split != .none
@@ -859,6 +862,25 @@ enum GesCSharpEmitter {
     }
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint" }
+
+    // The constants of a network: its hash, the index of each route and the rate of each topic that has one.
+    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String) {
+        code.line("/// <summary>The network <c>:\(network.name)</c>: its hash, the index of each route and the rate of each topic that has one.</summary>")
+        code.line("\(access) static class \(network.name)")
+        code.open("{")
+        code.line("/// <summary>The network hash over the routes and their bound roots, which the handshake compares.</summary>")
+        code.line("public const ulong Hash = 0x\(GesSchemaLayoutJson.hex(network.hash))UL;")
+        for route in network.routes {
+            code.blank()
+            code.line("/// <summary>The index of the route <c>\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)</c>.</summary>")
+            code.line("public const int \(route.name) = \(route.index);")
+            if route.rateMicroseconds == 0 { continue }
+            code.blank()
+            code.line("/// <summary>The shortest interval between two updates of the topic <c>:\(route.root)</c> in microseconds.</summary>")
+            code.line("public const long \(route.name)EveryMicroseconds = \(route.rateMicroseconds);")
+        }
+        code.close()
+    }
 
     // A named tag set, declared once beside the records that use it.
     static func tagSetDeclaration(_ code: inout Code, _ name: String, _ tags: [String], _ access: String) {

@@ -1,0 +1,382 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+using System.Text;
+using GameEventScript.Api;
+using GameEventScript.Network;
+
+namespace GameEventScript.Tests.Native.Network;
+
+[TestClass]
+public sealed class GesNetworkConnectionTests
+{
+    private const string Source = """
+        wire schema :World as { tick: :Number integer between 0 and 65535 }
+        wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }
+        wire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }
+        wire messages :Commands as (Move)
+        message Move(x: :Number integer between 0 and 255)
+
+        network :Game as {
+          client sends :Commands reliable
+          server sends :Blob reliable
+          server publishes :World latest at most every 50ms
+          server sends :Pack bulk
+        }
+        """;
+
+    private const int Commands = 0;
+    private const int Blob = 1;
+    private const int World = 2;
+    private const int BulkBlob = 3;
+
+    private static GesBoundNetwork Game(string source = Source) => GesSchemaSet.Parse(source).Network("Game").Bind();
+
+    private static GesNetworkLoopback Connected(GesNetworkOptions? options = null)
+    {
+        var network = Game();
+        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0, options);
+        var server = GesNetworkConnection.CreateServer(network, 0, options);
+        var loop = new GesNetworkLoopback(client, server);
+        loop.Advance(0);
+        CollectionAssert.AreEqual(new[] { "connecting t" }, Drain(server));
+        server.Accept();
+        loop.Advance(0);
+        CollectionAssert.AreEqual(new[] { "connected" }, Drain(client));
+        CollectionAssert.AreEqual(new[] { "connected" }, Drain(server));
+        Assert.AreEqual(GesNetworkState.Connected, client.State);
+        return loop;
+    }
+
+    private static List<string> Drain(GesNetworkConnection connection)
+    {
+        var events = new List<string>();
+        while (true)
+        {
+            var next = connection.NextEvent();
+            switch (next.Kind)
+            {
+                case GesNetworkEventKind.None:
+                    return events;
+                case GesNetworkEventKind.Connecting:
+                    events.Add("connecting " + Encoding.UTF8.GetString(next.Payload));
+                    break;
+                case GesNetworkEventKind.Connected:
+                    events.Add("connected");
+                    break;
+                case GesNetworkEventKind.Message:
+                    events.Add($"message {next.Route} {Convert.ToHexString(next.Payload)}");
+                    break;
+                case GesNetworkEventKind.Closed:
+                    events.Add($"closed {next.Code} '{next.Detail}' {(next.ByPeer ? "peer" : "local")}");
+                    break;
+            }
+        }
+    }
+
+    private static byte[] Bytes(int length, int seed)
+    {
+        var bytes = new byte[length];
+        for (var index = 0; index < length; index++) bytes[index] = (byte)(index * 7 + seed);
+        return bytes;
+    }
+
+    [TestMethod]
+    public void HandshakeReportsTheTokenAndConnectsBothSides()
+    {
+        var loop = Connected();
+        Assert.AreEqual(GesNetworkState.Connected, loop.Server.State);
+    }
+
+    [TestMethod]
+    public void RefusalClosesBothSidesWithTheHostDetail()
+    {
+        var network = Game();
+        var client = GesNetworkConnection.CreateClient(network, default, 0);
+        var server = GesNetworkConnection.CreateServer(network, 0);
+        var loop = new GesNetworkLoopback(client, server);
+        loop.Advance(0);
+        Drain(server);
+        server.Refuse("full");
+        loop.Advance(0);
+        CollectionAssert.AreEqual(new[] { "closed network.refused 'full' local" }, Drain(server));
+        CollectionAssert.AreEqual(new[] { "closed network.refused 'full' peer" }, Drain(client));
+    }
+
+    [TestMethod]
+    public void SchemaMismatchNamesTheDifferingRoots()
+    {
+        var other = Source.Replace("max 6000", "max 5000");
+        var client = GesNetworkConnection.CreateClient(Game(other), default, 0);
+        var server = GesNetworkConnection.CreateServer(Game(), 0);
+        var loop = new GesNetworkLoopback(client, server);
+        loop.Advance(0);
+        CollectionAssert.AreEqual(new[] { "closed network.schemaMismatch 'Blob, Pack' local" }, Drain(server));
+        CollectionAssert.AreEqual(new[] { "closed network.schemaMismatch 'Blob, Pack' peer" }, Drain(client));
+    }
+
+    [TestMethod]
+    public void SchemaMismatchWithEqualRootsNamesTheNetwork()
+    {
+        var other = Source.Replace("at most every 50ms", "at most every 60ms");
+        var client = GesNetworkConnection.CreateClient(Game(other), default, 0);
+        var server = GesNetworkConnection.CreateServer(Game(), 0);
+        new GesNetworkLoopback(client, server).Advance(0);
+        CollectionAssert.AreEqual(new[] { "closed network.schemaMismatch 'Game' local" }, Drain(server));
+    }
+
+    [TestMethod]
+    public void ReliableAndBulkMessagesArriveCompleteInOrderAcrossFragments()
+    {
+        var options = new GesNetworkOptions { MaxPacketBytes = 1200 };
+        var loop = Connected(options);
+        var first = Bytes(3000, 1);
+        var second = Bytes(10, 2);
+        var bulk = Bytes(5000, 3);
+        Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(BulkBlob, bulk));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, first));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, second));
+        loop.Advance(1);
+        CollectionAssert.AreEqual(
+            new[]
+            {
+                $"message {Blob} {Convert.ToHexString(first)}",
+                $"message {Blob} {Convert.ToHexString(second)}",
+                $"message {BulkBlob} {Convert.ToHexString(bulk)}",
+            },
+            Drain(loop.Client));
+        Assert.AreEqual(0, loop.Server.QueuedSendBytes);
+        Assert.AreEqual(0, loop.Client.PendingReceiveBytes);
+    }
+
+    [TestMethod]
+    public void LatestDeliversOnlyTheNewestUnstartedMessage()
+    {
+        var loop = Connected();
+        loop.Server.Send(World, [1]);
+        loop.Server.Send(World, [2]);
+        loop.Server.Send(World, [3]);
+        loop.Advance(1);
+        CollectionAssert.AreEqual(new[] { $"message {World} 03" }, Drain(loop.Client));
+        loop.Server.Send(World, [4]);
+        loop.Advance(2);
+        CollectionAssert.AreEqual(new[] { $"message {World} 04" }, Drain(loop.Client));
+    }
+
+    [TestMethod]
+    public void SendReportsEveryStatusInItsOrder()
+    {
+        var network = Game();
+        var client = GesNetworkConnection.CreateClient(network, default, 0);
+        Assert.AreEqual(GesNetworkSendStatus.InvalidRoute, client.Send(Blob, [1]));
+        Assert.AreEqual(GesNetworkSendStatus.InvalidRoute, client.Send(7, [1]));
+        Assert.AreEqual(GesNetworkSendStatus.NotConnected, client.Send(Commands, [1]));
+
+        var loop = Connected(new GesNetworkOptions { MaxSendQueueBytes = 100 });
+        Assert.AreEqual(GesNetworkSendStatus.MessageTooLarge, loop.Client.Send(Commands, new byte[1000]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, new byte[90]));
+        Assert.AreEqual(GesNetworkSendStatus.QueueFull, loop.Server.Send(Blob, new byte[11]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(World, [1]));
+    }
+
+    [TestMethod]
+    public void HostCloseDropsQueuedMessagesAndReachesThePeer()
+    {
+        var loop = Connected();
+        loop.Server.Send(Blob, [1, 2]);
+        loop.Server.Close("bye");
+        Assert.AreEqual(0, loop.Server.QueuedSendBytes);
+        loop.Advance(1);
+        CollectionAssert.AreEqual(new[] { "closed network.closed 'bye' local" }, Drain(loop.Server));
+        CollectionAssert.AreEqual(new[] { "closed network.closed 'bye' peer" }, Drain(loop.Client));
+        Assert.AreEqual(GesNetworkSendStatus.NotConnected, loop.Server.Send(Blob, [1]));
+    }
+
+    [TestMethod]
+    public void KeepaliveHoldsAnIdleSessionAndSilenceTimesOut()
+    {
+        var loop = Connected();
+        loop.Advance(30_000_000);
+        Assert.AreEqual(GesNetworkState.Connected, loop.Client.State);
+        Assert.AreEqual(GesNetworkState.Connected, loop.Server.State);
+
+        var network = Game();
+        var lone = GesNetworkConnection.CreateServer(network, 0);
+        lone.Advance(9_999_999);
+        Assert.AreEqual(GesNetworkState.AwaitHello, lone.State);
+        lone.Advance(10_000_000);
+        CollectionAssert.AreEqual(new[] { "closed network.timeout '' local" }, Drain(lone));
+    }
+
+    [TestMethod]
+    public void RoundTripFollowsTheSimulatedLatency()
+    {
+        var (client, server) = Pair(new GesNetworkOptions());
+        var simulator = new GesNetworkSimulator(client, server, 7, 20_000, 0);
+        Handshake(simulator);
+        for (var time = simulator.Now; time <= 2_000_000; time += 10_000)
+        {
+            client.Send(Commands, [1]);
+            simulator.Advance(time);
+            Drain(client);
+            Drain(server);
+        }
+
+        Assert.IsTrue(client.RoundTripMicroseconds is >= 40_000 and <= 60_000, client.RoundTripMicroseconds.ToString());
+    }
+
+    [TestMethod]
+    public void EqualSeedsGiveEqualTraces()
+    {
+        Assert.AreEqual(Trace(11), Trace(11));
+        Assert.AreNotEqual(Trace(11), Trace(12));
+    }
+
+    [TestMethod]
+    public void StreamTransportReassemblesPacketsFromSingleBytes()
+    {
+        var options = new GesNetworkOptions { Transport = GesNetworkTransport.Stream };
+        var (client, server) = Pair(options);
+        var buffer = new byte[70_000];
+        Pump(client, server, buffer);
+        CollectionAssert.AreEqual(new[] { "connecting " }, Drain(server));
+        server.Accept();
+        Pump(server, client, buffer);
+        CollectionAssert.AreEqual(new[] { "connected" }, Drain(client));
+        var payload = Bytes(4000, 5);
+        server.Send(Blob, payload);
+        Pump(server, client, buffer);
+        CollectionAssert.AreEqual(new[] { $"message {Blob} {Convert.ToHexString(payload)}" }, Drain(client));
+    }
+
+    [TestMethod]
+    public void StreamLengthZeroIsMalformedAndTooLongIsTooLarge()
+    {
+        var options = new GesNetworkOptions { Transport = GesNetworkTransport.Stream, MaxPacketBytes = 1200 };
+        var (_, server) = Pair(options);
+        server.Receive([0], 0);
+        CollectionAssert.AreEqual(new[] { "closed network.malformed '' local" }, Drain(server));
+        (_, server) = Pair(options);
+        server.Receive([0xb1, 0x09], 0);
+        CollectionAssert.AreEqual(new[] { "closed network.packetTooLarge '' local" }, Drain(server));
+    }
+
+    [TestMethod]
+    public void MalformedPacketsCloseWithTheirCode()
+    {
+        var (_, server) = Pair(new GesNetworkOptions());
+        server.Receive([9], 0);
+        CollectionAssert.AreEqual(new[] { "closed network.malformed '' local" }, Drain(server));
+
+        (_, server) = Pair(new GesNetworkOptions());
+        server.Receive([1, (byte)'G', (byte)'E', (byte)'S', (byte)'X'], 0);
+        CollectionAssert.AreEqual(new[] { "closed network.protocolMismatch '' local" }, Drain(server));
+
+        (_, server) = Pair(new GesNetworkOptions());
+        server.Receive([5, 0, 0, 0], 0);
+        CollectionAssert.AreEqual(new[] { "closed network.malformed '' local" }, Drain(server));
+    }
+
+    [TestMethod]
+    public void ClientRejectsAFrameOnItsOwnRoute()
+    {
+        var loop = Connected();
+        // data asking for acknowledgement, seq 0, frame: channel 1 (client route), id 0, offset 0, total 1, chunk 1, byte.
+        loop.Client.Receive([5, 2, 0, 0, 1, 0, 0, 0, 1, 1, 9], 0);
+        CollectionAssert.AreEqual(new[] { "closed network.unexpectedRoute '' local" }, Drain(loop.Client));
+    }
+
+    [TestMethod]
+    public void FrameRateLimitClosesTheConnection()
+    {
+        var loop = Connected(new GesNetworkOptions { MaxFramesPerSecond = 2 });
+        for (var index = 0; index < 3; index++) loop.Client.Send(Commands, [(byte)index]);
+        loop.Advance(1);
+        CollectionAssert.AreEqual(new[] { "closed network.rateExceeded '' local" }, Drain(loop.Server)[2..]);
+    }
+
+    [TestMethod]
+    public void SendBudgetDelaysFramesUntilTheBucketRefills()
+    {
+        var loop = Connected(new GesNetworkOptions { MaxPacketBytes = 1200 });
+        loop.Server.SendBudgetBytesPerSecond = 12_000;
+        loop.Server.Send(Blob, Bytes(5000, 0));
+        loop.Advance(1);
+        Assert.IsEmpty(Drain(loop.Client));
+        loop.Advance(500_000);
+        Assert.HasCount(1, Drain(loop.Client));
+    }
+
+    [TestMethod]
+    [TestCategory("Allocation")]
+    public void WarmedSessionAllocatesNothing()
+    {
+        var loop = Connected(new GesNetworkOptions { MaxPacketBytes = 1200 });
+        var world = new byte[] { 1, 2 };
+        var blob = Bytes(3000, 9);
+        var command = new byte[] { 3 };
+        long time = 0;
+        long received = 0;
+        void Round()
+        {
+            time += 16_667;
+            loop.Server.Send(World, world);
+            loop.Server.Send(Blob, blob);
+            loop.Server.Send(BulkBlob, blob);
+            loop.Client.Send(Commands, command);
+            loop.Advance(time);
+            for (var next = loop.Client.NextEvent(); next.Kind != GesNetworkEventKind.None; next = loop.Client.NextEvent()) received += next.Payload.Length;
+            for (var next = loop.Server.NextEvent(); next.Kind != GesNetworkEventKind.None; next = loop.Server.NextEvent()) received += next.Payload.Length;
+        }
+
+        for (var round = 0; round < 50; round++) Round();
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var round = 0; round < 1000; round++) Round();
+        Assert.AreEqual(before, GC.GetAllocatedBytesForCurrentThread());
+        Assert.AreEqual(1050L * (2 + 3000 + 3000 + 1), received);
+        Assert.AreEqual(GesNetworkState.Connected, loop.Client.State);
+    }
+
+    // Runs the simulator until the server's host is asked and accepts the client.
+    private static void Handshake(GesNetworkSimulator simulator)
+    {
+        simulator.Advance(simulator.Now);
+        while (simulator.Server.State == GesNetworkState.AwaitHello) simulator.Advance(simulator.NextDeadline);
+        CollectionAssert.AreEqual(new[] { "connecting " }, Drain(simulator.Server));
+        simulator.Server.Accept();
+    }
+
+    private static (GesNetworkConnection Client, GesNetworkConnection Server) Pair(GesNetworkOptions options)
+    {
+        var network = Game();
+        return (GesNetworkConnection.CreateClient(network, default, 0, options), GesNetworkConnection.CreateServer(network, 0, options));
+    }
+
+    // Moves every due packet from one stream connection to the other one byte at a time.
+    private static void Pump(GesNetworkConnection from, GesNetworkConnection to, byte[] buffer)
+    {
+        int length;
+        while ((length = from.Transmit(buffer)) > 0)
+        {
+            for (var index = 0; index < length; index++) to.Receive(buffer.AsSpan(index, 1), to.Now);
+        }
+    }
+
+    private static string Trace(long seed)
+    {
+        var (client, server) = Pair(new GesNetworkOptions { MaxPacketBytes = 1200 });
+        var simulator = new GesNetworkSimulator(client, server, seed, 5_000, 30_000);
+        var trace = new StringBuilder();
+        Handshake(simulator);
+        for (var time = simulator.Now; time < 1_000_000; time += 16_667)
+        {
+            server.Send(World, [(byte)(time / 16_667), 0]);
+            if (time % 100_000 < 16_667) server.Send(Blob, Bytes(2500, (int)time));
+            simulator.Advance(time);
+            foreach (var entry in Drain(client)) trace.Append(simulator.Now).Append(' ').Append(entry[..Math.Min(entry.Length, 16)]).Append('\n');
+            Drain(server);
+        }
+
+        return trace.Append(client.RoundTripMicroseconds).ToString();
+    }
+}

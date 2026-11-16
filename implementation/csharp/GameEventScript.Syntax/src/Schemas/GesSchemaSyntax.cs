@@ -20,7 +20,36 @@ internal enum GesSchemaDeclarationKind : byte
     Schema,
     Message,
     Messages,
-    TagSet
+    TagSet,
+    Network
+}
+
+internal enum GesSchemaRouteClass : byte
+{
+    Reliable,
+    Latest,
+    Bulk
+}
+
+// One route of a network: `client sends :Root reliable` or `server publishes :Root latest at most every 200ms`.
+internal sealed class GesSchemaRouteSyntax
+{
+    internal bool Server { get; init; }
+
+    internal bool Publishes { get; init; }
+
+    internal string Root { get; init; } = "";
+
+    internal int RootOffset { get; init; }
+
+    internal GesSchemaRouteClass Class { get; init; }
+
+    internal int ClassOffset { get; init; }
+
+    // The interval of `at most every`, a literal or a constant; null without one.
+    internal GesSchemaValueSyntax? Rate { get; init; }
+
+    internal int Offset { get; init; }
 }
 
 /// <summary>An exact decimal in lowest terms: no trailing zero in the significand, and zero is 0e0.</summary>
@@ -322,6 +351,9 @@ internal sealed class GesSchemaDeclarationSyntax
 
     internal int[] MemberOffsets { get; init; } = [];
 
+    // The routes of a network in declared order.
+    internal GesSchemaRouteSyntax[] Routes { get; init; } = [];
+
     // The group of a wire or model root, or null when the declaration has no such role.
     internal string? WireGroup { get; set; }
 
@@ -352,6 +384,8 @@ internal sealed class GesSchemaDiagnostic
     internal const string PackedTooWide = "schema.packedTooWide";
     internal const string InvalidExpression = "schema.invalidExpression";
     internal const string ComputedMayBeAbsent = "schema.computedMayBeAbsent";
+    internal const string InvalidRoute = "schema.invalidRoute";
+    internal const string DuplicateRoute = "schema.duplicateRoute";
 
     internal GesSchemaDiagnostic(string code, string text, int offset, string message)
     {

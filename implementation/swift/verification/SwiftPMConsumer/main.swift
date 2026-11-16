@@ -4,6 +4,8 @@
 import Foundation
 import GameEventScriptCompiler
 import GameEventScriptGenerator
+import GameEventScriptNetwork
+import GameEventScriptNetworkSockets
 import GameEventScriptRuntime
 import GameEventScriptSwiftBridge
 import GameEventScriptSyntax
@@ -44,4 +46,13 @@ precondition(macroExecution.state == .completed)
 precondition(result == .integer(17))
 let generated = try GesSchemaGenerator.generate(GesSchemaSet(parsing: "schema :Ping as {\n  ready: :Boolean\n}\n"), roots: ["Ping"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Consumer"))
 precondition(generated.contains("public struct Ping"))
-print("SwiftPM Compiler/Runtime/SwiftBridge/Generator consumer passed")
+let network = try GesSchemaSet(parsing: "wire schema :Ping as { ready: :Boolean }\nnetwork :Game as {\n  server sends :Ping reliable\n}\n").network("Game").bind()
+let client = try GesNetworkConnection.makeClient(network: network, token: Array("t".utf8), now: 0)
+let server = try GesNetworkConnection.makeServer(network: network, now: 0)
+let loopback = try GesNetworkLoopback(client: client, server: server)
+try loopback.advance(0)
+try server.accept()
+try loopback.advance(0)
+precondition(client.state == .connected)
+precondition(String(describing: GesNetworkSocketListener.self) == "GesNetworkSocketListener")
+print("SwiftPM Compiler/Runtime/SwiftBridge/Generator/Network consumer passed")

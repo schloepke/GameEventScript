@@ -52,7 +52,7 @@ public enum GesSchemaGenerator {
     public static func generateFiles(_ set: GesSchemaSet, roots: [String], parameters: GesSchemaParameters, options: GesSchemaGenerateOptions) throws -> [GesGeneratedFile] {
         let (document, layout) = try wire(set, roots, parameters, options)
         return try GesCodeFiles.split(document, options.split, sourceOf: set.sourceName(of:)) { files in
-            manifest(options, model: false, layout.roots, { root in (layout.type(root).hash, layout.type(root).bindingHash) }, layout.parameters, files)
+            manifest(options, model: false, layout.roots, { root in layout.rootHashes(root) }, layout.parameters, files)
         }
     }
 
@@ -93,7 +93,7 @@ public enum GesSchemaGenerator {
         // `<Name>Wire` members of packed roots and the helper of computed fields.
         var wireNames: Set<String>?
         if let modelSpace {
-            var names = GesSchemaPlanner.topLevel(types, GesSchemaPlanner.tagSets(types, ""))
+            var names = GesSchemaPlanner.topLevel(types, GesSchemaPlanner.tagSets(types, ""), layout.networks)
             for name in packed {
                 names.remove(name)
                 if layout.roots.contains(name) { names.insert(name + "Wire") }

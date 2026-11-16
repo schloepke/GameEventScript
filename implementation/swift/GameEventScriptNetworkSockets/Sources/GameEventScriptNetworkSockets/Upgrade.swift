@@ -158,8 +158,9 @@ struct GesNetworkSocketEndpoint: Sendable {
 
     init(_ url: String) throws {
         let invalid = GesApiError.invalidArgument("The URL must be a ws or wss endpoint with a host.")
-        guard let schemeEnd = url.range(of: "://") else { throw invalid }
-        let scheme = url[..<schemeEnd.lowerBound]
+        // A scheme has no colon, so the first one must open the "://" separator.
+        guard let colon = url.firstIndex(of: ":"), url[colon...].hasPrefix("://") else { throw invalid }
+        let scheme = url[..<colon]
         if GesNetworkSocketUpgrade.equalIgnoringCase(scheme, "ws") {
             secure = false
         } else if GesNetworkSocketUpgrade.equalIgnoringCase(scheme, "wss") {
@@ -168,7 +169,7 @@ struct GesNetworkSocketEndpoint: Sendable {
             throw invalid
         }
 
-        let rest = url[schemeEnd.upperBound...]
+        let rest = url[url.index(colon, offsetBy: 3)...]
         let authorityEnd = rest.firstIndex { $0 == "/" || $0 == "?" || $0 == "#" } ?? rest.endIndex
         let authority = rest[..<authorityEnd]
         var path = String(rest[authorityEnd...])

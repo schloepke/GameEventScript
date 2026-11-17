@@ -60,7 +60,11 @@ def c_module_arguments(directory, scratch=None):
     """Name the module maps of C dependencies such as SwiftNIO's, which Clang cannot discover on its own."""
     generated = directory.parent.parent / "Intermediates.noindex" / "GeneratedModuleMaps"
     # Swift Build collects generated maps in one directory; legacy SwiftPM keeps each beside its target's objects.
-    maps = sorted(generated.glob("*.modulemap")) if generated.is_dir() else sorted(directory.glob("*.build/module.modulemap"))
+    # Older legacy SwiftPM (Swift 6.1) also writes maps for Swift targets, which their .swiftmodule already loads,
+    # and a second copy of each in Foo-tool.build; naming those redefines the module, so keep only C targets' maps.
+    maps = (sorted(generated.glob("*.modulemap")) if generated.is_dir() else
+            [path for path in sorted(directory.glob("*.build/module.modulemap")) if not path.parent.name.endswith("-tool.build")
+             and "-Swift.h" not in path.read_text(encoding="utf-8", errors="replace")])
     # C targets that ship their own map, such as swift-atomics' _AtomicsShims, keep it in their checkout.
     if scratch is not None:
         maps += sorted((Path(scratch) / "checkouts").glob("*/Sources/*/include/module.modulemap"))

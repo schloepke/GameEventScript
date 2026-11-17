@@ -150,7 +150,10 @@ public final class GesNetworkCookies {
             return false
         }
         position += 8 * Int(routes)
-        if Wire.readVarint(packet, &position, &value) != 1 || Wire.readVarint(packet, &position, &value) != 1 { return false }
+        // The packet, baseline and transfer limits and the compression mask.
+        for _ in 0..<4 {
+            if Wire.readVarint(packet, &position, &value) != 1 { return false }
+        }
         var token: UInt32 = 0
         if Wire.readVarint(packet, &position, &token) != 1 || token > UInt32(Wire.maximumTokenBytes) || packet.count - position < Int(token) { return false }
         position += Int(token)

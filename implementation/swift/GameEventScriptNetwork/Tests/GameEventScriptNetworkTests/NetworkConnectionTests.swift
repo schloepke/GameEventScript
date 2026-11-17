@@ -58,6 +58,8 @@ final class NetworkConnectionTests: XCTestCase {
                 events.append("message \(next.route) \(hex(next.payload))")
             case .closed:
                 events.append("closed \(next.code) '\(next.detail)' \(next.byPeer ? "peer" : "local")")
+            case .transferProgress, .transferCancelled:
+                break
             }
         }
     }
@@ -309,5 +311,87 @@ final class NetworkConnectionTests: XCTestCase {
             time += 16_667
         }
         return trace + "\(client.roundTripMicroseconds)"
+    }
+
+    // Every event of a connection with its transfer fields.
+    private func transfers(_ connection: GesNetworkConnection) -> [String] {
+        var events: [String] = []
+        while true {
+            let next = connection.nextEvent()
+            switch next.kind {
+            case .none:
+                return events
+            case .transferProgress:
+                events.append("progress \(next.route) \(next.transferId) \(next.bytes)/\(next.total)")
+            case .transferCancelled:
+                events.append("cancelled \(next.route) \(next.transferId) \(next.code) \(next.byPeer ? "peer" : "local")")
+            case .message:
+                events.append("message \(next.route) \(next.transferId) \(next.payload.count)")
+            default:
+                events.append("\(next.kind) \(next.code)")
+            }
+        }
+    }
+
+    func testTransferArrivesWithProgressOnBothSidesAndCompressesWhenShorter() throws {
+        var options = GesNetworkOptions()
+        options.maxPacketBytes = 1200
+        let loop = try connected(options)
+        XCTAssertEqual(loop.server.send(route: bulkBlob, payload: [UInt8](repeating: 0, count: 5000)), .queued)
+        XCTAssertEqual(loop.server.lastTransferId, 0)
+        // 1 compression byte, the 2-byte size, the hash and far fewer than 5000 deflated bytes.
+        XCTAssertLessThan(loop.server.queuedSendBytes, 200)
+        try loop.advance(1)
+        let received = transfers(loop.client)
+        XCTAssertEqual(received.last, "message \(bulkBlob) 0 5000")
+        XCTAssertTrue(received[0].hasPrefix("progress \(bulkBlob) 0 "))
+        try loop.advance(20_000)
+        XCTAssertEqual(transfers(loop.server).last, received[received.count - 2])
+    }
+
+    func testTransferWithoutCompressionCarriesTheData() throws {
+        var options = GesNetworkOptions()
+        options.deflateTransfers = false
+        let loop = try connected(options)
+        let data = bytes(3000, 5)
+        XCTAssertEqual(loop.server.send(route: bulkBlob, payload: data), .queued)
+        XCTAssertEqual(loop.server.queuedSendBytes, 3000 + 1 + 2 + 32)
+        try loop.advance(1)
+        var next = loop.client.nextEvent()
+        while next.kind == .transferProgress { next = loop.client.nextEvent() }
+        XCTAssertEqual(next.kind, .message)
+        XCTAssertEqual(Array(next.payload), data)
+    }
+
+    func testTransferAboveThePeerLimitIsTooLarge() throws {
+        let network = try game()
+        var options = GesNetworkOptions()
+        options.maxTransferBytes = 100
+        let client = try GesNetworkConnection.makeClient(network: network, now: 0, options: options)
+        let server = try GesNetworkConnection.makeServer(network: network, now: 0)
+        let loop = try GesNetworkLoopback(client: client, server: server)
+        try loop.advance(0)
+        _ = server.nextEvent()
+        try server.accept()
+        try loop.advance(0)
+        XCTAssertEqual(server.send(route: bulkBlob, payload: [UInt8](repeating: 0, count: 101)), .messageTooLarge)
+        XCTAssertEqual(server.send(route: bulkBlob, payload: [UInt8](repeating: 0, count: 100)), .queued)
+    }
+
+    func testCancelledTransferReachesThePeerAndTheSessionContinues() throws {
+        let loop = try connected()
+        _ = loop.server.send(route: bulkBlob, payload: bytes(4000, 1))
+        let first = loop.server.lastTransferId
+        _ = loop.server.send(route: bulkBlob, payload: bytes(10, 2))
+        XCTAssertTrue(try loop.server.cancel(route: bulkBlob, transferId: first, code: "game.skipped"))
+        XCTAssertFalse(try loop.server.cancel(route: bulkBlob, transferId: first))
+        XCTAssertEqual(transfers(loop.server), ["cancelled \(bulkBlob) 0 game.skipped local"])
+        try loop.advance(1)
+        let received = transfers(loop.client)
+        XCTAssertEqual(received.first, "cancelled \(bulkBlob) 0 game.skipped peer")
+        XCTAssertEqual(received.last, "message \(bulkBlob) 1 10")
+        XCTAssertEqual(loop.client.state, .connected)
+        XCTAssertThrowsError(try loop.server.cancel(route: blob, transferId: 0))
+        XCTAssertThrowsError(try loop.server.cancel(route: bulkBlob, transferId: 1, code: "bad code"))
     }
 }

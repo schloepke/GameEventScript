@@ -146,6 +146,27 @@ instead. A `message` event on the other side carries the route index and the pay
 bytes stay valid until the next `NextEvent` call, so decode or copy them right away. A `closed`
 event carries a `network.*` code, such as `network.timeout`, and whether the peer closed.
 
+A message on a `bulk` route is a transfer: up to 64 MiB by default (`MaxTransferBytes`), sent with
+its size and SHA-256 hash and compressed with Deflate when that is shorter. It gets its id when
+you send it; read it right afterwards and cancel the transfer with that id, optionally with your
+own `network.*` code:
+
+```csharp
+client.Send(route: 2, level);
+var id = client.LastTransferId;
+client.Cancel(route: 2, id); // the peer reports transferCancelled; the session continues
+```
+
+```swift
+_ = client.send(route: 2, payload: level)
+let id = client.lastTransferId
+_ = try client.cancel(route: 2, transferId: id)
+```
+
+Both sides report `transferProgress` with the bytes so far and the total. The receiver checks
+the size before it allocates and the hash before it reports the `message`; a transfer that fails
+is cancelled with `network.transferTooLarge` or `network.transferCorrupt`.
+
 ## 5. Drive the loop
 
 Without a loopback, your host loop does the transport's work. Each iteration:

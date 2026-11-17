@@ -34,6 +34,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   padded to 1200 bytes. A stateless address validation gate (`GesNetworkCookies`) answers unknown addresses with an
   HMAC-SHA256 cookie in a `retry`. `ListenUdp`/`ConnectUdpAsync` (Swift `listenUdp`/`connectUdp`) open UDP sockets over
   IPv4 and IPv6, and `GesNetworkSimulator` can lose, duplicate and reorder packets with a seed.
+- Network transfers: a message on a `bulk` route carries a header with its compression, size and SHA-256 hash and is
+  compressed with a portable Deflate encoder, byte-identical in both ports, when both sides allow it
+  (`DeflateTransfers`) and the result is shorter. Both sides agree a transfer limit (`MaxTransferBytes`, default
+  64 MiB) that the receiver checks before it allocates. `LastTransferId` reports a sent transfer's id and `Cancel`
+  (Swift `cancel(route:transferId:code:)`) cancels it with an optional code without closing the session; the events
+  `transferProgress` and `transferCancelled` and the codes `network.transferTooLarge`, `network.transferCorrupt` and
+  `network.transferCancelled` report progress and failures.
 
 ### Changed
 - The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the

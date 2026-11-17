@@ -66,6 +66,7 @@ extension GesNetworkConnection {
         }
         position = Wire.writeVarint(packet, position, UInt32(maxPacketBytes))
         position = Wire.writeVarint(packet, position, UInt32(maxBaseline))
+        position = writeTransferLimits(packet, position)
         position = Wire.writeVarint(packet, position, UInt32(token.count))
         for byte in token {
             packet[position] = byte
@@ -78,7 +79,14 @@ extension GesNetworkConnection {
         packet[0] = Wire.welcome
         var position = Wire.writeVarint(packet, 1, Wire.version)
         position = Wire.writeVarint(packet, position, UInt32(maxPacketBytes))
-        return Wire.writeVarint(packet, position, UInt32(maxBaseline))
+        position = Wire.writeVarint(packet, position, UInt32(maxBaseline))
+        return writeTransferLimits(packet, position)
+    }
+
+    // Writes the transfer limit and the mask of the compressions this side accepts.
+    private func writeTransferLimits(_ packet: UnsafeMutableRawBufferPointer, _ position: Int) -> Int {
+        let position = Wire.writeVarint(packet, position, UInt32(maxTransfer))
+        return Wire.writeVarint(packet, position, deflate ? Wire.compressionMaskDeflate : 0)
     }
 
     private func writeClose(_ packet: UnsafeMutableRawBufferPointer) -> Int {
@@ -115,6 +123,7 @@ extension GesNetworkConnection {
 
         let start = position
         if frames {
+            position = writeCancels(packet, position, limit)
             position = writeQueue(sendReliable, &nextReliableId, packet, position, limit)
             for route in 0..<routeCount {
                 if let slot = sendLatest[route] { position = writeLatest(route, slot, packet, position, limit) }
@@ -127,6 +136,7 @@ extension GesNetworkConnection {
         if asks { packet[1] |= 2 }
         sendTimes[Int(sentCount % Int64(Self.sendTimeWindow))] = now
         sendAsks[Int(sentCount % Int64(Self.sendTimeWindow))] = asks
+        bulkMarks[Int(sentCount % Int64(Self.sendTimeWindow))] = bulkWritten
         sentCount += 1
         ackDue = false
         if position > start && budget > 0 { budgetUnits -= Int64(position) * Self.microsecondsPerSecond }
@@ -137,7 +147,18 @@ extension GesNetworkConnection {
     private func writeQueue(_ queue: GesNetworkSendQueue, _ nextId: inout UInt16, _ packet: UnsafeMutableRawBufferPointer, _ position: Int, _ limit: Int) -> Int {
         var position = position
         while queue.count > 0 {
-            let id = queue.started ? queue.id : nextId
+            if queue.preassigned && queue.isCancelled(0) {
+                // A cancelled transfer tells the peer in queue order; one the peer refused needs no cancel.
+                let code = queue.code(0)
+                if !code.isEmpty {
+                    if limit - position < Self.cancelFrameSize(queue.currentRoute, code) { break }
+                    position = Self.writeCancelFrame(packet, position, queue.currentRoute, queue.entryId(0), code)
+                }
+                queue.pop()
+                continue
+            }
+
+            let id = queue.preassigned ? queue.entryId(0) : queue.started ? queue.id : nextId
             let offset = queue.offset
             let route = queue.currentRoute
             var chunk = 0
@@ -146,9 +167,15 @@ extension GesNetworkConnection {
             position = next
             if !queue.started {
                 queue.started = true
-                queue.id = nextId
-                nextId &+= 1
+                if queue.preassigned {
+                    queue.id = id
+                    noteTransferStarted(route, id, queue.currentLength)
+                } else {
+                    queue.id = nextId
+                    nextId &+= 1
+                }
             }
+            if queue.preassigned { bulkWritten += Int64(chunk) }
             queue.offset += chunk
             if queue.offset < queue.currentLength { break }
             topics[route]?.markSent(sentCount)

@@ -3,7 +3,8 @@
 
 // A FIFO of reliable or bulk messages to send. The bytes and entries are reused. A stream or message transport sends
 // the head in fragments and removes it when sent; a datagram transport keeps each message until all its bytes are
-// acknowledged, sends new fragments at a cursor and resends lost ranges first.
+// acknowledged, sends new fragments at a cursor and resends lost ranges first. A bulk queue numbers its transfers when
+// they are queued and keeps a cancelled transfer as a placeholder until its cancel is sent in queue order.
 final class GesNetworkSendQueue {
     // The most messages a datagram transport has started and still holds.
     static let maximumStarted = 8192
@@ -18,6 +19,8 @@ final class GesNetworkSendQueue {
     private var ids = [UInt16](repeating: 0, count: 8)
     private var acknowledged = [Int](repeating: 0, count: 8)
     private var done = [Bool](repeating: false, count: 8)
+    private var cancelled = [Bool](repeating: false, count: 8)
+    private var codes = [String](repeating: "", count: 8)
     private var first = 0
     private(set) var count = 0
     private var firstSerial: Int64 = 0
@@ -33,6 +36,13 @@ final class GesNetworkSendQueue {
     var cursorStarted = false
     var cursorOffset = 0
     let lost = GesNetworkRanges()
+
+    // Whether the ids were assigned when the messages were queued.
+    let preassigned: Bool
+
+    init(preassigned: Bool = false) {
+        self.preassigned = preassigned
+    }
 
     // Bytes of messages not yet completely sent, or on a datagram transport not yet acknowledged.
     var byteCount: Int64 { Int64(tail - head) }
@@ -69,17 +79,61 @@ final class GesNetworkSendQueue {
 
     func serial(_ index: Int) -> Int64 { firstSerial + Int64(index) }
 
+    func isCancelled(_ index: Int) -> Bool { cancelled[slot(index)] }
+
+    func code(_ index: Int) -> String { codes[slot(index)] }
+
+    // The acknowledged bytes of a held message on a datagram transport.
+    func acknowledgedBytes(_ index: Int) -> Int { acknowledged[slot(index)] }
+
+    // Turns a message into a cancelled placeholder; a datagram transport no longer sends or resends its fragments.
+    func cancel(_ index: Int, _ code: String) {
+        let slot = slot(index)
+        cancelled[slot] = true
+        done[slot] = true
+        codes[slot] = code
+    }
+
+    // Finds the held, not cancelled transfer with the route and id.
+    func findTransfer(_ route: Int, _ id: UInt16, _ index: inout Int) -> Bool {
+        for candidate in 0..<count {
+            let slot = slot(candidate)
+            if routes[slot] == route && ids[slot] == id && !cancelled[slot] {
+                index = candidate
+                return true
+            }
+        }
+        return false
+    }
+
     // Adds a message; number is the topic state's number, or -1.
     func enqueue(_ route: Int, _ payload: UnsafeRawBufferPointer, _ number: Int = -1) {
+        reserve(route, payload.count, number)
+        if payload.count > 0 {
+            let start = tail - payload.count
+            bytes.withUnsafeMutableBytes { $0.baseAddress!.advanced(by: start).copyMemory(from: payload.baseAddress!, byteCount: payload.count) }
+        }
+    }
+
+    // Calls the body with the bytes of the newest message to fill; shrink may shorten it before the next change.
+    func withNewest<Result>(_ body: (UnsafeMutableRawBufferPointer) -> Result) -> Result {
+        let slot = slot(count - 1)
+        let start = starts[slot]
+        let length = lengths[slot]
+        return bytes.withUnsafeMutableBytes { body(UnsafeMutableRawBufferPointer(rebasing: $0[start..<start + length])) }
+    }
+
+    // Adds a message of the length whose bytes withNewest fills.
+    func reserve(_ route: Int, _ length: Int, _ number: Int = -1, _ id: UInt16 = 0) {
         if count == routes.count { grow() }
-        if bytes.count - tail < payload.count {
+        if bytes.count - tail < length {
             let used = tail - head
             let start = head
-            if bytes.count - used >= payload.count && head > 0 {
+            if bytes.count - used >= length && head > 0 {
                 // The ranges may overlap when the storage is kept.
                 bytes.withUnsafeMutableBytes { $0.baseAddress!.copyMemory(from: $0.baseAddress! + start, byteCount: used) }
             } else {
-                var grown = [UInt8](repeating: 0, count: max(bytes.count * 2, 256, used + payload.count))
+                var grown = [UInt8](repeating: 0, count: max(bytes.count * 2, 256, used + length))
                 if used > 0 {
                     bytes.withUnsafeBytes { source in
                         grown.withUnsafeMutableBytes { $0.baseAddress!.copyMemory(from: source.baseAddress! + start, byteCount: used) }
@@ -91,19 +145,25 @@ final class GesNetworkSendQueue {
             head = 0
             tail = used
         }
-        let start = tail
-        if payload.count > 0 {
-            bytes.withUnsafeMutableBytes { $0.baseAddress!.advanced(by: start).copyMemory(from: payload.baseAddress!, byteCount: payload.count) }
-        }
         let slot = slot(count)
         routes[slot] = route
-        starts[slot] = start
-        lengths[slot] = payload.count
+        starts[slot] = tail
+        lengths[slot] = length
         numbers[slot] = number
+        ids[slot] = id
         acknowledged[slot] = 0
         done[slot] = false
-        tail += payload.count
+        cancelled[slot] = false
+        codes[slot] = ""
+        tail += length
         count += 1
+    }
+
+    // Shortens the newest message to the length.
+    func shrink(_ length: Int) {
+        let slot = slot(count - 1)
+        tail -= lengths[slot] - length
+        lengths[slot] = length
     }
 
     private func grow() {
@@ -115,6 +175,8 @@ final class GesNetworkSendQueue {
         var grownIds = [UInt16](repeating: 0, count: size)
         var grownAcknowledged = [Int](repeating: 0, count: size)
         var grownDone = [Bool](repeating: false, count: size)
+        var grownCancelled = [Bool](repeating: false, count: size)
+        var grownCodes = [String](repeating: "", count: size)
         for index in 0..<count {
             let slot = slot(index)
             grownRoutes[index] = routes[slot]
@@ -124,6 +186,8 @@ final class GesNetworkSendQueue {
             grownIds[index] = ids[slot]
             grownAcknowledged[index] = acknowledged[slot]
             grownDone[index] = done[slot]
+            grownCancelled[index] = cancelled[slot]
+            grownCodes[index] = codes[slot]
         }
         routes = grownRoutes
         starts = grownStarts
@@ -132,6 +196,8 @@ final class GesNetworkSendQueue {
         ids = grownIds
         acknowledged = grownAcknowledged
         done = grownDone
+        cancelled = grownCancelled
+        codes = grownCodes
         first = 0
     }
 
@@ -417,6 +483,9 @@ final class GesNetworkPartial {
     var reported: UInt16 = 0
     var hasReported = false
 
+    // Whether the sender cancelled the bulk message before it was reported.
+    var cancelled = false
+
     // Calls the body with the message's bytes.
     func withMessage<Result>(_ body: (UnsafeRawBufferPointer) -> Result) -> Result {
         let length = Int(total)
@@ -432,9 +501,20 @@ final class GesNetworkPartial {
             arrived.withUnsafeMutableBytes { _ = $0.baseAddress!.initializeMemory(as: UInt8.self, repeating: 0, count: bits) }
         }
         active = true
+        cancelled = false
         self.channel = channel
         self.id = id
         self.total = total
+        received = 0
+    }
+
+    // Marks the message with the id cancelled; its fragments are ignored and it is skipped in order.
+    func cancel(_ channel: UInt32, _ id: UInt16) {
+        active = true
+        cancelled = true
+        self.channel = channel
+        self.id = id
+        total = 0
         received = 0
     }
 
@@ -484,9 +564,11 @@ final class GesNetworkOrderedReceive {
         free.append(message)
     }
 
-    // The next message to report when it is complete; nil otherwise.
+    // The next message to report when it is complete or cancelled; nil otherwise.
     var ready: GesNetworkPartial? {
-        guard let message = messages[Int(nextId) % Self.window], message.active, message.received == Int64(message.total) else { return nil }
+        guard let message = messages[Int(nextId) % Self.window], message.active, message.cancelled || message.received == Int64(message.total) else {
+            return nil
+        }
         return message
     }
 }

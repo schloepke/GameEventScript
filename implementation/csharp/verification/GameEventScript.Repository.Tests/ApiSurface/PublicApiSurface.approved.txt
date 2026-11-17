@@ -1577,12 +1577,16 @@ static class GameEventScript.Network.GesNetworkCodes
   field static System.String Refused
   field static System.String SchemaMismatch
   field static System.String Timeout
+  field static System.String TransferCancelled
+  field static System.String TransferCorrupt
+  field static System.String TransferTooLarge
   field static System.String TransportClosed
   field static System.String UnexpectedRoute
 sealed class GameEventScript.Network.GesNetworkConnection
   method GameEventScript.Network.GesNetworkEvent NextEvent()
   method GameEventScript.Network.GesNetworkSendStatus Publish(System.Int32 route, System.ReadOnlySpan<System.Byte> payload)
   method GameEventScript.Network.GesNetworkSendStatus Send(System.Int32 route, System.ReadOnlySpan<System.Byte> payload)
+  method System.Boolean Cancel(System.Int32 route, System.Int32 transferId, System.String code)
   method System.Int32 Transmit(System.Span<System.Byte> buffer)
   method System.Void Accept()
   method System.Void Advance(System.Int64 now)
@@ -1598,6 +1602,7 @@ sealed class GameEventScript.Network.GesNetworkConnection
   property GameEventScript.Network.GesNetworkState State { get }
   property GameEventScript.Network.GesNetworkTransport Transport { get }
   property System.Boolean IsClient { get }
+  property System.Int32 LastTransferId { get }
   property System.Int32 MaxPacketBytes { get }
   property System.Int64 NextDeadline { get }
   property System.Int64 Now { get }
@@ -1618,6 +1623,9 @@ struct GameEventScript.Network.GesNetworkEvent
   property GameEventScript.Network.GesNetworkEventKind Kind { get }
   property System.Boolean ByPeer { get }
   property System.Int32 Route { get }
+  property System.Int32 TransferId { get }
+  property System.Int64 Bytes { get }
+  property System.Int64 Total { get }
   property System.ReadOnlySpan<System.Byte> Payload { get }
   property System.String Code { get }
   property System.String Detail { get }
@@ -1627,6 +1635,8 @@ enum GameEventScript.Network.GesNetworkEventKind
   enum-field Connected = 2
   enum-field Message = 3
   enum-field Closed = 4
+  enum-field TransferProgress = 5
+  enum-field TransferCancelled = 6
 sealed class GameEventScript.Network.GesNetworkLoopback
   ctor GesNetworkLoopback(GameEventScript.Network.GesNetworkConnection client, GameEventScript.Network.GesNetworkConnection server)
   method System.Void Advance(System.Int64 now)
@@ -1637,6 +1647,7 @@ sealed class GameEventScript.Network.GesNetworkLoopback
 sealed class GameEventScript.Network.GesNetworkOptions
   ctor GesNetworkOptions()
   property GameEventScript.Network.GesNetworkTransport Transport { get set }
+  property System.Boolean DeflateTransfers { get set }
   property System.Int32 MaxFramesPerSecond { get set }
   property System.Int32 MaxPacketBytes { get set }
   property System.Int64 AckDelayMicroseconds { get set }
@@ -1644,6 +1655,7 @@ sealed class GameEventScript.Network.GesNetworkOptions
   property System.Int64 MaxBaselineBytes { get set }
   property System.Int64 MaxPendingReceiveBytes { get set }
   property System.Int64 MaxSendQueueBytes { get set }
+  property System.Int64 MaxTransferBytes { get set }
   property System.Int64 SendBudgetBytesPerSecond { get set }
   property System.Int64 TimeoutMicroseconds { get set }
 enum GameEventScript.Network.GesNetworkSendStatus

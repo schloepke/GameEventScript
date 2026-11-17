@@ -13,6 +13,18 @@ enum GesNetworkWire {
     static let version: UInt32 = 1
     static let maximumCookieBytes = 64
     static let cookieBytes = 24
+    static let maximumTransferBytes = 1 << 30
+
+    // The largest transfer header: compression byte, ten-byte size varint and SHA-256.
+    static let transferHeaderBytes = 43
+    static let hashBytes = 32
+    static let compressionNone: UInt8 = 0
+    static let compressionDeflate: UInt8 = 1
+    static let compressionMaskDeflate: UInt32 = 1
+
+    // Kinds of a control frame on channel 0.
+    static let controlConfirmation: UInt8 = 0
+    static let controlCancel: UInt8 = 1
 
     static let hello: UInt8 = 1
     static let retry: UInt8 = 2
@@ -54,6 +66,47 @@ enum GesNetworkWire {
             let current = source[start + index]
             if index == 4 && current > 0x0f { return -1 }
             value |= UInt32(current & 0x7f) << UInt32(7 * index)
+            if current & 0x80 == 0 {
+                if current == 0 && index > 0 { return -1 }
+                position = start + index + 1
+                return 1
+            }
+        }
+        return -1
+    }
+
+    static func varintSize64(_ value: UInt64) -> Int {
+        var value = value
+        var size = 1
+        while value >= 0x80 {
+            value >>= 7
+            size += 1
+        }
+        return size
+    }
+
+    static func writeVarint64(_ target: UnsafeMutableRawBufferPointer, _ position: Int, _ value: UInt64) -> Int {
+        var value = value
+        var position = position
+        while value >= 0x80 {
+            target[position] = UInt8(truncatingIfNeeded: value | 0x80)
+            position += 1
+            value >>= 7
+        }
+        target[position] = UInt8(truncatingIfNeeded: value)
+        return position + 1
+    }
+
+    // Reads a canonical varint of up to 64 bits. Returns 1 on success, 0 when the bytes end first, -1 when it is not
+    // canonical or exceeds 64 bits.
+    static func readVarint64(_ source: UnsafeRawBufferPointer, _ position: inout Int, _ value: inout UInt64) -> Int {
+        value = 0
+        let start = position
+        for index in 0..<10 {
+            if start + index >= source.count { return 0 }
+            let current = source[start + index]
+            if index == 9 && current > 0x01 { return -1 }
+            value |= UInt64(current & 0x7f) << UInt64(7 * index)
             if current & 0x80 == 0 {
                 if current == 0 && index > 0 { return -1 }
                 position = start + index + 1

@@ -74,8 +74,7 @@ here.
   ports green:
   - path MTU discovery for datagrams: probe larger packets than the default 1200 bytes and fall back on loss, as in
     RFC 8899 (DPLPMTUD);
-  - bulk transfers: `TransferStart(id, kind, size, hash)`, compression `none` (mandatory) or raw Deflate (RFC 1951)
-    through a provider;
+  - resume a transfer after a dropped connection, using its hash as the transfer's identity;
   - encryption: P-256 ECDH, HKDF-SHA256 and AES-256-GCM, optionally X25519 and ChaCha20-Poly1305, with server-key
     pinning; the spec states that unauthenticated ECDH protects only against passive attackers. Test `AesGcm` and
     `ECDiffieHellman` on .NET for iOS first;

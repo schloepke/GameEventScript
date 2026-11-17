@@ -5,7 +5,7 @@ using System;
 
 namespace GameEventScript.Network;
 
-/// <summary>The codes a connection closes with. Each is stable and language-neutral.</summary>
+/// <summary>The codes a connection closes or cancels a transfer with. Each is stable and language-neutral.</summary>
 public static class GesNetworkCodes
 {
     /// <summary>A <c>hello</c> has a wrong magic or version.</summary>
@@ -43,6 +43,15 @@ public static class GesNetworkCodes
 
     /// <summary>The transport ended without a <c>close</c> packet.</summary>
     public const string TransportClosed = "network.transportClosed";
+
+    /// <summary>A transfer announces more bytes than the receiver's transfer limit.</summary>
+    public const string TransferTooLarge = "network.transferTooLarge";
+
+    /// <summary>A transfer's header, compressed data or hash is invalid.</summary>
+    public const string TransferCorrupt = "network.transferCorrupt";
+
+    /// <summary>The host cancelled a transfer without giving its own code.</summary>
+    public const string TransferCancelled = "network.transferCancelled";
 }
 
 /// <summary>The result of sending a payload on a route.</summary>
@@ -54,10 +63,13 @@ public enum GesNetworkSendStatus
     /// <summary>The connection is not connected.</summary>
     NotConnected,
 
-    /// <summary>The reliable and bulk queue would exceed its byte limit.</summary>
+    /// <summary>The reliable queue or the bulk queue would exceed its limit.</summary>
     QueueFull,
 
-    /// <summary>The payload is longer than the route root's largest encoding.</summary>
+    /// <summary>
+    /// The payload is longer than the route root's largest encoding, or, on a bulk route, than this side's or the peer's
+    /// transfer limit.
+    /// </summary>
     MessageTooLarge,
 
     /// <summary>The route index is out of range, or the route is not sent by this side with this verb.</summary>
@@ -118,7 +130,15 @@ public enum GesNetworkEventKind
     Message,
 
     /// <summary>The connection closed.</summary>
-    Closed
+    Closed,
+
+    /// <summary>
+    /// A transfer on a bulk route advanced: the receiver got more of its bytes, or the peer confirmed more of the bytes sent.
+    /// </summary>
+    TransferProgress,
+
+    /// <summary>A transfer was cancelled by this side, by its host or by the peer; the session continues.</summary>
+    TransferCancelled
 }
 
 /// <summary>
@@ -129,7 +149,16 @@ public readonly ref struct GesNetworkEvent
     private readonly string? _code;
     private readonly string? _detail;
 
-    internal GesNetworkEvent(GesNetworkEventKind kind, int route, ReadOnlySpan<byte> payload, string code, string detail, bool byPeer)
+    internal GesNetworkEvent(
+        GesNetworkEventKind kind,
+        int route,
+        ReadOnlySpan<byte> payload,
+        string code,
+        string detail,
+        bool byPeer,
+        int transferId,
+        long bytes,
+        long total)
     {
         Kind = kind;
         Route = route;
@@ -137,25 +166,40 @@ public readonly ref struct GesNetworkEvent
         _code = code;
         _detail = detail;
         ByPeer = byPeer;
+        TransferId = transferId;
+        Bytes = bytes;
+        Total = total;
     }
 
     /// <summary>Gets the event kind; <see cref="GesNetworkEventKind.None"/> when no event was pending.</summary>
     public GesNetworkEventKind Kind { get; }
 
-    /// <summary>Gets the route index of a message; -1 for other events.</summary>
+    /// <summary>Gets the route index of a message or transfer event; -1 for other events.</summary>
     public int Route { get; }
 
     /// <summary>Gets the message payload or the client's token; empty for other events.</summary>
     public ReadOnlySpan<byte> Payload { get; }
 
-    /// <summary>Gets the close code of a closed event; empty for other events.</summary>
+    /// <summary>Gets the close code of a closed event or the code of a cancelled transfer; empty for other events.</summary>
     public string Code => _code ?? string.Empty;
 
     /// <summary>Gets the close detail of a closed event; empty for other events.</summary>
     public string Detail => _detail ?? string.Empty;
 
-    /// <summary>Gets whether the peer sent the close of a closed event.</summary>
+    /// <summary>Gets whether the peer sent the close of a closed event or cancelled the transfer of a cancelled event.</summary>
     public bool ByPeer { get; }
+
+    /// <summary>Gets the transfer id, 0 to 65535, of a transfer event or of a message on a bulk route; -1 for other events.</summary>
+    public int TransferId { get; }
+
+    /// <summary>
+    /// Gets the bytes of a progress event: received ones on the receiver, confirmed ones on the sender. Both count the
+    /// transfer's encoded bytes; 0 for other events.
+    /// </summary>
+    public long Bytes { get; }
+
+    /// <summary>Gets the encoded length of a progress event's transfer; 0 for other events.</summary>
+    public long Total { get; }
 }
 
 /// <summary>The limits and transport of one connection. Values are checked when a connection is created.</summary>
@@ -176,7 +220,7 @@ public sealed class GesNetworkOptions
     /// <summary>Gets or sets the frames received per second, a token bucket of one second. The default is 4096.</summary>
     public int MaxFramesPerSecond { get; set; } = 4096;
 
-    /// <summary>Gets or sets the limit of queued reliable and bulk bytes to send. The default is 1048576.</summary>
+    /// <summary>Gets or sets the limit of queued reliable bytes to send. The default is 1048576.</summary>
     public long MaxSendQueueBytes { get; set; } = 1048576;
 
     /// <summary>Gets or sets the timeout without a received packet in microseconds. The default is 10 seconds.</summary>
@@ -197,6 +241,15 @@ public sealed class GesNetworkOptions
     /// </summary>
     public long MaxBaselineBytes { get; set; } = 65536;
 
+    /// <summary>
+    /// Gets or sets the transfer limit this side announces, 0 to 1073741824: the largest uncompressed data of one bulk
+    /// message it sends or receives. It also bounds the bulk send queue. The default is 67108864.
+    /// </summary>
+    public long MaxTransferBytes { get; set; } = 67108864;
+
+    /// <summary>Gets or sets whether this side accepts and sends deflate-compressed transfers. The default is true.</summary>
+    public bool DeflateTransfers { get; set; } = true;
+
     // The packet limit in effect: the configured one, or the transport's default.
     internal int PacketLimit => MaxPacketBytes != 0 ? MaxPacketBytes : Transport == GesNetworkTransport.Datagram ? GesNetworkWire.MinimumPacketBytes : 16384;
 
@@ -212,6 +265,7 @@ public sealed class GesNetworkOptions
         if (AckDelayMicroseconds < 0) throw new ArgumentOutOfRangeException(nameof(AckDelayMicroseconds));
         if (SendBudgetBytesPerSecond < 0) throw new ArgumentOutOfRangeException(nameof(SendBudgetBytesPerSecond));
         if (MaxBaselineBytes is < 0 or > GesNetworkWire.MaximumBaselineBytes) throw new ArgumentOutOfRangeException(nameof(MaxBaselineBytes));
+        if (MaxTransferBytes is < 0 or > GesNetworkWire.MaximumTransferBytes) throw new ArgumentOutOfRangeException(nameof(MaxTransferBytes));
         if (Transport is not (GesNetworkTransport.Message or GesNetworkTransport.Stream or GesNetworkTransport.Datagram))
             throw new ArgumentOutOfRangeException(nameof(Transport));
     }

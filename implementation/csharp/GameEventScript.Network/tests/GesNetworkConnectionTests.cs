@@ -388,4 +388,96 @@ public sealed class GesNetworkConnectionTests
 
         return trace.Append(client.RoundTripMicroseconds).ToString();
     }
+
+    // Every event of a connection with its transfer fields.
+    private static List<string> Transfers(GesNetworkConnection connection)
+    {
+        var events = new List<string>();
+        for (var next = connection.NextEvent(); next.Kind != GesNetworkEventKind.None; next = connection.NextEvent())
+        {
+            switch (next.Kind)
+            {
+                case GesNetworkEventKind.TransferProgress:
+                    events.Add($"progress {next.Route} {next.TransferId} {next.Bytes}/{next.Total}");
+                    break;
+                case GesNetworkEventKind.TransferCancelled:
+                    events.Add($"cancelled {next.Route} {next.TransferId} {next.Code} {(next.ByPeer ? "peer" : "local")}");
+                    break;
+                case GesNetworkEventKind.Message:
+                    events.Add($"message {next.Route} {next.TransferId} {next.Payload.Length}");
+                    break;
+                default:
+                    events.Add(next.Kind + " " + next.Code);
+                    break;
+            }
+        }
+
+        return events;
+    }
+
+    [TestMethod]
+    public void TransferArrivesWithProgressOnBothSidesAndCompressesWhenShorter()
+    {
+        var loop = Connected(new GesNetworkOptions { MaxPacketBytes = 1200 });
+        var data = new byte[5000];
+        Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(BulkBlob, data));
+        Assert.AreEqual(0, loop.Server.LastTransferId);
+        // 1 compression byte, the 2-byte size, the hash and far fewer than 5000 deflated bytes.
+        Assert.IsLessThan(200L, loop.Server.QueuedSendBytes);
+        loop.Advance(1);
+        var received = Transfers(loop.Client);
+        Assert.AreEqual($"message {BulkBlob} 0 5000", received[^1]);
+        StringAssert.StartsWith(received[0], $"progress {BulkBlob} 0 ");
+        loop.Advance(20_000);
+        var sent = Transfers(loop.Server);
+        Assert.AreEqual(received[^2], sent.LastOrDefault());
+    }
+
+    [TestMethod]
+    public void TransferWithoutCompressionCarriesTheData()
+    {
+        var loop = Connected(new GesNetworkOptions { DeflateTransfers = false });
+        var data = Bytes(3000, 5);
+        loop.Server.Send(BulkBlob, data);
+        Assert.AreEqual(3000 + 1 + 2 + 32, loop.Server.QueuedSendBytes);
+        loop.Advance(1);
+        var next = loop.Client.NextEvent();
+        while (next.Kind == GesNetworkEventKind.TransferProgress) next = loop.Client.NextEvent();
+        Assert.AreEqual(GesNetworkEventKind.Message, next.Kind);
+        CollectionAssert.AreEqual(data, next.Payload.ToArray());
+    }
+
+    [TestMethod]
+    public void TransferAboveThePeerLimitIsTooLarge()
+    {
+        var network = Game();
+        var client = GesNetworkConnection.CreateClient(network, default, 0, new GesNetworkOptions { MaxTransferBytes = 100 });
+        var server = GesNetworkConnection.CreateServer(network, 0);
+        var loop = new GesNetworkLoopback(client, server);
+        loop.Advance(0);
+        server.NextEvent();
+        server.Accept();
+        loop.Advance(0);
+        Assert.AreEqual(GesNetworkSendStatus.MessageTooLarge, server.Send(BulkBlob, new byte[101]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, server.Send(BulkBlob, new byte[100]));
+    }
+
+    [TestMethod]
+    public void CancelledTransferReachesThePeerAndTheSessionContinues()
+    {
+        var loop = Connected();
+        loop.Server.Send(BulkBlob, Bytes(4000, 1));
+        var first = loop.Server.LastTransferId;
+        loop.Server.Send(BulkBlob, Bytes(10, 2));
+        Assert.IsTrue(loop.Server.Cancel(BulkBlob, first, "game.skipped"));
+        Assert.IsFalse(loop.Server.Cancel(BulkBlob, first));
+        CollectionAssert.AreEqual(new[] { $"cancelled {BulkBlob} 0 game.skipped local" }, Transfers(loop.Server));
+        loop.Advance(1);
+        var received = Transfers(loop.Client);
+        Assert.AreEqual($"cancelled {BulkBlob} 0 game.skipped peer", received[0]);
+        Assert.AreEqual($"message {BulkBlob} 1 10", received[^1]);
+        Assert.AreEqual(GesNetworkState.Connected, loop.Client.State);
+        Assert.ThrowsExactly<ArgumentException>(() => loop.Server.Cancel(Blob, 0));
+        Assert.ThrowsExactly<ArgumentException>(() => loop.Server.Cancel(BulkBlob, 1, "bad code"));
+    }
 }

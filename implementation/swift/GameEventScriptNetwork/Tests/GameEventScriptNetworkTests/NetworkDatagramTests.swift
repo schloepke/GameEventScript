@@ -237,4 +237,47 @@ final class NetworkDatagramTests: XCTestCase {
             try GesNetworkSimulator(client: datagramClient, server: datagramServer, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0, duplicatePerMille: -1)
         )
     }
+
+    func testCancelledTransfersAreSkippedAndLaterOnesArriveDespiteLoss() throws {
+        try checkCancelledTransfers(11, 0, 0, false)
+        try checkCancelledTransfers(12, 250, 150, true)
+    }
+
+    private func checkCancelledTransfers(_ seed: Int64, _ loss: Int, _ duplicate: Int, _ reorder: Bool) throws {
+        let simulator = try connected(seed, loss, duplicate, reorder)
+        var kept: [[UInt8]] = []
+        for index in 0..<20 {
+            let data = bytes(index * 331 % 5000 + 1, index)
+            XCTAssertEqual(simulator.server.send(route: bulkBlob, payload: data), .queued)
+            if index % 3 == 1 {
+                XCTAssertTrue(try simulator.server.cancel(route: bulkBlob, transferId: simulator.server.lastTransferId))
+            } else {
+                kept.append(data)
+            }
+        }
+
+        var received: [[UInt8]] = []
+        var cancelled: [Int] = []
+        var step = 0
+        while step < 4000 && (received.count < kept.count || cancelled.count < 7) {
+            try simulator.advance(simulator.now + 16_667)
+            while true {
+                let next = simulator.client.nextEvent()
+                if next.kind == .none { break }
+                XCTAssertNotEqual(next.kind, .closed, next.code)
+                if next.kind == .message { received.append(Array(next.payload)) }
+                if next.kind == .transferCancelled {
+                    XCTAssertTrue(next.byPeer)
+                    cancelled.append(next.transferId)
+                }
+            }
+            _ = messages(simulator.server)
+            step += 1
+        }
+
+        XCTAssertEqual(cancelled.sorted(), [1, 4, 7, 10, 13, 16, 19])
+        XCTAssertEqual(received, kept)
+        try simulator.advance(simulator.now + 2_000_000)
+        XCTAssertEqual(simulator.server.queuedSendBytes, 0)
+    }
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Security.Cryptography;
 using GameEventScript.Api;
 
 namespace GameEventScript.Network;
@@ -27,6 +28,10 @@ public sealed partial class GesNetworkConnection
     private readonly long _ackDelay;
     private readonly long _maxBaseline;
     private long _baselineLimit;
+    private readonly long _maxTransfer;
+    private readonly bool _deflate;
+    private long _peerTransferLimit;
+    private bool _peerDeflate;
 
     private readonly int _routeCount;
     private readonly GesNetworkClass[] _classes;
@@ -48,7 +53,7 @@ public sealed partial class GesNetworkConnection
     private long _lastSend;
 
     private readonly GesNetworkSendQueue _sendReliable = new();
-    private readonly GesNetworkSendQueue _sendBulk = new();
+    private readonly GesNetworkSendQueue _sendBulk = new(preassigned: true);
     private readonly GesNetworkLatestSlot?[] _sendLatest;
     private ushort _nextReliableId;
     private ushort _nextBulkId;
@@ -76,6 +81,7 @@ public sealed partial class GesNetworkConnection
     private byte[] _arena = [];
     private int _arenaLength;
     private long _pending;
+    private long _pendingBulk;
 
     private byte[] _stream = [];
     private int _streamLength;
@@ -97,6 +103,8 @@ public sealed partial class GesNetworkConnection
         _ackDelay = options.AckDelayMicroseconds;
         _budget = options.SendBudgetBytesPerSecond;
         _maxBaseline = options.MaxBaselineBytes;
+        _maxTransfer = options.MaxTransferBytes;
+        _deflate = options.DeflateTransfers;
 
         var routes = network.Network.Routes;
         _routeCount = routes.Count;
@@ -197,8 +205,8 @@ public sealed partial class GesNetworkConnection
     /// <summary>Gets the smoothed round-trip time in microseconds, or -1 before the first sample.</summary>
     public long RoundTripMicroseconds { get; private set; } = -1;
 
-    /// <summary>Gets the received bytes of incomplete messages and undelivered events.</summary>
-    public long PendingReceiveBytes => _pending;
+    /// <summary>Gets the received bytes of incomplete messages and transfers and of undelivered events.</summary>
+    public long PendingReceiveBytes => _pending + _pendingBulk;
 
     /// <summary>
     /// Gets the queued reliable and bulk bytes not yet completely sent, on a datagram transport not yet completely
@@ -260,7 +268,11 @@ public sealed partial class GesNetworkConnection
         else if (_datagram) AdvanceDatagram();
     }
 
-    /// <summary>Sends a payload on a route this side sends. Never throws; the status tells the result.</summary>
+    /// <summary>
+    /// Sends a payload on a route this side sends. On a bulk route the payload is a transfer: it is hashed, compressed
+    /// when that is shorter and both sides allow it, and gets its id at once (<see cref="LastTransferId"/>). Never
+    /// throws; the status tells the result.
+    /// </summary>
     /// <param name="route">The route index of a <c>sends</c> route of this side.</param>
     /// <param name="payload">The encoded root value; it is copied.</param>
     /// <returns>The send status.</returns>
@@ -268,6 +280,7 @@ public sealed partial class GesNetworkConnection
     {
         if ((uint)route >= (uint)_routeCount || !_localSends[route] || _topics[route] is not null) return GesNetworkSendStatus.InvalidRoute;
         if (State != GesNetworkState.Connected) return GesNetworkSendStatus.NotConnected;
+        if (_classes[route] == GesNetworkClass.Bulk) return SendTransfer(route, payload);
         if (payload.Length > _maxBytes[route]) return GesNetworkSendStatus.MessageTooLarge;
         if (_sendLatest[route] is { } slot)
         {
@@ -275,8 +288,8 @@ public sealed partial class GesNetworkConnection
             return GesNetworkSendStatus.Queued;
         }
 
-        if (QueuedSendBytes + payload.Length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
-        (_classes[route] == GesNetworkClass.Bulk ? _sendBulk : _sendReliable).Enqueue(route, payload);
+        if (_sendReliable.Bytes + payload.Length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
+        _sendReliable.Enqueue(route, payload);
         return GesNetworkSendStatus.Queued;
     }
 
@@ -300,7 +313,7 @@ public sealed partial class GesNetworkConnection
         }
 
         var length = EncodeState(topic, payload, topic.Next);
-        if (QueuedSendBytes + length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
+        if (_sendReliable.Bytes + length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
         _sendReliable.Enqueue(route, topic.Scratch.AsSpan(0, length), topic.Next);
         topic.Add(payload, _baselineLimit, topic.Next++);
         return GesNetworkSendStatus.Queued;
@@ -371,7 +384,7 @@ public sealed partial class GesNetworkConnection
         if (State != GesNetworkState.AwaitAccept) throw new InvalidOperationException("Only a connecting client can be accepted.");
         State = GesNetworkState.Connected;
         _welcomePending = true;
-        AddEvent(GesNetworkEventKind.Connected, -1, default, false, string.Empty, string.Empty, false);
+        AddEvent(GesNetworkEventKind.Connected, -1, default, Counter.None, string.Empty, string.Empty, false);
     }
 
     /// <summary>Refuses the client of a <c>connecting</c> event; the connection closes with <c>network.refused</c>.</summary>
@@ -405,12 +418,22 @@ public sealed partial class GesNetworkConnection
         {
             _eventHead = _eventCount = 0;
             _arenaLength = 0;
-            return new GesNetworkEvent(GesNetworkEventKind.None, -1, default, string.Empty, string.Empty, false);
+            return new GesNetworkEvent(GesNetworkEventKind.None, -1, default, string.Empty, string.Empty, false, -1, 0, 0);
         }
 
         ref readonly var entry = ref _events[_eventHead++];
-        if (entry.Counted) _pending -= entry.Length;
-        return new GesNetworkEvent(entry.Kind, entry.Route, _arena.AsSpan(entry.Offset, entry.Length), entry.Code, entry.Detail, entry.ByPeer);
+        if (entry.Counter == Counter.Pending) _pending -= entry.Length;
+        else if (entry.Counter == Counter.Bulk) _pendingBulk -= entry.Length;
+        return new GesNetworkEvent(
+            entry.Kind,
+            entry.Route,
+            _arena.AsSpan(entry.Offset, entry.Length),
+            entry.Code,
+            entry.Detail,
+            entry.ByPeer,
+            entry.TransferId,
+            entry.Bytes,
+            entry.Total);
     }
 
     private void CloseLocal(string code, string detail, bool sendPacket)
@@ -426,13 +449,14 @@ public sealed partial class GesNetworkConnection
             reported = _closeDetail.Length == 0 ? string.Empty : System.Text.Encoding.UTF8.GetString(_closeDetail);
         }
 
-        AddEvent(GesNetworkEventKind.Closed, -1, default, false, code, reported, false);
+        AddEvent(GesNetworkEventKind.Closed, -1, default, Counter.None, code, reported, false);
     }
 
     private void DropSending()
     {
         _sendReliable.Clear();
         _sendBulk.Clear();
+        DropTransfers();
         foreach (var slot in _sendLatest) slot?.Clear();
         _ackDue = false;
         _welcomePending = false;
@@ -442,7 +466,7 @@ public sealed partial class GesNetworkConnection
     private bool HasPendingFrames()
     {
         if (_datagram) return HasPendingDatagramFrames();
-        if (_sendReliable.Count > 0 || _sendBulk.Count > 0) return true;
+        if (_sendReliable.Count > 0 || _sendBulk.Count > 0 || _cancelCount > 0) return true;
         foreach (var slot in _sendLatest)
         {
             if (slot is { HasCurrent: true }) return true;
@@ -451,22 +475,72 @@ public sealed partial class GesNetworkConnection
         return false;
     }
 
-    // Adds an event; a counted payload adds to the pending received bytes. Returns false when they exceed their limit.
-    private bool AddEvent(GesNetworkEventKind kind, int route, ReadOnlySpan<byte> payload, bool counted, string code, string detail, bool byPeer)
+    // Adds an event; a counted payload adds to its pending received bytes. Returns false when they exceed their limit.
+    private bool AddEvent(
+        GesNetworkEventKind kind,
+        int route,
+        ReadOnlySpan<byte> payload,
+        Counter counter,
+        string code,
+        string detail,
+        bool byPeer,
+        int transferId = -1)
     {
-        if (counted)
+        if (!ReserveEvent(kind, route, payload.Length, counter, code, detail, byPeer, transferId, 0, 0, out var bytes)) return false;
+        payload.CopyTo(bytes);
+        return true;
+    }
+
+    // Adds an event with a payload of the length and gives its bytes to fill; false when the counted bytes exceed their
+    // limit.
+    private bool ReserveEvent(
+        GesNetworkEventKind kind,
+        int route,
+        int length,
+        Counter counter,
+        string code,
+        string detail,
+        bool byPeer,
+        int transferId,
+        long bytes,
+        long total,
+        out Span<byte> reserved)
+    {
+        reserved = default;
+        if (counter == Counter.Pending)
         {
-            _pending += payload.Length;
+            _pending += length;
             if (_pending > _maxPending) return false;
+        }
+        else if (counter == Counter.Bulk)
+        {
+            _pendingBulk += length;
+            if (_pendingBulk > MaxPendingBulk) return false;
         }
 
         if (_eventCount == _events.Length) Array.Resize(ref _events, _events.Length * 2);
-        if (_arena.Length - _arenaLength < payload.Length)
-            Array.Resize(ref _arena, Math.Max(Math.Max(_arena.Length * 2, 256), _arenaLength + payload.Length));
-        payload.CopyTo(_arena.AsSpan(_arenaLength));
-        _events[_eventCount++] = new EventEntry(kind, route, _arenaLength, payload.Length, counted, code, detail, byPeer);
-        _arenaLength += payload.Length;
+        if (_arena.Length - _arenaLength < length)
+            Array.Resize(ref _arena, (int)Math.Min(Math.Max(Math.Max((long)_arena.Length * 2, 256), (long)_arenaLength + length), int.MaxValue));
+        _events[_eventCount++] = new EventEntry(kind, route, _arenaLength, length, counter, code, detail, byPeer, transferId, bytes, total);
+        reserved = _arena.AsSpan(_arenaLength, length);
+        _arenaLength += length;
         return true;
+    }
+
+    // Reports the progress of a transfer; it replaces the newest event when that reports the same transfer.
+    private void AddProgress(int route, ushort id, long bytes, long total)
+    {
+        if (_eventCount > _eventHead)
+        {
+            ref var last = ref _events[_eventCount - 1];
+            if (last.Kind == GesNetworkEventKind.TransferProgress && last.Route == route && last.TransferId == id)
+            {
+                last = new EventEntry(last.Kind, route, last.Offset, 0, Counter.None, string.Empty, string.Empty, false, id, bytes, total);
+                return;
+            }
+        }
+
+        ReserveEvent(GesNetworkEventKind.TransferProgress, route, 0, Counter.None, string.Empty, string.Empty, false, id, bytes, total, out _);
     }
 
     // Refills a token bucket of units per microsecond up to its capacity, without overflow.
@@ -478,15 +552,37 @@ public sealed partial class GesNetworkConnection
         return units + elapsed * rate;
     }
 
-    private readonly struct EventEntry(GesNetworkEventKind kind, int route, int offset, int length, bool counted, string code, string detail, bool byPeer)
+    // Which pending count an event's payload adds to.
+    private enum Counter : byte
+    {
+        None,
+        Pending,
+        Bulk
+    }
+
+    private readonly struct EventEntry(
+        GesNetworkEventKind kind,
+        int route,
+        int offset,
+        int length,
+        Counter counter,
+        string code,
+        string detail,
+        bool byPeer,
+        int transferId,
+        long bytes,
+        long total)
     {
         internal readonly GesNetworkEventKind Kind = kind;
         internal readonly int Route = route;
         internal readonly int Offset = offset;
         internal readonly int Length = length;
-        internal readonly bool Counted = counted;
+        internal readonly Counter Counter = counter;
         internal readonly string Code = code;
         internal readonly string Detail = detail;
         internal readonly bool ByPeer = byPeer;
+        internal readonly int TransferId = transferId;
+        internal readonly long Bytes = bytes;
+        internal readonly long Total = total;
     }
 }

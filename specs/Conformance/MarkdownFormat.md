@@ -936,28 +936,35 @@ networks are owned by [GES network](../Network.md), *since Unreleased*.
 Requires `network-api` and no GES source. `networkApi.sources` lists schema source texts as in
 `schemaApi`, `clientSources` optionally different texts for the client, and `network` the
 [network](../Network.md#declaration) both sides bind. `options` and `clientOptions` (default: the
-server's) set the connection options by their portable names (`transport` is `message` or `stream`;
-the others are integers), and `token` is the client's token as lowercase hexadecimal. `link` is
-`loopback` (default), `none`, or a simulated link with `seed`, `latencyMicroseconds` and
-`jitterMicroseconds`; with a link, packets travel through the seeded
-[simulator](../Network.md#simulator), without one only `transmit` and `receive` move them.
+server's) set the connection options by their portable names (`transport` is `message`, `stream` or
+`datagram`, `deflateTransfers` is a Boolean, the others are integers), and `token` is the client's token
+as lowercase hexadecimal. `link` is `loopback` (default), `none`, or a simulated link with `seed`,
+`latencyMicroseconds`, `jitterMicroseconds` and optionally `lossPerMille`, `duplicatePerMille` and
+`reorder`; with a link, packets travel through the seeded [simulator](../Network.md#simulated-network),
+without one only `transmit`, `deliver` and `receive` move them.
 
 `steps` is a list of mappings with exactly one action each: `advance: now` advances both sides (or
 the link), `accept: true` and `refuse: detail` decide on the server, `close` takes `side` and
-`detail`, `send` takes `side`, `route` and `payload`, `receive` takes `side` and hexadecimal
-`bytes`, `transmit: side` and `transportClosed: side` act on one side, and `budget` takes `side`
-and `bytesPerSecond`. A payload is lowercase hexadecimal or a mapping of `length` and `seed` whose
-byte *i* is (*i* + `seed`) mod 251.
+`detail`, `send` and `publish` take `side`, `route` and `payload`, `subscribe` and `unsubscribe`
+take `side` and `route`, `cancel` takes `side`, `route`, the transfer `id` and an optional `code`,
+`receive` takes `side` and hexadecimal `bytes`, `deliver` takes `side` and the `packets` of the other
+side's last `transmit` by index, `transmit: side` and `transportClosed: side` act on one side,
+`budget` takes `side` and `bytesPerSecond`, and `cookie` checks `bytes` or the client's last
+transmitted `packet` at an [address validation gate](../Network.md#address-validation) with `key`,
+`windowMicroseconds`, `now` and `address`. A payload is lowercase hexadecimal or a mapping of `length`
+and `seed` whose byte *i* is (*i* + `seed`) mod 251.
 
-The adapter records a trace: `<side> send <status>` for each send, `<side> packet <hex>` for each
-transmitted packet, `<side> error invalidOperation|invalidArgument` for a rejected call, and after
-every step the events of the client and then of the server as `<side> connecting <bytes>`,
-`<side> connected`, `<side> message <route> <bytes>` and `<side> closed <code> peer|local
-"<detail>"`. Bytes print as `-` when empty, as hexadecimal up to 32 bytes, and otherwise as
-`<length>:<FNV-1a 64 hex>`. The expectation `network` holds the exact `trace` and optional `client`
-and `server` mappings with any of `state`, `roundTripMicroseconds`, `queuedSendBytes` and
-`pendingReceiveBytes`, or a standalone `error` with the `code` of a schema error or
-`invalidArgument` for options the connection rejects.
+The adapter records a trace: `<side> send <status>` and `<side> publish <status>` for each send,
+`<side> cancel true|false` for each cancel, `<side> packet <bytes>` for each transmitted packet,
+`cookie accept|retry <hex>|drop` for each cookie step, `<side> error invalidOperation|invalidArgument`
+for a rejected call, and after every step the events of the client and then of the server as
+`<side> connecting <bytes>`, `<side> connected`, `<side> message <route> <bytes>`, `<side> progress
+<route> <id> <bytes>/<total>`, `<side> cancelled <route> <id> <code> peer|local` and `<side> closed
+<code> peer|local "<detail>"`. Bytes print as `-` when empty, as hexadecimal up to 32 bytes (512 for a
+packet), and otherwise as `<length>:<FNV-1a 64 hex>`. The expectation `network` holds the exact `trace` and
+optional `client` and `server` mappings with any of `state`, `roundTripMicroseconds`,
+`queuedSendBytes` and `pendingReceiveBytes`, or a standalone `error` with the `code` of a schema error
+or `invalidArgument` for options the connection rejects.
 
 ```yaml
 networkApi:

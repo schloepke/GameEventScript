@@ -254,4 +254,45 @@ public sealed class GesNetworkDatagramTests
         Assert.AreEqual(before, GC.GetAllocatedBytesForCurrentThread());
         Assert.AreEqual(GesNetworkState.Connected, simulator.Client.State);
     }
+
+    [TestMethod]
+    [DataRow(11, 0, 0, false)]
+    [DataRow(12, 250, 150, true)]
+    public void CancelledTransfersAreSkippedAndLaterOnesArriveDespiteLoss(int seed, int loss, int duplicate, bool reorder)
+    {
+        var simulator = Connected(seed, loss, duplicate, reorder);
+        var kept = new List<byte[]>();
+        for (var index = 0; index < 20; index++)
+        {
+            var data = Bytes(index * 331 % 5000 + 1, index);
+            Assert.AreEqual(GesNetworkSendStatus.Queued, simulator.Server.Send(BulkBlob, data));
+            if (index % 3 == 1) Assert.IsTrue(simulator.Server.Cancel(BulkBlob, simulator.Server.LastTransferId));
+            else kept.Add(data);
+        }
+
+        var received = new List<byte[]>();
+        var cancelled = new List<int>();
+        for (var step = 0; step < 4000 && (received.Count < kept.Count || cancelled.Count < 7); step++)
+        {
+            simulator.Advance(simulator.Now + 16_667);
+            for (var next = simulator.Client.NextEvent(); next.Kind != GesNetworkEventKind.None; next = simulator.Client.NextEvent())
+            {
+                Assert.AreNotEqual(GesNetworkEventKind.Closed, next.Kind, next.Code);
+                if (next.Kind == GesNetworkEventKind.Message) received.Add(next.Payload.ToArray());
+                if (next.Kind == GesNetworkEventKind.TransferCancelled)
+                {
+                    Assert.IsTrue(next.ByPeer);
+                    cancelled.Add(next.TransferId);
+                }
+            }
+
+            Messages(simulator.Server);
+        }
+
+        CollectionAssert.AreEqual(new[] { 1, 4, 7, 10, 13, 16, 19 }, cancelled.Order().ToArray());
+        Assert.HasCount(kept.Count, received);
+        for (var index = 0; index < kept.Count; index++) CollectionAssert.AreEqual(kept[index], received[index]);
+        simulator.Advance(simulator.Now + 2_000_000);
+        Assert.AreEqual(0, simulator.Server.QueuedSendBytes);
+    }
 }

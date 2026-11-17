@@ -76,6 +76,7 @@ public sealed partial class GesNetworkConnection
 
         position = Wire.WriteVarint(packet, position, (uint)_maxPacket);
         position = Wire.WriteVarint(packet, position, (uint)_maxBaseline);
+        position = WriteTransferLimits(packet, position);
         position = Wire.WriteVarint(packet, position, (uint)_token.Length);
         _token.CopyTo(packet.Slice(position));
         position += _token.Length;
@@ -87,7 +88,15 @@ public sealed partial class GesNetworkConnection
         packet[0] = Wire.Welcome;
         var position = Wire.WriteVarint(packet, 1, Wire.Version);
         position = Wire.WriteVarint(packet, position, (uint)_maxPacket);
-        return Wire.WriteVarint(packet, position, (uint)_maxBaseline);
+        position = Wire.WriteVarint(packet, position, (uint)_maxBaseline);
+        return WriteTransferLimits(packet, position);
+    }
+
+    // Writes the transfer limit and the mask of the compressions this side accepts.
+    private int WriteTransferLimits(Span<byte> packet, int position)
+    {
+        position = Wire.WriteVarint(packet, position, (uint)_maxTransfer);
+        return Wire.WriteVarint(packet, position, _deflate ? Wire.CompressionMaskDeflate : 0);
     }
 
     private int WriteClose(Span<byte> packet)
@@ -122,6 +131,7 @@ public sealed partial class GesNetworkConnection
         var start = position;
         if (frames)
         {
+            position = WriteCancels(packet, position, limit);
             position = WriteQueue(_sendReliable, ref _nextReliableId, packet, position, limit);
             for (var route = 0; route < _routeCount; route++)
             {
@@ -136,6 +146,7 @@ public sealed partial class GesNetworkConnection
         if (asks) packet[1] |= 2;
         _sendTimes[_sentCount % SendTimeWindow] = _now;
         _sendAsks[_sentCount % SendTimeWindow] = asks;
+        _bulkMarks[_sentCount % SendTimeWindow] = _bulkWritten;
         _sentCount++;
         _ackDue = false;
         if (position > start && _budget > 0) _budgetUnits -= position * MicrosecondsPerSecond;
@@ -147,17 +158,33 @@ public sealed partial class GesNetworkConnection
     {
         while (queue.Count > 0)
         {
+            if (queue.Preassigned && queue.Cancelled(0))
+            {
+                // A cancelled transfer tells the peer in queue order; one the peer refused needs no cancel.
+                var code = queue.Code(0);
+                if (code.Length > 0)
+                {
+                    if (limit - position < CancelFrameSize(queue.CurrentRoute, code)) break;
+                    position = WriteCancelFrame(packet, position, queue.CurrentRoute, queue.EntryId(0), code);
+                }
+
+                queue.Pop();
+                continue;
+            }
+
             var message = queue.Current;
-            var id = queue.Started ? queue.Id : nextId;
+            var id = queue.Preassigned ? queue.EntryId(0) : queue.Started ? queue.Id : nextId;
             var next = WriteFrame(packet, position, limit, (uint)queue.CurrentRoute + 1, id, queue.Offset, message, out var chunk);
             if (next < 0) break;
             position = next;
             if (!queue.Started)
             {
                 queue.Started = true;
-                queue.Id = nextId++;
+                queue.Id = queue.Preassigned ? id : nextId++;
+                if (queue.Preassigned) NoteTransferStarted(queue.CurrentRoute, id, message.Length);
             }
 
+            if (queue.Preassigned) _bulkWritten += chunk;
             queue.Offset += chunk;
             if (queue.Offset < message.Length) break;
             _topics[queue.CurrentRoute]?.MarkSent(_sentCount);

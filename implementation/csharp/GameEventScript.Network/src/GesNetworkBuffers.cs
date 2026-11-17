@@ -8,8 +8,9 @@ namespace GameEventScript.Network;
 
 // A FIFO of reliable or bulk messages to send. The bytes and entries are reused. A stream or message transport sends
 // the head in fragments and removes it when sent; a datagram transport keeps each message until all its bytes are
-// acknowledged, sends new fragments at a cursor and resends lost ranges first.
-internal sealed class GesNetworkSendQueue
+// acknowledged, sends new fragments at a cursor and resends lost ranges first. A bulk queue numbers its transfers when
+// they are queued and keeps a cancelled transfer as a placeholder until its cancel is sent in queue order.
+internal sealed class GesNetworkSendQueue(bool preassigned = false)
 {
     // The most messages a datagram transport has started and still holds.
     internal const int MaximumStarted = 8192;
@@ -24,11 +25,16 @@ internal sealed class GesNetworkSendQueue
     private ushort[] _ids = new ushort[8];
     private int[] _acknowledged = new int[8];
     private bool[] _done = new bool[8];
+    private bool[] _cancelled = new bool[8];
+    private string[] _codes = new string[8];
     private int _first;
     private int _count;
     private long _firstSerial;
 
     internal int Count => _count;
+
+    // Whether the ids were assigned when the messages were queued.
+    internal bool Preassigned => preassigned;
 
     // Bytes of messages not yet completely sent, or on a datagram transport not yet acknowledged.
     internal long Bytes => _tail - _head;
@@ -65,19 +71,50 @@ internal sealed class GesNetworkSendQueue
 
     internal long Serial(int index) => _firstSerial + index;
 
+    internal bool Cancelled(int index) => _cancelled[Slot(index)];
+
+    internal string Code(int index) => _codes[Slot(index)];
+
+    // The acknowledged bytes of a held message on a datagram transport.
+    internal int AcknowledgedBytes(int index) => _acknowledged[Slot(index)];
+
+    // Turns a message into a cancelled placeholder; a datagram transport no longer sends or resends its fragments.
+    internal void Cancel(int index, string code)
+    {
+        var slot = Slot(index);
+        _cancelled[slot] = true;
+        _done[slot] = true;
+        _codes[slot] = code;
+    }
+
+    // Finds the held, not cancelled transfer with the route and id.
+    internal bool FindTransfer(int route, ushort id, out int index)
+    {
+        for (index = 0; index < _count; index++)
+        {
+            var slot = Slot(index);
+            if (_routes[slot] == route && _ids[slot] == id && !_cancelled[slot]) return true;
+        }
+
+        return false;
+    }
+
     // Whether a datagram transport has new fragments to send.
     internal bool HasNew => Cursor < _count && (CursorStarted || Cursor < MaximumStarted);
 
     // Adds a message; number is the topic state's number, or -1.
-    internal void Enqueue(int route, ReadOnlySpan<byte> payload, int number = -1)
+    internal void Enqueue(int route, ReadOnlySpan<byte> payload, int number = -1) => payload.CopyTo(Reserve(route, payload.Length, number));
+
+    // Adds a message of the length and returns its bytes to fill; Shrink may shorten it before the next change.
+    internal Span<byte> Reserve(int route, int length, int number = -1, ushort id = 0)
     {
         if (_count == _routes.Length) Grow();
-        if (_bytes.Length - _tail < payload.Length)
+        if (_bytes.Length - _tail < length)
         {
             var used = _tail - _head;
-            var target = _bytes.Length - used >= payload.Length && _head > 0
+            var target = _bytes.Length - used >= length && _head > 0
                 ? _bytes
-                : new byte[Math.Max(Math.Max(_bytes.Length * 2, 256), used + payload.Length)];
+                : new byte[Math.Max(Math.Max(_bytes.Length * 2, 256), used + length)];
             _bytes.AsSpan(_head, used).CopyTo(target);
             _bytes = target;
             for (var index = 0; index < _count; index++) _starts[Slot(index)] -= _head;
@@ -85,16 +122,28 @@ internal sealed class GesNetworkSendQueue
             _tail = used;
         }
 
-        payload.CopyTo(_bytes.AsSpan(_tail));
         var slot = Slot(_count);
         _routes[slot] = route;
         _starts[slot] = _tail;
-        _lengths[slot] = payload.Length;
+        _lengths[slot] = length;
         _numbers[slot] = number;
+        _ids[slot] = id;
         _acknowledged[slot] = 0;
         _done[slot] = false;
-        _tail += payload.Length;
+        _cancelled[slot] = false;
+        _codes[slot] = string.Empty;
+        var bytes = _bytes.AsSpan(_tail, length);
+        _tail += length;
         _count++;
+        return bytes;
+    }
+
+    // Shortens the newest message to the length.
+    internal void Shrink(int length)
+    {
+        var slot = Slot(_count - 1);
+        _tail -= _lengths[slot] - length;
+        _lengths[slot] = length;
     }
 
     private void Grow()
@@ -107,6 +156,8 @@ internal sealed class GesNetworkSendQueue
         var ids = new ushort[size];
         var acknowledged = new int[size];
         var done = new bool[size];
+        var cancelled = new bool[size];
+        var codes = new string[size];
         for (var index = 0; index < _count; index++)
         {
             var slot = Slot(index);
@@ -117,6 +168,8 @@ internal sealed class GesNetworkSendQueue
             ids[index] = _ids[slot];
             acknowledged[index] = _acknowledged[slot];
             done[index] = _done[slot];
+            cancelled[index] = _cancelled[slot];
+            codes[index] = _codes[slot];
         }
 
         _routes = routes;
@@ -126,6 +179,8 @@ internal sealed class GesNetworkSendQueue
         _ids = ids;
         _acknowledged = acknowledged;
         _done = done;
+        _cancelled = cancelled;
+        _codes = codes;
         _first = 0;
     }
 
@@ -403,6 +458,9 @@ internal sealed class GesNetworkPartial
     internal ushort Reported;
     internal bool HasReported;
 
+    // Whether the sender cancelled the bulk message before it was reported.
+    internal bool Cancelled;
+
     internal ReadOnlySpan<byte> Message => _buffer.AsSpan(0, (int)Total);
 
     internal void Start(uint channel, ushort id, uint total)
@@ -412,9 +470,20 @@ internal sealed class GesNetworkPartial
         if (_arrived.Length < bits) _arrived = new byte[Math.Max(bits, Math.Min(_arrived.Length * 2, int.MaxValue))];
         else Array.Clear(_arrived, 0, bits);
         Active = true;
+        Cancelled = false;
         Channel = channel;
         Id = id;
         Total = total;
+        Received = 0;
+    }
+
+    // Marks the message with the id cancelled; its fragments are ignored and it is skipped in order.
+    internal void Cancel(uint channel, ushort id)
+    {
+        Active = Cancelled = true;
+        Channel = channel;
+        Id = id;
+        Total = 0;
         Received = 0;
     }
 
@@ -456,6 +525,6 @@ internal sealed class GesNetworkOrderedReceive
         _free.Push(message);
     }
 
-    // The next message to report when it is complete; null otherwise.
-    internal GesNetworkPartial? Ready => _messages[NextId % Window] is { Active: true } message && message.Received == message.Total ? message : null;
+    // The next message to report when it is complete or cancelled; null otherwise.
+    internal GesNetworkPartial? Ready => _messages[NextId % Window] is { Active: true } message && (message.Cancelled || message.Received == message.Total) ? message : null;
 }

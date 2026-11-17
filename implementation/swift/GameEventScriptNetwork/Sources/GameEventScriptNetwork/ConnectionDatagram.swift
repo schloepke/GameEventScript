@@ -14,7 +14,8 @@ extension GesNetworkConnection {
     static let minimumDelay: Int64 = 1000
     static let helloRepeatInterval: Int64 = microsecondsPerSecond
 
-    // Fragment lanes: reliable, bulk, then one per latest route.
+    // Fragment lanes: cancel frames, reliable, bulk, then one per latest route.
+    private static let laneCancel = -1
     private static let laneReliable = 0
     private static let laneBulk = 1
     private static let laneLatest = 2
@@ -49,7 +50,7 @@ extension GesNetworkConnection {
     }
 
     func hasPendingDatagramFrames() -> Bool {
-        if sendReliable.lost.count > 0 || sendReliable.hasNew || sendBulk.lost.count > 0 || sendBulk.hasNew { return true }
+        if cancels.pendingCount > 0 || sendReliable.lost.count > 0 || sendReliable.hasNew || sendBulk.lost.count > 0 || sendBulk.hasNew { return true }
         for slot in sendLatest where slot?.hasPending == true { return true }
         return false
     }
@@ -245,15 +246,35 @@ extension GesNetworkConnection {
         for index in 0..<recordFragmentCounts[slot] {
             let fragment = Int((recordFragments[slot] + Int64(index)) % Int64(Self.recordedFragments))
             let lane = fragmentLanes[fragment]
+            let key = fragmentKeys[fragment]
+            if lane == Self.laneCancel {
+                cancels.confirm(key)
+                continue
+            }
             if lane >= Self.laneLatest { continue }
-            let queue = lane == Self.laneReliable ? sendReliable : sendBulk
+            if lane == Self.laneBulk {
+                acknowledgeBulk(key, fragmentLengths[fragment])
+                continue
+            }
             var route = 0
             var number = 0
-            if queue.acknowledge(fragmentKeys[fragment], fragmentLengths[fragment], &route, &number) && number >= 0 {
+            if sendReliable.acknowledge(key, fragmentLengths[fragment], &route, &number) && number >= 0 {
                 topics[route]?.confirm(UInt16(truncatingIfNeeded: number))
             }
         }
         return true
+    }
+
+    // Acknowledges a fragment of a transfer and reports the transfer's acknowledged bytes.
+    private func acknowledgeBulk(_ key: Int64, _ length: Int) {
+        var index = 0
+        if !sendBulk.find(key, &index) || sendBulk.isCancelled(index) { return }
+        let before = sendBulk.acknowledgedBytes(index)
+        var route = 0
+        var number = 0
+        _ = sendBulk.acknowledge(key, length, &route, &number)
+        let after = sendBulk.acknowledgedBytes(index)
+        if after != before { addProgress(sendBulk.route(index), sendBulk.entryId(index), Int64(after), Int64(sendBulk.entryLength(index))) }
     }
 
     // Declares lost the outstanding packets older than the largest acknowledged one whose order or delay ran out.
@@ -291,7 +312,9 @@ extension GesNetworkConnection {
             let key = fragmentKeys[fragment]
             let offset = fragmentOffsets[fragment]
             let length = fragmentLengths[fragment]
-            if lane == Self.laneReliable {
+            if lane == Self.laneCancel {
+                cancels.lose(key)
+            } else if lane == Self.laneReliable {
                 sendReliable.lose(key, offset, length)
             } else if lane == Self.laneBulk {
                 sendBulk.lose(key, offset, length)
@@ -307,7 +330,15 @@ extension GesNetworkConnection {
         frameUnits -= Self.microsecondsPerSecond
         var channel: UInt32 = 0
         if Wire.readVarint(packet, &position, &channel) != 1 || Int(channel) > routeCount { return fail(GesNetworkCodes.malformed) }
-        if channel == 0 { return receiveConfirmation(packet, &position) }
+        if channel == 0 {
+            if position == packet.count { return fail(GesNetworkCodes.malformed) }
+            let kind = packet[position]
+            position += 1
+            if kind == Wire.controlConfirmation { return receiveConfirmation(packet, &position) }
+            // A cancel frame is resent until acknowledged, so its packet asks.
+            if kind != Wire.controlCancel || !asks { return fail(GesNetworkCodes.malformed) }
+            return receiveCancel(packet, &position)
+        }
         if !asks { return fail(GesNetworkCodes.malformed) }
         let route = Int(channel) - 1
         if localSends[route] { return fail(GesNetworkCodes.unexpectedRoute) }
@@ -317,7 +348,7 @@ extension GesNetworkConnection {
         var offset: UInt32 = 0
         var total: UInt32 = 0
         if Wire.readVarint(packet, &position, &offset) != 1 || Wire.readVarint(packet, &position, &total) != 1 { return fail(GesNetworkCodes.malformed) }
-        if Int64(total) > maxBytes[route] { return fail(GesNetworkCodes.messageTooLarge) }
+        if Int64(total) > messageLimit(route) { return fail(GesNetworkCodes.messageTooLarge) }
         var length: UInt32 = 0
         if Wire.readVarint(packet, &position, &length) != 1 || packet.count - position < Int(length) { return fail(GesNetworkCodes.malformed) }
         let chunk = UnsafeRawBufferPointer(rebasing: packet[position..<position + Int(length)])
@@ -325,25 +356,49 @@ extension GesNetworkConnection {
         if (length == 0 && total != 0) || UInt64(offset) + UInt64(length) > UInt64(total) { return fail(GesNetworkCodes.malformed) }
 
         if classes[route] == .latest { return receiveLatestFragment(route, channel, id, Int(offset), total, chunk) }
-        let ordered = classes[route] == .reliable ? orderedReliable! : orderedBulk!
+        let bulk = classes[route] == .bulk
+        let ordered = bulk ? orderedBulk! : orderedReliable!
         if Int(id &- ordered.nextId) >= GesNetworkOrderedReceive.window {
             return Int(ordered.nextId &- id) <= GesNetworkOrderedReceive.window || fail(GesNetworkCodes.malformed)
         }
         let message = ordered.message(id)
         if !message.active || message.id != id {
             message.start(channel, id, total)
-            pending += Int64(total)
-            if pending > maxPending { return fail(GesNetworkCodes.queueFull) }
+            if bulk {
+                pendingBulk += Int64(total)
+                if pendingBulk > maxPendingBulk { return fail(GesNetworkCodes.queueFull) }
+            } else {
+                pending += Int64(total)
+                if pending > maxPending { return fail(GesNetworkCodes.queueFull) }
+            }
+        } else if message.cancelled {
+            // Fragments of a transfer the sender cancelled are still in flight.
+            return true
         } else if message.channel != channel || message.total != total {
             return fail(GesNetworkCodes.malformed)
         }
 
+        let received = message.received
         message.write(Int(offset), chunk)
+        if bulk && message.received != received { addProgress(route, id, message.received, Int64(total)) }
+        return deliverOrdered(ordered)
+    }
+
+    // Reports the messages that are complete in order and skips cancelled ones; false when it closed the connection.
+    func deliverOrdered(_ ordered: GesNetworkOrderedReceive) -> Bool {
         while let ready = ordered.ready {
             ordered.nextId &+= 1
-            // The message's bytes are pending already; the event counts them again.
-            pending -= Int64(ready.total)
-            let delivered = ready.withMessage { deliver(Int(ready.channel) - 1, ready.id, $0) }
+            var delivered = true
+            if !ready.cancelled {
+                let route = Int(ready.channel) - 1
+                // The message's bytes are pending already; the event counts them again.
+                if classes[route] == .bulk {
+                    pendingBulk -= Int64(ready.total)
+                } else {
+                    pending -= Int64(ready.total)
+                }
+                delivered = ready.withMessage { deliver(route, ready.id, $0) }
+            }
             ordered.release(ready)
             if !delivered { return false }
         }
@@ -431,7 +486,8 @@ extension GesNetworkConnection {
         for route in 0..<routeCount where owed[route] {
             owed[route] = false
             position = Wire.writeVarint(packet, position, 0)
-            position = Wire.writeVarint(packet, position, UInt32(route) + 1)
+            packet[position] = Wire.controlConfirmation
+            position = Wire.writeVarint(packet, position + 1, UInt32(route) + 1)
             Wire.writeUInt16(packet, position, owedNumbers[route])
             position += 2
         }
@@ -440,6 +496,7 @@ extension GesNetworkConnection {
         fragmentRoom = room
         let start = position
         if frames {
+            position = writeDatagramCancels(packet, position, limit)
             position = writeDatagramQueue(sendReliable, &nextReliableId, Self.laneReliable, packet, position, limit)
             for route in 0..<routeCount {
                 if let latest = sendLatest[route] { position = writeDatagramLatest(route, latest, packet, position, limit) }
@@ -467,6 +524,21 @@ extension GesNetworkConnection {
         return position
     }
 
+    // Writes pending cancel frames; each is resent until a packet holding it is acknowledged.
+    private func writeDatagramCancels(_ packet: UnsafeMutableRawBufferPointer, _ position: Int, _ limit: Int) -> Int {
+        var position = position
+        while cancels.pendingCount > 0 && fragmentRoom > 0 {
+            let serial = cancels.firstPending
+            let route = cancels.route(serial)
+            let code = cancels.code(serial)
+            if limit - position < Self.cancelFrameSize(route, code) { break }
+            position = Self.writeCancelFrame(packet, position, route, cancels.id(serial), code)
+            cancels.markSent(serial)
+            recordFragment(Self.laneCancel, serial, 0, 0)
+        }
+        return position
+    }
+
     private func recordFragment(_ lane: Int, _ key: Int64, _ offset: Int, _ length: Int) {
         let fragment = Int(fragmentTail % Int64(Self.recordedFragments))
         fragmentLanes[fragment] = lane
@@ -490,7 +562,7 @@ extension GesNetworkConnection {
         let lost = queue.lost
         while lost.count > 0 && fragmentRoom > 0 {
             var index = 0
-            if !queue.find(lost.message, &index) {
+            if !queue.find(lost.message, &index) || queue.isCancelled(index) {
                 lost.consume(lost.length)
                 continue
             }
@@ -509,8 +581,13 @@ extension GesNetworkConnection {
 
         while queue.hasNew && fragmentRoom > 0 {
             let index = queue.cursor
+            if queue.isCancelled(index) {
+                queue.advance()
+                continue
+            }
+
             let length = queue.entryLength(index)
-            let id = queue.cursorStarted ? queue.entryId(index) : nextId
+            let id = queue.cursorStarted || queue.preassigned ? queue.entryId(index) : nextId
             let offset = queue.cursorOffset
             let channel = UInt32(queue.route(index)) + 1
             var chunk = 0
@@ -519,8 +596,10 @@ extension GesNetworkConnection {
             position = next
             if !queue.cursorStarted {
                 queue.cursorStarted = true
-                queue.setEntryId(index, nextId)
-                nextId &+= 1
+                if !queue.preassigned {
+                    queue.setEntryId(index, nextId)
+                    nextId &+= 1
+                }
             }
             recordFragment(lane, queue.serial(index), offset, chunk)
             queue.cursorOffset += chunk

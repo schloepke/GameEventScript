@@ -19,7 +19,8 @@ public sealed partial class GesNetworkConnection
     private const long MinimumDelay = 1000;
     private const long HelloInterval = MicrosecondsPerSecond;
 
-    // Fragment lanes: reliable, bulk, then one per latest route.
+    // Fragment lanes: cancel frames, reliable, bulk, then one per latest route.
+    private const int LaneCancel = -1;
     private const int LaneReliable = 0;
     private const int LaneBulk = 1;
     private const int LaneLatest = 2;
@@ -106,7 +107,7 @@ public sealed partial class GesNetworkConnection
 
     private bool HasPendingDatagramFrames()
     {
-        if (_sendReliable.Lost.Count > 0 || _sendReliable.HasNew || _sendBulk.Lost.Count > 0 || _sendBulk.HasNew) return true;
+        if (_cancels.PendingCount > 0 || _sendReliable.Lost.Count > 0 || _sendReliable.HasNew || _sendBulk.Lost.Count > 0 || _sendBulk.HasNew) return true;
         foreach (var slot in _sendLatest)
         {
             if (slot is { HasPending: true }) return true;
@@ -337,13 +338,35 @@ public sealed partial class GesNetworkConnection
         {
             var fragment = (_recordFragments[slot] + index) % RecordedFragments;
             var lane = _fragmentLanes[fragment];
+            var key = _fragmentKeys[fragment];
+            if (lane == LaneCancel)
+            {
+                _cancels.Confirm(key);
+                continue;
+            }
+
             if (lane >= LaneLatest) continue;
-            var queue = lane == LaneReliable ? _sendReliable : _sendBulk;
-            if (queue.Acknowledge(_fragmentKeys[fragment], _fragmentLengths[fragment], out var route, out var number) && number >= 0)
+            if (lane == LaneBulk)
+            {
+                AcknowledgeBulk(key, _fragmentLengths[fragment]);
+                continue;
+            }
+
+            if (_sendReliable.Acknowledge(key, _fragmentLengths[fragment], out var route, out var number) && number >= 0)
                 _topics[route]?.Confirm((ushort)number);
         }
 
         return true;
+    }
+
+    // Acknowledges a fragment of a transfer and reports the transfer's acknowledged bytes.
+    private void AcknowledgeBulk(long key, int length)
+    {
+        if (!_sendBulk.Find(key, out var index) || _sendBulk.Cancelled(index)) return;
+        var before = _sendBulk.AcknowledgedBytes(index);
+        _sendBulk.Acknowledge(key, length, out _, out _);
+        var after = _sendBulk.AcknowledgedBytes(index);
+        if (after != before) AddProgress(_sendBulk.Route(index), _sendBulk.EntryId(index), after, _sendBulk.Entry(index).Length);
     }
 
     // Declares lost the outstanding packets older than the largest acknowledged one whose order or delay ran out.
@@ -378,7 +401,8 @@ public sealed partial class GesNetworkConnection
             var key = _fragmentKeys[fragment];
             var offset = _fragmentOffsets[fragment];
             var length = _fragmentLengths[fragment];
-            if (lane == LaneReliable) _sendReliable.Lose(key, offset, length);
+            if (lane == LaneCancel) _cancels.Lose(key);
+            else if (lane == LaneReliable) _sendReliable.Lose(key, offset, length);
             else if (lane == LaneBulk) _sendBulk.Lose(key, offset, length);
             else _sendLatest[lane - LaneLatest]?.Lose((ushort)key, offset, length);
         }
@@ -390,7 +414,16 @@ public sealed partial class GesNetworkConnection
         if (_frameUnits < MicrosecondsPerSecond) return Fail(GesNetworkCodes.RateExceeded);
         _frameUnits -= MicrosecondsPerSecond;
         if (Wire.ReadVarint(packet, ref position, out var channel) != 1 || channel > _routeCount) return Fail(GesNetworkCodes.Malformed);
-        if (channel == 0) return ReceiveConfirmation(packet, ref position);
+        if (channel == 0)
+        {
+            if (position == packet.Length) return Fail(GesNetworkCodes.Malformed);
+            var kind = packet[position++];
+            if (kind == Wire.ControlConfirmation) return ReceiveConfirmation(packet, ref position);
+            // A cancel frame is resent until acknowledged, so its packet asks.
+            if (kind != Wire.ControlCancel || !asks) return Fail(GesNetworkCodes.Malformed);
+            return ReceiveCancel(packet, ref position);
+        }
+
         if (!asks) return Fail(GesNetworkCodes.Malformed);
         var route = (int)channel - 1;
         if (_localSends[route]) return Fail(GesNetworkCodes.UnexpectedRoute);
@@ -399,35 +432,64 @@ public sealed partial class GesNetworkConnection
         position += 2;
         if (Wire.ReadVarint(packet, ref position, out var offset) != 1 || Wire.ReadVarint(packet, ref position, out var total) != 1)
             return Fail(GesNetworkCodes.Malformed);
-        if (total > _maxBytes[route]) return Fail(GesNetworkCodes.MessageTooLarge);
+        if (total > MessageLimit(route)) return Fail(GesNetworkCodes.MessageTooLarge);
         if (Wire.ReadVarint(packet, ref position, out var length) != 1 || packet.Length - position < length) return Fail(GesNetworkCodes.Malformed);
         var chunk = packet.Slice(position, (int)length);
         position += chunk.Length;
         if ((length == 0 && total != 0) || (ulong)offset + length > total) return Fail(GesNetworkCodes.Malformed);
 
         if (_classes[route] == GesNetworkClass.Latest) return ReceiveLatestFragment(route, channel, id, (int)offset, total, chunk);
-        var ordered = _classes[route] == GesNetworkClass.Reliable ? _orderedReliable! : _orderedBulk!;
+        var bulk = _classes[route] == GesNetworkClass.Bulk;
+        var ordered = bulk ? _orderedBulk! : _orderedReliable!;
         if ((ushort)(id - ordered.NextId) >= GesNetworkOrderedReceive.Window)
             return (ushort)(ordered.NextId - id) <= GesNetworkOrderedReceive.Window || Fail(GesNetworkCodes.Malformed);
         var message = ordered.Message(id);
         if (!message.Active || message.Id != id)
         {
             message.Start(channel, id, total);
-            _pending += total;
-            if (_pending > _maxPending) return Fail(GesNetworkCodes.QueueFull);
+            if (bulk)
+            {
+                _pendingBulk += total;
+                if (_pendingBulk > MaxPendingBulk) return Fail(GesNetworkCodes.QueueFull);
+            }
+            else
+            {
+                _pending += total;
+                if (_pending > _maxPending) return Fail(GesNetworkCodes.QueueFull);
+            }
+        }
+        else if (message.Cancelled)
+        {
+            // Fragments of a transfer the sender cancelled are still in flight.
+            return true;
         }
         else if (message.Channel != channel || message.Total != total)
         {
             return Fail(GesNetworkCodes.Malformed);
         }
 
+        var received = message.Received;
         message.Write((int)offset, chunk);
+        if (bulk && message.Received != received) AddProgress(route, id, message.Received, total);
+        return DeliverOrdered(ordered);
+    }
+
+    // Reports the messages that are complete in order and skips cancelled ones; false when it closed the connection.
+    private bool DeliverOrdered(GesNetworkOrderedReceive ordered)
+    {
         while (ordered.Ready is { } ready)
         {
             ordered.NextId++;
-            // The message's bytes are pending already; the event counts them again.
-            _pending -= ready.Total;
-            var delivered = Deliver((int)ready.Channel - 1, ready.Id, ready.Message);
+            var delivered = true;
+            if (!ready.Cancelled)
+            {
+                var route = (int)ready.Channel - 1;
+                // The message's bytes are pending already; the event counts them again.
+                if (_classes[route] == GesNetworkClass.Bulk) _pendingBulk -= ready.Total;
+                else _pending -= ready.Total;
+                delivered = Deliver(route, ready.Id, ready.Message);
+            }
+
             ordered.Release(ready);
             if (!delivered) return false;
         }
@@ -516,6 +578,7 @@ public sealed partial class GesNetworkConnection
             if (!_owed[route]) continue;
             _owed[route] = false;
             position = Wire.WriteVarint(packet, position, 0);
+            packet[position++] = Wire.ControlConfirmation;
             position = Wire.WriteVarint(packet, position, (uint)route + 1);
             Wire.WriteUInt16(packet, position, _owedNumbers[route]);
             position += 2;
@@ -526,6 +589,7 @@ public sealed partial class GesNetworkConnection
         var start = position;
         if (frames)
         {
+            position = WriteDatagramCancels(packet, position, limit);
             position = WriteDatagramQueue(_sendReliable, ref _nextReliableId, LaneReliable, packet, position, limit);
             for (var route = 0; route < _routeCount; route++)
             {
@@ -573,7 +637,7 @@ public sealed partial class GesNetworkConnection
         var lost = queue.Lost;
         while (lost.Count > 0 && _fragmentRoom > 0)
         {
-            if (!queue.Find(lost.Message, out var index))
+            if (!queue.Find(lost.Message, out var index) || queue.Cancelled(index))
             {
                 lost.Consume(lost.Length);
                 continue;
@@ -590,8 +654,14 @@ public sealed partial class GesNetworkConnection
         while (queue.HasNew && _fragmentRoom > 0)
         {
             var index = queue.Cursor;
+            if (queue.Cancelled(index))
+            {
+                queue.Advance();
+                continue;
+            }
+
             var message = queue.Entry(index);
-            var id = queue.CursorStarted ? queue.EntryId(index) : nextId;
+            var id = queue.CursorStarted || queue.Preassigned ? queue.EntryId(index) : nextId;
             var offset = queue.CursorOffset;
             var next = WriteFrame(packet, position, limit, (uint)queue.Route(index) + 1, id, offset, message.Length, message, out var chunk);
             if (next < 0) break;
@@ -599,7 +669,7 @@ public sealed partial class GesNetworkConnection
             if (!queue.CursorStarted)
             {
                 queue.CursorStarted = true;
-                queue.SetEntryId(index, nextId++);
+                if (!queue.Preassigned) queue.SetEntryId(index, nextId++);
             }
 
             RecordFragment(lane, queue.Serial(index), offset, chunk);

@@ -6,7 +6,7 @@ import GameEventScriptRuntime
 
 // Runs scripted steps over a client and a server connection and records their events and packets as trace lines.
 enum NetworkApiObservations {
-    private static let steps: Set<String> = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget", "deliver", "cookie"]
+    private static let steps: Set<String> = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget", "deliver", "cookie", "cancel"]
 
     static func validate(_ input: Input) throws {
         try Validation.fields(input, ["sources", "clientSources", "network", "options", "clientOptions", "token", "link", "steps"])
@@ -74,6 +74,9 @@ enum NetworkApiObservations {
                 case "publish":
                     let status = connection.publish(route: Int(try integer(step.required("route"))), payload: try payload(step.required("payload")))
                     trace.append("\(name) publish \(status)")
+                case "cancel":
+                    let cancelled = try connection.cancel(route: Int(try integer(step.required("route"))), transferId: Int(try integer(step.required("id"))), code: step["code"]?.stringValue)
+                    trace.append("\(name) cancel \(cancelled)")
                 case "subscribe": try connection.subscribe(route: Int(try integer(step.required("route"))))
                 case "unsubscribe": try connection.unsubscribe(route: Int(try integer(step.required("route"))))
                 case "receive": try connection.receive(bytes(step.text("bytes")), now: now)
@@ -171,6 +174,10 @@ enum NetworkApiObservations {
             case "keepaliveMicroseconds": options.keepaliveMicroseconds = try integer(entry.value)
             case "ackDelayMicroseconds": options.ackDelayMicroseconds = try integer(entry.value)
             case "sendBudgetBytesPerSecond": options.sendBudgetBytesPerSecond = try integer(entry.value)
+            case "maxTransferBytes": options.maxTransferBytes = try integer(entry.value)
+            case "deflateTransfers":
+                guard let value = entry.value.boolValue else { throw ConformanceExecutionError.invalidInput("Expected a Boolean") }
+                options.deflateTransfers = value
             default: throw ConformanceExecutionError.invalidInput("Unknown network option")
             }
         }
@@ -198,6 +205,8 @@ enum NetworkApiObservations {
             case .connected: trace.append("\(name) connected")
             case .message: trace.append("\(name) message \(next.route) \(text(next.payload))")
             case .closed: trace.append("\(name) closed \(next.code) \(next.byPeer ? "peer" : "local") \"\(next.detail)\"")
+            case .transferProgress: trace.append("\(name) progress \(next.route) \(next.transferId) \(next.bytes)/\(next.total)")
+            case .transferCancelled: trace.append("\(name) cancelled \(next.route) \(next.transferId) \(next.code) \(next.byPeer ? "peer" : "local")")
             }
         }
     }

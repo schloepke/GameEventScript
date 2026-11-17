@@ -3,7 +3,7 @@
 
 import GameEventScriptRuntime
 
-/// The stable `network.*` codes a connection closes with.
+/// The stable `network.*` codes a connection closes or cancels a transfer with.
 public enum GesNetworkCodes {
     /// The peer speaks another protocol or another protocol version.
     public static let protocolMismatch = "network.protocolMismatch"
@@ -29,6 +29,12 @@ public enum GesNetworkCodes {
     public static let closed = "network.closed"
     /// The transport ended without a close packet.
     public static let transportClosed = "network.transportClosed"
+    /// A transfer announces more bytes than the receiver's transfer limit.
+    public static let transferTooLarge = "network.transferTooLarge"
+    /// A transfer's header, compressed data or hash is invalid.
+    public static let transferCorrupt = "network.transferCorrupt"
+    /// The host cancelled a transfer without giving its own code.
+    public static let transferCancelled = "network.transferCancelled"
 }
 
 /// The result of queueing a message.
@@ -37,9 +43,10 @@ public enum GesNetworkSendStatus: Sendable, Equatable {
     case queued
     /// The connection is not connected.
     case notConnected
-    /// The send queue would exceed its byte limit; the message is not queued.
+    /// The reliable queue or the bulk queue would exceed its limit; the message is not queued.
     case queueFull
-    /// The message exceeds the largest encoding of the route's root.
+    /// The message exceeds the largest encoding of the route's root, or, on a bulk route, this side's or the peer's
+    /// transfer limit.
     case messageTooLarge
     /// The route does not exist, or this side does not send it with this verb.
     case invalidRoute
@@ -84,23 +91,35 @@ public enum GesNetworkEventKind: Sendable, Equatable {
     case message
     /// The connection closed with a code and a detail.
     case closed
+    /// A transfer on a bulk route advanced: the receiver got more of its bytes, or the peer confirmed more of the bytes
+    /// sent.
+    case transferProgress
+    /// A transfer was cancelled by this side, by its host or by the peer; the session continues.
+    case transferCancelled
 }
 
 /// One event of a connection.
 public struct GesNetworkEvent {
     /// The kind of the event.
     public let kind: GesNetworkEventKind
-    /// The route of a message; -1 for other events.
+    /// The route of a message or transfer event; -1 for other events.
     public let route: Int
     /// The message bytes or the client's token. The bytes stay valid until the next call of
     /// `GesNetworkConnection.nextEvent()` or the release of the connection.
     public let payload: UnsafeRawBufferPointer
-    /// The `network.*` code of a close; empty otherwise.
+    /// The `network.*` code of a close or the code of a cancelled transfer; empty otherwise.
     public let code: String
     /// The detail of a close, at most 512 UTF-8 bytes; empty otherwise.
     public let detail: String
-    /// Whether the peer closed the connection.
+    /// Whether the peer closed the connection or cancelled the transfer.
     public let byPeer: Bool
+    /// The transfer id, 0 to 65535, of a transfer event or of a message on a bulk route; -1 for other events.
+    public let transferId: Int
+    /// The bytes of a progress event: received ones on the receiver, confirmed ones on the sender. Both count the
+    /// transfer's encoded bytes; 0 for other events.
+    public let bytes: Int64
+    /// The encoded length of a progress event's transfer; 0 for other events.
+    public let total: Int64
 }
 
 /// The limits and timings of a connection. Times are microseconds.
@@ -114,7 +133,7 @@ public struct GesNetworkOptions: Sendable, Equatable {
     public var maxPendingReceiveBytes: Int64 = 4_194_304
     /// The most frames the peer may send per second.
     public var maxFramesPerSecond = 4096
-    /// The largest number of reliable and bulk bytes waiting to be sent.
+    /// The largest number of reliable bytes waiting to be sent.
     public var maxSendQueueBytes: Int64 = 1_048_576
     /// How long the connection waits for anything from the peer.
     public var timeoutMicroseconds: Int64 = 10_000_000
@@ -127,6 +146,11 @@ public struct GesNetworkOptions: Sendable, Equatable {
     /// The baseline limit this side announces, 0 to 1073741824: the full record bytes a topic's ring of recent states
     /// holds. The smaller limit of both sides applies.
     public var maxBaselineBytes: Int64 = 65536
+    /// The transfer limit this side announces, 0 to 1073741824: the largest uncompressed data of one bulk message it
+    /// sends or receives. It also bounds the bulk send queue.
+    public var maxTransferBytes: Int64 = 67_108_864
+    /// Whether this side accepts and sends deflate-compressed transfers.
+    public var deflateTransfers = true
 
     /// Creates the default options.
     public init() {}
@@ -147,6 +171,9 @@ public struct GesNetworkOptions: Sendable, Equatable {
         if sendBudgetBytesPerSecond < 0 { throw GesApiError.invalidArgument("The send budget is not negative.") }
         if maxBaselineBytes < 0 || maxBaselineBytes > Int64(GesNetworkWire.maximumBaselineBytes) {
             throw GesApiError.invalidArgument("The baseline limit is 0 to 1073741824 bytes.")
+        }
+        if maxTransferBytes < 0 || maxTransferBytes > Int64(GesNetworkWire.maximumTransferBytes) {
+            throw GesApiError.invalidArgument("The transfer limit is 0 to 1073741824 bytes.")
         }
     }
 }

@@ -55,6 +55,22 @@ class NetworkInputTests(unittest.TestCase):
                           {'action': 'publish', 'side': 'server', 'route': 2, 'payload': {'hex': '0500'}},
                           {'action': 'unsubscribe', 'side': 'server', 'route': 2}], steps)
 
+    def test_transfer_steps_and_options_reach_the_adapter(self):
+        request = prepare(self.case('handshake-loopback', options={'maxTransferBytes': 4, 'deflateTransfers': False}, steps=[
+            {'cancel': {'side': 'server', 'route': 3, 'id': 0}},
+            {'cancel': {'side': 'server', 'route': 3, 'id': 1, 'code': 'game.stale'}}]))
+        self.assertEqual({'maxTransferBytes': 4, 'deflateTransfers': False}, request['options'])
+        self.assertEqual([{'action': 'cancel', 'side': 'server', 'route': 3, 'id': 0},
+                          {'action': 'cancel', 'side': 'server', 'route': 3, 'id': 1, 'code': 'game.stale'}], request['steps'])
+        for step in ({'cancel': {'side': 'server', 'route': 3}}, {'cancel': {'side': 'server', 'route': 3, 'id': '0'}},
+                     {'cancel': {'side': 'server', 'route': 3, 'id': 0, 'code': 1}},
+                     {'cancel': {'side': 'server', 'route': 3, 'id': 0, 'payload': '00'}}):
+            with self.assertRaises(InvalidDocument, msg=step):
+                prepare(self.case('handshake-loopback', steps=[step]))
+        for options in ({'deflateTransfers': 1}, {'maxTransferBytes': True}, {'maxTransferBytes': -1}):
+            with self.assertRaises(InvalidDocument, msg=options):
+                prepare(self.case('handshake-loopback', options=options))
+
     def test_malformed_steps_are_document_errors(self):
         for step in ({}, {'advance': 0, 'accept': True}, {'jump': 1}, {'advance': -1}, {'advance': '1'},
                      {'accept': False}, {'transmit': 'both'}, {'refuse': 1},

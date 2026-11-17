@@ -9,7 +9,7 @@ using GameEventScript.Network;
 // Runs scripted steps over a client and a server connection and records their events and packets as trace lines.
 internal static class NetworkApiObservations
 {
-    private static readonly string[] Steps = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget", "deliver", "cookie"];
+    private static readonly string[] Steps = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget", "deliver", "cookie", "cancel"];
 
     internal static void Validate(JsonElement input)
     {
@@ -86,6 +86,13 @@ internal static class NetworkApiObservations
                     case "publish":
                         var published = connection.Publish(step.GetProperty("route").GetInt32(), Payload(step.GetProperty("payload")));
                         trace.Add($"{name} publish {SendStatus(published)}");
+                        break;
+                    case "cancel":
+                        var cancelled = connection.Cancel(
+                            step.GetProperty("route").GetInt32(),
+                            step.GetProperty("id").GetInt32(),
+                            step.TryGetProperty("code", out var code) ? code.GetString() : null);
+                        trace.Add($"{name} cancel {(cancelled ? "true" : "false")}");
                         break;
                     case "subscribe":
                         connection.Subscribe(step.GetProperty("route").GetInt32());
@@ -213,6 +220,8 @@ internal static class NetworkApiObservations
                 case "keepaliveMicroseconds": options.KeepaliveMicroseconds = property.Value.GetInt64(); break;
                 case "ackDelayMicroseconds": options.AckDelayMicroseconds = property.Value.GetInt64(); break;
                 case "sendBudgetBytesPerSecond": options.SendBudgetBytesPerSecond = property.Value.GetInt64(); break;
+                case "maxTransferBytes": options.MaxTransferBytes = property.Value.GetInt64(); break;
+                case "deflateTransfers": options.DeflateTransfers = property.Value.GetBoolean(); break;
                 default: throw new ArgumentException("Unknown network option.");
             }
         }
@@ -259,6 +268,12 @@ internal static class NetworkApiObservations
                     break;
                 case GesNetworkEventKind.Closed:
                     trace.Add($"{name} closed {next.Code} {(next.ByPeer ? "peer" : "local")} \"{next.Detail}\"");
+                    break;
+                case GesNetworkEventKind.TransferProgress:
+                    trace.Add($"{name} progress {next.Route} {next.TransferId} {next.Bytes}/{next.Total}");
+                    break;
+                case GesNetworkEventKind.TransferCancelled:
+                    trace.Add($"{name} cancelled {next.Route} {next.TransferId} {next.Code} {(next.ByPeer ? "peer" : "local")}");
                     break;
             }
         }

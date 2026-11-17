@@ -19,6 +19,18 @@ internal static class GesNetworkWire
     internal const int Version = 1;
     internal const int MaximumCookieBytes = 64;
     internal const int CookieBytes = 24;
+    internal const int MaximumTransferBytes = 1 << 30;
+
+    // The largest transfer header: compression byte, ten-byte size varint and SHA-256.
+    internal const int TransferHeaderBytes = 43;
+    internal const int HashBytes = 32;
+    internal const byte CompressionNone = 0;
+    internal const byte CompressionDeflate = 1;
+    internal const uint CompressionMaskDeflate = 1;
+
+    // Kinds of a control frame on channel 0.
+    internal const byte ControlConfirmation = 0;
+    internal const byte ControlCancel = 1;
 
     internal const byte Hello = 1;
     internal const byte Retry = 2;
@@ -64,6 +76,53 @@ internal static class GesNetworkWire
             var current = source[start + index];
             if (index == 4 && current > 0x0f) return -1;
             value |= (uint)(current & 0x7f) << (7 * index);
+            if ((current & 0x80) == 0)
+            {
+                if (current == 0 && index > 0) return -1;
+                position = start + index + 1;
+                return 1;
+            }
+        }
+
+        return -1;
+    }
+
+    internal static int VarintSize64(ulong value)
+    {
+        var size = 1;
+        while (value >= 0x80)
+        {
+            value >>= 7;
+            size++;
+        }
+
+        return size;
+    }
+
+    internal static int WriteVarint64(Span<byte> target, int position, ulong value)
+    {
+        while (value >= 0x80)
+        {
+            target[position++] = (byte)(value | 0x80);
+            value >>= 7;
+        }
+
+        target[position++] = (byte)value;
+        return position;
+    }
+
+    // Reads a canonical varint of up to 64 bits. Returns 1 on success, 0 when the bytes end first, -1 when it is not
+    // canonical or exceeds 64 bits.
+    internal static int ReadVarint64(ReadOnlySpan<byte> source, ref int position, out ulong value)
+    {
+        value = 0;
+        var start = position;
+        for (var index = 0; index < 10; index++)
+        {
+            if (start + index >= source.Length) return 0;
+            var current = source[start + index];
+            if (index == 9 && current > 0x01) return -1;
+            value |= (ulong)(current & 0x7f) << (7 * index);
             if ((current & 0x80) == 0)
             {
                 if (current == 0 && index > 0) return -1;

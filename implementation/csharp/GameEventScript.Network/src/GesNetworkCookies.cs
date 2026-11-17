@@ -117,7 +117,12 @@ public sealed class GesNetworkCookies : IDisposable
         position += 8;
         if (Wire.ReadVarint(packet, ref position, out var routes) != 1 || routes is < 1 or > Wire.MaximumRoutes || packet.Length - position < 8 * (int)routes) return false;
         position += 8 * (int)routes;
-        if (Wire.ReadVarint(packet, ref position, out _) != 1 || Wire.ReadVarint(packet, ref position, out _) != 1) return false;
+        // The packet, baseline and transfer limits and the compression mask.
+        for (var field = 0; field < 4; field++)
+        {
+            if (Wire.ReadVarint(packet, ref position, out _) != 1) return false;
+        }
+
         if (Wire.ReadVarint(packet, ref position, out var token) != 1 || token > Wire.MaximumTokenBytes || packet.Length - position < token) return false;
         position += (int)token;
         if (Wire.ReadVarint(packet, ref position, out var length) != 1 || length > Wire.MaximumCookieBytes || packet.Length - position < length) return false;

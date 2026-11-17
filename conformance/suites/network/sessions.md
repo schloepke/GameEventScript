@@ -72,7 +72,7 @@ network:
 
 ## Test: The handshake packets
 
-`hello` carries magic, version, network hash, route binding hashes, packet limit, baseline limit, token and an empty cookie; `welcome` carries version, packet limit and baseline limit.
+`hello` carries magic, version, network hash, route binding hashes, packet limit, baseline limit, transfer limit, compressions, token and an empty cookie; `welcome` carries version, packet limit, baseline limit, transfer limit and compressions.
 
 ### Case description
 
@@ -86,10 +86,10 @@ networkApi:
   link: "none"
   steps:
     - {"transmit": "client"}
-    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001808004017400"}}
+    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001017400"}}
     - {"accept": true}
     - {"transmit": "server"}
-    - {"receive": {"side": "client", "bytes": "0301808001808004"}}
+    - {"receive": {"side": "client", "bytes": "03018080018080048080802001"}}
 ```
 
 ### Expectation
@@ -98,10 +98,10 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001808004017400"
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001017400"
     - "server connecting 74"
     - "server connected"
-    - "server packet 0301808001808004"
+    - "server packet 03018080018080048080802001"
     - "client connected"
   client: {"state": "connected"}
   server: {"state": "connected"}
@@ -125,10 +125,10 @@ networkApi:
   link: "none"
   steps:
     - {"transmit": "client"}
-    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080040000"}}
+    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb580800180800480808020010000"}}
     - {"accept": true}
     - {"transmit": "server"}
-    - {"receive": {"side": "client", "bytes": "0301808001808004"}}
+    - {"receive": {"side": "client", "bytes": "03018080018080048080802001"}}
     - {"send": {"side": "client", "route": 0, "payload": "07"}}
     - {"transmit": "client"}
 ```
@@ -139,10 +139,10 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080040000"
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb580800180800480808020010000"
     - "server connecting -"
     - "server connected"
-    - "server packet 0301808001808004"
+    - "server packet 03018080018080048080802001"
     - "client connected"
     - "client send queued"
     - "client packet 0502000001000000010107"
@@ -166,7 +166,7 @@ networkApi:
   link: "none"
   steps:
     - {"transmit": "client"}
-    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080040000"}}
+    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb580800180800480808020010000"}}
     - {"accept": true}
     - {"transmit": "server"}
     - {"receive": {"side": "server", "bytes": "0500000001000000010107"}}
@@ -178,10 +178,10 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080040000"
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb580800180800480808020010000"
     - "server connecting -"
     - "server connected"
-    - "server packet 0301808001808004"
+    - "server packet 03018080018080048080802001"
     - "server closed network.malformed local \"\""
   server: {"state": "closed"}
 ```
@@ -213,7 +213,7 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 38014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001808004017400"
+    - "client packet 3d014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001017400"
   client: {"state": "hello"}
   server: {"state": "awaitHello"}
 ```
@@ -490,6 +490,7 @@ network:
     - "server send queued"
     - "server send queued"
     - "client message 1 03"
+    - "client progress 3 0 318/318"
     - "client message 3 2000:042f6eb0e3ffefb4"
 ```
 

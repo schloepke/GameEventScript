@@ -152,7 +152,7 @@ extension GesNetworkConnection {
         position += hashes.count
         var limit = 0
         var baseline: Int64 = 0
-        if !readPacketLimit(packet, &position, &limit) || !readBaselineLimit(packet, &position, &baseline) { return }
+        if !readPacketLimit(packet, &position, &limit) || !readBaselineLimit(packet, &position, &baseline) || !readTransferLimits(packet, &position) { return }
         var tokenLength: UInt32 = 0
         if Wire.readVarint(packet, &position, &tokenLength) != 1 || tokenLength > UInt32(Wire.maximumTokenBytes) || packet.count - position < Int(tokenLength) {
             fail(GesNetworkCodes.malformed)
@@ -179,7 +179,7 @@ extension GesNetworkConnection {
         peerPacketLimit = limit
         baselineLimit = min(maxBaseline, baseline)
         state = .awaitAccept
-        if !addEvent(.connecting, -1, token, true, "", "", false) { fail(GesNetworkCodes.queueFull) }
+        if !addEvent(.connecting, -1, token, .pending, "", "", false) { fail(GesNetworkCodes.queueFull) }
     }
 
     // The roots of the local routes the client lacks or binds differently; the network name when none differs.
@@ -198,7 +198,11 @@ extension GesNetworkConnection {
         var position = 1
         var limit = 0
         var baseline: Int64 = 0
-        if !readVersion(packet, &position) || !readPacketLimit(packet, &position, &limit) || !readBaselineLimit(packet, &position, &baseline) { return }
+        if !readVersion(packet, &position) || !readPacketLimit(packet, &position, &limit) || !readBaselineLimit(packet, &position, &baseline)
+            || !readTransferLimits(packet, &position)
+        {
+            return
+        }
         if position != packet.count {
             fail(GesNetworkCodes.malformed)
             return
@@ -207,7 +211,7 @@ extension GesNetworkConnection {
         peerPacketLimit = limit
         baselineLimit = min(maxBaseline, baseline)
         state = .connected
-        _ = addEvent(.connected, -1, UnsafeRawBufferPointer(start: nil, count: 0), false, "", "", false)
+        _ = addEvent(.connected, -1, UnsafeRawBufferPointer(start: nil, count: 0), .none, "", "", false)
     }
 
     private func readVersion(_ packet: UnsafeRawBufferPointer, _ position: inout Int) -> Bool {
@@ -242,6 +246,21 @@ extension GesNetworkConnection {
         return true
     }
 
+    // Reads the peer's transfer limit and the mask of the compressions it accepts; unknown compressions are malformed.
+    private func readTransferLimits(_ packet: UnsafeRawBufferPointer, _ position: inout Int) -> Bool {
+        var limit: UInt32 = 0
+        var mask: UInt32 = 0
+        if Wire.readVarint(packet, &position, &limit) != 1 || Int64(limit) > Int64(Wire.maximumTransferBytes) || Wire.readVarint(packet, &position, &mask) != 1
+            || (mask & ~Wire.compressionMaskDeflate) != 0
+        {
+            fail(GesNetworkCodes.malformed)
+            return false
+        }
+        peerTransferLimit = Int64(limit)
+        peerDeflate = (mask & Wire.compressionMaskDeflate) != 0
+        return true
+    }
+
     func receiveClose(_ packet: UnsafeRawBufferPointer) {
         var position = 1
         var codeLength: UInt32 = 0
@@ -272,7 +291,7 @@ extension GesNetworkConnection {
         state = .closed
         dropSending()
         closePending = false
-        _ = addEvent(.closed, -1, UnsafeRawBufferPointer(start: nil, count: 0), false, String(decoding: code, as: UTF8.self), String(decoding: detail, as: UTF8.self), true)
+        _ = addEvent(.closed, -1, UnsafeRawBufferPointer(start: nil, count: 0), .none, String(decoding: code, as: UTF8.self), String(decoding: detail, as: UTF8.self), true)
     }
 
     private func receiveData(_ packet: UnsafeRawBufferPointer) {
@@ -320,6 +339,7 @@ extension GesNetworkConnection {
             roundTripMicroseconds = roundTripMicroseconds < 0 ? sample : roundTripMicroseconds + (sample - roundTripMicroseconds) / 8
         }
         ackedIndex = index
+        confirmWritten(index)
         return true
     }
 
@@ -328,7 +348,14 @@ extension GesNetworkConnection {
         if frameUnits < Self.microsecondsPerSecond { return fail(GesNetworkCodes.rateExceeded) }
         frameUnits -= Self.microsecondsPerSecond
         var channel: UInt32 = 0
-        if Wire.readVarint(packet, &position, &channel) != 1 || channel == 0 || Int(channel) > routeCount { return fail(GesNetworkCodes.malformed) }
+        if Wire.readVarint(packet, &position, &channel) != 1 || Int(channel) > routeCount { return fail(GesNetworkCodes.malformed) }
+        if channel == 0 {
+            // Control frames: a stream or message transport carries only cancels.
+            if position == packet.count || packet[position] != Wire.controlCancel { return fail(GesNetworkCodes.malformed) }
+            position += 1
+            return receiveCancel(packet, &position)
+        }
+
         let route = Int(channel) - 1
         if localSends[route] { return fail(GesNetworkCodes.unexpectedRoute) }
         if packet.count - position < 2 { return fail(GesNetworkCodes.malformed) }
@@ -337,7 +364,8 @@ extension GesNetworkConnection {
         var offset: UInt32 = 0
         var total: UInt32 = 0
         if Wire.readVarint(packet, &position, &offset) != 1 || Wire.readVarint(packet, &position, &total) != 1 { return fail(GesNetworkCodes.malformed) }
-        if Int64(total) > maxBytes[route] { return fail(GesNetworkCodes.messageTooLarge) }
+        let bulk = classes[route] == .bulk
+        if Int64(total) > messageLimit(route) { return fail(GesNetworkCodes.messageTooLarge) }
         var length: UInt32 = 0
         if Wire.readVarint(packet, &position, &length) != 1 || packet.count - position < Int(length) { return fail(GesNetworkCodes.malformed) }
         let chunk = UnsafeRawBufferPointer(rebasing: packet[position..<position + Int(length)])
@@ -353,25 +381,40 @@ extension GesNetworkConnection {
         if offset == 0 {
             if assembly.active || id != assembly.nextId { return fail(GesNetworkCodes.malformed) }
             assembly.nextId &+= 1
-            if length == total { return deliver(route, id, chunk) }
+            if length == total {
+                if bulk { addProgress(route, id, Int64(total), Int64(total)) }
+                return deliver(route, id, chunk)
+            }
             assembly.start(channel, id, total)
         } else if !assembly.active || assembly.channel != channel || assembly.id != id || assembly.total != total || assembly.received != Int(offset) {
             return fail(GesNetworkCodes.malformed)
         }
 
-        pending += Int64(length)
-        if pending > maxPending { return fail(GesNetworkCodes.queueFull) }
+        if bulk {
+            pendingBulk += Int64(length)
+            if pendingBulk > maxPendingBulk { return fail(GesNetworkCodes.queueFull) }
+        } else {
+            pending += Int64(length)
+            if pending > maxPending { return fail(GesNetworkCodes.queueFull) }
+        }
+
         assembly.append(chunk)
+        if bulk { addProgress(route, id, Int64(assembly.received), Int64(total)) }
         if assembly.received != Int(total) { return true }
         assembly.active = false
         // The message's bytes are pending already; the event counts them again.
-        pending -= Int64(total)
+        if bulk {
+            pendingBulk -= Int64(total)
+        } else {
+            pending -= Int64(total)
+        }
         return assembly.withMessage { deliver(route, id, $0) }
     }
 
     // Reports a complete message with its id; a topic message becomes its state's full record, numbered by the id of a
     // latest message or the topic's count of reliable states. False when it closed the connection.
     func deliver(_ route: Int, _ id: UInt16, _ message: UnsafeRawBufferPointer) -> Bool {
+        if classes[route] == .bulk { return deliverTransfer(route, id, message) }
         var message = message
         if let topic = topics[route] {
             if message.isEmpty || Int(message[0]) > GesNetworkTopic.maximumStates { return fail(GesNetworkCodes.malformed) }
@@ -395,8 +438,11 @@ extension GesNetworkConnection {
             if datagram && classes[route] == .latest { oweConfirmation(route, number) }
             message = rest
         }
-        return addEvent(.message, route, message, true, "", "", false) || fail(GesNetworkCodes.queueFull)
+        return addEvent(.message, route, message, .pending, "", "", false) || fail(GesNetworkCodes.queueFull)
     }
+
+    // The largest message of a received route: on a bulk route a transfer's header and data.
+    func messageLimit(_ route: Int) -> Int64 { classes[route] == .bulk ? transferLimit(route) + Int64(Wire.transferHeaderBytes) : maxBytes[route] }
 
     // Closes the connection with an error found in received data and returns false.
     @discardableResult

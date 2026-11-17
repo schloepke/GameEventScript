@@ -51,6 +51,8 @@ final class SocketTests: XCTestCase {
         case .connected: return "connected"
         case .message: return "message \(next.route) \(hexadecimal(next.payload))"
         case .closed: return "closed \(next.code) \(next.byPeer ? "peer" : "local")"
+        case .transferProgress: return "progress \(next.route) \(next.transferId) \(next.bytes)/\(next.total)"
+        case .transferCancelled: return "cancelled \(next.route) \(next.transferId) \(next.code)"
         }
     }
 

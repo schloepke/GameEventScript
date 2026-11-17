@@ -35,6 +35,10 @@ public final class GesNetworkConnection {
     let ackDelay: Int64
     let maxBaseline: Int64
     var baselineLimit: Int64 = 0
+    let maxTransfer: Int64
+    let deflate: Bool
+    var peerTransferLimit: Int64 = 0
+    var peerDeflate = false
 
     let routeCount: Int
     let classes: [GesNetworkClass]
@@ -55,7 +59,7 @@ public final class GesNetworkConnection {
     var lastSend: Int64
 
     let sendReliable = GesNetworkSendQueue()
-    let sendBulk = GesNetworkSendQueue()
+    let sendBulk = GesNetworkSendQueue(preassigned: true)
     let sendLatest: [GesNetworkLatestSlot?]
     var nextReliableId: UInt16 = 0
     var nextBulkId: UInt16 = 0
@@ -77,15 +81,16 @@ public final class GesNetworkConnection {
     var budget: Int64
     var budgetUnits: Int64 = 0
 
-    private var events: [EventEntry] = []
-    private var eventHead = 0
+    var events: [EventEntry] = []
+    var eventHead = 0
     // The event bytes. A grown arena is retired, not freed, while the payload of the last returned event may point
     // into it; nextEvent() frees it.
     private var arena: UnsafeMutableRawPointer?
     private var arenaCapacity = 0
-    private var arenaLength = 0
+    var arenaLength = 0
     private var retiredArena: UnsafeMutableRawPointer?
     var pending: Int64 = 0
+    var pendingBulk: Int64 = 0
 
     // The bytes of an incomplete stream packet: at most a prefix and a packet.
     var stream: UnsafeMutableRawBufferPointer?
@@ -136,6 +141,27 @@ public final class GesNetworkConnection {
     var helloInterval: Int64 = GesNetworkConnection.helloRepeatInterval
     var cookie: [UInt8] = []
 
+    // Bulk transfers, see ConnectionTransfer.swift: the codecs and hash, created when first needed.
+    var deflater: GesNetworkDeflater?
+    var inflater: GesNetworkInflater?
+    let hash = UnsafeMutableRawBufferPointer.allocate(byteCount: GesNetworkWire.hashBytes, alignment: 1)
+    var sha256: GesNetworkSha256?
+
+    // Cancel frames to send: the route, the id, the code and whether it is sent and unconfirmed or confirmed.
+    let cancels = GesNetworkCancels()
+
+    // The ids of local transfers the peer cancelled, so a repeated cancel is reported once.
+    var peerCancelled = [UInt64](repeating: 0, count: 65536 / 64)
+
+    // Stream sender progress: written bulk bytes, their count at each sent packet, and the written transfers not yet
+    // confirmed completely.
+    var bulkWritten: Int64 = 0
+    var bulkMarks = [Int64](repeating: 0, count: GesNetworkConnection.sendTimeWindow)
+    let written = GesNetworkWrittenTransfers()
+
+    /// The id of the transfer the latest successful `send(route:payload:)` on a bulk route queued; -1 before the first.
+    public internal(set) var lastTransferId = -1
+
     private init(network: GesBoundNetwork, client: Bool, token: [UInt8], now: Int64, options: GesNetworkOptions) throws {
         try options.validate()
         if token.count > GesNetworkWire.maximumTokenBytes { throw GesApiError.invalidArgument("A token holds at most 512 bytes.") }
@@ -152,6 +178,8 @@ public final class GesNetworkConnection {
         ackDelay = options.ackDelayMicroseconds
         budget = options.sendBudgetBytesPerSecond
         maxBaseline = options.maxBaselineBytes
+        maxTransfer = options.maxTransferBytes
+        deflate = options.deflateTransfers
 
         let routes = network.network.routes
         routeCount = routes.count
@@ -217,6 +245,7 @@ public final class GesNetworkConnection {
         arena?.deallocate()
         retiredArena?.deallocate()
         stream?.deallocate()
+        hash.deallocate()
     }
 
     /// Creates the client side of a connection.
@@ -242,8 +271,8 @@ public final class GesNetworkConnection {
         try GesNetworkConnection(network: network, client: false, token: [], now: now, options: options)
     }
 
-    /// The received message bytes not yet taken as events.
-    public var pendingReceiveBytes: Int64 { pending }
+    /// The received bytes of incomplete messages and transfers and of events not yet taken.
+    public var pendingReceiveBytes: Int64 { pending + pendingBulk }
 
     /// The reliable and bulk bytes not yet completely sent, on a datagram transport not yet completely acknowledged.
     public var queuedSendBytes: Int64 { sendReliable.byteCount + sendBulk.byteCount }
@@ -296,7 +325,8 @@ public final class GesNetworkConnection {
         }
     }
 
-    /// Queues a message on a route this side sends.
+    /// Queues a message on a route this side sends. On a bulk route the message is a transfer: it is hashed, compressed
+    /// when that is shorter and both sides allow it, and gets its id at once (`lastTransferId`).
     /// - Parameters:
     ///   - route: The route index of a `sends` route of this side.
     ///   - payload: The encoded message; the bytes are copied.
@@ -304,17 +334,19 @@ public final class GesNetworkConnection {
     public func send(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus {
         if route < 0 || route >= routeCount || !localSends[route] || topics[route] != nil { return .invalidRoute }
         if state != .connected { return .notConnected }
+        if classes[route] == .bulk { return sendTransfer(route, payload) }
         if Int64(payload.count) > maxBytes[route] { return .messageTooLarge }
         if let slot = sendLatest[route] {
             slot.set(payload)
             return .queued
         }
-        if queuedSendBytes + Int64(payload.count) > maxSendQueue { return .queueFull }
-        (classes[route] == .bulk ? sendBulk : sendReliable).enqueue(route, payload)
+        if sendReliable.byteCount + Int64(payload.count) > maxSendQueue { return .queueFull }
+        sendReliable.enqueue(route, payload)
         return .queued
     }
 
-    /// Queues a message on a route this side sends.
+    /// Queues a message on a route this side sends. On a bulk route the message is a transfer: it is hashed, compressed
+    /// when that is shorter and both sides allow it, and gets its id at once (`lastTransferId`).
     /// - Parameters:
     ///   - route: The route index of a `sends` route of this side.
     ///   - payload: The encoded message; the bytes are copied.
@@ -341,7 +373,7 @@ public final class GesNetworkConnection {
             return .queued
         }
         let length = encodeState(topic, payload, topic.next)
-        if queuedSendBytes + Int64(length) > maxSendQueue { return .queueFull }
+        if sendReliable.byteCount + Int64(length) > maxSendQueue { return .queueFull }
         sendReliable.enqueue(route, UnsafeRawBufferPointer(rebasing: topic.scratch[0..<length]), Int(topic.next))
         topic.add(payload, baselineLimit, topic.next)
         topic.next &+= 1
@@ -414,7 +446,7 @@ public final class GesNetworkConnection {
         if state != .awaitAccept { throw GesApiError.invalidOperation("Only a connecting client can be accepted.") }
         state = .connected
         welcomePending = true
-        _ = addEvent(.connected, -1, UnsafeRawBufferPointer(start: nil, count: 0), false, "", "", false)
+        _ = addEvent(.connected, -1, UnsafeRawBufferPointer(start: nil, count: 0), .none, "", "", false)
     }
 
     /// Refuses a connecting client with `network.refused`.
@@ -449,13 +481,37 @@ public final class GesNetworkConnection {
             eventHead = 0
             events.removeAll(keepingCapacity: true)
             arenaLength = 0
-            return GesNetworkEvent(kind: .none, route: -1, payload: UnsafeRawBufferPointer(start: nil, count: 0), code: "", detail: "", byPeer: false)
+            return GesNetworkEvent(
+                kind: .none,
+                route: -1,
+                payload: UnsafeRawBufferPointer(start: nil, count: 0),
+                code: "",
+                detail: "",
+                byPeer: false,
+                transferId: -1,
+                bytes: 0,
+                total: 0
+            )
         }
         let entry = events[eventHead]
         eventHead += 1
-        if entry.counted { pending -= Int64(entry.length) }
+        if entry.counter == .pending {
+            pending -= Int64(entry.length)
+        } else if entry.counter == .bulk {
+            pendingBulk -= Int64(entry.length)
+        }
         let payload = UnsafeRawBufferPointer(start: entry.length == 0 ? nil : arena! + entry.offset, count: entry.length)
-        return GesNetworkEvent(kind: entry.kind, route: entry.route, payload: payload, code: entry.code, detail: entry.detail, byPeer: entry.byPeer)
+        return GesNetworkEvent(
+            kind: entry.kind,
+            route: entry.route,
+            payload: payload,
+            code: entry.code,
+            detail: entry.detail,
+            byPeer: entry.byPeer,
+            transferId: entry.transferId,
+            bytes: entry.bytes,
+            total: entry.total
+        )
     }
 
     func closeLocal(_ code: String, _ detail: String, _ sendPacket: Bool) {
@@ -468,12 +524,13 @@ public final class GesNetworkConnection {
             closeDetail = GesNetworkWire.detailBytes(detail)
             reported = closeDetail.isEmpty ? "" : String(decoding: closeDetail, as: UTF8.self)
         }
-        _ = addEvent(.closed, -1, UnsafeRawBufferPointer(start: nil, count: 0), false, code, reported, false)
+        _ = addEvent(.closed, -1, UnsafeRawBufferPointer(start: nil, count: 0), .none, code, reported, false)
     }
 
     func dropSending() {
         sendReliable.clear()
         sendBulk.clear()
+        dropTransfers()
         for slot in sendLatest { slot?.clear() }
         ackDue = false
         welcomePending = false
@@ -482,19 +539,50 @@ public final class GesNetworkConnection {
 
     func hasPendingFrames() -> Bool {
         if datagram { return hasPendingDatagramFrames() }
-        if sendReliable.count > 0 || sendBulk.count > 0 { return true }
+        if sendReliable.count > 0 || sendBulk.count > 0 || cancels.pendingCount > 0 { return true }
         for slot in sendLatest where slot?.hasCurrent == true { return true }
         return false
     }
 
-    // Adds an event; a counted payload adds to the pending received bytes. Returns false when they exceed their limit.
-    func addEvent(_ kind: GesNetworkEventKind, _ route: Int, _ payload: UnsafeRawBufferPointer, _ counted: Bool, _ code: String, _ detail: String, _ byPeer: Bool) -> Bool {
-        if counted {
-            pending += Int64(payload.count)
-            if pending > maxPending { return false }
+    // Adds an event; a counted payload adds to its pending received bytes. Returns false when they exceed their limit.
+    func addEvent(
+        _ kind: GesNetworkEventKind,
+        _ route: Int,
+        _ payload: UnsafeRawBufferPointer,
+        _ counter: Counter,
+        _ code: String,
+        _ detail: String,
+        _ byPeer: Bool,
+        _ transferId: Int = -1
+    ) -> Bool {
+        guard let reserved = reserveEvent(kind, route, payload.count, counter, code, detail, byPeer, transferId, 0, 0) else { return false }
+        if payload.count > 0 { reserved.baseAddress!.copyMemory(from: payload.baseAddress!, byteCount: payload.count) }
+        return true
+    }
+
+    // Adds an event with a payload of the length and returns its bytes to fill; nil when the counted bytes exceed their
+    // limit.
+    func reserveEvent(
+        _ kind: GesNetworkEventKind,
+        _ route: Int,
+        _ length: Int,
+        _ counter: Counter,
+        _ code: String,
+        _ detail: String,
+        _ byPeer: Bool,
+        _ transferId: Int,
+        _ bytes: Int64,
+        _ total: Int64
+    ) -> UnsafeMutableRawBufferPointer? {
+        if counter == .pending {
+            pending += Int64(length)
+            if pending > maxPending { return nil }
+        } else if counter == .bulk {
+            pendingBulk += Int64(length)
+            if pendingBulk > maxPendingBulk { return nil }
         }
-        if arenaCapacity - arenaLength < payload.count {
-            let capacity = max(arenaCapacity * 2, 256, arenaLength + payload.count)
+        if arenaCapacity - arenaLength < length {
+            let capacity = max(arenaCapacity * 2, 256, arenaLength + length)
             let grown = UnsafeMutableRawPointer.allocate(byteCount: capacity, alignment: 8)
             if let old = arena {
                 if arenaLength > 0 { grown.copyMemory(from: old, byteCount: arenaLength) }
@@ -503,10 +591,48 @@ public final class GesNetworkConnection {
             arena = grown
             arenaCapacity = capacity
         }
-        if payload.count > 0 { (arena! + arenaLength).copyMemory(from: payload.baseAddress!, byteCount: payload.count) }
-        events.append(EventEntry(kind: kind, route: route, offset: arenaLength, length: payload.count, counted: counted, code: code, detail: detail, byPeer: byPeer))
-        arenaLength += payload.count
-        return true
+        events.append(
+            EventEntry(
+                kind: kind,
+                route: route,
+                offset: arenaLength,
+                length: length,
+                counter: counter,
+                code: code,
+                detail: detail,
+                byPeer: byPeer,
+                transferId: transferId,
+                bytes: bytes,
+                total: total
+            )
+        )
+        let reserved = UnsafeMutableRawBufferPointer(start: length == 0 ? nil : arena! + arenaLength, count: length)
+        arenaLength += length
+        return reserved
+    }
+
+    // Reports the progress of a transfer; it replaces the newest event when that reports the same transfer.
+    func addProgress(_ route: Int, _ id: UInt16, _ bytes: Int64, _ total: Int64) {
+        if events.count > eventHead {
+            let last = events[events.count - 1]
+            if last.kind == .transferProgress && last.route == route && last.transferId == Int(id) {
+                events[events.count - 1] = EventEntry(
+                    kind: last.kind,
+                    route: route,
+                    offset: last.offset,
+                    length: 0,
+                    counter: .none,
+                    code: "",
+                    detail: "",
+                    byPeer: false,
+                    transferId: Int(id),
+                    bytes: bytes,
+                    total: total
+                )
+                return
+            }
+        }
+        _ = reserveEvent(.transferProgress, route, 0, .none, "", "", false, Int(id), bytes, total)
     }
 
     // Refills a token bucket of units per microsecond up to its capacity, without overflow.
@@ -517,14 +643,24 @@ public final class GesNetworkConnection {
         return units + elapsed * rate
     }
 
-    private struct EventEntry {
+    // Which pending count an event's payload adds to.
+    enum Counter {
+        case none
+        case pending
+        case bulk
+    }
+
+    struct EventEntry {
         let kind: GesNetworkEventKind
         let route: Int
         let offset: Int
         let length: Int
-        let counted: Bool
+        let counter: Counter
         let code: String
         let detail: String
         let byPeer: Bool
+        let transferId: Int
+        let bytes: Int64
+        let total: Int64
     }
 }

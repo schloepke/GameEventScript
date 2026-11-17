@@ -8,9 +8,10 @@ HEX = re.compile(r'(?:[0-9a-f]{2})*')
 SIDES = ('client', 'server')
 STATES = {'hello', 'awaitHello', 'awaitAccept', 'connected', 'closed'}
 OPTIONS = {'transport', 'maxPacketBytes', 'maxPendingReceiveBytes', 'maxFramesPerSecond', 'maxSendQueueBytes',
-           'timeoutMicroseconds', 'keepaliveMicroseconds', 'ackDelayMicroseconds', 'sendBudgetBytesPerSecond', 'maxBaselineBytes'}
+           'timeoutMicroseconds', 'keepaliveMicroseconds', 'ackDelayMicroseconds', 'sendBudgetBytesPerSecond', 'maxBaselineBytes',
+           'maxTransferBytes', 'deflateTransfers'}
 STEPS = {'advance', 'accept', 'refuse', 'close', 'send', 'receive', 'transmit', 'transportClosed', 'budget',
-         'publish', 'subscribe', 'unsubscribe', 'deliver', 'cookie'}
+         'publish', 'subscribe', 'unsubscribe', 'deliver', 'cookie', 'cancel'}
 TRANSPORTS = ('message', 'stream', 'datagram')
 LINK_FIELDS = {'seed', 'latencyMicroseconds', 'jitterMicroseconds', 'lossPerMille', 'duplicatePerMille', 'reorder'}
 SIDE_FIELDS = {'state', 'roundTripMicroseconds', 'queuedSendBytes', 'pendingReceiveBytes'}
@@ -52,7 +53,9 @@ def options(raw):
     result = dict(raw)
     if 'transport' in result and result['transport'] not in TRANSPORTS:
         raise InvalidDocument('A transport is message, stream or datagram')
-    for key in OPTIONS - {'transport'}:
+    if 'deflateTransfers' in result and type(result['deflateTransfers']) is not bool:
+        raise InvalidDocument('deflateTransfers is true or false')
+    for key in OPTIONS - {'transport', 'deflateTransfers'}:
         if key in result:
             integer(result[key], key, 0, 2**53)
     return result
@@ -100,6 +103,14 @@ def step(raw):
             result['bytes'] = hexadecimal(value['bytes'], 'cookie bytes')
         else:
             result['packet'] = integer(value['packet'], 'cookie packet', 0, 1023)
+        return result
+    if name == 'cancel':
+        # Cancels a transfer by its id; code is the one the peer receives.
+        closed(value, {'side', 'route', 'id', 'code'}, 'cancel step')
+        result = {'action': name, 'side': side(value.get('side')), 'route': integer(value.get('route'), 'route', -1, 1 << 20),
+                  'id': integer(value.get('id'), 'transfer id', -1, 1 << 20)}
+        if 'code' in value:
+            result['code'] = text(value['code'], 'cancel code')
         return result
     closed(value, {'side', 'detail', 'route', 'payload', 'bytes', 'bytesPerSecond'}, name + ' step')
     result = {'action': name, 'side': side(value.get('side'))}

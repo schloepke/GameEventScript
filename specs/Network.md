@@ -136,7 +136,7 @@ stateDiagram-v2
 ```
 
 1. The client sends `hello` with its network hash, the binding hash of every route, its
-   receive limit and the host's token.
+   limits, the compressions it accepts and the host's token.
 2. The server checks the protocol and the hashes. On a difference it closes the session
    with `network.protocolMismatch` or `network.schemaMismatch`. Otherwise it reports the
    event `connecting` with the token, and the host accepts or refuses the client.
@@ -158,7 +158,7 @@ server validates the client's address first; the
 | --- | --- |
 | `reliable` | every message, complete, in the order sent across all reliable routes of the direction |
 | `latest` | the newest message per route; a message not yet started is replaced by a newer one |
-| `bulk` | every message, complete, in the order sent across all bulk routes of the direction, after all other traffic |
+| `bulk` | every message, complete, in the order sent across all bulk routes of the direction, after all other traffic; each message is a [transfer](#transfers) |
 
 Transmission order within a packet is: reliable, then latest, then bulk. A reliable or
 bulk message is sent completely before the next one of its class starts; messages of
@@ -179,8 +179,8 @@ order:
 | `invalidRoute` | the route index is out of range, or the route is not sent by this side with this verb |
 | `notConnected` | the connection is not `Connected` |
 | `notSubscribed` | a published topic of the server is not subscribed |
-| `messageTooLarge` | the payload is longer than the route root's largest encoding |
-| `queueFull` | the reliable and bulk queue would exceed its byte limit |
+| `messageTooLarge` | the payload is longer than the route root's largest encoding; on a bulk route also longer than the transfer limit of either side |
+| `queueFull` | the reliable queue would exceed its byte limit; on a bulk route, 8192 transfers are queued or the queued bulk bytes plus the payload would exceed the transfer limit of either side |
 | `queued` | the message is queued |
 
 A latest message never makes the queue full; it replaces the waiting one.
@@ -232,6 +232,104 @@ so the states from the base on fit the same limits. On a datagram transport the 
 of a latest topic skips states that were lost or overtaken; it then holds fewer states
 after the base, which fit the limits all the more.
 
+### Transfers
+
+A message on a bulk route is a transfer: data of up to the transfer limit, sent with its
+size and hash, compressed when that is shorter, and cancellable without closing the
+session.
+
+**Sending.** A transfer gets its id when it is queued: the next number of the bulk
+numbering, which the host reads from the connection right after `send`. The sender
+computes the SHA-256 hash of the data and, when both sides accept Deflate and the data
+is not empty, compresses it with the [reference encoder](#deflate). The compressed form
+is sent when it is shorter than the data, otherwise the data itself. The message is:
+
+| Field | Encoding |
+| --- | --- |
+| compression | 1 byte: `0` none, `1` Deflate |
+| size | varint of up to 64 bits, the length of the data |
+| hash | 32 bytes, SHA-256 of the data |
+| data | the data, or its raw Deflate stream ([RFC 1951](https://www.rfc-editor.org/rfc/rfc1951)) |
+
+The size varint follows the [varint rules](#values) with up to ten bytes; a value above
+64 bits is not canonical.
+
+**Receiving.** The receiver checks a complete transfer in this order and cancels it with
+the code, without reporting it, when a check fails:
+
+| Check | Code |
+| --- | --- |
+| the message is empty or its size varint cannot be read | `network.transferCorrupt` |
+| the size exceeds the receiver's transfer limit or the route root's largest encoding | `network.transferTooLarge` |
+| the compression is unknown, or Deflate while the receiver does not accept it | `network.transferCorrupt` |
+| fewer than 32 bytes follow the size | `network.transferCorrupt` |
+| uncompressed data whose length differs from the size, or compressed data at least as long as the size | `network.transferCorrupt` |
+| the Deflate stream is invalid or does not yield exactly the size | `network.transferCorrupt` |
+| the hash of the data differs | `network.transferCorrupt` |
+
+A transfer that passes is reported as `message` with the data and the transfer's id. A
+message frame of a bulk route whose total exceeds the receiver's transfer limit, limited
+by the route root's largest encoding, plus 43 header bytes is `network.messageTooLarge`.
+Bulk bytes pending at the receiver count toward their own limit of twice the transfer
+limit plus 86 instead of the pending received bytes; exceeding it is
+`network.queueFull`.
+
+**Progress.** Both sides report `transferProgress` with the route, the id, the bytes
+and the total of the transfer's message, header included. The receiver reports the
+bytes it holds whenever a frame adds bytes; the sender reports the bytes the peer
+acknowledged: on a stream or message transport the written bytes up to the end of
+each acknowledged packet, on a datagram transport the acknowledged bytes of the
+transfer. A progress event replaces the newest pending event when that reports the same
+transfer, so a host that takes events late sees one event with the latest count. The
+receiver's `message` follows its last progress event.
+
+**Cancelling.** The sender's host cancels a queued transfer by its id with an optional
+code, `network.transferCancelled` when it gives none, as long as not every byte was sent
+once; afterwards the cancel reports false. Cancelling sends a
+[cancel frame](#control-frames) to the receiver, also for a transfer not yet started, and
+reports `transferCancelled` locally. The receiver cancels a transfer that fails a check
+the same way. A cancelled transfer sends no further bytes, keeps its id, and reports
+neither progress nor `message`; the session continues.
+
+On a stream or message transport the sender writes the cancel frame in queue order: in
+place of a transfer not yet started, and before the rest of a started one. The receiver
+then accepts a cancel only for the transfer in progress or, when none is, for the next
+id; any other is `network.malformed`. On a datagram transport cancel frames are sent at
+once and resent until acknowledged. The receiver takes the id as a frame of the bulk
+class of [datagram delivery](#datagram-delivery): it ignores a cancel for an id it
+already reported, skipped or cancelled, an id outside that window is
+`network.malformed`, and it marks a transfer ahead of it cancelled, so the next transfers
+are reported without it. A received cancel reports `transferCancelled` with the peer's
+code once per transfer and stops the sender's transfer when it is still queued.
+
+#### Deflate
+
+The reference encoder writes one final block with the fixed Huffman code (`BFINAL` 1,
+`BTYPE` 01) and greedy matches; the end-of-block symbol follows the last symbol and the
+last byte is padded with zero bits. Both ports produce the same bytes for the same data.
+
+1. Two tables of 32768 entries hold chain heads and links. Every head starts at none;
+   links are written before they are read. The hash of position `p` is
+   `((d[p] << 10) xor (d[p+1] << 5) xor d[p+2]) and 32767`. Inserting `p` with at least
+   three bytes from `p` on stores the head of its hash as the link at `p and 32767` and
+   makes `p` the head; a position with fewer bytes is not inserted.
+2. At position `p` with at least three bytes left the encoder walks the chain from the
+   head of `p`'s hash, at most 32 candidates, stopping before a candidate more than
+   32768 bytes back. It compares each candidate with `p` up to the smaller of 258 and
+   the bytes left; a longer match replaces the best one, the first of equal length
+   stays, and a match of the full length ends the walk. The next candidate is the link
+   stored at the current candidate's slot.
+3. A best match of at least 3 bytes is written as length and distance and every
+   position it covers is inserted; otherwise the byte at `p` is written as a literal
+   and inserted. The encoder continues after the written bytes.
+
+Every Deflate stream ([RFC 1951](https://www.rfc-editor.org/rfc/rfc1951)) of any block
+types is accepted when it ends with its final block, yields exactly the size and leaves
+no byte after the final block's last byte. Code tables that zlib rejects are invalid:
+over-subscribed lengths, and incomplete ones except a single literal or distance code of
+length 1. The fixture `conformance/fixtures/Network/deflate.json` holds the reference
+encoder's output and accepted and rejected streams.
+
 ### Limits
 
 Each connection has receive and send limits. The defaults are fixed values of this
@@ -241,9 +339,10 @@ document; the host may change them per connection.
 | --- | --- | --- |
 | largest packet received and sent, 1200 to 65535 bytes | 16384; 1200 on a datagram transport | `network.packetTooLarge` |
 | baseline limit: full record bytes of a topic's ring, 0 to 1073741824 | 65536 | older states leave the ring |
-| pending received bytes: incomplete messages and undelivered events | 4194304 | `network.queueFull` |
+| pending received bytes: incomplete messages and undelivered events, without bulk | 4194304 | `network.queueFull` |
+| transfer limit: data of one transfer sent and received, 0 to 1073741824 | 67108864 | status `messageTooLarge`; `network.transferTooLarge` |
 | frames received per second, token bucket of one second | 4096 | `network.rateExceeded` |
-| queued reliable and bulk bytes to send | 1048576 | status `queueFull` |
+| queued reliable bytes to send | 1048576 | status `queueFull` |
 | timeout without a received packet | 10 s | `network.timeout` |
 | keepalive after the last sent packet | 1 s | |
 | delay of an acknowledgement | 10 ms | |
@@ -252,7 +351,8 @@ document; the host may change them per connection.
 A message is longer than its route allows when its total length exceeds the
 [largest encoding](Schemas.md#largest-encoding) of the route's bound root, plus the mode
 byte of a [topic message](#topic-messages): `network.messageTooLarge`. A side sends packets no larger than the smaller of its own
-packet limit and the peer's announced one.
+packet limit and the peer's announced one, and transfers no larger than the smaller transfer
+limit. Deflate is used only when both sides accept it.
 
 The frame bucket starts full with as many frames as the limit and refills with the limit
 per second, counted in exact integer steps of one microsecond. The send budget is a
@@ -268,7 +368,7 @@ Every data packet carries a sequence number, 0 for the first and then one higher
 packet modulo 65536, and from the first received data packet on an acknowledgement: the
 newest received sequence and a bit for each of the 32 sequences before it, bit 0 for the
 sequence one older, set when that sequence was received. A data packet with at least one
-message frame, a keepalive and a [probe](#datagram-delivery) ask for acknowledgement and
+message or cancel frame, a keepalive and a [probe](#datagram-delivery) ask for acknowledgement and
 set flag bit 1; a packet that only acknowledges or [confirms](#confirmation-frames) does
 not, so acknowledgements never answer each other. An asking packet is acknowledged by the next
 data packet, which a side sends at the latest after the acknowledgement delay. A side
@@ -349,7 +449,8 @@ a data packet that asks even when no frame is due.
 **Reliable and bulk messages.** Each class sends its messages in order as on other
 transports; a message keeps its place in the send queue and counts toward the queue limit
 until every byte of it is acknowledged, and the queue head leaves then. At most 8192
-messages per class are started and still queued; the next one waits. In a packet each
+messages per class are started and still queued; the next one waits. A cancelled
+transfer leaves the queue at once; its lost fragments are not resent. In a packet each
 class first resends the ranges of its lost fragments in the order they were lost, then
 continues with new fragments. A range that does not fit the packet is split; its rest
 waits. A message of total 0 is acknowledged when its one frame is.
@@ -362,8 +463,8 @@ range received already keep their first value. A message counts its total toward
 pending received bytes from its first frame. Complete messages are reported in id order:
 a message complete before an earlier one waits for it.
 
-**Packet order.** A data packet carries owed confirmation frames first, then reliable
-resends and new reliable fragments, then per latest route its resends, its current
+**Packet order.** A data packet carries owed confirmation frames first, then lost and new
+cancel frames, then reliable resends and new reliable fragments, then per latest route its resends, its current
 message and a newer one, then bulk resends and new bulk fragments.
 
 ### Latest messages on datagrams
@@ -394,6 +495,7 @@ an owed confirmation makes a data packet due like a received asking packet.
 | Field | Encoding |
 | --- | --- |
 | channel | varint `0` |
+| kind | 1 byte `0` |
 | topic | varint, the channel of the topic's route |
 | number | 2 bytes, the state's number |
 
@@ -428,7 +530,7 @@ key of 32 bytes and a window length, and checks each datagram of an unknown addr
 | accept | the cookie is valid | create a server connection and pass it the datagram |
 
 Reading the fields within the bounds means: the version varint, the 8 bytes of the
-network hash, a route count from 1 to 64 with its hashes, the two limit varints, a token
+network hash, a route count from 1 to 64 with its hashes, the four limit varints, a token
 of at most 512 bytes and a cookie of at most 64 bytes. The connection checks the version.
 
 A cookie is 24 bytes: the window number as 8 bytes, signed, the current time divided by
@@ -459,8 +561,10 @@ connection ignores received data and sends nothing beyond its `close` packet.
 | --- | --- |
 | `connecting` | the client's token; server only |
 | `connected` | |
-| `message` | route index and payload; for a topic, the full record |
+| `message` | route index and payload; for a topic, the full record; for a transfer, its data and id |
 | `closed` | code, detail and whether the peer sent it |
+| `transferProgress` | route index, transfer id, bytes and total of the transfer's message |
+| `transferCancelled` | route index, transfer id, code and whether the peer cancelled it |
 
 A connection reports events in the order they arise. A `message` event's payload is valid
 until the next event is taken.
@@ -499,6 +603,8 @@ its last field are `network.malformed`, and so is an unknown type.
 | binding hashes | 8 bytes per route, in route order |
 | packet limit | varint, 1200 to 65535 |
 | baseline limit | varint, 0 to 1073741824 |
+| transfer limit | varint, 0 to 1073741824 |
+| compressions | varint, bit 0 for Deflate; another bit set is `network.malformed` |
 | token | varint length up to 512, then the bytes |
 | cookie | varint length up to 64, then the bytes; length `0` on a stream or message transport |
 
@@ -512,7 +618,8 @@ the root of each route of the server whose binding hash differs or which the cli
 lacks, in route order and separated by `, `; it names the network when no root differs.
 
 **`welcome`** (server to client): version varint `1`, then the server's packet limit as a
-varint, 1200 to 65535, and its baseline limit as a varint, 0 to 1073741824.
+varint, 1200 to 65535, its baseline limit and its transfer limit as varints, 0 to
+1073741824 each, and its compressions as in `hello`.
 
 **`retry`** (server to client, datagram only): the cookie as varint length 1 to 64, then
 the bytes. A `retry` on a stream or message transport or received by a server is
@@ -526,7 +633,7 @@ is sent.
 
 | Field | Encoding |
 | --- | --- |
-| flags | 1 byte; bit 0 is set when an acknowledgement follows, bit 1 when the packet asks for acknowledgement; the other bits are zero, and a packet with message frames sets bit 1 |
+| flags | 1 byte; bit 0 is set when an acknowledgement follows, bit 1 when the packet asks for acknowledgement; the other bits are zero, and a packet with message or cancel frames sets bit 1 |
 | sequence | 2 bytes |
 | acknowledgement | 2 bytes newest received sequence, 4 bytes earlier sequences, when flagged |
 | frames | until the end of the packet |
@@ -544,20 +651,18 @@ is sent.
 
 A message is sent in one frame or, when it does not fit, in fragments of consecutive
 offsets. The sender fills each packet: a fragment takes the largest chunk that fits the
-remaining space. On a datagram transport channel 0 is a
-[confirmation frame](#confirmation-frames).
+remaining space. Channel 0 is a [control frame](#control-frames).
 
 Reliable messages are numbered from 0 per direction across all reliable routes, bulk
 messages likewise across bulk routes, and latest messages per route; the number wraps
-from 65535 to 0. A reliable, bulk or latest message takes its number when its first
-fragment is sent.
+from 65535 to 0. A reliable or latest message takes its number when its first fragment
+is sent; a bulk message, a [transfer](#transfers), when it is queued.
 
 The receiver checks each message frame. The first three checks apply on every
 transport; on a datagram transport [datagram delivery](#datagram-delivery) replaces the
 others:
 
-- a channel beyond the route count, or of 0 on a stream or message transport, is
-  `network.malformed`; a route the peer does
+- a channel beyond the route count is `network.malformed`; a route the peer does
   not send is `network.unexpectedRoute`;
 - a total beyond the route's largest encoding is `network.messageTooLarge`;
 - a chunk of length 0 in a message of nonzero total, or a chunk ending beyond the total, is
@@ -570,6 +675,26 @@ others:
 - anything else is `network.malformed`.
 
 A message is complete and reported when its chunks reach its total.
+
+### Control frames
+
+A frame on channel 0 is a control frame; a kind byte follows the channel. Kind `0` is a
+[confirmation frame](#confirmation-frames), valid only on a datagram transport. Kind `1`
+is a cancel frame of a [transfer](#transfers):
+
+| Field | Encoding |
+| --- | --- |
+| channel | varint `0` |
+| kind | 1 byte `1` |
+| route | varint, the channel of the transfer's bulk route |
+| transfer id | 2 bytes |
+| code | text of 1 to 64 bytes from `!` to `~` |
+
+A cancel names a route the sender of the transfer sends; the receiver of the transfer
+sends one back for a transfer that failed a check. Another kind, a route that is not a
+bulk route, or a malformed field is `network.malformed`. On a datagram transport a
+packet with a cancel frame asks for acknowledgement, and a cancel frame in a packet that
+does not ask is `network.malformed`. Control frames count toward the frame limit.
 
 ### Topic messages
 
@@ -618,6 +743,9 @@ endpoint path is chosen by the host. A text WebSocket message closes with
 | `network.unexpectedRoute` | a frame uses a route the peer does not send |
 | `network.closed` | the host closed the connection |
 | `network.transportClosed` | the transport ended without a `close` packet |
+| `network.transferTooLarge` | a transfer's size exceeds the receiver's transfer limit; cancels the transfer |
+| `network.transferCorrupt` | a transfer's header, compressed data or hash is invalid; cancels the transfer |
+| `network.transferCancelled` | the host cancelled a transfer without its own code |
 
 ## Security
 

@@ -136,7 +136,7 @@ def verify(workspace):
         source.mkdir(parents=True)
         shutil.copy2(ROOT / "implementation/swift/verification" / consumer / "main.swift", source / "main.swift")
         dependencies = ", ".join(f'.product(name: "{name}", package: "GameEventScript")' for name in modules)
-        (directory / "Package.swift").write_text(f'''// swift-tools-version: 6.0
+        (directory / "Package.swift").write_text(f'''// swift-tools-version: 6.1
 import PackageDescription
 let package = Package(name: "{consumer}",
     platforms: [.macOS("10.15.4")],

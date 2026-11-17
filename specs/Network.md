@@ -16,14 +16,14 @@ allocation of its own resources at run time: bytes and the current time go in, b
 and events come out. Transports are plug-ins around it. Equal inputs at equal times give
 equal bytes and events in every port.
 
-Not part of this version: publish/subscribe with baselines per subscriber, datagram
-transports (UDP), bulk transfers and encryption.
+Not part of this version: datagram transports (UDP), bulk transfers and encryption.
 
 ## Principles
 
 - A payload is the encoding of one record or message of a route's root, produced and
-  read by the [schema writer and reader](Schemas.md#writer-and-reader). The session never
-  decodes a payload.
+  read by the [schema writer and reader](Schemas.md#writer-and-reader). The session
+  decodes no payload; it only converts the states of a [topic](#topics) between full
+  records and [deltas](Schemas.md#deltas).
 - Both sides hold the same network declaration bound with the same parameter values.
   The handshake compares hashes and closes the session on any difference.
 - Data from the peer is untrusted. Every limit is known before a packet is read; a
@@ -77,7 +77,7 @@ allowed. Each route stays on one line.
 
 A network shares the namespace of schemas, messages, message sets and tag sets. It is no
 type: a field or another route cannot name it. Code generation alone accepts it as a root and
-writes its [constants](Schemas.md#network-constants). A root may be abstract
+writes its [constants and typed functions](Schemas.md#network-constants). A root may be abstract
 nowhere in a network.
 
 | Code | Condition |
@@ -165,17 +165,60 @@ a newer message of the same route then waits in its place and is itself replacea
 
 ### Sending
 
-Sending a payload on a route returns a status and never throws:
+A side sends a payload on its `sends` routes and publishes one on its `publishes` routes,
+the [topics](#topics). Both return a status and never throw; the checks apply in table
+order:
 
 | Status | Meaning |
 | --- | --- |
-| `queued` | the message is queued |
+| `invalidRoute` | the route index is out of range, or the route is not sent by this side with this verb |
 | `notConnected` | the connection is not `Connected` |
-| `queueFull` | the reliable and bulk queue would exceed its byte limit |
+| `notSubscribed` | a published topic of the server is not subscribed |
 | `messageTooLarge` | the payload is longer than the route root's largest encoding |
-| `invalidRoute` | the route index is out of range or the route is not sent by this side |
+| `queueFull` | the reliable and bulk queue would exceed its byte limit |
+| `queued` | the message is queued |
 
 A latest message never makes the queue full; it replaces the waiting one.
+
+### Topics
+
+A topic is a `publishes` route. Its messages are states: each one is a full record of the
+topic's schema, and the receiver gets the full record. On the wire a state travels as a
+full record or as a [delta](Schemas.md#deltas) against an earlier state the receiver has
+confirmed, whichever is shorter.
+
+**Subscriptions.** The server decides which client receives which of its topics. A server
+connection starts with none of them subscribed; the host subscribes and unsubscribes a
+topic per connection, and publishing on a topic that is not subscribed reports
+`notSubscribed`. Both are usage errors on a client connection and for a route that is no
+topic the server publishes, and do nothing when the state does not change. Subscribing
+sends nothing by itself; the host publishes the current state when it wants the client to
+start with it. Unsubscribing drops the waiting latest state of the topic and the
+sender's ring; a latest state already started is completed and reliable states already
+queued are sent. The topics a client publishes are always subscribed.
+
+**Numbering.** A side numbers the states of each topic it sends from 0: a reliable state
+when it is published, a latest state when its first fragment is sent. A latest state
+replaced before it started gets no number. The receiver numbers the states it receives
+per topic the same way, so both count the same states.
+
+**Rings.** Each side holds a ring of states per topic and direction. When a state enters
+it, the oldest states leave while the ring holds more than 32 states or more than the
+baseline limit of full record bytes, but the newest state always stays. The baseline
+limit is the smaller of the limits both sides announce in the handshake.
+
+**Sending a state.** Its base is the newest state of the sender's ring that is
+confirmed: the packet carrying its last fragment is acknowledged. On a stream or message
+transport an acknowledgement confirms every packet up to the sequence it names. The
+sender writes a delta against the base when there is one, the
+[delta encoding](Schemas.md#deltas-between-records) succeeds, and the delta is shorter
+than the full record; otherwise the full record. Then the state enters the ring.
+
+**Receiving a state.** The receiver takes the base from its ring, decodes the delta
+against it and reports the full record; a full record is reported as received. The state
+then enters the receiver's ring. The receiver's ring always still holds the base: it
+received the base and, after it, only states that also entered the sender's ring since,
+so the states from the base on fit the same limits.
 
 ### Limits
 
@@ -185,6 +228,7 @@ document; the host may change them per connection.
 | Limit | Default | Exceeded |
 | --- | --- | --- |
 | largest packet received and sent, 1200 to 65535 bytes | 16384 | `network.packetTooLarge` |
+| baseline limit: full record bytes of a topic's ring, 0 to 1073741824 | 65536 | older states leave the ring |
 | pending received bytes: incomplete messages and undelivered events | 4194304 | `network.queueFull` |
 | frames received per second, token bucket of one second | 4096 | `network.rateExceeded` |
 | queued reliable and bulk bytes to send | 1048576 | status `queueFull` |
@@ -194,8 +238,8 @@ document; the host may change them per connection.
 | send budget in bytes per second, 0 for none | 0 | sending waits |
 
 A message is longer than its route allows when its total length exceeds the
-[largest encoding](Schemas.md#largest-encoding) of the route's bound root:
-`network.messageTooLarge`. A side sends packets no larger than the smaller of its own
+[largest encoding](Schemas.md#largest-encoding) of the route's bound root, plus the mode
+byte of a [topic message](#topic-messages): `network.messageTooLarge`. A side sends packets no larger than the smaller of its own
 packet limit and the peer's announced one.
 
 The frame bucket starts full with as many frames as the limit and refills with the limit
@@ -247,7 +291,7 @@ connection ignores received data and sends nothing beyond its `close` packet.
 | --- | --- |
 | `connecting` | the client's token; server only |
 | `connected` | |
-| `message` | route index and payload |
+| `message` | route index and payload; for a topic, the full record |
 | `closed` | code, detail and whether the peer sent it |
 
 A connection reports events in the order they arise. A `message` event's payload is valid
@@ -286,6 +330,7 @@ its last field are `network.malformed`, and so is an unknown type.
 | route count | varint, 1 to 64 |
 | binding hashes | 8 bytes per route, in route order |
 | packet limit | varint, 1200 to 65535 |
+| baseline limit | varint, 0 to 1073741824 |
 | token | varint length up to 512, then the bytes |
 | cookie | varint length, `0` in this version |
 
@@ -295,7 +340,7 @@ the root of each route of the server whose binding hash differs or which the cli
 lacks, in route order and separated by `, `; it names the network when no root differs.
 
 **`welcome`** (server to client): version varint `1`, then the server's packet limit as a
-varint, 1200 to 65535.
+varint, 1200 to 65535, and its baseline limit as a varint, 0 to 1073741824.
 
 **`close`**: the code as text of 1 to 64 bytes from `!` to `~`, then the detail as
 UTF-8 text of at most 512 bytes. A longer detail is shortened to whole scalars before it
@@ -345,6 +390,19 @@ The receiver checks each frame:
 - anything else is `network.malformed`.
 
 A message is complete and reported when its chunks reach its total.
+
+### Topic messages
+
+A message of a [topic](#topics) starts with a mode byte:
+
+| Mode | Rest of the message |
+| --- | --- |
+| 0 | the full record |
+| 1 to 32 | a delta against the state that many states before this one in the topic's numbering |
+
+The receiver closes with `network.malformed` when a topic message is empty, its mode is
+above 32, its base is not in the ring, or the delta does not decode against the base or
+leaves bytes over.
 
 ### Transports
 
@@ -399,7 +457,7 @@ owns the member names per port.
 | connection | `GesNetworkConnection` | `GesNetworkConnection` |
 | options | `GesNetworkOptions` | `GesNetworkOptions` |
 | event | `GesNetworkEvent`, a `ref struct` with a borrowed payload | `GesNetworkEvent`, a struct with a borrowed payload |
-| send status | `GesNetworkSendStatus` | `GesNetworkSendStatus` |
+| send and publish status | `GesNetworkSendStatus` | `GesNetworkSendStatus` |
 | codes | `GesNetworkCodes` | `GesNetworkCodes` |
 | in-process transport | `GesNetworkLoopback` | `GesNetworkLoopback` |
 | simulated network | `GesNetworkSimulator` | `GesNetworkSimulator` |
@@ -410,9 +468,11 @@ A host drives a connection like this:
    a server connection with the bound network and the current time.
 2. Pass every received packet or stream chunk with the current time.
 3. Take events until none is left; accept or refuse a `connecting` client.
-4. Take packets to transmit into a buffer until none is left. The buffer holds at least
+4. Send and publish, directly or through the [typed functions](Schemas.md#network-constants)
+   of generated code, and on the server subscribe and unsubscribe topics.
+5. Take packets to transmit into a buffer until none is left. The buffer holds at least
    1200 bytes; a smaller one is a usage error.
-5. Call `advance` with the current time no later than the connection's next deadline,
+6. Call `advance` with the current time no later than the connection's next deadline,
    then take packets again.
 
 ### Simulated network

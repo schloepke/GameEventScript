@@ -6,7 +6,7 @@ import GameEventScriptRuntime
 
 // Runs scripted steps over a client and a server connection and records their events and packets as trace lines.
 enum NetworkApiObservations {
-    private static let steps: Set<String> = ["advance", "accept", "refuse", "close", "send", "receive", "transmit", "transportClosed", "budget"]
+    private static let steps: Set<String> = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget"]
 
     static func validate(_ input: Input) throws {
         try Validation.fields(input, ["sources", "clientSources", "network", "options", "clientOptions", "token", "link", "steps"])
@@ -71,6 +71,11 @@ enum NetworkApiObservations {
                 case "send":
                     let status = connection.send(route: Int(try integer(step.required("route"))), payload: try payload(step.required("payload")))
                     trace.append("\(name) send \(status)")
+                case "publish":
+                    let status = connection.publish(route: Int(try integer(step.required("route"))), payload: try payload(step.required("payload")))
+                    trace.append("\(name) publish \(status)")
+                case "subscribe": try connection.subscribe(route: Int(try integer(step.required("route"))))
+                case "unsubscribe": try connection.unsubscribe(route: Int(try integer(step.required("route"))))
                 case "receive": try connection.receive(bytes(step.text("bytes")), now: now)
                 case "transmit":
                     var buffer = [UInt8](repeating: 0, count: connection.maxPacketBytes + 5)
@@ -105,6 +110,7 @@ enum NetworkApiObservations {
             switch entry.key {
             case "transport": options.transport = entry.value.stringValue == "stream" ? .stream : .message
             case "maxPacketBytes": options.maxPacketBytes = Int(try integer(entry.value))
+            case "maxBaselineBytes": options.maxBaselineBytes = try integer(entry.value)
             case "maxPendingReceiveBytes": options.maxPendingReceiveBytes = try integer(entry.value)
             case "maxFramesPerSecond": options.maxFramesPerSecond = Int(try integer(entry.value))
             case "maxSendQueueBytes": options.maxSendQueueBytes = try integer(entry.value)

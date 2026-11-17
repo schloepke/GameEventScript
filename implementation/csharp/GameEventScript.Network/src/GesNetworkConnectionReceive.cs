@@ -152,7 +152,7 @@ public sealed partial class GesNetworkConnection
 
         var hashes = packet.Slice(position, 8 * (int)count);
         position += hashes.Length;
-        if (!ReadPacketLimit(packet, ref position, out var limit)) return;
+        if (!ReadPacketLimit(packet, ref position, out var limit) || !ReadBaselineLimit(packet, ref position, out var baseline)) return;
         if (Wire.ReadVarint(packet, ref position, out var tokenLength) != 1 || tokenLength > Wire.MaximumTokenBytes || packet.Length - position < tokenLength)
         {
             Fail(GesNetworkCodes.Malformed);
@@ -174,6 +174,7 @@ public sealed partial class GesNetworkConnection
         }
 
         _peerPacketLimit = limit;
+        _baselineLimit = Math.Min(_maxBaseline, baseline);
         State = GesNetworkState.AwaitAccept;
         if (!AddEvent(GesNetworkEventKind.Connecting, -1, token, true, string.Empty, string.Empty, false)) Fail(GesNetworkCodes.QueueFull);
     }
@@ -196,7 +197,8 @@ public sealed partial class GesNetworkConnection
     private void ReceiveWelcome(ReadOnlySpan<byte> packet)
     {
         var position = 1;
-        if (!ReadVersion(packet, ref position) || !ReadPacketLimit(packet, ref position, out var limit)) return;
+        if (!ReadVersion(packet, ref position) || !ReadPacketLimit(packet, ref position, out var limit) ||
+            !ReadBaselineLimit(packet, ref position, out var baseline)) return;
         if (position != packet.Length)
         {
             Fail(GesNetworkCodes.Malformed);
@@ -204,6 +206,7 @@ public sealed partial class GesNetworkConnection
         }
 
         _peerPacketLimit = limit;
+        _baselineLimit = Math.Min(_maxBaseline, baseline);
         State = GesNetworkState.Connected;
         AddEvent(GesNetworkEventKind.Connected, -1, default, false, string.Empty, string.Empty, false);
     }
@@ -226,6 +229,19 @@ public sealed partial class GesNetworkConnection
         }
 
         limit = (int)value;
+        return true;
+    }
+
+    private bool ReadBaselineLimit(ReadOnlySpan<byte> packet, ref int position, out long limit)
+    {
+        limit = 0;
+        if (Wire.ReadVarint(packet, ref position, out var value) != 1 || value > Wire.MaximumBaselineBytes)
+        {
+            Fail(GesNetworkCodes.Malformed);
+            return false;
+        }
+
+        limit = value;
         return true;
     }
 
@@ -356,10 +372,7 @@ public sealed partial class GesNetworkConnection
         {
             if (assembly.Active || id != assembly.NextId) return Fail(GesNetworkCodes.Malformed);
             assembly.NextId++;
-            if (length == total)
-            {
-                return AddEvent(GesNetworkEventKind.Message, route, chunk, true, string.Empty, string.Empty, false) || Fail(GesNetworkCodes.QueueFull);
-            }
+            if (length == total) return Deliver(route, chunk);
 
             assembly.Start(channel, id, total);
         }
@@ -375,7 +388,36 @@ public sealed partial class GesNetworkConnection
         assembly.Active = false;
         // The message's bytes are pending already; the event counts them again.
         _pending -= total;
-        return AddEvent(GesNetworkEventKind.Message, route, assembly.Message, true, string.Empty, string.Empty, false);
+        return Deliver(route, assembly.Message);
+    }
+
+    // Reports a complete message; a topic message becomes its state's full record. False when it closed the connection.
+    private bool Deliver(int route, ReadOnlySpan<byte> message)
+    {
+        if (_topics[route] is { } topic)
+        {
+            if (message.IsEmpty || message[0] > GesNetworkTopic.MaximumStates) return Fail(GesNetworkCodes.Malformed);
+            var rest = message.Slice(1);
+            if (message[0] != 0)
+            {
+                if (!topic.Find(message[0], out var baseline)) return Fail(GesNetworkCodes.Malformed);
+                try
+                {
+                    var decoded = GesSchemaDelta.Decode(topic.Schema, rest, baseline, topic.Scratch);
+                    if (decoded.DeltaByteCount != rest.Length) return Fail(GesNetworkCodes.Malformed);
+                    rest = topic.Scratch.AsSpan(0, decoded.ByteCount);
+                }
+                catch (GesWireException)
+                {
+                    return Fail(GesNetworkCodes.Malformed);
+                }
+            }
+
+            topic.Add(rest, _baselineLimit);
+            message = rest;
+        }
+
+        return AddEvent(GesNetworkEventKind.Message, route, message, true, string.Empty, string.Empty, false) || Fail(GesNetworkCodes.QueueFull);
     }
 
     // Closes the connection with an error found in received data and returns false.

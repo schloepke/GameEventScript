@@ -144,6 +144,13 @@ internal sealed class GesNetworkLatestSlot
         HasCurrent = HasWaiting = Started = false;
         Offset = 0;
     }
+
+    // Drops the messages not yet started; a started one is completed.
+    internal void DropUnstarted()
+    {
+        HasWaiting = false;
+        if (!Started) HasCurrent = false;
+    }
 }
 
 // A message being received in fragments.

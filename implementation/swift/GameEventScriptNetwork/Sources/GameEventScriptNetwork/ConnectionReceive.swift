@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+import GameEventScriptRuntime
+
 private typealias Wire = GesNetworkWire
 
 extension GesNetworkConnection {
@@ -144,7 +146,8 @@ extension GesNetworkConnection {
         let hashes = UnsafeRawBufferPointer(rebasing: packet[position..<position + 8 * Int(count)])
         position += hashes.count
         var limit = 0
-        if !readPacketLimit(packet, &position, &limit) { return }
+        var baseline: Int64 = 0
+        if !readPacketLimit(packet, &position, &limit) || !readBaselineLimit(packet, &position, &baseline) { return }
         var tokenLength: UInt32 = 0
         if Wire.readVarint(packet, &position, &tokenLength) != 1 || tokenLength > UInt32(Wire.maximumTokenBytes) || packet.count - position < Int(tokenLength) {
             fail(GesNetworkCodes.malformed)
@@ -165,6 +168,7 @@ extension GesNetworkConnection {
         }
 
         peerPacketLimit = limit
+        baselineLimit = min(maxBaseline, baseline)
         state = .awaitAccept
         if !addEvent(.connecting, -1, token, true, "", "", false) { fail(GesNetworkCodes.queueFull) }
     }
@@ -184,13 +188,15 @@ extension GesNetworkConnection {
     private func receiveWelcome(_ packet: UnsafeRawBufferPointer) {
         var position = 1
         var limit = 0
-        if !readVersion(packet, &position) || !readPacketLimit(packet, &position, &limit) { return }
+        var baseline: Int64 = 0
+        if !readVersion(packet, &position) || !readPacketLimit(packet, &position, &limit) || !readBaselineLimit(packet, &position, &baseline) { return }
         if position != packet.count {
             fail(GesNetworkCodes.malformed)
             return
         }
 
         peerPacketLimit = limit
+        baselineLimit = min(maxBaseline, baseline)
         state = .connected
         _ = addEvent(.connected, -1, UnsafeRawBufferPointer(start: nil, count: 0), false, "", "", false)
     }
@@ -214,6 +220,16 @@ extension GesNetworkConnection {
             return false
         }
         limit = Int(value)
+        return true
+    }
+
+    private func readBaselineLimit(_ packet: UnsafeRawBufferPointer, _ position: inout Int, _ limit: inout Int64) -> Bool {
+        var value: UInt32 = 0
+        if Wire.readVarint(packet, &position, &value) != 1 || value > UInt32(Wire.maximumBaselineBytes) {
+            fail(GesNetworkCodes.malformed)
+            return false
+        }
+        limit = Int64(value)
         return true
     }
 
@@ -328,9 +344,7 @@ extension GesNetworkConnection {
         if offset == 0 {
             if assembly.active || id != assembly.nextId { return fail(GesNetworkCodes.malformed) }
             assembly.nextId &+= 1
-            if length == total {
-                return addEvent(.message, route, chunk, true, "", "", false) || fail(GesNetworkCodes.queueFull)
-            }
+            if length == total { return deliver(route, chunk) }
             assembly.start(channel, id, total)
         } else if !assembly.active || assembly.channel != channel || assembly.id != id || assembly.total != total || assembly.received != Int(offset) {
             return fail(GesNetworkCodes.malformed)
@@ -343,7 +357,27 @@ extension GesNetworkConnection {
         assembly.active = false
         // The message's bytes are pending already; the event counts them again.
         pending -= Int64(total)
-        return assembly.withMessage { addEvent(.message, route, $0, true, "", "", false) }
+        return assembly.withMessage { deliver(route, $0) }
+    }
+
+    // Reports a complete message; a topic message becomes its state's full record. False when it closed the connection.
+    private func deliver(_ route: Int, _ message: UnsafeRawBufferPointer) -> Bool {
+        var message = message
+        if let topic = topics[route] {
+            if message.isEmpty || Int(message[0]) > GesNetworkTopic.maximumStates { return fail(GesNetworkCodes.malformed) }
+            var rest = UnsafeRawBufferPointer(rebasing: message[1...])
+            if message[0] != 0 {
+                var baseline = UnsafeRawBufferPointer(start: nil, count: 0)
+                if !topic.find(Int(message[0]), &baseline) { return fail(GesNetworkCodes.malformed) }
+                guard let decoded = try? GesSchemaDelta.decode(topic.schema, delta: rest, baseline: baseline, into: topic.scratch),
+                    decoded.deltaByteCount == rest.count
+                else { return fail(GesNetworkCodes.malformed) }
+                rest = UnsafeRawBufferPointer(rebasing: topic.scratch[0..<decoded.byteCount])
+            }
+            topic.add(rest, baselineLimit)
+            message = rest
+        }
+        return addEvent(.message, route, message, true, "", "", false) || fail(GesNetworkCodes.queueFull)
     }
 
     // Closes the connection with an error found in received data and returns false.

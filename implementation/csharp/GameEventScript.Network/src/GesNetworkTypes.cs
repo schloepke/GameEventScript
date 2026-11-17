@@ -60,8 +60,11 @@ public enum GesNetworkSendStatus
     /// <summary>The payload is longer than the route root's largest encoding.</summary>
     MessageTooLarge,
 
-    /// <summary>The route index is out of range or the route is not sent by this side.</summary>
-    InvalidRoute
+    /// <summary>The route index is out of range, or the route is not sent by this side with this verb.</summary>
+    InvalidRoute,
+
+    /// <summary>The server's host has not subscribed the client to the topic.</summary>
+    NotSubscribed
 }
 
 /// <summary>The state of a connection.</summary>
@@ -179,6 +182,12 @@ public sealed class GesNetworkOptions
     /// <summary>Gets or sets the initial send budget in bytes per second; 0 for none. The default is 0.</summary>
     public long SendBudgetBytesPerSecond { get; set; }
 
+    /// <summary>
+    /// Gets or sets the baseline limit this side announces, 0 to 1073741824: the full record bytes a topic's ring of recent
+    /// states holds. The smaller limit of both sides applies. The default is 65536.
+    /// </summary>
+    public long MaxBaselineBytes { get; set; } = 65536;
+
     internal void Validate()
     {
         if (MaxPacketBytes is < GesNetworkWire.MinimumPacketBytes or > GesNetworkWire.MaximumPacketBytes)
@@ -190,6 +199,7 @@ public sealed class GesNetworkOptions
         if (KeepaliveMicroseconds < 1) throw new ArgumentOutOfRangeException(nameof(KeepaliveMicroseconds));
         if (AckDelayMicroseconds < 0) throw new ArgumentOutOfRangeException(nameof(AckDelayMicroseconds));
         if (SendBudgetBytesPerSecond < 0) throw new ArgumentOutOfRangeException(nameof(SendBudgetBytesPerSecond));
+        if (MaxBaselineBytes is < 0 or > GesNetworkWire.MaximumBaselineBytes) throw new ArgumentOutOfRangeException(nameof(MaxBaselineBytes));
         if (Transport is not (GesNetworkTransport.Message or GesNetworkTransport.Stream))
             throw new ArgumentOutOfRangeException(nameof(Transport));
     }

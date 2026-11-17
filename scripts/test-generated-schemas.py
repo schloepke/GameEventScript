@@ -500,7 +500,7 @@ def main():
             raise SystemExit(f"The gate schema does not generate: {error}")
         target.write_text(code, encoding="utf-8")
     # The checked-in wire and model code of the role fixture, which compare-schema-generation.py keeps current, compiles
-    # under the same rules: models of every field type, spatial wire fields in 2D and 3D, and the constants of a network.
+    # under the same rules: models of every field type, spatial wire fields in 2D and 3D, and the constants and typed functions of a network.
     for name in ("RolesWire", "RolesModel", "RolesBound", "NetworkWire"):
         shutil.copy(GENERATED_CSHARP / f"{name}.g.cs", csharp / f"{name}.g.cs")
         shutil.copy(GENERATED_SWIFT / f"{name}.swift", swift / f"{name}.swift")
@@ -539,21 +539,28 @@ def main():
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj'}" />
+    <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Network/src/GameEventScript.Network.csproj'}" />
   </ItemGroup>
 </Project>
 """, encoding="utf-8")
     (swift / "main.swift").write_text(swift_program(entries), encoding="utf-8")
-    (WORK / "swift/Package.swift").write_text(f"""// swift-tools-version: 6.0
+    (WORK / "swift/Package.swift").write_text(f"""// swift-tools-version: 6.1
 import PackageDescription
 
 let package = Package(
     name: "Harness",
     platforms: [.macOS("10.15.4")],
-    dependencies: [.package(path: "{ROOT / 'implementation/swift/GameEventScriptRuntime'}")],
+    dependencies: [
+        .package(path: "{ROOT / 'implementation/swift/GameEventScriptRuntime'}"),
+        .package(path: "{ROOT / 'implementation/swift/GameEventScriptNetwork'}"),
+    ],
     targets: [
         .executableTarget(
             name: "Harness",
-            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
+            dependencies: [
+                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+                .product(name: "GameEventScriptNetwork", package: "GameEventScriptNetwork"),
+            ],
             swiftSettings: [.unsafeFlags(["-warnings-as-errors"]), .define("GES_CHECK_SHARING")]
         ),
         .target(
@@ -569,7 +576,10 @@ let package = Package(
         // The same sources without the check, as release builds of users compile them; one build shares the Runtime.
         .executableTarget(
             name: "Unchecked",
-            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
+            dependencies: [
+                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+                .product(name: "GameEventScriptNetwork", package: "GameEventScriptNetwork"),
+            ],
             swiftSettings: [.unsafeFlags(["-warnings-as-errors"])]
         ),
     ]
@@ -590,6 +600,7 @@ let package = Package(
   <ItemGroup>
     <Compile Include="{csharp}/**/*.g.cs" />
     <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj'}" />
+    <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Network/src/GameEventScript.Network.csproj'}" />
   </ItemGroup>
 </Project>
 """, encoding="utf-8")

@@ -39,6 +39,7 @@ internal static partial class GesSwiftEmitter
         prologue.Line("// swift-format-ignore-file");
         prologue.Blank();
         prologue.Line("import GameEventScriptRuntime");
+        if (layout.Networks.Count > 0) prologue.Line("import GameEventScriptNetwork");
         if (GesComputedEmitter.UsesMath(types.ConvertAll(type => type.Layout.Computed))) GesComputedLibrary.MathImport(prologue);
         prologue.Blank();
         var header = GesSchemaPlanner.Header(layout);
@@ -98,7 +99,12 @@ internal static partial class GesSwiftEmitter
         }
         var sets = GesSchemaPlanner.TagSets(types, "");
         foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
-        foreach (var network in layout.Networks) document.Units.Add(new GesCodeUnit(network.Name, code => Network(code, network, access)));
+        foreach (var network in layout.Networks) document.Units.Add(new GesCodeUnit(network.Name, code => Network(code, network, access, root =>
+        {
+            // A packed root that the models declare has its wire members in an enum `<Name>Wire`.
+            var type = types.Find(candidate => candidate.Name == root)!;
+            return type.Layout.PackedWidth > 0 && packed is null ? (models + root, $"{root}Wire.write(value, into: buffer)") : (root, "value.write(into: buffer)");
+        })));
         context.TopLevel = GesSchemaPlanner.TopLevel(types, sets, layout.Networks);
         if (modelSpace is not null)
         {
@@ -922,10 +928,11 @@ internal static partial class GesSwiftEmitter
 
     private static string Underlying(int count) => count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32";
 
-    // The constants of a network: its hash, the index of each route and the rate of each topic that has one.
-    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access)
+    // The constants of a network, its hash, the index of each route and the rate of each topic that has one, and a
+    // function per route that encodes its root and sends or publishes it.
+    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access, Func<string, (string Type, string Write)> root)
     {
-        code.Line($"/// The network `:{network.Name}`: its hash, the index of each route and the rate of each topic that has one.");
+        code.Line($"/// The network `:{network.Name}`: its hash, the index of each route, the rate of each topic that has one and a typed function per route.");
         code.Open($"{access}enum {network.Name} {{");
         code.Line("/// The network hash over the routes and their bound roots, which the handshake compares.");
         code.Line($"{access}static let hash: UInt64 = 0x{GesSchemaLayoutJson.Hex(network.Hash)}");
@@ -939,6 +946,25 @@ internal static partial class GesSwiftEmitter
             code.Blank();
             code.Line($"/// The shortest interval between two updates of the topic `:{route.Root}` in microseconds.");
             code.Line($"{access}static let {name}EveryMicroseconds: Int64 = {route.RateMicroseconds}");
+        }
+
+        foreach (var route in network.Routes)
+        {
+            var publishes = route.Verb == "publishes";
+            var verb = publishes ? "publish" : "send";
+            var (type, write) = root(route.Root);
+            code.Blank();
+            code.Line($"/// Encodes a record into a buffer and {(publishes ? "publishes" : "sends")} it on the route `{route.Side} {route.Verb} :{route.Root} {route.Class}`.");
+            code.Line("/// - Parameters:");
+            code.Line("///   - value: The record.");
+            code.Line($"///   - connection: The {route.Side}'s connection.");
+            code.Line("///   - buffer: The buffer the record is encoded into; its `maxByteCount` bytes always suffice.");
+            code.Line($"/// - Returns: The status of `GesNetworkConnection.{verb}(route:payload:)`.");
+            code.Line("/// - Throws: `GesWireError` when a value does not fit its field or the buffer is too small.");
+            code.Open($"{access}static func {route.Side}{GesSchemaPlanner.Pascal(verb)}{route.Root}(_ value: {type}, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> GesNetworkSendStatus {{");
+            code.Line($"let count = try {write}");
+            code.Line($"return connection.{verb}(route: {GesSchemaPlanner.Camel(route.Name)}, payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))");
+            code.Close();
         }
 
         code.Close();

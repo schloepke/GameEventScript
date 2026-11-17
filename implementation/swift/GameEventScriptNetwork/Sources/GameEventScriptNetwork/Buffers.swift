@@ -147,6 +147,12 @@ final class GesNetworkLatestSlot {
         offset = 0
     }
 
+    // Drops the messages not yet started; a started one is completed.
+    func dropUnstarted() {
+        hasWaiting = false
+        if !started { hasCurrent = false }
+    }
+
     private static func copy(_ payload: UnsafeRawBufferPointer, into target: inout [UInt8]) {
         if target.count < payload.count { target = [UInt8](repeating: 0, count: max(payload.count, target.count * 2)) }
         if payload.count > 0 {

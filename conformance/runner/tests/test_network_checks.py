@@ -28,6 +28,15 @@ class NetworkInputTests(unittest.TestCase):
         link = prepare(self.cases['simulated-link'])['link']
         self.assertEqual({'seed', 'latencyMicroseconds', 'jitterMicroseconds'}, set(link))
 
+    def test_topic_steps_reach_the_adapter(self):
+        steps = prepare(self.case('handshake-loopback', steps=[
+            {'subscribe': {'side': 'server', 'route': 2}},
+            {'publish': {'side': 'server', 'route': 2, 'payload': '0500'}},
+            {'unsubscribe': {'side': 'server', 'route': 2}}]))['steps']
+        self.assertEqual([{'action': 'subscribe', 'side': 'server', 'route': 2},
+                          {'action': 'publish', 'side': 'server', 'route': 2, 'payload': {'hex': '0500'}},
+                          {'action': 'unsubscribe', 'side': 'server', 'route': 2}], steps)
+
     def test_malformed_steps_are_document_errors(self):
         for step in ({}, {'advance': 0, 'accept': True}, {'jump': 1}, {'advance': -1}, {'advance': '1'},
                      {'accept': False}, {'transmit': 'both'}, {'refuse': 1},
@@ -35,7 +44,10 @@ class NetworkInputTests(unittest.TestCase):
                      {'send': {'side': 'client', 'route': 0, 'payload': {'length': 2, 'seed': 251}}},
                      {'send': {'side': 'client', 'route': 0, 'payload': '00', 'detail': ''}},
                      {'receive': {'side': 'server', 'bytes': '0g'}},
-                     {'budget': {'side': 'server'}}):
+                     {'budget': {'side': 'server'}},
+                     {'publish': {'side': 'server', 'route': 2}},
+                     {'subscribe': {'side': 'server', 'route': 2, 'payload': '00'}},
+                     {'unsubscribe': {'side': 'server'}}):
             with self.assertRaises(InvalidDocument, msg=step):
                 prepare(self.case('handshake-loopback', steps=[step]))
         with self.assertRaises(InvalidDocument):

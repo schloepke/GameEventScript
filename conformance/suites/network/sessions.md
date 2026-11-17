@@ -72,7 +72,7 @@ network:
 
 ## Test: The handshake packets
 
-`hello` carries magic, version, network hash, route binding hashes, packet limit, token and an empty cookie; `welcome` carries version and packet limit.
+`hello` carries magic, version, network hash, route binding hashes, packet limit, baseline limit, token and an empty cookie; `welcome` carries version, packet limit and baseline limit.
 
 ### Case description
 
@@ -86,10 +86,10 @@ networkApi:
   link: "none"
   steps:
     - {"transmit": "client"}
-    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001017400"}}
+    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001808004017400"}}
     - {"accept": true}
     - {"transmit": "server"}
-    - {"receive": {"side": "client", "bytes": "0301808001"}}
+    - {"receive": {"side": "client", "bytes": "0301808001808004"}}
 ```
 
 ### Expectation
@@ -98,10 +98,10 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001017400"
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001808004017400"
     - "server connecting 74"
     - "server connected"
-    - "server packet 0301808001"
+    - "server packet 0301808001808004"
     - "client connected"
   client: {"state": "connected"}
   server: {"state": "connected"}
@@ -125,10 +125,10 @@ networkApi:
   link: "none"
   steps:
     - {"transmit": "client"}
-    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080010000"}}
+    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080040000"}}
     - {"accept": true}
     - {"transmit": "server"}
-    - {"receive": {"side": "client", "bytes": "0301808001"}}
+    - {"receive": {"side": "client", "bytes": "0301808001808004"}}
     - {"send": {"side": "client", "route": 0, "payload": "07"}}
     - {"transmit": "client"}
 ```
@@ -139,10 +139,10 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080010000"
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080040000"
     - "server connecting -"
     - "server connected"
-    - "server packet 0301808001"
+    - "server packet 0301808001808004"
     - "client connected"
     - "client send queued"
     - "client packet 0502000001000000010107"
@@ -166,7 +166,7 @@ networkApi:
   link: "none"
   steps:
     - {"transmit": "client"}
-    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080010000"}}
+    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080040000"}}
     - {"accept": true}
     - {"transmit": "server"}
     - {"receive": {"side": "server", "bytes": "0500000001000000010107"}}
@@ -178,10 +178,10 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080010000"
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080040000"
     - "server connecting -"
     - "server connected"
-    - "server packet 0301808001"
+    - "server packet 0301808001808004"
     - "server closed network.malformed local \"\""
   server: {"state": "closed"}
 ```
@@ -213,7 +213,7 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 35014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001017400"
+    - "client packet 38014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001808004017400"
   client: {"state": "hello"}
   server: {"state": "awaitHello"}
 ```
@@ -323,7 +323,7 @@ network:
 
 ## Test: Send results
 
-Sending never throws: it reports a missing connection, a route of the other side or out of range, an oversized payload and a full queue.
+Sending and publishing never throw: they report a missing connection, a route of the other side, of the other method or out of range, a topic the client is not subscribed to, an oversized payload and a full queue.
 
 ### Case description
 
@@ -342,7 +342,11 @@ networkApi:
     - {"send": {"side": "client", "route": 1, "payload": "01"}}
     - {"send": {"side": "client", "route": 9, "payload": "01"}}
     - {"send": {"side": "client", "route": 0, "payload": "0102"}}
-    - {"send": {"side": "server", "route": 2, "payload": "0102030405"}}
+    - {"send": {"side": "server", "route": 2, "payload": "0100"}}
+    - {"publish": {"side": "server", "route": 1, "payload": "01"}}
+    - {"publish": {"side": "server", "route": 2, "payload": "0100"}}
+    - {"subscribe": {"side": "server", "route": 2}}
+    - {"publish": {"side": "server", "route": 2, "payload": "0102030405"}}
     - {"send": {"side": "server", "route": 1, "payload": "0102030405"}}
     - {"send": {"side": "server", "route": 1, "payload": "0102030405"}}
 ```
@@ -360,7 +364,10 @@ network:
     - "client send invalidRoute"
     - "client send invalidRoute"
     - "client send messageTooLarge"
-    - "server send messageTooLarge"
+    - "server send invalidRoute"
+    - "server publish invalidRoute"
+    - "server publish notSubscribed"
+    - "server publish messageTooLarge"
     - "server send queued"
     - "server send queueFull"
   server: {"queuedSendBytes": 5}
@@ -425,9 +432,10 @@ networkApi:
     - {"advance": 0}
     - {"accept": true}
     - {"advance": 0}
-    - {"send": {"side": "server", "route": 2, "payload": "0100"}}
-    - {"send": {"side": "server", "route": 2, "payload": "0200"}}
-    - {"send": {"side": "server", "route": 2, "payload": "0300"}}
+    - {"subscribe": {"side": "server", "route": 2}}
+    - {"publish": {"side": "server", "route": 2, "payload": "0100"}}
+    - {"publish": {"side": "server", "route": 2, "payload": "0200"}}
+    - {"publish": {"side": "server", "route": 2, "payload": "0300"}}
     - {"advance": 1000}
 ```
 
@@ -440,9 +448,9 @@ network:
     - "server connecting -"
     - "server connected"
     - "client connected"
-    - "server send queued"
-    - "server send queued"
-    - "server send queued"
+    - "server publish queued"
+    - "server publish queued"
+    - "server publish queued"
     - "client message 2 0300"
 ```
 
@@ -728,7 +736,8 @@ networkApi:
     - {"accept": true}
     - {"advance": 60000}
     - {"send": {"side": "client", "route": 0, "payload": "01"}}
-    - {"send": {"side": "server", "route": 2, "payload": "0500"}}
+    - {"subscribe": {"side": "server", "route": 2}}
+    - {"publish": {"side": "server", "route": 2, "payload": "0500"}}
     - {"advance": 90000}
     - {"send": {"side": "client", "route": 0, "payload": "02"}}
     - {"advance": 120000}
@@ -745,7 +754,7 @@ network:
     - "server connected"
     - "client connected"
     - "client send queued"
-    - "server send queued"
+    - "server publish queued"
     - "client message 2 0500"
     - "server message 0 01"
     - "client send queued"

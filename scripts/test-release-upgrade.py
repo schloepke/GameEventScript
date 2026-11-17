@@ -156,7 +156,7 @@ def swift(workspace, candidate):
             (sources / 'main.swift').write_bytes(consumer_source(revision, 'swift', name))
             products = ', '.join(f'.product(name: "GameEventScript{module}", package: "GameEventScript")'
                                  for module in (modules(version) if name == 'SwiftPMConsumer' else ('Runtime',)))
-            (directory / 'Package.swift').write_text(f'''// swift-tools-version: 6.0
+            (directory / 'Package.swift').write_text(f'''// swift-tools-version: 6.1
 import PackageDescription
 let package = Package(name: "{name}", platforms: [.macOS("10.15.4")],
     dependencies: [.package(url: {json.dumps(str(repository))}, exact: "{version}")],

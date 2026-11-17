@@ -9,6 +9,7 @@ enum GesNetworkWire {
     static let maximumDetailBytes = 512
     static let maximumCodeBytes = 64
     static let maximumRoutes = 64
+    static let maximumBaselineBytes = 1 << 30
     static let version: UInt32 = 1
 
     static let hello: UInt8 = 1

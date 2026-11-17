@@ -582,7 +582,7 @@ verifies source discovery and unchanged-build object reuse through the build scr
 Run `./scripts/test-swift.sh` and `python3 scripts/verify-swift-api.py`.
 `./scripts/test-swift-linux.sh` runs the Swift port on Linux without .NET (package tests, the supported corpus,
 CLI process checks); Swift CI runs it in the digest-pinned `swift:6.4.0-jammy` release image and builds Runtime,
-Compiler and Generator with the declared minimum Swift 6.0. Docker reproduces both locally.
+Compiler, Generator, Network and Network Sockets with the declared minimum Swift 6.1. Docker reproduces both locally.
 The API snapshot gate invokes the official symbol-graph extractor directly with
 explicit options; Swift Build’s intermediate graphs are not snapshot inputs.
 DocC consumes only explicit `dump-symbol-graph` exports, including extension blocks.

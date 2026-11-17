@@ -13,6 +13,7 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
+using GameEventScript.Network;
 
 namespace GameEventScript.Tests.Generator.Network.Wire
 {
@@ -829,7 +830,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         }
     }
 
-    /// <summary>The network <c>:Game</c>: its hash, the index of each route and the rate of each topic that has one.</summary>
+    /// <summary>The network <c>:Game</c>: its hash, the index of each route, the rate of each topic that has one and a typed function per route.</summary>
     internal static class Game
     {
         /// <summary>The network hash over the routes and their bound roots, which the handshake compares.</summary>
@@ -846,5 +847,32 @@ namespace GameEventScript.Tests.Generator.Network.Wire
 
         /// <summary>The index of the route <c>server sends :Chunk bulk</c>.</summary>
         public const int ServerSendsChunk = 2;
+
+        /// <summary>Encodes <paramref name="value"/> into <paramref name="buffer"/> and sends it on the route <c>client sends :Commands reliable</c>.</summary>
+        /// <param name="connection">The client's connection.</param>
+        /// <param name="value">The record.</param>
+        /// <param name="buffer">The buffer the record is encoded into; its <c>MaxByteCount</c> bytes always suffice.</param>
+        /// <returns>The status of <see cref="GesNetworkConnection.Send(int, ReadOnlySpan{byte})"/>.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the buffer is too small.</exception>
+        public static GesNetworkSendStatus ClientSendCommands(GesNetworkConnection connection, in global::GameEventScript.Tests.Generator.Network.Wire.Commands value, Span<byte> buffer)
+            => connection.Send(ClientSendsCommands, buffer.Slice(0, value.Write(buffer)));
+
+        /// <summary>Encodes <paramref name="value"/> into <paramref name="buffer"/> and publishes it on the route <c>server publishes :World latest</c>.</summary>
+        /// <param name="connection">The server's connection.</param>
+        /// <param name="value">The record.</param>
+        /// <param name="buffer">The buffer the record is encoded into; its <c>MaxByteCount</c> bytes always suffice.</param>
+        /// <returns>The status of <see cref="GesNetworkConnection.Publish(int, ReadOnlySpan{byte})"/>.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the buffer is too small.</exception>
+        public static GesNetworkSendStatus ServerPublishWorld(GesNetworkConnection connection, in global::GameEventScript.Tests.Generator.Network.Wire.World value, Span<byte> buffer)
+            => connection.Publish(ServerPublishesWorld, buffer.Slice(0, value.Write(buffer)));
+
+        /// <summary>Encodes <paramref name="value"/> into <paramref name="buffer"/> and sends it on the route <c>server sends :Chunk bulk</c>.</summary>
+        /// <param name="connection">The server's connection.</param>
+        /// <param name="value">The record.</param>
+        /// <param name="buffer">The buffer the record is encoded into; its <c>MaxByteCount</c> bytes always suffice.</param>
+        /// <returns>The status of <see cref="GesNetworkConnection.Send(int, ReadOnlySpan{byte})"/>.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the buffer is too small.</exception>
+        public static GesNetworkSendStatus ServerSendChunk(GesNetworkConnection connection, in global::GameEventScript.Tests.Generator.Network.Wire.Chunk value, Span<byte> buffer)
+            => connection.Send(ServerSendsChunk, buffer.Slice(0, value.Write(buffer)));
     }
 }

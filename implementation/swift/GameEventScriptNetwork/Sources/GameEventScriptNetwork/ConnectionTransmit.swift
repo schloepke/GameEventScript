@@ -63,6 +63,7 @@ extension GesNetworkConnection {
             position += 8
         }
         position = Wire.writeVarint(packet, position, UInt32(maxPacketBytes))
+        position = Wire.writeVarint(packet, position, UInt32(maxBaseline))
         position = Wire.writeVarint(packet, position, UInt32(token.count))
         for byte in token {
             packet[position] = byte
@@ -73,8 +74,9 @@ extension GesNetworkConnection {
 
     private func writeWelcome(_ packet: UnsafeMutableRawBufferPointer) -> Int {
         packet[0] = Wire.welcome
-        let position = Wire.writeVarint(packet, 1, Wire.version)
-        return Wire.writeVarint(packet, position, UInt32(maxPacketBytes))
+        var position = Wire.writeVarint(packet, 1, Wire.version)
+        position = Wire.writeVarint(packet, position, UInt32(maxPacketBytes))
+        return Wire.writeVarint(packet, position, UInt32(maxBaseline))
     }
 
     private func writeClose(_ packet: UnsafeMutableRawBufferPointer) -> Int {
@@ -113,7 +115,7 @@ extension GesNetworkConnection {
         if frames {
             position = writeQueue(sendReliable, &nextReliableId, packet, position, limit)
             for route in 0..<routeCount {
-                if let slot = sendLatest[route] { position = Self.writeLatest(route, slot, packet, position, limit) }
+                if let slot = sendLatest[route] { position = writeLatest(route, slot, packet, position, limit) }
             }
             position = writeQueue(sendBulk, &nextBulkId, packet, position, limit)
         }
@@ -147,28 +149,46 @@ extension GesNetworkConnection {
             }
             queue.offset += chunk
             if queue.offset < queue.currentLength { break }
+            topics[route]?.markSent(sentCount)
             queue.pop()
         }
         return position
     }
 
-    // Writes fragments of a latest route's current message and of the newer one that then takes its place.
-    private static func writeLatest(_ route: Int, _ slot: GesNetworkLatestSlot, _ packet: UnsafeMutableRawBufferPointer, _ position: Int, _ limit: Int) -> Int {
+    // Writes fragments of a latest route's current message and of the newer one that then takes its place. A topic
+    // state is encoded when its first fragment is written and numbered only when that fragment fits.
+    private func writeLatest(_ route: Int, _ slot: GesNetworkLatestSlot, _ packet: UnsafeMutableRawBufferPointer, _ position: Int, _ limit: Int) -> Int {
+        let topic = topics[route]
         var position = position
         while slot.hasCurrent {
             let id = slot.started ? slot.id : slot.nextId
             let offset = slot.offset
             var chunk = 0
-            let next = slot.withCurrent { writeFrame(packet, position, limit, UInt32(route) + 1, id, offset, $0, &chunk) }
+            let next: Int
+            let length: Int
+            if let topic {
+                if !slot.started {
+                    topic.messageLength = slot.withCurrent { encodeState(topic, $0) }
+                    if topic.message.baseAddress == nil { topic.message = .allocate(byteCount: topic.scratch.count, alignment: 8) }
+                    topic.message.baseAddress!.copyMemory(from: topic.scratch.baseAddress!, byteCount: topic.messageLength)
+                }
+                length = topic.messageLength
+                next = Self.writeFrame(packet, position, limit, UInt32(route) + 1, id, offset, UnsafeRawBufferPointer(rebasing: topic.message[0..<length]), &chunk)
+            } else {
+                length = slot.currentLength
+                next = slot.withCurrent { Self.writeFrame(packet, position, limit, UInt32(route) + 1, id, offset, $0, &chunk) }
+            }
             if next < 0 { break }
             position = next
             if !slot.started {
                 slot.started = true
                 slot.id = slot.nextId
                 slot.nextId &+= 1
+                if let topic { slot.withCurrent { topic.add($0, baselineLimit) } }
             }
             slot.offset += chunk
-            if slot.offset < slot.currentLength { break }
+            if slot.offset < length { break }
+            topic?.markSent(sentCount)
             slot.complete()
         }
         return position

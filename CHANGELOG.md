@@ -20,8 +20,18 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - The Network Sockets package (C# `GameEventScript.Network.Sockets` on .NET 8; Swift `GameEventScriptNetworkSockets`
   over SwiftNIO) carries a session over TCP or WebSocket, including `wss` clients.
 - `ges schema generate --root <Network>` writes the wire types of a network's routes and one type with the network
-  hash, a route index per route and the rate of each `at most every` route (specs/Schemas.md#network-constants).
+  hash, a route index per route, the rate of each `at most every` route and a typed function per route that encodes
+  its root into a buffer and sends or publishes it (`ServerPublishWorld`, Swift `serverPublishWorld`;
+  specs/Schemas.md#network-constants).
 - Editor grammars highlight the `network` declaration's keywords in `.gess` sources.
+- Network topics: `Publish` sends a `publishes` route's state as a full record or as a delta against the last
+  acknowledged state held in a ring of up to 32 states per subscriber, bounded by `MaxBaselineBytes` (default 65536,
+  agreed in the handshake); the server decides subscriptions with `Subscribe`/`Unsubscribe`, and publishing an
+  unsubscribed topic reports `NotSubscribed`.
+
+### Changed
+- The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the
+  Network Sockets package uses; CI builds every library with Swift 6.1.
 
 ## [0.5.0] — 2026-11-16
 

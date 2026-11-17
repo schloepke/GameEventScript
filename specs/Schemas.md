@@ -1694,7 +1694,7 @@ console and the highlighter know `.gess`, and the editor bundles have a grammar 
 `layout` prints the [generation layout](#generation-layout) of one or more roots. `--root` may be
 repeated; naming a root twice is a usage error. A `--root` may name a [network](Network.md#declaration): it follows the
 network with the roots of its routes in route order that are not roots yet, and generated code gets the
-[network constants](#network-constants) beside their types. *Since: Unreleased.* `--all-roots` makes every declaration of the files
+[network constants and typed functions](#network-constants) beside their types. *Since: Unreleased.* `--all-roots` makes every declaration of the files
 except networks a root, in declaration order. `--wire <group>` makes the [wire roots](#roles) of the group in the given files the roots,
 in declaration order, and `--model <group>` the model roots, which `layout` then prints as the [model layout](#model-layout)
 and `generate` writes as [model types](#model-types). Exactly one of `--root`, `--all-roots`, `--wire` and `--model` is
@@ -1866,8 +1866,18 @@ A [network](Network.md) root generates one type named after the network: a C# `s
 cases. It holds the network hash with the given parameters, C# `const ulong Hash` and Swift `static let hash: UInt64`,
 and per route its route index, named after side, verb and root (`ClientSendsCommands`, Swift `clientSendsCommands`),
 C# `const int` and Swift `Int`. A route with `at most every` adds the interval in microseconds under the route's name and
-`EveryMicroseconds`, C# `const long` and Swift `Int64`. The type holds no send or receive members; the route roots are
-ordinary wire types. A network name takes part in the name checks of the generation like a type.
+`EveryMicroseconds`, C# `const long` and Swift `Int64`. A network name takes part in the name checks of the generation like
+a type.
+
+Per route the type also holds a typed function named after side, imperative verb and root (`ClientSendCommands`,
+`ServerPublishWorld`, Swift `clientSendCommands`). It writes the root record into the caller's buffer, which the root's
+`MaxByteCount` bytes always suffice, and passes the written bytes to `Send` or `Publish` of the given connection with the
+route's index. It returns that call's status and allocates nothing; a record that does not encode fails like the record's
+own write (C# `GesWireException`, Swift `GesWireError`). C# takes `(GesNetworkConnection connection, in Root value,
+Span<byte> buffer)`, Swift `(_ value: Root, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer)`.
+Generated code of a network therefore uses the Network package (C# `GameEventScript.Network`, Swift
+`GameEventScriptNetwork`) besides Runtime. Receiving needs no generated member: the event's route selects the root, whose
+`Read` decodes the payload.
 
 ```gess
 network :Game as {
@@ -1883,6 +1893,12 @@ public static class Game
     public const int ClientSendsCommands = 0;
     public const int ServerPublishesWorld = 1;
     public const long ServerPublishesWorldEveryMicroseconds = 50000;
+
+    public static GesNetworkSendStatus ClientSendCommands(GesNetworkConnection connection, in Commands value, Span<byte> buffer)
+        => connection.Send(ClientSendsCommands, buffer.Slice(0, value.Write(buffer)));
+
+    public static GesNetworkSendStatus ServerPublishWorld(GesNetworkConnection connection, in World value, Span<byte> buffer)
+        => connection.Publish(ServerPublishesWorld, buffer.Slice(0, value.Write(buffer)));
 }
 ```
 
@@ -1892,6 +1908,16 @@ public enum Game {
     public static let clientSendsCommands = 0
     public static let serverPublishesWorld = 1
     public static let serverPublishesWorldEveryMicroseconds: Int64 = 50000
+
+    public static func clientSendCommands(_ value: Commands, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> GesNetworkSendStatus {
+        let count = try value.write(into: buffer)
+        return connection.send(route: clientSendsCommands, payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))
+    }
+
+    public static func serverPublishWorld(_ value: World, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> GesNetworkSendStatus {
+        let count = try value.write(into: buffer)
+        return connection.publish(route: serverPublishesWorld, payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))
+    }
 }
 ```
 

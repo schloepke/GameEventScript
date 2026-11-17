@@ -42,6 +42,7 @@ enum GesCSharpEmitter {
         prologue.line("using System;")
         prologue.line("using System.Collections.Generic;")
         prologue.line("using GameEventScript.Api;")
+        if !layout.networks.isEmpty { prologue.line("using GameEventScript.Network;") }
         prologue.blank()
         let header = GesSchemaPlanner.header(layout)
         let holder = "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
@@ -100,7 +101,15 @@ enum GesCSharpEmitter {
             document.units.append(GesCodeUnit(owner: set.name) { code in tagSetDeclaration(&code, set.name, set.tags, access) })
         }
         for network in layout.networks {
-            document.units.append(GesCodeUnit(owner: network.name) { code in self.network(&code, network, access) })
+            document.units.append(
+                GesCodeUnit(owner: network.name) { code in
+                    self.network(&code, network, access) { root in
+                        // A packed root that the models declare is their struct; its wire members extend it.
+                        let type = types.first { $0.name == root }!
+                        return (type.layout.packedWidth > 0 && packed == nil ? models : context.global) + root
+                    }
+                }
+            )
         }
         try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: false)
         let shared = options.split != .none
@@ -863,9 +872,10 @@ enum GesCSharpEmitter {
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint" }
 
-    // The constants of a network: its hash, the index of each route and the rate of each topic that has one.
-    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String) {
-        code.line("/// <summary>The network <c>:\(network.name)</c>: its hash, the index of each route and the rate of each topic that has one.</summary>")
+    // The constants of a network, its hash, the index of each route and the rate of each topic that has one, and a
+    // function per route that encodes its root and sends or publishes it.
+    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String, _ rootType: (String) -> String) {
+        code.line("/// <summary>The network <c>:\(network.name)</c>: its hash, the index of each route, the rate of each topic that has one and a typed function per route.</summary>")
         code.line("\(access) static class \(network.name)")
         code.open("{")
         code.line("/// <summary>The network hash over the routes and their bound roots, which the handshake compares.</summary>")
@@ -878,6 +888,19 @@ enum GesCSharpEmitter {
             code.blank()
             code.line("/// <summary>The shortest interval between two updates of the topic <c>:\(route.root)</c> in microseconds.</summary>")
             code.line("public const long \(route.name)EveryMicroseconds = \(route.rateMicroseconds);")
+        }
+        for route in network.routes {
+            let publishes = route.verb == "publishes"
+            let verb = publishes ? "Publish" : "Send"
+            code.blank()
+            code.line("/// <summary>Encodes <paramref name=\"value\"/> into <paramref name=\"buffer\"/> and \(publishes ? "publishes" : "sends") it on the route <c>\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)</c>.</summary>")
+            code.line("/// <param name=\"connection\">The \(route.side)'s connection.</param>")
+            code.line("/// <param name=\"value\">The record.</param>")
+            code.line("/// <param name=\"buffer\">The buffer the record is encoded into; its <c>MaxByteCount</c> bytes always suffice.</param>")
+            code.line("/// <returns>The status of <see cref=\"GesNetworkConnection.\(verb)(int, ReadOnlySpan{byte})\"/>.</returns>")
+            code.line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the buffer is too small.</exception>")
+            code.line("public static GesNetworkSendStatus \(GesSchemaPlanner.pascal(route.side))\(verb)\(route.root)(GesNetworkConnection connection, in \(rootType(route.root)) value, Span<byte> buffer)")
+            code.line("    => connection.\(verb)(\(route.name), buffer.Slice(0, value.Write(buffer)));")
         }
         code.close()
     }

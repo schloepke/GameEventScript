@@ -8,8 +8,9 @@ HEX = re.compile(r'(?:[0-9a-f]{2})*')
 SIDES = ('client', 'server')
 STATES = {'hello', 'awaitHello', 'awaitAccept', 'connected', 'closed'}
 OPTIONS = {'transport', 'maxPacketBytes', 'maxPendingReceiveBytes', 'maxFramesPerSecond', 'maxSendQueueBytes',
-           'timeoutMicroseconds', 'keepaliveMicroseconds', 'ackDelayMicroseconds', 'sendBudgetBytesPerSecond'}
-STEPS = {'advance', 'accept', 'refuse', 'close', 'send', 'receive', 'transmit', 'transportClosed', 'budget'}
+           'timeoutMicroseconds', 'keepaliveMicroseconds', 'ackDelayMicroseconds', 'sendBudgetBytesPerSecond', 'maxBaselineBytes'}
+STEPS = {'advance', 'accept', 'refuse', 'close', 'send', 'receive', 'transmit', 'transportClosed', 'budget',
+         'publish', 'subscribe', 'unsubscribe'}
 SIDE_FIELDS = {'state', 'roundTripMicroseconds', 'queuedSendBytes', 'pendingReceiveBytes'}
 MAX_TIME = 2**62
 
@@ -82,10 +83,13 @@ def step(raw):
     if name == 'close':
         closed(value, {'side', 'detail'}, 'close step')
         result['detail'] = text(value.get('detail', ''), 'close detail')
-    elif name == 'send':
-        closed(value, {'side', 'route', 'payload'}, 'send step')
+    elif name in ('send', 'publish'):
+        closed(value, {'side', 'route', 'payload'}, name + ' step')
         result['route'] = integer(value.get('route'), 'route', -1, 1 << 20)
         result['payload'] = payload(value.get('payload'))
+    elif name in ('subscribe', 'unsubscribe'):
+        closed(value, {'side', 'route'}, name + ' step')
+        result['route'] = integer(value.get('route'), 'route', -1, 1 << 20)
     elif name == 'receive':
         closed(value, {'side', 'bytes'}, 'receive step')
         result['bytes'] = hexadecimal(value.get('bytes'), 'received bytes')

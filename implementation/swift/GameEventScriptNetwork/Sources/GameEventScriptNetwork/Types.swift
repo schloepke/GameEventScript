@@ -41,8 +41,10 @@ public enum GesNetworkSendStatus: Sendable, Equatable {
     case queueFull
     /// The message exceeds the largest encoding of the route's root.
     case messageTooLarge
-    /// The route does not exist or is not sent by this side.
+    /// The route does not exist, or this side does not send it with this verb.
     case invalidRoute
+    /// The server's host has not subscribed the client to the topic.
+    case notSubscribed
 }
 
 /// The state of a connection.
@@ -118,6 +120,9 @@ public struct GesNetworkOptions: Sendable, Equatable {
     public var ackDelayMicroseconds: Int64 = 10_000
     /// The bytes per second this side sends; 0 sends without a budget.
     public var sendBudgetBytesPerSecond: Int64 = 0
+    /// The baseline limit this side announces, 0 to 1073741824: the full record bytes a topic's ring of recent states
+    /// holds. The smaller limit of both sides applies.
+    public var maxBaselineBytes: Int64 = 65536
 
     /// Creates the default options.
     public init() {}
@@ -133,5 +138,8 @@ public struct GesNetworkOptions: Sendable, Equatable {
         if keepaliveMicroseconds < 1 { throw GesApiError.invalidArgument("The keepalive is at least 1 microsecond.") }
         if ackDelayMicroseconds < 0 { throw GesApiError.invalidArgument("The acknowledgement delay is not negative.") }
         if sendBudgetBytesPerSecond < 0 { throw GesApiError.invalidArgument("The send budget is not negative.") }
+        if maxBaselineBytes < 0 || maxBaselineBytes > Int64(GesNetworkWire.maximumBaselineBytes) {
+            throw GesApiError.invalidArgument("The baseline limit is 0 to 1073741824 bytes.")
+        }
     }
 }

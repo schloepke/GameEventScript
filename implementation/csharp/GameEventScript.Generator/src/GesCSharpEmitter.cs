@@ -44,6 +44,7 @@ internal static partial class GesCSharpEmitter
         prologue.Line("using System;");
         prologue.Line("using System.Collections.Generic;");
         prologue.Line("using GameEventScript.Api;");
+        if (layout.Networks.Count > 0) prologue.Line("using GameEventScript.Network;");
         prologue.Blank();
         var header = GesSchemaPlanner.Header(layout);
         var holder = "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
@@ -86,7 +87,12 @@ internal static partial class GesCSharpEmitter
         }
         var sets = GesSchemaPlanner.TagSets(types, context.Global);
         foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
-        foreach (var network in layout.Networks) document.Units.Add(new GesCodeUnit(network.Name, code => Network(code, network, access)));
+        foreach (var network in layout.Networks) document.Units.Add(new GesCodeUnit(network.Name, code => Network(code, network, access, root =>
+        {
+            // A packed root that the models declare is their struct; its wire members extend it.
+            var type = types.Find(candidate => candidate.Name == root)!;
+            return (type.Layout.PackedWidth > 0 && packed is null ? models : context.Global) + root;
+        })));
         context.TopLevel = GesSchemaPlanner.TopLevel(types, sets, layout.Networks);
         if (options.Models is not null) GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: false);
@@ -885,10 +891,11 @@ internal static partial class GesCSharpEmitter
 
     private static string Underlying(int count) => count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint";
 
-    // The constants of a network: its hash, the index of each route and the rate of each topic that has one.
-    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access)
+    // The constants of a network, its hash, the index of each route and the rate of each topic that has one, and a
+    // function per route that encodes its root and sends or publishes it.
+    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access, Func<string, string> rootType)
     {
-        code.Line($"/// <summary>The network <c>:{network.Name}</c>: its hash, the index of each route and the rate of each topic that has one.</summary>");
+        code.Line($"/// <summary>The network <c>:{network.Name}</c>: its hash, the index of each route, the rate of each topic that has one and a typed function per route.</summary>");
         code.Line($"{access} static class {network.Name}");
         code.Open("{");
         code.Line("/// <summary>The network hash over the routes and their bound roots, which the handshake compares.</summary>");
@@ -902,6 +909,21 @@ internal static partial class GesCSharpEmitter
             code.Blank();
             code.Line($"/// <summary>The shortest interval between two updates of the topic <c>:{route.Root}</c> in microseconds.</summary>");
             code.Line($"public const long {route.Name}EveryMicroseconds = {route.RateMicroseconds};");
+        }
+
+        foreach (var route in network.Routes)
+        {
+            var publishes = route.Verb == "publishes";
+            var verb = publishes ? "Publish" : "Send";
+            code.Blank();
+            code.Line($"/// <summary>Encodes <paramref name=\"value\"/> into <paramref name=\"buffer\"/> and {(publishes ? "publishes" : "sends")} it on the route <c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>.</summary>");
+            code.Line($"/// <param name=\"connection\">The {route.Side}'s connection.</param>");
+            code.Line($"/// <param name=\"value\">The record.</param>");
+            code.Line($"/// <param name=\"buffer\">The buffer the record is encoded into; its <c>MaxByteCount</c> bytes always suffice.</param>");
+            code.Line($"/// <returns>The status of <see cref=\"GesNetworkConnection.{verb}(int, ReadOnlySpan{{byte}})\"/>.</returns>");
+            code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the buffer is too small.</exception>");
+            code.Line($"public static GesNetworkSendStatus {GesSchemaPlanner.Pascal(route.Side)}{verb}{route.Root}(GesNetworkConnection connection, in {rootType(route.Root)} value, Span<byte> buffer)");
+            code.Line($"    => connection.{verb}({route.Name}, buffer.Slice(0, value.Write(buffer)));");
         }
 
         code.Close();

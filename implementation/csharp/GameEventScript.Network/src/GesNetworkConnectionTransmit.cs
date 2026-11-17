@@ -73,6 +73,7 @@ public sealed partial class GesNetworkConnection
         }
 
         position = Wire.WriteVarint(packet, position, (uint)_maxPacket);
+        position = Wire.WriteVarint(packet, position, (uint)_maxBaseline);
         position = Wire.WriteVarint(packet, position, (uint)_token.Length);
         _token.CopyTo(packet.Slice(position));
         position += _token.Length;
@@ -83,7 +84,8 @@ public sealed partial class GesNetworkConnection
     {
         packet[0] = Wire.Welcome;
         var position = Wire.WriteVarint(packet, 1, Wire.Version);
-        return Wire.WriteVarint(packet, position, (uint)_maxPacket);
+        position = Wire.WriteVarint(packet, position, (uint)_maxPacket);
+        return Wire.WriteVarint(packet, position, (uint)_maxBaseline);
     }
 
     private int WriteClose(Span<byte> packet)
@@ -156,18 +158,33 @@ public sealed partial class GesNetworkConnection
 
             queue.Offset += chunk;
             if (queue.Offset < message.Length) break;
+            _topics[queue.CurrentRoute]?.MarkSent(_sentCount);
             queue.Pop();
         }
 
         return position;
     }
 
-    // Writes fragments of a latest route's current message and of the newer one that then takes its place.
-    private static int WriteLatest(int route, GesNetworkLatestSlot slot, Span<byte> packet, int position, int limit)
+    // Writes fragments of a latest route's current message and of the newer one that then takes its place. A topic
+    // state is encoded when its first fragment is written and numbered only when that fragment fits.
+    private int WriteLatest(int route, GesNetworkLatestSlot slot, Span<byte> packet, int position, int limit)
     {
+        var topic = _topics[route];
         while (slot.HasCurrent)
         {
             var message = slot.Current;
+            if (topic is not null)
+            {
+                if (!slot.Started)
+                {
+                    topic.MessageLength = EncodeState(topic, message);
+                    topic.Message ??= new byte[topic.Scratch.Length];
+                    topic.Scratch.AsSpan(0, topic.MessageLength).CopyTo(topic.Message);
+                }
+
+                message = topic.Message.AsSpan(0, topic.MessageLength);
+            }
+
             var id = slot.Started ? slot.Id : slot.NextId;
             var next = WriteFrame(packet, position, limit, (uint)route + 1, id, slot.Offset, message, out var chunk);
             if (next < 0) break;
@@ -176,10 +193,12 @@ public sealed partial class GesNetworkConnection
             {
                 slot.Started = true;
                 slot.Id = slot.NextId++;
+                topic?.Add(slot.Current, _baselineLimit);
             }
 
             slot.Offset += chunk;
             if (slot.Offset < message.Length) break;
+            topic?.MarkSent(_sentCount);
             slot.Complete();
         }
 

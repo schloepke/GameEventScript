@@ -9,7 +9,7 @@ using GameEventScript.Network;
 // Runs scripted steps over a client and a server connection and records their events and packets as trace lines.
 internal static class NetworkApiObservations
 {
-    private static readonly string[] Steps = ["advance", "accept", "refuse", "close", "send", "receive", "transmit", "transportClosed", "budget"];
+    private static readonly string[] Steps = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget"];
 
     internal static void Validate(JsonElement input)
     {
@@ -81,6 +81,16 @@ internal static class NetworkApiObservations
                         var status = connection.Send(step.GetProperty("route").GetInt32(), Payload(step.GetProperty("payload")));
                         trace.Add($"{name} send {SendStatus(status)}");
                         break;
+                    case "publish":
+                        var published = connection.Publish(step.GetProperty("route").GetInt32(), Payload(step.GetProperty("payload")));
+                        trace.Add($"{name} publish {SendStatus(published)}");
+                        break;
+                    case "subscribe":
+                        connection.Subscribe(step.GetProperty("route").GetInt32());
+                        break;
+                    case "unsubscribe":
+                        connection.Unsubscribe(step.GetProperty("route").GetInt32());
+                        break;
                     case "receive":
                         connection.Receive(Convert.FromHexString(step.GetProperty("bytes").GetString()!), now);
                         break;
@@ -130,6 +140,7 @@ internal static class NetworkApiObservations
                     options.Transport = property.Value.GetString() == "stream" ? GesNetworkTransport.Stream : GesNetworkTransport.Message;
                     break;
                 case "maxPacketBytes": options.MaxPacketBytes = checked((int)property.Value.GetInt64()); break;
+                case "maxBaselineBytes": options.MaxBaselineBytes = property.Value.GetInt64(); break;
                 case "maxPendingReceiveBytes": options.MaxPendingReceiveBytes = property.Value.GetInt64(); break;
                 case "maxFramesPerSecond": options.MaxFramesPerSecond = checked((int)property.Value.GetInt64()); break;
                 case "maxSendQueueBytes": options.MaxSendQueueBytes = property.Value.GetInt64(); break;
@@ -159,6 +170,7 @@ internal static class NetworkApiObservations
         GesNetworkSendStatus.NotConnected => "notConnected",
         GesNetworkSendStatus.QueueFull => "queueFull",
         GesNetworkSendStatus.MessageTooLarge => "messageTooLarge",
+        GesNetworkSendStatus.NotSubscribed => "notSubscribed",
         _ => "invalidRoute"
     };
 

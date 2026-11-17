@@ -38,6 +38,7 @@ enum GesSwiftEmitter {
         prologue.line("// swift-format-ignore-file")
         prologue.blank()
         prologue.line("import GameEventScriptRuntime")
+        if !layout.networks.isEmpty { prologue.line("import GameEventScriptNetwork") }
         if GesComputedEmitter.usesMath(types.map(\.layout.computed)) { GesComputedLibrary.mathImport(&prologue) }
         prologue.blank()
         let header = GesSchemaPlanner.header(layout)
@@ -145,7 +146,15 @@ enum GesSwiftEmitter {
             document.units.append(GesCodeUnit(owner: set.name) { code in tagSetDeclaration(&code, set.name, set.tags, access) })
         }
         for network in layout.networks {
-            document.units.append(GesCodeUnit(owner: network.name) { code in self.network(&code, network, access) })
+            document.units.append(
+                GesCodeUnit(owner: network.name) { code in
+                    self.network(&code, network, access) { root in
+                        // A packed root that the models declare has its wire members in an enum `<Name>Wire`.
+                        let type = types.first { $0.name == root }!
+                        return type.layout.packedWidth > 0 && packed == nil ? (models + root, "\(root)Wire.write(value, into: buffer)") : (root, "value.write(into: buffer)")
+                    }
+                }
+            )
         }
         try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: true)
         // Split files reach the sources of another file, so the holder is internal there.
@@ -864,9 +873,10 @@ enum GesSwiftEmitter {
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32" }
 
-    // The constants of a network: its hash, the index of each route and the rate of each topic that has one.
-    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String) {
-        code.line("/// The network `:\(network.name)`: its hash, the index of each route and the rate of each topic that has one.")
+    // The constants of a network, its hash, the index of each route and the rate of each topic that has one, and a
+    // function per route that encodes its root and sends or publishes it.
+    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String, _ root: (String) -> (type: String, write: String)) {
+        code.line("/// The network `:\(network.name)`: its hash, the index of each route, the rate of each topic that has one and a typed function per route.")
         code.open("\(access)enum \(network.name) {")
         code.line("/// The network hash over the routes and their bound roots, which the handshake compares.")
         code.line("\(access)static let hash: UInt64 = 0x\(GesSchemaLayoutJson.hex(network.hash))")
@@ -879,6 +889,23 @@ enum GesSwiftEmitter {
             code.blank()
             code.line("/// The shortest interval between two updates of the topic `:\(route.root)` in microseconds.")
             code.line("\(access)static let \(name)EveryMicroseconds: Int64 = \(route.rateMicroseconds)")
+        }
+        for route in network.routes {
+            let publishes = route.verb == "publishes"
+            let verb = publishes ? "publish" : "send"
+            let (type, write) = root(route.root)
+            code.blank()
+            code.line("/// Encodes a record into a buffer and \(publishes ? "publishes" : "sends") it on the route `\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`.")
+            code.line("/// - Parameters:")
+            code.line("///   - value: The record.")
+            code.line("///   - connection: The \(route.side)'s connection.")
+            code.line("///   - buffer: The buffer the record is encoded into; its `maxByteCount` bytes always suffice.")
+            code.line("/// - Returns: The status of `GesNetworkConnection.\(verb)(route:payload:)`.")
+            code.line("/// - Throws: `GesWireError` when a value does not fit its field or the buffer is too small.")
+            code.open("\(access)static func \(route.side)\(GesSchemaPlanner.pascal(verb))\(route.root)(_ value: \(type), on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> GesNetworkSendStatus {")
+            code.line("let count = try \(write)")
+            code.line("return connection.\(verb)(route: \(GesSchemaPlanner.camel(route.name)), payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))")
+            code.close()
         }
         code.close()
     }

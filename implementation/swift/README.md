@@ -158,7 +158,7 @@ incremental-build controls always use fresh isolated workspaces. The first run
 after a cache miss remains a full build; subsequent runs can reuse dependencies.
 Newer revisions cancel obsolete CI runs for the same branch or pull request.
 
-Use Swift 6.0 or newer. The complete verification script additionally uses .NET 10
+Use Swift 6.1 or newer. The complete verification script additionally uses .NET 10
 for independent cross-language binary inputs:
 
 ```bash

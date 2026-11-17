@@ -33,11 +33,14 @@ public final class GesNetworkConnection {
     let timeout: Int64
     let keepalive: Int64
     let ackDelay: Int64
+    let maxBaseline: Int64
+    var baselineLimit: Int64 = 0
 
     let routeCount: Int
     let classes: [GesNetworkClass]
     let localSends: [Bool]
     let maxBytes: [Int64]
+    let topics: [GesNetworkTopic?]
 
     let token: [UInt8]
     var helloSent = false
@@ -102,6 +105,7 @@ public final class GesNetworkConnection {
         keepalive = options.keepaliveMicroseconds
         ackDelay = options.ackDelayMicroseconds
         budget = options.sendBudgetBytesPerSecond
+        maxBaseline = options.maxBaselineBytes
 
         let routes = network.network.routes
         routeCount = routes.count
@@ -110,11 +114,20 @@ public final class GesNetworkConnection {
         var maxBytes: [Int64] = []
         var sendLatest: [GesNetworkLatestSlot?] = []
         var receiveLatest: [GesNetworkReassembly?] = []
+        var topics: [GesNetworkTopic?] = []
         for (index, route) in routes.enumerated() {
             let local = (route.side == .client) == client
             classes.append(route.deliveryClass)
             localSends.append(local)
-            maxBytes.append(Int64(network.roots[index].maxByteCount))
+            let root = network.roots[index]
+            if route.verb == .publishes {
+                // A topic message adds its mode byte; a client's own topics are always subscribed.
+                maxBytes.append(Int64(root.maxByteCount) + 1)
+                topics.append(GesNetworkTopic(root, subscribed: client))
+            } else {
+                maxBytes.append(Int64(root.maxByteCount))
+                topics.append(nil)
+            }
             let latest = route.deliveryClass == .latest
             sendLatest.append(latest && local ? GesNetworkLatestSlot() : nil)
             receiveLatest.append(latest && !local ? GesNetworkReassembly() : nil)
@@ -122,6 +135,7 @@ public final class GesNetworkConnection {
         self.classes = classes
         self.localSends = localSends
         self.maxBytes = maxBytes
+        self.topics = topics
         self.sendLatest = sendLatest
         self.receiveLatest = receiveLatest
         self.token = token
@@ -212,11 +226,11 @@ public final class GesNetworkConnection {
 
     /// Queues a message on a route this side sends.
     /// - Parameters:
-    ///   - route: The route index.
+    ///   - route: The route index of a `sends` route of this side.
     ///   - payload: The encoded message; the bytes are copied.
     /// - Returns: Whether the message is queued, and why not.
     public func send(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus {
-        if route < 0 || route >= routeCount || !localSends[route] { return .invalidRoute }
+        if route < 0 || route >= routeCount || !localSends[route] || topics[route] != nil { return .invalidRoute }
         if state != .connected { return .notConnected }
         if Int64(payload.count) > maxBytes[route] { return .messageTooLarge }
         if let slot = sendLatest[route] {
@@ -230,11 +244,95 @@ public final class GesNetworkConnection {
 
     /// Queues a message on a route this side sends.
     /// - Parameters:
-    ///   - route: The route index.
+    ///   - route: The route index of a `sends` route of this side.
     ///   - payload: The encoded message; the bytes are copied.
     /// - Returns: Whether the message is queued, and why not.
     public func send(route: Int, payload: [UInt8]) -> GesNetworkSendStatus {
         payload.withUnsafeBytes { send(route: route, payload: $0) }
+    }
+
+    /// Publishes a state on a topic this side publishes. The receiver gets the full record; on the wire it travels as
+    /// a delta against a confirmed earlier state when that is shorter.
+    /// - Parameters:
+    ///   - route: The route index of a `publishes` route of this side.
+    ///   - payload: The full record of the topic's schema; the bytes are copied and not validated.
+    /// - Returns: Whether the state is queued, and why not; `notSubscribed` for a server topic the client is not
+    ///   subscribed to.
+    public func publish(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus {
+        if route < 0 || route >= routeCount || !localSends[route] { return .invalidRoute }
+        guard let topic = topics[route] else { return .invalidRoute }
+        if state != .connected { return .notConnected }
+        if !topic.subscribed { return .notSubscribed }
+        if Int64(payload.count) >= maxBytes[route] { return .messageTooLarge }
+        if let slot = sendLatest[route] {
+            slot.set(payload)
+            return .queued
+        }
+        let length = encodeState(topic, payload)
+        if queuedSendBytes + Int64(length) > maxSendQueue { return .queueFull }
+        sendReliable.enqueue(route, UnsafeRawBufferPointer(rebasing: topic.scratch[0..<length]))
+        topic.add(payload, baselineLimit)
+        return .queued
+    }
+
+    /// Publishes a state on a topic this side publishes. The receiver gets the full record; on the wire it travels as
+    /// a delta against a confirmed earlier state when that is shorter.
+    /// - Parameters:
+    ///   - route: The route index of a `publishes` route of this side.
+    ///   - payload: The full record of the topic's schema; the bytes are copied and not validated.
+    /// - Returns: Whether the state is queued, and why not; `notSubscribed` for a server topic the client is not
+    ///   subscribed to.
+    public func publish(route: Int, payload: [UInt8]) -> GesNetworkSendStatus {
+        payload.withUnsafeBytes { publish(route: route, payload: $0) }
+    }
+
+    /// Subscribes the client to a topic the server publishes. Sends nothing by itself; does nothing when subscribed.
+    /// - Parameter route: The route index of a topic the server publishes.
+    /// - Throws: `GesApiError.invalidOperation` on a client connection; `GesApiError.invalidArgument` when the route is
+    ///   no topic the server publishes.
+    public func subscribe(route: Int) throws {
+        try serverTopic(route).subscribed = true
+    }
+
+    /// Unsubscribes the client from a topic the server publishes: drops its waiting latest state and the ring of sent
+    /// states. A latest state already started and queued reliable states are still sent. Does nothing when not
+    /// subscribed.
+    /// - Parameter route: The route index of a topic the server publishes.
+    /// - Throws: `GesApiError.invalidOperation` on a client connection; `GesApiError.invalidArgument` when the route is
+    ///   no topic the server publishes.
+    public func unsubscribe(route: Int) throws {
+        let topic = try serverTopic(route)
+        if !topic.subscribed { return }
+        topic.subscribed = false
+        topic.clear()
+        sendLatest[route]?.dropUnstarted()
+    }
+
+    private func serverTopic(_ route: Int) throws -> GesNetworkTopic {
+        if isClient { throw GesApiError.invalidOperation("Only the server subscribes clients to topics.") }
+        if route < 0 || route >= routeCount || !localSends[route] { throw GesApiError.invalidArgument("The route is no topic the server publishes.") }
+        guard let topic = topics[route] else { throw GesApiError.invalidArgument("The route is no topic the server publishes.") }
+        return topic
+    }
+
+    // Writes the message of a new state into the topic's scratch: a delta against the newest confirmed state when it
+    // is shorter than the full record, else the full record. Returns the message length.
+    func encodeState(_ topic: GesNetworkTopic, _ record: UnsafeRawBufferPointer) -> Int {
+        let message = topic.scratch
+        var baseline = UnsafeRawBufferPointer(start: nil, count: 0)
+        let distance = topic.base(ackedIndex, &baseline)
+        if distance > 0 {
+            // A record without a delta, such as one with another key or an invalid one, travels in full.
+            if let length = try? GesSchemaDelta.encode(topic.schema, record: record, baseline: baseline, into: UnsafeMutableRawBufferPointer(rebasing: message[1...])),
+                length < record.count
+            {
+                message[0] = UInt8(distance)
+                return length + 1
+            }
+        }
+        message[0] = 0
+        if record.count > 0 { (message.baseAddress! + 1).copyMemory(from: record.baseAddress!, byteCount: record.count) }
+        return record.count + 1
     }
 
     /// Accepts a connecting client; the server sends its welcome next.

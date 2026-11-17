@@ -130,14 +130,15 @@ final class NetworkConnectionTests: XCTestCase {
 
     func testLatestDeliversOnlyTheNewestUnstartedMessage() throws {
         let loop = try connected()
-        _ = loop.server.send(route: world, payload: [1])
-        _ = loop.server.send(route: world, payload: [2])
-        _ = loop.server.send(route: world, payload: [3])
+        try loop.server.subscribe(route: world)
+        _ = loop.server.publish(route: world, payload: [1, 0])
+        _ = loop.server.publish(route: world, payload: [2, 0])
+        _ = loop.server.publish(route: world, payload: [3, 0])
         try loop.advance(1)
-        XCTAssertEqual(drain(loop.client), ["message \(world) 03"])
-        _ = loop.server.send(route: world, payload: [4])
+        XCTAssertEqual(drain(loop.client), ["message \(world) 0300"])
+        _ = loop.server.publish(route: world, payload: [4, 0])
         try loop.advance(2)
-        XCTAssertEqual(drain(loop.client), ["message \(world) 04"])
+        XCTAssertEqual(drain(loop.client), ["message \(world) 0400"])
     }
 
     func testSendReportsEveryStatusInItsOrder() throws {
@@ -152,7 +153,10 @@ final class NetworkConnectionTests: XCTestCase {
         XCTAssertEqual(loop.client.send(route: commands, payload: [UInt8](repeating: 0, count: 1000)), .messageTooLarge)
         XCTAssertEqual(loop.server.send(route: blob, payload: [UInt8](repeating: 0, count: 90)), .queued)
         XCTAssertEqual(loop.server.send(route: blob, payload: [UInt8](repeating: 0, count: 11)), .queueFull)
-        XCTAssertEqual(loop.server.send(route: world, payload: [1]), .queued)
+        XCTAssertEqual(loop.server.send(route: world, payload: [1, 0]), .invalidRoute)
+        XCTAssertEqual(loop.server.publish(route: world, payload: [1, 0]), .notSubscribed)
+        try loop.server.subscribe(route: world)
+        XCTAssertEqual(loop.server.publish(route: world, payload: [1, 0]), .queued)
     }
 
     func testHostCloseDropsQueuedMessagesAndReachesThePeer() throws {
@@ -183,6 +187,7 @@ final class NetworkConnectionTests: XCTestCase {
         let (client, server) = try pair(GesNetworkOptions())
         let simulator = try GesNetworkSimulator(client: client, server: server, seed: 7, latencyMicroseconds: 20_000, jitterMicroseconds: 0)
         try handshake(simulator)
+        try server.subscribe(route: world)
         var time = simulator.now
         while time <= 2_000_000 {
             _ = client.send(route: commands, payload: [1])
@@ -293,9 +298,10 @@ final class NetworkConnectionTests: XCTestCase {
         let simulator = try GesNetworkSimulator(client: client, server: server, seed: seed, latencyMicroseconds: 5_000, jitterMicroseconds: 30_000)
         var trace = ""
         try handshake(simulator)
+        try server.subscribe(route: world)
         var time = simulator.now
         while time < 1_000_000 {
-            _ = server.send(route: world, payload: [UInt8(truncatingIfNeeded: time / 16_667), 0])
+            _ = server.publish(route: world, payload: [UInt8(truncatingIfNeeded: time / 16_667), 0])
             if time % 100_000 < 16_667 { _ = server.send(route: blob, payload: bytes(2500, Int(time))) }
             try simulator.advance(time)
             for entry in drain(client) { trace += "\(simulator.now) \(entry.prefix(16))\n" }

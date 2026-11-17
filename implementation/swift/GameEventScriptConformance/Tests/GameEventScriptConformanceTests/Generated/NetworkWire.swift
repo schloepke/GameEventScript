@@ -10,6 +10,7 @@
 // swift-format-ignore-file
 
 import GameEventScriptRuntime
+import GameEventScriptNetwork
 
 /// The namespace `NetworkWire` of generated schema types.
 enum NetworkWire {}
@@ -827,7 +828,7 @@ extension NetworkWire {
         }
     }
 
-    /// The network `:Game`: its hash, the index of each route and the rate of each topic that has one.
+    /// The network `:Game`: its hash, the index of each route, the rate of each topic that has one and a typed function per route.
     enum Game {
         /// The network hash over the routes and their bound roots, which the handshake compares.
         static let hash: UInt64 = 0xf589a3e2e3aaff61
@@ -843,5 +844,41 @@ extension NetworkWire {
 
         /// The index of the route `server sends :Chunk bulk`.
         static let serverSendsChunk = 2
+
+        /// Encodes a record into a buffer and sends it on the route `client sends :Commands reliable`.
+        /// - Parameters:
+        ///   - value: The record.
+        ///   - connection: The client's connection.
+        ///   - buffer: The buffer the record is encoded into; its `maxByteCount` bytes always suffice.
+        /// - Returns: The status of `GesNetworkConnection.send(route:payload:)`.
+        /// - Throws: `GesWireError` when a value does not fit its field or the buffer is too small.
+        static func clientSendCommands(_ value: Commands, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> GesNetworkSendStatus {
+            let count = try value.write(into: buffer)
+            return connection.send(route: clientSendsCommands, payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))
+        }
+
+        /// Encodes a record into a buffer and publishes it on the route `server publishes :World latest`.
+        /// - Parameters:
+        ///   - value: The record.
+        ///   - connection: The server's connection.
+        ///   - buffer: The buffer the record is encoded into; its `maxByteCount` bytes always suffice.
+        /// - Returns: The status of `GesNetworkConnection.publish(route:payload:)`.
+        /// - Throws: `GesWireError` when a value does not fit its field or the buffer is too small.
+        static func serverPublishWorld(_ value: World, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> GesNetworkSendStatus {
+            let count = try value.write(into: buffer)
+            return connection.publish(route: serverPublishesWorld, payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))
+        }
+
+        /// Encodes a record into a buffer and sends it on the route `server sends :Chunk bulk`.
+        /// - Parameters:
+        ///   - value: The record.
+        ///   - connection: The server's connection.
+        ///   - buffer: The buffer the record is encoded into; its `maxByteCount` bytes always suffice.
+        /// - Returns: The status of `GesNetworkConnection.send(route:payload:)`.
+        /// - Throws: `GesWireError` when a value does not fit its field or the buffer is too small.
+        static func serverSendChunk(_ value: Chunk, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> GesNetworkSendStatus {
+            let count = try value.write(into: buffer)
+            return connection.send(route: serverSendsChunk, payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))
+        }
     }
 }

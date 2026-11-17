@@ -65,16 +65,24 @@ let network = try GesSchemaSet(parsing: source).network("Game").bind()
 
 Generated code saves you from repeating route indexes and rates by hand. Name the network as a root, and
 `ges schema generate` writes the wire types of its routes and one type with the network hash, a route index per
-route and the rate of each topic:
+route, the rate of each topic and a typed function per route that encodes a record and sends or publishes it:
 
 ```bash
 ges schema generate game.gess --root Game --language csharp --namespace Game.Net -o Game.g.cs
 ```
 
 ```csharp
-client.Send(Game.ClientSendsGameCommands, payload);
+var buffer = new byte[GameCommands.MaxByteCount];
+var status = Game.ClientSendGameCommands(client, commands, buffer); // encodes and calls client.Send
 var interval = Game.ServerPublishesWorldEveryMicroseconds; // 50000
 ```
+
+```swift
+let status = try Game.clientSendGameCommands(commands, on: client, buffer: buffer)
+```
+
+The functions allocate nothing; the buffer is yours to reuse. To receive, match the route index of a
+message against the constants and read the record with the root's generated `Read`.
 
 Compare `Game.Hash` with the bound network's hash at startup to detect a stale generation.
 

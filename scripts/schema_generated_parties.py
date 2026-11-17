@@ -244,7 +244,7 @@ def build(work, schemas):
 </Project>
 ''', encoding='utf-8')
     (swift / 'main.swift').write_text(_swift_program(listed, classes), encoding='utf-8')
-    (work / 'swift/Package.swift').write_text(f'''// swift-tools-version: 6.0
+    (work / 'swift/Package.swift').write_text(f'''// swift-tools-version: 6.1
 import PackageDescription
 
 let package = Package(

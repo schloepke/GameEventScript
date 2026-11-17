@@ -153,14 +153,15 @@ public sealed class GesNetworkConnectionTests
     public void LatestDeliversOnlyTheNewestUnstartedMessage()
     {
         var loop = Connected();
-        loop.Server.Send(World, [1]);
-        loop.Server.Send(World, [2]);
-        loop.Server.Send(World, [3]);
+        loop.Server.Subscribe(World);
+        loop.Server.Publish(World, [1, 0]);
+        loop.Server.Publish(World, [2, 0]);
+        loop.Server.Publish(World, [3, 0]);
         loop.Advance(1);
-        CollectionAssert.AreEqual(new[] { $"message {World} 03" }, Drain(loop.Client));
-        loop.Server.Send(World, [4]);
+        CollectionAssert.AreEqual(new[] { $"message {World} 0300" }, Drain(loop.Client));
+        loop.Server.Publish(World, [4, 0]);
         loop.Advance(2);
-        CollectionAssert.AreEqual(new[] { $"message {World} 04" }, Drain(loop.Client));
+        CollectionAssert.AreEqual(new[] { $"message {World} 0400" }, Drain(loop.Client));
     }
 
     [TestMethod]
@@ -176,7 +177,10 @@ public sealed class GesNetworkConnectionTests
         Assert.AreEqual(GesNetworkSendStatus.MessageTooLarge, loop.Client.Send(Commands, new byte[1000]));
         Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, new byte[90]));
         Assert.AreEqual(GesNetworkSendStatus.QueueFull, loop.Server.Send(Blob, new byte[11]));
-        Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(World, [1]));
+        Assert.AreEqual(GesNetworkSendStatus.InvalidRoute, loop.Server.Send(World, [1, 0]));
+        Assert.AreEqual(GesNetworkSendStatus.NotSubscribed, loop.Server.Publish(World, [1, 0]));
+        loop.Server.Subscribe(World);
+        Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Publish(World, [1, 0]));
     }
 
     [TestMethod]
@@ -214,6 +218,7 @@ public sealed class GesNetworkConnectionTests
         var (client, server) = Pair(new GesNetworkOptions());
         var simulator = new GesNetworkSimulator(client, server, 7, 20_000, 0);
         Handshake(simulator);
+        server.Subscribe(World);
         for (var time = simulator.Now; time <= 2_000_000; time += 10_000)
         {
             client.Send(Commands, [1]);
@@ -312,6 +317,7 @@ public sealed class GesNetworkConnectionTests
     public void WarmedSessionAllocatesNothing()
     {
         var loop = Connected(new GesNetworkOptions { MaxPacketBytes = 1200 });
+        loop.Server.Subscribe(World);
         var world = new byte[] { 1, 2 };
         var blob = Bytes(3000, 9);
         var command = new byte[] { 3 };
@@ -320,7 +326,9 @@ public sealed class GesNetworkConnectionTests
         void Round()
         {
             time += 16_667;
-            loop.Server.Send(World, world);
+            // A changing state travels as a delta against an acknowledged one in the ring.
+            world[0] = (byte)(time / 16_667);
+            loop.Server.Publish(World, world);
             loop.Server.Send(Blob, blob);
             loop.Server.Send(BulkBlob, blob);
             loop.Client.Send(Commands, command);
@@ -368,9 +376,10 @@ public sealed class GesNetworkConnectionTests
         var simulator = new GesNetworkSimulator(client, server, seed, 5_000, 30_000);
         var trace = new StringBuilder();
         Handshake(simulator);
+        server.Subscribe(World);
         for (var time = simulator.Now; time < 1_000_000; time += 16_667)
         {
-            server.Send(World, [(byte)(time / 16_667), 0]);
+            server.Publish(World, [(byte)(time / 16_667), 0]);
             if (time % 100_000 < 16_667) server.Send(Blob, Bytes(2500, (int)time));
             simulator.Advance(time);
             foreach (var entry in Drain(client)) trace.Append(simulator.Now).Append(' ').Append(entry[..Math.Min(entry.Length, 16)]).Append('\n');

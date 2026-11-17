@@ -183,7 +183,7 @@ def snapshot(package, graphs):
                 continue
             # Swift 6.2+ adds this transitive conformance to every Sendable type.
             # Sendable already captures the declared contract; the extra edge
-            # would otherwise create toolchain-only drift against Swift 6.0.
+            # would otherwise create toolchain-only drift against Swift 6.1.
             if (kind == "conformsTo" and relation.get("targetFallback") == "Swift.SendableMetatype"
                     and relation["source"] in sendable_sources):
                 continue

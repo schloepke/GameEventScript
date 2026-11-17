@@ -25,11 +25,14 @@ public sealed partial class GesNetworkConnection
     private readonly long _timeout;
     private readonly long _keepalive;
     private readonly long _ackDelay;
+    private readonly long _maxBaseline;
+    private long _baselineLimit;
 
     private readonly int _routeCount;
     private readonly GesNetworkClass[] _classes;
     private readonly bool[] _localSends;
     private readonly long[] _maxBytes;
+    private readonly GesNetworkTopic?[] _topics;
 
     private readonly byte[] _token = [];
     private bool _helloSent;
@@ -92,6 +95,7 @@ public sealed partial class GesNetworkConnection
         _keepalive = options.KeepaliveMicroseconds;
         _ackDelay = options.AckDelayMicroseconds;
         _budget = options.SendBudgetBytesPerSecond;
+        _maxBaseline = options.MaxBaselineBytes;
 
         var routes = network.Network.Routes;
         _routeCount = routes.Count;
@@ -100,12 +104,20 @@ public sealed partial class GesNetworkConnection
         _maxBytes = new long[_routeCount];
         _sendLatest = new GesNetworkLatestSlot?[_routeCount];
         _receiveLatest = new GesNetworkReassembly?[_routeCount];
+        _topics = new GesNetworkTopic?[_routeCount];
         for (var index = 0; index < _routeCount; index++)
         {
             var route = routes[index];
             _classes[index] = route.DeliveryClass;
             _localSends[index] = route.Side == GesNetworkSide.Client == client;
             _maxBytes[index] = network.Roots[index].MaxByteCount;
+            if (route.Verb == GesNetworkVerb.Publishes)
+            {
+                // A topic message adds its mode byte; a client's own topics are always subscribed.
+                _maxBytes[index]++;
+                _topics[index] = new GesNetworkTopic(network.Roots[index], client);
+            }
+
             if (route.DeliveryClass != GesNetworkClass.Latest) continue;
             if (_localSends[index]) _sendLatest[index] = new GesNetworkLatestSlot();
             else _receiveLatest[index] = new GesNetworkReassembly();
@@ -218,13 +230,13 @@ public sealed partial class GesNetworkConnection
         if (State != GesNetworkState.Closed && now - _lastReceive >= _timeout) CloseLocal(GesNetworkCodes.Timeout, string.Empty, true);
     }
 
-    /// <summary>Sends a payload on a route. Never throws; the status tells the result.</summary>
-    /// <param name="route">The route index.</param>
+    /// <summary>Sends a payload on a route this side sends. Never throws; the status tells the result.</summary>
+    /// <param name="route">The route index of a <c>sends</c> route of this side.</param>
     /// <param name="payload">The encoded root value; it is copied.</param>
     /// <returns>The send status.</returns>
     public GesNetworkSendStatus Send(int route, ReadOnlySpan<byte> payload)
     {
-        if ((uint)route >= (uint)_routeCount || !_localSends[route]) return GesNetworkSendStatus.InvalidRoute;
+        if ((uint)route >= (uint)_routeCount || !_localSends[route] || _topics[route] is not null) return GesNetworkSendStatus.InvalidRoute;
         if (State != GesNetworkState.Connected) return GesNetworkSendStatus.NotConnected;
         if (payload.Length > _maxBytes[route]) return GesNetworkSendStatus.MessageTooLarge;
         if (_sendLatest[route] is { } slot)
@@ -236,6 +248,90 @@ public sealed partial class GesNetworkConnection
         if (QueuedSendBytes + payload.Length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
         (_classes[route] == GesNetworkClass.Bulk ? _sendBulk : _sendReliable).Enqueue(route, payload);
         return GesNetworkSendStatus.Queued;
+    }
+
+    /// <summary>
+    /// Publishes a state on a topic this side publishes. The receiver gets the full record; on the wire it travels as a
+    /// delta against a confirmed earlier state when that is shorter. Never throws; the status tells the result.
+    /// </summary>
+    /// <param name="route">The route index of a <c>publishes</c> route of this side.</param>
+    /// <param name="payload">The full record of the topic's schema; it is copied and not validated.</param>
+    /// <returns>The send status; <see cref="GesNetworkSendStatus.NotSubscribed"/> for a server topic the client is not subscribed to.</returns>
+    public GesNetworkSendStatus Publish(int route, ReadOnlySpan<byte> payload)
+    {
+        if ((uint)route >= (uint)_routeCount || !_localSends[route] || _topics[route] is not { } topic) return GesNetworkSendStatus.InvalidRoute;
+        if (State != GesNetworkState.Connected) return GesNetworkSendStatus.NotConnected;
+        if (!topic.Subscribed) return GesNetworkSendStatus.NotSubscribed;
+        if (payload.Length >= _maxBytes[route]) return GesNetworkSendStatus.MessageTooLarge;
+        if (_sendLatest[route] is { } slot)
+        {
+            slot.Set(payload);
+            return GesNetworkSendStatus.Queued;
+        }
+
+        var length = EncodeState(topic, payload);
+        if (QueuedSendBytes + length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
+        _sendReliable.Enqueue(route, topic.Scratch.AsSpan(0, length));
+        topic.Add(payload, _baselineLimit);
+        return GesNetworkSendStatus.Queued;
+    }
+
+    /// <summary>Subscribes the client to a topic the server publishes. Sends nothing by itself; does nothing when subscribed.</summary>
+    /// <param name="route">The route index of a topic the server publishes.</param>
+    /// <exception cref="InvalidOperationException">This is a client connection.</exception>
+    /// <exception cref="ArgumentException">The route is no topic the server publishes.</exception>
+    public void Subscribe(int route) => ServerTopic(route).Subscribed = true;
+
+    /// <summary>
+    /// Unsubscribes the client from a topic the server publishes: drops its waiting latest state and the ring of sent
+    /// states. A latest state already started and queued reliable states are still sent. Does nothing when not subscribed.
+    /// </summary>
+    /// <param name="route">The route index of a topic the server publishes.</param>
+    /// <exception cref="InvalidOperationException">This is a client connection.</exception>
+    /// <exception cref="ArgumentException">The route is no topic the server publishes.</exception>
+    public void Unsubscribe(int route)
+    {
+        var topic = ServerTopic(route);
+        if (!topic.Subscribed) return;
+        topic.Subscribed = false;
+        topic.Clear();
+        _sendLatest[route]?.DropUnstarted();
+    }
+
+    private GesNetworkTopic ServerTopic(int route)
+    {
+        if (_client) throw new InvalidOperationException("Only the server subscribes clients to topics.");
+        if ((uint)route >= (uint)_routeCount || !_localSends[route] || _topics[route] is not { } topic)
+            throw new ArgumentException("The route is no topic the server publishes.", nameof(route));
+        return topic;
+    }
+
+    // Writes the message of a new state into the topic's scratch: a delta against the newest confirmed state when it is
+    // shorter than the full record, else the full record. Returns the message length.
+    private int EncodeState(GesNetworkTopic topic, ReadOnlySpan<byte> record)
+    {
+        var message = topic.Scratch;
+        var distance = topic.Base(_ackedIndex, out var baseline);
+        if (distance > 0)
+        {
+            try
+            {
+                var length = GesSchemaDelta.Encode(topic.Schema, record, baseline, message.AsSpan(1));
+                if (length < record.Length)
+                {
+                    message[0] = (byte)distance;
+                    return length + 1;
+                }
+            }
+            catch (GesWireException)
+            {
+                // A record without a delta, such as one with another key or an invalid one, travels in full.
+            }
+        }
+
+        message[0] = 0;
+        record.CopyTo(message.AsSpan(1));
+        return record.Length + 1;
     }
 
     /// <summary>Accepts the client of a <c>connecting</c> event: the server sends <c>welcome</c> and reports <c>connected</c>.</summary>

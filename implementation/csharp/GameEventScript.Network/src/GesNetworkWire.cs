@@ -17,8 +17,11 @@ internal static class GesNetworkWire
     internal const int MaximumRoutes = 64;
     internal const int MaximumBaselineBytes = 1 << 30;
     internal const int Version = 1;
+    internal const int MaximumCookieBytes = 64;
+    internal const int CookieBytes = 24;
 
     internal const byte Hello = 1;
+    internal const byte Retry = 2;
     internal const byte Welcome = 3;
     internal const byte Close = 4;
     internal const byte Data = 5;

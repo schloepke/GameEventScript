@@ -47,7 +47,7 @@ GameEventScript Network
   -> depends only on GameEventScript Runtime
 
 GameEventScript Network Sockets (optional)
-  TCP and WebSocket transports (.NET 8 sockets; SwiftNIO)
+  TCP, WebSocket and UDP transports (.NET 8 sockets; SwiftNIO)
   -> depends only on GameEventScript Network and Runtime; no portable module depends on it
 
 Independent Conformance runner (Python, repository tooling)
@@ -815,7 +815,7 @@ Runtime binds the `network` declarations of a schema set ([GES network](Network.
 package (C# `GameEventScript.Network`, netstandard2.1; Swift product `GameEventScriptNetwork`) holds the session
 state machine. It depends on Runtime only, is synchronous and opens no socket, starts no thread and reads no clock.
 The optional Sockets package (C# `GameEventScript.Network.Sockets`, .NET 8; Swift product
-`GameEventScriptNetworkSockets` over SwiftNIO) carries a connection over TCP or WebSocket; only it is asynchronous.
+`GameEventScriptNetworkSockets` over SwiftNIO) carries a connection over TCP, WebSocket or UDP; only it is asynchronous.
 
 | Concept | C# | Swift |
 | --- | --- | --- |
@@ -832,9 +832,10 @@ The optional Sockets package (C# `GameEventScript.Network.Sockets`, .NET 8; Swif
 | enums | `GesNetworkEventKind`, `GesNetworkState`, `GesNetworkTransport`, `GesNetworkSendStatus` | the same enums |
 | options | `sealed class GesNetworkOptions` with settable limits and timings, including `MaxBaselineBytes` | `struct GesNetworkOptions` with the same properties |
 | codes | `static class GesNetworkCodes` with `const string` members | `enum GesNetworkCodes` with `static let` members |
-| in-process transports | `GesNetworkLoopback(client, server)`, `GesNetworkSimulator(client, server, seed, latencyMicroseconds, jitterMicroseconds)`, each with `Advance(now)` | `GesNetworkLoopback(client:server:)`, `GesNetworkSimulator(client:server:seed:latencyMicroseconds:jitterMicroseconds:)`, each with `advance(_:)`, both throwing |
-| socket listener | `GesNetworkSocketListener.ListenTcp(endPoint, network, options)`, `ListenWebSocket(endPoint, path, network, options)`, `Accept(now)`, `Dispose()` | `GesNetworkSocketListener.listenTcp(host:port:network:options:)`, `listenWebSocket(host:port:path:network:options:)` (async), `accept(now:)`, `close()` |
-| socket session | `GesNetworkSocketSession.ConnectTcpAsync(host, port, connection, cancellationToken)`, `ConnectWebSocketAsync(uri, connection, cancellationToken)`, `Update(now)`, `Connection`, `Dispose()` | `GesNetworkSocketSession.connectTcp(host:port:connection:)`, `connectWebSocket(url:connection:)` (async), `update(now:)`, `connection`, `close()` |
+| in-process transports | `GesNetworkLoopback(client, server)`, `GesNetworkSimulator(client, server, seed, latencyMicroseconds, jitterMicroseconds, lossPerMille, duplicatePerMille, reorder)` with optional last three, each with `Advance(now)` | `GesNetworkLoopback(client:server:)`, `GesNetworkSimulator(client:server:seed:latencyMicroseconds:jitterMicroseconds:lossPerMille:duplicatePerMille:reorder:)` with defaulted last three, each with `advance(_:)`, both throwing |
+| address validation | `sealed class GesNetworkCookies(key, windowMicroseconds)` with `Check(packet, address, now, retry)` returning `GesNetworkCookieResult`, `RetryBytes`, `Dispose()` | `final class GesNetworkCookies(key:windowMicroseconds:)` (throwing) with `check(_:address:now:retry:)` returning `GesNetworkCookieResult`, `retryBytes` |
+| socket listener | `GesNetworkSocketListener.ListenTcp(endPoint, network, options)`, `ListenWebSocket(endPoint, path, network, options)`, `ListenUdp(endPoint, network, options)`, `Accept(now)`, `Dispose()` | `GesNetworkSocketListener.listenTcp(host:port:network:options:)`, `listenWebSocket(host:port:path:network:options:)`, `listenUdp(host:port:network:options:)` (async), `accept(now:)`, `close()` |
+| socket session | `GesNetworkSocketSession.ConnectTcpAsync(host, port, connection, cancellationToken)`, `ConnectWebSocketAsync(uri, connection, cancellationToken)`, `ConnectUdpAsync(host, port, connection, cancellationToken)`, `Update(now)`, `Connection`, `Dispose()` | `GesNetworkSocketSession.connectTcp(host:port:connection:)`, `connectWebSocket(url:connection:)`, `connectUdp(host:port:connection:)` (async), `update(now:)`, `connection`, `close()` |
 
 `Send` and `Publish` never throw; they report `GesNetworkSendStatus`, including `NotSubscribed` for a server topic without subscription. `Subscribe` and `Unsubscribe` are idempotent and throw on a client or on a route that is no server topic. An event's payload stays valid until the next
 `NextEvent` call. A peer's violation closes the connection with a `network.*` code and never throws; API misuse

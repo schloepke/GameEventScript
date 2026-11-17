@@ -3,8 +3,8 @@
 
 import GameEventScriptRuntime
 
-// The states of one topic in one direction: their numbering and the ring of recent full records. Both sides apply the
-// same ring rule to the same states, so the receiver's ring holds every state the sender's ring holds.
+// The states of one topic in one direction: their numbers and the ring of recent full records. Both sides apply the
+// same ring rule, so the receiver's ring holds every state from a base on that the sender's ring holds.
 final class GesNetworkTopic {
     static let maximumStates = 32
 
@@ -12,8 +12,12 @@ final class GesNetworkTopic {
     private let maxRecord: Int
     private var offsets = [Int](repeating: 0, count: GesNetworkTopic.maximumStates)
     private var lengths = [Int](repeating: 0, count: GesNetworkTopic.maximumStates)
-    // The index of the packet that carried the state's last fragment; -1 while it is not completely sent.
+    private var numbers = [UInt16](repeating: 0, count: GesNetworkTopic.maximumStates)
+    // The index of the packet that carried the state's last fragment; -1 while it is not completely sent. Stream and
+    // message transports confirm a state through it.
     private var packets = [Int64](repeating: 0, count: GesNetworkTopic.maximumStates)
+    // Whether the receiver confirmed the state; datagram transports confirm through it.
+    private var confirmed = [Bool](repeating: false, count: GesNetworkTopic.maximumStates)
     private var bytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
     private var end = 0
     private var first = 0
@@ -22,10 +26,11 @@ final class GesNetworkTopic {
 
     // Whether the server's host subscribed the client to this topic; a client's own topics always are.
     var subscribed: Bool
-    // The number of the next state.
-    var next: Int64 = 0
-    // The number of the next state whose last fragment is sent.
-    var completed: Int64 = 0
+    // The number of the next reliable state.
+    var next: UInt16 = 0
+    // The count of states added and of states whose last fragment is sent.
+    private var added: Int64 = 0
+    private var completed: Int64 = 0
     // The message being encoded or decoded: the mode byte and up to one record.
     let scratch: UnsafeMutableRawBufferPointer
     // The message of the latest state being sent and its length.
@@ -45,8 +50,8 @@ final class GesNetworkTopic {
         bytes.deallocate()
     }
 
-    // Numbers a new state and adds its full record; older states leave while the ring would exceed its limits.
-    func add(_ record: UnsafeRawBufferPointer, _ limit: Int64) {
+    // Adds a state with its number and full record; older states leave while the ring would exceed its limits.
+    func add(_ record: UnsafeRawBufferPointer, _ limit: Int64, _ number: UInt16) {
         while count > 0 && (count + 1 > Self.maximumStates || held + Int64(record.count) > limit) {
             held -= Int64(lengths[first])
             first = (first + 1) % Self.maximumStates
@@ -58,11 +63,13 @@ final class GesNetworkTopic {
         if record.count > 0 { (bytes.baseAddress! + end).copyMemory(from: record.baseAddress!, byteCount: record.count) }
         offsets[slot] = end
         lengths[slot] = record.count
+        numbers[slot] = number
         packets[slot] = -1
+        confirmed[slot] = false
         end += record.count
         held += Int64(record.count)
         count += 1
-        next += 1
+        added += 1
     }
 
     // Moves the held records to the start and grows the storage up to the most the ring can hold.
@@ -88,34 +95,54 @@ final class GesNetworkTopic {
 
     // Records the packet that carried the last fragment of the next state; a state no longer held is skipped.
     func markSent(_ packet: Int64) {
-        let number = completed
+        let index = completed
         completed += 1
-        let oldest = next - Int64(count)
-        if number >= oldest && number < next { packets[(first + Int(number - oldest)) % Self.maximumStates] = packet }
+        let oldest = added - Int64(count)
+        if index >= oldest && index < added { packets[(first + Int(index - oldest)) % Self.maximumStates] = packet }
     }
 
-    // Finds the newest state whose last fragment is acknowledged; the distance to the next state, or 0 when none is.
-    // The record stays valid until the next change of the ring.
-    func base(_ acknowledged: Int64, _ record: inout UnsafeRawBufferPointer) -> Int {
+    // Confirms the held state with the number; a state no longer held is skipped.
+    func confirm(_ number: UInt16) {
+        var index = count - 1
+        while index >= 0 {
+            let slot = (first + index) % Self.maximumStates
+            if numbers[slot] == number {
+                confirmed[slot] = true
+                return
+            }
+            index -= 1
+        }
+    }
+
+    // Finds the newest confirmed state: confirmed directly or carried completely by a packet up to the acknowledged
+    // one. Returns the distance of its number to the given number of the new state, or 0 when none is confirmed. The
+    // record stays valid until the next change of the ring.
+    func base(_ acknowledged: Int64, _ number: UInt16, _ record: inout UnsafeRawBufferPointer) -> Int {
         var index = count - 1
         while index >= 0 {
             let slot = (first + index) % Self.maximumStates
             let packet = packets[slot]
-            if packet >= 0 && packet <= acknowledged {
+            if confirmed[slot] || (packet >= 0 && packet <= acknowledged) {
                 record = UnsafeRawBufferPointer(rebasing: bytes[offsets[slot]..<offsets[slot] + lengths[slot]])
-                return count - index
+                return Int(number &- numbers[slot])
             }
             index -= 1
         }
         return 0
     }
 
-    // Finds the state the given distance before the next one; false when the ring does not hold it.
-    func find(_ distance: Int, _ record: inout UnsafeRawBufferPointer) -> Bool {
-        if distance > count { return false }
-        let slot = (first + count - distance) % Self.maximumStates
-        record = UnsafeRawBufferPointer(rebasing: bytes[offsets[slot]..<offsets[slot] + lengths[slot]])
-        return true
+    // Finds the held state with the number; false when the ring does not hold it.
+    func find(_ number: UInt16, _ record: inout UnsafeRawBufferPointer) -> Bool {
+        var index = count - 1
+        while index >= 0 {
+            let slot = (first + index) % Self.maximumStates
+            if numbers[slot] == number {
+                record = UnsafeRawBufferPointer(rebasing: bytes[offsets[slot]..<offsets[slot] + lengths[slot]])
+                return true
+            }
+            index -= 1
+        }
+        return false
     }
 
     // Empties the ring; the numbering continues.

@@ -25,11 +25,13 @@ extension GesNetworkConnection {
         } else if isClient && !helloSent {
             length = writeHello(packet)
             helloSent = true
+            if datagram { noteHelloSent() }
         } else if welcomePending {
             length = writeWelcome(packet)
             welcomePending = false
         } else if state == .connected {
-            length = writeData(packet, Int(min(sendPacketLimit, Int64(packet.count))))
+            let limit = Int(min(sendPacketLimit, Int64(packet.count)))
+            length = datagram ? writeDatagramData(packet, limit) : writeData(packet, limit)
             if length == 0 { return 0 }
         } else {
             return 0
@@ -69,7 +71,7 @@ extension GesNetworkConnection {
             packet[position] = byte
             position += 1
         }
-        return Wire.writeVarint(packet, position, 0)
+        return datagram ? writeHelloCookie(packet, position) : Wire.writeVarint(packet, position, 0)
     }
 
     private func writeWelcome(_ packet: UnsafeMutableRawBufferPointer) -> Int {
@@ -168,7 +170,7 @@ extension GesNetworkConnection {
             let length: Int
             if let topic {
                 if !slot.started {
-                    topic.messageLength = slot.withCurrent { encodeState(topic, $0) }
+                    topic.messageLength = slot.withCurrent { encodeState(topic, $0, slot.nextId) }
                     if topic.message.baseAddress == nil { topic.message = .allocate(byteCount: topic.scratch.count, alignment: 8) }
                     topic.message.baseAddress!.copyMemory(from: topic.scratch.baseAddress!, byteCount: topic.messageLength)
                 }
@@ -184,7 +186,7 @@ extension GesNetworkConnection {
                 slot.started = true
                 slot.id = slot.nextId
                 slot.nextId &+= 1
-                if let topic { slot.withCurrent { topic.add($0, baselineLimit) } }
+                if let topic { slot.withCurrent { topic.add($0, baselineLimit, slot.id) } }
             }
             slot.offset += chunk
             if slot.offset < length { break }
@@ -205,11 +207,26 @@ extension GesNetworkConnection {
         _ message: UnsafeRawBufferPointer,
         _ chunk: inout Int
     ) -> Int {
+        writeFrame(packet, position, limit, channel, id, offset, message.count, message, &chunk)
+    }
+
+    // Writes the largest fragment of the message's bytes from the offset before the end that fits; -1 when none fits.
+    static func writeFrame(
+        _ packet: UnsafeMutableRawBufferPointer,
+        _ position: Int,
+        _ limit: Int,
+        _ channel: UInt32,
+        _ id: UInt16,
+        _ offset: Int,
+        _ end: Int,
+        _ message: UnsafeRawBufferPointer,
+        _ chunk: inout Int
+    ) -> Int {
         chunk = 0
         let total = message.count
         let space = limit - position - Wire.varintSize(channel) - 2 - Wire.varintSize(UInt32(offset)) - Wire.varintSize(UInt32(total))
         if space < 1 { return -1 }
-        let remaining = total - offset
+        let remaining = end - offset
         var length = min(remaining, space - 1)
         while Wire.varintSize(UInt32(length)) + length > space { length -= 1 }
         if length == 0 && remaining > 0 { return -1 }

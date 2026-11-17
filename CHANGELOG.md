@@ -28,6 +28,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   acknowledged state held in a ring of up to 32 states per subscriber, bounded by `MaxBaselineBytes` (default 65536,
   agreed in the handshake); the server decides subscriptions with `Subscribe`/`Unsubscribe`, and publishing an
   unsubscribed topic reports `NotSubscribed`.
+- Network datagrams: the `datagram` transport carries a session over UDP with datagrams of at most 1200 bytes by
+  default, selective resends after loss detection by packet threshold, time threshold and probe timeout, fragmentation,
+  receive windows that restore the order, confirmation frames for the delta bases of `latest` topics and a `hello`
+  padded to 1200 bytes. A stateless address validation gate (`GesNetworkCookies`) answers unknown addresses with an
+  HMAC-SHA256 cookie in a `retry`. `ListenUdp`/`ConnectUdpAsync` (Swift `listenUdp`/`connectUdp`) open UDP sockets over
+  IPv4 and IPv6, and `GesNetworkSimulator` can lose, duplicate and reorder packets with a seed.
 
 ### Changed
 - The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the

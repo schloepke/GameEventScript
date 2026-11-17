@@ -1605,6 +1605,15 @@ sealed class GameEventScript.Network.GesNetworkConnection
   property System.Int64 QueuedSendBytes { get }
   property System.Int64 RoundTripMicroseconds { get }
   property System.Int64 SendBudgetBytesPerSecond { get set }
+enum GameEventScript.Network.GesNetworkCookieResult
+  enum-field Drop = 0
+  enum-field Retry = 1
+  enum-field Accept = 2
+sealed class GameEventScript.Network.GesNetworkCookies
+  ctor GesNetworkCookies(System.ReadOnlySpan<System.Byte> key, System.Int64 windowMicroseconds)
+  field static System.Int32 RetryBytes
+  method GameEventScript.Network.GesNetworkCookieResult Check(System.ReadOnlySpan<System.Byte> packet, System.ReadOnlySpan<System.Byte> address, System.Int64 now, System.Span<System.Byte> retry)
+  method System.Void Dispose()
 struct GameEventScript.Network.GesNetworkEvent
   property GameEventScript.Network.GesNetworkEventKind Kind { get }
   property System.Boolean ByPeer { get }
@@ -1645,7 +1654,7 @@ enum GameEventScript.Network.GesNetworkSendStatus
   enum-field InvalidRoute = 4
   enum-field NotSubscribed = 5
 sealed class GameEventScript.Network.GesNetworkSimulator
-  ctor GesNetworkSimulator(GameEventScript.Network.GesNetworkConnection client, GameEventScript.Network.GesNetworkConnection server, System.Int64 seed, System.Int64 latencyMicroseconds, System.Int64 jitterMicroseconds)
+  ctor GesNetworkSimulator(GameEventScript.Network.GesNetworkConnection client, GameEventScript.Network.GesNetworkConnection server, System.Int64 seed, System.Int64 latencyMicroseconds, System.Int64 jitterMicroseconds, System.Int32 lossPerMille, System.Int32 duplicatePerMille, System.Boolean reorder)
   method System.Void Advance(System.Int64 now)
   property GameEventScript.Network.GesNetworkConnection Client { get }
   property GameEventScript.Network.GesNetworkConnection Server { get }
@@ -1661,16 +1670,19 @@ enum GameEventScript.Network.GesNetworkState
 enum GameEventScript.Network.GesNetworkTransport
   enum-field Message = 0
   enum-field Stream = 1
+  enum-field Datagram = 2
 sealed class GameEventScript.Network.Sockets.GesNetworkSocketListener
   method GameEventScript.Network.Sockets.GesNetworkSocketSession Accept(System.Int64 now)
   method System.Void Dispose()
   method static GameEventScript.Network.Sockets.GesNetworkSocketListener ListenTcp(System.Net.IPEndPoint endPoint, GameEventScript.Api.GesBoundNetwork network, GameEventScript.Network.GesNetworkOptions options)
+  method static GameEventScript.Network.Sockets.GesNetworkSocketListener ListenUdp(System.Net.IPEndPoint endPoint, GameEventScript.Api.GesBoundNetwork network, GameEventScript.Network.GesNetworkOptions options)
   method static GameEventScript.Network.Sockets.GesNetworkSocketListener ListenWebSocket(System.Net.IPEndPoint endPoint, System.String path, GameEventScript.Api.GesBoundNetwork network, GameEventScript.Network.GesNetworkOptions options)
   property System.Net.IPEndPoint LocalEndPoint { get }
 sealed class GameEventScript.Network.Sockets.GesNetworkSocketSession
   method System.Void Dispose()
   method System.Void Update(System.Int64 now)
   method static System.Threading.Tasks.Task<GameEventScript.Network.Sockets.GesNetworkSocketSession> ConnectTcpAsync(System.String host, System.Int32 port, GameEventScript.Network.GesNetworkConnection connection, System.Threading.CancellationToken cancellationToken)
+  method static System.Threading.Tasks.Task<GameEventScript.Network.Sockets.GesNetworkSocketSession> ConnectUdpAsync(System.String host, System.Int32 port, GameEventScript.Network.GesNetworkConnection connection, System.Threading.CancellationToken cancellationToken)
   method static System.Threading.Tasks.Task<GameEventScript.Network.Sockets.GesNetworkSocketSession> ConnectWebSocketAsync(System.Uri uri, GameEventScript.Network.GesNetworkConnection connection, System.Threading.CancellationToken cancellationToken)
   property GameEventScript.Network.GesNetworkConnection Connection { get }
 struct GameEventScript.Runtime.Values.GesValue

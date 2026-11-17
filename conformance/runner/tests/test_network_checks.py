@@ -26,7 +26,25 @@ class NetworkInputTests(unittest.TestCase):
         self.assertEqual({'action': 'accept'}, request['steps'][1])
         self.assertEqual({'action': 'send', 'side': 'client', 'route': 0, 'payload': {'hex': '05'}}, request['steps'][3])
         link = prepare(self.cases['simulated-link'])['link']
-        self.assertEqual({'seed', 'latencyMicroseconds', 'jitterMicroseconds'}, set(link))
+        self.assertEqual({'seed': 7, 'latencyMicroseconds': 20000, 'jitterMicroseconds': 10000, 'lossPerMille': 0,
+                          'duplicatePerMille': 0, 'reorder': False}, link)
+
+    def test_datagram_steps_reach_the_adapter(self):
+        key = '00' * 32
+        steps = prepare(self.case('handshake-loopback', steps=[
+            {'deliver': {'side': 'server', 'packets': [1, 0, 0]}},
+            {'cookie': {'key': key, 'windowMicroseconds': 10, 'now': -5, 'address': '7f000001', 'packet': 0}},
+            {'cookie': {'key': key, 'windowMicroseconds': 10, 'now': 0, 'address': '', 'bytes': '01'}}]))['steps']
+        self.assertEqual({'action': 'deliver', 'side': 'server', 'packets': [1, 0, 0]}, steps[0])
+        self.assertEqual({'action': 'cookie', 'key': key, 'windowMicroseconds': 10, 'now': -5, 'address': '7f000001', 'packet': 0}, steps[1])
+        self.assertEqual('01', steps[2]['bytes'])
+        for step in ({'deliver': {'side': 'server'}}, {'deliver': {'side': 'server', 'packets': [-1]}},
+                     {'cookie': {'key': key, 'windowMicroseconds': 10, 'now': 0, 'address': ''}},
+                     {'cookie': {'key': key, 'windowMicroseconds': 10, 'now': 0, 'address': '', 'bytes': '', 'packet': 0}}):
+            with self.assertRaises(InvalidDocument, msg=step):
+                prepare(self.case('handshake-loopback', steps=[step]))
+        with self.assertRaises(InvalidDocument):
+            prepare(self.case('handshake-loopback', link={'seed': 1, 'reorder': 1}))
 
     def test_topic_steps_reach_the_adapter(self):
         steps = prepare(self.case('handshake-loopback', steps=[

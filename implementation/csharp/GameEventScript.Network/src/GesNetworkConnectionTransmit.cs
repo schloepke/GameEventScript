@@ -35,6 +35,7 @@ public sealed partial class GesNetworkConnection
         {
             length = WriteHello(packet);
             _helloSent = true;
+            if (_datagram) NoteHelloSent();
         }
         else if (_welcomePending)
         {
@@ -43,7 +44,8 @@ public sealed partial class GesNetworkConnection
         }
         else if (State == GesNetworkState.Connected)
         {
-            length = WriteData(packet, (int)Math.Min(SendPacketLimit, packet.Length));
+            var limit = (int)Math.Min(SendPacketLimit, packet.Length);
+            length = _datagram ? WriteDatagramData(packet, limit) : WriteData(packet, limit);
             if (length == 0) return 0;
         }
         else
@@ -77,7 +79,7 @@ public sealed partial class GesNetworkConnection
         position = Wire.WriteVarint(packet, position, (uint)_token.Length);
         _token.CopyTo(packet.Slice(position));
         position += _token.Length;
-        return Wire.WriteVarint(packet, position, 0);
+        return _datagram ? WriteHelloCookie(packet, position) : Wire.WriteVarint(packet, position, 0);
     }
 
     private int WriteWelcome(Span<byte> packet)
@@ -177,7 +179,7 @@ public sealed partial class GesNetworkConnection
             {
                 if (!slot.Started)
                 {
-                    topic.MessageLength = EncodeState(topic, message);
+                    topic.MessageLength = EncodeState(topic, message, slot.NextId);
                     topic.Message ??= new byte[topic.Scratch.Length];
                     topic.Scratch.AsSpan(0, topic.MessageLength).CopyTo(topic.Message);
                 }
@@ -193,7 +195,7 @@ public sealed partial class GesNetworkConnection
             {
                 slot.Started = true;
                 slot.Id = slot.NextId++;
-                topic?.Add(slot.Current, _baselineLimit);
+                topic?.Add(slot.Current, _baselineLimit, slot.Id);
             }
 
             slot.Offset += chunk;
@@ -206,13 +208,17 @@ public sealed partial class GesNetworkConnection
     }
 
     // Writes the largest fragment of a message at its offset that fits; -1 when none fits.
-    private static int WriteFrame(Span<byte> packet, int position, int limit, uint channel, ushort id, int offset, ReadOnlySpan<byte> message, out int chunk)
+    private static int WriteFrame(Span<byte> packet, int position, int limit, uint channel, ushort id, int offset, ReadOnlySpan<byte> message, out int chunk) =>
+        WriteFrame(packet, position, limit, channel, id, offset, message.Length, message, out chunk);
+
+    // Writes the largest fragment of the message's bytes from the offset before the end that fits; -1 when none fits.
+    private static int WriteFrame(Span<byte> packet, int position, int limit, uint channel, ushort id, int offset, int end, ReadOnlySpan<byte> message, out int chunk)
     {
         chunk = 0;
         var total = message.Length;
         var space = limit - position - Wire.VarintSize(channel) - 2 - Wire.VarintSize((uint)offset) - Wire.VarintSize((uint)total);
         if (space < 1) return -1;
-        var remaining = total - offset;
+        var remaining = end - offset;
         var length = Math.Min(remaining, space - 1);
         while (Wire.VarintSize((uint)length) + length > space) length--;
         if (length == 0 && remaining > 0) return -1;

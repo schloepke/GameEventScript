@@ -7,8 +7,9 @@ import NIOConcurrencyHelpers
 import NIOCore
 import NIOPosix
 
-/// Accepts TCP or WebSocket clients for a server. SwiftNIO event loops accept sockets and, for WebSocket, answer
-/// the HTTP upgrade; the host takes each ready client with `accept(now:)` where it runs its sessions.
+/// Accepts TCP, WebSocket or UDP clients for a server. SwiftNIO event loops accept sockets and, for WebSocket, answer
+/// the HTTP upgrade, or for UDP read the shared socket, validate unknown addresses and route each datagram to its
+/// client; the host takes each ready client with `accept(now:)` where it runs its sessions.
 ///
 /// A listener is not `Sendable`; it belongs to one isolation domain at a time and may be transferred to another.
 /// Releasing it closes it like `close()`.
@@ -20,19 +21,32 @@ public final class GesNetworkSocketListener {
     private let queue: GesNetworkSocketQueue
     private let network: GesBoundNetwork
     private let options: GesNetworkOptions
-    private let webSocket: Bool
+    private let framing: GesNetworkSocketSession.Framing
+    // A UDP listener's socket, which replaces its channel when SwiftNIO closes it; nil for TCP and WebSocket.
+    private let datagram: (current: () -> Channel?, close: () -> Void)?
     private var closed = false
 
-    private init(channel: Channel, queue: GesNetworkSocketQueue, network: GesBoundNetwork, options: GesNetworkOptions, webSocket: Bool) {
+    init(
+        channel: Channel,
+        queue: GesNetworkSocketQueue,
+        network: GesBoundNetwork,
+        options: GesNetworkOptions,
+        framing: GesNetworkSocketSession.Framing,
+        datagram: (current: () -> Channel?, close: () -> Void)? = nil
+    ) {
         self.channel = channel
+        self.datagram = datagram
         self.queue = queue
         self.network = network
         self.options = options
-        self.webSocket = webSocket
+        self.framing = framing
         localEndPoint = channel.localAddress!
     }
 
     deinit { close() }
+
+    // The channel the listener currently reads on.
+    var socket: Channel? { datagram?.current() ?? channel }
 
     /// Starts accepting TCP clients for server connections of the stream transport.
     /// - Parameters:
@@ -62,15 +76,18 @@ public final class GesNetworkSocketListener {
         return try await listen(host: host, port: port, path: path, network: network, options: options)
     }
 
-    private static func listen(host: String, port: Int, path: String?, network: GesBoundNetwork, options: GesNetworkOptions?) async throws -> sending GesNetworkSocketListener {
-        let transport: GesNetworkTransport = path == nil ? .stream : .message
+    // The options of every server connection with the given transport, checked by creating a connection, so a
+    // listener never accepts clients it cannot serve; returns them with the packet limit.
+    static func resolve(_ options: GesNetworkOptions?, _ transport: GesNetworkTransport, _ network: GesBoundNetwork) throws -> (GesNetworkOptions, Int) {
         var resolved = options ?? GesNetworkOptions()
         if options == nil { resolved.transport = transport }
         if resolved.transport != transport { throw GesApiError.invalidArgument("The options must use the \(transport) transport.") }
-        // Creating a connection checks the options, so a listener never accepts clients it cannot serve.
-        _ = try GesNetworkConnection.makeServer(network: network, now: 0, options: resolved)
+        return (resolved, try GesNetworkConnection.makeServer(network: network, now: 0, options: resolved).maxPacketBytes)
+    }
+
+    private static func listen(host: String, port: Int, path: String?, network: GesBoundNetwork, options: GesNetworkOptions?) async throws -> sending GesNetworkSocketListener {
+        let (resolved, limit) = try resolve(options, path == nil ? .stream : .message, network)
         let queue = GesNetworkSocketQueue()
-        let limit = resolved.maxPacketBytes
         let channel = try await ServerBootstrap(group: MultiThreadedEventLoopGroup.singleton)
             .serverChannelOption(.backlog, value: 256)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -94,7 +111,7 @@ public final class GesNetworkSocketListener {
             }
             .bind(host: host, port: port).get()
         queue.attach(channel)
-        return GesNetworkSocketListener(channel: channel, queue: queue, network: network, options: resolved, webSocket: path != nil)
+        return GesNetworkSocketListener(channel: channel, queue: queue, network: network, options: resolved, framing: path == nil ? .stream : .webSocket)
     }
 
     /// Takes the next client that is ready, without waiting, and creates its server connection at `now`. Call
@@ -104,17 +121,18 @@ public final class GesNetworkSocketListener {
     /// - Throws: `GesApiError.invalidOperation` when the listener is closed.
     public func accept(now: Int64) throws -> GesNetworkSocketSession? {
         if closed { throw GesApiError.invalidOperation("The listener is closed.") }
-        guard let (child, inbox) = queue.take() else { return nil }
+        guard let (child, inbox, peer) = queue.take() else { return nil }
         let connection = try GesNetworkConnection.makeServer(network: network, now: now, options: options)
-        return GesNetworkSocketSession(connection: connection, channel: child, inbox: inbox, webSocket: webSocket)
+        return GesNetworkSocketSession(connection: connection, channel: child, inbox: inbox, framing: framing, peer: peer)
     }
 
-    /// Stops accepting and closes every client not yet taken. Sessions already taken stay open. Closing again does
-    /// nothing.
+    /// Stops accepting and closes every client not yet taken. TCP and WebSocket sessions already taken stay open; UDP
+    /// sessions share the listener's socket, so they stop carrying packets and their connections time out. Closing
+    /// again does nothing.
     public func close() {
         if closed { return }
         closed = true
-        channel.close(promise: nil)
+        if let datagram { datagram.close() } else { channel.close(promise: nil) }
         queue.close()
     }
 }
@@ -125,7 +143,8 @@ final class GesNetworkSocketQueue: @unchecked Sendable {
     static let capacity = 64
 
     private let lock = NIOLock()
-    private var entries: [(Channel, GesNetworkSocketInbox)] = []
+    // A UDP client is its peer on the listener's shared channel.
+    private var entries: [(Channel, GesNetworkSocketInbox, GesNetworkDatagramPeer?)] = []
     private var head = 0
     private var upgrading = 0
     private var held = false
@@ -162,14 +181,23 @@ final class GesNetworkSocketQueue: @unchecked Sendable {
     func offer(_ channel: Channel, _ inbox: GesNetworkSocketInbox) {
         let accepted = lock.withLock {
             if closed { return false }
-            entries.append((channel, inbox))
+            entries.append((channel, inbox, nil))
             return true
         }
         if !accepted { channel.close(promise: nil) }
     }
 
-    func take() -> (Channel, GesNetworkSocketInbox)? {
-        let (entry, server): ((Channel, GesNetworkSocketInbox)?, Channel?) = lock.withLock {
+    // Queues a validated UDP client; false when the queue is full or closed, and the client sends hello again.
+    func offer(_ channel: Channel, _ peer: GesNetworkDatagramPeer) -> Bool {
+        lock.withLock {
+            if closed || entries.count - head + upgrading >= Self.capacity { return false }
+            entries.append((channel, peer.inbox, peer))
+            return true
+        }
+    }
+
+    func take() -> (Channel, GesNetworkSocketInbox, GesNetworkDatagramPeer?)? {
+        let (entry, server): ((Channel, GesNetworkSocketInbox, GesNetworkDatagramPeer?)?, Channel?) = lock.withLock {
             if head == entries.count { return (nil, nil) }
             let entry = entries[head]
             head += 1
@@ -186,12 +214,14 @@ final class GesNetworkSocketQueue: @unchecked Sendable {
     func close() {
         let pending = lock.withLock {
             closed = true
-            let pending = entries[head...].map(\.0)
+            let pending = entries[head...].map { ($0.0, $0.2) }
             entries.removeAll()
             head = 0
             return pending
         }
-        for channel in pending { channel.close(promise: nil) }
+        for (channel, peer) in pending {
+            if let peer { peer.release() } else { channel.close(promise: nil) }
+        }
     }
 
     // The server channel to read on when accepting held and a place is free; called under the lock.

@@ -17,7 +17,7 @@ extension GesNetworkConnection {
     public func receive(_ data: UnsafeRawBufferPointer, now: Int64) throws {
         try advance(now)
         if state == .closed { return }
-        if transport == .message {
+        if transport != .stream {
             receivePacket(data)
             return
         }
@@ -108,6 +108,11 @@ extension GesNetworkConnection {
         }
 
         lastReceive = now
+        if datagram {
+            receiveDatagramPacket(packet)
+            return
+        }
+
         switch packet[0] {
         case Wire.close:
             receiveClose(packet)
@@ -122,7 +127,7 @@ extension GesNetworkConnection {
         }
     }
 
-    private func receiveHello(_ packet: UnsafeRawBufferPointer) {
+    func receiveHello(_ packet: UnsafeRawBufferPointer) {
         if packet.count < 5 || Wire.readUInt32(packet, 1) != Wire.magic {
             fail(GesNetworkCodes.protocolMismatch)
             return
@@ -156,10 +161,14 @@ extension GesNetworkConnection {
 
         let token = UnsafeRawBufferPointer(rebasing: packet[position..<position + Int(tokenLength)])
         position += token.count
-        var cookie: UInt32 = 0
-        if Wire.readVarint(packet, &position, &cookie) != 1 || cookie != 0 || position != packet.count {
-            fail(GesNetworkCodes.malformed)
-            return
+        if datagram {
+            if !readHelloCookie(packet, &position) { return }
+        } else {
+            var cookie: UInt32 = 0
+            if Wire.readVarint(packet, &position, &cookie) != 1 || cookie != 0 || position != packet.count {
+                fail(GesNetworkCodes.malformed)
+                return
+            }
         }
 
         if Int(count) != routeCount || hash != network.hash {
@@ -185,7 +194,7 @@ extension GesNetworkConnection {
         return text.isEmpty ? network.network.name : text
     }
 
-    private func receiveWelcome(_ packet: UnsafeRawBufferPointer) {
+    func receiveWelcome(_ packet: UnsafeRawBufferPointer) {
         var position = 1
         var limit = 0
         var baseline: Int64 = 0
@@ -233,7 +242,7 @@ extension GesNetworkConnection {
         return true
     }
 
-    private func receiveClose(_ packet: UnsafeRawBufferPointer) {
+    func receiveClose(_ packet: UnsafeRawBufferPointer) {
         var position = 1
         var codeLength: UInt32 = 0
         if Wire.readVarint(packet, &position, &codeLength) != 1 || codeLength < 1 || codeLength > UInt32(Wire.maximumCodeBytes) || packet.count - position < Int(codeLength) {
@@ -344,7 +353,7 @@ extension GesNetworkConnection {
         if offset == 0 {
             if assembly.active || id != assembly.nextId { return fail(GesNetworkCodes.malformed) }
             assembly.nextId &+= 1
-            if length == total { return deliver(route, chunk) }
+            if length == total { return deliver(route, id, chunk) }
             assembly.start(channel, id, total)
         } else if !assembly.active || assembly.channel != channel || assembly.id != id || assembly.total != total || assembly.received != Int(offset) {
             return fail(GesNetworkCodes.malformed)
@@ -357,24 +366,33 @@ extension GesNetworkConnection {
         assembly.active = false
         // The message's bytes are pending already; the event counts them again.
         pending -= Int64(total)
-        return assembly.withMessage { deliver(route, $0) }
+        return assembly.withMessage { deliver(route, id, $0) }
     }
 
-    // Reports a complete message; a topic message becomes its state's full record. False when it closed the connection.
-    private func deliver(_ route: Int, _ message: UnsafeRawBufferPointer) -> Bool {
+    // Reports a complete message with its id; a topic message becomes its state's full record, numbered by the id of a
+    // latest message or the topic's count of reliable states. False when it closed the connection.
+    func deliver(_ route: Int, _ id: UInt16, _ message: UnsafeRawBufferPointer) -> Bool {
         var message = message
         if let topic = topics[route] {
             if message.isEmpty || Int(message[0]) > GesNetworkTopic.maximumStates { return fail(GesNetworkCodes.malformed) }
+            let number: UInt16
+            if classes[route] == .latest {
+                number = id
+            } else {
+                number = topic.next
+                topic.next &+= 1
+            }
             var rest = UnsafeRawBufferPointer(rebasing: message[1...])
             if message[0] != 0 {
                 var baseline = UnsafeRawBufferPointer(start: nil, count: 0)
-                if !topic.find(Int(message[0]), &baseline) { return fail(GesNetworkCodes.malformed) }
+                if !topic.find(number &- UInt16(message[0]), &baseline) { return fail(GesNetworkCodes.malformed) }
                 guard let decoded = try? GesSchemaDelta.decode(topic.schema, delta: rest, baseline: baseline, into: topic.scratch),
                     decoded.deltaByteCount == rest.count
                 else { return fail(GesNetworkCodes.malformed) }
                 rest = UnsafeRawBufferPointer(rebasing: topic.scratch[0..<decoded.byteCount])
             }
-            topic.add(rest, baselineLimit)
+            topic.add(rest, baselineLimit, number)
+            if datagram && classes[route] == .latest { oweConfirmation(route, number) }
             message = rest
         }
         return addEvent(.message, route, message, true, "", "", false) || fail(GesNetworkCodes.queueFull)
@@ -382,7 +400,7 @@ extension GesNetworkConnection {
 
     // Closes the connection with an error found in received data and returns false.
     @discardableResult
-    private func fail(_ code: String, _ detail: String = "") -> Bool {
+    func fail(_ code: String, _ detail: String = "") -> Bool {
         closeLocal(code, detail, true)
         return false
     }

@@ -68,11 +68,13 @@ public sealed class GesNetworkSocketTests
         throw new AssertFailedException("No event arrived in time.");
     }
 
-    private static GesNetworkSocketSession AcceptOne(GesNetworkSocketListener listener)
+    // Updates the given client sessions, which a datagram handshake needs, until the listener offers a client.
+    private static GesNetworkSocketSession AcceptOne(GesNetworkSocketListener listener, params GesNetworkSocketSession[] clients)
     {
         var deadline = Clock.Elapsed + Limit;
         while (Clock.Elapsed < deadline)
         {
+            foreach (var client in clients) client.Update(Now);
             if (listener.Accept(Now) is { } session) return session;
             Thread.Sleep(1);
         }
@@ -129,6 +131,96 @@ public sealed class GesNetworkSocketTests
         using var client = await GesNetworkSocketSession.ConnectWebSocketAsync(uri, connection);
         using var server = AcceptOne(listener);
         RoundTrip(client, server);
+    }
+
+    [TestMethod]
+    public async Task UdpCarriesASession()
+    {
+        var network = Game();
+        using var listener = GesNetworkSocketListener.ListenUdp(Loopback, network, Options(GesNetworkTransport.Datagram));
+        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, Options(GesNetworkTransport.Datagram));
+        using var client = await GesNetworkSocketSession.ConnectUdpAsync("127.0.0.1", listener.LocalEndPoint.Port, connection);
+        using var server = AcceptOne(listener, client);
+        RoundTrip(client, server);
+    }
+
+    [TestMethod]
+    public async Task UdpValidatesAnUnknownAddressWithoutState()
+    {
+        var network = Game();
+        using var listener = GesNetworkSocketListener.ListenUdp(Loopback, network, Options(GesNetworkTransport.Datagram));
+        using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        await socket.ConnectAsync(listener.LocalEndPoint);
+        var buffer = new byte[2048];
+
+        // Anything but a full-size hello is dropped without an answer.
+        await socket.SendAsync(new byte[] { 3, 0, 0, 0 }, SocketFlags.None);
+        var hello = new byte[2048];
+        var length = GesNetworkConnection.CreateClient(network, "tok"u8, Now, Options(GesNetworkTransport.Datagram)).Transmit(hello);
+        Assert.AreEqual(1200, length);
+        await socket.SendAsync(hello.AsMemory(0, length), SocketFlags.None);
+        using var timeout = new CancellationTokenSource(Limit);
+        var received = await socket.ReceiveAsync(buffer, SocketFlags.None, timeout.Token);
+        Assert.AreEqual(GesNetworkCookies.RetryBytes, received);
+        Assert.AreEqual(2, buffer[0]);
+        Assert.AreEqual(24, buffer[1]);
+        Assert.IsNull(listener.Accept(Now));
+    }
+
+    [TestMethod]
+    public async Task AClosedUdpSessionReleasesItsAddress()
+    {
+        var network = Game();
+        using var listener = GesNetworkSocketListener.ListenUdp(Loopback, network, Options(GesNetworkTransport.Datagram));
+        using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        socket.Bind(Loopback);
+        await socket.ConnectAsync(listener.LocalEndPoint);
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, Options(GesNetworkTransport.Datagram));
+            using var server = await Handshake(socket, connection, listener);
+            server.Connection.Refuse("full");
+            server.Update(Now);
+            Assert.AreEqual(GesNetworkState.Closed, server.Connection.State);
+            var deadline = Clock.Elapsed + Limit;
+            var buffer = new byte[2048];
+            while (connection.State != GesNetworkState.Closed && Clock.Elapsed < deadline)
+            {
+                using var timeout = new CancellationTokenSource(Limit);
+                var length = await socket.ReceiveAsync(buffer, SocketFlags.None, timeout.Token);
+                connection.Receive(buffer.AsSpan(0, length), Now);
+            }
+
+            Assert.AreEqual(GesNetworkState.Closed, connection.State);
+        }
+    }
+
+    // Runs the client side of a datagram handshake by hand on a socket until the listener offers the server session.
+    private static async Task<GesNetworkSocketSession> Handshake(Socket socket, GesNetworkConnection connection, GesNetworkSocketListener listener)
+    {
+        var buffer = new byte[2048];
+        var deadline = Clock.Elapsed + Limit;
+        while (Clock.Elapsed < deadline)
+        {
+            int length;
+            while ((length = connection.Transmit(buffer)) > 0) await socket.SendAsync(buffer.AsMemory(0, length), SocketFlags.None);
+            if (listener.Accept(Now) is { } session)
+            {
+                Assert.AreEqual("connecting tok", Await(session));
+                return session;
+            }
+
+            if (socket.Available > 0)
+            {
+                length = await socket.ReceiveAsync(buffer, SocketFlags.None);
+                connection.Receive(buffer.AsSpan(0, length), Now);
+            }
+
+            connection.Advance(Now);
+            Thread.Sleep(1);
+        }
+
+        throw new AssertFailedException("No client was accepted in time.");
     }
 
     [TestMethod]
@@ -203,5 +295,7 @@ public sealed class GesNetworkSocketTests
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => GesNetworkSocketSession.ConnectTcpAsync("127.0.0.1", 1, message));
         var server = GesNetworkConnection.CreateServer(network, Now);
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => GesNetworkSocketSession.ConnectWebSocketAsync(new Uri("ws://127.0.0.1:1/"), server));
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenUdp(Loopback, network, Options(GesNetworkTransport.Stream)));
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => GesNetworkSocketSession.ConnectUdpAsync("127.0.0.1", 1, message));
     }
 }

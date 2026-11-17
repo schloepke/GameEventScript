@@ -72,10 +72,8 @@ here.
   the interpreted writer and reader before adopting it; build it only on real demand.
 - Continue GES network (specs/Network.md) after the session milestone, each step with spec, Conformance and both
   ports green:
-  - publish/subscribe: a server topic sends only on change against the baseline each subscriber acknowledged, with
-    32 baselines per subscriber in a ring that is also bounded in bytes, and full records after a lost baseline;
-  - datagrams: UDP over IPv4 and IPv6 with acknowledgements, resends, fragmentation for an MTU of about 1200 bytes and
-    NAT keepalive, without ENet;
+  - path MTU discovery for datagrams: probe larger packets than the default 1200 bytes and fall back on loss, as in
+    RFC 8899 (DPLPMTUD);
   - bulk transfers: `TransferStart(id, kind, size, hash)`, compression `none` (mandatory) or raw Deflate (RFC 1951)
     through a provider;
   - encryption: P-256 ECDH, HKDF-SHA256 and AES-256-GCM, optionally X25519 and ChaCha20-Poly1305, with server-key

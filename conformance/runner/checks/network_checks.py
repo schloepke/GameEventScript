@@ -10,7 +10,9 @@ STATES = {'hello', 'awaitHello', 'awaitAccept', 'connected', 'closed'}
 OPTIONS = {'transport', 'maxPacketBytes', 'maxPendingReceiveBytes', 'maxFramesPerSecond', 'maxSendQueueBytes',
            'timeoutMicroseconds', 'keepaliveMicroseconds', 'ackDelayMicroseconds', 'sendBudgetBytesPerSecond', 'maxBaselineBytes'}
 STEPS = {'advance', 'accept', 'refuse', 'close', 'send', 'receive', 'transmit', 'transportClosed', 'budget',
-         'publish', 'subscribe', 'unsubscribe'}
+         'publish', 'subscribe', 'unsubscribe', 'deliver', 'cookie'}
+TRANSPORTS = ('message', 'stream', 'datagram')
+LINK_FIELDS = {'seed', 'latencyMicroseconds', 'jitterMicroseconds', 'lossPerMille', 'duplicatePerMille', 'reorder'}
 SIDE_FIELDS = {'state', 'roundTripMicroseconds', 'queuedSendBytes', 'pendingReceiveBytes'}
 MAX_TIME = 2**62
 
@@ -48,8 +50,8 @@ def sources(raw, label):
 def options(raw):
     closed(raw, OPTIONS, 'network options')
     result = dict(raw)
-    if 'transport' in result and result['transport'] not in ('message', 'stream'):
-        raise InvalidDocument('A transport is message or stream')
+    if 'transport' in result and result['transport'] not in TRANSPORTS:
+        raise InvalidDocument('A transport is message, stream or datagram')
     for key in OPTIONS - {'transport'}:
         if key in result:
             integer(result[key], key, 0, 2**53)
@@ -78,6 +80,27 @@ def step(raw):
         return {'action': name, 'detail': text(value, 'refuse detail')}
     if name in ('transmit', 'transportClosed'):
         return {'action': name, 'side': side(value)}
+    if name == 'deliver':
+        # Passes packets of the other side's last transmit step, by index, in the listed order.
+        closed(value, {'side', 'packets'}, 'deliver step')
+        packets = value.get('packets')
+        if not isinstance(packets, list) or any(type(index) is not int or not 0 <= index < 1024 for index in packets):
+            raise InvalidDocument('A deliver step lists packet indexes')
+        return {'action': name, 'side': side(value.get('side')), 'packets': packets}
+    if name == 'cookie':
+        # Checks a datagram at an address validation gate: hexadecimal bytes or a packet of the client's last transmit.
+        closed(value, {'key', 'windowMicroseconds', 'now', 'address', 'bytes', 'packet'}, 'cookie step')
+        result = {'action': name, 'key': hexadecimal(value.get('key'), 'cookie key'),
+                  'windowMicroseconds': integer(value.get('windowMicroseconds'), 'cookie window', 0),
+                  'now': integer(value.get('now'), 'cookie time', -MAX_TIME),
+                  'address': hexadecimal(value.get('address'), 'cookie address')}
+        if ('bytes' in value) == ('packet' in value):
+            raise InvalidDocument('A cookie step has bytes or a packet')
+        if 'bytes' in value:
+            result['bytes'] = hexadecimal(value['bytes'], 'cookie bytes')
+        else:
+            result['packet'] = integer(value['packet'], 'cookie packet', 0, 1023)
+        return result
     closed(value, {'side', 'detail', 'route', 'payload', 'bytes', 'bytesPerSecond'}, name + ' step')
     result = {'action': name, 'side': side(value.get('side'))}
     if name == 'close':
@@ -106,10 +129,16 @@ def prepare(case):
     closed(raw, {'sources', 'clientSources', 'network', 'options', 'clientOptions', 'token', 'link', 'steps'}, 'network input')
     link = raw.get('link', 'loopback')
     if link not in ('loopback', 'none'):
-        closed(link, {'seed', 'latencyMicroseconds', 'jitterMicroseconds'}, 'simulated link')
+        closed(link, LINK_FIELDS, 'simulated link')
+        reorder = link.get('reorder', False)
+        if type(reorder) is not bool:
+            raise InvalidDocument('reorder is true or false')
         link = {'seed': integer(link.get('seed', 0), 'seed', -2**63, 2**63 - 1),
                 'latencyMicroseconds': integer(link.get('latencyMicroseconds', 0), 'latency'),
-                'jitterMicroseconds': integer(link.get('jitterMicroseconds', 0), 'jitter')}
+                'jitterMicroseconds': integer(link.get('jitterMicroseconds', 0), 'jitter'),
+                'lossPerMille': integer(link.get('lossPerMille', 0), 'loss', -1, 1001),
+                'duplicatePerMille': integer(link.get('duplicatePerMille', 0), 'duplicates', -1, 1001),
+                'reorder': reorder}
     steps = raw.get('steps')
     if not isinstance(steps, list) or not steps:
         raise InvalidDocument('A network case has steps')

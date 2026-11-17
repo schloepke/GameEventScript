@@ -37,7 +37,7 @@ public sealed class GameEventScriptLicensePolicyTests
             (TestRepositoryPaths.CSharpBridgeProjectDirectory, "GameEventScript.CSharpBridge", "C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution."),
             (TestRepositoryPaths.GeneratorProjectDirectory, "GameEventScript.Generator", "Game Event Script schema code generator: computes the generation layout of .gess schemas and writes typed C# and Swift record code. A build-time library that games never ship."),
             (TestRepositoryPaths.NetworkProjectDirectory, "GameEventScript.Network", "Portable, synchronous Game Event Script network sessions over schema-declared routes, with a deterministic simulated network. No threads, sockets or async."),
-            (TestRepositoryPaths.NetworkSocketsProjectDirectory, "GameEventScript.Network.Sockets", "TCP and WebSocket transports for Game Event Script network sessions. Background tasks move bytes only; the host drives the connection on its own thread.")
+            (TestRepositoryPaths.NetworkSocketsProjectDirectory, "GameEventScript.Network.Sockets", "TCP, WebSocket and UDP transports for Game Event Script network sessions. Background tasks move bytes only; the host drives the connection on its own thread.")
         };
 
         foreach (var (projectDirectory, packageId, description) in projects)

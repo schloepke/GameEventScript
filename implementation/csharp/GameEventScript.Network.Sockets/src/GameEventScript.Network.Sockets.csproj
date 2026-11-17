@@ -11,7 +11,7 @@
         <Version>0.1.0</Version>
         <Authors>Stephan Schlöpke</Authors>
         <Copyright>Copyright 2026 Stephan Schlöpke</Copyright>
-        <Description>TCP and WebSocket transports for Game Event Script network sessions. Background tasks move bytes only; the host drives the connection on its own thread.</Description>
+        <Description>TCP, WebSocket and UDP transports for Game Event Script network sessions. Background tasks move bytes only; the host drives the connection on its own thread.</Description>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageIcon>icon.png</PackageIcon>

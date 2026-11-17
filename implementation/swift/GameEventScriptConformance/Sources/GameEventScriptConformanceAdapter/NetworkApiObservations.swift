@@ -6,7 +6,7 @@ import GameEventScriptRuntime
 
 // Runs scripted steps over a client and a server connection and records their events and packets as trace lines.
 enum NetworkApiObservations {
-    private static let steps: Set<String> = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget"]
+    private static let steps: Set<String> = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget", "deliver", "cookie"]
 
     static func validate(_ input: Input) throws {
         try Validation.fields(input, ["sources", "clientSources", "network", "options", "clientOptions", "token", "link", "steps"])
@@ -36,13 +36,11 @@ enum NetworkApiObservations {
         let link = try input.required("link")
         let simulator: GesNetworkSimulator?
         if link.objectValue != nil {
-            simulator = try GesNetworkSimulator(
-                client: client,
-                server: server,
-                seed: Int64(link.required("seed").numberValue ?? "") ?? 0,
-                latencyMicroseconds: Int64(link.required("latencyMicroseconds").numberValue ?? "") ?? 0,
-                jitterMicroseconds: Int64(link.required("jitterMicroseconds").numberValue ?? "") ?? 0
-            )
+            do {
+                simulator = try makeSimulator(client, server, link)
+            } catch GesApiError.invalidArgument {
+                return ["status": "ok", "network": ["error": ["code": "invalidArgument"]]]
+            }
         } else if link.stringValue == "loopback" {
             simulator = try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0)
         } else {
@@ -50,11 +48,13 @@ enum NetworkApiObservations {
         }
 
         var trace: [String] = []
+        var clientSent: [[UInt8]] = []
+        var serverSent: [[UInt8]] = []
         var now: Int64 = 0
         for step in input.values("steps") {
             let action = try step.text("action")
             let connection = step["side"]?.stringValue == "client" ? client : server
-            let name = connection === client ? "client" : "server"
+            let name = action == "cookie" ? "cookie" : connection === client ? "client" : "server"
             do {
                 switch action {
                 case "advance":
@@ -79,11 +79,22 @@ enum NetworkApiObservations {
                 case "receive": try connection.receive(bytes(step.text("bytes")), now: now)
                 case "transmit":
                     var buffer = [UInt8](repeating: 0, count: connection.maxPacketBytes + 5)
+                    if connection === client { clientSent.removeAll() } else { serverSent.removeAll() }
                     while true {
                         let length = try connection.transmit(into: &buffer)
                         if length == 0 { break }
-                        trace.append("\(name) packet \(hexadecimal(buffer[0..<length]))")
+                        let sent = Array(buffer[0..<length])
+                        if connection === client { clientSent.append(sent) } else { serverSent.append(sent) }
+                        trace.append("\(name) packet \(packet(sent))")
                     }
+                case "deliver":
+                    let from = connection === client ? serverSent : clientSent
+                    for index in step.values("packets") {
+                        let position = Int(try integer(index))
+                        guard position < from.count else { throw GesApiError.invalidArgument("No such packet.") }
+                        try connection.receive(from[position], now: now)
+                    }
+                case "cookie": trace.append("cookie \(try cookie(step, clientSent))")
                 case "transportClosed": connection.transportClosed()
                 default: try connection.setSendBudgetBytesPerSecond(integer(step.required("bytesPerSecond")))
                 }
@@ -99,6 +110,43 @@ enum NetworkApiObservations {
         return ["status": "ok", "network": ["trace": trace, "client": describe(client), "server": describe(server)]]
     }
 
+    private static func makeSimulator(_ client: GesNetworkConnection, _ server: GesNetworkConnection, _ link: Input) throws -> GesNetworkSimulator {
+        try GesNetworkSimulator(
+            client: client,
+            server: server,
+            seed: integer(link.required("seed")),
+            latencyMicroseconds: integer(link.required("latencyMicroseconds")),
+            jitterMicroseconds: integer(link.required("jitterMicroseconds")),
+            lossPerMille: Int(try link["lossPerMille"].map(integer) ?? 0),
+            duplicatePerMille: Int(try link["duplicatePerMille"].map(integer) ?? 0),
+            reorder: link["reorder"]?.boolValue ?? false
+        )
+    }
+
+    // Checks a datagram at a fresh gate and names the result, with the retry's bytes.
+    private static func cookie(_ step: Input, _ sent: [[UInt8]]) throws -> String {
+        let packet: [UInt8]
+        if let hex = step["bytes"]?.stringValue {
+            packet = try bytes(hex)
+        } else {
+            let position = Int(try integer(step.required("packet")))
+            guard position < sent.count else { throw GesApiError.invalidArgument("No such packet.") }
+            packet = sent[position]
+        }
+        let cookies = try GesNetworkCookies(key: bytes(step.text("key")), windowMicroseconds: integer(step.required("windowMicroseconds")))
+        var retry = [UInt8](repeating: 0, count: GesNetworkCookies.retryBytes)
+        switch try cookies.check(packet: packet, address: bytes(step.text("address")), now: integer(step.required("now")), retry: &retry) {
+        case .accept: return "accept"
+        case .retry: return "retry \(hexadecimal(retry))"
+        case .drop: return "drop"
+        }
+    }
+
+    // A packet up to 512 bytes as hexadecimal, a longer one as its length and FNV-1a 64 hash.
+    private static func packet(_ bytes: [UInt8]) -> String {
+        bytes.count <= 512 ? hexadecimal(bytes) : bytes.withUnsafeBytes { text($0) }
+    }
+
     private static func bind(_ sources: [Input], _ network: String) throws -> GesBoundNetwork {
         let parsed = sources.enumerated().map { GesSchemaSource(name: "schema\($0.offset).gess", text: $0.element.stringValue ?? "") }
         return try GesSchemaSet(sources: parsed).network(network).bind()
@@ -108,7 +156,12 @@ enum NetworkApiObservations {
         var options = GesNetworkOptions()
         for entry in raw.objectValue ?? [] {
             switch entry.key {
-            case "transport": options.transport = entry.value.stringValue == "stream" ? .stream : .message
+            case "transport":
+                switch entry.value.stringValue {
+                case "stream": options.transport = .stream
+                case "datagram": options.transport = .datagram
+                default: options.transport = .message
+                }
             case "maxPacketBytes": options.maxPacketBytes = Int(try integer(entry.value))
             case "maxBaselineBytes": options.maxBaselineBytes = try integer(entry.value)
             case "maxPendingReceiveBytes": options.maxPendingReceiveBytes = try integer(entry.value)

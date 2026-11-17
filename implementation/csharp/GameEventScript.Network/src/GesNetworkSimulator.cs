@@ -10,16 +10,21 @@ namespace GameEventScript.Network;
 /// <summary>
 /// Connects a client and a server connection in one process with seeded latency. Each packet is delayed by the
 /// latency plus a draw from 0 to the jitter inclusive, but never arrives before a packet sent earlier in the same
-/// direction. Equal seeds, options and inputs give equal packets, events and times. The host takes the events of
-/// both connections between calls of <see cref="Advance"/>. Not thread-safe.
+/// direction. Between datagram connections it may also lose, duplicate and reorder packets. Equal seeds, options and
+/// inputs give equal packets, events and times. The host takes the events of both connections between calls of
+/// <see cref="Advance"/>. Not thread-safe.
 /// </summary>
 public sealed class GesNetworkSimulator
 {
     private readonly GesRandomGenerator _random;
     private readonly long _latency;
     private readonly long _jitter;
-    private readonly Queue<Flight> _toServer = new();
-    private readonly Queue<Flight> _toClient = new();
+    private readonly int _loss;
+    private readonly int _duplicate;
+    private readonly bool _reorder;
+    // The packets on their way in arrival order: by time, then in the order sent.
+    private readonly List<Flight> _toServer = [];
+    private readonly List<Flight> _toClient = [];
     private readonly Stack<byte[]> _free = new();
     private readonly byte[] _buffer = new byte[GesNetworkWire.MaximumPacketBytes + 3];
     private long _lastToServer;
@@ -32,10 +37,24 @@ public sealed class GesNetworkSimulator
     /// <param name="seed">The seed of the random generator that draws the jitter.</param>
     /// <param name="latencyMicroseconds">The base latency of every packet in microseconds.</param>
     /// <param name="jitterMicroseconds">The largest additional delay in microseconds.</param>
+    /// <param name="lossPerMille">The share of packets lost in per mille, 0 to 1000.</param>
+    /// <param name="duplicatePerMille">The share of packets delivered twice in per mille, 0 to 1000.</param>
+    /// <param name="reorder">Whether a packet arrives after its own delay instead of behind packets sent earlier.</param>
     /// <exception cref="ArgumentNullException">A connection is null.</exception>
-    /// <exception cref="ArgumentException">The connections are not a client and a server at the same time.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">The latency or jitter is negative.</exception>
-    public GesNetworkSimulator(GesNetworkConnection client, GesNetworkConnection server, long seed, long latencyMicroseconds, long jitterMicroseconds)
+    /// <exception cref="ArgumentException">
+    /// The connections are not a client and a server at the same time, or loss, duplicates or reordering are requested
+    /// for connections that do not both use <see cref="GesNetworkTransport.Datagram"/>.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">The latency or jitter is negative, or a rate is outside 0 to 1000.</exception>
+    public GesNetworkSimulator(
+        GesNetworkConnection client,
+        GesNetworkConnection server,
+        long seed,
+        long latencyMicroseconds,
+        long jitterMicroseconds,
+        int lossPerMille = 0,
+        int duplicatePerMille = 0,
+        bool reorder = false)
     {
         Client = client ?? throw new ArgumentNullException(nameof(client));
         Server = server ?? throw new ArgumentNullException(nameof(server));
@@ -43,6 +62,14 @@ public sealed class GesNetworkSimulator
         if (client.Now != server.Now) throw new ArgumentException("Both connections start at the same time.");
         if (latencyMicroseconds < 0) throw new ArgumentOutOfRangeException(nameof(latencyMicroseconds));
         if (jitterMicroseconds < 0) throw new ArgumentOutOfRangeException(nameof(jitterMicroseconds));
+        if (lossPerMille is < 0 or > 1000) throw new ArgumentOutOfRangeException(nameof(lossPerMille));
+        if (duplicatePerMille is < 0 or > 1000) throw new ArgumentOutOfRangeException(nameof(duplicatePerMille));
+        if ((lossPerMille > 0 || duplicatePerMille > 0 || reorder) &&
+            (client.Transport != GesNetworkTransport.Datagram || server.Transport != GesNetworkTransport.Datagram))
+            throw new ArgumentException("Loss, duplicates and reordering require datagram connections.");
+        _loss = lossPerMille;
+        _duplicate = duplicatePerMille;
+        _reorder = reorder;
         _random = GesRandomGenerator.FromSeed(seed);
         _latency = latencyMicroseconds;
         _jitter = jitterMicroseconds;
@@ -67,8 +94,8 @@ public sealed class GesNetworkSimulator
         get
         {
             var deadline = Math.Min(Client.NextDeadline, Server.NextDeadline);
-            if (_toServer.Count > 0) deadline = Math.Min(deadline, _toServer.Peek().Time);
-            if (_toClient.Count > 0) deadline = Math.Min(deadline, _toClient.Peek().Time);
+            if (_toServer.Count > 0) deadline = Math.Min(deadline, _toServer[0].Time);
+            if (_toClient.Count > 0) deadline = Math.Min(deadline, _toClient[0].Time);
             return Math.Max(deadline, Now);
         }
     }
@@ -86,11 +113,11 @@ public sealed class GesNetworkSimulator
         {
             TransmitAll();
             var next = NextDeadline;
-            if (next > now) break;
+            if (next > now || next == long.MaxValue) break;
             Now = next;
-            var toServer = _toServer.Count > 0 && _toServer.Peek().Time == next;
-            var toClient = _toClient.Count > 0 && _toClient.Peek().Time == next;
-            if (toServer && (!toClient || _toServer.Peek().Sequence < _toClient.Peek().Sequence)) Deliver(_toServer, Server);
+            var toServer = _toServer.Count > 0 && _toServer[0].Time == next;
+            var toClient = _toClient.Count > 0 && _toClient[0].Time == next;
+            if (toServer && (!toClient || _toServer[0].Sequence < _toClient[0].Sequence)) Deliver(_toServer, Server);
             else if (toClient) Deliver(_toClient, Client);
             else
             {
@@ -105,9 +132,10 @@ public sealed class GesNetworkSimulator
         TransmitAll();
     }
 
-    private void Deliver(Queue<Flight> queue, GesNetworkConnection receiver)
+    private void Deliver(List<Flight> queue, GesNetworkConnection receiver)
     {
-        var flight = queue.Dequeue();
+        var flight = queue[0];
+        queue.RemoveAt(0);
         receiver.Receive(flight.Bytes.AsSpan(0, flight.Length), Now);
         _free.Push(flight.Bytes);
     }
@@ -118,17 +146,30 @@ public sealed class GesNetworkSimulator
         Send(Server, _toClient, ref _lastToClient);
     }
 
-    private void Send(GesNetworkConnection sender, Queue<Flight> queue, ref long last)
+    private void Send(GesNetworkConnection sender, List<Flight> queue, ref long last)
     {
         int length;
         while ((length = sender.Transmit(_buffer)) > 0)
         {
-            var delay = _latency + _random.NextInclusiveInteger(0, _jitter);
-            last = Math.Max(Now + delay, last);
-            var bytes = _free.Count > 0 ? _free.Pop() : new byte[_buffer.Length];
-            _buffer.AsSpan(0, length).CopyTo(bytes);
-            queue.Enqueue(new Flight(last, _sequence++, bytes, length));
+            var delay = Delay();
+            if (_loss > 0 && _random.NextInclusiveInteger(0, 999) < _loss) continue;
+            Enqueue(queue, ref last, delay, length);
+            if (_duplicate > 0 && _random.NextInclusiveInteger(0, 999) < _duplicate) Enqueue(queue, ref last, Delay(), length);
         }
+    }
+
+    private long Delay() => _latency + _random.NextInclusiveInteger(0, _jitter);
+
+    // Adds a packet in arrival order; without reordering it arrives no earlier than the packet sent before.
+    private void Enqueue(List<Flight> queue, ref long last, long delay, int length)
+    {
+        var time = Now + delay;
+        if (!_reorder) time = last = Math.Max(time, last);
+        var bytes = _free.Count > 0 ? _free.Pop() : new byte[_buffer.Length];
+        _buffer.AsSpan(0, length).CopyTo(bytes);
+        var index = queue.Count;
+        while (index > 0 && queue[index - 1].Time > time) index--;
+        queue.Insert(index, new Flight(time, _sequence++, bytes, length));
     }
 
     private readonly struct Flight(long time, long sequence, byte[] bytes, int length)

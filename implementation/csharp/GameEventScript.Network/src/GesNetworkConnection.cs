@@ -87,7 +87,8 @@ public sealed partial class GesNetworkConnection
         options.Validate();
         _client = client;
         _transport = options.Transport;
-        _maxPacket = options.MaxPacketBytes;
+        _datagram = _transport == GesNetworkTransport.Datagram;
+        _maxPacket = options.PacketLimit;
         _maxPending = options.MaxPendingReceiveBytes;
         _framesPerSecond = options.MaxFramesPerSecond;
         _maxSendQueue = options.MaxSendQueueBytes;
@@ -105,6 +106,28 @@ public sealed partial class GesNetworkConnection
         _sendLatest = new GesNetworkLatestSlot?[_routeCount];
         _receiveLatest = new GesNetworkReassembly?[_routeCount];
         _topics = new GesNetworkTopic?[_routeCount];
+        // Only a datagram connection records its packets and restores the order of what it receives.
+        var datagramRoutes = _datagram ? _routeCount : 0;
+        var records = _datagram ? RecordedPackets : 0;
+        var fragments = _datagram ? RecordedFragments : 0;
+        _partialLatest = new GesNetworkPartial?[datagramRoutes];
+        _owed = new bool[datagramRoutes];
+        _owedNumbers = new ushort[datagramRoutes];
+        _recordTimes = new long[records];
+        _recordAsks = new bool[records];
+        _recordOutstanding = new bool[records];
+        _recordFragments = new long[records];
+        _recordFragmentCounts = new int[records];
+        _fragmentLanes = new int[fragments];
+        _fragmentKeys = new long[fragments];
+        _fragmentOffsets = new int[fragments];
+        _fragmentLengths = new int[fragments];
+        if (_datagram)
+        {
+            _orderedReliable = new GesNetworkOrderedReceive();
+            _orderedBulk = new GesNetworkOrderedReceive();
+        }
+
         for (var index = 0; index < _routeCount; index++)
         {
             var route = routes[index];
@@ -119,7 +142,8 @@ public sealed partial class GesNetworkConnection
             }
 
             if (route.DeliveryClass != GesNetworkClass.Latest) continue;
-            if (_localSends[index]) _sendLatest[index] = new GesNetworkLatestSlot();
+            if (_localSends[index]) _sendLatest[index] = new GesNetworkLatestSlot(_datagram);
+            else if (_datagram) _partialLatest[index] = new GesNetworkPartial();
             else _receiveLatest[index] = new GesNetworkReassembly();
         }
 
@@ -176,7 +200,10 @@ public sealed partial class GesNetworkConnection
     /// <summary>Gets the received bytes of incomplete messages and undelivered events.</summary>
     public long PendingReceiveBytes => _pending;
 
-    /// <summary>Gets the queued reliable and bulk bytes not yet completely sent.</summary>
+    /// <summary>
+    /// Gets the queued reliable and bulk bytes not yet completely sent, on a datagram transport not yet completely
+    /// acknowledged.
+    /// </summary>
     public long QueuedSendBytes => _sendReliable.Bytes + _sendBulk.Bytes;
 
     /// <summary>
@@ -197,7 +224,8 @@ public sealed partial class GesNetworkConnection
 
     /// <summary>
     /// Gets the latest time at which <see cref="Advance"/> must be called: the timeout, keepalive, acknowledgement or
-    /// budget refill; <see cref="long.MaxValue"/> once closed.
+    /// budget refill, and on a datagram transport also the repetition of <c>hello</c>, loss detection or probe timeout;
+    /// <see cref="long.MaxValue"/> once closed.
     /// </summary>
     public long NextDeadline
     {
@@ -209,6 +237,7 @@ public sealed partial class GesNetworkConnection
             if (_ackDue) deadline = Math.Min(deadline, _ackDeadline);
             if (_budget > 0 && _budgetUnits < 0 && HasPendingFrames())
                 deadline = Math.Min(deadline, _now + (-_budgetUnits + _budget - 1) / _budget);
+            if (_datagram) deadline = Math.Min(deadline, DatagramDeadline());
             return deadline;
         }
     }
@@ -228,6 +257,7 @@ public sealed partial class GesNetworkConnection
         _frameUnits = Refill(_frameUnits, _framesPerSecond * MicrosecondsPerSecond, elapsed, _framesPerSecond);
         _budgetUnits = _budget == 0 ? BudgetCapacity : Refill(_budgetUnits, BudgetCapacity, elapsed, _budget);
         if (State != GesNetworkState.Closed && now - _lastReceive >= _timeout) CloseLocal(GesNetworkCodes.Timeout, string.Empty, true);
+        else if (_datagram) AdvanceDatagram();
     }
 
     /// <summary>Sends a payload on a route this side sends. Never throws; the status tells the result.</summary>
@@ -269,10 +299,10 @@ public sealed partial class GesNetworkConnection
             return GesNetworkSendStatus.Queued;
         }
 
-        var length = EncodeState(topic, payload);
+        var length = EncodeState(topic, payload, topic.Next);
         if (QueuedSendBytes + length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
-        _sendReliable.Enqueue(route, topic.Scratch.AsSpan(0, length));
-        topic.Add(payload, _baselineLimit);
+        _sendReliable.Enqueue(route, topic.Scratch.AsSpan(0, length), topic.Next);
+        topic.Add(payload, _baselineLimit, topic.Next++);
         return GesNetworkSendStatus.Queued;
     }
 
@@ -307,11 +337,11 @@ public sealed partial class GesNetworkConnection
     }
 
     // Writes the message of a new state into the topic's scratch: a delta against the newest confirmed state when it is
-    // shorter than the full record, else the full record. Returns the message length.
-    private int EncodeState(GesNetworkTopic topic, ReadOnlySpan<byte> record)
+    // shorter than the full record, else the full record. The number is the new state's. Returns the message length.
+    private int EncodeState(GesNetworkTopic topic, ReadOnlySpan<byte> record, ushort number)
     {
         var message = topic.Scratch;
-        var distance = topic.Base(_ackedIndex, out var baseline);
+        var distance = topic.Base(_datagram ? -1 : _ackedIndex, number, out var baseline);
         if (distance > 0)
         {
             try
@@ -406,10 +436,12 @@ public sealed partial class GesNetworkConnection
         foreach (var slot in _sendLatest) slot?.Clear();
         _ackDue = false;
         _welcomePending = false;
+        DropDatagramSending();
     }
 
     private bool HasPendingFrames()
     {
+        if (_datagram) return HasPendingDatagramFrames();
         if (_sendReliable.Count > 0 || _sendBulk.Count > 0) return true;
         foreach (var slot in _sendLatest)
         {

@@ -90,6 +90,8 @@ PLATFORM_ONLY = {
     ("swift", "Bridge", "GesConstructMacro"): "Swift macro implementation; C# uses Reflection on attributes",
     ("swift", "Bridge", "GesExtensionMacro"): "Swift macro implementation; C# uses Reflection on attributes",
     ("swift", "Bridge", "GesFunctionMacro"): "Swift macro implementation; C# uses Reflection on attributes",
+    ("swift", "Network", "GesNetworkSha256"): "Swift SHA-256 without Foundation/CryptoKit; C# uses the BCL HMACSHA256",
+    ("swift", "Network", "GesNetworkHmacSha256"): "Swift HMAC-SHA256 without Foundation/CryptoKit; C# uses the BCL HMACSHA256",
     ("swift", "Sockets", "GesNetworkSocketClientUpgradeHandler"): "SwiftNIO client upgrade handler; C# uses ClientWebSocket",
     ("swift", "Sockets", "GesNetworkSocketEndpoint"): "Swift ws/wss URL parsing; C# uses System.Uri",
     ("swift", "Sockets", "GesNetworkSocketError"): "idiomatic mapping: C# ClientWebSocket throws WebSocketException for refused upgrades",

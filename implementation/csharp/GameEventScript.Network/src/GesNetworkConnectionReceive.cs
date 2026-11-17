@@ -22,7 +22,7 @@ public sealed partial class GesNetworkConnection
     {
         Advance(now);
         if (State == GesNetworkState.Closed) return;
-        if (_transport == GesNetworkTransport.Message)
+        if (_transport != GesNetworkTransport.Stream)
         {
             ReceivePacket(data);
             return;
@@ -106,6 +106,12 @@ public sealed partial class GesNetworkConnection
         }
 
         _lastReceive = _now;
+        if (_datagram)
+        {
+            ReceiveDatagramPacket(packet);
+            return;
+        }
+
         switch (packet[0])
         {
             case Wire.Close:
@@ -161,7 +167,11 @@ public sealed partial class GesNetworkConnection
 
         var token = packet.Slice(position, (int)tokenLength);
         position += token.Length;
-        if (Wire.ReadVarint(packet, ref position, out var cookie) != 1 || cookie != 0 || position != packet.Length)
+        if (_datagram)
+        {
+            if (!ReadHelloCookie(packet, ref position)) return;
+        }
+        else if (Wire.ReadVarint(packet, ref position, out var cookie) != 1 || cookie != 0 || position != packet.Length)
         {
             Fail(GesNetworkCodes.Malformed);
             return;
@@ -372,7 +382,7 @@ public sealed partial class GesNetworkConnection
         {
             if (assembly.Active || id != assembly.NextId) return Fail(GesNetworkCodes.Malformed);
             assembly.NextId++;
-            if (length == total) return Deliver(route, chunk);
+            if (length == total) return Deliver(route, id, chunk);
 
             assembly.Start(channel, id, total);
         }
@@ -388,19 +398,21 @@ public sealed partial class GesNetworkConnection
         assembly.Active = false;
         // The message's bytes are pending already; the event counts them again.
         _pending -= total;
-        return Deliver(route, assembly.Message);
+        return Deliver(route, id, assembly.Message);
     }
 
-    // Reports a complete message; a topic message becomes its state's full record. False when it closed the connection.
-    private bool Deliver(int route, ReadOnlySpan<byte> message)
+    // Reports a complete message with its id; a topic message becomes its state's full record, numbered by the id of a
+    // latest message or the topic's count of reliable states. False when it closed the connection.
+    private bool Deliver(int route, ushort id, ReadOnlySpan<byte> message)
     {
         if (_topics[route] is { } topic)
         {
             if (message.IsEmpty || message[0] > GesNetworkTopic.MaximumStates) return Fail(GesNetworkCodes.Malformed);
+            var number = _classes[route] == GesNetworkClass.Latest ? id : topic.Next++;
             var rest = message.Slice(1);
             if (message[0] != 0)
             {
-                if (!topic.Find(message[0], out var baseline)) return Fail(GesNetworkCodes.Malformed);
+                if (!topic.Find((ushort)(number - message[0]), out var baseline)) return Fail(GesNetworkCodes.Malformed);
                 try
                 {
                     var decoded = GesSchemaDelta.Decode(topic.Schema, rest, baseline, topic.Scratch);
@@ -413,7 +425,8 @@ public sealed partial class GesNetworkConnection
                 }
             }
 
-            topic.Add(rest, _baselineLimit);
+            topic.Add(rest, _baselineLimit, number);
+            if (_datagram && _classes[route] == GesNetworkClass.Latest) OweConfirmation(route, number);
             message = rest;
         }
 

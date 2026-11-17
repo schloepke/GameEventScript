@@ -8,15 +8,15 @@
 This document owns GES network sessions. A `network` declaration in a
 [schema source](Schemas.md) names which wire roots a client and a server exchange, and
 in which delivery class. A session carries the encoded records of those roots between
-the two sides over a transport: a TCP stream, WebSocket messages or the in-process
-transport. The [network guide](../docs/guide/Network.md) introduces it step by step.
+the two sides over a transport: a TCP stream, WebSocket messages, UDP datagrams or the
+in-process transport. The [network guide](../docs/guide/Network.md) introduces it step by step.
 
 The session core is a synchronous state machine without threads, sockets, clocks or
 allocation of its own resources at run time: bytes and the current time go in, bytes
 and events come out. Transports are plug-ins around it. Equal inputs at equal times give
 equal bytes and events in every port.
 
-Not part of this version: datagram transports (UDP), bulk transfers and encryption.
+Not part of this version: bulk transfers and encryption.
 
 ## Principles
 
@@ -148,7 +148,9 @@ stateDiagram-v2
 
 A client sends nothing but `hello` and `close` before `welcome`; a server sends nothing but
 `welcome` and `close` before acceptance. Either receiving anything else is
-`network.malformed`.
+`network.malformed`. On a datagram transport the handshake repeats lost packets and the
+server validates the client's address first; the
+[datagram handshake](#datagram-handshake) adds those rules.
 
 ### Delivery classes
 
@@ -160,8 +162,11 @@ A client sends nothing but `hello` and `close` before `welcome`; a server sends 
 
 Transmission order within a packet is: reliable, then latest, then bulk. A reliable or
 bulk message is sent completely before the next one of its class starts; messages of
-different classes interleave in fragments. A latest message, once started, is completed;
-a newer message of the same route then waits in its place and is itself replaceable.
+different classes interleave in fragments. On a stream or message transport a latest
+message, once started, is completed; a newer message of the same route then waits in its
+place and is itself replaceable. On a datagram transport a newer message starts once the
+current one is sent, and the receiver drops an older incomplete one
+([latest messages on datagrams](#latest-messages-on-datagrams)).
 
 ### Sending
 
@@ -197,19 +202,24 @@ start with it. Unsubscribing drops the waiting latest state of the topic and the
 sender's ring; a latest state already started is completed and reliable states already
 queued are sent. The topics a client publishes are always subscribed.
 
-**Numbering.** A side numbers the states of each topic it sends from 0: a reliable state
-when it is published, a latest state when its first fragment is sent. A latest state
-replaced before it started gets no number. The receiver numbers the states it receives
-per topic the same way, so both count the same states.
+**Numbering.** Every state has a number modulo 65536. A latest state's number is its
+[message id](#frames), taken when its first fragment is sent; a latest state replaced
+before it started gets no number. Reliable states are numbered from 0 per topic in the
+order they are published. The receiver takes the same numbers: the message id of a latest
+state and its own count of the reliable states of the topic.
 
-**Rings.** Each side holds a ring of states per topic and direction. When a state enters
+**Rings.** Each side holds a ring of states with their numbers per topic and direction.
+When a state enters
 it, the oldest states leave while the ring holds more than 32 states or more than the
 baseline limit of full record bytes, but the newest state always stays. The baseline
 limit is the smaller of the limits both sides announce in the handshake.
 
 **Sending a state.** Its base is the newest state of the sender's ring that is
-confirmed: the packet carrying its last fragment is acknowledged. On a stream or message
-transport an acknowledgement confirms every packet up to the sequence it names. The
+confirmed. On a stream or message transport a state is confirmed when the packet
+carrying its last fragment is acknowledged, and an acknowledgement confirms every packet
+up to the sequence it names. On a datagram transport a reliable state is confirmed when
+every byte of its message is acknowledged, and a latest state when a
+[confirmation frame](#confirmation-frames) of the receiver names it. The
 sender writes a delta against the base when there is one, the
 [delta encoding](Schemas.md#deltas-between-records) succeeds, and the delta is shorter
 than the full record; otherwise the full record. Then the state enters the ring.
@@ -218,7 +228,9 @@ than the full record; otherwise the full record. Then the state enters the ring.
 against it and reports the full record; a full record is reported as received. The state
 then enters the receiver's ring. The receiver's ring always still holds the base: it
 received the base and, after it, only states that also entered the sender's ring since,
-so the states from the base on fit the same limits.
+so the states from the base on fit the same limits. On a datagram transport the receiver
+of a latest topic skips states that were lost or overtaken; it then holds fewer states
+after the base, which fit the limits all the more.
 
 ### Limits
 
@@ -227,7 +239,7 @@ document; the host may change them per connection.
 
 | Limit | Default | Exceeded |
 | --- | --- | --- |
-| largest packet received and sent, 1200 to 65535 bytes | 16384 | `network.packetTooLarge` |
+| largest packet received and sent, 1200 to 65535 bytes | 16384; 1200 on a datagram transport | `network.packetTooLarge` |
 | baseline limit: full record bytes of a topic's ring, 0 to 1073741824 | 65536 | older states leave the ring |
 | pending received bytes: incomplete messages and undelivered events | 4194304 | `network.queueFull` |
 | frames received per second, token bucket of one second | 4096 | `network.rateExceeded` |
@@ -255,9 +267,10 @@ time; this is the congestion hook.
 Every data packet carries a sequence number, 0 for the first and then one higher per
 packet modulo 65536, and from the first received data packet on an acknowledgement: the
 newest received sequence and a bit for each of the 32 sequences before it, bit 0 for the
-sequence one older. A data packet with at least one frame and a keepalive ask for
-acknowledgement and set flag bit 1; a packet that only acknowledges does not, so
-acknowledgements never answer each other. An asking packet is acknowledged by the next
+sequence one older, set when that sequence was received. A data packet with at least one
+message frame, a keepalive and a [probe](#datagram-delivery) ask for acknowledgement and
+set flag bit 1; a packet that only acknowledges or [confirms](#confirmation-frames) does
+not, so acknowledgements never answer each other. An asking packet is acknowledged by the next
 data packet, which a side sends at the latest after the acknowledgement delay. A side
 that has sent nothing for the keepalive interval sends a data packet without frames, the
 keepalive.
@@ -270,7 +283,162 @@ that truncates toward zero.
 
 On a stream or message transport packets arrive complete and in order, so nothing is
 resent, a data packet must carry exactly the next sequence, and an acknowledgement must
-name a sequence the receiver has sent and not be older than the previous one.
+name a sequence the receiver has sent and not be older than the previous one. A datagram
+transport follows [datagram delivery](#datagram-delivery) instead.
+
+### Datagram delivery
+
+On a datagram transport each packet travels alone and may be lost, duplicated, delayed
+or reordered. The sender keeps what is not acknowledged and resends what is lost; the
+receiver ignores what it has already and restores the order of each class. Loss
+detection follows QUIC ([RFC 9002](https://www.rfc-editor.org/rfc/rfc9002)) in integer
+microseconds; every division truncates toward zero.
+
+**Receiving data packets.** A data packet whose flags and sequence are valid is placed
+by its distance to the newest received sequence modulo 65536: 1 to 32767 ahead makes it
+the newest; up to 32 behind is received when its bit is not yet set. The first data
+packet is received with any sequence. A packet with the newest sequence, a set bit or a
+sequence more than 32 behind is a duplicate or too old and is ignored without reading
+further; it still counts as a received packet for the timeout.
+
+**Acknowledging.** An asking packet makes an acknowledgement due after the
+acknowledgement delay, as on other transports, and at once when 16 asking packets have
+arrived since the last data packet this side sent.
+
+**Sent packets.** The sender records its last 1024 data packets: the send time, whether
+the packet asked, and the fragments of messages it carried, at most 16384 fragments over
+all records. A fragment names its message and the range of bytes it carried. A packet
+that does not ask is settled when sent; an asking packet stays outstanding until it is
+acknowledged or lost. Before a data packet is written, the packet 1024 before it is declared lost
+when that one is still outstanding, so its fragments may be resent in the new packet; an
+outstanding packet due to leave makes a data packet due as waiting frames do. A packet ends before a message frame whose fragment would
+exceed 16384 recorded fragments.
+
+**Acknowledgements received.** The newest sequence of an acknowledgement names the
+newest packet sent with that sequence: with `n` packets sent, the packet
+`n − 1 − ((n − 1 − sequence) mod 65536)`, counted from 0. Naming a packet before the
+first, or any packet before one was sent, is `network.malformed`. The named packet and
+each packet a set bit names, counting back from it, are acknowledged when they are
+recorded and outstanding; acknowledging a packet acknowledges its fragments. A packet
+already acknowledged or declared lost stays as it is, so every range of bytes is
+outstanding in at most one packet.
+
+The round trip is sampled as on other transports when the named packet is newer than
+every packet acknowledged before and asked for acknowledgement. Besides the estimate a
+side keeps the variation and the newest sample. The first sample sets the variation to
+half the sample; each later one moves it by a quarter of the difference between the
+absolute difference of estimate and sample and the variation, computed before the
+estimate moves. Until the first sample, loss detection uses an estimate and a newest
+sample of 333000 µs and a variation of 166500 µs.
+
+**Loss detection.** The largest is the newest packet acknowledged. An outstanding packet
+older than the largest is lost when it is at least 3 packets older, or when its loss
+delay has passed since it was sent: nine eighths of the larger of estimate and newest
+sample, at least 1000 µs. Detection runs after every acknowledgement received and when
+the earliest loss delay of an outstanding packet older than the largest ends. Lost
+packets are handled in packet order; their fragments are queued to be resent in that
+order.
+
+**Probe timeout.** While a packet is outstanding and no outstanding packet older than the
+largest awaits its loss delay, the probe timeout counts from the last asking packet sent:
+the estimate, plus the larger of four times the variation and 1000 µs, plus the local
+acknowledgement delay, doubled for each expiry since an acknowledgement last
+acknowledged an outstanding packet, at most 10 times. On expiry the side sends a probe:
+a data packet that asks even when no frame is due.
+
+**Reliable and bulk messages.** Each class sends its messages in order as on other
+transports; a message keeps its place in the send queue and counts toward the queue limit
+until every byte of it is acknowledged, and the queue head leaves then. At most 8192
+messages per class are started and still queued; the next one waits. In a packet each
+class first resends the ranges of its lost fragments in the order they were lost, then
+continues with new fragments. A range that does not fit the packet is split; its rest
+waits. A message of total 0 is acknowledged when its one frame is.
+
+The receiver accepts a frame of a class whose id is 0 to 8191 ahead of the next message
+of the class to report, modulo 65536; an id up to 8192 behind is a duplicate and
+ignored, and any other id is `network.malformed`. The frames of one id arrive in any
+order; they must name the same channel and total, else `network.malformed`. Bytes of a
+range received already keep their first value. A message counts its total toward the
+pending received bytes from its first frame. Complete messages are reported in id order:
+a message complete before an earlier one waits for it.
+
+**Packet order.** A data packet carries owed confirmation frames first, then reliable
+resends and new reliable fragments, then per latest route its resends, its current
+message and a newer one, then bulk resends and new bulk fragments.
+
+### Latest messages on datagrams
+
+A newer message of a latest route starts as soon as every fragment of the current one is
+sent once; the current one is then no longer sent. A lost fragment of a latest message is
+resent only while that message is still the route's current one and no newer message
+waits; otherwise it is dropped.
+
+The receiver holds at most one incomplete message per latest route. A frame of the
+message in progress continues it. A frame whose id is 1 to 32767 ahead of the message in
+progress, or ahead of the last reported message of the route when none is in progress,
+drops the message in progress and starts a new one; before the first message every id
+is ahead. A frame of the message in progress with another total is `network.malformed`.
+Any other frame is ignored. A latest message counts its total toward the
+pending received bytes from its first frame and is reported when complete.
+
+### Confirmation frames
+
+On a datagram transport the receiver of a latest topic confirms states for the sender's
+base. When a state of a latest topic enters the receiver's ring, the receiver owes the
+sender one confirmation frame for it; a newer state of the same route replaces a
+confirmation not yet sent. A data packet carries all owed confirmations first, in route
+order. They are never resent, do not ask for acknowledgement, so a data packet with only
+confirmations does not ask, and ignore the send budget;
+an owed confirmation makes a data packet due like a received asking packet.
+
+| Field | Encoding |
+| --- | --- |
+| channel | varint `0` |
+| topic | varint, the channel of the topic's route |
+| number | 2 bytes, the state's number |
+
+A confirmation counts toward the frame limit. One whose topic is not a latest topic the
+receiving side publishes is `network.malformed`; one that names a state no longer in the
+ring is ignored.
+
+### Datagram handshake
+
+- The client sends `hello` and repeats it while no `welcome` arrives: after 1 s, then
+  after twice the previous interval each time. Without `welcome` it closes with
+  `network.timeout` like any connection, so loss can fail the handshake.
+- A `retry` received in the state `Hello` stores its cookie, and the client sends `hello`
+  with it at once; the interval starts again at 1 s. A `retry` in another state is
+  ignored.
+- A server in `AwaitAccept` ignores `hello`; a server in `Connected` answers each `hello`
+  with `welcome`. In both states it does not read the `hello`.
+- The client accepts the first `welcome` in the state `Hello`, whichever `hello` it
+  answers, and ignores data packets before it and every `welcome` after it.
+- A side sends `close` once; when it is lost, the peer closes on its timeout.
+
+### Address validation
+
+A server answers a client it does not know without keeping state, so a forged source
+address gains no connection and at most as many bytes as it sent. A gate holds a secret
+key of 32 bytes and a window length, and checks each datagram of an unknown address:
+
+| Result | Condition | Server action |
+| --- | --- | --- |
+| drop | the datagram is not a `hello`, is shorter than 1200 bytes, has a wrong magic, or its fields up to the cookie cannot be read within the bounds of a `hello` | ignore it |
+| retry | the cookie is empty or not valid | send the gate's 26-byte `retry` |
+| accept | the cookie is valid | create a server connection and pass it the datagram |
+
+Reading the fields within the bounds means: the version varint, the 8 bytes of the
+network hash, a route count from 1 to 64 with its hashes, the two limit varints, a token
+of at most 512 bytes and a cookie of at most 64 bytes. The connection checks the version.
+
+A cookie is 24 bytes: the window number as 8 bytes, signed, the current time divided by
+the window length rounded toward negative infinity, followed by the first 16 bytes of
+HMAC-SHA256 with the key over the four bytes `GESC` (`47 45 53 43`), the window number's 8
+bytes and the address. A cookie is valid when its window number is the current or the
+previous one and its HMAC bytes match, compared in constant time. The address is the
+client's address as the transport gives it; the socket transports use the 4 or 16 bytes
+of the IP address followed by the port as 2 bytes, most significant first. The `retry`
+holds type 2, the varint `24` and a fresh cookie for the current window.
 
 ### Timeout and closing
 
@@ -315,7 +483,7 @@ its last field are `network.malformed`, and so is an unknown type.
 | Type | Packet |
 | --- | --- |
 | 1 | `hello` |
-| 2 | reserved; `network.malformed` |
+| 2 | `retry`, datagram only |
 | 3 | `welcome` |
 | 4 | `close` |
 | 5 | `data` |
@@ -332,7 +500,11 @@ its last field are `network.malformed`, and so is an unknown type.
 | packet limit | varint, 1200 to 65535 |
 | baseline limit | varint, 0 to 1073741824 |
 | token | varint length up to 512, then the bytes |
-| cookie | varint length, `0` in this version |
+| cookie | varint length up to 64, then the bytes; length `0` on a stream or message transport |
+
+On a datagram transport zero bytes follow the cookie up to at least 1200 bytes in all; a
+shorter datagram `hello` or another byte after the cookie is `network.malformed`. A
+connection does not check the cookie; the [gate](#address-validation) does.
 
 A wrong magic or version is `network.protocolMismatch`, checked before anything else.
 A different route count or network hash is `network.schemaMismatch`. Its detail names
@@ -342,6 +514,10 @@ lacks, in route order and separated by `, `; it names the network when no root d
 **`welcome`** (server to client): version varint `1`, then the server's packet limit as a
 varint, 1200 to 65535, and its baseline limit as a varint, 0 to 1073741824.
 
+**`retry`** (server to client, datagram only): the cookie as varint length 1 to 64, then
+the bytes. A `retry` on a stream or message transport or received by a server is
+`network.malformed`.
+
 **`close`**: the code as text of 1 to 64 bytes from `!` to `~`, then the detail as
 UTF-8 text of at most 512 bytes. A longer detail is shortened to whole scalars before it
 is sent.
@@ -350,7 +526,7 @@ is sent.
 
 | Field | Encoding |
 | --- | --- |
-| flags | 1 byte; bit 0 is set when an acknowledgement follows, bit 1 when the packet asks for acknowledgement; the other bits are zero, and a packet with frames sets bit 1 |
+| flags | 1 byte; bit 0 is set when an acknowledgement follows, bit 1 when the packet asks for acknowledgement; the other bits are zero, and a packet with message frames sets bit 1 |
 | sequence | 2 bytes |
 | acknowledgement | 2 bytes newest received sequence, 4 bytes earlier sequences, when flagged |
 | frames | until the end of the packet |
@@ -368,16 +544,20 @@ is sent.
 
 A message is sent in one frame or, when it does not fit, in fragments of consecutive
 offsets. The sender fills each packet: a fragment takes the largest chunk that fits the
-remaining space. Channel 0 is reserved.
+remaining space. On a datagram transport channel 0 is a
+[confirmation frame](#confirmation-frames).
 
 Reliable messages are numbered from 0 per direction across all reliable routes, bulk
 messages likewise across bulk routes, and latest messages per route; the number wraps
 from 65535 to 0. A reliable, bulk or latest message takes its number when its first
 fragment is sent.
 
-The receiver checks each frame:
+The receiver checks each message frame. The first three checks apply on every
+transport; on a datagram transport [datagram delivery](#datagram-delivery) replaces the
+others:
 
-- a channel of 0 or beyond the route count is `network.malformed`; a route the peer does
+- a channel beyond the route count, or of 0 on a stream or message transport, is
+  `network.malformed`; a route the peer does
   not send is `network.unexpectedRoute`;
 - a total beyond the route's largest encoding is `network.messageTooLarge`;
 - a chunk of length 0 in a message of nonzero total, or a chunk ending beyond the total, is
@@ -411,6 +591,12 @@ leaves bytes over.
   `network.packetTooLarge`.
 - **Message** (WebSocket, in-process): one binary message per packet. A packet above the
   packet limit is `network.packetTooLarge`.
+- **Datagram** (UDP over IPv4 or IPv6): one datagram per packet. A packet above the
+  packet limit is `network.packetTooLarge`, an empty one `network.malformed`. The server
+  passes the datagrams of an unknown address through
+  [address validation](#address-validation) and those of a known address to its
+  connection. A socket transport may drop datagrams when its receive queues are full, as
+  the network could.
 
 The client of a stream or WebSocket transport opens the connection; the WebSocket
 endpoint path is chosen by the host. A text WebSocket message closes with
@@ -437,7 +623,9 @@ endpoint path is chosen by the host. A text WebSocket message closes with
 
 This version does not encrypt or authenticate. The token is shown to whoever can read
 the transport, and the peer's identity is not proven. Use a transport that protects
-both, such as TLS; a browser client uses WebSocket only over `wss`.
+both, such as TLS; a browser client uses WebSocket only over `wss`. On a datagram
+transport address validation proves only that the client receives at its address;
+whoever can see or forge its packets can still disturb or close the session.
 
 ## API
 
@@ -446,7 +634,7 @@ both, such as TLS; a browser client uses WebSocket only over `wss`.
 The core is the package `GameEventScript.Network` (C#, `netstandard2.1`) and
 `GameEventScriptNetwork` (Swift, without Foundation). It depends only on Runtime.
 The socket transports are the separate packages `GameEventScript.Network.Sockets`
-(C#, .NET 8, `TcpListener` and `WebSocket.CreateFromStream`) and
+(C#, .NET 8, `TcpListener`, `WebSocket.CreateFromStream` and `Socket` for UDP) and
 `GameEventScriptNetworkSockets` (Swift, SwiftNIO). The [public API](PublicApi.md#network)
 owns the member names per port.
 
@@ -461,6 +649,7 @@ owns the member names per port.
 | codes | `GesNetworkCodes` | `GesNetworkCodes` |
 | in-process transport | `GesNetworkLoopback` | `GesNetworkLoopback` |
 | simulated network | `GesNetworkSimulator` | `GesNetworkSimulator` |
+| address validation | `GesNetworkCookies` | `GesNetworkCookies` |
 
 A host drives a connection like this:
 
@@ -484,3 +673,13 @@ delayed by the base latency plus a draw from 0 to the jitter inclusive, but neve
 arrives before a packet sent earlier in the same direction, so order is preserved. Equal
 seeds, options and inputs give equal packets, events and times. The loopback transport is
 the simulated network without latency.
+
+Between datagram connections the simulated network may also lose, duplicate and reorder
+packets, with a loss and a duplicate rate in per mille, 0 to 1000, and reordering on or
+off. For each packet it draws the delay; with a loss rate above 0 a number from 0 to 999
+that loses the packet when below the rate; then, for a packet not lost and a duplicate
+rate above 0, a number from 0 to 999 that adds a copy when below the rate, and the copy's
+delay. With reordering a packet or copy arrives after its own delay, not held behind
+packets sent earlier; packets due at the same time arrive in the order sent, a packet
+before its copy. Loss, duplicates and reordering require both connections to use the
+datagram transport.

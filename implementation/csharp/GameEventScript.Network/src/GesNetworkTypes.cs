@@ -93,7 +93,13 @@ public enum GesNetworkTransport
     Message,
 
     /// <summary>A byte stream, for example TCP; each packet is preceded by its varint length.</summary>
-    Stream
+    Stream,
+
+    /// <summary>
+    /// One datagram per packet, for example UDP. Packets may be lost, duplicated, delayed or reordered; the connection
+    /// resends what is lost and restores the order of each class.
+    /// </summary>
+    Datagram
 }
 
 /// <summary>The kind of a connection event.</summary>
@@ -158,8 +164,11 @@ public sealed class GesNetworkOptions
     /// <summary>Gets or sets the transport kind. The default is <see cref="GesNetworkTransport.Message"/>.</summary>
     public GesNetworkTransport Transport { get; set; } = GesNetworkTransport.Message;
 
-    /// <summary>Gets or sets the largest packet received and sent, 1200 to 65535 bytes. The default is 16384.</summary>
-    public int MaxPacketBytes { get; set; } = 16384;
+    /// <summary>
+    /// Gets or sets the largest packet received and sent, 1200 to 65535 bytes, or 0 for the transport's default: 1200 on
+    /// the datagram transport, else 16384. The default is 0.
+    /// </summary>
+    public int MaxPacketBytes { get; set; }
 
     /// <summary>Gets or sets the limit of pending received bytes: incomplete messages and undelivered events. The default is 4194304.</summary>
     public long MaxPendingReceiveBytes { get; set; } = 4194304;
@@ -188,10 +197,13 @@ public sealed class GesNetworkOptions
     /// </summary>
     public long MaxBaselineBytes { get; set; } = 65536;
 
+    // The packet limit in effect: the configured one, or the transport's default.
+    internal int PacketLimit => MaxPacketBytes != 0 ? MaxPacketBytes : Transport == GesNetworkTransport.Datagram ? GesNetworkWire.MinimumPacketBytes : 16384;
+
     internal void Validate()
     {
-        if (MaxPacketBytes is < GesNetworkWire.MinimumPacketBytes or > GesNetworkWire.MaximumPacketBytes)
-            throw new ArgumentOutOfRangeException(nameof(MaxPacketBytes), "The packet limit is 1200 to 65535 bytes.");
+        if (MaxPacketBytes != 0 && MaxPacketBytes is < GesNetworkWire.MinimumPacketBytes or > GesNetworkWire.MaximumPacketBytes)
+            throw new ArgumentOutOfRangeException(nameof(MaxPacketBytes), "The packet limit is 0 or 1200 to 65535 bytes.");
         if (MaxPendingReceiveBytes < 1) throw new ArgumentOutOfRangeException(nameof(MaxPendingReceiveBytes));
         if (MaxFramesPerSecond < 1) throw new ArgumentOutOfRangeException(nameof(MaxFramesPerSecond));
         if (MaxSendQueueBytes < 1) throw new ArgumentOutOfRangeException(nameof(MaxSendQueueBytes));
@@ -200,7 +212,7 @@ public sealed class GesNetworkOptions
         if (AckDelayMicroseconds < 0) throw new ArgumentOutOfRangeException(nameof(AckDelayMicroseconds));
         if (SendBudgetBytesPerSecond < 0) throw new ArgumentOutOfRangeException(nameof(SendBudgetBytesPerSecond));
         if (MaxBaselineBytes is < 0 or > GesNetworkWire.MaximumBaselineBytes) throw new ArgumentOutOfRangeException(nameof(MaxBaselineBytes));
-        if (Transport is not (GesNetworkTransport.Message or GesNetworkTransport.Stream))
+        if (Transport is not (GesNetworkTransport.Message or GesNetworkTransport.Stream or GesNetworkTransport.Datagram))
             throw new ArgumentOutOfRangeException(nameof(Transport));
     }
 }

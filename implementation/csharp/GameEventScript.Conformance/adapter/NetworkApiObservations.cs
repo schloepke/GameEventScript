@@ -9,7 +9,7 @@ using GameEventScript.Network;
 // Runs scripted steps over a client and a server connection and records their events and packets as trace lines.
 internal static class NetworkApiObservations
 {
-    private static readonly string[] Steps = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget"];
+    private static readonly string[] Steps = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget", "deliver", "cookie"];
 
     internal static void Validate(JsonElement input)
     {
@@ -44,17 +44,19 @@ internal static class NetworkApiObservations
         var link = input.GetProperty("link");
         GesNetworkSimulator? simulator = link.ValueKind switch
         {
-            JsonValueKind.Object => new GesNetworkSimulator(client, server, link.GetProperty("seed").GetInt64(), link.GetProperty("latencyMicroseconds").GetInt64(), link.GetProperty("jitterMicroseconds").GetInt64()),
+            JsonValueKind.Object => Simulator(client, server, link),
             _ when link.GetString() == "loopback" => new GesNetworkSimulator(client, server, 0, 0, 0),
             _ => null
         };
+        if (simulator is null && link.ValueKind == JsonValueKind.Object) return new { status = "ok", network = new { error = new { code = "invalidArgument" } } };
         var trace = new List<string>();
+        var sent = new Dictionary<GesNetworkConnection, List<byte[]>> { [client] = [], [server] = [] };
         var now = 0L;
         foreach (var step in input.GetProperty("steps").EnumerateArray())
         {
             var action = step.GetProperty("action").GetString()!;
             var connection = step.TryGetProperty("side", out var side) && side.GetString() == "client" ? client : server;
-            var name = connection == client ? "client" : "server";
+            var name = action == "cookie" ? "cookie" : connection == client ? "client" : "server";
             try
             {
                 switch (action)
@@ -97,7 +99,26 @@ internal static class NetworkApiObservations
                     case "transmit":
                         var buffer = new byte[connection.MaxPacketBytes + 5];
                         int length;
-                        while ((length = connection.Transmit(buffer)) > 0) trace.Add($"{name} packet {Convert.ToHexString(buffer, 0, length).ToLowerInvariant()}");
+                        sent[connection].Clear();
+                        while ((length = connection.Transmit(buffer)) > 0)
+                        {
+                            sent[connection].Add(buffer[..length]);
+                            trace.Add($"{name} packet {Packet(buffer.AsSpan(0, length))}");
+                        }
+
+                        break;
+                    case "deliver":
+                        var from = sent[connection == client ? server : client];
+                        foreach (var index in step.GetProperty("packets").EnumerateArray())
+                        {
+                            var position = index.GetInt32();
+                            if (position >= from.Count) throw new ArgumentException("No such packet.");
+                            connection.Receive(from[position], now);
+                        }
+
+                        break;
+                    case "cookie":
+                        trace.Add($"cookie {Cookie(step, sent[client])}");
                         break;
                     case "transportClosed":
                         connection.TransportClosed();
@@ -123,6 +144,45 @@ internal static class NetworkApiObservations
         return new { status = "ok", network = new { trace, client = Describe(client), server = Describe(server) } };
     }
 
+    private static GesNetworkSimulator? Simulator(GesNetworkConnection client, GesNetworkConnection server, JsonElement link)
+    {
+        try
+        {
+            return new GesNetworkSimulator(
+                client,
+                server,
+                link.GetProperty("seed").GetInt64(),
+                link.GetProperty("latencyMicroseconds").GetInt64(),
+                link.GetProperty("jitterMicroseconds").GetInt64(),
+                link.TryGetProperty("lossPerMille", out var loss) ? loss.GetInt32() : 0,
+                link.TryGetProperty("duplicatePerMille", out var duplicate) ? duplicate.GetInt32() : 0,
+                link.TryGetProperty("reorder", out var reorder) && reorder.GetBoolean());
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    // Checks a datagram at a fresh gate and names the result, with the retry's bytes.
+    private static string Cookie(JsonElement step, List<byte[]> sent)
+    {
+        var packet = step.TryGetProperty("bytes", out var bytes)
+            ? Convert.FromHexString(bytes.GetString()!)
+            : step.GetProperty("packet").GetInt32() < sent.Count ? sent[step.GetProperty("packet").GetInt32()] : throw new ArgumentException("No such packet.");
+        using var cookies = new GesNetworkCookies(Convert.FromHexString(step.GetProperty("key").GetString()!), step.GetProperty("windowMicroseconds").GetInt64());
+        var retry = new byte[GesNetworkCookies.RetryBytes];
+        return cookies.Check(packet, Convert.FromHexString(step.GetProperty("address").GetString()!), step.GetProperty("now").GetInt64(), retry) switch
+        {
+            GesNetworkCookieResult.Accept => "accept",
+            GesNetworkCookieResult.Retry => "retry " + Convert.ToHexString(retry).ToLowerInvariant(),
+            _ => "drop"
+        };
+    }
+
+    // A packet up to 512 bytes as hexadecimal, a longer one as its length and FNV-1a 64 hash.
+    private static string Packet(ReadOnlySpan<byte> bytes) => bytes.Length <= 512 ? Convert.ToHexString(bytes).ToLowerInvariant() : Bytes(bytes);
+
     private static GesBoundNetwork Bind(JsonElement sources, string network)
     {
         var parsed = sources.EnumerateArray().Select((text, index) => new GesSchemaSource($"schema{index}.gess", text.GetString()!)).ToArray();
@@ -137,7 +197,12 @@ internal static class NetworkApiObservations
             switch (property.Name)
             {
                 case "transport":
-                    options.Transport = property.Value.GetString() == "stream" ? GesNetworkTransport.Stream : GesNetworkTransport.Message;
+                    options.Transport = property.Value.GetString() switch
+                    {
+                        "stream" => GesNetworkTransport.Stream,
+                        "datagram" => GesNetworkTransport.Datagram,
+                        _ => GesNetworkTransport.Message
+                    };
                     break;
                 case "maxPacketBytes": options.MaxPacketBytes = checked((int)property.Value.GetInt64()); break;
                 case "maxBaselineBytes": options.MaxBaselineBytes = property.Value.GetInt64(); break;

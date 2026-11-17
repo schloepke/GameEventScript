@@ -19,10 +19,13 @@ public struct GesNetworkSocketError: Error, Sendable, CustomStringConvertible {
 }
 
 // The received chunks of one socket, written on its event loop and taken on the host thread. Reading pauses
-// while the chunks reach the capacity and resumes when the host takes them.
+// while the chunks reach the capacity and resumes when the host takes them; datagrams are dropped instead.
 final class GesNetworkSocketInbox: @unchecked Sendable {
     static let capacity = 64
     static let readBytes = 16384
+
+    // A datagram is dropped rather than waited for when this many are not yet taken.
+    static let datagramCapacity = 256
 
     private let lock = NIOLock()
     private var chunks: [ByteBuffer] = []
@@ -30,6 +33,12 @@ final class GesNetworkSocketInbox: @unchecked Sendable {
     private var held = false
 
     func push(_ chunk: ByteBuffer) { lock.withLock { chunks.append(chunk) } }
+
+    func pushDatagram(_ datagram: ByteBuffer) {
+        lock.withLock {
+            if chunks.count < Self.datagramCapacity { chunks.append(datagram) }
+        }
+    }
 
     func end() { lock.withLock { ended = true } }
 

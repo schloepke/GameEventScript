@@ -67,6 +67,9 @@ public enum GesNetworkTransport: Sendable, Equatable {
     case message
     /// The transport is a byte stream, as TCP; every packet carries a varint length prefix.
     case stream
+    /// One datagram per packet, for example UDP. Packets may be lost, duplicated, delayed or reordered; the connection
+    /// resends what is lost and restores the order of each class.
+    case datagram
 }
 
 /// The kind of a connection event.
@@ -104,8 +107,9 @@ public struct GesNetworkEvent {
 public struct GesNetworkOptions: Sendable, Equatable {
     /// How the transport delimits packets.
     public var transport: GesNetworkTransport = .message
-    /// The largest packet this side sends or receives, from 1200 to 65535 bytes.
-    public var maxPacketBytes = 16384
+    /// The largest packet this side sends or receives, from 1200 to 65535 bytes, or 0 for the transport's default:
+    /// 1200 on the datagram transport, else 16384.
+    public var maxPacketBytes = 0
     /// The largest number of received bytes not yet taken as events.
     public var maxPendingReceiveBytes: Int64 = 4_194_304
     /// The most frames the peer may send per second.
@@ -127,9 +131,12 @@ public struct GesNetworkOptions: Sendable, Equatable {
     /// Creates the default options.
     public init() {}
 
+    // The packet limit in effect: the configured one, or the transport's default.
+    var packetLimit: Int { maxPacketBytes != 0 ? maxPacketBytes : transport == .datagram ? GesNetworkWire.minimumPacketBytes : 16384 }
+
     func validate() throws {
-        if maxPacketBytes < GesNetworkWire.minimumPacketBytes || maxPacketBytes > GesNetworkWire.maximumPacketBytes {
-            throw GesApiError.invalidArgument("The packet limit is 1200 to 65535 bytes.")
+        if maxPacketBytes != 0 && (maxPacketBytes < GesNetworkWire.minimumPacketBytes || maxPacketBytes > GesNetworkWire.maximumPacketBytes) {
+            throw GesApiError.invalidArgument("The packet limit is 0 or 1200 to 65535 bytes.")
         }
         if maxPendingReceiveBytes < 1 { throw GesApiError.invalidArgument("The pending receive limit is at least 1 byte.") }
         if maxFramesPerSecond < 1 { throw GesApiError.invalidArgument("The frame rate is at least 1 frame per second.") }

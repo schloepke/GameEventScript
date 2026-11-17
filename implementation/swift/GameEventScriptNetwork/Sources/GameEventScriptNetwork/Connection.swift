@@ -91,13 +91,59 @@ public final class GesNetworkConnection {
     var stream: UnsafeMutableRawBufferPointer?
     var streamLength = 0
 
+    // Datagram delivery, see ConnectionDatagram.swift.
+    let datagram: Bool
+
+    // Receiving: the newest sequence, a bit for each of the 32 before it, and the asking packets since the last send.
+    var receivedAny = false
+    var newestSequence: UInt16 = 0
+    var sequenceBits: UInt32 = 0
+    var asksSinceSend = 0
+    let orderedReliable: GesNetworkOrderedReceive?
+    let orderedBulk: GesNetworkOrderedReceive?
+    let partialLatest: [GesNetworkPartial?]
+
+    // Owed confirmation frames per route.
+    var owed: [Bool]
+    var owedNumbers: [UInt16]
+
+    // Sent packets: time, whether it asked, whether it is outstanding, and its fragments in the fragment ring.
+    var recordTimes: [Int64]
+    var recordAsks: [Bool]
+    var recordOutstanding: [Bool]
+    var recordFragments: [Int64]
+    var recordFragmentCounts: [Int]
+    var fragmentLanes: [Int]
+    var fragmentKeys: [Int64]
+    var fragmentOffsets: [Int]
+    var fragmentLengths: [Int]
+    var fragmentTail: Int64 = 0
+    var fragmentRoom = 0
+    var outstanding = 0
+    var oldestOutstanding: Int64 = 0
+
+    var largestAcked: Int64 = -1
+    var variation: Int64 = GesNetworkConnection.initialVariation
+    var latestSample: Int64 = GesNetworkConnection.initialRoundTrip
+    var lossTime: Int64 = .max
+    var probeCount = 0
+    var probeDue = false
+    var lastAskSend: Int64 = 0
+
+    // The client's hello repetition and the cookie of the latest retry.
+    var helloWritten = false
+    var helloNext: Int64 = 0
+    var helloInterval: Int64 = GesNetworkConnection.helloRepeatInterval
+    var cookie: [UInt8] = []
+
     private init(network: GesBoundNetwork, client: Bool, token: [UInt8], now: Int64, options: GesNetworkOptions) throws {
         try options.validate()
         if token.count > GesNetworkWire.maximumTokenBytes { throw GesApiError.invalidArgument("A token holds at most 512 bytes.") }
         self.network = network
         isClient = client
         transport = options.transport
-        maxPacketBytes = options.maxPacketBytes
+        datagram = options.transport == .datagram
+        maxPacketBytes = options.packetLimit
         maxPending = options.maxPendingReceiveBytes
         framesPerSecond = Int64(options.maxFramesPerSecond)
         maxSendQueue = options.maxSendQueueBytes
@@ -114,6 +160,7 @@ public final class GesNetworkConnection {
         var maxBytes: [Int64] = []
         var sendLatest: [GesNetworkLatestSlot?] = []
         var receiveLatest: [GesNetworkReassembly?] = []
+        var partialLatest: [GesNetworkPartial?] = []
         var topics: [GesNetworkTopic?] = []
         for (index, route) in routes.enumerated() {
             let local = (route.side == .client) == client
@@ -129,8 +176,9 @@ public final class GesNetworkConnection {
                 topics.append(nil)
             }
             let latest = route.deliveryClass == .latest
-            sendLatest.append(latest && local ? GesNetworkLatestSlot() : nil)
-            receiveLatest.append(latest && !local ? GesNetworkReassembly() : nil)
+            sendLatest.append(latest && local ? GesNetworkLatestSlot(datagram: datagram) : nil)
+            receiveLatest.append(latest && !local && !datagram ? GesNetworkReassembly() : nil)
+            if datagram { partialLatest.append(latest && !local ? GesNetworkPartial() : nil) }
         }
         self.classes = classes
         self.localSends = localSends
@@ -138,6 +186,24 @@ public final class GesNetworkConnection {
         self.topics = topics
         self.sendLatest = sendLatest
         self.receiveLatest = receiveLatest
+        self.partialLatest = partialLatest
+        // Only a datagram connection records its packets and restores the order of what it receives.
+        let datagramRoutes = datagram ? routeCount : 0
+        let records = datagram ? Self.recordedPackets : 0
+        let fragments = datagram ? Self.recordedFragments : 0
+        owed = [Bool](repeating: false, count: datagramRoutes)
+        owedNumbers = [UInt16](repeating: 0, count: datagramRoutes)
+        recordTimes = [Int64](repeating: 0, count: records)
+        recordAsks = [Bool](repeating: false, count: records)
+        recordOutstanding = [Bool](repeating: false, count: records)
+        recordFragments = [Int64](repeating: 0, count: records)
+        recordFragmentCounts = [Int](repeating: 0, count: records)
+        fragmentLanes = [Int](repeating: 0, count: fragments)
+        fragmentKeys = [Int64](repeating: 0, count: fragments)
+        fragmentOffsets = [Int](repeating: 0, count: fragments)
+        fragmentLengths = [Int](repeating: 0, count: fragments)
+        orderedReliable = datagram ? GesNetworkOrderedReceive() : nil
+        orderedBulk = datagram ? GesNetworkOrderedReceive() : nil
         self.token = token
         self.now = now
         lastReceive = now
@@ -179,7 +245,7 @@ public final class GesNetworkConnection {
     /// The received message bytes not yet taken as events.
     public var pendingReceiveBytes: Int64 { pending }
 
-    /// The reliable and bulk bytes not yet completely sent.
+    /// The reliable and bulk bytes not yet completely sent, on a datagram transport not yet completely acknowledged.
     public var queuedSendBytes: Int64 { sendReliable.byteCount + sendBulk.byteCount }
 
     /// The bytes per second this side sends; 0 sends without a budget. Change it with
@@ -195,8 +261,9 @@ public final class GesNetworkConnection {
         budget = value
     }
 
-    /// The time in microseconds at which the connection next needs `advance(_:)` or `transmit(into:)`;
-    /// `Int64.max` once closed.
+    /// The time in microseconds at which the connection next needs `advance(_:)` or `transmit(into:)`: the timeout,
+    /// keepalive, acknowledgement or budget refill, and on a datagram transport also the repetition of the hello, loss
+    /// detection or probe timeout; `Int64.max` once closed.
     public var nextDeadline: Int64 {
         if state == .closed { return .max }
         var deadline = lastReceive + timeout
@@ -205,6 +272,7 @@ public final class GesNetworkConnection {
         if budget > 0 && budgetUnits < 0 && hasPendingFrames() {
             deadline = min(deadline, now + (-budgetUnits + budget - 1) / budget)
         }
+        if datagram { deadline = min(deadline, datagramDeadline()) }
         return deadline
     }
 
@@ -221,7 +289,11 @@ public final class GesNetworkConnection {
         self.now = now
         frameUnits = Self.refill(frameUnits, framesPerSecond * Self.microsecondsPerSecond, elapsed, framesPerSecond)
         budgetUnits = budget == 0 ? budgetCapacity : Self.refill(budgetUnits, budgetCapacity, elapsed, budget)
-        if state != .closed && now - lastReceive >= timeout { closeLocal(GesNetworkCodes.timeout, "", true) }
+        if state != .closed && now - lastReceive >= timeout {
+            closeLocal(GesNetworkCodes.timeout, "", true)
+        } else if datagram {
+            advanceDatagram()
+        }
     }
 
     /// Queues a message on a route this side sends.
@@ -268,10 +340,11 @@ public final class GesNetworkConnection {
             slot.set(payload)
             return .queued
         }
-        let length = encodeState(topic, payload)
+        let length = encodeState(topic, payload, topic.next)
         if queuedSendBytes + Int64(length) > maxSendQueue { return .queueFull }
-        sendReliable.enqueue(route, UnsafeRawBufferPointer(rebasing: topic.scratch[0..<length]))
-        topic.add(payload, baselineLimit)
+        sendReliable.enqueue(route, UnsafeRawBufferPointer(rebasing: topic.scratch[0..<length]), Int(topic.next))
+        topic.add(payload, baselineLimit, topic.next)
+        topic.next &+= 1
         return .queued
     }
 
@@ -316,11 +389,11 @@ public final class GesNetworkConnection {
     }
 
     // Writes the message of a new state into the topic's scratch: a delta against the newest confirmed state when it
-    // is shorter than the full record, else the full record. Returns the message length.
-    func encodeState(_ topic: GesNetworkTopic, _ record: UnsafeRawBufferPointer) -> Int {
+    // is shorter than the full record, else the full record. The number is the new state's. Returns the message length.
+    func encodeState(_ topic: GesNetworkTopic, _ record: UnsafeRawBufferPointer, _ number: UInt16) -> Int {
         let message = topic.scratch
         var baseline = UnsafeRawBufferPointer(start: nil, count: 0)
-        let distance = topic.base(ackedIndex, &baseline)
+        let distance = topic.base(datagram ? -1 : ackedIndex, number, &baseline)
         if distance > 0 {
             // A record without a delta, such as one with another key or an invalid one, travels in full.
             if let length = try? GesSchemaDelta.encode(topic.schema, record: record, baseline: baseline, into: UnsafeMutableRawBufferPointer(rebasing: message[1...])),
@@ -404,9 +477,11 @@ public final class GesNetworkConnection {
         for slot in sendLatest { slot?.clear() }
         ackDue = false
         welcomePending = false
+        dropDatagramSending()
     }
 
     func hasPendingFrames() -> Bool {
+        if datagram { return hasPendingDatagramFrames() }
         if sendReliable.count > 0 || sendBulk.count > 0 { return true }
         for slot in sendLatest where slot?.hasCurrent == true { return true }
         return false

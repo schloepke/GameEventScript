@@ -11,8 +11,11 @@ enum GesNetworkWire {
     static let maximumRoutes = 64
     static let maximumBaselineBytes = 1 << 30
     static let version: UInt32 = 1
+    static let maximumCookieBytes = 64
+    static let cookieBytes = 24
 
     static let hello: UInt8 = 1
+    static let retry: UInt8 = 2
     static let welcome: UInt8 = 3
     static let close: UInt8 = 4
     static let data: UInt8 = 5

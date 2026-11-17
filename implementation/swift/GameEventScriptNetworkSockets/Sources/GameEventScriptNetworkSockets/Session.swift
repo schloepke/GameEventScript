@@ -8,7 +8,7 @@ import NIOPosix
 import NIOSSL
 import NIOWebSocket
 
-/// Carries one `GesNetworkConnection` over a TCP stream or a WebSocket. SwiftNIO event loops only move bytes: the
+/// Carries one `GesNetworkConnection` over a TCP stream, a WebSocket or UDP. SwiftNIO event loops only move bytes: the
 /// host calls `update(now:)` on its own task or thread, which feeds received bytes into the connection, advances it
 /// and hands its packets to the socket. The connection is touched only by the host.
 ///
@@ -18,25 +18,35 @@ public final class GesNetworkSocketSession {
     /// The connection this session carries. Use it only where `update(now:)` is called.
     public let connection: GesNetworkConnection
 
+    // How packets travel on the channel.
+    enum Framing {
+        case stream
+        case webSocket
+        case datagram
+    }
+
     private let channel: Channel
     private let inbox: GesNetworkSocketInbox
-    private let webSocket: Bool
+    private let framing: Framing
+    // The remote address of a UDP session, which sends through it; nil for every other session.
+    let peer: GesNetworkDatagramPeer?
     private var transmitBuffer: [UInt8]
     private var chunks: [ByteBuffer] = []
     private var lastWrite: EventLoopFuture<Void>?
     private var outgoingCompleted = false
     private var closed = false
 
-    init(connection: GesNetworkConnection, channel: Channel, inbox: GesNetworkSocketInbox, webSocket: Bool) {
+    init(connection: GesNetworkConnection, channel: Channel, inbox: GesNetworkSocketInbox, framing: Framing, peer: GesNetworkDatagramPeer? = nil) {
         self.connection = connection
         self.channel = channel
         self.inbox = inbox
-        self.webSocket = webSocket
+        self.framing = framing
+        self.peer = peer
         transmitBuffer = [UInt8](repeating: 0, count: connection.maxPacketBytes + 3)
     }
 
     deinit {
-        if !closed { channel.close(promise: nil) }
+        if !closed { release() }
     }
 
     /// Opens a TCP connection for a client connection of the stream transport.
@@ -57,7 +67,7 @@ public final class GesNetworkSocketSession {
                 channel.eventLoop.makeCompletedFuture { try channel.pipeline.syncOperations.addHandler(GesNetworkSocketStreamHandler(inbox: inbox)) }
             }
             .connect(host: host, port: port).get()
-        return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, webSocket: false)
+        return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, framing: .stream)
     }
 
     /// Opens a WebSocket for a client connection of the message transport.
@@ -101,7 +111,7 @@ public final class GesNetworkSocketSession {
             channel.close(promise: nil)
             throw error
         }
-        return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, webSocket: true)
+        return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, framing: .webSocket)
     }
 
     static func require(_ connection: GesNetworkConnection, _ transport: GesNetworkTransport, client: Bool) throws {
@@ -133,36 +143,59 @@ public final class GesNetworkSocketSession {
             if length == 0 { break }
             var buffer = channel.allocator.buffer(capacity: length)
             transmitBuffer.withUnsafeBytes { _ = buffer.writeBytes(UnsafeRawBufferPointer(rebasing: $0[0..<length])) }
-            if webSocket {
+            switch framing {
+            case .webSocket:
                 let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: connection.isClient ? .random() : nil, data: buffer)
                 lastWrite = channel.write(frame)
-            } else {
+            case .datagram:
+                // The socket is not connected, so each datagram names its address.
+                lastWrite = peer?.write(buffer)
+            case .stream:
                 lastWrite = channel.write(buffer)
             }
             wrote = true
         }
 
-        if wrote { channel.flush() }
+        if wrote {
+            if let peer { peer.flush() } else { channel.flush() }
+        }
         if connection.state == .closed {
             outgoingCompleted = true
             finish()
         }
     }
 
-    /// Closes the socket without sending anything more. Closing again does nothing.
+    /// Closes the socket without sending anything more. A server session of a UDP listener gives its client's
+    /// address back to address validation instead, because it shares the listener's socket. Closing again does nothing.
     public func close() {
         if closed { return }
         closed = true
-        channel.close(promise: nil)
+        release()
+    }
+
+    private func release() {
+        if let peer {
+            peer.release()
+        } else {
+            channel.close(promise: nil)
+        }
     }
 
     // The connection closed and its last packet is queued: end the transport in order.
     private func finish() {
-        if webSocket {
+        switch framing {
+        case .stream:
+            break
+        case .webSocket:
             var status = channel.allocator.buffer(capacity: 2)
             status.writeInteger(UInt16(1000))
             let frame = WebSocketFrame(fin: true, opcode: .connectionClose, maskKey: connection.isClient ? .random() : nil, data: status)
             channel.writeAndFlush(frame, promise: nil)
+            return
+        case .datagram:
+            // UDP has no end; a closed server connection gives its address back to address validation.
+            guard let peer, peer.isShared else { return }
+            (lastWrite ?? channel.eventLoop.makeSucceededVoidFuture()).whenComplete { _ in peer.release() }
             return
         }
 

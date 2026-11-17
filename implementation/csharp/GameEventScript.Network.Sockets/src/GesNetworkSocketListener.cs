@@ -17,17 +17,18 @@ using GameEventScript.Api;
 namespace GameEventScript.Network.Sockets;
 
 /// <summary>
-/// Accepts TCP or WebSocket clients for a server. A background task accepts sockets and, for WebSocket, answers the
-/// HTTP upgrade; the host takes each ready client with <see cref="Accept"/> on its own thread.
+/// Accepts TCP, WebSocket or UDP clients for a server. A background task accepts sockets and, for WebSocket, answers
+/// the HTTP upgrade, or for UDP reads the shared socket, validates unknown addresses and routes each datagram to its
+/// client; the host takes each ready client with <see cref="Accept"/> on its own thread.
 /// </summary>
-public sealed class GesNetworkSocketListener : IDisposable
+public sealed partial class GesNetworkSocketListener : IDisposable
 {
     private const int MaxRequestBytes = 8192;
     private const int PendingClients = 64;
     private static readonly TimeSpan UpgradeTimeout = TimeSpan.FromSeconds(10);
     private const string WebSocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-    private readonly TcpListener _listener;
+    private readonly TcpListener? _listener;
     private readonly GesBoundNetwork _network;
     private readonly GesNetworkOptions _options;
     private readonly string? _path;
@@ -45,6 +46,12 @@ public sealed class GesNetworkSocketListener : IDisposable
         _ = GesNetworkConnection.CreateServer(network, 0, options);
         _options = options;
         _path = path;
+        if (transport == GesNetworkTransport.Datagram)
+        {
+            LocalEndPoint = StartDatagrams(endPoint);
+            return;
+        }
+
         _listener = new TcpListener(endPoint);
         _listener.Start();
         LocalEndPoint = (IPEndPoint)_listener.LocalEndpoint;
@@ -91,18 +98,23 @@ public sealed class GesNetworkSocketListener : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (!_pending.Reader.TryRead(out var pending)) return null;
         var connection = GesNetworkConnection.CreateServer(_network, now, _options);
+        if (pending.Peer != null) return GesNetworkSocketSession.FromPeer(connection, pending.Peer);
         return pending.WebSocket != null
-            ? GesNetworkSocketSession.FromWebSocket(connection, pending.WebSocket, pending.Owner)
-            : GesNetworkSocketSession.FromStream(connection, pending.Owner.GetStream(), pending.Owner);
+            ? GesNetworkSocketSession.FromWebSocket(connection, pending.WebSocket, pending.Owner!)
+            : GesNetworkSocketSession.FromStream(connection, pending.Owner!.GetStream(), pending.Owner!);
     }
 
-    /// <summary>Stops accepting and closes every client not yet taken. Sessions already taken stay open.</summary>
+    /// <summary>
+    /// Stops accepting and closes every client not yet taken. TCP and WebSocket sessions already taken stay open; UDP
+    /// sessions share the listener's socket, so they stop carrying packets and their connections time out.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
         _cancel.Cancel();
-        _listener.Stop();
+        _listener?.Stop();
+        StopDatagrams();
         _pending.Writer.TryComplete();
         while (_pending.Reader.TryRead(out var pending)) pending.Dispose();
         _cancel.Dispose();
@@ -114,9 +126,9 @@ public sealed class GesNetworkSocketListener : IDisposable
         {
             while (true)
             {
-                var client = await _listener.AcceptTcpClientAsync(_cancel.Token).ConfigureAwait(false);
+                var client = await _listener!.AcceptTcpClientAsync(_cancel.Token).ConfigureAwait(false);
                 client.NoDelay = true;
-                if (_path == null) await OfferAsync(new Pending(client, null)).ConfigureAwait(false);
+                if (_path == null) await OfferAsync(new Pending(client, null, null)).ConfigureAwait(false);
                 else _ = UpgradeAsync(client);
             }
         }
@@ -156,7 +168,7 @@ public sealed class GesNetworkSocketListener : IDisposable
             }
 
             var socket = WebSocket.CreateFromStream(stream, isServer: true, subProtocol: null, keepAliveInterval: TimeSpan.Zero);
-            await OfferAsync(new Pending(client, socket)).ConfigureAwait(false);
+            await OfferAsync(new Pending(client, socket, null)).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is IOException or SocketException or ObjectDisposedException or OperationCanceledException or ChannelClosedException)
         {
@@ -215,12 +227,13 @@ public sealed class GesNetworkSocketListener : IDisposable
     private static (string Text, bool Upgrade) Status(int code, string reason) =>
         ($"HTTP/1.1 {code} {reason}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", false);
 
-    private readonly record struct Pending(TcpClient Owner, WebSocket? WebSocket) : IDisposable
+    private readonly record struct Pending(TcpClient? Owner, WebSocket? WebSocket, GesNetworkDatagramPeer? Peer) : IDisposable
     {
         public void Dispose()
         {
             WebSocket?.Dispose();
-            Owner.Dispose();
+            Owner?.Dispose();
+            Peer?.Dispose();
         }
     }
 }

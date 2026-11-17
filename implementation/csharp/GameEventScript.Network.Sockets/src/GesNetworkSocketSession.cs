@@ -4,6 +4,7 @@
 using System;
 using System.Buffers;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Threading;
@@ -13,7 +14,7 @@ using System.Threading.Tasks;
 namespace GameEventScript.Network.Sockets;
 
 /// <summary>
-/// Carries one <see cref="GesNetworkConnection"/> over a TCP stream or a WebSocket. Background tasks only move bytes:
+/// Carries one <see cref="GesNetworkConnection"/> over a TCP stream, a WebSocket or UDP. Background tasks only move bytes:
 /// the host calls <see cref="Update"/> on its own thread, which feeds received bytes into the connection, advances
 /// it and hands its packets to the sender. The connection is touched only by the host thread.
 /// </summary>
@@ -22,10 +23,15 @@ public sealed class GesNetworkSocketSession : IDisposable
     private const int ReadBytes = 16384;
     private const int ReceivedChunks = 64;
 
+    // A datagram is dropped rather than waited for when this many are not yet taken.
+    internal const int ReceivedDatagrams = 256;
+
     private readonly Stream? _stream;
     private readonly WebSocket? _webSocket;
+    private readonly Socket? _datagram;
+    private readonly GesNetworkDatagramPeer? _peer;
     private readonly IDisposable _owner;
-    private readonly Channel<Chunk> _received = Channel.CreateBounded<Chunk>(new BoundedChannelOptions(ReceivedChunks) { SingleReader = true, SingleWriter = true });
+    private readonly Channel<Chunk> _received;
     private readonly Channel<Chunk> _outgoing = Channel.CreateUnbounded<Chunk>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
     private readonly CancellationTokenSource _cancel = new();
     private readonly byte[] _transmit;
@@ -33,14 +39,18 @@ public sealed class GesNetworkSocketSession : IDisposable
     private bool _outgoingCompleted;
     private bool _disposed;
 
-    private GesNetworkSocketSession(GesNetworkConnection connection, Stream? stream, WebSocket? webSocket, IDisposable owner)
+    private GesNetworkSocketSession(GesNetworkConnection connection, Stream? stream, WebSocket? webSocket, Socket? datagram, GesNetworkDatagramPeer? peer, IDisposable owner)
     {
         Connection = connection;
         _stream = stream;
         _webSocket = webSocket;
+        _datagram = datagram;
+        _peer = peer;
         _owner = owner;
         _transmit = new byte[connection.MaxPacketBytes + 3];
-        _ = Task.Run(ReadAsync);
+        // A server's datagrams arrive through its listener, which reads the shared socket.
+        _received = peer?.Received ?? (datagram != null ? DatagramChannel() : Channel.CreateBounded<Chunk>(new BoundedChannelOptions(ReceivedChunks) { SingleReader = true, SingleWriter = true }));
+        if (peer == null) _ = Task.Run(ReadAsync);
         _ = Task.Run(WriteAsync);
     }
 
@@ -62,7 +72,7 @@ public sealed class GesNetworkSocketSession : IDisposable
         try
         {
             await client.ConnectAsync(host, port, cancellationToken).ConfigureAwait(false);
-            return new GesNetworkSocketSession(connection, client.GetStream(), null, client);
+            return new GesNetworkSocketSession(connection, client.GetStream(), null, null, null, client);
         }
         catch
         {
@@ -86,7 +96,7 @@ public sealed class GesNetworkSocketSession : IDisposable
         try
         {
             await socket.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
-            return new GesNetworkSocketSession(connection, null, socket, socket);
+            return new GesNetworkSocketSession(connection, null, socket, null, null, socket);
         }
         catch
         {
@@ -95,9 +105,40 @@ public sealed class GesNetworkSocketSession : IDisposable
         }
     }
 
-    internal static GesNetworkSocketSession FromStream(GesNetworkConnection connection, Stream stream, IDisposable owner) => new(connection, stream, null, owner);
+    /// <summary>Opens a UDP socket for a client connection of the datagram transport.</summary>
+    /// <param name="host">The server's host name or address; the first address it resolves to is used.</param>
+    /// <param name="port">The server's port.</param>
+    /// <param name="connection">A client connection created with <see cref="GesNetworkTransport.Datagram"/>; its timeout runs from its creation.</param>
+    /// <param name="cancellationToken">Cancels resolving the host.</param>
+    /// <returns>The session. UDP has no connection setup, so a missing server shows only as the connection's timeout.</returns>
+    /// <exception cref="ArgumentException">The connection is no client of the datagram transport.</exception>
+    /// <exception cref="SocketException">The host cannot be resolved or the socket cannot be opened.</exception>
+    public static async Task<GesNetworkSocketSession> ConnectUdpAsync(string host, int port, GesNetworkConnection connection, CancellationToken cancellationToken = default)
+    {
+        Require(connection, GesNetworkTransport.Datagram, client: true);
+        var addresses = await Dns.GetHostAddressesAsync(host, cancellationToken).ConfigureAwait(false);
+        if (addresses.Length == 0) throw new SocketException((int)SocketError.HostNotFound);
+        var socket = new Socket(addresses[0].AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+        try
+        {
+            await socket.ConnectAsync(new IPEndPoint(addresses[0], port), cancellationToken).ConfigureAwait(false);
+            return new GesNetworkSocketSession(connection, null, null, socket, null, socket);
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+    }
 
-    internal static GesNetworkSocketSession FromWebSocket(GesNetworkConnection connection, WebSocket socket, IDisposable owner) => new(connection, null, socket, owner);
+    internal static GesNetworkSocketSession FromStream(GesNetworkConnection connection, Stream stream, IDisposable owner) => new(connection, stream, null, null, null, owner);
+
+    internal static GesNetworkSocketSession FromWebSocket(GesNetworkConnection connection, WebSocket socket, IDisposable owner) => new(connection, null, socket, null, null, owner);
+
+    internal static GesNetworkSocketSession FromPeer(GesNetworkConnection connection, GesNetworkDatagramPeer peer) => new(connection, null, null, peer.Socket, peer, peer);
+
+    internal static Channel<Chunk> DatagramChannel() =>
+        Channel.CreateBounded<Chunk>(new BoundedChannelOptions(ReceivedDatagrams) { SingleReader = true, SingleWriter = true });
 
     internal static void Require(GesNetworkConnection connection, GesNetworkTransport transport, bool client)
     {
@@ -157,7 +198,8 @@ public sealed class GesNetworkSocketSession : IDisposable
         try
         {
             if (_stream != null) await ReadStreamAsync(_stream).ConfigureAwait(false);
-            else await ReadWebSocketAsync(_webSocket!).ConfigureAwait(false);
+            else if (_webSocket != null) await ReadWebSocketAsync(_webSocket).ConfigureAwait(false);
+            else await ReadDatagramsAsync(_datagram!).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is IOException or SocketException or WebSocketException or ObjectDisposedException or OperationCanceledException or ChannelClosedException)
         {
@@ -216,6 +258,39 @@ public sealed class GesNetworkSocketSession : IDisposable
         }
     }
 
+    // Reads one datagram per packet. A datagram longer than the packet limit is passed one byte beyond it, so the
+    // connection closes with network.packetTooLarge. Errors reported for single datagrams, such as an unreachable
+    // port, do not end the transport: UDP has no end, and the connection's timeout covers a lost peer.
+    private async Task ReadDatagramsAsync(Socket socket)
+    {
+        var limit = Connection.MaxPacketBytes;
+        while (true)
+        {
+            var bytes = ArrayPool<byte>.Shared.Rent(limit + 1);
+            int length;
+            try
+            {
+                length = await socket.ReceiveAsync(bytes.AsMemory(0, limit + 1), SocketFlags.None, _cancel.Token).ConfigureAwait(false);
+            }
+            catch (SocketException exception) when (exception.SocketErrorCode == SocketError.MessageSize)
+            {
+                length = limit + 1;
+            }
+            catch (SocketException exception) when (IsTransient(exception.SocketErrorCode))
+            {
+                ArrayPool<byte>.Shared.Return(bytes);
+                continue;
+            }
+
+            if (!_received.Writer.TryWrite(new Chunk(bytes, length))) ArrayPool<byte>.Shared.Return(bytes);
+        }
+    }
+
+    // Errors that concern one datagram on its way, not the socket.
+    internal static bool IsTransient(SocketError error) =>
+        error is SocketError.ConnectionReset or SocketError.ConnectionRefused or SocketError.HostUnreachable or SocketError.NetworkUnreachable
+            or SocketError.HostDown or SocketError.NetworkDown or SocketError.NoBufferSpaceAvailable;
+
     private async Task WriteAsync()
     {
         try
@@ -225,7 +300,8 @@ public sealed class GesNetworkSocketSession : IDisposable
                 try
                 {
                     if (_stream != null) await _stream.WriteAsync(chunk.Bytes.AsMemory(0, chunk.Length), _cancel.Token).ConfigureAwait(false);
-                    else await _webSocket!.SendAsync(chunk.Bytes.AsMemory(0, chunk.Length), WebSocketMessageType.Binary, true, _cancel.Token).ConfigureAwait(false);
+                    else if (_webSocket != null) await _webSocket.SendAsync(chunk.Bytes.AsMemory(0, chunk.Length), WebSocketMessageType.Binary, true, _cancel.Token).ConfigureAwait(false);
+                    else await SendDatagramAsync(chunk).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -239,7 +315,7 @@ public sealed class GesNetworkSocketSession : IDisposable
                 await _stream.FlushAsync(_cancel.Token).ConfigureAwait(false);
                 if (_owner is TcpClient client) client.Client.Shutdown(SocketShutdown.Send);
             }
-            else if (_webSocket!.State == WebSocketState.Open)
+            else if (_webSocket?.State == WebSocketState.Open)
             {
                 await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, _cancel.Token).ConfigureAwait(false);
             }
@@ -248,7 +324,25 @@ public sealed class GesNetworkSocketSession : IDisposable
         {
             _transportEnded = true;
         }
+        finally
+        {
+            // A closed server connection gives its address back to address validation.
+            _peer?.Dispose();
+        }
     }
 
-    private readonly record struct Chunk(byte[] Bytes, int Length);
+    private async ValueTask SendDatagramAsync(Chunk chunk)
+    {
+        try
+        {
+            if (_peer != null) await _datagram!.SendToAsync(chunk.Bytes.AsMemory(0, chunk.Length), SocketFlags.None, _peer.Address, _cancel.Token).ConfigureAwait(false);
+            else await _datagram!.SendAsync(chunk.Bytes.AsMemory(0, chunk.Length), SocketFlags.None, _cancel.Token).ConfigureAwait(false);
+        }
+        catch (SocketException exception) when (IsTransient(exception.SocketErrorCode))
+        {
+            // A datagram may be lost; the connection resends what it needs.
+        }
+    }
+
+    internal readonly record struct Chunk(byte[] Bytes, int Length);
 }

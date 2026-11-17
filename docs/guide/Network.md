@@ -123,8 +123,9 @@ try loopback.advance(0)
 // client.state is now .connected.
 ```
 
-`GesNetworkSimulator` replaces the loopback when you want seeded latency and jitter. Equal seeds
-give equal packets, events and times in every port, so a network test is reproducible.
+`GesNetworkSimulator` replaces the loopback when you want seeded latency and jitter. Between
+datagram connections it can also lose, duplicate and reorder packets. Equal seeds give equal
+packets, events and times in every port, so a network test is reproducible.
 
 ## 4. Send and receive
 
@@ -161,15 +162,16 @@ a violation by the peer closes the session with a code, never with a crash.
 
 ## 6. Use sockets
 
-The socket packages run this loop for TCP and WebSocket. Their event loops only move bytes; your
+The socket packages run this loop for TCP, WebSocket and UDP. Their event loops only move bytes; your
 host calls `Update` where it runs the connection, then takes the connection's events.
 
 | Port | Package | Transports |
 | --- | --- | --- |
-| C# | `GameEventScript.Network.Sockets` (.NET 8) | `TcpListener`, `WebSocket.CreateFromStream` |
+| C# | `GameEventScript.Network.Sockets` (.NET 8) | `TcpListener`, `WebSocket.CreateFromStream`, UDP `Socket` |
 | Swift | `GameEventScriptNetworkSockets` | SwiftNIO |
 
-A TCP session uses the `stream` transport, a WebSocket session the `message` transport. Listeners
+A TCP session uses the `stream` transport, a WebSocket session the `message` transport and a UDP
+session the `datagram` transport. Listeners
 choose the matching transport when you pass no options. A server takes ready clients without
 waiting:
 
@@ -188,15 +190,23 @@ let listener = try await GesNetworkSocketListener.listenWebSocket(host: "::", po
 if let session = try listener.accept(now: now) { try session.update(now: now) }
 ```
 
-A client opens its session with `ConnectTcpAsync` or `ConnectWebSocketAsync` in C# and
-`connectTcp(host:port:connection:)` or `connectWebSocket(url:connection:)` in Swift.
+A client opens its session with `ConnectTcpAsync`, `ConnectWebSocketAsync` or `ConnectUdpAsync`
+in C# and `connectTcp(host:port:connection:)`, `connectWebSocket(url:connection:)` or
+`connectUdp(host:port:connection:)` in Swift.
+
+A UDP session resends what was lost, restores the order of `reliable` and `bulk` messages and
+delivers only the newest state of a `latest` topic. A UDP listener answers an unknown address
+with a cookie first and creates a connection only for a client that returns it, so a forged
+source address gains nothing. Datagrams hold at most 1200 bytes by default, which passes almost
+every path.
 
 ## 7. Protect the connection
 
 This version neither encrypts nor authenticates. Anyone who can read the transport sees the token
 and the records, and the peer's identity is not proven. Run the session over TLS: a browser
 client uses WebSocket only over `wss`, for example behind a TLS-terminating proxy in front of the
-listener.
+listener. UDP sessions have no TLS; use them only where the records are not secret until a later
+version encrypts them.
 
 ## Next steps
 

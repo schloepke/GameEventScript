@@ -259,10 +259,9 @@ public sealed partial class GesNetworkConnection
         var sharedValid = GesNetworkX25519.SharedSecret(_key.PrivateKey, clientEphemeral, keys.Shared);
         DeriveHelloKey(keys, _key.PublicKey);
         if (keys.Buffer.Length == 0) keys.Buffer = new byte[_maxPacket + 1];
-        var token = keys.Buffer.AsSpan(0, (int)length);
-        packet.Slice(sealedStart, (int)length).CopyTo(token);
         keys.Aead.SetKey(keys.HelloKey);
-        if (!keys.Aead.Open(ZeroNonce, packet.Slice(0, sealedStart), token) || !sharedValid) return Fail(GesNetworkCodes.AuthenticationFailed);
+        if (!keys.Aead.Open(ZeroNonce, packet.Slice(0, sealedStart), packet.Slice(sealedStart, (int)length), keys.Buffer) || !sharedValid)
+            return Fail(GesNetworkCodes.AuthenticationFailed);
         DrawEphemeral(keys);
         if (!DeriveSessionKeys(keys, packet.Slice(0, position), keys.EphemeralPublic, clientEphemeral)) return Fail(GesNetworkCodes.AuthenticationFailed);
         _encrypted = true;
@@ -383,10 +382,8 @@ public sealed partial class GesNetworkConnection
         keys.Shared.CopyTo(shared);
         var serverEphemeral = packet.Slice(1, GesNetworkX25519.KeyBytes);
         var valid = DeriveSessionKeys(keys, keys.Hello.AsSpan(0, keys.HelloLength), serverEphemeral, serverEphemeral);
-        var plain = keys.Buffer.AsSpan(0, packet.Length - fields);
-        packet.Slice(fields).CopyTo(plain);
         keys.Aead.SetKey(keys.WelcomeKey);
-        if (!valid || !keys.Aead.Open(ZeroNonce, packet.Slice(0, fields), plain))
+        if (!valid || !keys.Aead.Open(ZeroNonce, packet.Slice(0, fields), packet.Slice(fields), keys.Buffer))
         {
             ephemeral.CopyTo(keys.Ephemeral);
             shared.CopyTo(keys.Shared);
@@ -399,7 +396,7 @@ public sealed partial class GesNetworkConnection
         shared.Clear();
         _encrypted = true;
         _sealing = true;
-        AcceptWelcome(plain.Slice(0, plain.Length - GesNetworkAead.TagBytes), 0);
+        AcceptWelcome(keys.Buffer.AsSpan(0, packet.Length - fields - GesNetworkAead.TagBytes), 0);
         return true;
     }
 
@@ -460,9 +457,8 @@ public sealed partial class GesNetworkConnection
         if (length > 0 && slot >= 0)
         {
             WriteNonce(keys, keys.ReceiveIv, number);
-            packet.Slice(3).CopyTo(keys.Buffer.AsSpan(2));
             keys.Aead.SetKey(keys.ReceiveKeys[slot]);
-            opened = keys.Aead.Open(keys.Nonce, packet.Slice(0, 3), keys.Buffer.AsSpan(2, packet.Length - 3));
+            opened = keys.Aead.Open(keys.Nonce, packet.Slice(0, 3), packet.Slice(3), keys.Buffer.AsSpan(2));
         }
 
         if (!opened)

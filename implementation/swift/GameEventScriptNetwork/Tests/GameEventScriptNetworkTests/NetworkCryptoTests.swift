@@ -61,7 +61,7 @@ final class NetworkCryptoTests: XCTestCase {
 
     private func open(_ aead: GesNetworkAead, key: [UInt8], nonce: [UInt8], aad: [UInt8], sealed: inout [UInt8]) -> Bool {
         key.withUnsafeBytes { aead.setKey($0) }
-        return nonce.withUnsafeBytes { n in aad.withUnsafeBytes { a in sealed.withUnsafeMutableBytes { aead.open(nonce: n, aad: a, sealed: $0) } } }
+        return nonce.withUnsafeBytes { n in aad.withUnsafeBytes { a in sealed.withUnsafeMutableBytes { aead.open(nonce: n, aad: a, sealed: UnsafeRawBufferPointer($0), into: $0) } } }
     }
 
     private func hkdf(salt: [UInt8], ikm: [UInt8], info: [UInt8], length: Int) -> [UInt8] {

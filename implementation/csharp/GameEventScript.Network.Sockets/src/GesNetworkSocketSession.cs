@@ -3,6 +3,7 @@
 
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -23,6 +24,13 @@ public sealed class GesNetworkSocketSession : IDisposable
     private const int ReadBytes = 16384;
     private const int ReceivedChunks = 64;
 
+    // A stream write carries the packets of one update together, up to this many bytes.
+    private const int WriteBytes = 65536;
+
+    // Packets wait in the connection while buffers of this many bytes are handed to the socket but not yet written,
+    // so a slow peer fills the connection's send queue rather than this session.
+    private const int UnwrittenBytes = 262144;
+
     // A datagram is dropped rather than waited for when this many are not yet taken.
     internal const int ReceivedDatagrams = 256;
 
@@ -34,7 +42,13 @@ public sealed class GesNetworkSocketSession : IDisposable
     private readonly Channel<Chunk> _received;
     private readonly Channel<Chunk> _outgoing = Channel.CreateUnbounded<Chunk>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
     private readonly CancellationTokenSource _cancel = new();
-    private readonly byte[] _transmit;
+    private readonly int _packetBytes;
+    private readonly int _chunkBytes;
+    // Packets are written straight into a buffer that the write task gives back here. The unwritten limit bounds
+    // their number, so the session keeps its own rather than relying on the shared pool across threads.
+    private readonly ConcurrentQueue<byte[]> _free = new();
+    private byte[]? _transmit;
+    private long _unwritten;
     private volatile bool _transportEnded;
     private bool _outgoingCompleted;
     private bool _disposed;
@@ -47,7 +61,8 @@ public sealed class GesNetworkSocketSession : IDisposable
         _datagram = datagram;
         _peer = peer;
         _owner = owner;
-        _transmit = new byte[connection.MaxPacketBytes + 3];
+        _packetBytes = connection.MaxPacketBytes + 3;
+        _chunkBytes = stream != null ? Math.Max(WriteBytes, _packetBytes) : _packetBytes;
         // A server's datagrams arrive through its listener, which reads the shared socket.
         _received = peer?.Received ?? (datagram != null ? DatagramChannel() : Channel.CreateBounded<Chunk>(new BoundedChannelOptions(ReceivedChunks) { SingleReader = true, SingleWriter = true }));
         if (peer == null) _ = Task.Run(ReadAsync);
@@ -168,11 +183,23 @@ public sealed class GesNetworkSocketSession : IDisposable
         Connection.Advance(now);
         if (ended) Connection.TransportClosed();
         if (_outgoingCompleted) return;
-        int length;
-        while ((length = Connection.Transmit(_transmit)) > 0)
+        var more = true;
+        while (more && Interlocked.Read(ref _unwritten) < UnwrittenBytes)
         {
-            var bytes = ArrayPool<byte>.Shared.Rent(length);
-            _transmit.AsSpan(0, length).CopyTo(bytes);
+            // A datagram or WebSocket message carries one packet; a stream write as many as fit.
+            var bytes = _transmit ??= _free.TryDequeue(out var free) ? free : new byte[_chunkBytes];
+            var length = 0;
+            do
+            {
+                var written = Connection.Transmit(bytes.AsSpan(length, _packetBytes));
+                more = written > 0;
+                length += written;
+            }
+            while (more && _stream != null && length + _packetBytes <= _chunkBytes);
+
+            if (length == 0) break;
+            _transmit = null;
+            Interlocked.Add(ref _unwritten, bytes.Length);
             _outgoing.Writer.TryWrite(new Chunk(bytes, length));
         }
 
@@ -296,7 +323,8 @@ public sealed class GesNetworkSocketSession : IDisposable
     {
         try
         {
-            await foreach (var chunk in _outgoing.Reader.ReadAllAsync(_cancel.Token).ConfigureAwait(false))
+            // Completing the channel ends this loop; a cancellable wait would allocate on every empty queue.
+            await foreach (var chunk in _outgoing.Reader.ReadAllAsync().ConfigureAwait(false))
             {
                 try
                 {
@@ -306,7 +334,8 @@ public sealed class GesNetworkSocketSession : IDisposable
                 }
                 finally
                 {
-                    ArrayPool<byte>.Shared.Return(chunk.Bytes);
+                    _free.Enqueue(chunk.Bytes);
+                    Interlocked.Add(ref _unwritten, -chunk.Bytes.Length);
                 }
             }
 

@@ -418,10 +418,11 @@ acknowledgement delay, as on other transports, and at once when 16 asking packet
 arrived since the last data packet this side sent.
 
 **Sent packets.** The sender records its last 1024 data packets: the send time, whether
-the packet asked, and the fragments of messages it carried, at most 16384 fragments over
-all records. A fragment names its message and the range of bytes it carried. A packet
-that does not ask is settled when sent; an asking packet stays outstanding until it is
-acknowledged or lost. Before a data packet is written, the packet 1024 before it is declared lost
+the packet asked, and the fragments of messages it carried. A fragment names its message
+and the range of bytes it carried. A packet that does not ask is settled when sent; an
+asking packet stays outstanding until it is acknowledged or lost. Only an outstanding
+packet needs its fragments again, so the recorded fragments are those from the oldest
+outstanding packet among the last 1023 sent on, at most 16384. Before a data packet is written, the packet 1024 before it is declared lost
 when that one is still outstanding, so its fragments may be resent in the new packet; an
 outstanding packet due to leave makes a data packet due as waiting frames do. A packet ends before a message frame whose fragment would
 exceed 16384 recorded fragments.
@@ -994,6 +995,10 @@ WebSocket upgrade. Accepting pauses while it holds them all; a validated UDP `he
 beyond them is dropped, and the client sends it again. One IP address holds at most 8 of
 these clients: the listener closes its further TCP and WebSocket sockets and drops its
 further UDP `hello` packets. A client the host takes frees its place.
+
+A socket session hands its socket about 256 KiB of packets that are not yet written and
+then stops. Further packets wait in the connection, so a peer that reads slowly fills the
+connection's send queue and `send` reports `queueFull`.
 
 An insecure test key seed derives a connection's ephemeral keys from a known value, so
 anyone who knows it reads the session; it exists only for tests and golden bytes. The

@@ -366,6 +366,33 @@ public sealed class GesNetworkSocketTests
     }
 
     [TestMethod]
+    public async Task ASlowPeerFillsTheSendQueue()
+    {
+        var network = Game();
+        using var listener = GesNetworkSocketListener.ListenTcp(Loopback, network, Options(GesNetworkTransport.Stream));
+        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, Options(GesNetworkTransport.Stream));
+        using var client = await GesNetworkSocketSession.ConnectTcpAsync("127.0.0.1", listener.LocalEndPoint.Port, connection);
+        using var server = AcceptOne(listener);
+        Assert.AreEqual("connecting tok", Await(server, client));
+        server.Connection.Accept();
+        Assert.AreEqual("connected", Await(server, client));
+        Assert.AreEqual("connected", Await(client, server));
+
+        // The client stops reading, so the socket fills and the session must leave further packets in the connection.
+        var blob = Bytes(1000);
+        var deadline = Clock.Elapsed + Limit;
+        for (long sent = 0; sent < 64L << 20 && Clock.Elapsed < deadline; sent += blob.Length)
+        {
+            server.Update(Now);
+            var status = server.Connection.Send(Blob, blob);
+            if (status == GesNetworkSendStatus.QueueFull) return;
+            Assert.AreEqual(GesNetworkSendStatus.Queued, status);
+        }
+
+        Assert.Fail("The send queue never filled.");
+    }
+
+    [TestMethod]
     public async Task TheEndOfTheTransportClosesTheConnection()
     {
         var network = Game();

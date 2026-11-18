@@ -103,6 +103,26 @@ final class NetworkDatagramTests: XCTestCase {
         XCTAssertEqual(client.nextDeadline, 3_000_000)
     }
 
+    // 1024 packets of 40 small messages each carry far more than the 16384 recorded fragments; acknowledged packets
+    // free theirs, so the sender keeps sending.
+    func testManySmallMessagesKeepFlowingBeyondTheRecordedFragments() throws {
+        let simulator = try connected(2, 0, 0, false)
+        var received = 0
+        for round in 0..<1200 {
+            for index in 0..<40 {
+                XCTAssertEqual(simulator.server.send(route: blob, payload: [UInt8(truncatingIfNeeded: round * 40 + index)]), .queued)
+            }
+            try simulator.advance(simulator.now + 16_667)
+            for (route, message) in messages(simulator.client) {
+                XCTAssertEqual(route, blob)
+                XCTAssertEqual(message[0], UInt8(truncatingIfNeeded: received))
+                received += 1
+            }
+        }
+        // At most the last rounds remain in flight.
+        XCTAssertGreaterThanOrEqual(received, 1190 * 40)
+    }
+
     func testReliableAndBulkArriveCompleteAndInOrderWithoutImpairment() throws {
         try reliableAndBulkArriveCompleteAndInOrder(1, 0, 0, false)
     }

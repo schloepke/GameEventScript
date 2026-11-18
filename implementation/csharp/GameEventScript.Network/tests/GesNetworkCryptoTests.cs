@@ -92,7 +92,7 @@ public sealed class GesNetworkCryptoTests
             aead.SetKey(Hex(testCase, "key"));
             aead.Seal(Hex(testCase, "nonce"), Hex(testCase, "aad"), buffer, plaintext.Length);
             Assert.AreEqual(testCase.GetProperty("sealed").GetString(), Hex(buffer), name);
-            Assert.IsTrue(aead.Open(Hex(testCase, "nonce"), Hex(testCase, "aad"), buffer), name);
+            Assert.IsTrue(aead.Open(Hex(testCase, "nonce"), Hex(testCase, "aad"), buffer, buffer), name);
             CollectionAssert.AreEqual(plaintext, buffer[..plaintext.Length], name);
         }
 
@@ -101,7 +101,7 @@ public sealed class GesNetworkCryptoTests
             var sealedBytes = Hex(testCase, "sealed");
             var copy = (byte[])sealedBytes.Clone();
             aead.SetKey(Hex(testCase, "key"));
-            Assert.IsFalse(aead.Open(Hex(testCase, "nonce"), Hex(testCase, "aad"), copy), testCase.GetProperty("name").GetString());
+            Assert.IsFalse(aead.Open(Hex(testCase, "nonce"), Hex(testCase, "aad"), copy, copy), testCase.GetProperty("name").GetString());
             CollectionAssert.AreEqual(sealedBytes, copy);
         }
     }

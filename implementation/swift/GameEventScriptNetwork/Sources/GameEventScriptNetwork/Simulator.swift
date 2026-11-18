@@ -13,7 +13,7 @@ public final class GesNetworkSimulator {
     private struct Flight {
         let time: Int64
         let sequence: Int64
-        let bytes: [UInt8]
+        var bytes: [UInt8]
         let length: Int
     }
 
@@ -127,9 +127,11 @@ public final class GesNetworkSimulator {
     }
 
     private func deliver(toServer direction: Bool) throws {
-        let flight: Flight
+        // The queue gives up its reference to the bytes, so the free buffer is unique and is reused without a copy.
+        var flight: Flight
         if direction {
             flight = toServer[toServerHead]
+            toServer[toServerHead].bytes = []
             toServerHead += 1
             if toServerHead == toServer.count {
                 toServer.removeAll(keepingCapacity: true)
@@ -137,6 +139,7 @@ public final class GesNetworkSimulator {
             }
         } else {
             flight = toClient[toClientHead]
+            toClient[toClientHead].bytes = []
             toClientHead += 1
             if toClientHead == toClient.count {
                 toClient.removeAll(keepingCapacity: true)
@@ -145,6 +148,7 @@ public final class GesNetworkSimulator {
         }
         try flight.bytes.withUnsafeBytes { try (direction ? server : client).receive(UnsafeRawBufferPointer(rebasing: $0[0..<flight.length]), now: now) }
         free.append(flight.bytes)
+        flight.bytes = []
     }
 
     private func transmitAll() throws {

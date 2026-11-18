@@ -303,10 +303,9 @@ extension GesNetworkConnection {
         let clientEphemeral = UnsafeRawBufferPointer(rebasing: packet[ephemeral..<ephemeral + GesNetworkX25519.keyBytes])
         let sharedValid = key.privateKey.withUnsafeBytes { GesNetworkX25519.sharedSecret($0, clientEphemeral, into: keys.shared) }
         Self.deriveHelloKey(keys, key.publicKey)
-        let token = UnsafeMutableRawBufferPointer(rebasing: keys.buffer[0..<count])
-        token.copyMemory(from: UnsafeRawBufferPointer(rebasing: packet[sealedStart..<sealedStart + count]))
         keys.aead.setKey(UnsafeRawBufferPointer(keys.helloKey))
-        if !keys.aead.open(nonce: UnsafeRawBufferPointer(keys.zeroNonce), aad: UnsafeRawBufferPointer(rebasing: packet[0..<sealedStart]), sealed: token) || !sharedValid {
+        let token = UnsafeRawBufferPointer(rebasing: packet[sealedStart..<sealedStart + count])
+        if !keys.aead.open(nonce: UnsafeRawBufferPointer(keys.zeroNonce), aad: UnsafeRawBufferPointer(rebasing: packet[0..<sealedStart]), sealed: token, into: keys.buffer) || !sharedValid {
             return fail(GesNetworkCodes.authenticationFailed)
         }
 
@@ -424,10 +423,9 @@ extension GesNetworkConnection {
             shared.copyMemory(from: UnsafeRawBufferPointer(keys.shared))
             let serverEphemeral = UnsafeRawBufferPointer(rebasing: packet[1..<fields])
             let valid = deriveSessionKeys(keys, UnsafeRawBufferPointer(rebasing: keys.hello[0..<keys.helloLength]), serverEphemeral, serverEphemeral)
-            let plain = UnsafeMutableRawBufferPointer(rebasing: keys.buffer[0..<packet.count - fields])
-            plain.copyMemory(from: UnsafeRawBufferPointer(rebasing: packet[fields..<packet.count]))
+            let sealed = UnsafeRawBufferPointer(rebasing: packet[fields..<packet.count])
             keys.aead.setKey(UnsafeRawBufferPointer(keys.welcomeKey))
-            if !valid || !keys.aead.open(nonce: UnsafeRawBufferPointer(keys.zeroNonce), aad: UnsafeRawBufferPointer(rebasing: packet[0..<fields]), sealed: plain) {
+            if !valid || !keys.aead.open(nonce: UnsafeRawBufferPointer(keys.zeroNonce), aad: UnsafeRawBufferPointer(rebasing: packet[0..<fields]), sealed: sealed, into: keys.buffer) {
                 keys.ephemeral.copyMemory(from: UnsafeRawBufferPointer(ephemeral))
                 keys.shared.copyMemory(from: UnsafeRawBufferPointer(shared))
                 saved.initializeMemory(as: UInt8.self, repeating: 0)
@@ -437,7 +435,7 @@ extension GesNetworkConnection {
             saved.initializeMemory(as: UInt8.self, repeating: 0)
             encrypted = true
             sealing = true
-            acceptWelcome(UnsafeRawBufferPointer(rebasing: plain[0..<plain.count - GesNetworkAead.tagBytes]), 0)
+            acceptWelcome(UnsafeRawBufferPointer(rebasing: keys.buffer[0..<sealed.count - GesNetworkAead.tagBytes]), 0)
             return true
         }
     }
@@ -500,10 +498,13 @@ extension GesNetworkConnection {
         var opened = false
         if length > 0 && slot >= 0 {
             Self.writeNonce(keys, keys.receiveIv, number)
-            let sealed = UnsafeMutableRawBufferPointer(rebasing: keys.buffer[2..<packet.count - 1])
-            sealed.copyMemory(from: UnsafeRawBufferPointer(rebasing: packet[3..<packet.count]))
             keys.aead.setKey(UnsafeRawBufferPointer(keys.receiveKey(slot)))
-            opened = keys.aead.open(nonce: UnsafeRawBufferPointer(keys.nonce), aad: UnsafeRawBufferPointer(rebasing: packet[0..<3]), sealed: sealed)
+            opened = keys.aead.open(
+                nonce: UnsafeRawBufferPointer(keys.nonce),
+                aad: UnsafeRawBufferPointer(rebasing: packet[0..<3]),
+                sealed: UnsafeRawBufferPointer(rebasing: packet[3..<packet.count]),
+                into: UnsafeMutableRawBufferPointer(rebasing: keys.buffer[2..<keys.buffer.count])
+            )
         }
 
         if !opened {

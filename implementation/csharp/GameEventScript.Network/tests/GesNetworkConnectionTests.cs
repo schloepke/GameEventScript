@@ -30,15 +30,17 @@ public sealed class GesNetworkConnectionTests
     private const int World = 2;
     private const int BulkBlob = 3;
 
+    private static readonly GesNetworkKey TestKey = GesNetworkKey.FromPrivateKey(Enumerable.Range(1, 32).Select(value => (byte)value).ToArray());
+
     private static readonly GesNetworkOptions Plain = new() { MinimumSecurity = GesNetworkSecurity.None };
 
     private static GesBoundNetwork Game(string source = Source) => GesSchemaSet.Parse(source).Network("Game").Bind();
 
-    private static GesNetworkLoopback Connected(GesNetworkOptions? options = null)
+    private static GesNetworkLoopback Connected(GesNetworkOptions? options = null, GesNetworkOptions? serverOptions = null)
     {
         var network = Game();
         var client = GesNetworkConnection.CreateClient(network, "t"u8, 0, options ?? Plain);
-        var server = GesNetworkConnection.CreateServer(network, 0, options ?? Plain);
+        var server = GesNetworkConnection.CreateServer(network, 0, serverOptions ?? options ?? Plain);
         var loop = new GesNetworkLoopback(client, server);
         loop.Advance(0);
         CollectionAssert.AreEqual(new[] { "connecting t" }, Drain(server));
@@ -360,9 +362,16 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     [TestCategory("Allocation")]
     [DoNotParallelize]
-    public void WarmedSessionAllocatesNothing()
+    [DataRow(false)]
+    [DataRow(true)]
+    public void WarmedSessionAllocatesNothing(bool encrypted)
     {
-        var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxPacketBytes = 1200 });
+        var loop = encrypted
+            ? Connected(
+                new GesNetworkOptions { MaxPacketBytes = 1200, MinimumSecurity = GesNetworkSecurity.Encrypted, InsecureTestKeySeed = 7 },
+                new GesNetworkOptions { MaxPacketBytes = 1200, MinimumSecurity = GesNetworkSecurity.Encrypted, Key = TestKey, InsecureTestKeySeed = 7 })
+            : Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxPacketBytes = 1200 });
+        Assert.AreEqual(encrypted ? GesNetworkSecurity.Encrypted : GesNetworkSecurity.None, loop.Client.Security);
         loop.Server.Subscribe(World);
         var world = new byte[] { 1, 2 };
         var blob = Bytes(3000, 9);

@@ -3,6 +3,7 @@
 
 import GameEventScriptNetwork
 import GameEventScriptRuntime
+import NIOConcurrencyHelpers
 import NIOCore
 import NIOPosix
 import NIOSSL
@@ -30,9 +31,11 @@ public final class GesNetworkSocketSession {
     private let framing: Framing
     // The remote address of a UDP session, which sends through it; nil for every other session.
     let peer: GesNetworkDatagramPeer?
-    private var transmitBuffer: [UInt8]
+    private let writer: GesNetworkSocketWriter
+    // The packets of one update, transmitted straight into the buffer the writer hands to the event loop.
+    private var outgoing: ByteBuffer
+    private let packetBytes: Int
     private var chunks: [ByteBuffer] = []
-    private var lastWrite: EventLoopFuture<Void>?
     private var outgoingCompleted = false
     private var closed = false
 
@@ -42,7 +45,9 @@ public final class GesNetworkSocketSession {
         self.inbox = inbox
         self.framing = framing
         self.peer = peer
-        transmitBuffer = [UInt8](repeating: 0, count: connection.maxPacketBytes + 3)
+        packetBytes = connection.maxPacketBytes + 3
+        writer = GesNetworkSocketWriter(channel: channel, framing: framing, peer: peer, masks: connection.isClient)
+        outgoing = channel.allocator.buffer(capacity: framing == .stream ? GesNetworkSocketWriter.streamBytes : 0)
     }
 
     deinit {
@@ -138,32 +143,23 @@ public final class GesNetworkSocketSession {
         try connection.advance(now)
         if ended { connection.transportClosed() }
         if outgoingCompleted { return }
-        var wrote = false
-        while true {
-            let length = try transmitBuffer.withUnsafeMutableBytes { try connection.transmit(into: $0) }
-            if length == 0 { break }
-            var buffer = channel.allocator.buffer(capacity: length)
-            transmitBuffer.withUnsafeBytes { _ = buffer.writeBytes(UnsafeRawBufferPointer(rebasing: $0[0..<length])) }
-            switch framing {
-            case .webSocket:
-                let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: connection.isClient ? .random() : nil, data: buffer)
-                lastWrite = channel.write(frame)
-            case .datagram:
-                // The socket is not connected, so each datagram names its address.
-                lastWrite = peer?.write(buffer)
-            case .stream:
-                lastWrite = channel.write(buffer)
+        // A stream carries the packets back to back; every other framing gets each packet with its length.
+        let prefix = framing == .stream ? 0 : 4
+        var room = writer.room
+        while room > 0 {
+            let length = try outgoing.writeWithUnsafeMutableBytes(minimumWritableBytes: prefix + packetBytes) { bytes in
+                let length = try connection.transmit(into: UnsafeMutableRawBufferPointer(rebasing: bytes[prefix..<prefix + packetBytes]))
+                if length == 0 { return 0 }
+                if prefix != 0 { bytes.storeBytes(of: UInt32(length).bigEndian, toByteOffset: 0, as: UInt32.self) }
+                return prefix + length
             }
-            wrote = true
+            if length == 0 { break }
+            room -= length
         }
 
-        if wrote {
-            if let peer { peer.flush() } else { channel.flush() }
-        }
-        if connection.state == .closed {
-            outgoingCompleted = true
-            finish()
-        }
+        let closed = connection.state == .closed
+        if closed { outgoingCompleted = true }
+        if outgoing.readableBytes > 0 || closed { writer.hand(&outgoing, finish: closed) }
     }
 
     /// Closes the socket without sending anything more. A server session of a UDP listener gives its client's
@@ -181,26 +177,120 @@ public final class GesNetworkSocketSession {
             channel.close(promise: nil)
         }
     }
+}
 
-    // The connection closed and its last packet is queued: end the transport in order.
-    private func finish() {
-        switch framing {
-        case .stream:
-            break
-        case .webSocket:
-            var status = channel.allocator.buffer(capacity: 2)
-            status.writeInteger(UInt16(1000))
-            let frame = WebSocketFrame(fin: true, opcode: .connectionClose, maskKey: connection.isClient ? .random() : nil, data: status)
-            channel.writeAndFlush(frame, promise: nil)
-            return
-        case .datagram:
-            // UDP has no end; a closed server connection gives its address back to address validation.
-            guard let peer, peer.isShared else { return }
-            (lastWrite ?? channel.eventLoop.makeSucceededVoidFuture()).whenComplete { _ in peer.release() }
-            return
+// Hands the packets of the host thread to the event loop. The host transmits the packets of an update into one buffer
+// and hands it over whole, so an update costs one event loop task. Three buffers rotate between the host, the hand-over
+// and the event loop and are reused once the socket wrote them.
+private final class GesNetworkSocketWriter: @unchecked Sendable {
+    // The initial capacity of a stream's buffers.
+    static let streamBytes = 65536
+
+    // Packets wait in the connection while this many bytes are handed over and not yet taken by the event loop, or
+    // while the channel holds more unwritten bytes than its high water mark, so a slow peer fills the connection's
+    // send queue rather than this session.
+    static let unwrittenBytes = 262144
+
+    private let channel: Channel
+    private let framing: GesNetworkSocketSession.Framing
+    private let peer: GesNetworkDatagramPeer?
+    private let masks: Bool
+    private let lock = NIOLock()
+    // Guarded by the lock.
+    private var queued: ByteBuffer
+    private var scheduled = false
+    private var finishing = false
+    // Used only on the channel's event loop.
+    private var taken: ByteBuffer
+
+    init(channel: Channel, framing: GesNetworkSocketSession.Framing, peer: GesNetworkDatagramPeer?, masks: Bool) {
+        self.channel = channel
+        self.framing = framing
+        self.peer = peer
+        self.masks = masks
+        queued = channel.allocator.buffer(capacity: 0)
+        taken = queued
+    }
+
+    // How many more bytes the host may hand over now.
+    var room: Int {
+        if let peer {
+            if let socket = peer.socket, !socket.isWritable { return 0 }
+        } else if !channel.isWritable {
+            return 0
+        }
+        return Self.unwrittenBytes - lock.withLock { queued.readableBytes }
+    }
+
+    // Takes the bytes of the outgoing buffer and leaves it empty. Finishing ends the transport after these bytes.
+    func hand(_ outgoing: inout ByteBuffer, finish: Bool) {
+        let schedule: Bool = lock.withLock {
+            if queued.readableBytes == 0 {
+                swap(&queued, &outgoing)
+            } else {
+                queued.writeBuffer(&outgoing)
+            }
+            if finish { finishing = true }
+            if scheduled { return false }
+            scheduled = true
+            return true
+        }
+        outgoing.clear()
+        if schedule { channel.eventLoop.execute { self.drain() } }
+    }
+
+    private func drain() {
+        let finish: Bool = lock.withLock {
+            swap(&queued, &taken)
+            scheduled = false
+            defer { finishing = false }
+            return finishing
         }
 
-        let channel = channel
-        (lastWrite ?? channel.eventLoop.makeSucceededVoidFuture()).whenComplete { _ in channel.close(mode: .output, promise: nil) }
+        switch framing {
+        case .stream:
+            if taken.readableBytes == 0 {
+                if finish { channel.close(mode: .output, promise: nil) }
+                return
+            }
+            if finish {
+                // The output closes once the last packets are written.
+                let channel = channel
+                let written = channel.eventLoop.makePromise(of: Void.self)
+                written.futureResult.whenComplete { _ in channel.close(mode: .output, promise: nil) }
+                channel.writeAndFlush(taken, promise: written)
+            } else {
+                channel.writeAndFlush(taken, promise: nil)
+            }
+            taken.moveReaderIndex(to: taken.writerIndex)
+        case .webSocket:
+            var wrote = false
+            while let length = taken.readInteger(as: UInt32.self), let packet = taken.readSlice(length: Int(length)) {
+                channel.write(WebSocketFrame(fin: true, opcode: .binary, maskKey: masks ? .random() : nil, data: packet), promise: nil)
+                wrote = true
+            }
+            if finish {
+                var status = channel.allocator.buffer(capacity: 2)
+                status.writeInteger(UInt16(1000))
+                channel.writeAndFlush(WebSocketFrame(fin: true, opcode: .connectionClose, maskKey: masks ? .random() : nil, data: status), promise: nil)
+            } else if wrote {
+                channel.flush()
+            }
+        case .datagram:
+            guard let peer else { return }
+            // The socket is not connected, so each datagram names its address; while the socket is being replaced
+            // the datagrams are lost.
+            if let socket = peer.socket {
+                var wrote = false
+                while let length = taken.readInteger(as: UInt32.self), let packet = taken.readSlice(length: Int(length)) {
+                    socket.write(AddressedEnvelope(remoteAddress: peer.address, data: packet), promise: nil)
+                    wrote = true
+                }
+                if wrote { socket.flush() }
+            }
+            taken.moveReaderIndex(to: taken.writerIndex)
+            // UDP has no end; a closed server connection gives its address back to address validation.
+            if finish && peer.isShared { peer.release() }
+        }
     }
 }

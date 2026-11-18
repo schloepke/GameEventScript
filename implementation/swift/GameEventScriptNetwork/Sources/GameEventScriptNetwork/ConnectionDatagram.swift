@@ -335,6 +335,13 @@ extension GesNetworkConnection {
         if Int(id &- ordered.nextId) >= GesNetworkOrderedReceive.window {
             return Int(ordered.nextId &- id) <= GesNetworkOrderedReceive.window || fail(GesNetworkCodes.malformed)
         }
+        if !bulk && id == ordered.nextId && offset == 0 && length == total && !ordered.holds(id) {
+            // The next message in a single fragment: delivered from the packet without passing through storage.
+            if pending + Int64(total) > maxPending { return fail(GesNetworkCodes.queueFull) }
+            ordered.nextId &+= 1
+            return deliver(route, id, chunk) && deliverOrdered(ordered)
+        }
+
         let message = ordered.message(id)
         if !message.active || message.id != id {
             // The total counts as pending before the message's storage grows to it.
@@ -391,6 +398,14 @@ extension GesNetworkConnection {
             if (message.active || message.hasReported) && (ahead == 0 || ahead >= 32768) { return true }
             if message.active { pending -= Int64(message.total) }
             message.active = false
+            if offset == 0 && chunk.count == Int(total) {
+                // A state in a single fragment: delivered from the packet without passing through storage.
+                if pending + Int64(total) > maxPending { return fail(GesNetworkCodes.queueFull) }
+                message.reported = id
+                message.hasReported = true
+                return deliver(route, id, chunk)
+            }
+
             pending += Int64(total)
             if pending > maxPending { return fail(GesNetworkCodes.queueFull) }
             message.start(channel, id, total)
@@ -433,15 +448,10 @@ extension GesNetworkConnection {
         let slot = Int(sent % recorded)
         // The record of the packet 1024 before leaves; it is lost when still outstanding.
         let evicted = sent >= recorded && recordOutstanding[slot]
-        let oldest = sent - recorded + 1
-        let used: Int64
-        if oldest >= 0 && oldest < sent {
-            used = fragmentTail - recordFragments[Int(oldest % recorded)]
-        } else if sent > 0 && oldest < 0 {
-            used = fragmentTail - recordFragments[0]
-        } else {
-            used = 0
-        }
+        // Only outstanding packets need their fragments again: the room counts from the oldest one that stays.
+        var oldest = max(oldestOutstanding, sent - recorded + 1)
+        while oldest < sent && !recordOutstanding[Int(oldest % recorded)] { oldest += 1 }
+        let used = oldest < sent ? fragmentTail - recordFragments[Int(oldest % recorded)] : 0
         let room = Int(Int64(Self.recordedFragments) - used)
         let frames = (evicted || hasPendingDatagramFrames()) && (budget == 0 || budgetUnits >= 0) && room > 0
         let keepaliveDue = now - lastSend >= keepalive

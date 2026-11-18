@@ -529,19 +529,42 @@ final class GesNetworkPartial {
         arrived = []
     }
 
-    // Writes the bytes of a chunk that did not arrive before; bytes that did keep their first value.
+    // Writes the bytes of a chunk that did not arrive before; bytes that did keep their first value. Runs of eight
+    // bytes that share a bitmap byte are copied or skipped together.
     func write(_ offset: Int, _ chunk: UnsafeRawBufferPointer) {
         var added: Int64 = 0
         buffer.withUnsafeMutableBytes { buffer in
             arrived.withUnsafeMutableBytes { arrived in
-                for index in 0..<chunk.count {
-                    let position = offset + index
+                let end = offset + chunk.count
+                var position = offset
+                while position < end {
+                    if position & 7 == 0 && end - position >= 8 {
+                        var run = position
+                        while end - run >= 8 && arrived[run >> 3] == 0 {
+                            arrived[run >> 3] = 0xff
+                            run += 8
+                        }
+                        if run != position {
+                            UnsafeMutableRawBufferPointer(rebasing: buffer[position..<run]).copyMemory(
+                                from: UnsafeRawBufferPointer(rebasing: chunk[position - offset..<run - offset])
+                            )
+                            added += Int64(run - position)
+                            position = run
+                            continue
+                        }
+                        if arrived[position >> 3] == 0xff {
+                            position += 8
+                            continue
+                        }
+                    }
                     let mask = UInt8(1) << UInt8(position & 7)
                     let bits = arrived[position >> 3]
-                    if bits & mask != 0 { continue }
-                    arrived[position >> 3] = bits | mask
-                    buffer[position] = chunk[index]
-                    added += 1
+                    if bits & mask == 0 {
+                        arrived[position >> 3] = bits | mask
+                        buffer[position] = chunk[position - offset]
+                        added += 1
+                    }
+                    position += 1
                 }
             }
         }
@@ -581,6 +604,9 @@ final class GesNetworkOrderedReceive {
         messages[slot] = message
         return message
     }
+
+    // Whether a message with the id is being received or was cancelled.
+    func holds(_ id: UInt16) -> Bool { messages[Int(id) % Self.window]?.active ?? false }
 
     // Frees the slot of a delivered message and keeps the message for reuse.
     func release(_ message: GesNetworkPartial) {

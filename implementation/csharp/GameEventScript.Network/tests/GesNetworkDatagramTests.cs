@@ -31,15 +31,26 @@ public sealed class GesNetworkDatagramTests
 
     private static readonly GesNetworkOptions Options = new() { MinimumSecurity = GesNetworkSecurity.None, Transport = GesNetworkTransport.Datagram };
 
-    private static (GesNetworkConnection Client, GesNetworkConnection Server) Pair()
+    private static readonly GesNetworkOptions EncryptedClient = new() { Transport = GesNetworkTransport.Datagram, MinimumSecurity = GesNetworkSecurity.Encrypted, InsecureTestKeySeed = 7 };
+
+    private static readonly GesNetworkOptions EncryptedServer = new()
+    {
+        Transport = GesNetworkTransport.Datagram,
+        MinimumSecurity = GesNetworkSecurity.Encrypted,
+        Key = GesNetworkKey.FromPrivateKey(Enumerable.Range(1, 32).Select(value => (byte)value).ToArray()),
+        InsecureTestKeySeed = 7,
+    };
+
+    private static (GesNetworkConnection Client, GesNetworkConnection Server) Pair(bool encrypted = false)
     {
         var network = GesSchemaSet.Parse(Source).Network("Game").Bind();
-        return (GesNetworkConnection.CreateClient(network, default, 0, Options), GesNetworkConnection.CreateServer(network, 0, Options));
+        return (GesNetworkConnection.CreateClient(network, default, 0, encrypted ? EncryptedClient : Options),
+            GesNetworkConnection.CreateServer(network, 0, encrypted ? EncryptedServer : Options));
     }
 
-    private static GesNetworkSimulator Connected(long seed, int loss, int duplicate, bool reorder)
+    private static GesNetworkSimulator Connected(long seed, int loss, int duplicate, bool reorder, bool encrypted = false)
     {
-        var (client, server) = Pair();
+        var (client, server) = Pair(encrypted);
         var simulator = new GesNetworkSimulator(client, server, seed, 20_000, 15_000, loss, duplicate, reorder);
         simulator.Advance(0);
         for (var step = 0; step < 1000 && server.State == GesNetworkState.AwaitHello; step++) simulator.Advance(simulator.NextDeadline);
@@ -89,6 +100,34 @@ public sealed class GesNetworkDatagramTests
         client.Advance(1_000_000);
         Assert.AreEqual(1200, client.Transmit(buffer));
         Assert.AreEqual(3_000_000, client.NextDeadline);
+    }
+
+    // 1024 packets of 40 small messages each carry far more than the 16384 recorded fragments; acknowledged packets
+    // free theirs, so the sender keeps sending.
+    [TestMethod]
+    public void ManySmallMessagesKeepFlowingBeyondTheRecordedFragments()
+    {
+        var simulator = Connected(2, 0, 0, false);
+        var payload = new byte[1];
+        var received = 0;
+        for (var round = 0; round < 1200; round++)
+        {
+            for (var index = 0; index < 40; index++)
+            {
+                payload[0] = (byte)(round * 40 + index);
+                Assert.AreEqual(GesNetworkSendStatus.Queued, simulator.Server.Send(Blob, payload));
+            }
+
+            simulator.Advance(simulator.Now + 16_667);
+            foreach (var (route, message) in Messages(simulator.Client))
+            {
+                Assert.AreEqual(Blob, route);
+                Assert.AreEqual((byte)received++, message[0]);
+            }
+        }
+
+        // At most the last rounds remain in flight.
+        Assert.IsGreaterThanOrEqualTo(1190 * 40, received, $"received {received}");
     }
 
     [TestMethod]
@@ -223,9 +262,12 @@ public sealed class GesNetworkDatagramTests
     [TestMethod]
     [TestCategory("Allocation")]
     [DoNotParallelize]
-    public void WarmedDatagramSessionAllocatesNothing()
+    [DataRow(false)]
+    [DataRow(true)]
+    public void WarmedDatagramSessionAllocatesNothing(bool encrypted)
     {
-        var simulator = Connected(3, 100, 50, true);
+        var simulator = Connected(3, 100, 50, true, encrypted);
+        Assert.AreEqual(encrypted ? GesNetworkSecurity.Encrypted : GesNetworkSecurity.None, simulator.Client.Security);
         simulator.Server.Subscribe(World);
         var world = new byte[] { 1, 2 };
         var blob = Bytes(1000, 9);

@@ -93,20 +93,14 @@ final class GesNetworkDatagramPeer: @unchecked Sendable {
     // The socket datagrams currently go through; nil while it is being replaced.
     var socket: Channel? { owner.current }
 
-    // Queues one datagram to the address; nil while the socket is being replaced, and the datagram is lost.
-    func write(_ buffer: ByteBuffer) -> EventLoopFuture<Void>? { owner.current?.write(AddressedEnvelope(remoteAddress: address, data: buffer)) }
-
-    func flush() { owner.current?.flush() }
-
     // A listener's peer gives its address back to address validation; a client's peer closes its socket. Releasing
     // again does nothing.
     func release() {
         if isShared { owner.remove(self) } else { owner.close() }
     }
 
-    // True when a datagram comes from the server.
-    fileprivate func sent(_ source: SocketAddress) -> Bool {
-        var bytes = [UInt8](repeating: 0, count: 18)
+    // True when a datagram comes from the server; the scratch holds the source's key.
+    fileprivate func sent(_ source: SocketAddress, scratch bytes: inout [UInt8]) -> Bool {
         guard let length = datagramAddressKey(source, into: &bytes), length == key.count else { return false }
         return bytes[0..<length].elementsEqual(key)
     }
@@ -302,12 +296,13 @@ private final class GesNetworkSocketDatagramHandler: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<ByteBuffer>
 
     private let peer: GesNetworkDatagramPeer
+    private var key = [UInt8](repeating: 0, count: 18)
 
     init(peer: GesNetworkDatagramPeer) { self.peer = peer }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let envelope = Self.unwrapInboundIn(data)
-        if peer.sent(envelope.remoteAddress) { peer.inbox.pushDatagram(envelope.data) }
+        if peer.sent(envelope.remoteAddress, scratch: &key) { peer.inbox.pushDatagram(envelope.data) }
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {}

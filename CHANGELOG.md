@@ -20,7 +20,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   in-process loopback and a seeded simulator.
 - The Network Sockets package (C# `GameEventScript.Network.Sockets` on .NET 8; Swift `GameEventScriptNetworkSockets`
   over SwiftNIO) carries a session over TCP or WebSocket, including `wss` clients. Its listeners hold at most 64
-  waiting clients, at most 8 per IP address.
+  waiting clients, at most 8 per IP address. A session hands its socket about 256 KiB of unwritten packets, so a peer
+  that reads slowly fills the send queue and `Send` reports `QueueFull`.
 - `ges schema generate --root <Network>` writes the wire types of a network's routes and one type with the network
   hash, a route index per route, the rate of each `at most every` route and a typed function per route that encodes
   its root into a buffer and sends or publishes it (`ServerPublishWorld`, Swift `serverPublishWorld`;

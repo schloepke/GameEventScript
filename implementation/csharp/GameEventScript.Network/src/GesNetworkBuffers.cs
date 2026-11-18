@@ -499,18 +499,48 @@ internal sealed class GesNetworkPartial
         _arrived = [];
     }
 
-    // Writes the bytes of a chunk that did not arrive before; bytes that did keep their first value.
+    // Writes the bytes of a chunk that did not arrive before; bytes that did keep their first value. Runs of eight
+    // bytes that share a bitmap byte are copied or skipped together.
     internal void Write(int offset, ReadOnlySpan<byte> chunk)
     {
-        for (var index = 0; index < chunk.Length; index++)
+        var end = offset + chunk.Length;
+        var position = offset;
+        while (position < end)
         {
-            var position = offset + index;
+            if ((position & 7) == 0 && end - position >= 8)
+            {
+                var run = position;
+                while (end - run >= 8 && _arrived[run >> 3] == 0)
+                {
+                    _arrived[run >> 3] = 0xff;
+                    run += 8;
+                }
+
+                if (run != position)
+                {
+                    chunk.Slice(position - offset, run - position).CopyTo(_buffer.AsSpan(position));
+                    Received += run - position;
+                    position = run;
+                    continue;
+                }
+
+                if (_arrived[position >> 3] == 0xff)
+                {
+                    position += 8;
+                    continue;
+                }
+            }
+
             var mask = (byte)(1 << (position & 7));
             ref var bits = ref _arrived[position >> 3];
-            if ((bits & mask) != 0) continue;
-            bits |= mask;
-            _buffer[position] = chunk[index];
-            Received++;
+            if ((bits & mask) == 0)
+            {
+                bits |= mask;
+                _buffer[position] = chunk[position - offset];
+                Received++;
+            }
+
+            position++;
         }
     }
 }
@@ -544,6 +574,9 @@ internal sealed class GesNetworkOrderedReceive
         _retained -= slot.Capacity;
         return slot;
     }
+
+    // Whether a message with the id is being received or was cancelled.
+    internal bool Holds(ushort id) => _messages[id % Window] is { Active: true };
 
     // Frees the slot of a delivered message and keeps the message for reuse.
     internal void Release(GesNetworkPartial message)

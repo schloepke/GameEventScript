@@ -296,9 +296,10 @@ final class GesNetworkPoly1305 {
             process(UnsafeRawBufferPointer(block), highBit: 1 << 24)
             buffered = 0
         }
-        while data.count - index >= 16 {
-            process(UnsafeRawBufferPointer(rebasing: data[index..<index + 16]), highBit: 1 << 24)
-            index += 16
+        let whole = (data.count - index) & ~15
+        if whole > 0 {
+            process(UnsafeRawBufferPointer(rebasing: data[index..<index + whole]), highBit: 1 << 24)
+            index += whole
         }
         for offset in 0..<data.count - index { block[offset] = data[index + offset] }
         buffered = data.count - index
@@ -387,13 +388,15 @@ final class GesNetworkPoly1305 {
         pad3 = 0
     }
 
+    // Adds whole 16-byte blocks; the accumulator stays in locals across them.
     private func process(_ m: UnsafeRawBufferPointer, highBit: UInt32) {
         let mask = Self.mask
-        let h0 = UInt64(self.h0 &+ (load(m, 0) & mask))
-        let h1 = UInt64(self.h1 &+ ((load(m, 3) >> 2) & mask))
-        let h2 = UInt64(self.h2 &+ ((load(m, 6) >> 4) & mask))
-        let h3 = UInt64(self.h3 &+ ((load(m, 9) >> 6) & mask))
-        let h4 = UInt64(self.h4 &+ ((load(m, 12) >> 8) | highBit))
+        let wide = UInt64(mask)
+        var h0 = self.h0
+        var h1 = self.h1
+        var h2 = self.h2
+        var h3 = self.h3
+        var h4 = self.h4
         let r0 = UInt64(self.r0)
         let r1 = UInt64(self.r1)
         let r2 = UInt64(self.r2)
@@ -403,39 +406,53 @@ final class GesNetworkPoly1305 {
         let s2 = r2 &* 5
         let s3 = r3 &* 5
         let s4 = r4 &* 5
-        let d0 = h0 &* r0 &+ h1 &* s4 &+ h2 &* s3 &+ h3 &* s2 &+ h4 &* s1
-        var d1 = h0 &* r1 &+ h1 &* r0 &+ h2 &* s4 &+ h3 &* s3 &+ h4 &* s2
-        var d2 = h0 &* r2 &+ h1 &* r1 &+ h2 &* r0 &+ h3 &* s4 &+ h4 &* s3
-        var d3 = h0 &* r3 &+ h1 &* r2 &+ h2 &* r1 &+ h3 &* r0 &+ h4 &* s4
-        var d4 = h0 &* r4 &+ h1 &* r3 &+ h2 &* r2 &+ h3 &* r1 &+ h4 &* r0
-        let wide = UInt64(mask)
-        var c = d0 >> 26
-        var n0 = UInt32(d0 & wide)
-        d1 &+= c
-        c = d1 >> 26
-        var n1 = UInt32(d1 & wide)
-        d2 &+= c
-        c = d2 >> 26
-        let n2 = UInt32(d2 & wide)
-        d3 &+= c
-        c = d3 >> 26
-        let n3 = UInt32(d3 & wide)
-        d4 &+= c
-        c = d4 >> 26
-        let n4 = UInt32(d4 & wide)
-        n0 &+= UInt32(truncatingIfNeeded: c) &* 5
-        let carry = n0 >> 26
-        n0 &= mask
-        n1 &+= carry
-        self.h0 = n0
-        self.h1 = n1
-        self.h2 = n2
-        self.h3 = n3
-        self.h4 = n4
+        var offset = 0
+        while offset < m.count {
+            h0 &+= load(m, offset) & mask
+            h1 &+= (load(m, offset + 3) >> 2) & mask
+            h2 &+= (load(m, offset + 6) >> 4) & mask
+            h3 &+= (load(m, offset + 9) >> 6) & mask
+            h4 &+= (load(m, offset + 12) >> 8) | highBit
+            let a0 = UInt64(h0)
+            let a1 = UInt64(h1)
+            let a2 = UInt64(h2)
+            let a3 = UInt64(h3)
+            let a4 = UInt64(h4)
+            let d0 = a0 &* r0 &+ a1 &* s4 &+ a2 &* s3 &+ a3 &* s2 &+ a4 &* s1
+            var d1 = a0 &* r1 &+ a1 &* r0 &+ a2 &* s4 &+ a3 &* s3 &+ a4 &* s2
+            var d2 = a0 &* r2 &+ a1 &* r1 &+ a2 &* r0 &+ a3 &* s4 &+ a4 &* s3
+            var d3 = a0 &* r3 &+ a1 &* r2 &+ a2 &* r1 &+ a3 &* r0 &+ a4 &* s4
+            var d4 = a0 &* r4 &+ a1 &* r3 &+ a2 &* r2 &+ a3 &* r1 &+ a4 &* r0
+            var c = d0 >> 26
+            h0 = UInt32(d0 & wide)
+            d1 &+= c
+            c = d1 >> 26
+            h1 = UInt32(d1 & wide)
+            d2 &+= c
+            c = d2 >> 26
+            h2 = UInt32(d2 & wide)
+            d3 &+= c
+            c = d3 >> 26
+            h3 = UInt32(d3 & wide)
+            d4 &+= c
+            c = d4 >> 26
+            h4 = UInt32(d4 & wide)
+            h0 &+= UInt32(truncatingIfNeeded: c) &* 5
+            let carry = h0 >> 26
+            h0 &= mask
+            h1 &+= carry
+            offset += 16
+        }
+
+        self.h0 = h0
+        self.h1 = h1
+        self.h2 = h2
+        self.h3 = h3
+        self.h4 = h4
     }
 
     private func load(_ data: UnsafeRawBufferPointer, _ offset: Int) -> UInt32 {
-        UInt32(data[offset]) | UInt32(data[offset + 1]) << 8 | UInt32(data[offset + 2]) << 16 | UInt32(data[offset + 3]) << 24
+        UInt32(littleEndian: data.loadUnaligned(fromByteOffset: offset, as: UInt32.self))
     }
 
     private func store(_ data: UnsafeMutableRawBufferPointer, _ offset: Int, _ value: UInt32) {
@@ -446,25 +463,23 @@ final class GesNetworkPoly1305 {
     }
 }
 
-// ChaCha20-Poly1305 (RFC 8439 section 2.8) with a replaceable key. Seals and opens in place; allocates nothing after
-// creation. Not thread-safe.
+// ChaCha20-Poly1305 (RFC 8439 section 2.8) with a replaceable key. Seals in place and opens into a destination, which
+// may be the sealed bytes themselves; allocates nothing after creation. Not thread-safe.
 final class GesNetworkAead {
     static let keyBytes = 32
     static let nonceBytes = 12
     static let tagBytes = GesNetworkPoly1305.tagBytes
+    private static let blockBytes = 64
 
-    private let key = UnsafeMutablePointer<UInt32>.allocate(capacity: 8)
-    private let state = UnsafeMutablePointer<UInt32>.allocate(capacity: 16)
-    private let working = UnsafeMutablePointer<UInt32>.allocate(capacity: 16)
-    private let stream = UnsafeMutableRawBufferPointer.allocate(byteCount: 64, alignment: 4)
+    private var k0: UInt32 = 0, k1: UInt32 = 0, k2: UInt32 = 0, k3: UInt32 = 0
+    private var k4: UInt32 = 0, k5: UInt32 = 0, k6: UInt32 = 0, k7: UInt32 = 0
+    private var n0: UInt32 = 0, n1: UInt32 = 0, n2: UInt32 = 0
+    private let stream = UnsafeMutableRawBufferPointer.allocate(byteCount: 64, alignment: 8)
     private let lengths = UnsafeMutableRawBufferPointer.allocate(byteCount: 16, alignment: 8)
     private let tag = UnsafeMutableRawBufferPointer.allocate(byteCount: GesNetworkAead.tagBytes, alignment: 1)
     private let poly = GesNetworkPoly1305()
 
     init() {
-        key.initialize(repeating: 0, count: 8)
-        state.initialize(repeating: 0, count: 16)
-        working.initialize(repeating: 0, count: 16)
         stream.initializeMemory(as: UInt8.self, repeating: 0)
         lengths.initializeMemory(as: UInt8.self, repeating: 0)
         tag.initializeMemory(as: UInt8.self, repeating: 0)
@@ -472,124 +487,182 @@ final class GesNetworkAead {
 
     deinit {
         clear()
-        key.deallocate()
-        state.deallocate()
-        working.deallocate()
         stream.deallocate()
         lengths.deallocate()
         tag.deallocate()
     }
 
     func setKey(_ bytes: UnsafeRawBufferPointer) {
-        for index in 0..<8 { key[index] = Self.load(bytes, 4 * index) }
+        k0 = Self.load(bytes, 0)
+        k1 = Self.load(bytes, 4)
+        k2 = Self.load(bytes, 8)
+        k3 = Self.load(bytes, 12)
+        k4 = Self.load(bytes, 16)
+        k5 = Self.load(bytes, 20)
+        k6 = Self.load(bytes, 24)
+        k7 = Self.load(bytes, 28)
     }
 
     func clear() {
-        key.update(repeating: 0, count: 8)
-        state.update(repeating: 0, count: 16)
-        working.update(repeating: 0, count: 16)
+        k0 = 0
+        k1 = 0
+        k2 = 0
+        k3 = 0
+        k4 = 0
+        k5 = 0
+        k6 = 0
+        k7 = 0
         for index in 0..<64 { stream[index] = 0 }
     }
 
     // Encrypts the first length bytes of the buffer in place and writes the tag behind them.
     func seal(nonce: UnsafeRawBufferPointer, aad: UnsafeRawBufferPointer, buffer: UnsafeMutableRawBufferPointer, length: Int) {
+        setNonce(nonce)
         let data = UnsafeMutableRawBufferPointer(rebasing: buffer[0..<length])
-        crypt(nonce, data)
-        authenticate(nonce, aad, UnsafeRawBufferPointer(data), UnsafeMutableRawBufferPointer(rebasing: buffer[length..<length + Self.tagBytes]))
+        crypt(UnsafeRawBufferPointer(data), data)
+        authenticate(aad, UnsafeRawBufferPointer(data), UnsafeMutableRawBufferPointer(rebasing: buffer[length..<length + Self.tagBytes]))
     }
 
-    // Checks the tag behind the ciphertext and decrypts it in place; false, with the buffer unchanged, when the tag does
-    // not match. The plaintext is the sealed length minus the tag.
-    func open(nonce: UnsafeRawBufferPointer, aad: UnsafeRawBufferPointer, sealed: UnsafeMutableRawBufferPointer) -> Bool {
+    // Checks the tag behind the ciphertext and decrypts it into the destination, which holds at least the plaintext,
+    // the sealed length minus the tag, and either starts at the sealed bytes or does not overlap them. False, with the
+    // destination unchanged, when the tag does not match.
+    func open(nonce: UnsafeRawBufferPointer, aad: UnsafeRawBufferPointer, sealed: UnsafeRawBufferPointer, into destination: UnsafeMutableRawBufferPointer) -> Bool {
         if sealed.count < Self.tagBytes { return false }
         let length = sealed.count - Self.tagBytes
-        let data = UnsafeMutableRawBufferPointer(rebasing: sealed[0..<length])
-        authenticate(nonce, aad, UnsafeRawBufferPointer(data), tag)
+        setNonce(nonce)
+        let ciphertext = UnsafeRawBufferPointer(rebasing: sealed[0..<length])
+        authenticate(aad, ciphertext, tag)
         var difference: UInt8 = 0
         for index in 0..<Self.tagBytes { difference |= tag[index] ^ sealed[length + index] }
         if difference != 0 { return false }
-        crypt(nonce, data)
+        crypt(ciphertext, UnsafeMutableRawBufferPointer(rebasing: destination[0..<length]))
         return true
     }
 
-    private func authenticate(_ nonce: UnsafeRawBufferPointer, _ aad: UnsafeRawBufferPointer, _ ciphertext: UnsafeRawBufferPointer, _ tag: UnsafeMutableRawBufferPointer) {
-        block(nonce, 0)
+    private func setNonce(_ nonce: UnsafeRawBufferPointer) {
+        n0 = Self.load(nonce, 0)
+        n1 = Self.load(nonce, 4)
+        n2 = Self.load(nonce, 8)
+    }
+
+    private func authenticate(_ aad: UnsafeRawBufferPointer, _ ciphertext: UnsafeRawBufferPointer, _ tag: UnsafeMutableRawBufferPointer) {
+        block(0, UnsafeRawBufferPointer(start: nil, count: 0), UnsafeMutableRawBufferPointer(start: nil, count: 0))
         poly.start(key: UnsafeRawBufferPointer(stream))
         poly.update(aad)
         poly.padToBlock()
         poly.update(ciphertext)
         poly.padToBlock()
-        Self.store64(lengths, 0, UInt64(aad.count))
-        Self.store64(lengths, 8, UInt64(ciphertext.count))
+        lengths.storeBytes(of: UInt64(aad.count).littleEndian, toByteOffset: 0, as: UInt64.self)
+        lengths.storeBytes(of: UInt64(ciphertext.count).littleEndian, toByteOffset: 8, as: UInt64.self)
         poly.update(UnsafeRawBufferPointer(lengths))
         poly.finish(into: tag)
     }
 
     // XORs the key stream from block counter 1 on.
-    private func crypt(_ nonce: UnsafeRawBufferPointer, _ data: UnsafeMutableRawBufferPointer) {
+    private func crypt(_ source: UnsafeRawBufferPointer, _ destination: UnsafeMutableRawBufferPointer) {
         var counter: UInt32 = 1
         var index = 0
-        while index < data.count {
-            block(nonce, counter)
+        while index < source.count {
+            let take = min(Self.blockBytes, source.count - index)
+            block(counter, UnsafeRawBufferPointer(rebasing: source[index..<index + take]), UnsafeMutableRawBufferPointer(rebasing: destination[index..<index + take]))
             counter &+= 1
-            let take = min(64, data.count - index)
-            for offset in 0..<take { data[index + offset] ^= stream[offset] }
             index += take
         }
     }
 
-    // The ChaCha20 block function (RFC 8439 section 2.3) into the key stream buffer.
-    private func block(_ nonce: UnsafeRawBufferPointer, _ counter: UInt32) {
-        let s = state
-        s[0] = 0x6170_7865
-        s[1] = 0x3320_646e
-        s[2] = 0x7962_2d32
-        s[3] = 0x6b20_6574
-        for index in 0..<8 { s[4 + index] = key[index] }
-        s[12] = counter
-        s[13] = Self.load(nonce, 0)
-        s[14] = Self.load(nonce, 4)
-        s[15] = Self.load(nonce, 8)
-        let w = working
-        w.update(from: s, count: 16)
+    // The ChaCha20 block function (RFC 8439 section 2.3). A full block of source is XORed with the key stream into the
+    // destination word by word; a shorter one leaves the key stream in its buffer and is XORed byte by byte.
+    private func block(_ counter: UInt32, _ source: UnsafeRawBufferPointer, _ destination: UnsafeMutableRawBufferPointer) {
+        var x0: UInt32 = 0x6170_7865
+        var x1: UInt32 = 0x3320_646e
+        var x2: UInt32 = 0x7962_2d32
+        var x3: UInt32 = 0x6b20_6574
+        var x4 = k0
+        var x5 = k1
+        var x6 = k2
+        var x7 = k3
+        var x8 = k4
+        var x9 = k5
+        var x10 = k6
+        var x11 = k7
+        var x12 = counter
+        var x13 = n0
+        var x14 = n1
+        var x15 = n2
         for _ in 0..<10 {
-            quarterRound(w, 0, 4, 8, 12)
-            quarterRound(w, 1, 5, 9, 13)
-            quarterRound(w, 2, 6, 10, 14)
-            quarterRound(w, 3, 7, 11, 15)
-            quarterRound(w, 0, 5, 10, 15)
-            quarterRound(w, 1, 6, 11, 12)
-            quarterRound(w, 2, 7, 8, 13)
-            quarterRound(w, 3, 4, 9, 14)
+            Self.quarterRound(&x0, &x4, &x8, &x12)
+            Self.quarterRound(&x1, &x5, &x9, &x13)
+            Self.quarterRound(&x2, &x6, &x10, &x14)
+            Self.quarterRound(&x3, &x7, &x11, &x15)
+            Self.quarterRound(&x0, &x5, &x10, &x15)
+            Self.quarterRound(&x1, &x6, &x11, &x12)
+            Self.quarterRound(&x2, &x7, &x8, &x13)
+            Self.quarterRound(&x3, &x4, &x9, &x14)
         }
-        for index in 0..<16 {
-            let word = w[index] &+ s[index]
-            stream[4 * index] = UInt8(truncatingIfNeeded: word)
-            stream[4 * index + 1] = UInt8(truncatingIfNeeded: word >> 8)
-            stream[4 * index + 2] = UInt8(truncatingIfNeeded: word >> 16)
-            stream[4 * index + 3] = UInt8(truncatingIfNeeded: word >> 24)
+
+        x0 &+= 0x6170_7865
+        x1 &+= 0x3320_646e
+        x2 &+= 0x7962_2d32
+        x3 &+= 0x6b20_6574
+        x4 &+= k0
+        x5 &+= k1
+        x6 &+= k2
+        x7 &+= k3
+        x8 &+= k4
+        x9 &+= k5
+        x10 &+= k6
+        x11 &+= k7
+        x12 &+= counter
+        x13 &+= n0
+        x14 &+= n1
+        x15 &+= n2
+        if source.count == Self.blockBytes {
+            Self.xor(source, destination, 0, x0, x1)
+            Self.xor(source, destination, 8, x2, x3)
+            Self.xor(source, destination, 16, x4, x5)
+            Self.xor(source, destination, 24, x6, x7)
+            Self.xor(source, destination, 32, x8, x9)
+            Self.xor(source, destination, 40, x10, x11)
+            Self.xor(source, destination, 48, x12, x13)
+            Self.xor(source, destination, 56, x14, x15)
+            return
         }
+
+        Self.store(stream, 0, x0, x1)
+        Self.store(stream, 8, x2, x3)
+        Self.store(stream, 16, x4, x5)
+        Self.store(stream, 24, x6, x7)
+        Self.store(stream, 32, x8, x9)
+        Self.store(stream, 40, x10, x11)
+        Self.store(stream, 48, x12, x13)
+        Self.store(stream, 56, x14, x15)
+        for index in 0..<source.count { destination[index] = source[index] ^ stream[index] }
     }
 
-    private func quarterRound(_ x: UnsafeMutablePointer<UInt32>, _ a: Int, _ b: Int, _ c: Int, _ d: Int) {
-        x[a] &+= x[b]
-        x[d] = rotate(x[d] ^ x[a], 16)
-        x[c] &+= x[d]
-        x[b] = rotate(x[b] ^ x[c], 12)
-        x[a] &+= x[b]
-        x[d] = rotate(x[d] ^ x[a], 8)
-        x[c] &+= x[d]
-        x[b] = rotate(x[b] ^ x[c], 7)
+    private static func quarterRound(_ a: inout UInt32, _ b: inout UInt32, _ c: inout UInt32, _ d: inout UInt32) {
+        a &+= b
+        d = rotate(d ^ a, 16)
+        c &+= d
+        b = rotate(b ^ c, 12)
+        a &+= b
+        d = rotate(d ^ a, 8)
+        c &+= d
+        b = rotate(b ^ c, 7)
     }
 
-    private func rotate(_ value: UInt32, _ count: UInt32) -> UInt32 { (value << count) | (value >> (32 - count)) }
+    private static func rotate(_ value: UInt32, _ count: UInt32) -> UInt32 { (value << count) | (value >> (32 - count)) }
+
+    private static func xor(_ source: UnsafeRawBufferPointer, _ destination: UnsafeMutableRawBufferPointer, _ offset: Int, _ low: UInt32, _ high: UInt32) {
+        let word = UInt64(littleEndian: source.loadUnaligned(fromByteOffset: offset, as: UInt64.self)) ^ (UInt64(high) << 32 | UInt64(low))
+        destination.storeBytes(of: word.littleEndian, toByteOffset: offset, as: UInt64.self)
+    }
+
+    private static func store(_ stream: UnsafeMutableRawBufferPointer, _ offset: Int, _ low: UInt32, _ high: UInt32) {
+        stream.storeBytes(of: (UInt64(high) << 32 | UInt64(low)).littleEndian, toByteOffset: offset, as: UInt64.self)
+    }
 
     private static func load(_ data: UnsafeRawBufferPointer, _ offset: Int) -> UInt32 {
-        UInt32(data[offset]) | UInt32(data[offset + 1]) << 8 | UInt32(data[offset + 2]) << 16 | UInt32(data[offset + 3]) << 24
-    }
-
-    private static func store64(_ data: UnsafeMutableRawBufferPointer, _ offset: Int, _ value: UInt64) {
-        for index in 0..<8 { data[offset + index] = UInt8(truncatingIfNeeded: value >> UInt64(8 * index)) }
+        UInt32(littleEndian: data.loadUnaligned(fromByteOffset: offset, as: UInt32.self))
     }
 }
 

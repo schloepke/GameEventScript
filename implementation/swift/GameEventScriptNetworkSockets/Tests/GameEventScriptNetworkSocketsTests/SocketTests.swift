@@ -433,6 +433,35 @@ final class SocketTests: XCTestCase {
         listener.close()
     }
 
+    func testASlowPeerFillsTheSendQueue() async throws {
+        let network = try Self.game()
+        let listener = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network, options: Self.options(.stream))
+        let connection = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: Self.options(.stream))
+        let client = try await GesNetworkSocketSession.connectTcp(host: "127.0.0.1", port: listener.localEndPoint.port!, connection: connection)
+        let server = try Self.acceptOne(listener)
+        XCTAssertEqual(try Self.waitFor(server, client), "connecting tok")
+        try server.connection.accept()
+        XCTAssertEqual(try Self.waitFor(server, client), "connected")
+        XCTAssertEqual(try Self.waitFor(client, server), "connected")
+
+        // The client stops reading, so the socket fills and the session must leave further packets in the connection.
+        let blob = [UInt8](repeating: 7, count: 1000)
+        let deadline = Self.now + Self.limit
+        var sent = 0
+        var full = false
+        while !full && sent < 64 << 20 && Self.now < deadline {
+            try server.update(now: Self.now)
+            let status = server.connection.send(route: Self.blob, payload: blob)
+            full = status == .queueFull
+            if !full { XCTAssertEqual(status, .queued) }
+            sent += blob.count
+        }
+        XCTAssertTrue(full, "The send queue never filled.")
+        client.close()
+        server.close()
+        listener.close()
+    }
+
     func testTheEndOfTheTransportClosesTheConnection() async throws {
         let network = try Self.game()
         let listener = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network, options: Self.options(.stream))

@@ -416,6 +416,14 @@ public sealed partial class GesNetworkConnection
         var ordered = bulk ? _orderedBulk! : _orderedReliable!;
         if ((ushort)(id - ordered.NextId) >= GesNetworkOrderedReceive.Window)
             return (ushort)(ordered.NextId - id) <= GesNetworkOrderedReceive.Window || Fail(GesNetworkCodes.Malformed);
+        if (!bulk && id == ordered.NextId && offset == 0 && length == total && !ordered.Holds(id))
+        {
+            // The next message in a single fragment: delivered from the packet without passing through storage.
+            if (_pending + total > _maxPending) return Fail(GesNetworkCodes.QueueFull);
+            ordered.NextId++;
+            return Deliver(route, id, chunk) && DeliverOrdered(ordered);
+        }
+
         var message = ordered.Message(id);
         if (!message.Active || message.Id != id)
         {
@@ -487,6 +495,15 @@ public sealed partial class GesNetworkConnection
             if ((message.Active || message.HasReported) && ahead is 0 or >= 32768) return true;
             if (message.Active) _pending -= message.Total;
             message.Active = false;
+            if (offset == 0 && chunk.Length == total)
+            {
+                // A state in a single fragment: delivered from the packet without passing through storage.
+                if (_pending + total > _maxPending) return Fail(GesNetworkCodes.QueueFull);
+                message.Reported = id;
+                message.HasReported = true;
+                return Deliver(route, id, chunk);
+            }
+
             _pending += total;
             if (_pending > _maxPending) return Fail(GesNetworkCodes.QueueFull);
             message.Start(channel, id, total);
@@ -529,8 +546,10 @@ public sealed partial class GesNetworkConnection
         var slot = sent % RecordedPackets;
         // The record of the packet 1024 before leaves; it is lost when still outstanding.
         var evicted = sent >= RecordedPackets && _recordOutstanding[slot];
-        var oldest = sent - RecordedPackets + 1;
-        var used = oldest >= 0 && oldest < sent ? _fragmentTail - _recordFragments[oldest % RecordedPackets] : sent > 0 && oldest < 0 ? _fragmentTail - _recordFragments[0] : 0;
+        // Only outstanding packets need their fragments again: the room counts from the oldest one that stays.
+        var oldest = Math.Max(_oldestOutstanding, sent - RecordedPackets + 1);
+        while (oldest < sent && !_recordOutstanding[oldest % RecordedPackets]) oldest++;
+        var used = oldest < sent ? _fragmentTail - _recordFragments[oldest % RecordedPackets] : 0;
         var room = (int)(RecordedFragments - used);
         var frames = (evicted || HasPendingDatagramFrames()) && (_budget == 0 || _budgetUnits >= 0) && room > 0;
         var keepalive = _now - _lastSend >= _keepalive;

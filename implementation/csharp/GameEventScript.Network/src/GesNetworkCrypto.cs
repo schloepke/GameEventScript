@@ -314,10 +314,11 @@ internal sealed class GesNetworkPoly1305
             _buffered = 0;
         }
 
-        while (data.Length >= 16)
+        var whole = data.Length & ~15;
+        if (whole > 0)
         {
-            Block(data, 1u << 24);
-            data = data.Slice(16);
+            Block(data.Slice(0, whole), 1u << 24);
+            data = data.Slice(whole);
         }
 
         data.CopyTo(_block);
@@ -397,38 +398,44 @@ internal sealed class GesNetworkPoly1305
         _r0 = _r1 = _r2 = _r3 = _r4 = _pad0 = _pad1 = _pad2 = _pad3 = 0;
     }
 
+    // Adds whole 16-byte blocks; the accumulator stays in locals across them.
     private void Block(ReadOnlySpan<byte> m, uint highBit)
     {
-        var h0 = _h0 + (Load(m, 0) & Mask);
-        var h1 = _h1 + ((Load(m, 3) >> 2) & Mask);
-        var h2 = _h2 + ((Load(m, 6) >> 4) & Mask);
-        var h3 = _h3 + ((Load(m, 9) >> 6) & Mask);
-        var h4 = _h4 + ((Load(m, 12) >> 8) | highBit);
+        uint h0 = _h0, h1 = _h1, h2 = _h2, h3 = _h3, h4 = _h4;
         ulong r0 = _r0, r1 = _r1, r2 = _r2, r3 = _r3, r4 = _r4;
         ulong s1 = r1 * 5, s2 = r2 * 5, s3 = r3 * 5, s4 = r4 * 5;
-        var d0 = h0 * r0 + h1 * s4 + h2 * s3 + h3 * s2 + h4 * s1;
-        var d1 = h0 * r1 + h1 * r0 + h2 * s4 + h3 * s3 + h4 * s2;
-        var d2 = h0 * r2 + h1 * r1 + h2 * r0 + h3 * s4 + h4 * s3;
-        var d3 = h0 * r3 + h1 * r2 + h2 * r1 + h3 * r0 + h4 * s4;
-        var d4 = h0 * r4 + h1 * r3 + h2 * r2 + h3 * r1 + h4 * r0;
-        var c = d0 >> 26;
-        h0 = (uint)d0 & Mask;
-        d1 += c;
-        c = d1 >> 26;
-        h1 = (uint)d1 & Mask;
-        d2 += c;
-        c = d2 >> 26;
-        h2 = (uint)d2 & Mask;
-        d3 += c;
-        c = d3 >> 26;
-        h3 = (uint)d3 & Mask;
-        d4 += c;
-        c = d4 >> 26;
-        h4 = (uint)d4 & Mask;
-        h0 += (uint)c * 5;
-        var carry = h0 >> 26;
-        h0 &= Mask;
-        h1 += carry;
+        for (var offset = 0; offset < m.Length; offset += 16)
+        {
+            h0 += Load(m, offset) & Mask;
+            h1 += (Load(m, offset + 3) >> 2) & Mask;
+            h2 += (Load(m, offset + 6) >> 4) & Mask;
+            h3 += (Load(m, offset + 9) >> 6) & Mask;
+            h4 += (Load(m, offset + 12) >> 8) | highBit;
+            var d0 = h0 * r0 + h1 * s4 + h2 * s3 + h3 * s2 + h4 * s1;
+            var d1 = h0 * r1 + h1 * r0 + h2 * s4 + h3 * s3 + h4 * s2;
+            var d2 = h0 * r2 + h1 * r1 + h2 * r0 + h3 * s4 + h4 * s3;
+            var d3 = h0 * r3 + h1 * r2 + h2 * r1 + h3 * r0 + h4 * s4;
+            var d4 = h0 * r4 + h1 * r3 + h2 * r2 + h3 * r1 + h4 * r0;
+            var c = d0 >> 26;
+            h0 = (uint)d0 & Mask;
+            d1 += c;
+            c = d1 >> 26;
+            h1 = (uint)d1 & Mask;
+            d2 += c;
+            c = d2 >> 26;
+            h2 = (uint)d2 & Mask;
+            d3 += c;
+            c = d3 >> 26;
+            h3 = (uint)d3 & Mask;
+            d4 += c;
+            c = d4 >> 26;
+            h4 = (uint)d4 & Mask;
+            h0 += (uint)c * 5;
+            var carry = h0 >> 26;
+            h0 &= Mask;
+            h1 += carry;
+        }
+
         _h0 = h0;
         _h1 = h1;
         _h2 = h2;
@@ -439,59 +446,76 @@ internal sealed class GesNetworkPoly1305
     private static uint Load(ReadOnlySpan<byte> data, int offset) => BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(offset));
 }
 
-// ChaCha20-Poly1305 (RFC 8439 section 2.8) with a replaceable key. Seals and opens in place; allocates nothing after
-// creation. Not thread-safe.
+// ChaCha20-Poly1305 (RFC 8439 section 2.8) with a replaceable key. Seals in place and opens into a destination, which
+// may be the sealed bytes themselves; allocates nothing after creation. Not thread-safe.
 internal sealed class GesNetworkAead
 {
     public const int KeyBytes = 32;
     public const int NonceBytes = 12;
     public const int TagBytes = GesNetworkPoly1305.TagBytes;
+    private const int BlockBytes = 64;
 
-    private readonly uint[] _key = new uint[8];
-    private readonly uint[] _state = new uint[16];
-    private readonly uint[] _working = new uint[16];
-    private readonly byte[] _stream = new byte[64];
+    private readonly byte[] _stream = new byte[BlockBytes];
     private readonly byte[] _lengths = new byte[16];
     private readonly byte[] _tag = new byte[TagBytes];
     private readonly GesNetworkPoly1305 _poly = new();
+    private uint _k0, _k1, _k2, _k3, _k4, _k5, _k6, _k7;
+    private uint _n0, _n1, _n2;
 
     public void SetKey(ReadOnlySpan<byte> key)
     {
-        for (var index = 0; index < 8; index++) _key[index] = BinaryPrimitives.ReadUInt32LittleEndian(key.Slice(4 * index));
+        _k0 = Load(key, 0);
+        _k1 = Load(key, 4);
+        _k2 = Load(key, 8);
+        _k3 = Load(key, 12);
+        _k4 = Load(key, 16);
+        _k5 = Load(key, 20);
+        _k6 = Load(key, 24);
+        _k7 = Load(key, 28);
     }
 
     public void Clear()
     {
-        Array.Clear(_key, 0, _key.Length);
-        Array.Clear(_state, 0, _state.Length);
-        Array.Clear(_working, 0, _working.Length);
+        _k0 = _k1 = _k2 = _k3 = _k4 = _k5 = _k6 = _k7 = 0;
         Array.Clear(_stream, 0, _stream.Length);
     }
 
     // Encrypts the first length bytes of the buffer in place and writes the tag behind them.
     public void Seal(ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> aad, Span<byte> buffer, int length)
     {
-        Crypt(nonce, buffer.Slice(0, length));
-        Authenticate(nonce, aad, buffer.Slice(0, length), buffer.Slice(length, TagBytes));
+        SetNonce(nonce);
+        var data = buffer.Slice(0, length);
+        Crypt(data, data);
+        Authenticate(aad, data, buffer.Slice(length, TagBytes));
     }
 
-    // Checks the tag behind the ciphertext and decrypts it in place; false, with the buffer unchanged, when the tag does
-    // not match. The plaintext is the sealed length minus the tag.
-    public bool Open(ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> aad, Span<byte> sealedBuffer)
+    // Checks the tag behind the ciphertext and decrypts it into the destination, which holds at least the plaintext,
+    // the sealed length minus the tag, and either starts at the sealed bytes or does not overlap them. False, with the
+    // destination unchanged, when the tag does not match.
+    public bool Open(ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> aad, ReadOnlySpan<byte> sealedBytes, Span<byte> destination)
     {
-        if (sealedBuffer.Length < TagBytes) return false;
-        var length = sealedBuffer.Length - TagBytes;
-        Authenticate(nonce, aad, sealedBuffer.Slice(0, length), _tag);
+        if (sealedBytes.Length < TagBytes) return false;
+        var length = sealedBytes.Length - TagBytes;
+        SetNonce(nonce);
+        var ciphertext = sealedBytes.Slice(0, length);
+        Authenticate(aad, ciphertext, _tag);
         var difference = 0;
-        for (var index = 0; index < TagBytes; index++) difference |= _tag[index] ^ sealedBuffer[length + index];
+        for (var index = 0; index < TagBytes; index++) difference |= _tag[index] ^ sealedBytes[length + index];
         if (difference != 0) return false;
-        Crypt(nonce, sealedBuffer.Slice(0, length));
+        Crypt(ciphertext, destination.Slice(0, length));
         return true;
     }
 
-    private void Authenticate(ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> aad, ReadOnlySpan<byte> ciphertext, Span<byte> tag)
+    private void SetNonce(ReadOnlySpan<byte> nonce)
     {
-        Block(nonce, 0);
+        _n0 = Load(nonce, 0);
+        _n1 = Load(nonce, 4);
+        _n2 = Load(nonce, 8);
+    }
+
+    private void Authenticate(ReadOnlySpan<byte> aad, ReadOnlySpan<byte> ciphertext, Span<byte> tag)
+    {
+        Block(0, default, default);
         _poly.Start(_stream);
         _poly.Update(aad);
         _poly.PadToBlock();
@@ -504,61 +528,99 @@ internal sealed class GesNetworkAead
     }
 
     // XORs the key stream from block counter 1 on.
-    private void Crypt(ReadOnlySpan<byte> nonce, Span<byte> data)
+    private void Crypt(ReadOnlySpan<byte> source, Span<byte> destination)
     {
         uint counter = 1;
-        while (!data.IsEmpty)
+        while (!source.IsEmpty)
         {
-            Block(nonce, counter++);
-            var take = Math.Min(64, data.Length);
-            for (var index = 0; index < take; index++) data[index] ^= _stream[index];
-            data = data.Slice(take);
+            var take = Math.Min(BlockBytes, source.Length);
+            Block(counter++, source.Slice(0, take), destination);
+            source = source.Slice(take);
+            destination = destination.Slice(take);
         }
     }
 
-    // The ChaCha20 block function (RFC 8439 section 2.3) into the key stream buffer.
-    private void Block(ReadOnlySpan<byte> nonce, uint counter)
+    // The ChaCha20 block function (RFC 8439 section 2.3). A full block of source is XORed with the key stream into the
+    // destination word by word; a shorter one leaves the key stream in its buffer and is XORed byte by byte.
+    private void Block(uint counter, ReadOnlySpan<byte> source, Span<byte> destination)
     {
-        var s = _state;
-        s[0] = 0x61707865;
-        s[1] = 0x3320646e;
-        s[2] = 0x79622d32;
-        s[3] = 0x6b206574;
-        for (var index = 0; index < 8; index++) s[4 + index] = _key[index];
-        s[12] = counter;
-        s[13] = BinaryPrimitives.ReadUInt32LittleEndian(nonce);
-        s[14] = BinaryPrimitives.ReadUInt32LittleEndian(nonce.Slice(4));
-        s[15] = BinaryPrimitives.ReadUInt32LittleEndian(nonce.Slice(8));
-        var w = _working;
-        Array.Copy(s, w, 16);
+        uint x0 = 0x61707865, x1 = 0x3320646e, x2 = 0x79622d32, x3 = 0x6b206574;
+        uint x4 = _k0, x5 = _k1, x6 = _k2, x7 = _k3, x8 = _k4, x9 = _k5, x10 = _k6, x11 = _k7;
+        uint x12 = counter, x13 = _n0, x14 = _n1, x15 = _n2;
         for (var round = 0; round < 10; round++)
         {
-            QuarterRound(w, 0, 4, 8, 12);
-            QuarterRound(w, 1, 5, 9, 13);
-            QuarterRound(w, 2, 6, 10, 14);
-            QuarterRound(w, 3, 7, 11, 15);
-            QuarterRound(w, 0, 5, 10, 15);
-            QuarterRound(w, 1, 6, 11, 12);
-            QuarterRound(w, 2, 7, 8, 13);
-            QuarterRound(w, 3, 4, 9, 14);
+            QuarterRound(ref x0, ref x4, ref x8, ref x12);
+            QuarterRound(ref x1, ref x5, ref x9, ref x13);
+            QuarterRound(ref x2, ref x6, ref x10, ref x14);
+            QuarterRound(ref x3, ref x7, ref x11, ref x15);
+            QuarterRound(ref x0, ref x5, ref x10, ref x15);
+            QuarterRound(ref x1, ref x6, ref x11, ref x12);
+            QuarterRound(ref x2, ref x7, ref x8, ref x13);
+            QuarterRound(ref x3, ref x4, ref x9, ref x14);
         }
 
-        for (var index = 0; index < 16; index++) BinaryPrimitives.WriteUInt32LittleEndian(_stream.AsSpan(4 * index), w[index] + s[index]);
+        x0 += 0x61707865;
+        x1 += 0x3320646e;
+        x2 += 0x79622d32;
+        x3 += 0x6b206574;
+        x4 += _k0;
+        x5 += _k1;
+        x6 += _k2;
+        x7 += _k3;
+        x8 += _k4;
+        x9 += _k5;
+        x10 += _k6;
+        x11 += _k7;
+        x12 += counter;
+        x13 += _n0;
+        x14 += _n1;
+        x15 += _n2;
+        if (source.Length == BlockBytes)
+        {
+            Xor(source, destination, 0, x0, x1);
+            Xor(source, destination, 8, x2, x3);
+            Xor(source, destination, 16, x4, x5);
+            Xor(source, destination, 24, x6, x7);
+            Xor(source, destination, 32, x8, x9);
+            Xor(source, destination, 40, x10, x11);
+            Xor(source, destination, 48, x12, x13);
+            Xor(source, destination, 56, x14, x15);
+            return;
+        }
+
+        var stream = _stream.AsSpan();
+        Store(stream, 0, x0, x1);
+        Store(stream, 8, x2, x3);
+        Store(stream, 16, x4, x5);
+        Store(stream, 24, x6, x7);
+        Store(stream, 32, x8, x9);
+        Store(stream, 40, x10, x11);
+        Store(stream, 48, x12, x13);
+        Store(stream, 56, x14, x15);
+        for (var index = 0; index < source.Length; index++) destination[index] = (byte)(source[index] ^ stream[index]);
     }
 
-    private static void QuarterRound(uint[] x, int a, int b, int c, int d)
+    private static void QuarterRound(ref uint a, ref uint b, ref uint c, ref uint d)
     {
-        x[a] += x[b];
-        x[d] = Rotate(x[d] ^ x[a], 16);
-        x[c] += x[d];
-        x[b] = Rotate(x[b] ^ x[c], 12);
-        x[a] += x[b];
-        x[d] = Rotate(x[d] ^ x[a], 8);
-        x[c] += x[d];
-        x[b] = Rotate(x[b] ^ x[c], 7);
+        a += b;
+        d = Rotate(d ^ a, 16);
+        c += d;
+        b = Rotate(b ^ c, 12);
+        a += b;
+        d = Rotate(d ^ a, 8);
+        c += d;
+        b = Rotate(b ^ c, 7);
     }
 
     private static uint Rotate(uint value, int count) => (value << count) | (value >> (32 - count));
+
+    private static void Xor(ReadOnlySpan<byte> source, Span<byte> destination, int offset, uint low, uint high) =>
+        BinaryPrimitives.WriteUInt64LittleEndian(destination.Slice(offset), BinaryPrimitives.ReadUInt64LittleEndian(source.Slice(offset)) ^ ((ulong)high << 32 | low));
+
+    private static void Store(Span<byte> stream, int offset, uint low, uint high) =>
+        BinaryPrimitives.WriteUInt64LittleEndian(stream.Slice(offset), (ulong)high << 32 | low);
+
+    private static uint Load(ReadOnlySpan<byte> data, int offset) => BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(offset));
 }
 
 // HKDF-SHA256 (RFC 5869). Used at the handshake and at a key change, so its HMAC objects may allocate.

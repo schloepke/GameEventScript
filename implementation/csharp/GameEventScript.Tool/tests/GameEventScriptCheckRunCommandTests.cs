@@ -437,6 +437,18 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(1, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "View").ExitCode);
         Assert.AreEqual(0, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game", "-d", "ExtendedView").ExitCode);
         StringAssert.Contains(File.ReadAllText(Path.Combine(_directory, "ExtendedView", ".ges-generated.json")), "\"extendNamespace\": \"Game\"");
+        // Schema sets: declaring and using one exclude each other, imports concern Swift alone, and the manifest names them.
+        Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--schemas", "ViewSchemas").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--schemas", "ViewSchemas", "--use-schemas", "Game.ViewSchemas").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "csharp", "--import", "Shared").ExitCode);
+        Assert.AreEqual(1, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--schemas", "View").ExitCode);
+        var schemas = Run("schema", "generate", "view.gess", "--model", "view", "--language", "csharp", "--namespace", "Game", "--documents", "--schemas", "ViewSchemas");
+        Assert.AreEqual(0, schemas.ExitCode, schemas.StandardError);
+        StringAssert.Contains(schemas.StandardOutput, "public static class ViewSchemas");
+        Assert.AreEqual(0, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--use-schemas", "Shared.ViewSchemas", "--import", "Shared", "-d", "UsedSchemas").ExitCode);
+        var used = File.ReadAllText(Path.Combine(_directory, "UsedSchemas", ".ges-generated.json"));
+        StringAssert.Contains(used, "\"useSchemaSet\": \"Shared.ViewSchemas\"");
+        StringAssert.Contains(used, "\"imports\": [");
         // A missing language is reported as such, not as an option that concerns Swift.
         var noLanguage = Run("schema", "generate", "view.gess", "--model", "view", "--extend-namespace", "Game");
         Assert.AreEqual(2, noLanguage.ExitCode);

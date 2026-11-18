@@ -222,16 +222,22 @@ internal static class NetworkApiObservations
                 case "sendBudgetBytesPerSecond": options.SendBudgetBytesPerSecond = property.Value.GetInt64(); break;
                 case "maxTransferBytes": options.MaxTransferBytes = property.Value.GetInt64(); break;
                 case "deflateTransfers": options.DeflateTransfers = property.Value.GetBoolean(); break;
-                case "minimumSecurity":
-                    options.MinimumSecurity = property.Value.GetString() switch
+                case "clientSecurity":
+                    options.ClientSecurity = property.Value.GetString() switch
                     {
-                        "none" => GesNetworkSecurity.None,
-                        "encrypted" => GesNetworkSecurity.Encrypted,
-                        _ => GesNetworkSecurity.Verified
+                        "none" => GesNetworkClientSecurity.None,
+                        "development" => GesNetworkClientSecurity.Development,
+                        _ => GesNetworkClientSecurity.Pinned(Convert.FromHexString(raw.GetProperty("serverPublicKey").GetString()!))
                     };
                     break;
-                case "key": options.Key = GesNetworkKey.FromPrivateKey(Convert.FromHexString(property.Value.GetString()!)); break;
-                case "serverPublicKey": options.ServerPublicKey = Convert.FromHexString(property.Value.GetString()!); break;
+                case "serverSecurity":
+                    options.ServerSecurity = property.Value.GetString() == "key"
+                        ? GesNetworkServerSecurity.Key(GesNetworkKey.FromPrivateKey(Convert.FromHexString(raw.GetProperty("key").GetString()!)))
+                        : GesNetworkServerSecurity.None;
+                    break;
+                case "key":
+                case "serverPublicKey":
+                    break;
                 case "testKeySeed": options.InsecureTestKeySeed = property.Value.GetUInt64(); break;
                 default: throw new ArgumentException("Unknown network option.");
             }

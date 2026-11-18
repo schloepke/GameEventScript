@@ -59,7 +59,7 @@ class NetworkInputTests(unittest.TestCase):
         request = prepare(self.case('handshake-loopback', options={'maxTransferBytes': 4, 'deflateTransfers': False}, steps=[
             {'cancel': {'side': 'server', 'route': 3, 'id': 0}},
             {'cancel': {'side': 'server', 'route': 3, 'id': 1, 'code': 'game.stale'}}]))
-        self.assertEqual({'maxTransferBytes': 4, 'deflateTransfers': False, 'minimumSecurity': 'none'}, request['options'])
+        self.assertEqual({'maxTransferBytes': 4, 'deflateTransfers': False, 'clientSecurity': 'none', 'serverSecurity': 'none'}, request['options'])
         self.assertEqual([{'action': 'cancel', 'side': 'server', 'route': 3, 'id': 0},
                           {'action': 'cancel', 'side': 'server', 'route': 3, 'id': 1, 'code': 'game.stale'}], request['steps'])
         for step in ({'cancel': {'side': 'server', 'route': 3}}, {'cancel': {'side': 'server', 'route': 3, 'id': '0'}},
@@ -73,13 +73,18 @@ class NetworkInputTests(unittest.TestCase):
 
     def test_security_options_reach_the_adapter(self):
         key = '01' * 32
-        request = prepare(self.case('handshake-loopback', options={'minimumSecurity': 'encrypted', 'key': key, 'testKeySeed': 2 ** 64 - 1},
-                                    clientOptions={'minimumSecurity': 'verified', 'serverPublicKey': key, 'testKeySeed': 0}))
-        self.assertEqual({'minimumSecurity': 'encrypted', 'key': key, 'testKeySeed': 2 ** 64 - 1}, request['options'])
-        self.assertEqual({'minimumSecurity': 'verified', 'serverPublicKey': key, 'testKeySeed': 0}, request['clientOptions'])
-        self.assertEqual('none', prepare(self.cases['handshake-loopback'])['options']['minimumSecurity'])
-        for options in ({'minimumSecurity': 'pinned'}, {'minimumSecurity': 1}, {'key': '01' * 31}, {'key': 'zz' * 32},
-                        {'serverPublicKey': 1}, {'testKeySeed': -1}, {'testKeySeed': 2 ** 64}, {'testKeySeed': True}):
+        request = prepare(self.case('handshake-loopback', options={'serverSecurity': 'key', 'key': key, 'testKeySeed': 2 ** 64 - 1},
+                                    clientOptions={'clientSecurity': 'pinned', 'serverPublicKey': key, 'testKeySeed': 0}))
+        self.assertEqual({'serverSecurity': 'key', 'key': key, 'testKeySeed': 2 ** 64 - 1, 'clientSecurity': 'none'}, request['options'])
+        self.assertEqual({'clientSecurity': 'pinned', 'serverPublicKey': key, 'testKeySeed': 0, 'serverSecurity': 'none'}, request['clientOptions'])
+        defaults = prepare(self.cases['handshake-loopback'])['options']
+        self.assertEqual(('none', 'none'), (defaults['clientSecurity'], defaults['serverSecurity']))
+        self.assertEqual('development', prepare(self.case('handshake-loopback', clientOptions={'clientSecurity': 'development'}))['clientOptions']['clientSecurity'])
+        for options in ({'minimumSecurity': 'none'}, {'clientSecurity': 'verified'}, {'serverSecurity': 'encrypted'}, {'clientSecurity': 1},
+                        {'clientSecurity': 'pinned'}, {'serverSecurity': 'key'}, {'key': '01' * 32}, {'serverPublicKey': '01' * 32},
+                        {'clientSecurity': 'development', 'serverPublicKey': '01' * 32},
+                        {'serverSecurity': 'key', 'key': '01' * 31}, {'serverSecurity': 'key', 'key': 'zz' * 32},
+                        {'clientSecurity': 'pinned', 'serverPublicKey': 1}, {'testKeySeed': -1}, {'testKeySeed': 2 ** 64}, {'testKeySeed': True}):
             with self.assertRaises(InvalidDocument, msg=options):
                 prepare(self.case('handshake-loopback', options=options))
 

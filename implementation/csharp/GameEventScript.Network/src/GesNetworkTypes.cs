@@ -56,9 +56,6 @@ public static class GesNetworkCodes
     /// <summary>A server without a key received a key request or a sealed <c>hello</c>.</summary>
     public const string Insecure = "network.insecure";
 
-    /// <summary>A client that requires <see cref="GesNetworkSecurity.Verified"/> has no pinned key and received a server key.</summary>
-    public const string Unverified = "network.unverified";
-
     /// <summary>A sealed <c>hello</c>, <c>welcome</c> or packet does not authenticate.</summary>
     public const string AuthenticationFailed = "network.authenticationFailed";
 }
@@ -214,6 +211,58 @@ public readonly ref struct GesNetworkEvent
 /// <summary>The limits and transport of one connection. Values are checked when a connection is created.</summary>
 public sealed class GesNetworkOptions
 {
+    /// <summary>
+    /// Creates the options of a connection within one process, such as a loopback: the message transport, packets of 65535
+    /// bytes, no acknowledgement delay, no timeout or keepalive and no encryption on either side.
+    /// </summary>
+    /// <returns>New options; change them freely.</returns>
+    public static GesNetworkOptions InProcess() => new()
+    {
+        Transport = GesNetworkTransport.Message,
+        MaxPacketBytes = GesNetworkWire.MaximumPacketBytes,
+        AckDelayMicroseconds = 0,
+        TimeoutMicroseconds = 0,
+        KeepaliveMicroseconds = 0,
+        ClientSecurity = GesNetworkClientSecurity.None,
+        ServerSecurity = GesNetworkServerSecurity.None,
+    };
+
+    /// <summary>Creates the options of a client on the message transport, such as a WebSocket.</summary>
+    /// <param name="security">How the client protects its session.</param>
+    /// <returns>New options; change them freely.</returns>
+    public static GesNetworkOptions Message(GesNetworkClientSecurity security) => Client(GesNetworkTransport.Message, security);
+
+    /// <summary>Creates the options of a server on the message transport, such as a WebSocket.</summary>
+    /// <param name="security">How the server protects its sessions.</param>
+    /// <returns>New options; change them freely.</returns>
+    public static GesNetworkOptions Message(GesNetworkServerSecurity security) => Server(GesNetworkTransport.Message, security);
+
+    /// <summary>Creates the options of a client on the stream transport, such as TCP.</summary>
+    /// <param name="security">How the client protects its session.</param>
+    /// <returns>New options; change them freely.</returns>
+    public static GesNetworkOptions Stream(GesNetworkClientSecurity security) => Client(GesNetworkTransport.Stream, security);
+
+    /// <summary>Creates the options of a server on the stream transport, such as TCP.</summary>
+    /// <param name="security">How the server protects its sessions.</param>
+    /// <returns>New options; change them freely.</returns>
+    public static GesNetworkOptions Stream(GesNetworkServerSecurity security) => Server(GesNetworkTransport.Stream, security);
+
+    /// <summary>Creates the options of a client on the datagram transport, such as UDP.</summary>
+    /// <param name="security">How the client protects its session.</param>
+    /// <returns>New options; change them freely.</returns>
+    public static GesNetworkOptions Datagram(GesNetworkClientSecurity security) => Client(GesNetworkTransport.Datagram, security);
+
+    /// <summary>Creates the options of a server on the datagram transport, such as UDP.</summary>
+    /// <param name="security">How the server protects its sessions.</param>
+    /// <returns>New options; change them freely.</returns>
+    public static GesNetworkOptions Datagram(GesNetworkServerSecurity security) => Server(GesNetworkTransport.Datagram, security);
+
+    private static GesNetworkOptions Client(GesNetworkTransport transport, GesNetworkClientSecurity security) =>
+        new() { Transport = transport, ClientSecurity = security ?? throw new ArgumentNullException(nameof(security)) };
+
+    private static GesNetworkOptions Server(GesNetworkTransport transport, GesNetworkServerSecurity security) =>
+        new() { Transport = transport, ServerSecurity = security ?? throw new ArgumentNullException(nameof(security)) };
+
     /// <summary>Gets or sets the transport kind. The default is <see cref="GesNetworkTransport.Message"/>.</summary>
     public GesNetworkTransport Transport { get; set; } = GesNetworkTransport.Message;
 
@@ -224,23 +273,30 @@ public sealed class GesNetworkOptions
     public int MaxPacketBytes { get; set; }
 
     /// <summary>
-    /// Gets or sets the limit of pending received bytes, 1 to 1073741824: incomplete messages and undelivered events. The
-    /// default is 4194304.
+    /// Gets or sets the limit of pending received bytes, 1 to 1073741824: incomplete messages and undelivered events. Unset,
+    /// the default, it is the larger of 4194304 and the largest message this side receives outside bulk routes, topic mode
+    /// byte included, at most 1073741824.
     /// </summary>
-    public long MaxPendingReceiveBytes { get; set; } = 4194304;
+    public long? MaxPendingReceiveBytes { get; set; }
 
     /// <summary>Gets or sets the frames received per second, 1 to 1000000, a token bucket of one second. The default is 4096.</summary>
     public int MaxFramesPerSecond { get; set; } = 4096;
 
-    /// <summary>Gets or sets the limit of queued reliable bytes to send, 1 to 1073741824. The default is 1048576.</summary>
-    public long MaxSendQueueBytes { get; set; } = 1048576;
+    /// <summary>
+    /// Gets or sets the limit of queued reliable bytes to send, 1 to 1073741824. Unset, the default, it is the larger of
+    /// 1048576 and the largest reliable payload this side sends, at most 1073741824.
+    /// </summary>
+    public long? MaxSendQueueBytes { get; set; }
 
-    /// <summary>Gets or sets the timeout without a received packet in microseconds, 1 to 3600000000. The default is 10 seconds.</summary>
+    /// <summary>
+    /// Gets or sets the timeout without a received packet in microseconds, 1 to 3600000000, or 0 for none. The default is 10
+    /// seconds.
+    /// </summary>
     public long TimeoutMicroseconds { get; set; } = 10_000_000;
 
     /// <summary>
-    /// Gets or sets the keepalive interval after the last sent packet in microseconds, 1 to 3600000000. The default is 1
-    /// second.
+    /// Gets or sets the keepalive interval after the last sent packet in microseconds, 1 to 3600000000, or 0 for none. The
+    /// default is 1 second.
     /// </summary>
     public long KeepaliveMicroseconds { get; set; } = 1_000_000;
 
@@ -252,35 +308,30 @@ public sealed class GesNetworkOptions
 
     /// <summary>
     /// Gets or sets the baseline limit this side announces, 0 to 1073741824: the full record bytes a topic's ring of recent
-    /// states holds. The smaller limit of both sides applies. The default is 65536.
+    /// states holds. The smaller limit of both sides applies. Unset, the default, it is the larger of 65536 and the largest
+    /// full record of a topic of the network, at most 1073741824.
     /// </summary>
-    public long MaxBaselineBytes { get; set; } = 65536;
+    public long? MaxBaselineBytes { get; set; }
 
     /// <summary>
     /// Gets or sets the transfer limit this side announces, 0 to 1073741824: the largest uncompressed data of one bulk
-    /// message it sends or receives. It also bounds the bulk send queue. The default is 67108864.
+    /// message it sends or receives. It also bounds the bulk send queue. Unset, the default, it is the larger of 67108864
+    /// and the largest record of a bulk route of the network, at most 1073741824.
     /// </summary>
-    public long MaxTransferBytes { get; set; } = 67108864;
+    public long? MaxTransferBytes { get; set; }
 
     /// <summary>Gets or sets whether this side accepts and sends deflate-compressed transfers. The default is true.</summary>
     public bool DeflateTransfers { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the lowest security level this side accepts. A client without a pinned key closes with
-    /// <see cref="GesNetworkCodes.Unverified"/> when it requires <see cref="GesNetworkSecurity.Verified"/>; a server above
-    /// <see cref="GesNetworkSecurity.None"/> needs a <see cref="Key"/>. The default is <see cref="GesNetworkSecurity.Verified"/>.
+    /// Gets or sets how a client protects its session; required to create a client. The default is none set.
     /// </summary>
-    public GesNetworkSecurity MinimumSecurity { get; set; } = GesNetworkSecurity.Verified;
+    public GesNetworkClientSecurity? ClientSecurity { get; set; }
 
     /// <summary>
-    /// Gets or sets the server's pinned public key of 32 bytes; client only. A client with a pinned key seals its first
-    /// <c>hello</c> and reaches <see cref="GesNetworkSecurity.Verified"/>. The default is none. The array is copied when a
-    /// connection is created.
+    /// Gets or sets how a server protects its sessions; required to create a server. The default is none set.
     /// </summary>
-    public byte[]? ServerPublicKey { get; set; }
-
-    /// <summary>Gets or sets the server's key; server only. A server with a key encrypts every session. The default is none.</summary>
-    public GesNetworkKey? Key { get; set; }
+    public GesNetworkServerSecurity? ServerSecurity { get; set; }
 
     /// <summary>
     /// Gets or sets a seed that derives the connection's ephemeral keys instead of the system's random generator.
@@ -288,6 +339,12 @@ public sealed class GesNetworkOptions
     /// refuse such options and connections. The default is none.
     /// </summary>
     public ulong? InsecureTestKeySeed { get; set; }
+
+    // The defaults of the derived byte limits.
+    internal const long DefaultPendingReceiveBytes = 4194304;
+    internal const long DefaultSendQueueBytes = 1048576;
+    internal const long DefaultBaselineBytes = 65536;
+    internal const long DefaultTransferBytes = 67108864;
 
     // The largest byte limits and send budget, frame rate and time interval in microseconds.
     internal const long MaximumBytes = 1 << 30;
@@ -304,17 +361,14 @@ public sealed class GesNetworkOptions
         if (MaxPendingReceiveBytes is < 1 or > MaximumBytes) throw new ArgumentOutOfRangeException(nameof(MaxPendingReceiveBytes));
         if (MaxFramesPerSecond is < 1 or > MaximumFramesPerSecond) throw new ArgumentOutOfRangeException(nameof(MaxFramesPerSecond));
         if (MaxSendQueueBytes is < 1 or > MaximumBytes) throw new ArgumentOutOfRangeException(nameof(MaxSendQueueBytes));
-        if (TimeoutMicroseconds is < 1 or > MaximumInterval) throw new ArgumentOutOfRangeException(nameof(TimeoutMicroseconds));
-        if (KeepaliveMicroseconds is < 1 or > MaximumInterval) throw new ArgumentOutOfRangeException(nameof(KeepaliveMicroseconds));
+        if (TimeoutMicroseconds is < 0 or > MaximumInterval) throw new ArgumentOutOfRangeException(nameof(TimeoutMicroseconds));
+        if (KeepaliveMicroseconds is < 0 or > MaximumInterval) throw new ArgumentOutOfRangeException(nameof(KeepaliveMicroseconds));
         if (AckDelayMicroseconds is < 0 or > MaximumInterval) throw new ArgumentOutOfRangeException(nameof(AckDelayMicroseconds));
         if (SendBudgetBytesPerSecond is < 0 or > MaximumBytes) throw new ArgumentOutOfRangeException(nameof(SendBudgetBytesPerSecond));
         if (MaxBaselineBytes is < 0 or > GesNetworkWire.MaximumBaselineBytes) throw new ArgumentOutOfRangeException(nameof(MaxBaselineBytes));
         if (MaxTransferBytes is < 0 or > GesNetworkWire.MaximumTransferBytes) throw new ArgumentOutOfRangeException(nameof(MaxTransferBytes));
         if (Transport is not (GesNetworkTransport.Message or GesNetworkTransport.Stream or GesNetworkTransport.Datagram))
             throw new ArgumentOutOfRangeException(nameof(Transport));
-        if (MinimumSecurity is not (GesNetworkSecurity.None or GesNetworkSecurity.Encrypted or GesNetworkSecurity.Verified))
-            throw new ArgumentOutOfRangeException(nameof(MinimumSecurity));
-        if (ServerPublicKey is { Length: not GesNetworkX25519.KeyBytes }) throw new ArgumentException("A server public key holds 32 bytes.", nameof(ServerPublicKey));
     }
 }
 

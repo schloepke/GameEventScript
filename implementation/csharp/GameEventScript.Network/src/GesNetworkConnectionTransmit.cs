@@ -137,7 +137,7 @@ public sealed partial class GesNetworkConnection
     private int WriteData(Span<byte> packet, int limit)
     {
         var frames = HasPendingFrames() && (_budget == 0 || _budgetUnits >= 0);
-        var keepalive = _now - _lastSend >= _keepalive;
+        var keepalive = _keepalive != 0 && _now - _lastSend >= _keepalive;
         if (!frames && !(_ackDue && _now >= _ackDeadline) && !keepalive) return 0;
         packet[0] = Wire.Data;
         packet[1] = 0;

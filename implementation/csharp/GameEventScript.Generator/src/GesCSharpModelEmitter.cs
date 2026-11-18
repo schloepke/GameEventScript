@@ -26,7 +26,10 @@ internal static class GesCSharpModelEmitter
 
     internal static GesCodeDocument Emit(GesModelLayout layout, GesSchemaGenerateOptions options)
     {
-        GesSchemaPlanner.CheckTopLevel(GesModelPlanner.TopLevel(layout, swift: false), swift: false);
+        var schemaSet = GesSchemaSetReference.From(options);
+        var topLevel = GesModelPlanner.TopLevel(layout, swift: false);
+        schemaSet?.Reserve(topLevel);
+        GesSchemaPlanner.CheckTopLevel(topLevel, swift: false);
         var access = options.Access == GesSchemaAccess.Public ? "public" : "internal";
         var space = GesSchemaPlanner.Namespace(options.Namespace, GesCSharpEmitter.Keywords);
         var prologue = new GesSchemaPlanner.Code();
@@ -46,7 +49,8 @@ internal static class GesCSharpModelEmitter
         GesModelPlanner.CheckProtocols(layout, swift: false);
         var document = new GesCodeDocument { Header = header, Prologue = prologue.ToString(), Space = space };
         var computed = GesModelPlanner.Computed(layout, GesComputedEmitter.Helper(options.Namespace, suffix), swift: false);
-        var documents = options.Documents ? "__GesModelDocuments" + suffix : null;
+        // The callee that reads a document: the schema set's, or that of the helper holding the sources of this file.
+        var documents = !options.Documents ? null : schemaSet is not null ? schemaSet.Qualified + ".ReadDocument" : "__GesModelDocuments" + suffix + ".Read";
         var documentType = options.Documents ? GesModelPlanner.DocumentType(layout, space) : "";
         // The document type holds a class per root with a property Value beside its static FromDocument, which a C# class of
         // either name cannot hold.
@@ -63,9 +67,11 @@ internal static class GesCSharpModelEmitter
         if (documents is not null)
         {
             document.Units.Add(new GesCodeUnit("", code => DocumentType(code, layout, documentType, documents, access, qualifier)));
-            document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, documents)));
+            if (schemaSet is null) document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, "__GesModelDocuments" + suffix)));
         }
 
+        if (schemaSet?.Declared is { } setName)
+            document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteCSharp(code, setName, access, layout.Sources, [], networks: false)));
         var geometry = GesModelPlanner.UsesGeometry(layout);
         document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || options.Values, geometry)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
@@ -108,7 +114,7 @@ internal static class GesCSharpModelEmitter
         code.Line("/// breaks its schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>");
         code.Line($"public static {name} FromDocument(string text)");
         code.Open("{");
-        code.Line($"var document = {documents}.Read(text{string.Concat(layout.Roots.ConvertAll(root => ", " + GesSchemaPlanner.Literal(root, false)))});");
+        code.Line($"var document = {documents}(text{string.Concat(layout.Roots.ConvertAll(root => ", " + GesSchemaPlanner.Literal(root, false)))});");
         code.Line("try");
         code.Open("{");
         code.Line("switch (document.Schema)");
@@ -349,7 +355,7 @@ internal static class GesCSharpModelEmitter
             code.Line("/// the schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>");
             code.Line($"public static {type.Name} FromDocument(string text)");
             code.Open("{");
-            code.Line($"var document = {documents}.Read(text, {GesSchemaPlanner.Literal(type.Name, false)});");
+            code.Line($"var document = {documents}(text, {GesSchemaPlanner.Literal(type.Name, false)});");
             code.Line("try");
             code.Open("{");
             code.Line("return FromValue(document.Value);");
@@ -570,7 +576,7 @@ internal static class GesCSharpModelEmitter
             code.Line("/// <exception cref=\"GesDocumentException\">The text is no document, names another schema or breaks the schema.</exception>");
             code.Line($"public static {type.Name} FromDocument(string text)");
             code.Open("{");
-            code.Line($"var document = {documents}.Read(text, {GesSchemaPlanner.Literal(type.Name, false)});");
+            code.Line($"var document = {documents}(text, {GesSchemaPlanner.Literal(type.Name, false)});");
             code.Line("try");
             code.Open("{");
             code.Line("return FromValue(document.Value);");

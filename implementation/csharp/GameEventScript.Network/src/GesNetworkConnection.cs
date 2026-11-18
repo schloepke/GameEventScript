@@ -87,27 +87,41 @@ public sealed partial class GesNetworkConnection
     private byte[] _stream = [];
     private int _streamLength;
 
-    private GesNetworkConnection(GesBoundNetwork network, bool client, ReadOnlySpan<byte> token, long now, GesNetworkOptions? options)
+    private GesNetworkConnection(GesBoundNetwork network, bool client, ReadOnlySpan<byte> token, long now, GesNetworkOptions options)
     {
         Network = network ?? throw new ArgumentNullException(nameof(network));
-        options ??= new GesNetworkOptions();
+        if (options is null) throw new ArgumentNullException(nameof(options));
         options.Validate();
         _client = client;
         _transport = options.Transport;
         _datagram = _transport == GesNetworkTransport.Datagram;
         _maxPacket = options.PacketLimit;
-        _maxPending = options.MaxPendingReceiveBytes;
         _framesPerSecond = options.MaxFramesPerSecond;
-        _maxSendQueue = options.MaxSendQueueBytes;
         _timeout = options.TimeoutMicroseconds;
         _keepalive = options.KeepaliveMicroseconds;
         _ackDelay = options.AckDelayMicroseconds;
         _budget = options.SendBudgetBytesPerSecond;
-        _maxBaseline = options.MaxBaselineBytes;
-        _maxTransfer = options.MaxTransferBytes;
         _deflate = options.DeflateTransfers;
 
         var routes = network.Network.Routes;
+        // Unset limits grow to the largest message of the network they bound.
+        long received = 0, sent = 0, baseline = 0, transfer = 0;
+        for (var index = 0; index < routes.Count; index++)
+        {
+            var route = routes[index];
+            var bytes = network.Roots[index].MaxByteCount;
+            var publishes = route.Verb == GesNetworkVerb.Publishes;
+            var local = route.Side == GesNetworkSide.Client == client;
+            if (publishes) baseline = Math.Max(baseline, bytes);
+            if (route.DeliveryClass == GesNetworkClass.Bulk) transfer = Math.Max(transfer, bytes);
+            else if (!local) received = Math.Max(received, publishes ? bytes + 1 : bytes);
+            else if (route.DeliveryClass == GesNetworkClass.Reliable) sent = Math.Max(sent, bytes);
+        }
+
+        _maxPending = Derived(options.MaxPendingReceiveBytes, GesNetworkOptions.DefaultPendingReceiveBytes, received, GesNetworkOptions.MaximumBytes);
+        _maxSendQueue = Derived(options.MaxSendQueueBytes, GesNetworkOptions.DefaultSendQueueBytes, sent, GesNetworkOptions.MaximumBytes);
+        _maxBaseline = Derived(options.MaxBaselineBytes, GesNetworkOptions.DefaultBaselineBytes, baseline, GesNetworkWire.MaximumBaselineBytes);
+        _maxTransfer = Derived(options.MaxTransferBytes, GesNetworkOptions.DefaultTransferBytes, transfer, GesNetworkWire.MaximumTransferBytes);
         _routeCount = routes.Count;
         _classes = new GesNetworkClass[_routeCount];
         _localSends = new bool[_routeCount];
@@ -158,17 +172,18 @@ public sealed partial class GesNetworkConnection
 
         if (token.Length > GesNetworkWire.MaximumTokenBytes) throw new ArgumentException("A token holds at most 512 bytes.", nameof(token));
         _token = token.ToArray();
-        _minimumSecurity = options.MinimumSecurity;
         if (client)
         {
-            _serverKey = options.ServerPublicKey is { } serverKey ? (byte[])serverKey.Clone() : null;
-            _pinned = _serverKey is not null;
+            var security = options.ClientSecurity ?? throw new ArgumentException("A client needs a security.", nameof(options));
+            _minimumSecurity = security.Level;
+            _pinned = _minimumSecurity == GesNetworkSecurity.Verified;
+            _serverKey = _pinned ? security.ServerPublicKey.ToArray() : null;
         }
         else
         {
-            _key = options.Key;
-            if (_key is null && _minimumSecurity != GesNetworkSecurity.None)
-                throw new ArgumentException("A server whose lowest security level is above none needs a key.", nameof(options));
+            var security = options.ServerSecurity ?? throw new ArgumentException("A server needs a security.", nameof(options));
+            _key = security.ServerKey;
+            _minimumSecurity = _key is null ? GesNetworkSecurity.None : GesNetworkSecurity.Encrypted;
         }
 
         _testKeys = options.InsecureTestKeySeed.HasValue;
@@ -183,21 +198,21 @@ public sealed partial class GesNetworkConnection
     /// <param name="network">The bound network both sides share.</param>
     /// <param name="token">The token the server's host receives with <c>connecting</c>, at most 512 bytes.</param>
     /// <param name="now">The current time in microseconds.</param>
-    /// <param name="options">The limits and transport; the defaults when omitted.</param>
+    /// <param name="options">The limits, transport and <see cref="GesNetworkOptions.ClientSecurity"/>.</param>
     /// <returns>The new connection in state <see cref="GesNetworkState.Hello"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="network"/> is null.</exception>
-    /// <exception cref="ArgumentException">The token or an option is out of range.</exception>
-    public static GesNetworkConnection CreateClient(GesBoundNetwork network, ReadOnlySpan<byte> token, long now, GesNetworkOptions? options = null) =>
+    /// <exception cref="ArgumentNullException"><paramref name="network"/> or <paramref name="options"/> is null.</exception>
+    /// <exception cref="ArgumentException">The token or an option is out of range, or the client security is unset.</exception>
+    public static GesNetworkConnection CreateClient(GesBoundNetwork network, ReadOnlySpan<byte> token, long now, GesNetworkOptions options) =>
         new(network, true, token, now, options);
 
     /// <summary>Creates the server side of a session for one client.</summary>
     /// <param name="network">The bound network both sides share.</param>
     /// <param name="now">The current time in microseconds.</param>
-    /// <param name="options">The limits and transport; the defaults when omitted.</param>
+    /// <param name="options">The limits, transport and <see cref="GesNetworkOptions.ServerSecurity"/>.</param>
     /// <returns>The new connection in state <see cref="GesNetworkState.AwaitHello"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="network"/> is null.</exception>
-    /// <exception cref="ArgumentException">An option is out of range.</exception>
-    public static GesNetworkConnection CreateServer(GesBoundNetwork network, long now, GesNetworkOptions? options = null) =>
+    /// <exception cref="ArgumentNullException"><paramref name="network"/> or <paramref name="options"/> is null.</exception>
+    /// <exception cref="ArgumentException">An option is out of range, or the server security is unset.</exception>
+    public static GesNetworkConnection CreateServer(GesBoundNetwork network, long now, GesNetworkOptions options) =>
         new(network, false, default, now, options);
 
     /// <summary>Gets the bound network of the session.</summary>
@@ -256,8 +271,8 @@ public sealed partial class GesNetworkConnection
         get
         {
             if (State == GesNetworkState.Closed) return long.MaxValue;
-            var deadline = _lastReceive + _timeout;
-            if (State == GesNetworkState.Connected) deadline = Math.Min(deadline, _lastSend + _keepalive);
+            var deadline = _timeout != 0 ? _lastReceive + _timeout : long.MaxValue;
+            if (State == GesNetworkState.Connected && _keepalive != 0) deadline = Math.Min(deadline, _lastSend + _keepalive);
             if (_ackDue) deadline = Math.Min(deadline, _ackDeadline);
             if (_budget > 0 && _budgetUnits < 0 && HasPendingFrames())
                 deadline = Math.Min(deadline, _now + (-_budgetUnits + _budget - 1) / _budget);
@@ -280,7 +295,7 @@ public sealed partial class GesNetworkConnection
         _now = now;
         _frameUnits = Refill(_frameUnits, _framesPerSecond * MicrosecondsPerSecond, elapsed, _framesPerSecond);
         _budgetUnits = _budget == 0 ? BudgetCapacity : Refill(_budgetUnits, BudgetCapacity, elapsed, _budget);
-        if (State != GesNetworkState.Closed && now - _lastReceive >= _timeout) CloseLocal(GesNetworkCodes.Timeout, string.Empty, true);
+        if (State != GesNetworkState.Closed && _timeout != 0 && now - _lastReceive >= _timeout) CloseLocal(GesNetworkCodes.Timeout, string.Empty, true);
         else if (_datagram) AdvanceDatagram();
     }
 
@@ -502,6 +517,9 @@ public sealed partial class GesNetworkConnection
         _retryPending = false;
         DropDatagramSending();
     }
+
+    // An unset limit is the larger of its default and what the network needs, at most the largest limit.
+    private static long Derived(long? limit, long fallback, long needed, long maximum) => limit ?? Math.Min(Math.Max(fallback, needed), maximum);
 
     private bool HasPendingFrames()
     {

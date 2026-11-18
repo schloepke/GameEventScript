@@ -40,11 +40,13 @@ internal static partial class GesSwiftEmitter
         prologue.Blank();
         prologue.Line("import GameEventScriptRuntime");
         if (layout.Networks.Count > 0) prologue.Line("import GameEventScriptNetwork");
+        var schemaSet = GesSchemaSetReference.From(options);
+        foreach (var module in options.Imports) prologue.Line("import " + module);
         if (GesComputedEmitter.UsesMath(types.ConvertAll(type => type.Layout.Computed))) GesComputedLibrary.MathImport(prologue);
         prologue.Blank();
         var header = GesSchemaPlanner.Header(layout);
-        var holder = "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
-        var context = new Context(GesSchemaPlanner.KeyedElements(types), options.Values, holder, options.CheckedExclusivity)
+        var holder = schemaSet?.Qualified ?? "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
+        var context = new Context(GesSchemaPlanner.KeyedElements(types), options.Values, holder, schemaSet is not null, options.CheckedExclusivity)
         {
             Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(options.Namespace, GesSchemaPlanner.Suffix(header, options)), swift: true)
         };
@@ -99,7 +101,7 @@ internal static partial class GesSwiftEmitter
         }
         var sets = GesSchemaPlanner.TagSets(types, "");
         foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
-        foreach (var network in layout.Networks) document.Units.Add(new GesCodeUnit(network.Name, code => Network(code, network, access, root =>
+        foreach (var network in layout.Networks) document.Units.Add(new GesCodeUnit(network.Name, code => Network(code, network, access, schemaSet?.Qualified, root =>
         {
             // A packed root that the models declare has its wire members in an enum `<Name>Wire`.
             var type = types.Find(candidate => candidate.Name == root)!;
@@ -135,18 +137,21 @@ internal static partial class GesSwiftEmitter
             }
         }
 
+        schemaSet?.Reserve(context.TopLevel);
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: true);
 
         // Split files reach the sources of another file, so the holder is internal there.
         var shared = options.Split != GesSchemaSplit.None;
-        if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, shared), outside: true));
+        if (schemaSet?.Declared is { } setName)
+            document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteSwift(code, setName, access, layout.Sources, layout.Parameters, layout.Networks.Count > 0)));
+        else if (options.Values && schemaSet is null) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, shared), outside: true));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: true, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))), GesComputedEmitter.UsesMath(types.ConvertAll(type => type.Layout.Computed)), GesComputedEmitter.UsesSpatial(types.ConvertAll(type => type.Layout.Computed)))));
         return document;
     }
 
     // The keyed-list elements, and whether records convert to and from GES values through the helper type of the file.
-    private sealed class Context(HashSet<string> elements, bool values, string holder, bool checkedExclusivity)
+    private sealed class Context(HashSet<string> elements, bool values, string holder, bool schemaSet, bool checkedExclusivity)
     {
         internal GesSchemaLayout Layout { get; set; } = null!;
 
@@ -158,6 +163,9 @@ internal static partial class GesSwiftEmitter
         internal bool Values { get; } = values;
 
         internal string Holder { get; } = holder;
+
+        // Whether the holder is a schema set, whose bind throws, rather than the private helper, which gives a Result.
+        internal bool SchemaSet { get; } = schemaSet;
 
         internal GesComputedEmitter Computed { get; set; } = null!;
 
@@ -244,7 +252,7 @@ internal static partial class GesSwiftEmitter
         var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;
         if (deltas) SameHelpers(code, type);
         Extras(code, type, access, deltas, context.Elements.Contains(type.Name));
-        if (context.Values && !type.IsItem) ValueMembers(code, type, access, context.Holder);
+        if (context.Values && !type.IsItem) ValueMembers(code, type, access, context.Holder, context.SchemaSet);
         foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
     }
@@ -605,7 +613,7 @@ internal static partial class GesSwiftEmitter
         read.Add("}");
         code.Blank();
         PublicMethods(code, access, type.MembersAreClasses ? "" : "mutating ", write, read, "message");
-        if (context.Values) ValueMembers(code, type, access, context.Holder);
+        if (context.Values) ValueMembers(code, type, access, context.Holder, context.SchemaSet);
         code.Blank();
         code.Line("/// The messages of the set, in declared order.");
         code.Open($"{access}enum Member: {Underlying(type.Members.Count)}, Sendable {{");
@@ -930,12 +938,24 @@ internal static partial class GesSwiftEmitter
 
     // The constants of a network, its hash, the index of each route and the rate of each topic that has one, and a
     // function per route that encodes its root and sends or publishes it.
-    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access, Func<string, (string Type, string Write)> root)
+    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access, string? schemaSet, Func<string, (string Type, string Write)> root)
     {
         code.Line($"/// The network `:{network.Name}`: its hash, the index of each route, the rate of each topic that has one and a typed function per route.");
         code.Open($"{access}enum {network.Name} {{");
         code.Line("/// The network hash over the routes and their bound roots, which the handshake compares.");
         code.Line($"{access}static let hash: UInt64 = 0x{GesSchemaLayoutJson.Hex(network.Hash)}");
+        if (schemaSet is not null)
+        {
+            code.Blank();
+            code.Line($"private static let __bound = Result<GesBoundNetwork, any Error> {{ try {schemaSet}.bindNetwork({GesSchemaPlanner.Literal(network.Name, true)}, hash: hash) }}");
+            code.Blank();
+            code.Line("/// The network bound with the parameters of the schema set, checked against `hash` on first access.");
+            code.Line($"/// - Throws: `GesSchemaError` when the sources no longer parse or the network no longer binds, and `{schemaSet}.Mismatch` when the bound network hash differs.");
+            code.Open($"{access}static var bound: GesBoundNetwork {{");
+            code.Line("get throws { try __bound.get() }");
+            code.Close();
+        }
+
         foreach (var route in network.Routes)
         {
             var name = GesSchemaPlanner.Camel(route.Name);

@@ -321,7 +321,7 @@ internal static partial class GesSwiftEmitter
         Copied(code, Call("readDelta", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), against: baseline, byteLimit: byteLimit", mutates: true));
         code.Close();
         // A root shared with models converts to and from values through the model's own conversion.
-        if (context.Values && !shared) ValueMembers(code, type, access, context.Holder);
+        if (context.Values && !shared) ValueMembers(code, type, access, context.Holder, context.SchemaSet);
         code.Close();
     }
 

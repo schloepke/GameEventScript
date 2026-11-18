@@ -48,10 +48,8 @@ let generated = try GesSchemaGenerator.generate(GesSchemaSet(parsing: "schema :P
 precondition(generated.contains("public struct Ping"))
 let network = try GesSchemaSet(parsing: "wire schema :Ping as { ready: :Boolean }\nnetwork :Game as {\n  server sends :Ping reliable\n}\n").network("Game").bind()
 let serverKey = GesNetworkKey.generate()
-var serverOptions = GesNetworkOptions()
-serverOptions.key = serverKey
-var clientOptions = GesNetworkOptions()
-clientOptions.serverPublicKey = serverKey.publicKey
+let serverOptions = GesNetworkOptions.message(server: .key(serverKey))
+let clientOptions = GesNetworkOptions.message(client: try .pinned(serverKey.publicKey))
 let client = try GesNetworkConnection.makeClient(network: network, token: Array("t".utf8), now: 0, options: clientOptions)
 let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: serverOptions)
 let loopback = try GesNetworkLoopback(client: client, server: server)

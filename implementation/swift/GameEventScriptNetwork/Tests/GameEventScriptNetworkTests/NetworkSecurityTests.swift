@@ -29,8 +29,11 @@ final class NetworkSecurityTests: XCTestCase {
     private func clientOptions(_ transport: GesNetworkTransport, _ minimum: GesNetworkSecurity, _ pinned: [UInt8]?) -> GesNetworkOptions {
         var options = GesNetworkOptions()
         options.transport = transport
-        options.minimumSecurity = minimum
-        options.serverPublicKey = pinned
+        switch minimum {
+        case .verified: options.clientSecurity = try! .pinned(pinned!)
+        case .encrypted: options.clientSecurity = .development
+        default: options.clientSecurity = .unencrypted
+        }
         options.insecureTestKeySeed = 7
         return options
     }
@@ -38,8 +41,7 @@ final class NetworkSecurityTests: XCTestCase {
     private func serverOptions(_ transport: GesNetworkTransport, _ key: GesNetworkKey?) -> GesNetworkOptions {
         var options = GesNetworkOptions()
         options.transport = transport
-        options.minimumSecurity = key == nil ? .none : .encrypted
-        options.key = key
+        options.serverSecurity = key.map { .key($0) } ?? .unencrypted
         options.insecureTestKeySeed = 7
         return options
     }
@@ -143,14 +145,6 @@ final class NetworkSecurityTests: XCTestCase {
         XCTAssertEqual(server.security, .none)
     }
 
-    func testVerifiedMinimumWithoutPinnedKeyClosesUnverified() throws {
-        let network = try game()
-        let client = try GesNetworkConnection.makeClient(network: network, now: 0, options: clientOptions(.stream, .verified, nil))
-        let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: serverOptions(.stream, Self.serverKey))
-        try exchange(client, server, 0)
-        XCTAssertEqual(drain(client), ["closed network.unverified"])
-    }
-
     func testServerWithoutKeyClosesAKeyRequestInsecure() throws {
         let network = try game()
         let client = try GesNetworkConnection.makeClient(network: network, now: 0, options: clientOptions(.stream, .encrypted, nil))
@@ -169,9 +163,20 @@ final class NetworkSecurityTests: XCTestCase {
         XCTAssertEqual(drain(server), ["closed network.authenticationFailed"])
     }
 
-    func testServerNeedsAKeyAboveSecurityNone() throws {
+    func testEachSideNeedsItsSecurity() throws {
         let network = try game()
         XCTAssertThrowsError(try GesNetworkConnection.makeServer(network: network, now: 0, options: GesNetworkOptions()))
+        XCTAssertThrowsError(try GesNetworkConnection.makeClient(network: network, now: 0, options: GesNetworkOptions()))
+        XCTAssertThrowsError(try GesNetworkConnection.makeServer(network: network, now: 0, options: clientOptions(.stream, .encrypted, nil)))
+        XCTAssertThrowsError(try GesNetworkClientSecurity.pinned([UInt8](repeating: 1, count: 31)))
+    }
+
+    func testPinnedSecurityKeepsTheKey() throws {
+        let security = try GesNetworkClientSecurity.pinned(Self.serverKey.publicKey)
+        XCTAssertEqual(security.level, .verified)
+        XCTAssertEqual(security.serverPublicKey, Self.serverKey.publicKey)
+        XCTAssertEqual(GesNetworkClientSecurity.development.level, .encrypted)
+        XCTAssertEqual(GesNetworkClientSecurity.unencrypted.level, .none)
     }
 
     func testChangedSealedPacketClosesAStream() throws {

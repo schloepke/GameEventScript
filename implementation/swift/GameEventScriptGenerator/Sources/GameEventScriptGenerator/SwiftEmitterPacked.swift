@@ -295,7 +295,7 @@ extension GesSwiftEmitter {
         copied(&code, call("readDelta", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), against: baseline, byteLimit: byteLimit", mutates: true))
         code.close()
         // A root shared with models converts to and from values through the model's own conversion.
-        if context.values && !shared { valueMembers(&code, type, access, context.holder) }
+        if context.values && !shared { valueMembers(&code, type, access, context.holder, schemaSet: context.schemaSet) }
         code.close()
     }
 

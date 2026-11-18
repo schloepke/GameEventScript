@@ -37,8 +37,8 @@ internal static class Program
         if (!generated.Contains("public partial struct Ping", StringComparison.Ordinal)) return Fail("The packaged generator did not write the schema type.");
         var network = GesSchemaSet.Parse("wire schema :Ping as { ready: :Boolean }\nnetwork :Game as {\n  server sends :Ping reliable\n}\n").Network("Game").Bind();
         var serverKey = GesNetworkKey.Generate();
-        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0, new GesNetworkOptions { ServerPublicKey = serverKey.PublicKey.ToArray() });
-        var server = GesNetworkConnection.CreateServer(network, 0, new GesNetworkOptions { Key = serverKey });
+        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0, GesNetworkOptions.Message(GesNetworkClientSecurity.Pinned(serverKey.PublicKey)));
+        var server = GesNetworkConnection.CreateServer(network, 0, GesNetworkOptions.Message(GesNetworkServerSecurity.Key(serverKey)));
         var loopback = new GesNetworkLoopback(client, server);
         loopback.Advance(0);
         server.Accept();

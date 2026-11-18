@@ -127,7 +127,7 @@ extension GesNetworkConnection {
     // Writes a data packet when frames, an acknowledgement or the keepalive are due; 0 otherwise.
     func writeData(_ packet: UnsafeMutableRawBufferPointer, _ limit: Int) -> Int {
         let frames = hasPendingFrames() && (budget == 0 || budgetUnits >= 0)
-        let keepaliveDue = now - lastSend >= keepalive
+        let keepaliveDue = keepalive != 0 && now - lastSend >= keepalive
         if !frames && !(ackDue && now >= ackDeadline) && !keepaliveDue { return 0 }
         packet[0] = Wire.data
         packet[1] = 0

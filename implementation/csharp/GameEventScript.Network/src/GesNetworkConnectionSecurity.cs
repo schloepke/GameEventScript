@@ -340,12 +340,6 @@ public sealed partial class GesNetworkConnection
         var key = packet.Slice(position);
         if (keyLength != 0 && !_pinned && !key.SequenceEqual(_serverKey))
         {
-            if (_minimumSecurity == GesNetworkSecurity.Verified)
-            {
-                Fail(GesNetworkCodes.Unverified);
-                return;
-            }
-
             _serverKey = key.ToArray();
             _ephemeralStale = true;
         }

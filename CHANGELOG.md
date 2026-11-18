@@ -26,6 +26,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   hash, a route index per route, the rate of each `at most every` route and a typed function per route that encodes
   its root into a buffer and sends or publishes it (`ServerPublishWorld`, Swift `serverPublishWorld`;
   specs/Schemas.md#network-constants).
+- `ges schema generate --schemas <Name>` writes one public schema set type (C# `static class`, Swift `enum`) with the
+  embedded sources parsed once, the parameter values, a hash, `Bind`, `BindNetwork` and `ReadDocument` and, per
+  network, the bound network as `Bound` (Swift `bound`); `--use-schemas <Qualified.Name>` lets another generation
+  share it, and `--import <Module>` adds Swift import lines (specs/Schemas.md#schema-sets).
+- Public monotonic clocks in Runtime: `GesSystemClock` and the virtual test clock `GesVirtualClock` behind the existing
+  `IGesClock` (Swift `GesClock`), for hosts and network ends.
+- Network byte limits are optional (`long?`, Swift `Int64?`): an unset `MaxPendingReceiveBytes`, `MaxSendQueueBytes`,
+  `MaxBaselineBytes` or `MaxTransferBytes` grows from its default to the largest message the bound network needs there,
+  up to its maximum; an explicit value stays as set (specs/Network.md#limits).
 - Editor grammars highlight the `network` declaration's keywords in `.gess` sources.
 - Network topics: `Publish` sends a `publishes` route's state as a full record or as a delta against the last
   acknowledged state held in a ring of up to 32 states per subscriber, bounded by `MaxBaselineBytes` (default 65536,
@@ -45,13 +54,18 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `transferProgress` and `transferCancelled` and the codes `network.transferTooLarge`, `network.transferCorrupt` and
   `network.transferCancelled` report progress and failures.
 - Network encryption: a server with a key (`GesNetworkKey`) encrypts its sessions with X25519, ChaCha20-Poly1305 and
-  HKDF-SHA256, implemented in constant time in both ports, with a key change every 2^24 packets. A client that pins the
-  server's public key (`ServerPublicKey`) reaches `GesNetworkSecurity.Verified`; one that takes the key from a `retry`
-  reaches `Encrypted`. `MinimumSecurity` sets the lowest level a side accepts, `Security` reports the level reached, and
-  the codes `network.unverified`, `network.insecure` and `network.authenticationFailed` report failures. A changed
+  HKDF-SHA256, implemented in constant time in both ports, with a key change every 2^24 packets. Each side states its
+  security: a client pins the server's public key (`GesNetworkClientSecurity.Pinned`) and reaches
+  `GesNetworkSecurity.Verified`, takes the key from a `retry` in development mode (`Development`) and reaches
+  `Encrypted`, or stays unencrypted (`None`, Swift `.unencrypted`); a server has a key
+  (`GesNetworkServerSecurity.Key`) or none. `Security` reports the level reached, and the codes `network.insecure`
+  and `network.authenticationFailed` report failures. A changed
   sealed datagram is dropped; on a stream or message transport it closes the session. `InsecureTestKeySeed` makes
-  handshakes reproducible for tests. By default a connection requires a pinned key (`MinimumSecurity` is `Verified`);
-  in-process sessions and sessions over TLS set it to `None`.
+  handshakes reproducible for tests. The default options set no security, so a
+  connection or listener without the security of its side is a usage error.
+- Network option presets: `GesNetworkOptions.InProcess()` (message transport, 65535-byte packets, no acknowledgement
+  delay, timeout or keepalive, unencrypted) and `Message`, `Stream` and `Datagram` with a client or server security
+  (Swift `inProcess()`, `message(client:)`, `stream(server:)` and so on). A timeout or keepalive of 0 means none.
 - Ten physical units (UnitIds 21 to 30): `Pa` (with `kPa`, `hPa`, `MPa`), `kg/m³`, `J/kg` (`kJ/kg`, `MJ/kg`),
   `J/(kg·K)` (`kJ/(kg·K)`), `N·m` (also `N*m`, `Nm`; `kN·m`), `kg·m²`, `°/s²`, `kg/s`, `Ω` (also `ohm`; `mΩ`, `kΩ`,
   `MΩ`) and `C` (with `Ah` and `mAh`), with their `:Quantity(...)` types and derivations such as `N / m² → Pa`,

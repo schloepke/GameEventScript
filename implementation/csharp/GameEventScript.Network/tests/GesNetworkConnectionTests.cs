@@ -32,7 +32,7 @@ public sealed class GesNetworkConnectionTests
 
     private static readonly GesNetworkKey TestKey = GesNetworkKey.FromPrivateKey(Enumerable.Range(1, 32).Select(value => (byte)value).ToArray());
 
-    private static readonly GesNetworkOptions Plain = new() { MinimumSecurity = GesNetworkSecurity.None };
+    private static readonly GesNetworkOptions Plain = new() { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None };
 
     private static GesBoundNetwork Game(string source = Source) => GesSchemaSet.Parse(source).Network("Game").Bind();
 
@@ -88,7 +88,7 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     public void UntakenEventsBeyondTheLimitCloseWithQueueFull()
     {
-        var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxFramesPerSecond = 1_000_000 });
+        var loop = Connected(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxFramesPerSecond = 1_000_000 });
         for (var index = 0; index <= 65536; index++) Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, [0]));
         for (var now = 0L; now < 60_000_000 && loop.Client.State != GesNetworkState.Closed; now += 10_000) loop.Advance(now);
         var events = Drain(loop.Client);
@@ -100,7 +100,7 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     public void TakenEventsFreeTheirPlaceAndKeepTheirOrder()
     {
-        var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxFramesPerSecond = 1_000_000 });
+        var loop = Connected(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxFramesPerSecond = 1_000_000 });
         var expected = new List<string>();
         var received = new List<string>();
         var now = 0L;
@@ -175,7 +175,7 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     public void ReliableAndBulkMessagesArriveCompleteInOrderAcrossFragments()
     {
-        var options = new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxPacketBytes = 1200 };
+        var options = new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxPacketBytes = 1200 };
         var loop = Connected(options);
         var first = Bytes(3000, 1);
         var second = Bytes(10, 2);
@@ -220,7 +220,7 @@ public sealed class GesNetworkConnectionTests
         Assert.AreEqual(GesNetworkSendStatus.InvalidRoute, client.Send(7, [1]));
         Assert.AreEqual(GesNetworkSendStatus.NotConnected, client.Send(Commands, [1]));
 
-        var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxSendQueueBytes = 100 });
+        var loop = Connected(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxSendQueueBytes = 100 });
         Assert.AreEqual(GesNetworkSendStatus.MessageTooLarge, loop.Client.Send(Commands, new byte[1000]));
         Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, new byte[90]));
         Assert.AreEqual(GesNetworkSendStatus.QueueFull, loop.Server.Send(Blob, new byte[11]));
@@ -260,9 +260,45 @@ public sealed class GesNetworkConnectionTests
     }
 
     [TestMethod]
+    public void TheInProcessPresetNeverTimesOut()
+    {
+        var options = GesNetworkOptions.InProcess();
+        Assert.AreEqual(GesNetworkTransport.Message, options.Transport);
+        Assert.AreEqual(65535, options.MaxPacketBytes);
+        Assert.AreEqual((0L, 0L, 0L), (options.AckDelayMicroseconds, options.TimeoutMicroseconds, options.KeepaliveMicroseconds));
+        var loop = Connected(options);
+        Assert.AreEqual(long.MaxValue, loop.Client.NextDeadline);
+        loop.Advance(3_600_000_000);
+        Assert.AreEqual(GesNetworkState.Connected, loop.Client.State);
+        Assert.AreEqual(GesNetworkState.Connected, loop.Server.State);
+        Assert.AreEqual(0, loop.Client.Transmit(new byte[1200]));
+
+        var lone = GesNetworkConnection.CreateServer(Game(), 0, options);
+        lone.Advance(3_600_000_000);
+        Assert.AreEqual(GesNetworkState.AwaitHello, lone.State);
+    }
+
+    [TestMethod]
+    public void PresetsSetTheTransportAndOneSecurity()
+    {
+        var client = GesNetworkOptions.Datagram(GesNetworkClientSecurity.Development);
+        Assert.AreEqual(GesNetworkTransport.Datagram, client.Transport);
+        Assert.AreSame(GesNetworkClientSecurity.Development, client.ClientSecurity);
+        Assert.IsNull(client.ServerSecurity);
+        var server = GesNetworkOptions.Stream(GesNetworkServerSecurity.Key(TestKey));
+        Assert.AreEqual(GesNetworkTransport.Stream, server.Transport);
+        Assert.AreSame(TestKey, server.ServerSecurity!.ServerKey);
+        Assert.IsNull(server.ClientSecurity);
+        Assert.AreEqual(GesNetworkTransport.Message, GesNetworkOptions.Message(GesNetworkServerSecurity.None).Transport);
+        Assert.ThrowsExactly<ArgumentNullException>(() => GesNetworkOptions.Message((GesNetworkClientSecurity)null!));
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkConnection.CreateServer(Game(), 0, client));
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkConnection.CreateClient(Game(), default, 0, server));
+    }
+
+    [TestMethod]
     public void RoundTripFollowsTheSimulatedLatency()
     {
-        var (client, server) = Pair(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None });
+        var (client, server) = Pair(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None });
         var simulator = new GesNetworkSimulator(client, server, 7, 20_000, 0);
         Handshake(simulator);
         server.Subscribe(World);
@@ -287,7 +323,7 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     public void StreamTransportReassemblesPacketsFromSingleBytes()
     {
-        var options = new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, Transport = GesNetworkTransport.Stream };
+        var options = new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, Transport = GesNetworkTransport.Stream };
         var (client, server) = Pair(options);
         var buffer = new byte[70_000];
         Pump(client, server, buffer);
@@ -304,7 +340,7 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     public void StreamLengthZeroIsMalformedAndTooLongIsTooLarge()
     {
-        var options = new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, Transport = GesNetworkTransport.Stream, MaxPacketBytes = 1200 };
+        var options = new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, Transport = GesNetworkTransport.Stream, MaxPacketBytes = 1200 };
         var (_, server) = Pair(options);
         server.Receive([0], 0);
         CollectionAssert.AreEqual(new[] { "closed network.malformed '' local" }, Drain(server));
@@ -316,15 +352,15 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     public void MalformedPacketsCloseWithTheirCode()
     {
-        var (_, server) = Pair(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None });
+        var (_, server) = Pair(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None });
         server.Receive([9], 0);
         CollectionAssert.AreEqual(new[] { "closed network.malformed '' local" }, Drain(server));
 
-        (_, server) = Pair(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None });
+        (_, server) = Pair(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None });
         server.Receive([1, (byte)'G', (byte)'E', (byte)'S', (byte)'X'], 0);
         CollectionAssert.AreEqual(new[] { "closed network.protocolMismatch '' local" }, Drain(server));
 
-        (_, server) = Pair(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None });
+        (_, server) = Pair(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None });
         server.Receive([5, 0, 0, 0], 0);
         CollectionAssert.AreEqual(new[] { "closed network.malformed '' local" }, Drain(server));
     }
@@ -341,7 +377,7 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     public void FrameRateLimitClosesTheConnection()
     {
-        var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxFramesPerSecond = 2 });
+        var loop = Connected(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxFramesPerSecond = 2 });
         for (var index = 0; index < 3; index++) loop.Client.Send(Commands, [(byte)index]);
         loop.Advance(1);
         CollectionAssert.AreEqual(new[] { "closed network.rateExceeded '' local" }, Drain(loop.Server)[2..]);
@@ -350,7 +386,7 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     public void SendBudgetDelaysFramesUntilTheBucketRefills()
     {
-        var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxPacketBytes = 1200 });
+        var loop = Connected(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxPacketBytes = 1200 });
         loop.Server.SendBudgetBytesPerSecond = 12_000;
         loop.Server.Send(Blob, Bytes(5000, 0));
         loop.Advance(1);
@@ -368,9 +404,9 @@ public sealed class GesNetworkConnectionTests
     {
         var loop = encrypted
             ? Connected(
-                new GesNetworkOptions { MaxPacketBytes = 1200, MinimumSecurity = GesNetworkSecurity.Encrypted, InsecureTestKeySeed = 7 },
-                new GesNetworkOptions { MaxPacketBytes = 1200, MinimumSecurity = GesNetworkSecurity.Encrypted, Key = TestKey, InsecureTestKeySeed = 7 })
-            : Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxPacketBytes = 1200 });
+                new GesNetworkOptions { MaxPacketBytes = 1200, ClientSecurity = GesNetworkClientSecurity.Development, InsecureTestKeySeed = 7 },
+                new GesNetworkOptions { MaxPacketBytes = 1200, ServerSecurity = GesNetworkServerSecurity.Key(TestKey), InsecureTestKeySeed = 7 })
+            : Connected(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxPacketBytes = 1200 });
         Assert.AreEqual(encrypted ? GesNetworkSecurity.Encrypted : GesNetworkSecurity.None, loop.Client.Security);
         loop.Server.Subscribe(World);
         var world = new byte[] { 1, 2 };
@@ -427,7 +463,7 @@ public sealed class GesNetworkConnectionTests
 
     private static string Trace(long seed)
     {
-        var (client, server) = Pair(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxPacketBytes = 1200 });
+        var (client, server) = Pair(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxPacketBytes = 1200 });
         var simulator = new GesNetworkSimulator(client, server, seed, 5_000, 30_000);
         var trace = new StringBuilder();
         Handshake(simulator);
@@ -473,7 +509,7 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     public void TransferArrivesWithProgressOnBothSidesAndCompressesWhenShorter()
     {
-        var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxPacketBytes = 1200 });
+        var loop = Connected(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxPacketBytes = 1200 });
         var data = new byte[5000];
         Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(BulkBlob, data));
         Assert.AreEqual(0, loop.Server.LastTransferId);
@@ -491,7 +527,7 @@ public sealed class GesNetworkConnectionTests
     [TestMethod]
     public void TransferWithoutCompressionCarriesTheData()
     {
-        var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, DeflateTransfers = false });
+        var loop = Connected(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, DeflateTransfers = false });
         var data = Bytes(3000, 5);
         loop.Server.Send(BulkBlob, data);
         Assert.AreEqual(3000 + 1 + 2 + 32, loop.Server.QueuedSendBytes);
@@ -506,7 +542,7 @@ public sealed class GesNetworkConnectionTests
     public void TransferAboveThePeerLimitIsTooLarge()
     {
         var network = Game();
-        var client = GesNetworkConnection.CreateClient(network, default, 0, new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxTransferBytes = 100 });
+        var client = GesNetworkConnection.CreateClient(network, default, 0, new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxTransferBytes = 100 });
         var server = GesNetworkConnection.CreateServer(network, 0, Plain);
         var loop = new GesNetworkLoopback(client, server);
         loop.Advance(0);
@@ -534,5 +570,109 @@ public sealed class GesNetworkConnectionTests
         Assert.AreEqual(GesNetworkState.Connected, loop.Client.State);
         Assert.ThrowsExactly<ArgumentException>(() => loop.Server.Cancel(Blob, 0));
         Assert.ThrowsExactly<ArgumentException>(() => loop.Server.Cancel(BulkBlob, 1, "bad code"));
+    }
+
+    [TestMethod]
+    [DataRow(GesNetworkTransport.Message)]
+    [DataRow(GesNetworkTransport.Stream)]
+    [DataRow(GesNetworkTransport.Datagram)]
+    public void TransferAboveThePendingReceiveLimitArrives(GesNetworkTransport transport)
+    {
+        const int Size = 5 * 1048576;
+        const string arena = """
+            wire schema :Arena as { data: :List(:Number integer between 0 and 255) max 6000000 }
+            network :Game as { server sends :Arena bulk }
+            """;
+        var network = Game(arena);
+        var options = new GesNetworkOptions
+        {
+            ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None,
+            Transport = transport,
+            DeflateTransfers = false,
+            MaxPendingReceiveBytes = 1048576,
+            MaxSendQueueBytes = 1048576,
+            MaxFramesPerSecond = 1_000_000,
+        };
+        var client = GesNetworkConnection.CreateClient(network, default, 0, options);
+        var server = GesNetworkConnection.CreateServer(network, 0, options);
+        var simulator = new GesNetworkSimulator(client, server, 1, 0, 0);
+        simulator.Advance(0);
+        for (var step = 0; step < 100 && server.State != GesNetworkState.AwaitAccept; step++) simulator.Advance(simulator.NextDeadline);
+        server.NextEvent();
+        server.Accept();
+        for (var step = 0; step < 100 && client.State != GesNetworkState.Connected; step++) simulator.Advance(simulator.NextDeadline);
+        Assert.AreEqual(GesNetworkState.Connected, client.State);
+        var data = Bytes(Size, 3);
+        Assert.AreEqual(GesNetworkSendStatus.Queued, server.Send(0, data));
+        byte[]? received = null;
+        var closed = string.Empty;
+        for (var step = 0; step < 20_000 && received is null && client.State == GesNetworkState.Connected; step++)
+        {
+            simulator.Advance(simulator.Now + 1000);
+            for (var next = client.NextEvent(); next.Kind != GesNetworkEventKind.None; next = client.NextEvent())
+            {
+                if (next.Kind == GesNetworkEventKind.Message) received = next.Payload.ToArray();
+                if (next.Kind == GesNetworkEventKind.Closed) closed = next.Code;
+            }
+
+            while (server.NextEvent().Kind != GesNetworkEventKind.None) { }
+        }
+
+        Assert.AreEqual(GesNetworkState.Connected, client.State, closed);
+        CollectionAssert.AreEqual(data, received);
+    }
+
+    [TestMethod]
+    public void UnsetLimitsGrowToTheLargestMessage()
+    {
+        const string source = """
+            wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000000 }
+            network :Game as { server sends :Blob reliable }
+            """;
+        var network = Game(source);
+        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0, Plain);
+        var server = GesNetworkConnection.CreateServer(network, 0, Plain);
+        var loop = new GesNetworkLoopback(client, server);
+        loop.Advance(0);
+        CollectionAssert.AreEqual(new[] { "connecting t" }, Drain(server));
+        server.Accept();
+        loop.Advance(0);
+        Assert.AreEqual(GesNetworkState.Connected, client.State);
+
+        // Above the defaults of 1 MiB queued and 4 MiB pending bytes: both limits take the 6000000-byte Blob.
+        var blob = Bytes(5 * 1048576, 1);
+        Assert.AreEqual(GesNetworkSendStatus.Queued, server.Send(0, blob));
+        byte[]? received = null;
+        for (var step = 0; step < 1000 && received is null && client.State == GesNetworkState.Connected; step++)
+        {
+            loop.Advance(loop.Now + 1000);
+            for (var next = client.NextEvent(); next.Kind != GesNetworkEventKind.None; next = client.NextEvent())
+            {
+                if (next.Kind == GesNetworkEventKind.Message) received = next.Payload.ToArray();
+            }
+        }
+
+        CollectionAssert.AreEqual(blob, received);
+    }
+
+    [TestMethod]
+    public void ExplicitLimitsStayAsSet()
+    {
+        const string source = """
+            wire schema :Arena as { data: :List(:Number integer between 0 and 255) max 6000000 }
+            network :Game as { server sends :Arena bulk }
+            """;
+        var network = Game(source);
+        var options = new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxTransferBytes = 1000 };
+        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0, options);
+        var server = GesNetworkConnection.CreateServer(network, 0, options);
+        var loop = new GesNetworkLoopback(client, server);
+        loop.Advance(0);
+        Drain(server);
+        server.Accept();
+        loop.Advance(0);
+        Assert.AreEqual(GesNetworkState.Connected, server.State);
+        Assert.AreEqual(GesNetworkSendStatus.MessageTooLarge, server.Send(0, new byte[1001]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, server.Send(0, new byte[1000]));
     }
 }

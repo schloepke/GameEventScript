@@ -722,6 +722,11 @@ model types of the schemas marked `model(group)`, which are never encoded; `--bi
 scripts as external types, `--values` converts them to and from the plain values that wire records read and write, and
 `--documents` adds `FromDocument` (Swift `init(document:)`) per root and a `Document` type (`ModelDocument` without a namespace) that reads GES document
 text by its `:Schema(:Name)` header, checked against the embedded schemas, with errors at their line, column and field path.
+`--schemas <Name>` generates one public schema set type `Name` that embeds the sources once and holds their hash, the
+parameters, `Bind`, `BindNetwork`, `ReadDocument` and, per network, `Bound`; conversions and documents of the generation
+use it. `--use-schemas <A.Name>` uses the set of another generation instead, such as models beside wire code, and
+`--import <Module>` adds a Swift import line, for a set in another module. See
+[Schema sets](../../../specs/Schemas.md#schema-sets).
 
 `layout` prints the language-neutral generation layout of one or more roots, or of every
 declaration with `--all-roots`, as JSON, and with `--model` the model layout; a type that several roots share appears once. `hash` prints the schema hash and, with parameters, the binding hash. `dump` lists each field of

@@ -50,6 +50,8 @@ extension GesNetworkConnection {
     }
 
     func hasPendingDatagramFrames() -> Bool {
+        // A full send window (the packet 1024 before the next one still outstanding) holds every frame back.
+        if sentCount >= Int64(Self.recordedPackets) && recordOutstanding[Int(sentCount % Int64(Self.recordedPackets))] { return false }
         if cancels.pendingCount > 0 || sendReliable.lost.count > 0 || sendReliable.hasNew || sendBulk.lost.count > 0 || sendBulk.hasNew { return true }
         for slot in sendLatest where slot?.hasPending == true { return true }
         return false
@@ -446,15 +448,16 @@ extension GesNetworkConnection {
         let sent = sentCount
         let recorded = Int64(Self.recordedPackets)
         let slot = Int(sent % recorded)
-        // The record of the packet 1024 before leaves; it is lost when still outstanding.
+        // The record of the packet 1024 before leaves; while that one is outstanding the send window is full: no frames,
+        // and a packet sent anyway declares it lost.
         let evicted = sent >= recorded && recordOutstanding[slot]
         // Only outstanding packets need their fragments again: the room counts from the oldest one that stays.
         var oldest = max(oldestOutstanding, sent - recorded + 1)
         while oldest < sent && !recordOutstanding[Int(oldest % recorded)] { oldest += 1 }
         let used = oldest < sent ? fragmentTail - recordFragments[Int(oldest % recorded)] : 0
         let room = Int(Int64(Self.recordedFragments) - used)
-        let frames = (evicted || hasPendingDatagramFrames()) && (budget == 0 || budgetUnits >= 0) && room > 0
-        let keepaliveDue = now - lastSend >= keepalive
+        let frames = hasPendingDatagramFrames() && (budget == 0 || budgetUnits >= 0) && room > 0
+        let keepaliveDue = keepalive != 0 && now - lastSend >= keepalive
         if !frames && !(ackDue && now >= ackDeadline) && !keepaliveDue && !probeDue { return 0 }
         if evicted { losePacket(sent - recorded) }
 

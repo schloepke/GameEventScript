@@ -178,14 +178,18 @@ enum NetworkApiObservations {
             case "deflateTransfers":
                 guard let value = entry.value.boolValue else { throw ConformanceExecutionError.invalidInput("Expected a Boolean") }
                 options.deflateTransfers = value
-            case "minimumSecurity":
+            case "clientSecurity":
                 switch entry.value.stringValue {
-                case "none": options.minimumSecurity = .none
-                case "encrypted": options.minimumSecurity = .encrypted
-                default: options.minimumSecurity = .verified
+                case "development": options.clientSecurity = .development
+                case "pinned": options.clientSecurity = try .pinned(try bytes(raw["serverPublicKey"]?.stringValue ?? ""))
+                default: options.clientSecurity = .unencrypted
                 }
-            case "key": options.key = try GesNetworkKey(privateKey: try bytes(entry.value.stringValue ?? ""))
-            case "serverPublicKey": options.serverPublicKey = try bytes(entry.value.stringValue ?? "")
+            case "serverSecurity":
+                switch entry.value.stringValue {
+                case "key": options.serverSecurity = .key(try GesNetworkKey(privateKey: try bytes(raw["key"]?.stringValue ?? "")))
+                default: options.serverSecurity = .unencrypted
+                }
+            case "key", "serverPublicKey": break
             case "testKeySeed":
                 guard let text = entry.value.numberValue, let value = UInt64(text) else { throw ConformanceExecutionError.invalidInput("Expected an unsigned integer") }
                 options.insecureTestKeySeed = value

@@ -781,7 +781,7 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 | models | `ModelLayout(set, roots)`, `GenerateModels(set, roots, options)` | `modelLayout(_:roots:)`, `generateModels(_:roots:options:)` |
 | split files | `GenerateFiles(set, roots, parameters, options)`, `GenerateModelFiles(set, roots, options)`, returning `IReadOnlyList<GesGeneratedFile>` | `generateFiles(_:roots:parameters:options:)`, `generateModelFiles(_:roots:options:)`, returning `[GesGeneratedFile]` |
 | generated file | `sealed class GesGeneratedFile` with `Path`, `Text` | `struct GesGeneratedFile` with `path`, `text` |
-| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Split`, `Models`, `ExtendNamespace` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:extendNamespace:)` and the same properties |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Split`, `Models`, `ExtendNamespace`, `SchemaSet`, `UseSchemaSet`, `Imports` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:extendNamespace:schemaSet:useSchemaSet:imports:)` and the same properties |
 | split | `enum GesSchemaSplit` with `None`, `Schema`, `File` | `enum GesSchemaSplit` with `none`, `schema`, `file` |
 | target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
 | access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
@@ -835,7 +835,8 @@ The optional Sockets package (C# `GameEventScript.Network.Sockets`, .NET 8; Swif
 | state | `State`, `Security`, `IsClient`, `Transport`, `MaxPacketBytes`, `Now`, `RoundTripMicroseconds`, `PendingReceiveBytes`, `QueuedSendBytes`, `UsesInsecureTestKeys`, settable `SendBudgetBytesPerSecond` | the same properties; `setSendBudgetBytesPerSecond(_:)` |
 | event | `readonly ref struct GesNetworkEvent` with `Kind`, `Route`, `Payload` (span), `Code`, `Detail`, `ByPeer`, `TransferId`, `Bytes`, `Total` | `struct GesNetworkEvent` with `kind`, `route`, `payload` (borrowed `UnsafeRawBufferPointer`), `code`, `detail`, `byPeer`, `transferId`, `bytes`, `total` |
 | enums | `GesNetworkEventKind`, `GesNetworkState`, `GesNetworkTransport`, `GesNetworkSendStatus` | the same enums |
-| options | `sealed class GesNetworkOptions` with settable limits and timings, including `MaxBaselineBytes`, `MaxTransferBytes`, `DeflateTransfers`, `MinimumSecurity` (default `Verified`), `ServerPublicKey`, `Key` and `InsecureTestKeySeed` | `struct GesNetworkOptions` with the same properties in lower camel case |
+| options | `sealed class GesNetworkOptions` with settable limits and timings, including the byte limits `MaxPendingReceiveBytes`, `MaxSendQueueBytes`, `MaxBaselineBytes` and `MaxTransferBytes` as `long?`, unset by default ([derived](Network.md#limits)), `DeflateTransfers`, `ClientSecurity`, `ServerSecurity` (both unset by default) and `InsecureTestKeySeed`; presets `InProcess()`, `Message(security)`, `Stream(security)`, `Datagram(security)` with a client or server security | `struct GesNetworkOptions` with the same properties in lower camel case; the byte limits are `Int64?`; presets `inProcess()`, `message(client:)`, `message(server:)`, `stream(client:)`, `stream(server:)`, `datagram(client:)`, `datagram(server:)` |
+| security | `sealed class GesNetworkClientSecurity` with `None`, `Development`, `Pinned(serverPublicKey)`, `Level`, `ServerPublicKey` (span); `sealed class GesNetworkServerSecurity` with `None`, `Key(key)`, `ServerKey` | `struct GesNetworkClientSecurity` with `unencrypted`, `development`, `pinned(_:)` (throwing), `level`, `serverPublicKey`; `struct GesNetworkServerSecurity` with `unencrypted`, `key(_:)`, `serverKey` |
 | encryption | `sealed class GesNetworkKey` with `Generate()`, `FromPrivateKey(privateKey)`, `PublicKey` (span), `CopyPrivateKey(destination)`; `enum GesNetworkSecurity` with `None`, `Encrypted`, `Verified` | `struct GesNetworkKey` with `generate()`, `init(privateKey:)` (throwing), `publicKey`, `copyPrivateKey(into:)` (throwing); `enum GesNetworkSecurity` with `none`, `encrypted`, `verified` |
 | codes | `static class GesNetworkCodes` with `const string` members | `enum GesNetworkCodes` with `static let` members |
 | in-process transports | `GesNetworkLoopback(client, server)`, `GesNetworkSimulator(client, server, seed, latencyMicroseconds, jitterMicroseconds, lossPerMille, duplicatePerMille, reorder)` with optional last three, each with `Advance(now)` | `GesNetworkLoopback(client:server:)`, `GesNetworkSimulator(client:server:seed:latencyMicroseconds:jitterMicroseconds:lossPerMille:duplicatePerMille:reorder:)` with defaulted last three, each with `advance(_:)`, both throwing |
@@ -845,8 +846,8 @@ The optional Sockets package (C# `GameEventScript.Network.Sockets`, .NET 8; Swif
 
 `Send` and `Publish` never throw; they report `GesNetworkSendStatus`, including `NotSubscribed` for a server topic without subscription. `Subscribe` and `Unsubscribe` are idempotent and throw on a client or on a route that is no server topic. A sent transfer gets the next id of the bulk numbering across all bulk routes, which `LastTransferId` reports; `Cancel` returns `false` without a connection and for an unknown or completely sent transfer and throws on a route this side does not send in bulk or an invalid code. An event's payload stays valid until the next
 `NextEvent` call. A peer's violation closes the connection with a `network.*` code and never throws; API misuse
-(a time going back, `Accept` outside a pending handshake, a too-small transmit buffer, a server without `Key` whose
-`MinimumSecurity` is above `None`, an option outside its range, insecure test keys on a socket transport) throws the
+(a time going back, `Accept` outside a pending handshake, a too-small transmit buffer, a connection or listener without the security of its side, a pinned key
+that is not 32 bytes, an option outside its range, insecure test keys on a socket transport) throws the
 port's argument or operation error. A socket session's event loop only moves bytes; the connection is touched only where `Update`
 runs.
 
@@ -1666,6 +1667,15 @@ C# `IGesClock.ElapsedMicroseconds` and Swift
 microsecond source. Host builders accept `WithClock` / `withClock`; absent an
 injected source, each host uses an independent origin on the system monotonic
 clock. A shared injected clock is read serially by its embedding.
+
+> **Since: Unreleased** — public clocks
+
+C# `GesSystemClock` and Swift `GesSystemClock` measure the system monotonic clock from
+their creation without allocating; one instance can serve hosts and network ends that
+share a timeline. C# `GesVirtualClock` and Swift `GesVirtualClock` move only through
+`Advance(microseconds)` / `advance(by:)`, start at zero or at an explicit nonnegative
+time, and reject a negative amount or Int64 overflow (C# `ArgumentOutOfRangeException`,
+Swift `GesApiError.invalidArgument`) without changing the time.
 
 Host `NextMessageDelay` / `nextMessageDelay` returns optional remaining Int64
 microseconds without pumping. `Waiting` / `waiting` extends execution results

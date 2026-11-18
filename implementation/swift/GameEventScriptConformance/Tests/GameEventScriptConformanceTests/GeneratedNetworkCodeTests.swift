@@ -34,11 +34,11 @@ final class GeneratedNetworkCodeTests: XCTestCase {
         let parameters = GesSchemaParameters()
         try parameters.with("worldSize", literal: "2km")
         let network = try fixture().bind(parameters: parameters)
-        var plain = GesNetworkOptions()
-        plain.minimumSecurity = .none
+        let plain = GesNetworkOptions.message(client: .unencrypted)
+        let server = GesNetworkOptions.message(server: .unencrypted)
         let loop = try GesNetworkLoopback(
             client: try .makeClient(network: network, now: 0, options: plain),
-            server: try .makeServer(network: network, now: 0, options: plain)
+            server: try .makeServer(network: network, now: 0, options: server)
         )
         try loop.advance(0)
         XCTAssertEqual(loop.server.nextEvent().kind, .connecting)

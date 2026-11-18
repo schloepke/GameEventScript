@@ -25,6 +25,7 @@ Usage:
                              [--param <name>=<literal> ...]
                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
                              [--checked-exclusivity] [--bindings] [--documents] [--models <namespace>] [--extend-namespace <A>]
+                             [--schemas <Name> | --use-schemas <A.Name>] [--import <Module> ...]
                              [-o <file> | -d <dir> [--split schema|file]] [--check]
 
 Commands:
@@ -48,6 +49,10 @@ Options:
   --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
   --extend-namespace <A>    Extend this leading part of the Swift namespace, which another generation of the module
                             declares, instead of declaring it; wire code with --models does so for the part it shares.
+  --schemas <Name>          Declare the schema set type <Name>, which holds the embedded sources and parameter values
+                            and binds conversions, networks and documents for this and other generations.
+  --use-schemas <A.Name>    Use the schema set type that another generation declares, instead of embedding the sources.
+  --import <Module>         Import this Swift module in every generated file, such as the module of --use-schemas.
   --bindings                Also offer generated model types to scripts as external types; only with --model.
   --documents               Also read model roots from GES document text; includes --values, only with --model.
   --models <namespace>      Share the packed types of the model code in that namespace ("" for the global one) and
@@ -95,6 +100,9 @@ Options:
         string? outDir = null;
         string? split = null;
         string? models = null;
+        string? schemaSet = null;
+        string? useSchemaSet = null;
+        var imports = new List<string>();
         var quiet = false;
         var parameters = new List<(string Name, string Literal)>();
         for (var index = 1; index < arguments.Length; index++)
@@ -113,7 +121,7 @@ Options:
             else if (argument == "--checked-exclusivity" && command == "generate") checkedExclusivity = true;
             else if (argument == "--bindings" && command == "generate") bindings = true;
             else if (argument == "--documents" && command == "generate") documents = true;
-            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace")
+            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace" or "--schemas" or "--use-schemas" or "--import")
             {
                 var applies = argument switch
                 {
@@ -121,7 +129,7 @@ Options:
                     "--wire" or "--model" => command is "layout" or "generate",
                     "--param" => command is "hash" or "dump" or "layout" or "generate",
                     "--data" or "--baseline" => command == "dump",
-                    "--language" or "--namespace" or "--access" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace" => command == "generate",
+                    "--language" or "--namespace" or "--access" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace" or "--schemas" or "--use-schemas" or "--import" => command == "generate",
                     _ => command is "format" or "layout" or "generate"
                 };
                 if (!applies) return UsageError($"Unknown schema {command} option '{argument}'.");
@@ -149,6 +157,13 @@ Options:
                 else if (argument == "--split") split = next;
                 else if (argument == "--models") models = next;
                 else if (argument == "--extend-namespace") extendNamespace = next;
+                else if (argument == "--schemas") schemaSet = next;
+                else if (argument == "--use-schemas") useSchemaSet = next;
+                else if (argument == "--import")
+                {
+                    if (imports.Contains(next)) return UsageError($"The module '{next}' is given twice.");
+                    imports.Add(next);
+                }
                 else
                 {
                     var separator = next.IndexOf('=');
@@ -175,6 +190,8 @@ Options:
         if (models is not null && modelGroup is not null) return UsageError("--models concerns wire code, not --model.");
         if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
         if (extendNamespace is not null && language != "swift") return UsageError("--extend-namespace concerns Swift, whose namespaces are enums; C# merges namespaces.");
+        if (schemaSet is not null && useSchemaSet is not null) return UsageError("--schemas declares a schema set and --use-schemas uses another one; give one of them.");
+        if (imports.Count > 0 && language != "swift") return UsageError("--import concerns Swift, whose generated files import modules; C# names types with qualified names.");
         if (access is not (null or "public" or "internal")) return UsageError("--access is public or internal.");
         if (output is not null && outDir is not null) return GenerateUsage("-o writes one file and --out-dir a directory; give one of them.");
         if (split is not null && outDir is null) return GenerateUsage("--split divides the files of --out-dir.");
@@ -230,7 +247,10 @@ Options:
                         Bindings = bindings,
                         Documents = documents,
                         Split = outDir is null ? GesSchemaSplit.None : split == "file" ? GesSchemaSplit.File : GesSchemaSplit.Schema,
-                        Models = models
+                        Models = models,
+                        SchemaSet = schemaSet,
+                        UseSchemaSet = useSchemaSet,
+                        Imports = imports
                     };
                     if (wireGroup is not null || modelGroup is not null)
                     {

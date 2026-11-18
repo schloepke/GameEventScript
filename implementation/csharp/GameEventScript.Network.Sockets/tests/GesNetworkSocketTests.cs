@@ -40,11 +40,11 @@ public sealed class GesNetworkSocketTests
 
     private static readonly GesNetworkKey ServerKey = GesNetworkKey.FromPrivateKey(Enumerable.Range(1, 32).Select(value => (byte)value).ToArray());
 
-    private static GesNetworkOptions Options(GesNetworkTransport transport) => new() { Transport = transport, MinimumSecurity = GesNetworkSecurity.None };
+    private static GesNetworkOptions Options(GesNetworkTransport transport) => new() { Transport = transport, ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None };
 
-    private static GesNetworkOptions SecureServer(GesNetworkTransport transport) => new() { Transport = transport, Key = ServerKey };
+    private static GesNetworkOptions SecureServer(GesNetworkTransport transport) => new() { Transport = transport, ServerSecurity = GesNetworkServerSecurity.Key(ServerKey) };
 
-    private static GesNetworkOptions SecureClient(GesNetworkTransport transport) => new() { Transport = transport, ServerPublicKey = ServerKey.PublicKey.ToArray() };
+    private static GesNetworkOptions SecureClient(GesNetworkTransport transport) => new() { Transport = transport, ClientSecurity = GesNetworkClientSecurity.Pinned(ServerKey.PublicKey) };
 
     private static string? Next(GesNetworkConnection connection)
     {
@@ -175,16 +175,16 @@ public sealed class GesNetworkSocketTests
     }
 
     [TestMethod]
-    public void TheDefaultOptionsNeedAKey()
+    public void AListenerNeedsAServerSecurity()
     {
-        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenTcp(Loopback, Game()));
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenTcp(Loopback, Game(), new GesNetworkOptions { Transport = GesNetworkTransport.Stream }));
     }
 
     [TestMethod]
     public async Task SocketTransportsRefuseInsecureTestKeys()
     {
         var network = Game();
-        var server = new GesNetworkOptions { Transport = GesNetworkTransport.Stream, Key = ServerKey, InsecureTestKeySeed = 1 };
+        var server = new GesNetworkOptions { Transport = GesNetworkTransport.Stream, ServerSecurity = GesNetworkServerSecurity.Key(ServerKey), InsecureTestKeySeed = 1 };
         Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenTcp(Loopback, network, server));
         server.Transport = GesNetworkTransport.Datagram;
         Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenUdp(Loopback, network, server));
@@ -460,7 +460,7 @@ public sealed class GesNetworkSocketTests
         var network = Game();
         Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenTcp(Loopback, network, Options(GesNetworkTransport.Message)));
         Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenWebSocket(Loopback, "game", network, Options(GesNetworkTransport.Message)));
-        var message = GesNetworkConnection.CreateClient(network, "tok"u8, Now);
+        var message = GesNetworkConnection.CreateClient(network, "tok"u8, Now, Options(GesNetworkTransport.Message));
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => GesNetworkSocketSession.ConnectTcpAsync("127.0.0.1", 1, message));
         var server = GesNetworkConnection.CreateServer(network, Now, Options(GesNetworkTransport.Message));
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => GesNetworkSocketSession.ConnectWebSocketAsync(new Uri("ws://127.0.0.1:1/"), server));

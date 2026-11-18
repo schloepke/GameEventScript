@@ -379,11 +379,6 @@ extension GesNetworkConnection {
         // A later retry replaces the key of an earlier one: until a welcome authenticates, any of them may be forged.
         let key = UnsafeRawBufferPointer(rebasing: packet[position..<packet.count])
         if keyLength != 0 && !pinned && !(serverKey.map { key.elementsEqual($0) } ?? false) {
-            if minimumSecurity == .verified {
-                fail(GesNetworkCodes.unverified)
-                return
-            }
-
             serverKey = Array(key)
             ephemeralStale = true
         }

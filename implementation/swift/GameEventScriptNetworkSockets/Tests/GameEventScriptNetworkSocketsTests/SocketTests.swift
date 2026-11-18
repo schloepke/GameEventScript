@@ -36,7 +36,8 @@ final class SocketTests: XCTestCase {
     private static func options(_ transport: GesNetworkTransport) -> GesNetworkOptions {
         var options = GesNetworkOptions()
         options.transport = transport
-        options.minimumSecurity = .none
+        options.clientSecurity = .unencrypted
+        options.serverSecurity = .unencrypted
         return options
     }
 
@@ -192,14 +193,14 @@ final class SocketTests: XCTestCase {
     private static func secureServer(_ transport: GesNetworkTransport) -> GesNetworkOptions {
         var options = GesNetworkOptions()
         options.transport = transport
-        options.key = serverKey
+        options.serverSecurity = .key(serverKey)
         return options
     }
 
     private static func secureClient(_ transport: GesNetworkTransport) -> GesNetworkOptions {
         var options = GesNetworkOptions()
         options.transport = transport
-        options.serverPublicKey = serverKey.publicKey
+        options.clientSecurity = try! .pinned(serverKey.publicKey)
         return options
     }
 
@@ -270,9 +271,11 @@ final class SocketTests: XCTestCase {
         listener.close()
     }
 
-    func testTheDefaultOptionsNeedAKey() async throws {
+    func testAListenerNeedsAServerSecurity() async throws {
         let network = try Self.game()
-        await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network) }
+        var options = GesNetworkOptions()
+        options.transport = .stream
+        await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network, options: options) }
     }
 
     func testSocketTransportsRefuseInsecureTestKeys() async throws {
@@ -622,7 +625,7 @@ final class SocketTests: XCTestCase {
     func testTheTransportMustMatch() async throws {
         let network = try Self.game()
         await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network, options: Self.options(.message)) }
-        await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "game", network: network) }
+        await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "game", network: network, options: Self.options(.message)) }
         await assertInvalidArgument {
             let message = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: Self.options(.message))
             _ = try await GesNetworkSocketSession.connectTcp(host: "127.0.0.1", port: 1, connection: message)

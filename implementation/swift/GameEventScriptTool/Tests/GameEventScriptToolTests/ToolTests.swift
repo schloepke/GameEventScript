@@ -195,6 +195,19 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game", "-d", extendedDirectory]).code, 0)
         let manifest = try String(contentsOfFile: extendedDirectory + "/.ges-generated.json", encoding: .utf8)
         XCTAssertTrue(manifest.contains("\"extendNamespace\": \"Game\""))
+        // Schema sets: declaring and using one exclude each other, imports concern Swift alone, and the manifest names them.
+        XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--schemas", "ViewSchemas"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--schemas", "ViewSchemas", "--use-schemas", "Game.ViewSchemas"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "csharp", "--import", "Shared"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--schemas", "View"]).code, 1)
+        let schemas = run(["schema", "generate", view, "--model", "view", "--language", "csharp", "--namespace", "Game", "--documents", "--schemas", "ViewSchemas"])
+        XCTAssertEqual(schemas.code, 0, schemas.error)
+        XCTAssertTrue(schemas.output.contains("public static class ViewSchemas"))
+        let usedDirectory = directory.appendingPathComponent("UsedSchemas").path
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--use-schemas", "Shared.ViewSchemas", "--import", "Shared", "-d", usedDirectory]).code, 0)
+        let used = try String(contentsOfFile: usedDirectory + "/.ges-generated.json", encoding: .utf8)
+        XCTAssertTrue(used.contains("\"useSchemaSet\": \"Shared.ViewSchemas\""), used)
+        XCTAssertTrue(used.contains("\"imports\": ["), used)
         // A missing language is reported as such, not as an option that concerns Swift.
         let noLanguage = run(["schema", "generate", view, "--model", "view", "--extend-namespace", "Game"])
         XCTAssertEqual(noLanguage.code, 2)

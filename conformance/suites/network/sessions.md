@@ -375,6 +375,75 @@ network:
 
 ---
 
+## Test: Unset limits grow to the largest message
+
+An unset queued reliable bytes limit grows from its default of 1048576 to the largest message the side sends reliably; an explicit limit stays as set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: derived-send-queue
+networkApi:
+  sources: ["wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 2000000 }\nnetwork :Game as { server sends :Blob reliable }\n"]
+  network: "Game"
+  steps:
+    - {"advance": 0}
+    - {"accept": true}
+    - {"advance": 0}
+    - {"send": {"side": "server", "route": 0, "payload": {"length": 600000, "seed": 1}}}
+    - {"send": {"side": "server", "route": 0, "payload": {"length": 600000, "seed": 2}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "server connecting -"
+    - "server connected"
+    - "client connected"
+    - "server send queued"
+    - "server send queued"
+```
+
+---
+
+## Test: An explicit send queue limit stays as set
+
+### Case description
+
+```yaml
+gesBlock: case
+id: explicit-send-queue
+networkApi:
+  sources: ["wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 2000000 }\nnetwork :Game as { server sends :Blob reliable }\n"]
+  network: "Game"
+  options: {"maxSendQueueBytes": 1048576}
+  steps:
+    - {"advance": 0}
+    - {"accept": true}
+    - {"advance": 0}
+    - {"send": {"side": "server", "route": 0, "payload": {"length": 600000, "seed": 1}}}
+    - {"send": {"side": "server", "route": 0, "payload": {"length": 600000, "seed": 2}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "server connecting -"
+    - "server connected"
+    - "client connected"
+    - "server send queued"
+    - "server send queueFull"
+```
+
+---
+
 ## Test: Messages larger than a packet are fragmented
 
 A reliable message is split across packets of at most 1200 bytes and reassembled in order.

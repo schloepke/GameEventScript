@@ -82,6 +82,20 @@ public struct GesSchemaGenerateOptions: Sendable {
     /// leading part of the namespace, else `generate.usage`. Wire code with `models` extends the part it shares with the
     /// models' namespace on its own. C# merges namespaces, so C# generation rejects it with `generate.usage`.
     public var extendNamespace: String?
+    /// The name of a schema set type to declare in the namespace, or nil for none, the default: a C# static class or Swift
+    /// enum that holds the embedded schema sources parsed once, the parameter values of this generation, a hash over both
+    /// and the binding of schemas, networks and documents against them. The generated conversions, network bindings and
+    /// document readers then use it instead of a private helper, and other generations share it through `useSchemaSet`. It
+    /// must be an identifier; it excludes `useSchemaSet`.
+    public var schemaSet: String?
+    /// The qualified name of a schema set type that another generation declares with `schemaSet`, or nil for none, the
+    /// default. The generated conversions, network bindings and document readers use that type, which may live in another
+    /// namespace, assembly or module, and this generation declares no sources of its own. The bindings still compare the
+    /// generated hashes on first use.
+    public var useSchemaSet: String?
+    /// The Swift modules that the generated files import beside the runtime, such as the module that declares the
+    /// `useSchemaSet` type. C# names types with qualified names, so C# generation rejects it with `generate.usage`.
+    public var imports: [String]
 
     /// Creates options.
     /// - Parameters:
@@ -95,6 +109,9 @@ public struct GesSchemaGenerateOptions: Sendable {
     ///   - split: How the code is divided into files.
     ///   - models: The namespace of the model code that wire code shares types with, or nil for none.
     ///   - extendNamespace: The leading part of the Swift namespace that another generation of the module declares, or nil.
+    ///   - schemaSet: The name of a schema set type to declare, or nil for none.
+    ///   - useSchemaSet: The qualified name of a schema set type that another generation declares, or nil for none.
+    ///   - imports: The Swift modules that the generated files import beside the runtime.
     public init(
         language: GesSchemaLanguage = .csharp,
         namespace: String = "",
@@ -105,7 +122,10 @@ public struct GesSchemaGenerateOptions: Sendable {
         documents: Bool = false,
         split: GesSchemaSplit = .none,
         models: String? = nil,
-        extendNamespace: String? = nil
+        extendNamespace: String? = nil,
+        schemaSet: String? = nil,
+        useSchemaSet: String? = nil,
+        imports: [String] = []
     ) {
         self.language = language
         self.namespace = namespace
@@ -117,6 +137,9 @@ public struct GesSchemaGenerateOptions: Sendable {
         self.split = split
         self.models = models
         self.extendNamespace = extendNamespace
+        self.schemaSet = schemaSet
+        self.useSchemaSet = useSchemaSet
+        self.imports = imports
     }
 }
 

@@ -39,10 +39,12 @@ enum GesSwiftEmitter {
         prologue.blank()
         prologue.line("import GameEventScriptRuntime")
         if !layout.networks.isEmpty { prologue.line("import GameEventScriptNetwork") }
+        let schemaSet = try GesSchemaSetReference.from(options)
+        for module in options.imports { prologue.line("import " + module) }
         if GesComputedEmitter.usesMath(types.map(\.layout.computed)) { GesComputedLibrary.mathImport(&prologue) }
         prologue.blank()
         let header = GesSchemaPlanner.header(layout)
-        let holder = "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
+        let holder = schemaSet?.qualified ?? "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
         let computed = GesSchemaPlanner.computed(types, GesComputedEmitter.helper(options.namespace, GesSchemaPlanner.suffix(header, options)), swift: true)
         let sets = GesSchemaPlanner.tagSets(types, "")
         // Packed records are the model types over one word, the shared ones of the model namespace or declared here.
@@ -90,12 +92,14 @@ enum GesSwiftEmitter {
                 }
             }
         }
+        try schemaSet?.reserve(&topLevel)
         let context = Context(
             layout: layout,
             models: conversion,
             elements: GesSchemaPlanner.keyedElements(types),
             values: options.values,
             holder: holder,
+            schemaSet: schemaSet != nil,
             checkedExclusivity: options.checkedExclusivity,
             computed: computed,
             topLevel: topLevel,
@@ -148,7 +152,7 @@ enum GesSwiftEmitter {
         for network in layout.networks {
             document.units.append(
                 GesCodeUnit(owner: network.name) { code in
-                    self.network(&code, network, access) { root in
+                    self.network(&code, network, access, schemaSet?.qualified) { root in
                         // A packed root that the models declare has its wire members in an enum `<Name>Wire`.
                         let type = types.first { $0.name == root }!
                         return type.layout.packedWidth > 0 && packed == nil ? (models + root, "\(root)Wire.write(value, into: buffer)") : (root, "value.write(into: buffer)")
@@ -159,7 +163,11 @@ enum GesSwiftEmitter {
         try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: true)
         // Split files reach the sources of another file, so the holder is internal there.
         let shared = options.split != .none
-        if options.values { document.units.append(GesCodeUnit(owner: "", write: { code in valuesHolder(&code, layout, holder, shared: shared) }, outside: true)) }
+        if let setName = schemaSet?.declared {
+            document.units.append(GesCodeUnit(owner: "") { code in GesSchemaSetReference.writeSwift(&code, setName, access, layout.sources, layout.parameters, networks: !layout.networks.isEmpty) })
+        } else if options.values && schemaSet == nil {
+            document.units.append(GesCodeUnit(owner: "", write: { code in valuesHolder(&code, layout, holder, shared: shared) }, outside: true))
+        }
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
             let computed = context.computed
             let values = computed.needsValues(types.map { ($0.name, $0.layout.computed) })
@@ -178,6 +186,8 @@ enum GesSwiftEmitter {
         let elements: Set<String>
         let values: Bool
         let holder: String
+        // Whether the holder is a schema set, whose bind throws, rather than the private helper, which gives a Result.
+        let schemaSet: Bool
         let checkedExclusivity: Bool
         let computed: GesComputedEmitter
         // The records and tag sets declared beside each other, which a record's nested type must not hide.
@@ -253,7 +263,7 @@ enum GesSwiftEmitter {
         let deltas = type.kind == .schema && !type.isItem
         if deltas { sameHelpers(&code, type) }
         extras(&code, type, access, deltas, context.elements.contains(type.name))
-        if context.values && !type.isItem { valueMembers(&code, type, access, context.holder) }
+        if context.values && !type.isItem { valueMembers(&code, type, access, context.holder, schemaSet: context.schemaSet) }
         for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
     }
@@ -585,7 +595,7 @@ enum GesSwiftEmitter {
         read.append("}")
         code.blank()
         publicMethods(&code, access, type.membersAreClasses ? "" : "mutating ", write, read, "message")
-        if context.values { valueMembers(&code, type, access, context.holder) }
+        if context.values { valueMembers(&code, type, access, context.holder, schemaSet: context.schemaSet) }
         code.blank()
         code.line("/// The messages of the set, in declared order.")
         code.open("\(access)enum Member: \(underlying(type.members.count)), Sendable {")
@@ -875,11 +885,21 @@ enum GesSwiftEmitter {
 
     // The constants of a network, its hash, the index of each route and the rate of each topic that has one, and a
     // function per route that encodes its root and sends or publishes it.
-    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String, _ root: (String) -> (type: String, write: String)) {
+    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String, _ schemaSet: String?, _ root: (String) -> (type: String, write: String)) {
         code.line("/// The network `:\(network.name)`: its hash, the index of each route, the rate of each topic that has one and a typed function per route.")
         code.open("\(access)enum \(network.name) {")
         code.line("/// The network hash over the routes and their bound roots, which the handshake compares.")
         code.line("\(access)static let hash: UInt64 = 0x\(GesSchemaLayoutJson.hex(network.hash))")
+        if let schemaSet {
+            code.blank()
+            code.line("private static let __bound = Result<GesBoundNetwork, any Error> { try \(schemaSet).bindNetwork(\(GesSchemaPlanner.literal(network.name, swift: true)), hash: hash) }")
+            code.blank()
+            code.line("/// The network bound with the parameters of the schema set, checked against `hash` on first access.")
+            code.line("/// - Throws: `GesSchemaError` when the sources no longer parse or the network no longer binds, and `\(schemaSet).Mismatch` when the bound network hash differs.")
+            code.open("\(access)static var bound: GesBoundNetwork {")
+            code.line("get throws { try __bound.get() }")
+            code.close()
+        }
         for route in network.routes {
             let name = GesSchemaPlanner.camel(route.name)
             code.blank()

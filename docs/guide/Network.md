@@ -84,18 +84,32 @@ let status = try Game.clientSendGameCommands(commands, on: client, buffer: buffe
 The functions allocate nothing; the buffer is yours to reuse. To receive, match the route index of a
 message against the constants and read the record with the root's generated `Read`.
 
-Compare `Game.Hash` with the bound network's hash at startup to detect a stale generation.
+Compare `Game.Hash` with the bound network's hash at startup to detect a stale generation, or let the
+generated code do it: `--schemas GameSchemas` adds a schema set type that embeds the sources with the
+generation's parameters, and `Game.Bound` (Swift `Game.bound`) is then the network bound once and checked
+against `Game.Hash`:
+
+```bash
+ges schema generate game.gess --root Game --schemas GameSchemas --language swift --namespace Net -o Game.swift
+```
+
+```swift
+let network = try Net.Game.bound // throws when the sources no longer bind like the generated code
+```
+
+`--use-schemas Net.GameSchemas` lets a second generation, such as the models, share that set. See
+[Schema sets](../../specs/Schemas.md#schema-sets).
 
 ## 3. Connect two sides in one process
 
 A client connection carries a token for the server, such as a login ticket. The server reports
 it in a `connecting` event and accepts or refuses the client. The loopback transport moves the
 packets between both connections without latency, which is how tests and single-player modes run.
-Packets that never leave the process need no [encryption](#7-protect-the-connection), so both
-sides lower their security level to `None`.
+Packets that never leave the process need no [encryption](#7-protect-the-connection): the
+in-process preset turns it off on both sides, uses the largest packets and never times out.
 
 ```csharp
-var local = new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None };
+var local = GesNetworkOptions.InProcess();
 var client = GesNetworkConnection.CreateClient(network, "ticket"u8, now: 0, local);
 var server = GesNetworkConnection.CreateServer(network, now: 0, local);
 var loopback = new GesNetworkLoopback(client, server);
@@ -111,8 +125,7 @@ loopback.Advance(0);
 ```
 
 ```swift
-var local = GesNetworkOptions()
-local.minimumSecurity = .none
+let local = GesNetworkOptions.inProcess()
 let client = try GesNetworkConnection.makeClient(network: network, token: Array("ticket".utf8), now: 0, options: local)
 let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: local)
 let loopback = try GesNetworkLoopback(client: client, server: server)
@@ -151,7 +164,7 @@ instead. A `message` event on the other side carries the route index and the pay
 bytes stay valid until the next `NextEvent` call, so decode or copy them right away. A `closed`
 event carries a `network.*` code, such as `network.timeout`, and whether the peer closed.
 
-A message on a `bulk` route is a transfer: up to 64 MiB by default (`MaxTransferBytes`), sent with
+A message on a `bulk` route is a transfer: by default up to 64 MiB or the route's largest record (`MaxTransferBytes`), sent with
 its size and SHA-256 hash and compressed with Deflate when that is shorter. It gets its id when
 you send it; read it right afterwards and cancel the transfer with that id, optionally with your
 own `network.*` code:
@@ -198,13 +211,14 @@ host calls `Update` where it runs the connection, then takes the connection's ev
 
 A TCP session uses the `stream` transport, a WebSocket session the `message` transport and a UDP
 session the `datagram` transport. Listeners
-choose the matching transport. With the default options a listener needs the server's
-[key](#7-protect-the-connection). A server takes ready clients without waiting:
+choose the matching transport. The presets `Stream`, `Message` and `Datagram` set the transport
+and the [security](#7-protect-the-connection) of one side; a listener needs a server security. A
+server takes ready clients without waiting:
 
 ```csharp
 using GameEventScript.Network.Sockets;
 
-var options = new GesNetworkOptions { Key = serverKey };
+var options = GesNetworkOptions.Stream(GesNetworkServerSecurity.Key(serverKey));
 using var listener = GesNetworkSocketListener.ListenTcp(new IPEndPoint(IPAddress.Loopback, 7000), network, options);
 var session = listener.Accept(now); // null while no client is ready
 session?.Update(now);
@@ -213,8 +227,7 @@ session?.Update(now);
 ```swift
 import GameEventScriptNetworkSockets
 
-var options = GesNetworkOptions()
-options.key = serverKey
+let options = GesNetworkOptions.message(server: .key(serverKey))
 let listener = try await GesNetworkSocketListener.listenWebSocket(host: "::", port: 7000, path: "/game", network: network, options: options)
 if let session = try listener.accept(now: now) { try session.update(now: now) }
 ```
@@ -242,30 +255,30 @@ your clients outside the protocol, for example in the client build or a signed c
 var serverKey = GesNetworkKey.Generate();
 var stored = new byte[32];
 serverKey.CopyPrivateKey(stored); // later: GesNetworkKey.FromPrivateKey(stored)
-var server = GesNetworkConnection.CreateServer(network, now, new GesNetworkOptions { Key = serverKey });
+var server = GesNetworkConnection.CreateServer(network, now,
+    GesNetworkOptions.Message(GesNetworkServerSecurity.Key(serverKey)));
 var client = GesNetworkConnection.CreateClient(network, "ticket"u8, now,
-    new GesNetworkOptions { ServerPublicKey = serverKey.PublicKey.ToArray() });
+    GesNetworkOptions.Message(GesNetworkClientSecurity.Pinned(serverKey.PublicKey)));
 // After connecting, client.Security is GesNetworkSecurity.Verified.
 ```
 
 ```swift
 let serverKey = GesNetworkKey.generate()
-var serverOptions = GesNetworkOptions()
-serverOptions.key = serverKey
-var clientOptions = GesNetworkOptions()
-clientOptions.serverPublicKey = serverKey.publicKey
+let serverOptions = GesNetworkOptions.message(server: .key(serverKey))
+let clientOptions = GesNetworkOptions.message(client: try .pinned(serverKey.publicKey))
 // After connecting, client.security is .verified.
 ```
 
-A client with the pinned key reaches `Verified`: the server proved that it holds the key, and
-nobody else can read or change the session. The default options require it; a client without
-a pinned key closes with `network.unverified`. A client whose lowest level is `Encrypted` takes
-the key from the server's first answer instead. That hides the session from attackers who only
+A client with the pinned key (`Pinned`, Swift `.pinned`) reaches `Verified`: the server proved
+that it holds the key, and nobody else can read or change the session. A client in development
+mode (`Development`) takes the key from the server's first answer instead and reaches
+`Encrypted`; `Security` reports the level a connection reached. That hides the session from attackers who only
 read the network, but one who can change packets can pose as the server, so use it only during
 development or on a local network. A server without a key closes a client that asks for
 encryption with `network.insecure`.
 
-An unencrypted session (`None`) hides and authenticates nothing. Use it only in-process or over
+An unencrypted session (`GesNetworkClientSecurity.None` and `GesNetworkServerSecurity.None`,
+Swift `.unencrypted`) hides and authenticates nothing. Use it only in-process or over
 a transport that protects itself, such as TLS: a browser client uses WebSocket over `wss`, for
 example behind a TLS-terminating proxy in front of the listener.
 

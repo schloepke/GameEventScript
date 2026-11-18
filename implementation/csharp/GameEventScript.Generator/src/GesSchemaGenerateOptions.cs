@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Collections.Generic;
 
 namespace GameEventScript.Generator;
 
@@ -125,6 +126,30 @@ public sealed class GesSchemaGenerateOptions
     /// reaches. An empty string is the global namespace. Only wire generation takes it.
     /// </summary>
     public string? Models { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of a schema set type to declare in the namespace, or null for none, the default: a C# static class
+    /// or Swift enum that holds the embedded schema sources parsed once, the parameter values of this generation, a hash over
+    /// both and the binding of schemas, networks and documents against them. The generated conversions, network bindings and
+    /// document readers then use it instead of a private helper, and other generations share it through
+    /// <see cref="UseSchemaSet"/>. It must be an identifier; it excludes <see cref="UseSchemaSet"/>.
+    /// </summary>
+    public string? SchemaSet { get; set; }
+
+    /// <summary>
+    /// Gets or sets the qualified name of a schema set type that another generation declares with <see cref="SchemaSet"/>,
+    /// or null for none, the default. The generated conversions, network bindings and document readers use that type, which
+    /// may live in another namespace, assembly or module, and this generation declares no sources of its own. The bindings
+    /// still compare the generated hashes on first use.
+    /// </summary>
+    public string? UseSchemaSet { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Swift modules that the generated files import beside the runtime, such as the module that declares the
+    /// <see cref="UseSchemaSet"/> type. C# names types with qualified names, so C# generation rejects it with
+    /// <c>generate.usage</c>.
+    /// </summary>
+    public IReadOnlyList<string> Imports { get; set; } = [];
 }
 
 /// <summary>

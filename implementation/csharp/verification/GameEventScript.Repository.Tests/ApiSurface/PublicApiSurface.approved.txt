@@ -1335,6 +1335,9 @@ struct GameEventScript.Api.GesStringConstantSegment.SliceEntry
 sealed class GameEventScript.Api.GesSubscription
   method System.Boolean Unsubscribe()
   property System.Boolean IsSubscribed { get }
+sealed class GameEventScript.Api.GesSystemClock
+  ctor GesSystemClock()
+  property System.Int64 ElapsedMicroseconds { get }
 struct GameEventScript.Api.GesUInt16IndexList
   property System.Int32 Length { get }
   property System.Int32 Start { get }
@@ -1372,6 +1375,10 @@ struct GameEventScript.Api.GesVector
   property System.Double X { get set }
   property System.Double Y { get set }
   property System.Double Z { get set }
+sealed class GameEventScript.Api.GesVirtualClock
+  ctor GesVirtualClock(System.Int64 elapsedMicroseconds)
+  method System.Void Advance(System.Int64 microseconds)
+  property System.Int64 ElapsedMicroseconds { get }
 sealed class GameEventScript.Api.GesWireException
   ctor GesWireException(System.String code, System.String path)
   ctor GesWireException(System.String code, System.String path, System.String detail)
@@ -1557,9 +1564,12 @@ sealed class GameEventScript.Generator.GesSchemaGenerateOptions
   property System.Boolean CheckedExclusivity { get set }
   property System.Boolean Documents { get set }
   property System.Boolean Values { get set }
+  property System.Collections.Generic.IReadOnlyList<System.String> Imports { get set }
   property System.String ExtendNamespace { get set }
   property System.String Models { get set }
   property System.String Namespace { get set }
+  property System.String SchemaSet { get set }
+  property System.String UseSchemaSet { get set }
 static class GameEventScript.Generator.GesSchemaGenerator
   method static System.Collections.Generic.IReadOnlyList<GameEventScript.Generator.GesGeneratedFile> GenerateFiles(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Api.GesSchemaParameters parameters, GameEventScript.Generator.GesSchemaGenerateOptions options)
   method static System.Collections.Generic.IReadOnlyList<GameEventScript.Generator.GesGeneratedFile> GenerateModelFiles(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Generator.GesSchemaGenerateOptions options)
@@ -1576,6 +1586,12 @@ enum GameEventScript.Generator.GesSchemaSplit
   enum-field None = 0
   enum-field Schema = 1
   enum-field File = 2
+sealed class GameEventScript.Network.GesNetworkClientSecurity
+  method static GameEventScript.Network.GesNetworkClientSecurity Pinned(System.ReadOnlySpan<System.Byte> serverPublicKey)
+  property GameEventScript.Network.GesNetworkClientSecurity Development { get }
+  property GameEventScript.Network.GesNetworkClientSecurity None { get }
+  property GameEventScript.Network.GesNetworkSecurity Level { get }
+  property System.ReadOnlySpan<System.Byte> ServerPublicKey { get }
 static class GameEventScript.Network.GesNetworkCodes
   field static System.String AuthenticationFailed
   field static System.String Closed
@@ -1594,7 +1610,6 @@ static class GameEventScript.Network.GesNetworkCodes
   field static System.String TransferTooLarge
   field static System.String TransportClosed
   field static System.String UnexpectedRoute
-  field static System.String Unverified
 sealed class GameEventScript.Network.GesNetworkConnection
   method GameEventScript.Network.GesNetworkEvent NextEvent()
   method GameEventScript.Network.GesNetworkSendStatus Publish(System.Int32 route, System.ReadOnlySpan<System.Byte> payload)
@@ -1666,21 +1681,27 @@ sealed class GameEventScript.Network.GesNetworkLoopback
   property System.Int64 Now { get }
 sealed class GameEventScript.Network.GesNetworkOptions
   ctor GesNetworkOptions()
-  property GameEventScript.Network.GesNetworkKey Key { get set }
-  property GameEventScript.Network.GesNetworkSecurity MinimumSecurity { get set }
+  method static GameEventScript.Network.GesNetworkOptions Datagram(GameEventScript.Network.GesNetworkClientSecurity security)
+  method static GameEventScript.Network.GesNetworkOptions Datagram(GameEventScript.Network.GesNetworkServerSecurity security)
+  method static GameEventScript.Network.GesNetworkOptions InProcess()
+  method static GameEventScript.Network.GesNetworkOptions Message(GameEventScript.Network.GesNetworkClientSecurity security)
+  method static GameEventScript.Network.GesNetworkOptions Message(GameEventScript.Network.GesNetworkServerSecurity security)
+  method static GameEventScript.Network.GesNetworkOptions Stream(GameEventScript.Network.GesNetworkClientSecurity security)
+  method static GameEventScript.Network.GesNetworkOptions Stream(GameEventScript.Network.GesNetworkServerSecurity security)
+  property GameEventScript.Network.GesNetworkClientSecurity ClientSecurity { get set }
+  property GameEventScript.Network.GesNetworkServerSecurity ServerSecurity { get set }
   property GameEventScript.Network.GesNetworkTransport Transport { get set }
   property System.Boolean DeflateTransfers { get set }
-  property System.Byte[] ServerPublicKey { get set }
   property System.Int32 MaxFramesPerSecond { get set }
   property System.Int32 MaxPacketBytes { get set }
   property System.Int64 AckDelayMicroseconds { get set }
   property System.Int64 KeepaliveMicroseconds { get set }
-  property System.Int64 MaxBaselineBytes { get set }
-  property System.Int64 MaxPendingReceiveBytes { get set }
-  property System.Int64 MaxSendQueueBytes { get set }
-  property System.Int64 MaxTransferBytes { get set }
   property System.Int64 SendBudgetBytesPerSecond { get set }
   property System.Int64 TimeoutMicroseconds { get set }
+  property System.Int64? MaxBaselineBytes { get set }
+  property System.Int64? MaxPendingReceiveBytes { get set }
+  property System.Int64? MaxSendQueueBytes { get set }
+  property System.Int64? MaxTransferBytes { get set }
   property System.UInt64? InsecureTestKeySeed { get set }
 enum GameEventScript.Network.GesNetworkSecurity
   enum-field None = 0
@@ -1693,6 +1714,10 @@ enum GameEventScript.Network.GesNetworkSendStatus
   enum-field MessageTooLarge = 3
   enum-field InvalidRoute = 4
   enum-field NotSubscribed = 5
+sealed class GameEventScript.Network.GesNetworkServerSecurity
+  method static GameEventScript.Network.GesNetworkServerSecurity Key(GameEventScript.Network.GesNetworkKey key)
+  property GameEventScript.Network.GesNetworkKey ServerKey { get }
+  property GameEventScript.Network.GesNetworkServerSecurity None { get }
 sealed class GameEventScript.Network.GesNetworkSimulator
   ctor GesNetworkSimulator(GameEventScript.Network.GesNetworkConnection client, GameEventScript.Network.GesNetworkConnection server, System.Int64 seed, System.Int64 latencyMicroseconds, System.Int64 jitterMicroseconds, System.Int32 lossPerMille, System.Int32 duplicatePerMille, System.Boolean reorder)
   method System.Void Advance(System.Int64 now)

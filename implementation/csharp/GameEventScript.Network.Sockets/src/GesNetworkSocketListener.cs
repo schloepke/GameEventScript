@@ -44,11 +44,11 @@ public sealed partial class GesNetworkSocketListener : IDisposable
     private readonly CancellationTokenSource _cancel = new();
     private bool _disposed;
 
-    private GesNetworkSocketListener(IPEndPoint endPoint, GesBoundNetwork network, GesNetworkOptions? options, GesNetworkTransport transport, string? path)
+    private GesNetworkSocketListener(IPEndPoint endPoint, GesBoundNetwork network, GesNetworkOptions options, GesNetworkTransport transport, string? path)
     {
         ArgumentNullException.ThrowIfNull(endPoint);
         _network = network ?? throw new ArgumentNullException(nameof(network));
-        options ??= new GesNetworkOptions { Transport = transport };
+        ArgumentNullException.ThrowIfNull(options);
         if (options.Transport != transport) throw new ArgumentException($"The options must use the {transport} transport.", nameof(options));
         if (options.InsecureTestKeySeed.HasValue) throw new ArgumentException("A socket transport refuses insecure test keys.", nameof(options));
         // Creating a connection checks the options, so a listener never accepts clients it cannot serve.
@@ -73,22 +73,22 @@ public sealed partial class GesNetworkSocketListener : IDisposable
     /// <summary>Starts accepting TCP clients for server connections of the stream transport.</summary>
     /// <param name="endPoint">The local address and port; port 0 lets the system choose.</param>
     /// <param name="network">The bound network of every session.</param>
-    /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Stream"/>; the defaults when omitted.</param>
+    /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Stream"/>.</param>
     /// <returns>The listener.</returns>
-    /// <exception cref="ArgumentException">The options use another transport, name an insecure test key seed or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
+    /// <exception cref="ArgumentException">The options use another transport, name an insecure test key seed or are out of range, or set no server security.</exception>
     /// <exception cref="SocketException">The address cannot be bound.</exception>
-    public static GesNetworkSocketListener ListenTcp(IPEndPoint endPoint, GesBoundNetwork network, GesNetworkOptions? options = null) =>
+    public static GesNetworkSocketListener ListenTcp(IPEndPoint endPoint, GesBoundNetwork network, GesNetworkOptions options) =>
         new(endPoint, network, options, GesNetworkTransport.Stream, null);
 
     /// <summary>Starts accepting WebSocket clients for server connections of the message transport.</summary>
     /// <param name="endPoint">The local address and port; port 0 lets the system choose.</param>
     /// <param name="path">The request path clients upgrade on, starting with <c>/</c>; other paths receive 404.</param>
     /// <param name="network">The bound network of every session.</param>
-    /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Message"/>; the defaults when omitted.</param>
+    /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Message"/>.</param>
     /// <returns>The listener. It speaks plain <c>ws</c>; a browser client needs <c>wss</c> through a TLS-terminating proxy.</returns>
-    /// <exception cref="ArgumentException">The path does not start with <c>/</c>, or the options use another transport, name an insecure test key seed or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
+    /// <exception cref="ArgumentException">The path does not start with <c>/</c>, or the options use another transport, name an insecure test key seed or are out of range, or set no server security.</exception>
     /// <exception cref="SocketException">The address cannot be bound.</exception>
-    public static GesNetworkSocketListener ListenWebSocket(IPEndPoint endPoint, string path, GesBoundNetwork network, GesNetworkOptions? options = null)
+    public static GesNetworkSocketListener ListenWebSocket(IPEndPoint endPoint, string path, GesBoundNetwork network, GesNetworkOptions options)
     {
         ArgumentNullException.ThrowIfNull(path);
         if (!path.StartsWith('/')) throw new ArgumentException("The path starts with '/'.", nameof(path));

@@ -9,10 +9,12 @@ SIDES = ('client', 'server')
 STATES = {'hello', 'awaitHello', 'awaitAccept', 'connected', 'closed'}
 OPTIONS = {'transport', 'maxPacketBytes', 'maxPendingReceiveBytes', 'maxFramesPerSecond', 'maxSendQueueBytes',
            'timeoutMicroseconds', 'keepaliveMicroseconds', 'ackDelayMicroseconds', 'sendBudgetBytesPerSecond', 'maxBaselineBytes',
-           'maxTransferBytes', 'deflateTransfers', 'minimumSecurity', 'key', 'serverPublicKey', 'testKeySeed'}
-# The corpus default: a case states the security it tests, while the API default is verified.
+           'maxTransferBytes', 'deflateTransfers', 'clientSecurity', 'serverSecurity', 'key', 'serverPublicKey', 'testKeySeed'}
+# The corpus default: a case states the security it tests, while the API requires one on each side.
 DEFAULT_SECURITY = 'none'
 SECURITY = ('none', 'encrypted', 'verified')
+CLIENT_SECURITY = ('none', 'development', 'pinned')
+SERVER_SECURITY = ('none', 'key')
 STEPS = {'advance', 'accept', 'refuse', 'close', 'send', 'receive', 'transmit', 'transportClosed', 'budget',
          'publish', 'subscribe', 'unsubscribe', 'deliver', 'cookie', 'cancel'}
 TRANSPORTS = ('message', 'stream', 'datagram')
@@ -59,15 +61,22 @@ def options(raw):
         raise InvalidDocument('A transport is message, stream or datagram')
     if 'deflateTransfers' in result and type(result['deflateTransfers']) is not bool:
         raise InvalidDocument('deflateTransfers is true or false')
-    result.setdefault('minimumSecurity', DEFAULT_SECURITY)
-    if result['minimumSecurity'] not in SECURITY:
-        raise InvalidDocument('A security level is none, encrypted or verified')
+    result.setdefault('clientSecurity', DEFAULT_SECURITY)
+    result.setdefault('serverSecurity', DEFAULT_SECURITY)
+    if result['clientSecurity'] not in CLIENT_SECURITY:
+        raise InvalidDocument('A client security is none, development or pinned')
+    if result['serverSecurity'] not in SERVER_SECURITY:
+        raise InvalidDocument('A server security is none or key')
+    if ('serverPublicKey' in result) != (result['clientSecurity'] == 'pinned'):
+        raise InvalidDocument('A pinned client security and only it has a serverPublicKey')
+    if ('key' in result) != (result['serverSecurity'] == 'key'):
+        raise InvalidDocument('A key server security and only it has a key')
     for key in ('key', 'serverPublicKey'):
         if key in result and len(hexadecimal(result[key], key)) != 64:
             raise InvalidDocument('A key holds 32 bytes: ' + key)
     if 'testKeySeed' in result:
         integer(result['testKeySeed'], 'testKeySeed', 0, 2**64 - 1)
-    for key in OPTIONS - {'transport', 'deflateTransfers', 'minimumSecurity', 'key', 'serverPublicKey', 'testKeySeed'}:
+    for key in OPTIONS - {'transport', 'deflateTransfers', 'clientSecurity', 'serverSecurity', 'key', 'serverPublicKey', 'testKeySeed'}:
         if key in result:
             integer(result[key], key, 0, 2**53)
     return result

@@ -26,11 +26,13 @@ public sealed class GesNetworkSecurityTests
 
     private static GesBoundNetwork Game() => GesSchemaSet.Parse(Source).Network("Game").Bind();
 
-    private static GesNetworkOptions ClientOptions(GesNetworkTransport transport, GesNetworkSecurity minimum, byte[]? pinned) =>
-        new() { Transport = transport, MinimumSecurity = minimum, ServerPublicKey = pinned, InsecureTestKeySeed = 7 };
+    private static readonly GesNetworkClientSecurity Pinned = GesNetworkClientSecurity.Pinned(ServerKey.PublicKey);
+
+    private static GesNetworkOptions ClientOptions(GesNetworkTransport transport, GesNetworkClientSecurity security) =>
+        new() { Transport = transport, ClientSecurity = security, InsecureTestKeySeed = 7 };
 
     private static GesNetworkOptions ServerOptions(GesNetworkTransport transport, GesNetworkKey? key) =>
-        new() { Transport = transport, MinimumSecurity = key is null ? GesNetworkSecurity.None : GesNetworkSecurity.Encrypted, Key = key, InsecureTestKeySeed = 7 };
+        new() { Transport = transport, ServerSecurity = key is null ? GesNetworkServerSecurity.None : GesNetworkServerSecurity.Key(key), InsecureTestKeySeed = 7 };
 
     // Moves every due packet from one side to the other; returns the packets moved.
     private static List<byte[]> Pump(GesNetworkConnection from, GesNetworkConnection to, long now, Func<byte[], byte[]>? change = null)
@@ -76,10 +78,10 @@ public sealed class GesNetworkSecurityTests
         return events;
     }
 
-    private static (GesNetworkConnection Client, GesNetworkConnection Server) Connect(GesNetworkTransport transport, GesNetworkSecurity minimum, byte[]? pinned, GesNetworkKey? key)
+    private static (GesNetworkConnection Client, GesNetworkConnection Server) Connect(GesNetworkTransport transport, GesNetworkClientSecurity security, GesNetworkKey? key)
     {
         var network = Game();
-        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0, ClientOptions(transport, minimum, pinned));
+        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0, ClientOptions(transport, security));
         var server = GesNetworkConnection.CreateServer(network, 0, ServerOptions(transport, key));
         Exchange(client, server, 0);
         CollectionAssert.AreEqual(new[] { "connecting" }, Drain(server));
@@ -95,7 +97,7 @@ public sealed class GesNetworkSecurityTests
     [DataRow(GesNetworkTransport.Datagram)]
     public void PinnedKeyGivesVerifiedSessionWhosePacketsAreSealed(GesNetworkTransport transport)
     {
-        var (client, server) = Connect(transport, GesNetworkSecurity.Verified, ServerKey.PublicKey.ToArray(), ServerKey);
+        var (client, server) = Connect(transport, Pinned, ServerKey);
         CollectionAssert.AreEqual(new[] { "connected" }, Drain(client));
         Assert.AreEqual(GesNetworkSecurity.Verified, client.Security);
         Assert.AreEqual(GesNetworkSecurity.Encrypted, server.Security);
@@ -114,7 +116,7 @@ public sealed class GesNetworkSecurityTests
     [DataRow(GesNetworkTransport.Datagram)]
     public void KeyFromRetryGivesEncryptedSession(GesNetworkTransport transport)
     {
-        var (client, server) = Connect(transport, GesNetworkSecurity.Encrypted, null, ServerKey);
+        var (client, server) = Connect(transport, GesNetworkClientSecurity.Development, ServerKey);
         CollectionAssert.AreEqual(new[] { "connected" }, Drain(client));
         Assert.AreEqual(GesNetworkSecurity.Encrypted, client.Security);
         client.Send(Commands, [3]);
@@ -125,7 +127,7 @@ public sealed class GesNetworkSecurityTests
     [TestMethod]
     public void PlainClientIsEncryptedByAServerWithAKey()
     {
-        var (client, _) = Connect(GesNetworkTransport.Stream, GesNetworkSecurity.None, null, ServerKey);
+        var (client, _) = Connect(GesNetworkTransport.Stream, GesNetworkClientSecurity.None, ServerKey);
         CollectionAssert.AreEqual(new[] { "connected" }, Drain(client));
         Assert.AreEqual(GesNetworkSecurity.Encrypted, client.Security);
     }
@@ -133,27 +135,17 @@ public sealed class GesNetworkSecurityTests
     [TestMethod]
     public void PlainSessionReportsNone()
     {
-        var (client, server) = Connect(GesNetworkTransport.Stream, GesNetworkSecurity.None, null, null);
+        var (client, server) = Connect(GesNetworkTransport.Stream, GesNetworkClientSecurity.None, null);
         CollectionAssert.AreEqual(new[] { "connected" }, Drain(client));
         Assert.AreEqual(GesNetworkSecurity.None, client.Security);
         Assert.AreEqual(GesNetworkSecurity.None, server.Security);
     }
 
     [TestMethod]
-    public void VerifiedMinimumWithoutPinnedKeyClosesUnverified()
-    {
-        var network = Game();
-        var client = GesNetworkConnection.CreateClient(network, default, 0, ClientOptions(GesNetworkTransport.Stream, GesNetworkSecurity.Verified, null));
-        var server = GesNetworkConnection.CreateServer(network, 0, ServerOptions(GesNetworkTransport.Stream, ServerKey));
-        Exchange(client, server, 0);
-        CollectionAssert.AreEqual(new[] { "closed network.unverified" }, Drain(client));
-    }
-
-    [TestMethod]
     public void ServerWithoutKeyClosesAKeyRequestInsecure()
     {
         var network = Game();
-        var client = GesNetworkConnection.CreateClient(network, default, 0, ClientOptions(GesNetworkTransport.Stream, GesNetworkSecurity.Encrypted, null));
+        var client = GesNetworkConnection.CreateClient(network, default, 0, ClientOptions(GesNetworkTransport.Stream, GesNetworkClientSecurity.Development));
         var server = GesNetworkConnection.CreateServer(network, 0, ServerOptions(GesNetworkTransport.Stream, null));
         Exchange(client, server, 0);
         CollectionAssert.AreEqual(new[] { "closed network.insecure" }, Drain(server));
@@ -165,22 +157,25 @@ public sealed class GesNetworkSecurityTests
     {
         var other = GesNetworkKey.FromPrivateKey(new byte[32]).PublicKey.ToArray();
         var network = Game();
-        var client = GesNetworkConnection.CreateClient(network, default, 0, ClientOptions(GesNetworkTransport.Stream, GesNetworkSecurity.Verified, other));
+        var client = GesNetworkConnection.CreateClient(network, default, 0, ClientOptions(GesNetworkTransport.Stream, GesNetworkClientSecurity.Pinned(other)));
         var server = GesNetworkConnection.CreateServer(network, 0, ServerOptions(GesNetworkTransport.Stream, ServerKey));
         Exchange(client, server, 0);
         CollectionAssert.AreEqual(new[] { "closed network.authenticationFailed" }, Drain(server));
     }
 
     [TestMethod]
-    public void ServerNeedsAKeyAboveSecurityNone()
+    public void EachSideNeedsASecurity()
     {
         Assert.ThrowsExactly<ArgumentException>(() => GesNetworkConnection.CreateServer(Game(), 0, new GesNetworkOptions()));
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkConnection.CreateClient(Game(), default, 0, new GesNetworkOptions()));
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkConnection.CreateClient(Game(), default, 0, GesNetworkOptions.Stream(GesNetworkServerSecurity.None)));
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkClientSecurity.Pinned(new byte[31]));
     }
 
     [TestMethod]
     public void ChangedSealedPacketClosesAStream()
     {
-        var (client, server) = Connect(GesNetworkTransport.Message, GesNetworkSecurity.Verified, ServerKey.PublicKey.ToArray(), ServerKey);
+        var (client, server) = Connect(GesNetworkTransport.Message, Pinned, ServerKey);
         Drain(client);
         client.Send(Commands, [1]);
         Pump(client, server, 1000, packet =>
@@ -194,7 +189,7 @@ public sealed class GesNetworkSecurityTests
     [TestMethod]
     public void ChangedSealedDatagramIsDropped()
     {
-        var (client, server) = Connect(GesNetworkTransport.Datagram, GesNetworkSecurity.Verified, ServerKey.PublicKey.ToArray(), ServerKey);
+        var (client, server) = Connect(GesNetworkTransport.Datagram, Pinned, ServerKey);
         Drain(client);
         client.Send(Commands, [1]);
         Pump(client, server, 1000, packet =>
@@ -215,7 +210,7 @@ public sealed class GesNetworkSecurityTests
         static List<byte[]> Run()
         {
             var network = Game();
-            var client = GesNetworkConnection.CreateClient(network, default, 0, ClientOptions(GesNetworkTransport.Stream, GesNetworkSecurity.Verified, ServerKey.PublicKey.ToArray()));
+            var client = GesNetworkConnection.CreateClient(network, default, 0, ClientOptions(GesNetworkTransport.Stream, Pinned));
             var server = GesNetworkConnection.CreateServer(network, 0, ServerOptions(GesNetworkTransport.Stream, ServerKey));
             var moved = Exchange(client, server, 0);
             server.Accept();

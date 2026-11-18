@@ -190,6 +190,9 @@ public final class GesNetworkConnection {
     /// The id of the transfer the latest successful `send(route:payload:)` on a bulk route queued; -1 before the first.
     public internal(set) var lastTransferId = -1
 
+    // An unset limit is the larger of its default and what the network needs, at most the largest limit.
+    private static func derived(_ limit: Int64?, _ fallback: Int64, _ needed: Int64, _ maximum: Int64) -> Int64 { limit ?? min(max(fallback, needed), maximum) }
+
     private init(network: GesBoundNetwork, client: Bool, token: [UInt8], now: Int64, options: GesNetworkOptions) throws {
         try options.validate()
         if token.count > GesNetworkWire.maximumTokenBytes { throw GesApiError.invalidArgument("A token holds at most 512 bytes.") }
@@ -198,33 +201,51 @@ public final class GesNetworkConnection {
         transport = options.transport
         datagram = options.transport == .datagram
         maxPacketBytes = options.packetLimit
-        maxPending = options.maxPendingReceiveBytes
         framesPerSecond = Int64(options.maxFramesPerSecond)
-        maxSendQueue = options.maxSendQueueBytes
         timeout = options.timeoutMicroseconds
         keepalive = options.keepaliveMicroseconds
         ackDelay = options.ackDelayMicroseconds
         budget = options.sendBudgetBytesPerSecond
-        maxBaseline = options.maxBaselineBytes
-        maxTransfer = options.maxTransferBytes
         deflate = options.deflateTransfers
-        minimumSecurity = options.minimumSecurity
         if client {
-            serverKey = options.serverPublicKey
-            pinned = options.serverPublicKey != nil
+            guard let security = options.clientSecurity else { throw GesApiError.invalidArgument("A client needs a security.") }
+            minimumSecurity = security.level
+            pinned = security.level == .verified
+            serverKey = pinned ? security.serverPublicKey : nil
             key = nil
         } else {
-            key = options.key
+            guard let security = options.serverSecurity else { throw GesApiError.invalidArgument("A server needs a security.") }
+            key = security.serverKey
+            minimumSecurity = key == nil ? .none : .encrypted
             pinned = false
-            if key == nil && minimumSecurity != .none {
-                throw GesApiError.invalidArgument("A server whose lowest security level is above none needs a key.")
-            }
         }
         testKeys = options.insecureTestKeySeed != nil
         testKeySeed = options.insecureTestKeySeed ?? 0
 
         let routes = network.network.routes
         routeCount = routes.count
+        // Unset limits grow to the largest message of the network they bound.
+        var received: Int64 = 0
+        var sent: Int64 = 0
+        var baseline: Int64 = 0
+        var transfer: Int64 = 0
+        for (index, route) in routes.enumerated() {
+            let bytes = Int64(network.roots[index].maxByteCount)
+            let publishes = route.verb == .publishes
+            let local = (route.side == .client) == client
+            if publishes { baseline = max(baseline, bytes) }
+            if route.deliveryClass == .bulk {
+                transfer = max(transfer, bytes)
+            } else if !local {
+                received = max(received, publishes ? bytes + 1 : bytes)
+            } else if route.deliveryClass == .reliable {
+                sent = max(sent, bytes)
+            }
+        }
+        maxPending = Self.derived(options.maxPendingReceiveBytes, GesNetworkOptions.defaultPendingReceiveBytes, received, GesNetworkOptions.maximumBytes)
+        maxSendQueue = Self.derived(options.maxSendQueueBytes, GesNetworkOptions.defaultSendQueueBytes, sent, GesNetworkOptions.maximumBytes)
+        maxBaseline = Self.derived(options.maxBaselineBytes, GesNetworkOptions.defaultBaselineBytes, baseline, Int64(GesNetworkWire.maximumBaselineBytes))
+        maxTransfer = Self.derived(options.maxTransferBytes, GesNetworkOptions.defaultTransferBytes, transfer, Int64(GesNetworkWire.maximumTransferBytes))
         var classes: [GesNetworkClass] = []
         var localSends: [Bool] = []
         var maxBytes: [Int64] = []
@@ -272,8 +293,8 @@ public final class GesNetworkConnection {
         fragmentKeys = [Int64](repeating: 0, count: fragments)
         fragmentOffsets = [Int](repeating: 0, count: fragments)
         fragmentLengths = [Int](repeating: 0, count: fragments)
-        orderedReliable = datagram ? GesNetworkOrderedReceive(retention: options.maxPendingReceiveBytes) : nil
-        orderedBulk = datagram ? GesNetworkOrderedReceive(retention: 2 * (options.maxTransferBytes + Int64(GesNetworkWire.transferHeaderBytes))) : nil
+        orderedReliable = datagram ? GesNetworkOrderedReceive(retention: maxPending) : nil
+        orderedBulk = datagram ? GesNetworkOrderedReceive(retention: 2 * (maxTransfer + Int64(GesNetworkWire.transferHeaderBytes))) : nil
         self.token = token
         self.now = now
         lastReceive = now
@@ -295,10 +316,10 @@ public final class GesNetworkConnection {
     ///   - network: The bound network the server must share.
     ///   - token: At most 512 bytes the server receives with the client's hello, such as a ticket.
     ///   - now: The current time in microseconds, from which the timeout runs.
-    ///   - options: The limits and timings.
+    ///   - options: The limits, transport and `GesNetworkOptions.clientSecurity`.
     /// - Returns: The connection in the `hello` state; its first transmitted packet is the hello.
-    /// - Throws: `GesApiError.invalidArgument` when the token or an option is out of range.
-    public static func makeClient(network: GesBoundNetwork, token: [UInt8] = [], now: Int64, options: GesNetworkOptions = GesNetworkOptions()) throws -> GesNetworkConnection {
+    /// - Throws: `GesApiError.invalidArgument` when the token or an option is out of range, or the client security is unset.
+    public static func makeClient(network: GesBoundNetwork, token: [UInt8] = [], now: Int64, options: GesNetworkOptions) throws -> GesNetworkConnection {
         try GesNetworkConnection(network: network, client: true, token: token, now: now, options: options)
     }
 
@@ -306,10 +327,10 @@ public final class GesNetworkConnection {
     /// - Parameters:
     ///   - network: The bound network the client must share.
     ///   - now: The current time in microseconds, from which the timeout runs.
-    ///   - options: The limits and timings.
+    ///   - options: The limits, transport and `GesNetworkOptions.serverSecurity`.
     /// - Returns: The connection in the `awaitHello` state.
-    /// - Throws: `GesApiError.invalidArgument` when an option is out of range.
-    public static func makeServer(network: GesBoundNetwork, now: Int64, options: GesNetworkOptions = GesNetworkOptions()) throws -> GesNetworkConnection {
+    /// - Throws: `GesApiError.invalidArgument` when an option is out of range, or the server security is unset.
+    public static func makeServer(network: GesBoundNetwork, now: Int64, options: GesNetworkOptions) throws -> GesNetworkConnection {
         try GesNetworkConnection(network: network, client: false, token: [], now: now, options: options)
     }
 
@@ -337,8 +358,8 @@ public final class GesNetworkConnection {
     /// detection or probe timeout; `Int64.max` once closed.
     public var nextDeadline: Int64 {
         if state == .closed { return .max }
-        var deadline = lastReceive + timeout
-        if state == .connected { deadline = min(deadline, lastSend + keepalive) }
+        var deadline = timeout != 0 ? lastReceive + timeout : Int64.max
+        if state == .connected && keepalive != 0 { deadline = min(deadline, lastSend + keepalive) }
         if ackDue { deadline = min(deadline, ackDeadline) }
         if budget > 0 && budgetUnits < 0 && hasPendingFrames() {
             deadline = min(deadline, now + (-budgetUnits + budget - 1) / budget)
@@ -360,7 +381,7 @@ public final class GesNetworkConnection {
         self.now = now
         frameUnits = Self.refill(frameUnits, framesPerSecond * Self.microsecondsPerSecond, elapsed, framesPerSecond)
         budgetUnits = budget == 0 ? budgetCapacity : Self.refill(budgetUnits, budgetCapacity, elapsed, budget)
-        if state != .closed && now - lastReceive >= timeout {
+        if state != .closed && timeout != 0 && now - lastReceive >= timeout {
             closeLocal(GesNetworkCodes.timeout, "", true)
         } else if datagram {
             advanceDatagram()

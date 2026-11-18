@@ -64,6 +64,11 @@ SPLITS = (("schema", ["--wire", "world", "--param", "worldWidth=2000m", "--value
           ("file", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "FileSplitWire"),
           ("schema", ["--model", "view", "--bindings", "--values"], "SchemaSplitModel"),
           ("file", ["--model", "view", "--values"], "FileSplit.Model"))
+# Named schema sets: a wire generation declares the set, split output puts it into the shared file, and a model generation
+# of the same sources in another namespace uses it for its documents.
+SETS = ((ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m", "--values", "--schemas", "RoleSchemas"], "RoleSet.Wire", "SetRolesWire", "file"),
+        (ROLES, ROLE_FILES, ["--model", "view", "--values", "--use-schemas", "RoleSet.Wire.RoleSchemas"], "RoleModels", "SetRolesModel", "schema"),
+        (ROOT / "conformance/fixtures/SchemaGeneration", ["network.gess"], ["--all-roots", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas"], "SetGame", "SetGame", None))
 GENERATED_SWIFT = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
 UNCHECKED_PROGRAM = """using System;
 using Unchecked;
@@ -519,6 +524,13 @@ def main():
                                   "--access", "internal", "--out-dir", str(target / directory), "--split", split], cwd=PACKED.parent, capture_output=True, check=False)
             if run.returncode != 0:
                 raise SystemExit(f"The packed fixture does not generate split: {run.stderr.decode('utf-8', 'replace').strip()}")
+    for directory, files, selection, space, name, split in SETS:
+        for language, target in (("csharp", csharp), ("swift", swift)):
+            output = ["--out-dir", str(target / name), "--split", split] if split else ["-o", str(target / (f"{name}.g.cs" if language == "csharp" else f"{name}.swift"))]
+            run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", *files, *selection, "--language", language, "--namespace", space,
+                                  "--access", "internal", *output], cwd=directory, capture_output=True, check=False)
+            if run.returncode != 0:
+                raise SystemExit(f"The schema set {name} does not generate: {run.stderr.decode('utf-8', 'replace').strip()}")
     for target, generations in HIDING:
         for index, (selection, space) in enumerate(generations):
             (WORK / "swift/Sources" / target).mkdir(parents=True, exist_ok=True)

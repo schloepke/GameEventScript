@@ -342,16 +342,29 @@ encoder's output and accepted and rejected streams.
 Each connection has receive and send limits. The defaults are fixed values of this
 document; the host may change them per connection.
 
+> **Since: Unreleased** — derived limits
+
+A limit the host leaves unset whose default below names a need takes the larger of its
+default and that need, at most 1073741824, so a bound network never exceeds a default
+limit by its own largest message. A value the host sets applies unchanged. The needs are
+the largest encodings of the roots of the bound network:
+
+- pending received bytes: the largest message this side receives on a route that is not
+  `bulk`, with the mode byte of a topic message;
+- queued reliable bytes to send: the largest root of a `reliable` route this side sends;
+- baseline limit: the largest root of a topic;
+- transfer limit: the largest root of a `bulk` route.
+
 | Limit | Default | Exceeded |
 | --- | --- | --- |
 | largest packet received and sent, 1200 to 65535 bytes; 0 selects the default | 16384; 1200 on a datagram transport | `network.packetTooLarge` |
-| baseline limit: full record bytes of a topic's ring, 0 to 1073741824 | 65536 | older states leave the ring |
-| pending received bytes: incomplete messages and undelivered events, without bulk, 1 to 1073741824 | 4194304 | `network.queueFull` |
-| transfer limit: data of one transfer sent and received, 0 to 1073741824 | 67108864 | status `messageTooLarge`; `network.transferTooLarge` |
+| baseline limit: full record bytes of a topic's ring, 0 to 1073741824 | 65536, or the need | older states leave the ring |
+| pending received bytes: incomplete messages and undelivered events, without bulk, 1 to 1073741824 | 4194304, or the need | `network.queueFull` |
+| transfer limit: data of one transfer sent and received, 0 to 1073741824 | 67108864, or the need | status `messageTooLarge`; `network.transferTooLarge` |
 | frames received per second, token bucket of one second, 1 to 1000000 | 4096 | `network.rateExceeded` |
-| queued reliable bytes to send, 1 to 1073741824 | 1048576 | status `queueFull` |
-| timeout without a received packet, 1 µs to 1 h | 10 s | `network.timeout` |
-| keepalive after the last sent packet, 1 µs to 1 h | 1 s | |
+| queued reliable bytes to send, 1 to 1073741824 | 1048576, or the need | status `queueFull` |
+| timeout without a received packet, 0 to 1 h, 0 for none | 10 s | `network.timeout` |
+| keepalive after the last sent packet, 0 to 1 h, 0 for none | 1 s | |
 | delay of an acknowledgement, 0 to 1 h | 10 ms | |
 | send budget in bytes per second, 0 to 1073741824, 0 for none | 0 | sending waits |
 
@@ -422,10 +435,12 @@ the packet asked, and the fragments of messages it carried. A fragment names its
 and the range of bytes it carried. A packet that does not ask is settled when sent; an
 asking packet stays outstanding until it is acknowledged or lost. Only an outstanding
 packet needs its fragments again, so the recorded fragments are those from the oldest
-outstanding packet among the last 1023 sent on, at most 16384. Before a data packet is written, the packet 1024 before it is declared lost
-when that one is still outstanding, so its fragments may be resent in the new packet; an
-outstanding packet due to leave makes a data packet due as waiting frames do. A packet ends before a message frame whose fragment would
-exceed 16384 recorded fragments.
+outstanding packet among the last 1023 sent on, at most 16384. While the packet 1024
+before the next one is still outstanding, the send window is full: no frame is due, and
+a data packet is written only for an acknowledgement, the keepalive or a probe. Before
+such a packet is written, that outstanding packet is declared lost, so its fragments are
+due again. A packet ends before a message frame whose fragment would exceed 16384
+recorded fragments.
 
 **Acknowledgements received.** The newest sequence of an acknowledgement names the
 newest packet sent with that sequence: with `n` packets sent, the packet
@@ -782,16 +797,16 @@ A session reaches one of three levels:
 A connection's level is `none` until it is connected. A server reports `encrypted` for
 every encrypted session, because it cannot tell whether the client pinned its key.
 
-The client's options hold the lowest level it accepts, `verified` by default, and
-optionally the pinned server public key of 32 bytes. Its first `hello` and its answer
-to a `retry` with a key follow its options:
+> **Since: Unreleased** — client and server security
 
-| Pinned key | Lowest level | First `hello` | `retry` with a key |
+The client's options hold its security; a client without one is a usage error. Its first
+`hello`, its answer to a `retry` with a key and the lowest level it reaches follow it:
+
+| Client security | First `hello` | `retry` with a key | Lowest level |
 | --- | --- | --- | --- |
-| yes | any | sealed with the pinned key | its key is ignored |
-| no | `verified` | key request | close with `network.unverified` |
-| no | `encrypted` | key request | the client takes the key and sends a sealed `hello` |
-| no | `none` | plain, with the token | the client takes the key and sends a sealed `hello` |
+| pinned, with the server public key of 32 bytes | sealed with the pinned key | its key is ignored | `verified` |
+| development | key request | the client takes the key and sends a sealed `hello` | `encrypted` |
+| none | plain, with the token | the client takes the key and sends a sealed `hello` | `none` |
 
 A client without a pinned key takes the key of each `retry` that carries one, so a key
 from a later `retry` replaces an earlier one: until a `welcome` authenticates, any of them
@@ -801,9 +816,8 @@ answer to a `hello` that is not sealed, and only with an empty cookie and a key;
 [datagram handshake](#datagram-handshake) processes a `retry` in the state `Hello` after
 the client sent its first `hello` and ignores it otherwise.
 
-The server's options hold a key or none and the lowest level it accepts, `verified` by
-default; `verified` and `encrypted` mean the same for a server. A server whose lowest
-level is above `none` needs a key; creating it without one is a usage error. A server
+The server's options hold its security, a key of its own or none; a server without a
+security is a usage error. A server
 checks the protocol and the hashes of every `hello` first and closes a difference
 without encryption. Then:
 
@@ -957,7 +971,6 @@ vectors do not establish these properties; reviews of the code do.
 | `network.transferCorrupt` | a transfer's header, compressed data or hash is invalid; cancels the transfer |
 | `network.transferCancelled` | the host cancelled a transfer without its own code |
 | `network.insecure` | a server without a key receives a key request or a sealed `hello` |
-| `network.unverified` | a client that requires `verified` has no pinned key and receives a `retry` with a key |
 | `network.authenticationFailed` | a sealed `hello` does not authenticate, an X25519 result is 32 zero bytes, or a sealed `welcome` or packet does not authenticate on a stream or message transport |
 
 ## Security
@@ -966,7 +979,7 @@ A session that is not encrypted neither hides nor authenticates anything: the to
 shown to whoever can read the transport and the peer's identity is not proven. Such a
 session belongs on a transport that protects both, such as TLS; a browser client uses
 WebSocket only over `wss`. The in-process transport and TLS need no encryption of their
-own; their hosts give the server no key and set the lowest level to `none`.
+own; their hosts give both sides the security none.
 
 An [encrypted](#encryption) session hides and authenticates every packet after
 `welcome` and the token. It does not hide the `hello` and `retry` fields, a plain
@@ -1019,9 +1032,23 @@ socket listeners and connects refuse options and connections that use it.
 | server key | `GesNetworkKey` | `GesNetworkKey` |
 | security level | `GesNetworkSecurity` | `GesNetworkSecurity` |
 
-The options hold the [encryption](#security-levels) settings: the lowest level, the
-client's pinned server public key, the server's key and the insecure test seed for
-[ephemeral keys](#ephemeral-keys). A connection reports the level it reached. A server key
+The options hold the [encryption](#security-levels) settings: the client's security,
+the server's security and the insecure test seed for [ephemeral keys](#ephemeral-keys).
+The default options set no security; a connection or listener needs the security of its
+side, and the other side's is ignored. A connection reports the level it reached.
+
+> **Since: Unreleased** — presets
+
+Presets create options with a transport and the security of one side; the other values
+keep their defaults:
+
+| Preset | Transport | Security | Other values |
+| --- | --- | --- | --- |
+| in process | message | none on both sides | packets of 65535 bytes, no acknowledgement delay, no timeout, no keepalive |
+| message, for example WebSocket | message | the given client or server security | |
+| stream, for example TCP | stream | the given client or server security | |
+| datagram, for example UDP | datagram | the given client or server security | |
+ A server key
 is generated from the system's random generator or created from a private key of 32
 bytes; it exposes its public key.
 

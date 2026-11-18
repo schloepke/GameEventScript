@@ -107,6 +107,8 @@ public sealed partial class GesNetworkConnection
 
     private bool HasPendingDatagramFrames()
     {
+        // A full send window (the packet 1024 before the next one still outstanding) holds every frame back.
+        if (_sentCount >= RecordedPackets && _recordOutstanding[_sentCount % RecordedPackets]) return false;
         if (_cancels.PendingCount > 0 || _sendReliable.Lost.Count > 0 || _sendReliable.HasNew || _sendBulk.Lost.Count > 0 || _sendBulk.HasNew) return true;
         foreach (var slot in _sendLatest)
         {
@@ -544,15 +546,16 @@ public sealed partial class GesNetworkConnection
     {
         var sent = _sentCount;
         var slot = sent % RecordedPackets;
-        // The record of the packet 1024 before leaves; it is lost when still outstanding.
+        // The record of the packet 1024 before leaves; while that one is outstanding the send window is full: no frames,
+        // and a packet sent anyway declares it lost.
         var evicted = sent >= RecordedPackets && _recordOutstanding[slot];
         // Only outstanding packets need their fragments again: the room counts from the oldest one that stays.
         var oldest = Math.Max(_oldestOutstanding, sent - RecordedPackets + 1);
         while (oldest < sent && !_recordOutstanding[oldest % RecordedPackets]) oldest++;
         var used = oldest < sent ? _fragmentTail - _recordFragments[oldest % RecordedPackets] : 0;
         var room = (int)(RecordedFragments - used);
-        var frames = (evicted || HasPendingDatagramFrames()) && (_budget == 0 || _budgetUnits >= 0) && room > 0;
-        var keepalive = _now - _lastSend >= _keepalive;
+        var frames = HasPendingDatagramFrames() && (_budget == 0 || _budgetUnits >= 0) && room > 0;
+        var keepalive = _keepalive != 0 && _now - _lastSend >= _keepalive;
         if (!frames && !(_ackDue && _now >= _ackDeadline) && !keepalive && !_probeDue) return 0;
         if (evicted) LosePacket(sent - RecordedPackets);
 

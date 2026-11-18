@@ -53,12 +53,12 @@ public final class GesNetworkSocketListener {
     ///   - host: The local address, such as `127.0.0.1` or `::`.
     ///   - port: The local port; 0 lets the system choose.
     ///   - network: The bound network of every session.
-    ///   - options: The options of every server connection, using `.stream`; the defaults when omitted.
+    ///   - options: The options of every server connection, using `.stream`.
     /// - Returns: The listener.
     /// - Throws: `GesApiError.invalidArgument` when the options use another transport, name an insecure test key seed or are out of range, or
-    ///   name no key while their lowest security level is above none, as the defaults do; a SwiftNIO error when the
+    ///   set no server security; a SwiftNIO error when the
     ///   address cannot be bound.
-    public static func listenTcp(host: String, port: Int, network: GesBoundNetwork, options: GesNetworkOptions? = nil) async throws -> sending GesNetworkSocketListener {
+    public static func listenTcp(host: String, port: Int, network: GesBoundNetwork, options: GesNetworkOptions) async throws -> sending GesNetworkSocketListener {
         try await listen(host: host, port: port, path: nil, network: network, options: options)
     }
 
@@ -68,27 +68,24 @@ public final class GesNetworkSocketListener {
     ///   - port: The local port; 0 lets the system choose.
     ///   - path: The request path clients upgrade on, starting with `/`; other paths receive 404.
     ///   - network: The bound network of every session.
-    ///   - options: The options of every server connection, using `.message`; the defaults when omitted.
+    ///   - options: The options of every server connection, using `.message`.
     /// - Returns: The listener. It speaks plain `ws`; a browser client needs `wss` through a TLS-terminating proxy.
     /// - Throws: `GesApiError.invalidArgument` when the path does not start with `/`, or the options use another
-    ///   transport, name an insecure test key seed or are out of range, or name no key while their lowest security level is above none, as the
-    ///   defaults do; a SwiftNIO error when the address cannot be bound.
-    public static func listenWebSocket(host: String, port: Int, path: String, network: GesBoundNetwork, options: GesNetworkOptions? = nil) async throws -> sending GesNetworkSocketListener {
+    ///   transport, name an insecure test key seed or are out of range, or set no server security; a SwiftNIO error when the address cannot be bound.
+    public static func listenWebSocket(host: String, port: Int, path: String, network: GesBoundNetwork, options: GesNetworkOptions) async throws -> sending GesNetworkSocketListener {
         if !path.hasPrefix("/") { throw GesApiError.invalidArgument("The path starts with '/'.") }
         return try await listen(host: host, port: port, path: path, network: network, options: options)
     }
 
     // The options of every server connection with the given transport, checked by creating a connection, so a
     // listener never accepts clients it cannot serve; returns them with the packet limit.
-    static func resolve(_ options: GesNetworkOptions?, _ transport: GesNetworkTransport, _ network: GesBoundNetwork) throws -> (GesNetworkOptions, Int) {
-        var resolved = options ?? GesNetworkOptions()
-        if options == nil { resolved.transport = transport }
+    static func resolve(_ resolved: GesNetworkOptions, _ transport: GesNetworkTransport, _ network: GesBoundNetwork) throws -> (GesNetworkOptions, Int) {
         if resolved.transport != transport { throw GesApiError.invalidArgument("The options must use the \(transport) transport.") }
         if resolved.insecureTestKeySeed != nil { throw GesApiError.invalidArgument("A socket transport refuses insecure test keys.") }
         return (resolved, try GesNetworkConnection.makeServer(network: network, now: 0, options: resolved).maxPacketBytes)
     }
 
-    private static func listen(host: String, port: Int, path: String?, network: GesBoundNetwork, options: GesNetworkOptions?) async throws -> sending GesNetworkSocketListener {
+    private static func listen(host: String, port: Int, path: String?, network: GesBoundNetwork, options: GesNetworkOptions) async throws -> sending GesNetworkSocketListener {
         let (resolved, limit) = try resolve(options, path == nil ? .stream : .message, network)
         let queue = GesNetworkSocketQueue()
         let channel = try await ServerBootstrap(group: MultiThreadedEventLoopGroup.singleton)

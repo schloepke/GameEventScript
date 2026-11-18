@@ -16,12 +16,12 @@ extension GesNetworkSocketListener {
     ///   - host: The local address, such as `127.0.0.1` or `::`.
     ///   - port: The local port; 0 lets the system choose.
     ///   - network: The bound network of every session.
-    ///   - options: The options of every server connection, using `.datagram`; the defaults when omitted.
+    ///   - options: The options of every server connection, using `.datagram`.
     /// - Returns: The listener. Its sessions send through its socket, so close it only after them.
     /// - Throws: `GesApiError.invalidArgument` when the options use another transport, name an insecure test key seed or are out of range, or
-    ///   name no key while their lowest security level is above none, as the defaults do; a SwiftNIO error when the
+    ///   set no server security; a SwiftNIO error when the
     ///   address cannot be resolved or bound.
-    public static func listenUdp(host: String, port: Int, network: GesBoundNetwork, options: GesNetworkOptions? = nil) async throws -> sending GesNetworkSocketListener {
+    public static func listenUdp(host: String, port: Int, network: GesBoundNetwork, options: GesNetworkOptions) async throws -> sending GesNetworkSocketListener {
         let (resolved, limit) = try resolve(options, .datagram, network)
         let local = try await NIOThreadPool.singleton.runIfActive { try SocketAddress.makeAddressResolvingHost(host, port: port) }
         let queue = GesNetworkSocketQueue()

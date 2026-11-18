@@ -34,7 +34,7 @@ public sealed class GesNetworkGeneratedCodeTests
     public void TypedFunctionsSendTheEncodedRecords()
     {
         var network = Network().Bind(new GesSchemaParameters().With("worldSize", "2km"));
-        var plain = new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None };
+        var plain = new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None };
         var loop = new GesNetworkLoopback(GesNetworkConnection.CreateClient(network, default, 0, plain), GesNetworkConnection.CreateServer(network, 0, plain));
         loop.Advance(0);
         Assert.AreEqual(GesNetworkEventKind.Connecting, loop.Server.NextEvent().Kind);

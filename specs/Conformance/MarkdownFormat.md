@@ -937,9 +937,10 @@ Requires `network-api` and no GES source. `networkApi.sources` lists schema sour
 `schemaApi`, `clientSources` optionally different texts for the client, and `network` the
 [network](../Network.md#declaration) both sides bind. `options` and `clientOptions` (default: the
 server's) set the connection options by their portable names (`transport` is `message`, `stream` or
-`datagram`, `deflateTransfers` is a Boolean, `minimumSecurity` is `none`, `encrypted` or `verified` and
-defaults to `none` in the corpus, `key` is the server's private key and `serverPublicKey` the client's
-pinned key as 64 lowercase hexadecimal digits, `testKeySeed` is the
+`datagram`, `deflateTransfers` is a Boolean, `clientSecurity` is `none`, `development` or `pinned` and
+`serverSecurity` `none` or `key`, both defaulting to `none` in the corpus, `key` is the server's private key
+and present exactly with `serverSecurity: key`, `serverPublicKey` is the client's pinned key and present
+exactly with `clientSecurity: pinned`, both as 64 lowercase hexadecimal digits, `testKeySeed` is the
 [insecure test seed](../Network.md#ephemeral-keys), the others are integers), and `token` is the client's token
 as lowercase hexadecimal. `link` is `loopback` (default), `none`, or a simulated link with `seed`,
 `latencyMicroseconds`, `jitterMicroseconds` and optionally `lossPerMille`, `duplicatePerMille` and

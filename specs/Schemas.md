@@ -1923,6 +1923,38 @@ public enum Game {
 }
 ```
 
+### Schema sets
+
+> **Since: Unreleased**
+
+`--schemas <Name>` (option `SchemaSet`) generates one public schema set type named `Name` in the generation's namespace,
+a C# `static class` and a Swift `enum` without cases, under `--access`. It embeds the schema sources under their file
+names, parses them once on first use and holds:
+
+- `Hash` (Swift `hash`), a `ulong` FNV-1a 64 hash over each source's name and text and each parameter's name and literal,
+  each followed by a zero byte, in generation order;
+- `Set` (Swift `set`), the parsed `GesSchemaSet`, and `Parameters` (Swift `parameters()`), the generation's parameter
+  values as a new instance per access (Swift per call);
+- `Bind(root, bindingHash)` and `BindNetwork(name, hash)` (Swift `bind(_:bindingHash:)` and `bindNetwork(_:hash:)`), which
+  bind with those parameters and fail when the binding or network hash differs from the given one (C#
+  `InvalidOperationException`, Swift the nested error `Mismatch` with the name);
+- `ReadDocument(text, roots)` (Swift `readDocument(_:roots:)`), document reading against the embedded sources as in
+  [model documents](#model-documents).
+
+The set replaces the per-generation helpers that `--values` and `--documents` otherwise generate: value conversions
+bind through `Bind`, model documents read through `ReadDocument`, and each [network](#network-constants) type adds
+`Bound` (Swift `bound`), the network bound once through `BindNetwork` with the generated hash, which throws on access
+when it no longer binds. `--use-schemas <A.Name>` (option `UseSchemaSet`) declares no set and uses the set that another
+generation declared under its qualified name, so wire code and models of one target embed the sources once; that
+generation must hold every source and parameter the using one needs. Both options together, a name that is no
+identifier or a keyword, or a qualified name with an empty or invalid part fail with `generate.usage`; a set name that
+another type of the generation has fails with `generate.nameCollision`. Model code with `--schemas` declares its set
+with the model sources and no parameters.
+
+`--import <Module>` (option `Imports`), repeatable, adds `import Module` lines to generated Swift after the runtime
+imports, for a set or models in another module; with C# it fails with `generate.usage`, since C# names the set
+qualified. The [split](#split-output) manifest names `schemaSet`, `useSchemaSet` and `imports` only when given. Without these options the generated code is unchanged.
+
 ### Split output
 
 > **Since: 0.5.0**
@@ -1952,7 +1984,7 @@ roots and hashes, so that it changes only with its own declarations; the single 
 The directory holds the manifest `.ges-generated.json`, canonical JSON with the members `manifest` (1), `code` (`wire` or
 `model`), `language`, `split` (`schema` or `file`), `namespace`, `access`, `values` (also `true` with `documents`, whose
 code includes the value conversions, so that equal code has an equal manifest), `bindings`, `documents` only when given, `checkedExclusivity`,
-`extendNamespace` (the part that `--extend-namespace` names) only when given, `roots` (each with `name`, `hash` and for wire code `bindingHash`, which a network leaves out), `parameters` (as in the
+`extendNamespace` (the part that `--extend-namespace` names) only when given, `schemaSet`, `useSchemaSet` and `imports` only when given, `roots` (each with `name`, `hash` and for wire code `bindingHash`, which a network leaves out), `parameters` (as in the
 [generation layout](#generation-layout); empty for models) and `files`, the generated file names in ordinal order without
 the manifest. Without `--check`, `generate` writes every file whose bytes changed, keeps unchanged files with their time
 stamps, removes the files that the previous manifest lists and that are no longer generated, and leaves every other file

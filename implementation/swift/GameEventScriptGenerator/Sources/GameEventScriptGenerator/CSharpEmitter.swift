@@ -45,7 +45,8 @@ enum GesCSharpEmitter {
         if !layout.networks.isEmpty { prologue.line("using GameEventScript.Network;") }
         prologue.blank()
         let header = GesSchemaPlanner.header(layout)
-        let holder = "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
+        let schemaSet = try GesSchemaSetReference.from(options)
+        let holder = schemaSet?.qualified ?? "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
         let global = "global::" + space.map { $0 + "." }.joined()
         let computed = GesSchemaPlanner.computed(types, GesComputedEmitter.helper(options.namespace, GesSchemaPlanner.suffix(header, options)), swift: false)
         let sets = GesSchemaPlanner.tagSets(types, global)
@@ -57,6 +58,7 @@ enum GesCSharpEmitter {
         }
         var topLevel = GesSchemaPlanner.topLevel(types, sets, layout.networks)
         if options.models != nil { try GesSchemaPlanner.reserveSharedRoots(layout, types, &topLevel) }
+        try schemaSet?.reserve(&topLevel)
         let context = Context(
             layout: layout,
             elements: GesSchemaPlanner.keyedElements(types),
@@ -103,7 +105,7 @@ enum GesCSharpEmitter {
         for network in layout.networks {
             document.units.append(
                 GesCodeUnit(owner: network.name) { code in
-                    self.network(&code, network, access) { root in
+                    self.network(&code, network, access, schemaSet?.qualified) { root in
                         // A packed root that the models declare is their struct; its wire members extend it.
                         let type = types.first { $0.name == root }!
                         return (type.layout.packedWidth > 0 && packed == nil ? models : context.global) + root
@@ -113,7 +115,11 @@ enum GesCSharpEmitter {
         }
         try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: false)
         let shared = options.split != .none
-        if options.values { document.units.append(GesCodeUnit(owner: "") { code in valuesHolder(&code, layout, holder, shared: shared) }) }
+        if let setName = schemaSet?.declared {
+            document.units.append(GesCodeUnit(owner: "") { code in GesSchemaSetReference.writeCSharp(&code, setName, access, layout.sources, layout.parameters, networks: !layout.networks.isEmpty) })
+        } else if options.values && schemaSet == nil {
+            document.units.append(GesCodeUnit(owner: "") { code in valuesHolder(&code, layout, holder, shared: shared) })
+        }
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
             let computed = context.computed
             let values = computed.needsValues(types.map { ($0.name, $0.layout.computed) })
@@ -874,12 +880,21 @@ enum GesCSharpEmitter {
 
     // The constants of a network, its hash, the index of each route and the rate of each topic that has one, and a
     // function per route that encodes its root and sends or publishes it.
-    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String, _ rootType: (String) -> String) {
+    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String, _ schemaSet: String?, _ rootType: (String) -> String) {
         code.line("/// <summary>The network <c>:\(network.name)</c>: its hash, the index of each route, the rate of each topic that has one and a typed function per route.</summary>")
         code.line("\(access) static class \(network.name)")
         code.open("{")
         code.line("/// <summary>The network hash over the routes and their bound roots, which the handshake compares.</summary>")
         code.line("public const ulong Hash = 0x\(GesSchemaLayoutJson.hex(network.hash))UL;")
+        if let schemaSet {
+            code.blank()
+            code.line("private static GesBoundNetwork? __bound;")
+            code.blank()
+            code.line("/// <summary>Gets the network bound with the parameters of the schema set, checked against <see cref=\"Hash\"/> on first access.</summary>")
+            code.line("/// <exception cref=\"GesSchemaException\">The sources no longer parse or the network no longer binds.</exception>")
+            code.line("/// <exception cref=\"global::System.InvalidOperationException\">The bound network hash differs from <see cref=\"Hash\"/>.</exception>")
+            code.line("public static GesBoundNetwork Bound => __bound ??= \(schemaSet).BindNetwork(\(GesSchemaPlanner.literal(network.name, swift: false)), Hash);")
+        }
         for route in network.routes {
             code.blank()
             code.line("/// <summary>The index of the route <c>\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)</c>.</summary>")

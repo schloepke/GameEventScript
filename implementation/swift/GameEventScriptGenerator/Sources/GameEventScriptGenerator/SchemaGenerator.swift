@@ -222,6 +222,9 @@ public enum GesSchemaGenerator {
         if options.documents { json.boolean("documents", true) }
         json.boolean("checkedExclusivity", options.checkedExclusivity)
         if let extended = options.extendNamespace { json.string("extendNamespace", extended) }
+        if let schemaSet = options.schemaSet { json.string("schemaSet", schemaSet) }
+        if let useSchemaSet = options.useSchemaSet { json.string("useSchemaSet", useSchemaSet) }
+        if !options.imports.isEmpty { json.strings("imports", options.imports) }
         json.beginArray("roots")
         for root in roots {
             let (hash, bindingHash) = hashes(root)

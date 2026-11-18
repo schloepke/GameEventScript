@@ -38,8 +38,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"minimumSecurity": "verified", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
+  options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"clientSecurity": "pinned", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
   link: "none"
   steps:
     - {"transmit": "client"}
@@ -90,8 +90,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"transport": "stream", "minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"transport": "stream", "minimumSecurity": "verified", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
+  options: {"transport": "stream", "serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"transport": "stream", "clientSecurity": "pinned", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
   link: "none"
   steps:
     - {"transmit": "client"}
@@ -142,8 +142,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"transport": "datagram", "minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"transport": "datagram", "minimumSecurity": "verified", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
+  options: {"transport": "datagram", "serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"transport": "datagram", "clientSecurity": "pinned", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
   link: "none"
   steps:
     - {"transmit": "client"}
@@ -183,7 +183,7 @@ network:
 
 ## Test: Without a pinned key the server key arrives in a retry
 
-A client without a pinned key asks for the key; the server answers with a `retry` that carries its public key, and the client seals its next `hello` to it. The session is `encrypted`, not `verified`.
+A client in development mode asks for the key; the server answers with a `retry` that carries its public key, and the client seals its next `hello` to it. The session is `encrypted`, not `verified`.
 
 ### Case description
 
@@ -194,8 +194,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"minimumSecurity": "encrypted", "testKeySeed": 7}
+  options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"clientSecurity": "development", "testKeySeed": 7}
   link: "none"
   steps:
     - {"transmit": "client"}
@@ -229,7 +229,7 @@ network:
 
 ## Test: A server with a key encrypts a plain client
 
-A client that accepts any level sends a plain `hello`; a server with a key answers with its key and the session is `encrypted`.
+A client without security sends a plain `hello`; a server with a key answers with its key and the session is `encrypted`.
 
 ### Case description
 
@@ -240,8 +240,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"minimumSecurity": "none", "testKeySeed": 7}
+  options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"testKeySeed": 7}
   link: "none"
   steps:
     - {"transmit": "client"}
@@ -275,7 +275,7 @@ network:
 
 ## Test: Without a key the session stays plain
 
-Neither side has a key and both accept the level none; both report `none`.
+Neither side has a security; both report `none`.
 
 ### Case description
 
@@ -308,38 +308,6 @@ network:
 ```
 ---
 
-## Test: A client that requires verification closes without a pinned key
-
-The client's lowest level is `verified` but it has no pinned key, so it closes with `network.unverified` before sending anything.
-
-### Case description
-
-```yaml
-gesBlock: case
-id: unverified
-networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
-  network: "Game"
-  token: "74"
-  options: {"minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"minimumSecurity": "verified"}
-  steps:
-    - {"advance": 0}
-```
-
-### Expectation
-
-```yaml
-gesBlock: expect
-network:
-  trace:
-    - "client closed network.unverified local \"\""
-    - "server closed network.unverified peer \"\""
-  client: {"state": "closed"}
-  server: {"state": "closed"}
-```
----
-
 ## Test: A server without a key closes a key request
 
 The client asks for the key of a server that has none: the server closes with `network.insecure`.
@@ -354,7 +322,7 @@ networkApi:
   network: "Game"
   token: "74"
   options: {}
-  clientOptions: {"minimumSecurity": "encrypted", "testKeySeed": 7}
+  clientOptions: {"clientSecurity": "development", "testKeySeed": 7}
   steps:
     - {"advance": 0}
 ```
@@ -386,7 +354,7 @@ networkApi:
   network: "Game"
   token: "74"
   options: {}
-  clientOptions: {"minimumSecurity": "encrypted", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
+  clientOptions: {"clientSecurity": "pinned", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
   link: "none"
   steps:
     - {"transmit": "client"}
@@ -419,8 +387,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"minimumSecurity": "verified", "serverPublicKey": "2fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74", "testKeySeed": 7}
+  options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"clientSecurity": "pinned", "serverPublicKey": "2fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74", "testKeySeed": 7}
   steps:
     - {"advance": 0}
 ```
@@ -451,8 +419,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"minimumSecurity": "verified", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
+  options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"clientSecurity": "pinned", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
   link: "none"
   steps:
     - {"transmit": "client"}
@@ -493,8 +461,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"transport": "datagram", "minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"transport": "datagram", "minimumSecurity": "verified", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
+  options: {"transport": "datagram", "serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"transport": "datagram", "clientSecurity": "pinned", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
   link: "none"
   steps:
     - {"transmit": "client"}
@@ -537,8 +505,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"transport": "datagram", "minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"transport": "datagram", "minimumSecurity": "encrypted", "testKeySeed": 7}
+  options: {"transport": "datagram", "serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"transport": "datagram", "clientSecurity": "development", "testKeySeed": 7}
   link: "none"
   steps:
     - {"receive": {"side": "client", "bytes": "0200202fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74"}}
@@ -588,8 +556,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"minimumSecurity": "verified", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
+  options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"clientSecurity": "pinned", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
   link: "none"
   steps:
     - {"transmit": "client"}
@@ -631,8 +599,8 @@ networkApi:
   sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
-  options: {"transport": "datagram", "minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
-  clientOptions: {"transport": "datagram", "minimumSecurity": "verified", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
+  options: {"transport": "datagram", "serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"transport": "datagram", "clientSecurity": "pinned", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
   link: "none"
   steps:
     - {"transmit": "client"}
@@ -663,32 +631,4 @@ network:
     - "server message 0 05"
   client: {"state": "connected"}
   server: {"state": "connected"}
-```
----
-
-## Test: A server above the level none needs a key
-
-Creating a server connection whose lowest level is above none without a key is an invalid argument.
-
-### Case description
-
-```yaml
-gesBlock: case
-id: key-required
-networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
-  network: "Game"
-  token: "74"
-  options: {"minimumSecurity": "encrypted"}
-  clientOptions: {}
-  steps:
-    - {"advance": 0}
-```
-
-### Expectation
-
-```yaml
-gesBlock: expect
-network:
-  error: {"code": "invalidArgument"}
 ```

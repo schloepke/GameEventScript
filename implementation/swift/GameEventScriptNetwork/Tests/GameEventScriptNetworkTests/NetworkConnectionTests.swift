@@ -231,6 +231,39 @@ final class NetworkConnectionTests: XCTestCase {
         XCTAssertEqual(drain(lone), ["closed network.timeout '' local"])
     }
 
+    func testTheInProcessPresetNeverTimesOut() throws {
+        let options = GesNetworkOptions.inProcess()
+        XCTAssertEqual(options.transport, .message)
+        XCTAssertEqual(options.maxPacketBytes, 65535)
+        XCTAssertEqual([options.ackDelayMicroseconds, options.timeoutMicroseconds, options.keepaliveMicroseconds], [0, 0, 0])
+        let loop = try connected(options)
+        XCTAssertEqual(loop.client.nextDeadline, Int64.max)
+        try loop.advance(3_600_000_000)
+        XCTAssertEqual(loop.client.state, .connected)
+        XCTAssertEqual(loop.server.state, .connected)
+        var buffer = [UInt8](repeating: 0, count: 1200)
+        XCTAssertEqual(try loop.client.transmit(into: &buffer), 0)
+
+        let lone = try GesNetworkConnection.makeServer(network: try game(), now: 0, options: options)
+        try lone.advance(3_600_000_000)
+        XCTAssertEqual(lone.state, .awaitHello)
+    }
+
+    func testPresetsSetTheTransportAndOneSecurity() throws {
+        let key = try GesNetworkKey(privateKey: (1...32).map { UInt8($0) })
+        let client = GesNetworkOptions.datagram(client: .development)
+        XCTAssertEqual(client.transport, .datagram)
+        XCTAssertEqual(client.clientSecurity, .development)
+        XCTAssertNil(client.serverSecurity)
+        let server = GesNetworkOptions.stream(server: .key(key))
+        XCTAssertEqual(server.transport, .stream)
+        XCTAssertEqual(server.serverSecurity?.serverKey?.publicKey, key.publicKey)
+        XCTAssertNil(server.clientSecurity)
+        XCTAssertEqual(GesNetworkOptions.message(server: .unencrypted).transport, .message)
+        XCTAssertThrowsError(try GesNetworkConnection.makeServer(network: try game(), now: 0, options: client))
+        XCTAssertThrowsError(try GesNetworkConnection.makeClient(network: try game(), now: 0, options: server))
+    }
+
     func testRoundTripFollowsTheSimulatedLatency() throws {
         let (client, server) = try pair(GesNetworkOptions.plain)
         let simulator = try GesNetworkSimulator(client: client, server: server, seed: 7, latencyMicroseconds: 20_000, jitterMicroseconds: 0)
@@ -440,13 +473,113 @@ final class NetworkConnectionTests: XCTestCase {
         XCTAssertThrowsError(try loop.server.cancel(route: blob, transferId: 0))
         XCTAssertThrowsError(try loop.server.cancel(route: bulkBlob, transferId: 1, code: "bad code"))
     }
+
+    func testTransferAboveThePendingReceiveLimitArrivesOnMessageTransport() throws { try transferAboveThePendingReceiveLimit(.message) }
+
+    func testTransferAboveThePendingReceiveLimitArrivesOnStreamTransport() throws { try transferAboveThePendingReceiveLimit(.stream) }
+
+    func testTransferAboveThePendingReceiveLimitArrivesOnDatagramTransport() throws { try transferAboveThePendingReceiveLimit(.datagram) }
+
+    private func transferAboveThePendingReceiveLimit(_ transport: GesNetworkTransport) throws {
+        let network = try game(
+            """
+            wire schema :Arena as { data: :List(:Number integer between 0 and 255) max 6000000 }
+            network :Game as { server sends :Arena bulk }
+            """
+        )
+        var options = GesNetworkOptions.plain
+        options.transport = transport
+        options.deflateTransfers = false
+        options.maxPendingReceiveBytes = 1_048_576
+        options.maxSendQueueBytes = 1_048_576
+        options.maxFramesPerSecond = 1_000_000
+        let client = try GesNetworkConnection.makeClient(network: network, now: 0, options: options)
+        let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: options)
+        let simulator = try GesNetworkSimulator(client: client, server: server, seed: 1, latencyMicroseconds: 0, jitterMicroseconds: 0)
+        try handshake(simulator)
+        for _ in 0..<100 where client.state != .connected { try simulator.advance(simulator.nextDeadline) }
+        XCTAssertEqual(client.state, .connected)
+        let data = bytes(5 * 1_048_576, 3)
+        XCTAssertEqual(server.send(route: 0, payload: data), .queued)
+        var received: [UInt8]?
+        var closed = ""
+        var step = 0
+        while step < 20_000 && received == nil && client.state == .connected {
+            try simulator.advance(simulator.now + 1000)
+            while true {
+                let next = client.nextEvent()
+                if next.kind == .none { break }
+                if next.kind == .message { received = Array(next.payload) }
+                if next.kind == .closed { closed = next.code }
+            }
+            while server.nextEvent().kind != .none {}
+            step += 1
+        }
+        XCTAssertEqual(client.state, .connected, closed)
+        XCTAssertTrue(received == data)
+    }
+
+    func testUnsetLimitsGrowToTheLargestMessage() throws {
+        let network = try game(
+            """
+            wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000000 }
+            network :Game as { server sends :Blob reliable }
+            """
+        )
+        let client = try GesNetworkConnection.makeClient(network: network, token: Array("t".utf8), now: 0, options: .plain)
+        let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: .plain)
+        let loop = try GesNetworkLoopback(client: client, server: server)
+        try loop.advance(0)
+        XCTAssertEqual(drain(server), ["connecting t"])
+        try server.accept()
+        try loop.advance(0)
+        XCTAssertEqual(client.state, .connected)
+
+        // Above the defaults of 1 MiB queued and 4 MiB pending bytes: both limits take the 6000000-byte Blob.
+        let blob = bytes(5 * 1_048_576, 1)
+        XCTAssertEqual(server.send(route: 0, payload: blob), .queued)
+        var received: [UInt8]?
+        var step = 0
+        while step < 1000 && received == nil && client.state == .connected {
+            try loop.advance(loop.now + 1000)
+            while true {
+                let next = client.nextEvent()
+                if next.kind == .none { break }
+                if next.kind == .message { received = Array(next.payload) }
+            }
+            step += 1
+        }
+        XCTAssertTrue(received == blob)
+    }
+
+    func testExplicitLimitsStayAsSet() throws {
+        let network = try game(
+            """
+            wire schema :Arena as { data: :List(:Number integer between 0 and 255) max 6000000 }
+            network :Game as { server sends :Arena bulk }
+            """
+        )
+        var options = GesNetworkOptions.plain
+        options.maxTransferBytes = 1000
+        let client = try GesNetworkConnection.makeClient(network: network, token: Array("t".utf8), now: 0, options: options)
+        let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: options)
+        let loop = try GesNetworkLoopback(client: client, server: server)
+        try loop.advance(0)
+        _ = drain(server)
+        try server.accept()
+        try loop.advance(0)
+        XCTAssertEqual(server.state, .connected)
+        XCTAssertEqual(server.send(route: 0, payload: [UInt8](repeating: 0, count: 1001)), .messageTooLarge)
+        XCTAssertEqual(server.send(route: 0, payload: [UInt8](repeating: 0, count: 1000)), .queued)
+    }
 }
 
 extension GesNetworkOptions {
     // Options without encryption, which a server without a key needs.
     static var plain: GesNetworkOptions {
         var options = GesNetworkOptions()
-        options.minimumSecurity = .none
+        options.clientSecurity = .unencrypted
+        options.serverSecurity = .unencrypted
         return options
     }
 }

@@ -18,7 +18,7 @@ public sealed class GesNetworkCookiesTests
     private const long Window = 10_000_000;
     private static readonly byte[] Key = Enumerable.Range(0, 32).Select(value => (byte)value).ToArray();
     private static readonly byte[] Address = [10, 0, 0, 1, 0x1f, 0x90];
-    private static readonly GesNetworkOptions Options = new() { MinimumSecurity = GesNetworkSecurity.None, Transport = GesNetworkTransport.Datagram };
+    private static readonly GesNetworkOptions Options = new() { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, Transport = GesNetworkTransport.Datagram };
 
     private static GesNetworkConnection Client() =>
         GesNetworkConnection.CreateClient(GesSchemaSet.Parse(Source).Network("Game").Bind(), "t"u8, 0, Options);

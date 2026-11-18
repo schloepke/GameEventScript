@@ -29,15 +29,14 @@ public sealed class GesNetworkDatagramTests
     private const int World = 2;
     private const int BulkBlob = 3;
 
-    private static readonly GesNetworkOptions Options = new() { MinimumSecurity = GesNetworkSecurity.None, Transport = GesNetworkTransport.Datagram };
+    private static readonly GesNetworkOptions Options = new() { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, Transport = GesNetworkTransport.Datagram };
 
-    private static readonly GesNetworkOptions EncryptedClient = new() { Transport = GesNetworkTransport.Datagram, MinimumSecurity = GesNetworkSecurity.Encrypted, InsecureTestKeySeed = 7 };
+    private static readonly GesNetworkOptions EncryptedClient = new() { Transport = GesNetworkTransport.Datagram, ClientSecurity = GesNetworkClientSecurity.Development, InsecureTestKeySeed = 7 };
 
     private static readonly GesNetworkOptions EncryptedServer = new()
     {
         Transport = GesNetworkTransport.Datagram,
-        MinimumSecurity = GesNetworkSecurity.Encrypted,
-        Key = GesNetworkKey.FromPrivateKey(Enumerable.Range(1, 32).Select(value => (byte)value).ToArray()),
+        ServerSecurity = GesNetworkServerSecurity.Key(GesNetworkKey.FromPrivateKey(Enumerable.Range(1, 32).Select(value => (byte)value).ToArray())),
         InsecureTestKeySeed = 7,
     };
 

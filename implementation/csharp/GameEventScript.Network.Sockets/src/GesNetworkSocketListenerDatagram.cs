@@ -31,11 +31,11 @@ public sealed partial class GesNetworkSocketListener
     /// </summary>
     /// <param name="endPoint">The local address and port; port 0 lets the system choose.</param>
     /// <param name="network">The bound network of every session.</param>
-    /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Datagram"/>; the defaults when omitted.</param>
+    /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Datagram"/>.</param>
     /// <returns>The listener. Its sessions send through its socket, so dispose it only after them.</returns>
-    /// <exception cref="ArgumentException">The options use another transport, name an insecure test key seed or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
+    /// <exception cref="ArgumentException">The options use another transport, name an insecure test key seed or are out of range, or set no server security.</exception>
     /// <exception cref="SocketException">The address cannot be bound.</exception>
-    public static GesNetworkSocketListener ListenUdp(IPEndPoint endPoint, GesBoundNetwork network, GesNetworkOptions? options = null) =>
+    public static GesNetworkSocketListener ListenUdp(IPEndPoint endPoint, GesBoundNetwork network, GesNetworkOptions options) =>
         new(endPoint, network, options, GesNetworkTransport.Datagram, null);
 
     private IPEndPoint StartDatagrams(IPEndPoint endPoint)

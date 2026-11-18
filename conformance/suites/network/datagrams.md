@@ -453,6 +453,55 @@ network:
 
 ---
 
+## Test: A full send window holds frames back
+
+Two 1 MB transfers need more than 1024 packets in flight on a link with 20 ms latency. While the packet 1024 before the
+next one is outstanding, the sender writes no frames and waits for acknowledgements instead of declaring that packet
+lost; both transfers arrive complete.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: datagram-send-window
+networkApi:
+  sources: ["wire schema :Arena as { data: :List(:Number integer between 0 and 255) max 1000000 }\nnetwork :Game as { server sends :Arena bulk }\n"]
+  network: "Game"
+  options: {"transport": "datagram", "deflateTransfers": false, "maxFramesPerSecond": 1000000}
+  link: {"seed": 1, "latencyMicroseconds": 20000, "jitterMicroseconds": 0}
+  steps:
+    - {"advance": 0}
+    - {"advance": 2000000}
+    - {"accept": true}
+    - {"advance": 4000000}
+    - {"send": {"side": "server", "route": 0, "payload": {"length": 1000000, "seed": 1}}}
+    - {"send": {"side": "server", "route": 0, "payload": {"length": 1000000, "seed": 2}}}
+    - {"advance": 9000000}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "server connecting -"
+    - "server connected"
+    - "client connected"
+    - "server send queued"
+    - "server send queued"
+    - "client progress 0 0 1000036/1000036"
+    - "client message 0 1000000:317796c921ccb4e5"
+    - "client progress 0 1 1000036/1000036"
+    - "client message 0 1000000:b2bf0603e843c995"
+    - "server progress 0 0 999807/1000036"
+    - "server progress 0 1 17699/1000036"
+    - "server progress 0 0 1000036/1000036"
+    - "server progress 0 1 1000036/1000036"
+```
+
+---
+
 ## Test: An empty datagram is malformed
 
 A datagram without bytes closes the connection with `network.malformed`.

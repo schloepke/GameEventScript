@@ -40,13 +40,14 @@ final class NetworkAllocationTests: XCTestCase {
 
     private func options(_ transport: GesNetworkTransport, encrypted: Bool, server: Bool) throws -> GesNetworkOptions {
         var options = GesNetworkOptions()
-        options.minimumSecurity = .none
+        options.clientSecurity = .unencrypted
+        options.serverSecurity = .unencrypted
         options.transport = transport
         options.maxPacketBytes = 1200
         if encrypted {
-            options.minimumSecurity = GesNetworkSecurity.encrypted
+            options.clientSecurity = .development
             options.insecureTestKeySeed = 7
-            if server { options.key = try GesNetworkKey(privateKey: (1...32).map { UInt8($0) }) }
+            if server { options.serverSecurity = .key(try GesNetworkKey(privateKey: (1...32).map { UInt8($0) })) }
         }
         return options
     }

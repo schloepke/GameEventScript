@@ -47,7 +47,8 @@ internal static partial class GesCSharpEmitter
         if (layout.Networks.Count > 0) prologue.Line("using GameEventScript.Network;");
         prologue.Blank();
         var header = GesSchemaPlanner.Header(layout);
-        var holder = "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
+        var schemaSet = GesSchemaSetReference.From(options);
+        var holder = schemaSet?.Qualified ?? "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
         var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder)
         {
             Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(options.Namespace, GesSchemaPlanner.Suffix(header, options)), swift: false)
@@ -87,7 +88,7 @@ internal static partial class GesCSharpEmitter
         }
         var sets = GesSchemaPlanner.TagSets(types, context.Global);
         foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
-        foreach (var network in layout.Networks) document.Units.Add(new GesCodeUnit(network.Name, code => Network(code, network, access, root =>
+        foreach (var network in layout.Networks) document.Units.Add(new GesCodeUnit(network.Name, code => Network(code, network, access, schemaSet?.Qualified, root =>
         {
             // A packed root that the models declare is their struct; its wire members extend it.
             var type = types.Find(candidate => candidate.Name == root)!;
@@ -95,8 +96,11 @@ internal static partial class GesCSharpEmitter
         })));
         context.TopLevel = GesSchemaPlanner.TopLevel(types, sets, layout.Networks);
         if (options.Models is not null) GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
+        schemaSet?.Reserve(context.TopLevel);
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: false);
-        if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));
+        if (schemaSet?.Declared is { } setName)
+            document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteCSharp(code, setName, access, layout.Sources, layout.Parameters, layout.Networks.Count > 0)));
+        else if (options.Values && schemaSet is null) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: false, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))), GesComputedEmitter.UsesMath(types.ConvertAll(type => type.Layout.Computed)), GesComputedEmitter.UsesSpatial(types.ConvertAll(type => type.Layout.Computed)))));
         return document;
@@ -893,13 +897,24 @@ internal static partial class GesCSharpEmitter
 
     // The constants of a network, its hash, the index of each route and the rate of each topic that has one, and a
     // function per route that encodes its root and sends or publishes it.
-    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access, Func<string, string> rootType)
+    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access, string? schemaSet, Func<string, string> rootType)
     {
         code.Line($"/// <summary>The network <c>:{network.Name}</c>: its hash, the index of each route, the rate of each topic that has one and a typed function per route.</summary>");
         code.Line($"{access} static class {network.Name}");
         code.Open("{");
         code.Line("/// <summary>The network hash over the routes and their bound roots, which the handshake compares.</summary>");
         code.Line($"public const ulong Hash = 0x{GesSchemaLayoutJson.Hex(network.Hash)}UL;");
+        if (schemaSet is not null)
+        {
+            code.Blank();
+            code.Line("private static GesBoundNetwork? __bound;");
+            code.Blank();
+            code.Line($"/// <summary>Gets the network bound with the parameters of the schema set, checked against <see cref=\"Hash\"/> on first access.</summary>");
+            code.Line("/// <exception cref=\"GesSchemaException\">The sources no longer parse or the network no longer binds.</exception>");
+            code.Line("/// <exception cref=\"global::System.InvalidOperationException\">The bound network hash differs from <see cref=\"Hash\"/>.</exception>");
+            code.Line($"public static GesBoundNetwork Bound => __bound ??= {schemaSet}.BindNetwork({GesSchemaPlanner.Literal(network.Name, false)}, Hash);");
+        }
+
         foreach (var route in network.Routes)
         {
             code.Blank();

@@ -37,8 +37,6 @@ public enum GesNetworkCodes {
     public static let transferCancelled = "network.transferCancelled"
     /// A server without a key received a key request or a sealed `hello`.
     public static let insecure = "network.insecure"
-    /// A client that requires `GesNetworkSecurity.verified` has no pinned key and received a server key.
-    public static let unverified = "network.unverified"
     /// A sealed `hello`, `welcome` or packet does not authenticate.
     public static let authenticationFailed = "network.authenticationFailed"
 }
@@ -146,44 +144,103 @@ public struct GesNetworkOptions: Sendable, Equatable {
     /// The largest packet this side sends or receives, from 1200 to 65535 bytes, or 0 for the transport's default:
     /// 1200 on the datagram transport, else 16384.
     public var maxPacketBytes = 0
-    /// The largest number of received bytes not yet taken as events, 1 to 1073741824.
-    public var maxPendingReceiveBytes: Int64 = 4_194_304
+    /// The largest number of received bytes not yet taken as events, 1 to 1073741824. Unset, the default, it is the
+    /// larger of 4194304 and the largest message this side receives outside bulk routes, topic mode byte included, at most
+    /// 1073741824.
+    public var maxPendingReceiveBytes: Int64?
     /// The most frames the peer may send per second, 1 to 1000000.
     public var maxFramesPerSecond = 4096
-    /// The largest number of reliable bytes waiting to be sent, 1 to 1073741824.
-    public var maxSendQueueBytes: Int64 = 1_048_576
-    /// How long the connection waits for anything from the peer, 1 to 3600000000.
+    /// The largest number of reliable bytes waiting to be sent, 1 to 1073741824. Unset, the default, it is the larger of
+    /// 1048576 and the largest reliable payload this side sends, at most 1073741824.
+    public var maxSendQueueBytes: Int64?
+    /// How long the connection waits for anything from the peer, 1 to 3600000000, or 0 for no timeout.
     public var timeoutMicroseconds: Int64 = 10_000_000
-    /// How long a connected side stays silent before it sends an empty data packet, 1 to 3600000000.
+    /// How long a connected side stays silent before it sends an empty data packet, 1 to 3600000000, or 0 for no
+    /// keepalive.
     public var keepaliveMicroseconds: Int64 = 1_000_000
     /// How long an acknowledgement may wait for frames to travel with, 0 to 3600000000.
     public var ackDelayMicroseconds: Int64 = 10_000
     /// The bytes per second this side sends, 0 to 1073741824; 0 sends without a budget.
     public var sendBudgetBytesPerSecond: Int64 = 0
     /// The baseline limit this side announces, 0 to 1073741824: the full record bytes a topic's ring of recent states
-    /// holds. The smaller limit of both sides applies.
-    public var maxBaselineBytes: Int64 = 65536
+    /// holds. The smaller limit of both sides applies. Unset, the default, it is the larger of 65536 and the largest full
+    /// record of a topic of the network, at most 1073741824.
+    public var maxBaselineBytes: Int64?
     /// The transfer limit this side announces, 0 to 1073741824: the largest uncompressed data of one bulk message it
-    /// sends or receives. It also bounds the bulk send queue.
-    public var maxTransferBytes: Int64 = 67_108_864
+    /// sends or receives. It also bounds the bulk send queue. Unset, the default, it is the larger of 67108864 and the
+    /// largest record of a bulk route of the network, at most 1073741824.
+    public var maxTransferBytes: Int64?
     /// Whether this side accepts and sends deflate-compressed transfers.
     public var deflateTransfers = true
-    /// The lowest security level this side accepts. A client without a pinned key closes with
-    /// `GesNetworkCodes.unverified` when it requires `GesNetworkSecurity.verified`; a server above
-    /// `GesNetworkSecurity.none` needs a `key`. The default is `GesNetworkSecurity.verified`.
-    public var minimumSecurity: GesNetworkSecurity = .verified
-    /// The server's pinned public key of 32 bytes; client only. A client with a pinned key seals its first `hello` and
-    /// reaches `GesNetworkSecurity.verified`. The default is none.
-    public var serverPublicKey: [UInt8]?
-    /// The server's key; server only. A server with a key encrypts every session. The default is none.
-    public var key: GesNetworkKey?
+    /// How a client protects its session; client only. A client without one cannot be created. The default is none.
+    public var clientSecurity: GesNetworkClientSecurity?
+    /// How a server protects its sessions; server only. A server without one cannot be created. The default is none.
+    public var serverSecurity: GesNetworkServerSecurity?
     /// A seed that derives the connection's ephemeral keys instead of the system's random generator. INSECURE: anyone
     /// who knows the seed reads the session. For tests and golden bytes only: the socket transports refuse such
     /// options and connections. The default is none.
     public var insecureTestKeySeed: UInt64?
 
-    /// Creates the default options.
+    /// Creates the default options. They set no security; use a preset or set `clientSecurity` or `serverSecurity`.
     public init() {}
+
+    /// Creates the options of a connection within one process, such as a loopback: the message transport, packets of
+    /// 65535 bytes, no acknowledgement delay, no timeout or keepalive and no encryption on either side.
+    /// - Returns: New options; change them freely.
+    public static func inProcess() -> GesNetworkOptions {
+        var options = GesNetworkOptions()
+        options.maxPacketBytes = GesNetworkWire.maximumPacketBytes
+        options.ackDelayMicroseconds = 0
+        options.timeoutMicroseconds = 0
+        options.keepaliveMicroseconds = 0
+        options.clientSecurity = .unencrypted
+        options.serverSecurity = .unencrypted
+        return options
+    }
+
+    /// Creates the options of a client on the message transport, such as a WebSocket.
+    /// - Parameter client: How the client protects its session.
+    /// - Returns: New options; change them freely.
+    public static func message(client: GesNetworkClientSecurity) -> GesNetworkOptions { make(.message, client: client) }
+
+    /// Creates the options of a server on the message transport, such as a WebSocket.
+    /// - Parameter server: How the server protects its sessions.
+    /// - Returns: New options; change them freely.
+    public static func message(server: GesNetworkServerSecurity) -> GesNetworkOptions { make(.message, server: server) }
+
+    /// Creates the options of a client on the stream transport, such as TCP.
+    /// - Parameter client: How the client protects its session.
+    /// - Returns: New options; change them freely.
+    public static func stream(client: GesNetworkClientSecurity) -> GesNetworkOptions { make(.stream, client: client) }
+
+    /// Creates the options of a server on the stream transport, such as TCP.
+    /// - Parameter server: How the server protects its sessions.
+    /// - Returns: New options; change them freely.
+    public static func stream(server: GesNetworkServerSecurity) -> GesNetworkOptions { make(.stream, server: server) }
+
+    /// Creates the options of a client on the datagram transport, such as UDP.
+    /// - Parameter client: How the client protects its session.
+    /// - Returns: New options; change them freely.
+    public static func datagram(client: GesNetworkClientSecurity) -> GesNetworkOptions { make(.datagram, client: client) }
+
+    /// Creates the options of a server on the datagram transport, such as UDP.
+    /// - Parameter server: How the server protects its sessions.
+    /// - Returns: New options; change them freely.
+    public static func datagram(server: GesNetworkServerSecurity) -> GesNetworkOptions { make(.datagram, server: server) }
+
+    private static func make(_ transport: GesNetworkTransport, client: GesNetworkClientSecurity? = nil, server: GesNetworkServerSecurity? = nil) -> GesNetworkOptions {
+        var options = GesNetworkOptions()
+        options.transport = transport
+        options.clientSecurity = client
+        options.serverSecurity = server
+        return options
+    }
+
+    // The defaults of the derived byte limits.
+    static let defaultPendingReceiveBytes: Int64 = 4_194_304
+    static let defaultSendQueueBytes: Int64 = 1_048_576
+    static let defaultBaselineBytes: Int64 = 65536
+    static let defaultTransferBytes: Int64 = 67_108_864
 
     // The largest byte limits and send budget, frame rate and time interval in microseconds.
     static let maximumBytes: Int64 = 1 << 30
@@ -197,21 +254,18 @@ public struct GesNetworkOptions: Sendable, Equatable {
         if maxPacketBytes != 0 && (maxPacketBytes < GesNetworkWire.minimumPacketBytes || maxPacketBytes > GesNetworkWire.maximumPacketBytes) {
             throw GesApiError.invalidArgument("The packet limit is 0 or 1200 to 65535 bytes.")
         }
-        if !(1...Self.maximumBytes).contains(maxPendingReceiveBytes) { throw GesApiError.invalidArgument("The pending receive limit is 1 to 1073741824 bytes.") }
+        if let maxPendingReceiveBytes, !(1...Self.maximumBytes).contains(maxPendingReceiveBytes) { throw GesApiError.invalidArgument("The pending receive limit is 1 to 1073741824 bytes.") }
         if !(1...Self.maximumFramesPerSecond).contains(maxFramesPerSecond) { throw GesApiError.invalidArgument("The frame rate is 1 to 1000000 frames per second.") }
-        if !(1...Self.maximumBytes).contains(maxSendQueueBytes) { throw GesApiError.invalidArgument("The send queue limit is 1 to 1073741824 bytes.") }
-        if !(1...Self.maximumInterval).contains(timeoutMicroseconds) { throw GesApiError.invalidArgument("The timeout is 1 to 3600000000 microseconds.") }
-        if !(1...Self.maximumInterval).contains(keepaliveMicroseconds) { throw GesApiError.invalidArgument("The keepalive is 1 to 3600000000 microseconds.") }
+        if let maxSendQueueBytes, !(1...Self.maximumBytes).contains(maxSendQueueBytes) { throw GesApiError.invalidArgument("The send queue limit is 1 to 1073741824 bytes.") }
+        if !(0...Self.maximumInterval).contains(timeoutMicroseconds) { throw GesApiError.invalidArgument("The timeout is 0 to 3600000000 microseconds.") }
+        if !(0...Self.maximumInterval).contains(keepaliveMicroseconds) { throw GesApiError.invalidArgument("The keepalive is 0 to 3600000000 microseconds.") }
         if !(0...Self.maximumInterval).contains(ackDelayMicroseconds) { throw GesApiError.invalidArgument("The acknowledgement delay is 0 to 3600000000 microseconds.") }
         if !(0...Self.maximumBytes).contains(sendBudgetBytesPerSecond) { throw GesApiError.invalidArgument("The send budget is 0 to 1073741824 bytes per second.") }
-        if maxBaselineBytes < 0 || maxBaselineBytes > Int64(GesNetworkWire.maximumBaselineBytes) {
+        if let maxBaselineBytes, maxBaselineBytes < 0 || maxBaselineBytes > Int64(GesNetworkWire.maximumBaselineBytes) {
             throw GesApiError.invalidArgument("The baseline limit is 0 to 1073741824 bytes.")
         }
-        if maxTransferBytes < 0 || maxTransferBytes > Int64(GesNetworkWire.maximumTransferBytes) {
+        if let maxTransferBytes, maxTransferBytes < 0 || maxTransferBytes > Int64(GesNetworkWire.maximumTransferBytes) {
             throw GesApiError.invalidArgument("The transfer limit is 0 to 1073741824 bytes.")
-        }
-        if let serverPublicKey, serverPublicKey.count != GesNetworkX25519.keyBytes {
-            throw GesApiError.invalidArgument("A server public key holds 32 bytes.")
         }
     }
 }

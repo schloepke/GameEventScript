@@ -57,6 +57,11 @@ jobs:
           python3 scripts/test-network-deflate.py --self-test
           python3 scripts/test-network-deflate.py
 
+      - name: Verify the network crypto fixture against an independent oracle
+        run: |
+          python3 scripts/test-network-crypto.py --self-test
+          python3 scripts/test-network-crypto.py
+
       - name: Verify license headers outside the C# license test
         run: |
           python3 scripts/verify-license-headers.py --self-test

@@ -9,12 +9,16 @@ SIDES = ('client', 'server')
 STATES = {'hello', 'awaitHello', 'awaitAccept', 'connected', 'closed'}
 OPTIONS = {'transport', 'maxPacketBytes', 'maxPendingReceiveBytes', 'maxFramesPerSecond', 'maxSendQueueBytes',
            'timeoutMicroseconds', 'keepaliveMicroseconds', 'ackDelayMicroseconds', 'sendBudgetBytesPerSecond', 'maxBaselineBytes',
-           'maxTransferBytes', 'deflateTransfers'}
+           'maxTransferBytes', 'deflateTransfers', 'minimumSecurity', 'key', 'serverPublicKey', 'testKeySeed'}
+# The corpus default: a case states the security it tests, while the API default is verified.
+DEFAULT_SECURITY = 'none'
+SECURITY = ('none', 'encrypted', 'verified')
 STEPS = {'advance', 'accept', 'refuse', 'close', 'send', 'receive', 'transmit', 'transportClosed', 'budget',
          'publish', 'subscribe', 'unsubscribe', 'deliver', 'cookie', 'cancel'}
 TRANSPORTS = ('message', 'stream', 'datagram')
 LINK_FIELDS = {'seed', 'latencyMicroseconds', 'jitterMicroseconds', 'lossPerMille', 'duplicatePerMille', 'reorder'}
-SIDE_FIELDS = {'state', 'roundTripMicroseconds', 'queuedSendBytes', 'pendingReceiveBytes'}
+SIDE_FIELDS = {'state', 'security', 'roundTripMicroseconds', 'queuedSendBytes', 'pendingReceiveBytes'}
+TEXT_SIDE_FIELDS = {'state', 'security'}
 MAX_TIME = 2**62
 
 
@@ -55,7 +59,15 @@ def options(raw):
         raise InvalidDocument('A transport is message, stream or datagram')
     if 'deflateTransfers' in result and type(result['deflateTransfers']) is not bool:
         raise InvalidDocument('deflateTransfers is true or false')
-    for key in OPTIONS - {'transport', 'deflateTransfers'}:
+    result.setdefault('minimumSecurity', DEFAULT_SECURITY)
+    if result['minimumSecurity'] not in SECURITY:
+        raise InvalidDocument('A security level is none, encrypted or verified')
+    for key in ('key', 'serverPublicKey'):
+        if key in result and len(hexadecimal(result[key], key)) != 64:
+            raise InvalidDocument('A key holds 32 bytes: ' + key)
+    if 'testKeySeed' in result:
+        integer(result['testKeySeed'], 'testKeySeed', 0, 2**64 - 1)
+    for key in OPTIONS - {'transport', 'deflateTransfers', 'minimumSecurity', 'key', 'serverPublicKey', 'testKeySeed'}:
         if key in result:
             integer(result[key], key, 0, 2**53)
     return result
@@ -186,7 +198,9 @@ def side_result(raw):
     closed(raw, SIDE_FIELDS, 'connection result')
     if 'state' in raw and raw['state'] not in STATES:
         raise InvalidDocument('Unknown connection state')
-    for key in SIDE_FIELDS - {'state'}:
+    if 'security' in raw and raw['security'] not in SECURITY:
+        raise InvalidDocument('Unknown security level')
+    for key in SIDE_FIELDS - TEXT_SIDE_FIELDS:
         if key in raw:
             integer(raw[key], key, -1)
     return raw

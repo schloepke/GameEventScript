@@ -157,6 +157,21 @@ public sealed partial class GesNetworkConnection
 
         if (token.Length > GesNetworkWire.MaximumTokenBytes) throw new ArgumentException("A token holds at most 512 bytes.", nameof(token));
         _token = token.ToArray();
+        _minimumSecurity = options.MinimumSecurity;
+        if (client)
+        {
+            _serverKey = options.ServerPublicKey is { } serverKey ? (byte[])serverKey.Clone() : null;
+            _pinned = _serverKey is not null;
+        }
+        else
+        {
+            _key = options.Key;
+            if (_key is null && _minimumSecurity != GesNetworkSecurity.None)
+                throw new ArgumentException("A server whose lowest security level is above none needs a key.", nameof(options));
+        }
+
+        _testKeys = options.InsecureTestKeySeed.HasValue;
+        _testKeySeed = options.InsecureTestKeySeed.GetValueOrDefault();
         _now = _lastReceive = _lastSend = now;
         _frameUnits = _framesPerSecond * MicrosecondsPerSecond;
         _budgetUnits = BudgetCapacity;
@@ -383,6 +398,7 @@ public sealed partial class GesNetworkConnection
     {
         if (State != GesNetworkState.AwaitAccept) throw new InvalidOperationException("Only a connecting client can be accepted.");
         State = GesNetworkState.Connected;
+        _security = _encrypted ? GesNetworkSecurity.Encrypted : GesNetworkSecurity.None;
         _welcomePending = true;
         AddEvent(GesNetworkEventKind.Connected, -1, default, Counter.None, string.Empty, string.Empty, false);
     }
@@ -460,6 +476,7 @@ public sealed partial class GesNetworkConnection
         foreach (var slot in _sendLatest) slot?.Clear();
         _ackDue = false;
         _welcomePending = false;
+        _retryPending = false;
         DropDatagramSending();
     }
 

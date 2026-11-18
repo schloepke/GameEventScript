@@ -1567,7 +1567,9 @@ enum GameEventScript.Generator.GesSchemaSplit
   enum-field Schema = 1
   enum-field File = 2
 static class GameEventScript.Network.GesNetworkCodes
+  field static System.String AuthenticationFailed
   field static System.String Closed
+  field static System.String Insecure
   field static System.String Malformed
   field static System.String MessageTooLarge
   field static System.String PacketTooLarge
@@ -1582,6 +1584,7 @@ static class GameEventScript.Network.GesNetworkCodes
   field static System.String TransferTooLarge
   field static System.String TransportClosed
   field static System.String UnexpectedRoute
+  field static System.String Unverified
 sealed class GameEventScript.Network.GesNetworkConnection
   method GameEventScript.Network.GesNetworkEvent NextEvent()
   method GameEventScript.Network.GesNetworkSendStatus Publish(System.Int32 route, System.ReadOnlySpan<System.Byte> payload)
@@ -1599,6 +1602,7 @@ sealed class GameEventScript.Network.GesNetworkConnection
   method static GameEventScript.Network.GesNetworkConnection CreateClient(GameEventScript.Api.GesBoundNetwork network, System.ReadOnlySpan<System.Byte> token, System.Int64 now, GameEventScript.Network.GesNetworkOptions options)
   method static GameEventScript.Network.GesNetworkConnection CreateServer(GameEventScript.Api.GesBoundNetwork network, System.Int64 now, GameEventScript.Network.GesNetworkOptions options)
   property GameEventScript.Api.GesBoundNetwork Network { get }
+  property GameEventScript.Network.GesNetworkSecurity Security { get }
   property GameEventScript.Network.GesNetworkState State { get }
   property GameEventScript.Network.GesNetworkTransport Transport { get }
   property System.Boolean IsClient { get }
@@ -1637,6 +1641,11 @@ enum GameEventScript.Network.GesNetworkEventKind
   enum-field Closed = 4
   enum-field TransferProgress = 5
   enum-field TransferCancelled = 6
+sealed class GameEventScript.Network.GesNetworkKey
+  method System.Void CopyPrivateKey(System.Span<System.Byte> destination)
+  method static GameEventScript.Network.GesNetworkKey FromPrivateKey(System.ReadOnlySpan<System.Byte> privateKey)
+  method static GameEventScript.Network.GesNetworkKey Generate()
+  property System.ReadOnlySpan<System.Byte> PublicKey { get }
 sealed class GameEventScript.Network.GesNetworkLoopback
   ctor GesNetworkLoopback(GameEventScript.Network.GesNetworkConnection client, GameEventScript.Network.GesNetworkConnection server)
   method System.Void Advance(System.Int64 now)
@@ -1646,8 +1655,11 @@ sealed class GameEventScript.Network.GesNetworkLoopback
   property System.Int64 Now { get }
 sealed class GameEventScript.Network.GesNetworkOptions
   ctor GesNetworkOptions()
+  property GameEventScript.Network.GesNetworkKey Key { get set }
+  property GameEventScript.Network.GesNetworkSecurity MinimumSecurity { get set }
   property GameEventScript.Network.GesNetworkTransport Transport { get set }
   property System.Boolean DeflateTransfers { get set }
+  property System.Byte[] ServerPublicKey { get set }
   property System.Int32 MaxFramesPerSecond { get set }
   property System.Int32 MaxPacketBytes { get set }
   property System.Int64 AckDelayMicroseconds { get set }
@@ -1658,6 +1670,11 @@ sealed class GameEventScript.Network.GesNetworkOptions
   property System.Int64 MaxTransferBytes { get set }
   property System.Int64 SendBudgetBytesPerSecond { get set }
   property System.Int64 TimeoutMicroseconds { get set }
+  property System.UInt64? InsecureTestKeySeed { get set }
+enum GameEventScript.Network.GesNetworkSecurity
+  enum-field None = 0
+  enum-field Encrypted = 1
+  enum-field Verified = 2
 enum GameEventScript.Network.GesNetworkSendStatus
   enum-field Queued = 0
   enum-field NotConnected = 1

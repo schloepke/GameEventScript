@@ -18,7 +18,7 @@ public sealed class GesNetworkCookiesTests
     private const long Window = 10_000_000;
     private static readonly byte[] Key = Enumerable.Range(0, 32).Select(value => (byte)value).ToArray();
     private static readonly byte[] Address = [10, 0, 0, 1, 0x1f, 0x90];
-    private static readonly GesNetworkOptions Options = new() { Transport = GesNetworkTransport.Datagram };
+    private static readonly GesNetworkOptions Options = new() { MinimumSecurity = GesNetworkSecurity.None, Transport = GesNetworkTransport.Datagram };
 
     private static GesNetworkConnection Client() =>
         GesNetworkConnection.CreateClient(GesSchemaSet.Parse(Source).Network("Game").Bind(), "t"u8, 0, Options);
@@ -43,12 +43,12 @@ public sealed class GesNetworkCookiesTests
 
         client.Receive(retry, 10);
         var hello = Hello(client);
-        Assert.AreEqual(GesNetworkCookieResult.Accept, gate.Check(hello, Address, 20, new byte[26]));
-        Assert.AreEqual(GesNetworkCookieResult.Accept, gate.Check(hello, Address, Window + 20, new byte[26]));
-        Assert.AreEqual(GesNetworkCookieResult.Retry, gate.Check(hello, Address, 2 * Window, new byte[26]));
-        Assert.AreEqual(GesNetworkCookieResult.Retry, gate.Check(hello, [10, 0, 0, 2, 0x1f, 0x90], 20, new byte[26]));
+        Assert.AreEqual(GesNetworkCookieResult.Accept, gate.Check(hello, Address, 20, new byte[GesNetworkCookies.RetryBytes]));
+        Assert.AreEqual(GesNetworkCookieResult.Accept, gate.Check(hello, Address, Window + 20, new byte[GesNetworkCookies.RetryBytes]));
+        Assert.AreEqual(GesNetworkCookieResult.Retry, gate.Check(hello, Address, 2 * Window, new byte[GesNetworkCookies.RetryBytes]));
+        Assert.AreEqual(GesNetworkCookieResult.Retry, gate.Check(hello, [10, 0, 0, 2, 0x1f, 0x90], 20, new byte[GesNetworkCookies.RetryBytes]));
         using var other = new GesNetworkCookies(new byte[32], Window);
-        Assert.AreEqual(GesNetworkCookieResult.Retry, other.Check(hello, Address, 20, new byte[26]));
+        Assert.AreEqual(GesNetworkCookieResult.Retry, other.Check(hello, Address, 20, new byte[GesNetworkCookies.RetryBytes]));
 
         var server = GesNetworkConnection.CreateServer(GesSchemaSet.Parse(Source).Network("Game").Bind(), 20, Options);
         server.Receive(hello, 20);
@@ -59,7 +59,7 @@ public sealed class GesNetworkCookiesTests
     public void NegativeTimesUseTheFloorWindow()
     {
         using var gate = new GesNetworkCookies(Key, Window);
-        var retry = new byte[26];
+        var retry = new byte[GesNetworkCookies.RetryBytes];
         Assert.AreEqual(GesNetworkCookieResult.Retry, gate.Check(Hello(Client()), Address, -1, retry));
         Assert.AreEqual(ulong.MaxValue, BitConverter.ToUInt64(retry, 2));
     }
@@ -69,7 +69,7 @@ public sealed class GesNetworkCookiesTests
     {
         using var gate = new GesNetworkCookies(Key, Window);
         var hello = Hello(Client());
-        var retry = new byte[26];
+        var retry = new byte[GesNetworkCookies.RetryBytes];
         Assert.AreEqual(GesNetworkCookieResult.Drop, gate.Check(hello.AsSpan(0, 1199), Address, 0, retry));
         var foreign = (byte[])hello.Clone();
         foreign[4] ^= 1;

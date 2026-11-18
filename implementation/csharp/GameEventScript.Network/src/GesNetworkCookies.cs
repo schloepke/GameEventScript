@@ -28,7 +28,7 @@ public enum GesNetworkCookieResult
 public sealed class GesNetworkCookies : IDisposable
 {
     /// <summary>The number of bytes of a <c>retry</c> the gate writes.</summary>
-    public const int RetryBytes = 2 + Wire.CookieBytes;
+    public const int RetryBytes = 3 + Wire.CookieBytes;
 
     private const int HashBytes = 16;
     private const int PrefixBytes = 12;
@@ -64,7 +64,7 @@ public sealed class GesNetworkCookies : IDisposable
     /// <exception cref="ArgumentException"><paramref name="retry"/> holds fewer than <see cref="RetryBytes"/> bytes.</exception>
     public GesNetworkCookieResult Check(ReadOnlySpan<byte> packet, ReadOnlySpan<byte> address, long now, Span<byte> retry)
     {
-        if (retry.Length < RetryBytes) throw new ArgumentException("The retry target holds at least 26 bytes.", nameof(retry));
+        if (retry.Length < RetryBytes) throw new ArgumentException("The retry target holds at least 27 bytes.", nameof(retry));
         if (!FindCookie(packet, out var cookie)) return GesNetworkCookieResult.Drop;
         var window = Window(now);
         if (cookie.Length == Wire.CookieBytes)
@@ -78,6 +78,7 @@ public sealed class GesNetworkCookies : IDisposable
         Wire.WriteUInt64(retry, 2, (ulong)window);
         Compute(window, address);
         _hash.AsSpan(0, HashBytes).CopyTo(retry.Slice(10));
+        retry[2 + Wire.CookieBytes] = 0;
         return GesNetworkCookieResult.Retry;
     }
 
@@ -123,8 +124,6 @@ public sealed class GesNetworkCookies : IDisposable
             if (Wire.ReadVarint(packet, ref position, out _) != 1) return false;
         }
 
-        if (Wire.ReadVarint(packet, ref position, out var token) != 1 || token > Wire.MaximumTokenBytes || packet.Length - position < token) return false;
-        position += (int)token;
         if (Wire.ReadVarint(packet, ref position, out var length) != 1 || length > Wire.MaximumCookieBytes || packet.Length - position < length) return false;
         cookie = packet.Slice(position, (int)length);
         return true;

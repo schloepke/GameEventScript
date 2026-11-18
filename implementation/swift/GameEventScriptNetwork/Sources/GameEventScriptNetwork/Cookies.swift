@@ -23,7 +23,7 @@ public enum GesNetworkCookieResult: Sendable {
 /// Not thread-safe; one caller at a time.
 public final class GesNetworkCookies {
     /// The number of bytes of a `retry` the gate writes.
-    public static let retryBytes = 2 + GesNetworkWire.cookieBytes
+    public static let retryBytes = 3 + GesNetworkWire.cookieBytes
 
     private static let hashBytes = 16
     private static let prefixBytes = 12
@@ -79,7 +79,7 @@ public final class GesNetworkCookies {
     public func check(packet: UnsafeRawBufferPointer, address: UnsafeRawBufferPointer, now: Int64, retry: UnsafeMutableRawBufferPointer) throws
         -> GesNetworkCookieResult
     {
-        if retry.count < Self.retryBytes { throw GesApiError.invalidArgument("The retry target holds at least 26 bytes.") }
+        if retry.count < Self.retryBytes { throw GesApiError.invalidArgument("The retry target holds at least 27 bytes.") }
         var cookie = UnsafeRawBufferPointer(start: nil, count: 0)
         if !Self.findCookie(packet, &cookie) { return .drop }
         let window = windowNumber(now)
@@ -93,6 +93,7 @@ public final class GesNetworkCookies {
         Wire.writeUInt64(retry, 2, UInt64(bitPattern: window))
         compute(window, address)
         (retry.baseAddress! + 10).copyMemory(from: hash.baseAddress!, byteCount: Self.hashBytes)
+        retry[2 + Wire.cookieBytes] = 0
         return .retry
     }
 
@@ -154,9 +155,6 @@ public final class GesNetworkCookies {
         for _ in 0..<4 {
             if Wire.readVarint(packet, &position, &value) != 1 { return false }
         }
-        var token: UInt32 = 0
-        if Wire.readVarint(packet, &position, &token) != 1 || token > UInt32(Wire.maximumTokenBytes) || packet.count - position < Int(token) { return false }
-        position += Int(token)
         var length: UInt32 = 0
         if Wire.readVarint(packet, &position, &length) != 1 || length > UInt32(Wire.maximumCookieBytes) || packet.count - position < Int(length) { return false }
         cookie = UnsafeRawBufferPointer(rebasing: packet[position..<position + Int(length)])

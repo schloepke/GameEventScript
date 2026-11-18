@@ -86,7 +86,7 @@ networkApi:
   link: "none"
   steps:
     - {"transmit": "client"}
-    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001017400"}}
+    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001808004808080200100000174"}}
     - {"accept": true}
     - {"transmit": "server"}
     - {"receive": {"side": "client", "bytes": "03018080018080048080802001"}}
@@ -98,7 +98,7 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001017400"
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001808004808080200100000174"
     - "server connecting 74"
     - "server connected"
     - "server packet 03018080018080048080802001"
@@ -125,7 +125,7 @@ networkApi:
   link: "none"
   steps:
     - {"transmit": "client"}
-    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb580800180800480808020010000"}}
+    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001000000"}}
     - {"accept": true}
     - {"transmit": "server"}
     - {"receive": {"side": "client", "bytes": "03018080018080048080802001"}}
@@ -139,7 +139,7 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb580800180800480808020010000"
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001000000"
     - "server connecting -"
     - "server connected"
     - "server packet 03018080018080048080802001"
@@ -166,7 +166,7 @@ networkApi:
   link: "none"
   steps:
     - {"transmit": "client"}
-    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb580800180800480808020010000"}}
+    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001000000"}}
     - {"accept": true}
     - {"transmit": "server"}
     - {"receive": {"side": "server", "bytes": "0500000001000000010107"}}
@@ -178,7 +178,7 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb580800180800480808020010000"
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001000000"
     - "server connecting -"
     - "server connected"
     - "server packet 03018080018080048080802001"
@@ -213,7 +213,7 @@ networkApi:
 gesBlock: expect
 network:
   trace:
-    - "client packet 3d014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001017400"
+    - "client packet 3e014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb5808001808004808080200100000174"
   client: {"state": "hello"}
   server: {"state": "awaitHello"}
 ```

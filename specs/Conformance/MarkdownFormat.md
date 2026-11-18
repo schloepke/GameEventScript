@@ -937,7 +937,10 @@ Requires `network-api` and no GES source. `networkApi.sources` lists schema sour
 `schemaApi`, `clientSources` optionally different texts for the client, and `network` the
 [network](../Network.md#declaration) both sides bind. `options` and `clientOptions` (default: the
 server's) set the connection options by their portable names (`transport` is `message`, `stream` or
-`datagram`, `deflateTransfers` is a Boolean, the others are integers), and `token` is the client's token
+`datagram`, `deflateTransfers` is a Boolean, `minimumSecurity` is `none`, `encrypted` or `verified` and
+defaults to `none` in the corpus, `key` is the server's private key and `serverPublicKey` the client's
+pinned key as 64 lowercase hexadecimal digits, `testKeySeed` is the
+[insecure test seed](../Network.md#ephemeral-keys), the others are integers), and `token` is the client's token
 as lowercase hexadecimal. `link` is `loopback` (default), `none`, or a simulated link with `seed`,
 `latencyMicroseconds`, `jitterMicroseconds` and optionally `lossPerMille`, `duplicatePerMille` and
 `reorder`; with a link, packets travel through the seeded [simulator](../Network.md#simulated-network),
@@ -962,7 +965,8 @@ for a rejected call, and after every step the events of the client and then of t
 <route> <id> <bytes>/<total>`, `<side> cancelled <route> <id> <code> peer|local` and `<side> closed
 <code> peer|local "<detail>"`. Bytes print as `-` when empty, as hexadecimal up to 32 bytes (512 for a
 packet), and otherwise as `<length>:<FNV-1a 64 hex>`. The expectation `network` holds the exact `trace` and
-optional `client` and `server` mappings with any of `state`, `roundTripMicroseconds`,
+optional `client` and `server` mappings with any of `state`, `security` (`none`, `encrypted` or
+`verified`), `roundTripMicroseconds`,
 `queuedSendBytes` and `pendingReceiveBytes`, or a standalone `error` with the `code` of a schema error
 or `invalidArgument` for options the connection rejects.
 

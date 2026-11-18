@@ -18,20 +18,31 @@ extension GesNetworkConnection {
         let packet = UnsafeMutableRawBufferPointer(rebasing: buffer[prefix...])
         let length: Int
         if closePending {
-            length = writeClose(packet)
+            length = sealing ? writeSealedClose(packet) : writeClose(packet)
             closePending = false
         } else if state == .closed {
             return 0
         } else if isClient && !helloSent {
-            length = writeHello(packet)
-            helloSent = true
-            if datagram { noteHelloSent() }
+            let hello = writeHello(packet)
+            if hello < 0 {
+                // The server key gives a shared secret of zeros: no hello can be sealed with it.
+                closeLocal(GesNetworkCodes.authenticationFailed, "", true)
+                length = writeClose(packet)
+                closePending = false
+            } else {
+                length = hello
+                helloSent = true
+                if datagram { noteHelloSent() }
+            }
+        } else if retryPending {
+            length = writeRetry(packet)
+            retryPending = false
         } else if welcomePending {
             length = writeWelcome(packet)
             welcomePending = false
         } else if state == .connected {
             let limit = Int(min(sendPacketLimit, Int64(packet.count)))
-            length = datagram ? writeDatagramData(packet, limit) : writeData(packet, limit)
+            length = encrypted ? writeSealedData(packet, limit) : datagram ? writeDatagramData(packet, limit) : writeData(packet, limit)
             if length == 0 { return 0 }
         } else {
             return 0
@@ -67,17 +78,26 @@ extension GesNetworkConnection {
         position = Wire.writeVarint(packet, position, UInt32(maxPacketBytes))
         position = Wire.writeVarint(packet, position, UInt32(maxBaseline))
         position = writeTransferLimits(packet, position)
-        position = Wire.writeVarint(packet, position, UInt32(token.count))
-        for byte in token {
+        position = Wire.writeVarint(packet, position, UInt32(cookie.count))
+        for byte in cookie {
             packet[position] = byte
             position += 1
         }
-        return datagram ? writeHelloCookie(packet, position) : Wire.writeVarint(packet, position, 0)
+        position = writeHelloSecurity(packet, position)
+        if position < 0 || !datagram || position >= Wire.minimumPacketBytes { return position }
+        (packet.baseAddress! + position).initializeMemory(as: UInt8.self, repeating: 0, count: Wire.minimumPacketBytes - position)
+        return Wire.minimumPacketBytes
     }
 
     private func writeWelcome(_ packet: UnsafeMutableRawBufferPointer) -> Int {
+        if encrypted { return writeSealedWelcome(packet) }
         packet[0] = Wire.welcome
-        var position = Wire.writeVarint(packet, 1, Wire.version)
+        return writeWelcomeFields(packet, 1)
+    }
+
+    // Writes the welcome fields from the position on and returns the end.
+    func writeWelcomeFields(_ packet: UnsafeMutableRawBufferPointer, _ start: Int) -> Int {
+        var position = Wire.writeVarint(packet, start, Wire.version)
         position = Wire.writeVarint(packet, position, UInt32(maxPacketBytes))
         position = Wire.writeVarint(packet, position, UInt32(maxBaseline))
         return writeTransferLimits(packet, position)
@@ -89,7 +109,7 @@ extension GesNetworkConnection {
         return Wire.writeVarint(packet, position, deflate ? Wire.compressionMaskDeflate : 0)
     }
 
-    private func writeClose(_ packet: UnsafeMutableRawBufferPointer) -> Int {
+    func writeClose(_ packet: UnsafeMutableRawBufferPointer) -> Int {
         packet[0] = Wire.close
         var position = Wire.writeVarint(packet, 1, UInt32(closeCode.utf8.count))
         for character in closeCode.utf8 {
@@ -105,7 +125,7 @@ extension GesNetworkConnection {
     }
 
     // Writes a data packet when frames, an acknowledgement or the keepalive are due; 0 otherwise.
-    private func writeData(_ packet: UnsafeMutableRawBufferPointer, _ limit: Int) -> Int {
+    func writeData(_ packet: UnsafeMutableRawBufferPointer, _ limit: Int) -> Int {
         let frames = hasPendingFrames() && (budget == 0 || budgetUnits >= 0)
         let keepaliveDue = now - lastSend >= keepalive
         if !frames && !(ackDue && now >= ackDeadline) && !keepaliveDue { return 0 }

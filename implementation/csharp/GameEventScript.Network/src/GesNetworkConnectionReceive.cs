@@ -105,17 +105,20 @@ public sealed partial class GesNetworkConnection
             return;
         }
 
-        _lastReceive = _now;
         if (_datagram)
         {
             ReceiveDatagramPacket(packet);
             return;
         }
 
+        _lastReceive = _now;
         switch (packet[0])
         {
-            case Wire.Close:
+            case Wire.Close when _keys is not { Largest: >= 0 }:
                 ReceiveClose(packet);
+                break;
+            case Wire.Retry when _client && State == GesNetworkState.Hello && _helloSent:
+                ReceiveRetry(packet);
                 break;
             case Wire.Hello when !_client && State == GesNetworkState.AwaitHello:
                 ReceiveHello(packet);
@@ -123,8 +126,11 @@ public sealed partial class GesNetworkConnection
             case Wire.Welcome when _client && State == GesNetworkState.Hello && _helloSent:
                 ReceiveWelcome(packet);
                 break;
-            case Wire.Data when State == GesNetworkState.Connected:
+            case Wire.Data when State == GesNetworkState.Connected && !_encrypted:
                 ReceiveData(packet);
+                break;
+            case Wire.Sealed when State == GesNetworkState.Connected && _encrypted:
+                ReceiveSealed(packet);
                 break;
             default:
                 Fail(GesNetworkCodes.Malformed);
@@ -160,24 +166,14 @@ public sealed partial class GesNetworkConnection
         position += hashes.Length;
         if (!ReadPacketLimit(packet, ref position, out var limit) || !ReadBaselineLimit(packet, ref position, out var baseline) ||
             !ReadTransferLimits(packet, ref position)) return;
-        if (Wire.ReadVarint(packet, ref position, out var tokenLength) != 1 || tokenLength > Wire.MaximumTokenBytes || packet.Length - position < tokenLength)
+        // The cookie: up to 64 bytes on a datagram transport, which the gate checks, and none on the others.
+        if (Wire.ReadVarint(packet, ref position, out var cookie) != 1 || cookie > (_datagram ? Wire.MaximumCookieBytes : 0) || packet.Length - position < cookie)
         {
             Fail(GesNetworkCodes.Malformed);
             return;
         }
 
-        var token = packet.Slice(position, (int)tokenLength);
-        position += token.Length;
-        if (_datagram)
-        {
-            if (!ReadHelloCookie(packet, ref position)) return;
-        }
-        else if (Wire.ReadVarint(packet, ref position, out var cookie) != 1 || cookie != 0 || position != packet.Length)
-        {
-            Fail(GesNetworkCodes.Malformed);
-            return;
-        }
-
+        position += (int)cookie;
         if (count != _routeCount || hash != Network.Hash)
         {
             Fail(GesNetworkCodes.SchemaMismatch, MismatchDetail(hashes));
@@ -186,8 +182,7 @@ public sealed partial class GesNetworkConnection
 
         _peerPacketLimit = limit;
         _baselineLimit = Math.Min(_maxBaseline, baseline);
-        State = GesNetworkState.AwaitAccept;
-        if (!AddEvent(GesNetworkEventKind.Connecting, -1, token, Counter.Pending, string.Empty, string.Empty, false)) Fail(GesNetworkCodes.QueueFull);
+        ReceiveHelloSecurity(packet, position);
     }
 
     // The roots of the local routes the client lacks or binds differently; the network name when none differs.
@@ -207,7 +202,25 @@ public sealed partial class GesNetworkConnection
 
     private void ReceiveWelcome(ReadOnlySpan<byte> packet)
     {
-        var position = 1;
+        if (_helloSealed)
+        {
+            if (!ReceiveSealedWelcome(packet) && !_datagram) Fail(GesNetworkCodes.AuthenticationFailed);
+            return;
+        }
+
+        // A key request asks for a retry; only a plain hello is answered by a plain welcome.
+        if (_minimumSecurity != GesNetworkSecurity.None)
+        {
+            Fail(GesNetworkCodes.Malformed);
+            return;
+        }
+
+        AcceptWelcome(packet, 1);
+    }
+
+    // Reads the welcome fields from the position to the end and connects.
+    private void AcceptWelcome(ReadOnlySpan<byte> packet, int position)
+    {
         if (!ReadVersion(packet, ref position) || !ReadPacketLimit(packet, ref position, out var limit) ||
             !ReadBaselineLimit(packet, ref position, out var baseline) || !ReadTransferLimits(packet, ref position)) return;
         if (position != packet.Length)
@@ -219,6 +232,7 @@ public sealed partial class GesNetworkConnection
         _peerPacketLimit = limit;
         _baselineLimit = Math.Min(_maxBaseline, baseline);
         State = GesNetworkState.Connected;
+        _security = !_encrypted ? GesNetworkSecurity.None : _pinned ? GesNetworkSecurity.Verified : GesNetworkSecurity.Encrypted;
         AddEvent(GesNetworkEventKind.Connected, -1, default, Counter.None, string.Empty, string.Empty, false);
     }
 

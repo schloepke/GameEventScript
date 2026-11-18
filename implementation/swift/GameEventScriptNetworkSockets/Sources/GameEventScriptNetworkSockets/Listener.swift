@@ -55,8 +55,9 @@ public final class GesNetworkSocketListener {
     ///   - network: The bound network of every session.
     ///   - options: The options of every server connection, using `.stream`; the defaults when omitted.
     /// - Returns: The listener.
-    /// - Throws: `GesApiError.invalidArgument` when the options use another transport or are out of range; a
-    ///   SwiftNIO error when the address cannot be bound.
+    /// - Throws: `GesApiError.invalidArgument` when the options use another transport or are out of range, or
+    ///   name no key while their lowest security level is above none, as the defaults do; a SwiftNIO error when the
+    ///   address cannot be bound.
     public static func listenTcp(host: String, port: Int, network: GesBoundNetwork, options: GesNetworkOptions? = nil) async throws -> sending GesNetworkSocketListener {
         try await listen(host: host, port: port, path: nil, network: network, options: options)
     }
@@ -70,7 +71,8 @@ public final class GesNetworkSocketListener {
     ///   - options: The options of every server connection, using `.message`; the defaults when omitted.
     /// - Returns: The listener. It speaks plain `ws`; a browser client needs `wss` through a TLS-terminating proxy.
     /// - Throws: `GesApiError.invalidArgument` when the path does not start with `/`, or the options use another
-    ///   transport or are out of range; a SwiftNIO error when the address cannot be bound.
+    ///   transport or are out of range, or name no key while their lowest security level is above none, as the
+    ///   defaults do; a SwiftNIO error when the address cannot be bound.
     public static func listenWebSocket(host: String, port: Int, path: String, network: GesBoundNetwork, options: GesNetworkOptions? = nil) async throws -> sending GesNetworkSocketListener {
         if !path.hasPrefix("/") { throw GesApiError.invalidArgument("The path starts with '/'.") }
         return try await listen(host: host, port: port, path: path, network: network, options: options)

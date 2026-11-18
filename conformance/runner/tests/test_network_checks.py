@@ -59,7 +59,7 @@ class NetworkInputTests(unittest.TestCase):
         request = prepare(self.case('handshake-loopback', options={'maxTransferBytes': 4, 'deflateTransfers': False}, steps=[
             {'cancel': {'side': 'server', 'route': 3, 'id': 0}},
             {'cancel': {'side': 'server', 'route': 3, 'id': 1, 'code': 'game.stale'}}]))
-        self.assertEqual({'maxTransferBytes': 4, 'deflateTransfers': False}, request['options'])
+        self.assertEqual({'maxTransferBytes': 4, 'deflateTransfers': False, 'minimumSecurity': 'none'}, request['options'])
         self.assertEqual([{'action': 'cancel', 'side': 'server', 'route': 3, 'id': 0},
                           {'action': 'cancel', 'side': 'server', 'route': 3, 'id': 1, 'code': 'game.stale'}], request['steps'])
         for step in ({'cancel': {'side': 'server', 'route': 3}}, {'cancel': {'side': 'server', 'route': 3, 'id': '0'}},
@@ -68,6 +68,18 @@ class NetworkInputTests(unittest.TestCase):
             with self.assertRaises(InvalidDocument, msg=step):
                 prepare(self.case('handshake-loopback', steps=[step]))
         for options in ({'deflateTransfers': 1}, {'maxTransferBytes': True}, {'maxTransferBytes': -1}):
+            with self.assertRaises(InvalidDocument, msg=options):
+                prepare(self.case('handshake-loopback', options=options))
+
+    def test_security_options_reach_the_adapter(self):
+        key = '01' * 32
+        request = prepare(self.case('handshake-loopback', options={'minimumSecurity': 'encrypted', 'key': key, 'testKeySeed': 2 ** 64 - 1},
+                                    clientOptions={'minimumSecurity': 'verified', 'serverPublicKey': key, 'testKeySeed': 0}))
+        self.assertEqual({'minimumSecurity': 'encrypted', 'key': key, 'testKeySeed': 2 ** 64 - 1}, request['options'])
+        self.assertEqual({'minimumSecurity': 'verified', 'serverPublicKey': key, 'testKeySeed': 0}, request['clientOptions'])
+        self.assertEqual('none', prepare(self.cases['handshake-loopback'])['options']['minimumSecurity'])
+        for options in ({'minimumSecurity': 'pinned'}, {'minimumSecurity': 1}, {'key': '01' * 31}, {'key': 'zz' * 32},
+                        {'serverPublicKey': 1}, {'testKeySeed': -1}, {'testKeySeed': 2 ** 64}, {'testKeySeed': True}):
             with self.assertRaises(InvalidDocument, msg=options):
                 prepare(self.case('handshake-loopback', options=options))
 
@@ -106,7 +118,7 @@ class NetworkInputTests(unittest.TestCase):
     def test_observations_are_compared_exactly(self):
         case = self.cases['handshake-loopback']
         expected = case.expected['network']
-        sides = {name: {'state': 'connected', 'roundTripMicroseconds': 0, 'queuedSendBytes': 0, 'pendingReceiveBytes': 0}
+        sides = {name: {'state': 'connected', 'security': 'none', 'roundTripMicroseconds': 0, 'queuedSendBytes': 0, 'pendingReceiveBytes': 0}
                  for name in ('client', 'server')}
         observed = {'status': 'ok', 'network': {'trace': list(expected['trace']), **sides}}
         self.assertEqual('passed', compare(case, observed)[0])

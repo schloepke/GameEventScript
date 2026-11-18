@@ -71,48 +71,13 @@ extension GesNetworkConnection {
         helloInterval = min(helloInterval, Int64.max / 2) * 2
     }
 
-    // Writes the cookie and pads the datagram hello to 1200 bytes.
-    func writeHelloCookie(_ packet: UnsafeMutableRawBufferPointer, _ position: Int) -> Int {
-        var position = Wire.writeVarint(packet, position, UInt32(cookie.count))
-        for byte in cookie {
-            packet[position] = byte
-            position += 1
-        }
-        if position >= Wire.minimumPacketBytes { return position }
-        (packet.baseAddress! + position).initializeMemory(as: UInt8.self, repeating: 0, count: Wire.minimumPacketBytes - position)
-        return Wire.minimumPacketBytes
-    }
-
-    // Skips the cookie of a datagram hello and checks its padding; false when it closed the connection.
-    func readHelloCookie(_ packet: UnsafeRawBufferPointer, _ position: inout Int) -> Bool {
-        var length: UInt32 = 0
-        if Wire.readVarint(packet, &position, &length) != 1 || length > UInt32(Wire.maximumCookieBytes) || packet.count - position < Int(length)
-            || packet.count < Wire.minimumPacketBytes
-        {
-            return fail(GesNetworkCodes.malformed)
-        }
-        position += Int(length)
-        for index in position..<packet.count where packet[index] != 0 { return fail(GesNetworkCodes.malformed) }
-        position = packet.count
-        return true
-    }
-
-    private func receiveRetry(_ packet: UnsafeRawBufferPointer) {
-        var position = 1
-        var length: UInt32 = 0
-        if Wire.readVarint(packet, &position, &length) != 1 || length < 1 || length > UInt32(Wire.maximumCookieBytes) || packet.count - position != Int(length) {
-            fail(GesNetworkCodes.malformed)
-            return
-        }
-        cookie = Array(packet[position...])
-        helloSent = false
-        helloInterval = Self.helloRepeatInterval
-    }
-
     // MARK: Receiving
 
     // Handles a datagram by type and state: repetitions and late packets of the handshake are ignored.
     func receiveDatagramPacket(_ packet: UnsafeRawBufferPointer) {
+        // An encrypted session drops plain data, and every plain packet once a sealed one authenticated.
+        if encrypted && packet[0] != Wire.sealed && ((keys?.largest ?? -1) >= 0 || packet[0] == Wire.data) { return }
+        if packet[0] != Wire.sealed { lastReceive = now }
         switch packet[0] {
         case Wire.close:
             receiveClose(packet)
@@ -130,16 +95,20 @@ extension GesNetworkConnection {
             receiveWelcome(packet)
         case Wire.welcome where isClient && state == .connected:
             break
-        case Wire.data where state == .connected:
+        case Wire.data where state == .connected && !encrypted:
             receiveDatagramData(packet)
         case Wire.data where isClient && state == .hello:
+            break
+        case Wire.sealed where state == .connected && encrypted:
+            receiveSealed(packet)
+        case Wire.sealed where isClient && state == .hello:
             break
         default:
             fail(GesNetworkCodes.malformed)
         }
     }
 
-    private func receiveDatagramData(_ packet: UnsafeRawBufferPointer) {
+    func receiveDatagramData(_ packet: UnsafeRawBufferPointer) {
         if packet.count < 4 || (packet[1] & ~3) != 0 {
             fail(GesNetworkCodes.malformed)
             return

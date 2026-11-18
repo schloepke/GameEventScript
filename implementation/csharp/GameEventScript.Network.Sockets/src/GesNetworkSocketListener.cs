@@ -66,7 +66,7 @@ public sealed partial class GesNetworkSocketListener : IDisposable
     /// <param name="network">The bound network of every session.</param>
     /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Stream"/>; the defaults when omitted.</param>
     /// <returns>The listener.</returns>
-    /// <exception cref="ArgumentException">The options use another transport or are out of range.</exception>
+    /// <exception cref="ArgumentException">The options use another transport or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
     /// <exception cref="SocketException">The address cannot be bound.</exception>
     public static GesNetworkSocketListener ListenTcp(IPEndPoint endPoint, GesBoundNetwork network, GesNetworkOptions? options = null) =>
         new(endPoint, network, options, GesNetworkTransport.Stream, null);
@@ -77,7 +77,7 @@ public sealed partial class GesNetworkSocketListener : IDisposable
     /// <param name="network">The bound network of every session.</param>
     /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Message"/>; the defaults when omitted.</param>
     /// <returns>The listener. It speaks plain <c>ws</c>; a browser client needs <c>wss</c> through a TLS-terminating proxy.</returns>
-    /// <exception cref="ArgumentException">The path does not start with <c>/</c>, or the options use another transport or are out of range.</exception>
+    /// <exception cref="ArgumentException">The path does not start with <c>/</c>, or the options use another transport or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
     /// <exception cref="SocketException">The address cannot be bound.</exception>
     public static GesNetworkSocketListener ListenWebSocket(IPEndPoint endPoint, string path, GesBoundNetwork network, GesNetworkOptions? options = null)
     {

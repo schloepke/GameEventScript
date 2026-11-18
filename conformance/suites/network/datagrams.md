@@ -85,7 +85,7 @@ networkApi:
   steps:
     - {"transmit": "client"}
     - {"cookie": {"key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "windowMicroseconds": 10000000, "now": 0, "address": "7f0000013039", "packet": 0}}
-    - {"receive": {"side": "client", "bytes": "02180000000000000000466cc01f6c2a8381ba5ad3c675cee84c"}}
+    - {"receive": {"side": "client", "bytes": "02180000000000000000466cc01f6c2a8381ba5ad3c675cee84c00"}}
     - {"transmit": "client"}
     - {"cookie": {"key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "windowMicroseconds": 10000000, "now": 15000000, "address": "7f0000013039", "packet": 0}}
     - {"cookie": {"key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "windowMicroseconds": 10000000, "now": 15000000, "address": "7f000001303a", "packet": 0}}
@@ -104,11 +104,11 @@ gesBlock: expect
 network:
   trace:
     - "client packet 1200:1e35caffd7b4efd5"
-    - "cookie retry 02180000000000000000466cc01f6c2a8381ba5ad3c675cee84c"
-    - "client packet 1200:eee08dfc521539b4"
+    - "cookie retry 02180000000000000000466cc01f6c2a8381ba5ad3c675cee84c00"
+    - "client packet 1200:4e7137565eda3c96"
     - "cookie accept"
-    - "cookie retry 021801000000000000005a7642b7bbd6c48c1fe81613016538fa"
-    - "cookie retry 021802000000000000001668be81d3a701b8d6d098846ce38f83"
+    - "cookie retry 021801000000000000005a7642b7bbd6c48c1fe81613016538fa00"
+    - "cookie retry 021802000000000000001668be81d3a701b8d6d098846ce38f8300"
     - "cookie drop"
     - "server connecting -"
     - "server connected"

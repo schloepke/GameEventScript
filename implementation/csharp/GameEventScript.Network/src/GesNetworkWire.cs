@@ -37,6 +37,7 @@ internal static class GesNetworkWire
     internal const byte Welcome = 3;
     internal const byte Close = 4;
     internal const byte Data = 5;
+    internal const byte Sealed = 6;
 
     // The magic of a hello: "GESN".
     internal const uint Magic = 0x4e534547;

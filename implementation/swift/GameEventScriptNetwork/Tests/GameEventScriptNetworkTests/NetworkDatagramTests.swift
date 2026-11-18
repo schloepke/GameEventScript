@@ -27,7 +27,7 @@ final class NetworkDatagramTests: XCTestCase {
     private let bulkBlob = 3
 
     private static var options: GesNetworkOptions {
-        var options = GesNetworkOptions()
+        var options = GesNetworkOptions.plain
         options.transport = .datagram
         return options
     }
@@ -225,8 +225,8 @@ final class NetworkDatagramTests: XCTestCase {
 
     func testImpairmentRequiresDatagramConnectionsAndValidRates() throws {
         let network = try GesSchemaSet(parsing: Self.source).network("Game").bind()
-        let client = try GesNetworkConnection.makeClient(network: network, now: 0)
-        let server = try GesNetworkConnection.makeServer(network: network, now: 0)
+        let client = try GesNetworkConnection.makeClient(network: network, now: 0, options: .plain)
+        let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: .plain)
         XCTAssertThrowsError(try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0, lossPerMille: 1))
         XCTAssertThrowsError(try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0, reorder: true))
         let (datagramClient, datagramServer) = try pair()

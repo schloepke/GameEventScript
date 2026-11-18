@@ -107,21 +107,25 @@ extension GesNetworkConnection {
             return
         }
 
-        lastReceive = now
         if datagram {
             receiveDatagramPacket(packet)
             return
         }
 
+        lastReceive = now
         switch packet[0] {
-        case Wire.close:
+        case Wire.close where (keys?.largest ?? -1) < 0:
             receiveClose(packet)
+        case Wire.retry where isClient && state == .hello && helloSent:
+            receiveRetry(packet)
         case Wire.hello where !isClient && state == .awaitHello:
             receiveHello(packet)
         case Wire.welcome where isClient && state == .hello && helloSent:
             receiveWelcome(packet)
-        case Wire.data where state == .connected:
+        case Wire.data where state == .connected && !encrypted:
             receiveData(packet)
+        case Wire.sealed where state == .connected && encrypted:
+            receiveSealed(packet)
         default:
             fail(GesNetworkCodes.malformed)
         }
@@ -153,24 +157,14 @@ extension GesNetworkConnection {
         var limit = 0
         var baseline: Int64 = 0
         if !readPacketLimit(packet, &position, &limit) || !readBaselineLimit(packet, &position, &baseline) || !readTransferLimits(packet, &position) { return }
-        var tokenLength: UInt32 = 0
-        if Wire.readVarint(packet, &position, &tokenLength) != 1 || tokenLength > UInt32(Wire.maximumTokenBytes) || packet.count - position < Int(tokenLength) {
+        // The cookie: up to 64 bytes on a datagram transport, which the gate checks, and none on the others.
+        var cookie: UInt32 = 0
+        if Wire.readVarint(packet, &position, &cookie) != 1 || cookie > UInt32(datagram ? Wire.maximumCookieBytes : 0) || packet.count - position < Int(cookie) {
             fail(GesNetworkCodes.malformed)
             return
         }
 
-        let token = UnsafeRawBufferPointer(rebasing: packet[position..<position + Int(tokenLength)])
-        position += token.count
-        if datagram {
-            if !readHelloCookie(packet, &position) { return }
-        } else {
-            var cookie: UInt32 = 0
-            if Wire.readVarint(packet, &position, &cookie) != 1 || cookie != 0 || position != packet.count {
-                fail(GesNetworkCodes.malformed)
-                return
-            }
-        }
-
+        position += Int(cookie)
         if Int(count) != routeCount || hash != network.hash {
             fail(GesNetworkCodes.schemaMismatch, mismatchDetail(hashes))
             return
@@ -178,8 +172,7 @@ extension GesNetworkConnection {
 
         peerPacketLimit = limit
         baselineLimit = min(maxBaseline, baseline)
-        state = .awaitAccept
-        if !addEvent(.connecting, -1, token, .pending, "", "", false) { fail(GesNetworkCodes.queueFull) }
+        receiveHelloSecurity(packet, position)
     }
 
     // The roots of the local routes the client lacks or binds differently; the network name when none differs.
@@ -195,7 +188,23 @@ extension GesNetworkConnection {
     }
 
     func receiveWelcome(_ packet: UnsafeRawBufferPointer) {
-        var position = 1
+        if helloSealed {
+            if !receiveSealedWelcome(packet) && !datagram { fail(GesNetworkCodes.authenticationFailed) }
+            return
+        }
+
+        // A key request asks for a retry; only a plain hello is answered by a plain welcome.
+        if minimumSecurity != .none {
+            fail(GesNetworkCodes.malformed)
+            return
+        }
+
+        acceptWelcome(packet, 1)
+    }
+
+    // Reads the welcome fields from the position to the end and connects.
+    func acceptWelcome(_ packet: UnsafeRawBufferPointer, _ start: Int) {
+        var position = start
         var limit = 0
         var baseline: Int64 = 0
         if !readVersion(packet, &position) || !readPacketLimit(packet, &position, &limit) || !readBaselineLimit(packet, &position, &baseline)
@@ -211,6 +220,7 @@ extension GesNetworkConnection {
         peerPacketLimit = limit
         baselineLimit = min(maxBaseline, baseline)
         state = .connected
+        security = !encrypted ? .none : pinned ? .verified : .encrypted
         _ = addEvent(.connected, -1, UnsafeRawBufferPointer(start: nil, count: 0), .none, "", "", false)
     }
 
@@ -294,7 +304,7 @@ extension GesNetworkConnection {
         _ = addEvent(.closed, -1, UnsafeRawBufferPointer(start: nil, count: 0), .none, String(decoding: code, as: UTF8.self), String(decoding: detail, as: UTF8.self), true)
     }
 
-    private func receiveData(_ packet: UnsafeRawBufferPointer) {
+    func receiveData(_ packet: UnsafeRawBufferPointer) {
         if packet.count < 4 || (packet[1] & ~3) != 0 || Wire.readUInt16(packet, 2) != UInt16(truncatingIfNeeded: receivedCount) {
             fail(GesNetworkCodes.malformed)
             return

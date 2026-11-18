@@ -35,6 +35,12 @@ public enum GesNetworkCodes {
     public static let transferCorrupt = "network.transferCorrupt"
     /// The host cancelled a transfer without giving its own code.
     public static let transferCancelled = "network.transferCancelled"
+    /// A server without a key received a key request or a sealed `hello`.
+    public static let insecure = "network.insecure"
+    /// A client that requires `GesNetworkSecurity.verified` has no pinned key and received a server key.
+    public static let unverified = "network.unverified"
+    /// A sealed `hello`, `welcome` or packet does not authenticate.
+    public static let authenticationFailed = "network.authenticationFailed"
 }
 
 /// The result of queueing a message.
@@ -77,6 +83,17 @@ public enum GesNetworkTransport: Sendable, Equatable {
     /// One datagram per packet, for example UDP. Packets may be lost, duplicated, delayed or reordered; the connection
     /// resends what is lost and restores the order of each class.
     case datagram
+}
+
+/// The security level of a session.
+public enum GesNetworkSecurity: Sendable, Equatable {
+    /// The session is not encrypted.
+    case none
+    /// The session is encrypted with a server key the client received during the handshake; it protects only against
+    /// attackers who read but do not change packets. A server reports this level for every encrypted session.
+    case encrypted
+    /// The session is encrypted with the server key the client was given in advance.
+    case verified
 }
 
 /// The kind of a connection event.
@@ -151,6 +168,18 @@ public struct GesNetworkOptions: Sendable, Equatable {
     public var maxTransferBytes: Int64 = 67_108_864
     /// Whether this side accepts and sends deflate-compressed transfers.
     public var deflateTransfers = true
+    /// The lowest security level this side accepts. A client without a pinned key closes with
+    /// `GesNetworkCodes.unverified` when it requires `GesNetworkSecurity.verified`; a server above
+    /// `GesNetworkSecurity.none` needs a `key`. The default is `GesNetworkSecurity.verified`.
+    public var minimumSecurity: GesNetworkSecurity = .verified
+    /// The server's pinned public key of 32 bytes; client only. A client with a pinned key seals its first `hello` and
+    /// reaches `GesNetworkSecurity.verified`. The default is none.
+    public var serverPublicKey: [UInt8]?
+    /// The server's key; server only. A server with a key encrypts every session. The default is none.
+    public var key: GesNetworkKey?
+    /// A seed that derives the connection's ephemeral keys instead of the system's random generator. INSECURE: anyone
+    /// who knows the seed reads the session. For tests and golden bytes only. The default is none.
+    public var insecureTestKeySeed: UInt64?
 
     /// Creates the default options.
     public init() {}
@@ -174,6 +203,9 @@ public struct GesNetworkOptions: Sendable, Equatable {
         }
         if maxTransferBytes < 0 || maxTransferBytes > Int64(GesNetworkWire.maximumTransferBytes) {
             throw GesApiError.invalidArgument("The transfer limit is 0 to 1073741824 bytes.")
+        }
+        if let serverPublicKey, serverPublicKey.count != GesNetworkX25519.keyBytes {
+            throw GesApiError.invalidArgument("A server public key holds 32 bytes.")
         }
     }
 }

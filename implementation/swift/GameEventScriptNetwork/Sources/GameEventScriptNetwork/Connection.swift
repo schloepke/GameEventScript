@@ -141,6 +141,30 @@ public final class GesNetworkConnection {
     var helloInterval: Int64 = GesNetworkConnection.helloRepeatInterval
     var cookie: [UInt8] = []
 
+    // Encryption, see ConnectionSecurity.swift.
+    let minimumSecurity: GesNetworkSecurity
+    let key: GesNetworkKey?
+    let pinned: Bool
+    let testKeys: Bool
+    let testKeySeed: UInt64
+    var ephemeralCount: UInt64 = 0
+    // The server's public key: the pinned one or the one a retry gave the client.
+    var serverKey: [UInt8]?
+    var keys: Keys?
+    // The session is encrypted: the client read a sealed welcome, the server opened a sealed hello.
+    var encrypted = false
+    // This side sends sealed packets: from the server's welcome or the client's reading of it on.
+    var sealing = false
+    var retryPending = false
+    var retryAccepted = false
+    // The hello the client holds is sealed; its next one needs a fresh ephemeral key.
+    var helloSealed = false
+    var ephemeralStale = true
+
+    /// The security level the session reached: `GesNetworkSecurity.none` until it is connected; a server reports
+    /// `GesNetworkSecurity.encrypted` for every encrypted session.
+    public internal(set) var security: GesNetworkSecurity = .none
+
     // Bulk transfers, see ConnectionTransfer.swift: the codecs and hash, created when first needed.
     var deflater: GesNetworkDeflater?
     var inflater: GesNetworkInflater?
@@ -180,6 +204,20 @@ public final class GesNetworkConnection {
         maxBaseline = options.maxBaselineBytes
         maxTransfer = options.maxTransferBytes
         deflate = options.deflateTransfers
+        minimumSecurity = options.minimumSecurity
+        if client {
+            serverKey = options.serverPublicKey
+            pinned = options.serverPublicKey != nil
+            key = nil
+        } else {
+            key = options.key
+            pinned = false
+            if key == nil && minimumSecurity != .none {
+                throw GesApiError.invalidArgument("A server whose lowest security level is above none needs a key.")
+            }
+        }
+        testKeys = options.insecureTestKeySeed != nil
+        testKeySeed = options.insecureTestKeySeed ?? 0
 
         let routes = network.network.routes
         routeCount = routes.count
@@ -445,6 +483,7 @@ public final class GesNetworkConnection {
     public func accept() throws {
         if state != .awaitAccept { throw GesApiError.invalidOperation("Only a connecting client can be accepted.") }
         state = .connected
+        security = encrypted ? .encrypted : .none
         welcomePending = true
         _ = addEvent(.connected, -1, UnsafeRawBufferPointer(start: nil, count: 0), .none, "", "", false)
     }
@@ -534,6 +573,7 @@ public final class GesNetworkConnection {
         for slot in sendLatest { slot?.clear() }
         ackDue = false
         welcomePending = false
+        retryPending = false
         dropDatagramSending()
     }
 

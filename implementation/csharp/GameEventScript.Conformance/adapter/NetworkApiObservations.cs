@@ -222,6 +222,17 @@ internal static class NetworkApiObservations
                 case "sendBudgetBytesPerSecond": options.SendBudgetBytesPerSecond = property.Value.GetInt64(); break;
                 case "maxTransferBytes": options.MaxTransferBytes = property.Value.GetInt64(); break;
                 case "deflateTransfers": options.DeflateTransfers = property.Value.GetBoolean(); break;
+                case "minimumSecurity":
+                    options.MinimumSecurity = property.Value.GetString() switch
+                    {
+                        "none" => GesNetworkSecurity.None,
+                        "encrypted" => GesNetworkSecurity.Encrypted,
+                        _ => GesNetworkSecurity.Verified
+                    };
+                    break;
+                case "key": options.Key = GesNetworkKey.FromPrivateKey(Convert.FromHexString(property.Value.GetString()!)); break;
+                case "serverPublicKey": options.ServerPublicKey = Convert.FromHexString(property.Value.GetString()!); break;
+                case "testKeySeed": options.InsecureTestKeySeed = property.Value.GetUInt64(); break;
                 default: throw new ArgumentException("Unknown network option.");
             }
         }
@@ -297,6 +308,12 @@ internal static class NetworkApiObservations
             GesNetworkState.AwaitAccept => "awaitAccept",
             GesNetworkState.Connected => "connected",
             _ => "closed"
+        },
+        security = connection.Security switch
+        {
+            GesNetworkSecurity.Verified => "verified",
+            GesNetworkSecurity.Encrypted => "encrypted",
+            _ => "none"
         },
         roundTripMicroseconds = connection.RoundTripMicroseconds,
         queuedSendBytes = connection.QueuedSendBytes,

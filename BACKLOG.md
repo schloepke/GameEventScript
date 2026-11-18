@@ -75,9 +75,9 @@ here.
   - path MTU discovery for datagrams: probe larger packets than the default 1200 bytes and fall back on loss, as in
     RFC 8899 (DPLPMTUD);
   - resume a transfer after a dropped connection, using its hash as the transfer's identity;
-  - encryption: P-256 ECDH, HKDF-SHA256 and AES-256-GCM, optionally X25519 and ChaCha20-Poly1305, with server-key
-    pinning; the spec states that unauthenticated ECDH protects only against passive attackers. Test `AesGcm` and
-    `ECDiffieHellman` on .NET for iOS first;
+  - a second cipher suite with P-256 ECDH and AES-256-GCM for platforms with hardware AES and certified P-256, chosen
+    in the handshake; test `AesGcm` and `ECDiffieHellman` on .NET for iOS first;
+  - signed server keys, so a client trusts a signing key instead of pinning each server's key, with rotation;
   - an observation hook for sent and received packets and events, and replay of a recorded session;
   - benchmarks with 64 subscribers, a World of about 33 KB and deltas of about 100 bytes.
 - Extend packed schemas (specs/Schemas.md#packed-schemas): `optional` fields as a presence bit, spatial fields with

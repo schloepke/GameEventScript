@@ -91,10 +91,13 @@ Compare `Game.Hash` with the bound network's hash at startup to detect a stale g
 A client connection carries a token for the server, such as a login ticket. The server reports
 it in a `connecting` event and accepts or refuses the client. The loopback transport moves the
 packets between both connections without latency, which is how tests and single-player modes run.
+Packets that never leave the process need no [encryption](#7-protect-the-connection), so both
+sides lower their security level to `None`.
 
 ```csharp
-var client = GesNetworkConnection.CreateClient(network, "ticket"u8, now: 0);
-var server = GesNetworkConnection.CreateServer(network, now: 0);
+var local = new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None };
+var client = GesNetworkConnection.CreateClient(network, "ticket"u8, now: 0, local);
+var server = GesNetworkConnection.CreateServer(network, now: 0, local);
 var loopback = new GesNetworkLoopback(client, server);
 
 loopback.Advance(0);
@@ -108,8 +111,10 @@ loopback.Advance(0);
 ```
 
 ```swift
-let client = try GesNetworkConnection.makeClient(network: network, token: Array("ticket".utf8), now: 0)
-let server = try GesNetworkConnection.makeServer(network: network, now: 0)
+var local = GesNetworkOptions()
+local.minimumSecurity = .none
+let client = try GesNetworkConnection.makeClient(network: network, token: Array("ticket".utf8), now: 0, options: local)
+let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: local)
 let loopback = try GesNetworkLoopback(client: client, server: server)
 
 try loopback.advance(0)
@@ -193,13 +198,14 @@ host calls `Update` where it runs the connection, then takes the connection's ev
 
 A TCP session uses the `stream` transport, a WebSocket session the `message` transport and a UDP
 session the `datagram` transport. Listeners
-choose the matching transport when you pass no options. A server takes ready clients without
-waiting:
+choose the matching transport. With the default options a listener needs the server's
+[key](#7-protect-the-connection). A server takes ready clients without waiting:
 
 ```csharp
 using GameEventScript.Network.Sockets;
 
-using var listener = GesNetworkSocketListener.ListenTcp(new IPEndPoint(IPAddress.Loopback, 7000), network);
+var options = new GesNetworkOptions { Key = serverKey };
+using var listener = GesNetworkSocketListener.ListenTcp(new IPEndPoint(IPAddress.Loopback, 7000), network, options);
 var session = listener.Accept(now); // null while no client is ready
 session?.Update(now);
 ```
@@ -207,7 +213,9 @@ session?.Update(now);
 ```swift
 import GameEventScriptNetworkSockets
 
-let listener = try await GesNetworkSocketListener.listenWebSocket(host: "::", port: 7000, path: "/game", network: network)
+var options = GesNetworkOptions()
+options.key = serverKey
+let listener = try await GesNetworkSocketListener.listenWebSocket(host: "::", port: 7000, path: "/game", network: network, options: options)
 if let session = try listener.accept(now: now) { try session.update(now: now) }
 ```
 
@@ -223,11 +231,40 @@ every path.
 
 ## 7. Protect the connection
 
-This version neither encrypts nor authenticates. Anyone who can read the transport sees the token
-and the records, and the peer's identity is not proven. Run the session over TLS: a browser
-client uses WebSocket only over `wss`, for example behind a TLS-terminating proxy in front of the
-listener. UDP sessions have no TLS; use them only where the records are not secret until a later
-version encrypts them.
+A server with a key of its own encrypts its sessions with X25519, ChaCha20-Poly1305 and
+HKDF-SHA256. Generate the key once, store its private key securely and give its public key to
+your clients outside the protocol, for example in the client build or a signed configuration:
+
+```csharp
+var serverKey = GesNetworkKey.Generate();
+var stored = new byte[32];
+serverKey.CopyPrivateKey(stored); // later: GesNetworkKey.FromPrivateKey(stored)
+var server = GesNetworkConnection.CreateServer(network, now, new GesNetworkOptions { Key = serverKey });
+var client = GesNetworkConnection.CreateClient(network, "ticket"u8, now,
+    new GesNetworkOptions { ServerPublicKey = serverKey.PublicKey.ToArray() });
+// After connecting, client.Security is GesNetworkSecurity.Verified.
+```
+
+```swift
+let serverKey = GesNetworkKey.generate()
+var serverOptions = GesNetworkOptions()
+serverOptions.key = serverKey
+var clientOptions = GesNetworkOptions()
+clientOptions.serverPublicKey = serverKey.publicKey
+// After connecting, client.security is .verified.
+```
+
+A client with the pinned key reaches `Verified`: the server proved that it holds the key, and
+nobody else can read or change the session. The default options require it; a client without
+a pinned key closes with `network.unverified`. A client whose lowest level is `Encrypted` takes
+the key from the server's first answer instead. That hides the session from attackers who only
+read the network, but one who can change packets can pose as the server, so use it only during
+development or on a local network. A server without a key closes a client that asks for
+encryption with `network.insecure`.
+
+An unencrypted session (`None`) hides and authenticates nothing. Use it only in-process or over
+a transport that protects itself, such as TLS: a browser client uses WebSocket over `wss`, for
+example behind a TLS-terminating proxy in front of the listener.
 
 ## Next steps
 

@@ -41,6 +41,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   (Swift `cancel(route:transferId:code:)`) cancels it with an optional code without closing the session; the events
   `transferProgress` and `transferCancelled` and the codes `network.transferTooLarge`, `network.transferCorrupt` and
   `network.transferCancelled` report progress and failures.
+- Network encryption: a server with a key (`GesNetworkKey`) encrypts its sessions with X25519, ChaCha20-Poly1305 and
+  HKDF-SHA256, implemented in constant time in both ports, with a key change every 2^24 packets. A client that pins the
+  server's public key (`ServerPublicKey`) reaches `GesNetworkSecurity.Verified`; one that takes the key from a `retry`
+  reaches `Encrypted`. `MinimumSecurity` sets the lowest level a side accepts, `Security` reports the level reached, and
+  the codes `network.unverified`, `network.insecure` and `network.authenticationFailed` report failures. A changed
+  sealed datagram is dropped; on a stream or message transport it closes the session. `InsecureTestKeySeed` makes
+  handshakes reproducible for tests. By default a connection requires a pinned key (`MinimumSecurity` is `Verified`);
+  in-process sessions and sessions over TLS set it to `None`.
 
 ### Changed
 - The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the

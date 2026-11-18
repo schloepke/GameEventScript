@@ -36,6 +36,7 @@ final class SocketTests: XCTestCase {
     private static func options(_ transport: GesNetworkTransport) -> GesNetworkOptions {
         var options = GesNetworkOptions()
         options.transport = transport
+        options.minimumSecurity = .none
         return options
     }
 
@@ -186,6 +187,22 @@ final class SocketTests: XCTestCase {
         throw GesNetworkSocketError("No client was accepted in time.")
     }
 
+    private static let serverKey = try! GesNetworkKey(privateKey: (1...32).map { UInt8($0) })
+
+    private static func secureServer(_ transport: GesNetworkTransport) -> GesNetworkOptions {
+        var options = GesNetworkOptions()
+        options.transport = transport
+        options.key = serverKey
+        return options
+    }
+
+    private static func secureClient(_ transport: GesNetworkTransport) -> GesNetworkOptions {
+        var options = GesNetworkOptions()
+        options.transport = transport
+        options.serverPublicKey = serverKey.publicKey
+        return options
+    }
+
     private static func frame(_ opcode: WebSocketOpcode, _ bytes: [UInt8]) -> WebSocketFrame {
         WebSocketFrame(fin: true, opcode: opcode, maskKey: .random(), data: ByteBuffer(bytes: bytes))
     }
@@ -204,8 +221,8 @@ final class SocketTests: XCTestCase {
 
     func testWebSocketCarriesASession() async throws {
         let network = try Self.game()
-        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: network)
-        let connection = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now)
+        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: network, options: Self.options(.message))
+        let connection = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: Self.options(.message))
         let url = "ws://127.0.0.1:\(listener.localEndPoint.port!)/game?room=1"
         let client = try await GesNetworkSocketSession.connectWebSocket(url: url, connection: connection)
         let server = try Self.acceptOne(listener)
@@ -225,6 +242,37 @@ final class SocketTests: XCTestCase {
         client.close()
         server.close()
         listener.close()
+    }
+
+    func testTcpCarriesAnEncryptedSession() async throws {
+        let network = try Self.game()
+        let listener = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network, options: Self.secureServer(.stream))
+        let connection = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: Self.secureClient(.stream))
+        let client = try await GesNetworkSocketSession.connectTcp(host: "127.0.0.1", port: listener.localEndPoint.port!, connection: connection)
+        let server = try Self.acceptOne(listener)
+        try Self.roundTrip(client, server)
+        XCTAssertEqual(client.connection.security, .verified)
+        client.close()
+        server.close()
+        listener.close()
+    }
+
+    func testUdpCarriesAnEncryptedSession() async throws {
+        let network = try Self.game()
+        let listener = try await GesNetworkSocketListener.listenUdp(host: "127.0.0.1", port: 0, network: network, options: Self.secureServer(.datagram))
+        let connection = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: Self.secureClient(.datagram))
+        let client = try await GesNetworkSocketSession.connectUdp(host: "127.0.0.1", port: listener.localEndPoint.port!, connection: connection)
+        let server = try Self.acceptOne(listener, client)
+        try Self.roundTrip(client, server)
+        XCTAssertEqual(client.connection.security, .verified)
+        client.close()
+        server.close()
+        listener.close()
+    }
+
+    func testTheDefaultOptionsNeedAKey() async throws {
+        let network = try Self.game()
+        await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network) }
     }
 
     func testUdpCarriesASessionOverIpv6() async throws {
@@ -378,7 +426,7 @@ final class SocketTests: XCTestCase {
     }
 
     func testAWebSocketTextMessageIsMalformed() async throws {
-        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: Self.game())
+        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: Self.game(), options: Self.options(.message))
         let socket = try await Self.rawWebSocket(port: listener.localEndPoint.port!, target: "/game")
         let server = try Self.acceptOne(listener)
         try await socket.writeAndFlush(Self.frame(.text, Array("hello".utf8))).get()
@@ -389,7 +437,7 @@ final class SocketTests: XCTestCase {
     }
 
     func testAnOversizedWebSocketMessageIsTooLarge() async throws {
-        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: Self.game())
+        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: Self.game(), options: Self.options(.message))
         let socket = try await Self.rawWebSocket(port: listener.localEndPoint.port!, target: "/game")
         let server = try Self.acceptOne(listener)
         try await socket.writeAndFlush(Self.frame(.binary, [UInt8](repeating: 0, count: 16385))).get()
@@ -401,11 +449,11 @@ final class SocketTests: XCTestCase {
 
     func testAFragmentedWebSocketMessageIsOnePacket() async throws {
         let network = try Self.game()
-        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: network)
+        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: network, options: Self.options(.message))
         let socket = try await Self.rawWebSocket(port: listener.localEndPoint.port!, target: "/game")
         let server = try Self.acceptOne(listener)
         // A Hello split over two frames: a single byte never forms a valid packet on its own.
-        let client = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now)
+        let client = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: Self.options(.message))
         var hello = [UInt8](repeating: 0, count: 2048)
         let length = try client.transmit(into: &hello)
         // A write completes only once flushed, so the first frame is awaited after the second.
@@ -420,8 +468,8 @@ final class SocketTests: XCTestCase {
 
     func testAnotherPathIsNotFound() async throws {
         let network = try Self.game()
-        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: network)
-        let connection = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now)
+        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: network, options: Self.options(.message))
+        let connection = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: Self.options(.message))
         do {
             _ = try await GesNetworkSocketSession.connectWebSocket(url: "ws://127.0.0.1:\(listener.localEndPoint.port!)/other", connection: connection)
             XCTFail("The upgrade succeeded.")
@@ -474,16 +522,16 @@ final class SocketTests: XCTestCase {
         await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network, options: Self.options(.message)) }
         await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "game", network: network) }
         await assertInvalidArgument {
-            let message = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now)
+            let message = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: Self.options(.message))
             _ = try await GesNetworkSocketSession.connectTcp(host: "127.0.0.1", port: 1, connection: message)
         }
         await assertInvalidArgument {
-            let server = try GesNetworkConnection.makeServer(network: network, now: Self.now)
+            let server = try GesNetworkConnection.makeServer(network: network, now: Self.now, options: Self.options(.message))
             _ = try await GesNetworkSocketSession.connectWebSocket(url: "ws://127.0.0.1:1/", connection: server)
         }
         await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenUdp(host: "127.0.0.1", port: 0, network: network, options: Self.options(.stream)) }
         await assertInvalidArgument {
-            let message = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now)
+            let message = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: Self.options(.message))
             _ = try await GesNetworkSocketSession.connectUdp(host: "127.0.0.1", port: 1, connection: message)
         }
     }

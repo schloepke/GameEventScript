@@ -38,7 +38,13 @@ public sealed class GesNetworkSocketTests
 
     private static IPEndPoint Loopback => new(IPAddress.Loopback, 0);
 
-    private static GesNetworkOptions Options(GesNetworkTransport transport) => new() { Transport = transport };
+    private static readonly GesNetworkKey ServerKey = GesNetworkKey.FromPrivateKey(Enumerable.Range(1, 32).Select(value => (byte)value).ToArray());
+
+    private static GesNetworkOptions Options(GesNetworkTransport transport) => new() { Transport = transport, MinimumSecurity = GesNetworkSecurity.None };
+
+    private static GesNetworkOptions SecureServer(GesNetworkTransport transport) => new() { Transport = transport, Key = ServerKey };
+
+    private static GesNetworkOptions SecureClient(GesNetworkTransport transport) => new() { Transport = transport, ServerPublicKey = ServerKey.PublicKey.ToArray() };
 
     private static string? Next(GesNetworkConnection connection)
     {
@@ -125,8 +131,8 @@ public sealed class GesNetworkSocketTests
     public async Task WebSocketCarriesASession()
     {
         var network = Game();
-        using var listener = GesNetworkSocketListener.ListenWebSocket(Loopback, "/game", network);
-        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now);
+        using var listener = GesNetworkSocketListener.ListenWebSocket(Loopback, "/game", network, Options(GesNetworkTransport.Message));
+        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, Options(GesNetworkTransport.Message));
         var uri = new Uri($"ws://127.0.0.1:{listener.LocalEndPoint.Port}/game?room=1");
         using var client = await GesNetworkSocketSession.ConnectWebSocketAsync(uri, connection);
         using var server = AcceptOne(listener);
@@ -142,6 +148,36 @@ public sealed class GesNetworkSocketTests
         using var client = await GesNetworkSocketSession.ConnectUdpAsync("127.0.0.1", listener.LocalEndPoint.Port, connection);
         using var server = AcceptOne(listener, client);
         RoundTrip(client, server);
+    }
+
+    [TestMethod]
+    public async Task TcpCarriesAnEncryptedSession()
+    {
+        var network = Game();
+        using var listener = GesNetworkSocketListener.ListenTcp(Loopback, network, SecureServer(GesNetworkTransport.Stream));
+        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, SecureClient(GesNetworkTransport.Stream));
+        using var client = await GesNetworkSocketSession.ConnectTcpAsync("127.0.0.1", listener.LocalEndPoint.Port, connection);
+        using var server = AcceptOne(listener);
+        RoundTrip(client, server);
+        Assert.AreEqual(GesNetworkSecurity.Verified, connection.Security);
+    }
+
+    [TestMethod]
+    public async Task UdpCarriesAnEncryptedSession()
+    {
+        var network = Game();
+        using var listener = GesNetworkSocketListener.ListenUdp(Loopback, network, SecureServer(GesNetworkTransport.Datagram));
+        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, SecureClient(GesNetworkTransport.Datagram));
+        using var client = await GesNetworkSocketSession.ConnectUdpAsync("127.0.0.1", listener.LocalEndPoint.Port, connection);
+        using var server = AcceptOne(listener, client);
+        RoundTrip(client, server);
+        Assert.AreEqual(GesNetworkSecurity.Verified, connection.Security);
+    }
+
+    [TestMethod]
+    public void TheDefaultOptionsNeedAKey()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenTcp(Loopback, Game()));
     }
 
     [TestMethod]
@@ -240,7 +276,7 @@ public sealed class GesNetworkSocketTests
     public async Task AWebSocketTextMessageIsMalformed()
     {
         var network = Game();
-        using var listener = GesNetworkSocketListener.ListenWebSocket(Loopback, "/game", network);
+        using var listener = GesNetworkSocketListener.ListenWebSocket(Loopback, "/game", network, Options(GesNetworkTransport.Message));
         using var socket = new ClientWebSocket();
         await socket.ConnectAsync(new Uri($"ws://127.0.0.1:{listener.LocalEndPoint.Port}/game"), CancellationToken.None);
         using var server = AcceptOne(listener);
@@ -252,7 +288,7 @@ public sealed class GesNetworkSocketTests
     public async Task AnOversizedWebSocketMessageIsTooLarge()
     {
         var network = Game();
-        using var listener = GesNetworkSocketListener.ListenWebSocket(Loopback, "/game", network);
+        using var listener = GesNetworkSocketListener.ListenWebSocket(Loopback, "/game", network, Options(GesNetworkTransport.Message));
         using var socket = new ClientWebSocket();
         await socket.ConnectAsync(new Uri($"ws://127.0.0.1:{listener.LocalEndPoint.Port}/game"), CancellationToken.None);
         using var server = AcceptOne(listener);
@@ -263,7 +299,7 @@ public sealed class GesNetworkSocketTests
     [TestMethod]
     public async Task AnotherPathIsNotFound()
     {
-        using var listener = GesNetworkSocketListener.ListenWebSocket(Loopback, "/game", Game());
+        using var listener = GesNetworkSocketListener.ListenWebSocket(Loopback, "/game", Game(), Options(GesNetworkTransport.Message));
         using var socket = new ClientWebSocket();
         var failure = await Assert.ThrowsExactlyAsync<WebSocketException>(
             () => socket.ConnectAsync(new Uri($"ws://127.0.0.1:{listener.LocalEndPoint.Port}/other"), CancellationToken.None));
@@ -290,10 +326,10 @@ public sealed class GesNetworkSocketTests
     {
         var network = Game();
         Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenTcp(Loopback, network, Options(GesNetworkTransport.Message)));
-        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenWebSocket(Loopback, "game", network));
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenWebSocket(Loopback, "game", network, Options(GesNetworkTransport.Message)));
         var message = GesNetworkConnection.CreateClient(network, "tok"u8, Now);
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => GesNetworkSocketSession.ConnectTcpAsync("127.0.0.1", 1, message));
-        var server = GesNetworkConnection.CreateServer(network, Now);
+        var server = GesNetworkConnection.CreateServer(network, Now, Options(GesNetworkTransport.Message));
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => GesNetworkSocketSession.ConnectWebSocketAsync(new Uri("ws://127.0.0.1:1/"), server));
         Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenUdp(Loopback, network, Options(GesNetworkTransport.Stream)));
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => GesNetworkSocketSession.ConnectUdpAsync("127.0.0.1", 1, message));

@@ -9,14 +9,14 @@ This document owns GES network sessions. A `network` declaration in a
 [schema source](Schemas.md) names which wire roots a client and a server exchange, and
 in which delivery class. A session carries the encoded records of those roots between
 the two sides over a transport: a TCP stream, WebSocket messages, UDP datagrams or the
-in-process transport. The [network guide](../docs/guide/Network.md) introduces it step by step.
+in-process transport. A server with a key of its own [encrypts](#encryption) its sessions.
+The [network guide](../docs/guide/Network.md) introduces it step by step.
 
 The session core is a synchronous state machine without threads, sockets, clocks or
 allocation of its own resources at run time: bytes and the current time go in, bytes
 and events come out. Transports are plug-ins around it. Equal inputs at equal times give
-equal bytes and events in every port.
-
-Not part of this version: bulk transfers and encryption.
+equal bytes and events in every port. Only the ephemeral keys of an encrypted session are
+drawn at random; a [test seed](#ephemeral-keys) makes them deterministic as well.
 
 ## Principles
 
@@ -128,6 +128,8 @@ stateDiagram-v2
     [*] --> AwaitHello: server created
     Hello --> Connected: welcome received
     AwaitHello --> AwaitAccept: valid hello
+    AwaitHello --> AwaitHello: retry with key sent
+    Hello --> Hello: retry received
     AwaitAccept --> Connected: host accepts
     AwaitAccept --> Closed: host refuses
     Connected --> Closed: close, error, timeout
@@ -136,7 +138,8 @@ stateDiagram-v2
 ```
 
 1. The client sends `hello` with its network hash, the binding hash of every route, its
-   limits, the compressions it accepts and the host's token.
+   limits, the compressions it accepts and the host's token, sealed when the session is
+   [encrypted](#encryption).
 2. The server checks the protocol and the hashes. On a difference it closes the session
    with `network.protocolMismatch` or `network.schemaMismatch`. Otherwise it reports the
    event `connecting` with the token, and the host accepts or refuses the client.
@@ -147,10 +150,12 @@ stateDiagram-v2
    ends, an error closes the session or the peer stays silent for the timeout.
 
 A client sends nothing but `hello` and `close` before `welcome`; a server sends nothing but
-`welcome` and `close` before acceptance. Either receiving anything else is
+`retry`, `welcome` and `close` before acceptance. Either receiving anything else is
 `network.malformed`. On a datagram transport the handshake repeats lost packets and the
 server validates the client's address first; the
-[datagram handshake](#datagram-handshake) adds those rules.
+[datagram handshake](#datagram-handshake) adds those rules. A server with a key answers a
+`hello` that is not sealed with a `retry` that carries its public key; [encryption](#encryption)
+adds those rules.
 
 ### Delivery classes
 
@@ -508,13 +513,17 @@ ring is ignored.
 - The client sends `hello` and repeats it while no `welcome` arrives: after 1 s, then
   after twice the previous interval each time. Without `welcome` it closes with
   `network.timeout` like any connection, so loss can fail the handshake.
-- A `retry` received in the state `Hello` stores its cookie, and the client sends `hello`
-  with it at once; the interval starts again at 1 s. A `retry` in another state is
-  ignored.
+- A `retry` received in the state `Hello` stores its cookie when the cookie is not empty,
+  takes its key as [encryption](#security-levels) allows, and the client sends `hello` at
+  once; the interval starts again at 1 s. A `retry` in another state is ignored.
 - A server in `AwaitAccept` ignores `hello`; a server in `Connected` answers each `hello`
-  with `welcome`. In both states it does not read the `hello`.
-- The client accepts the first `welcome` in the state `Hello`, whichever `hello` it
-  answers, and ignores data packets before it and every `welcome` after it.
+  with the same `welcome` bytes it sent first. In both states it does not read the `hello`.
+- The client accepts the first `welcome` it can read in the state `Hello` and ignores data
+  packets before it and every `welcome` after it. Its `hello` repetitions are identical,
+  so any `welcome` answers the `hello` it holds. An encrypted `welcome` answers only the
+  `hello` that holds the same ephemeral key: when a late `retry` changes the cookie after
+  the server accepted the earlier `hello`, the client cannot read its `welcome` and the
+  handshake ends on the timeout.
 - A side sends `close` once; when it is lost, the peer closes on its timeout.
 
 ### Address validation
@@ -526,12 +535,12 @@ key of 32 bytes and a window length, and checks each datagram of an unknown addr
 | Result | Condition | Server action |
 | --- | --- | --- |
 | drop | the datagram is not a `hello`, is shorter than 1200 bytes, has a wrong magic, or its fields up to the cookie cannot be read within the bounds of a `hello` | ignore it |
-| retry | the cookie is empty or not valid | send the gate's 26-byte `retry` |
+| retry | the cookie is empty or not valid | send the gate's 27-byte `retry` |
 | accept | the cookie is valid | create a server connection and pass it the datagram |
 
 Reading the fields within the bounds means: the version varint, the 8 bytes of the
-network hash, a route count from 1 to 64 with its hashes, the four limit varints, a token
-of at most 512 bytes and a cookie of at most 64 bytes. The connection checks the version.
+network hash, a route count from 1 to 64 with its hashes, the four limit varints and a
+cookie of at most 64 bytes. The connection checks the version and the rest.
 
 A cookie is 24 bytes: the window number as 8 bytes, signed, the current time divided by
 the window length rounded toward negative infinity, followed by the first 16 bytes of
@@ -540,7 +549,8 @@ bytes and the address. A cookie is valid when its window number is the current o
 previous one and its HMAC bytes match, compared in constant time. The address is the
 client's address as the transport gives it; the socket transports use the 4 or 16 bytes
 of the IP address followed by the port as 2 bytes, most significant first. The `retry`
-holds type 2, the varint `24` and a fresh cookie for the current window.
+holds type 2, the varint `24`, a fresh cookie for the current window and the varint `0`,
+no key; the gate holds no server key.
 
 ### Timeout and closing
 
@@ -587,10 +597,11 @@ its last field are `network.malformed`, and so is an unknown type.
 | Type | Packet |
 | --- | --- |
 | 1 | `hello` |
-| 2 | `retry`, datagram only |
+| 2 | `retry` |
 | 3 | `welcome` |
 | 4 | `close` |
 | 5 | `data` |
+| 6 | `sealed`, a [sealed packet](#sealed-packets) |
 
 **`hello`** (client to server):
 
@@ -605,25 +616,32 @@ its last field are `network.malformed`, and so is an unknown type.
 | baseline limit | varint, 0 to 1073741824 |
 | transfer limit | varint, 0 to 1073741824 |
 | compressions | varint, bit 0 for Deflate; another bit set is `network.malformed` |
-| token | varint length up to 512, then the bytes |
 | cookie | varint length up to 64, then the bytes; length `0` on a stream or message transport |
+| security | 1 byte: `0` plain, `1` key request, `2` sealed; another value is `network.malformed` |
+| ephemeral key | 32 bytes, the client's ephemeral public key; only when sealed |
+| token | varint length, then the bytes: up to 512 bytes when plain, `0` for a key request, 16 to 528 bytes when sealed, the [sealed token](#handshake-keys) |
 
-On a datagram transport zero bytes follow the cookie up to at least 1200 bytes in all; a
-shorter datagram `hello` or another byte after the cookie is `network.malformed`. A
+On a datagram transport zero bytes follow the token up to at least 1200 bytes in all; a
+shorter datagram `hello` or another byte after the token is `network.malformed`. A
 connection does not check the cookie; the [gate](#address-validation) does.
 
 A wrong magic or version is `network.protocolMismatch`, checked before anything else.
 A different route count or network hash is `network.schemaMismatch`. Its detail names
 the root of each route of the server whose binding hash differs or which the client
 lacks, in route order and separated by `, `; it names the network when no root differs.
+Both are checked before the security byte, so they close without encryption.
 
 **`welcome`** (server to client): version varint `1`, then the server's packet limit as a
 varint, 1200 to 65535, its baseline limit and its transfer limit as varints, 0 to
-1073741824 each, and its compressions as in `hello`.
+1073741824 each, and its compressions as in `hello`. On an encrypted session the server's
+ephemeral public key of 32 bytes follows the type, then these fields sealed with the
+[welcome key](#handshake-keys).
 
-**`retry`** (server to client, datagram only): the cookie as varint length 1 to 64, then
-the bytes. A `retry` on a stream or message transport or received by a server is
-`network.malformed`.
+**`retry`** (server to client): the cookie as varint length 0 to 64, then the bytes, and
+the server's public key as varint length `0` or `32`, then the bytes. A `retry` with
+neither a cookie nor a key, with a cookie on a stream or message transport, or received
+by a server is `network.malformed`; so is a `retry` on a stream or message transport
+beyond the [one a client accepts](#security-levels).
 
 **`close`**: the code as text of 1 to 64 bytes from `!` to `~`, then the detail as
 UTF-8 text of at most 512 bytes. A longer detail is shortened to whole scalars before it
@@ -727,6 +745,182 @@ The client of a stream or WebSocket transport opens the connection; the WebSocke
 endpoint path is chosen by the host. A text WebSocket message closes with
 `network.malformed`.
 
+## Encryption
+
+A server with a key of its own encrypts its sessions with the [cipher suite](#cipher-suite).
+The server's key is a static X25519 key pair; each session adds an ephemeral key pair
+on each side. The client learns that only the holder of the server's key can read the
+session; the server learns nothing about the client but its token. The data of a
+session is secret and authentic and stays secret when the server's key is disclosed
+later; the token stays secret only as long as the server's key does.
+
+GesNetwork assumes that the client receives the server's public key from outside the
+protocol, for example with its build or its configuration. It neither signs nor
+distributes keys.
+
+### Security levels
+
+A session reaches one of three levels:
+
+| Level | Meaning |
+| --- | --- |
+| `none` | not encrypted |
+| `encrypted` | encrypted with a server key that the client received in a `retry`; protects only against attackers who read but do not change packets, for development and local networks |
+| `verified` | encrypted with the server key that the client was given in advance, its pinned key |
+
+A connection's level is `none` until it is connected. A server reports `encrypted` for
+every encrypted session, because it cannot tell whether the client pinned its key.
+
+The client's options hold the lowest level it accepts, `verified` by default, and
+optionally the pinned server public key of 32 bytes. Its first `hello` and its answer
+to a `retry` with a key follow its options:
+
+| Pinned key | Lowest level | First `hello` | `retry` with a key |
+| --- | --- | --- | --- |
+| yes | any | sealed with the pinned key | its key is ignored |
+| no | `verified` | key request | close with `network.unverified` |
+| no | `encrypted` | key request | the client takes the key and sends a sealed `hello` |
+| no | `none` | plain, with the token | the client takes the key and sends a sealed `hello` |
+
+A client takes a key once; it ignores the key of every later `retry`. On a stream or
+message transport a client accepts one `retry`, only in answer to a `hello` that is not
+sealed, and only with an empty cookie and a key; any other `retry` there is
+`network.malformed`. On a datagram transport the [datagram handshake](#datagram-handshake)
+processes a `retry` in the state `Hello` and ignores it in every other state.
+
+The server's options hold a key or none and the lowest level it accepts, `verified` by
+default; `verified` and `encrypted` mean the same for a server. A server whose lowest
+level is above `none` needs a key; creating it without one is a usage error. A server
+checks the protocol and the hashes of every `hello` first and closes a difference
+without encryption. Then:
+
+- A server with a key answers a plain `hello` and a key request with a `retry` that holds
+  an empty cookie and its public key and stays in `AwaitHello`. It never accepts a plain
+  `hello`.
+- A server without a key closes on a key request or a sealed `hello` with
+  `network.insecure`.
+- A server with a key opens the token of a sealed `hello`; when the token does not
+  authenticate, it closes with `network.authenticationFailed`.
+
+A client reads `welcome` in the form its `hello` asks for, plain or sealed. A sealed
+`welcome` that does not authenticate is ignored on a datagram transport and closes the
+session with `network.authenticationFailed` on the others.
+
+### Ephemeral keys
+
+A client draws an ephemeral private key for each sealed `hello` whose bytes differ from
+the previous one; repeating a `hello` sends the same bytes again. A server draws one when
+it reads a sealed `hello` whose token authenticates. A private key is 32 bytes from the
+system's cryptographic random generator; X25519 clamps it.
+
+For tests and golden bytes only, a connection may instead derive its ephemeral keys from
+a test seed: the `n`-th key of the connection, counted from 0, is
+`SHA-256("GESK" ‖ side ‖ seed ‖ n)`, with side the byte `0` for a client and `1` for a
+server and the seed and `n` as 8 bytes each. Such keys are known to everyone who knows
+the seed; the API marks the option as insecure.
+
+### Handshake keys
+
+`Extract(salt, ikm)` and `Expand(prk, info, length)` are the two steps of HKDF with
+SHA-256. Labels are ASCII bytes without a terminator. `S` is the server's public key, the
+pinned one or the one the client took, `s` its private key; `ce` and `CE` are the
+client's ephemeral private and public key, `se` and `SE` the server's.
+
+1. The client computes `es = X25519(ce, S)` and the server `es = X25519(s, CE)`.
+2. Both derive `hello_key = Expand(Extract(S, es), "ges hello", 32)`. The token is sealed
+   with ChaCha20-Poly1305 under `hello_key` with a nonce of 12 zero bytes. Its additional
+   data is the `hello` from the type byte through the token's length varint, so it covers
+   the cookie; the token's length is the plaintext's length plus 16.
+3. On acceptance the server computes `ee = X25519(se, CE)` and the client, on `welcome`,
+   `ee = X25519(ce, SE)`. Both compute the transcript `T`, SHA-256 of the `hello` from
+   its type byte through the token's last byte, without padding, followed by `SE`, and
+   `prk = Extract(T, es ‖ ee)`.
+4. `welcome_key = Expand(prk, "ges welcome", 32)` seals the `welcome` fields with a nonce
+   of 12 zero bytes. A sealed `welcome` is the type byte `3`, `SE`, the sealed fields and
+   the tag; its additional data is the type byte and `SE`.
+5. The client's secret is `Expand(prk, "ges client", 32)`, the server's
+   `Expand(prk, "ges server", 32)`. Each side seals with its own secret and opens with
+   the peer's.
+
+An X25519 result of 32 zero bytes closes the session with `network.authenticationFailed`.
+Each key seals one plaintext only: a `hello` with other bytes has a fresh `CE`.
+
+### Sealed packets
+
+From `Connected` on, each side of an encrypted session sends only sealed packets, both
+`data` and `close`:
+
+| Field | Encoding |
+| --- | --- |
+| type | 1 byte, `6` |
+| sequence | 2 bytes, the packet number modulo 65536 |
+| sealed packet | the inner packet sealed, then the tag of 16 bytes |
+
+The inner packet is a `data` packet without its sequence, type byte `5` included, or a
+`close` packet. Another inner type is `network.malformed`. The additional data is the
+3 bytes of type and sequence. A sealed `data` packet is 17 bytes longer than its plain
+form; the packet limit applies to the sealed packet.
+
+Each side numbers its sealed packets from 0 per direction; a `close` takes the next
+number, and a `data` packet's sequence is the low 16 bits of its number. The number
+stays below 2^62. A direction's key changes every 2^24 packets without a signal:
+
+- `iv = Expand(secret, "ges iv", 12)`
+- `key = Expand(secret, "ges key" ‖ epoch, 32)`, with `epoch = number >> 24` as 8 bytes
+- `nonce = iv XOR (number as 8 bytes ‖ 4 zero bytes)`
+
+The receiver reconstructs the number. On a stream or message transport it is the count
+of sealed packets received before. On a datagram transport it is the number closest to
+the expected number with the same low 16 bits, with the expected number one above the
+largest authenticated number, 0 before the first, as RFC 9000 appendix A.3 decodes it;
+a candidate at or above 2^62 is not chosen. The receiver keeps the keys of the epochs
+next to that of the largest authenticated number, so a forged packet never causes a key
+derivation.
+
+A packet is authenticated before it changes any state. One that does not authenticate is
+dropped on a datagram transport, without counting as received for the timeout; on the
+other transports it closes the session with `network.authenticationFailed`.
+
+Before `welcome` the server closes without encryption, refusals included, so their
+detail is not protected. A client accepts a plain `close` until it has authenticated a
+sealed packet; after that a plain packet is dropped on a datagram transport and is
+`network.malformed` on the others. A plain `data` packet on an encrypted session and a
+sealed packet on a session that is not encrypted are never valid.
+
+### Replayed hellos
+
+The server cannot tell a replayed sealed `hello` from a new one; it reports `connecting`
+with the token again. Whoever replays it lacks `ce` and can neither read nor send in the
+resulting session. On a datagram transport a replay must come from the client's address
+while its cookie is valid; on the other transports it may come from anywhere. Hosts
+should therefore use single-use or short-lived tokens, tokens bound to a time, and grant
+rights only at the client's first message, which proves the client holds `ce`.
+
+### Cipher suite
+
+The suite is X25519, ChaCha20-Poly1305 and HKDF-SHA256. Every port produces the same
+bytes; a port may use a platform implementation of a primitive, such as CryptoKit,
+swift-crypto, .NET or libsodium, and keeps its own implementation for platforms without
+one. `conformance/fixtures/Network/crypto.json` holds the vectors both ports and every
+platform implementation must reproduce; `scripts/test-network-crypto.py` checks them
+against an independent oracle.
+
+- **X25519** follows RFC 7748, section 5: the scalar is clamped, bit 255 of the
+  u-coordinate is masked, the Montgomery ladder runs 255 steps with conditional swaps
+  and the result is encoded canonically. A public key is the scalar multiplied with
+  u = 9.
+- **ChaCha20-Poly1305** follows RFC 8439, section 2.8, with a 32-byte key, a 12-byte nonce
+  and the 16-byte tag after the ciphertext.
+- **HKDF** follows RFC 5869 with HMAC-SHA-256 (RFC 2104, FIPS 180-4); SHA-256 also
+  computes the transcript and test-seed keys.
+
+Implementations run in constant time with respect to secrets. X25519 uses no branch and
+no memory index that depends on the scalar or the result, and fixed iteration counts
+for field arithmetic and inversion. Poly1305 compares the tag over all 16 bytes without
+an early exit; opening releases no plaintext and changes no buffer when the tag does not
+match. Checking a shared secret for zero combines all 32 bytes before branching. Test
+vectors do not establish these properties; reviews of the code do.
+
 ## Codes
 
 | Code | Condition |
@@ -746,14 +940,28 @@ endpoint path is chosen by the host. A text WebSocket message closes with
 | `network.transferTooLarge` | a transfer's size exceeds the receiver's transfer limit; cancels the transfer |
 | `network.transferCorrupt` | a transfer's header, compressed data or hash is invalid; cancels the transfer |
 | `network.transferCancelled` | the host cancelled a transfer without its own code |
+| `network.insecure` | a server without a key receives a key request or a sealed `hello` |
+| `network.unverified` | a client that requires `verified` has no pinned key and receives a `retry` with a key |
+| `network.authenticationFailed` | a sealed `hello` does not authenticate, or a sealed `welcome` or packet does not on a stream or message transport |
 
 ## Security
 
-This version does not encrypt or authenticate. The token is shown to whoever can read
-the transport, and the peer's identity is not proven. Use a transport that protects
-both, such as TLS; a browser client uses WebSocket only over `wss`. On a datagram
-transport address validation proves only that the client receives at its address;
-whoever can see or forge its packets can still disturb or close the session.
+A session that is not encrypted neither hides nor authenticates anything: the token is
+shown to whoever can read the transport and the peer's identity is not proven. Such a
+session belongs on a transport that protects both, such as TLS; a browser client uses
+WebSocket only over `wss`. The in-process transport and TLS need no encryption of their
+own; their hosts give the server no key and set the lowest level to `none`.
+
+An [encrypted](#encryption) session hides and authenticates every packet after
+`welcome` and the token. It does not hide the `hello` and `retry` fields, a plain
+`welcome`, a `close` before `welcome`, or the size and timing of packets. At the level
+`encrypted` an attacker who can change packets can read the session; only `verified`
+proves the server. The protocol never proves the client; the token does.
+
+An attacker who can drop or forge packets can always prevent a session or end it early:
+on a datagram transport through lost packets, a forged `retry` or a forged plain `close`
+during the handshake. Address validation proves only that the client receives at its
+address.
 
 ## API
 
@@ -778,6 +986,14 @@ owns the member names per port.
 | in-process transport | `GesNetworkLoopback` | `GesNetworkLoopback` |
 | simulated network | `GesNetworkSimulator` | `GesNetworkSimulator` |
 | address validation | `GesNetworkCookies` | `GesNetworkCookies` |
+| server key | `GesNetworkKey` | `GesNetworkKey` |
+| security level | `GesNetworkSecurity` | `GesNetworkSecurity` |
+
+The options hold the [encryption](#security-levels) settings: the lowest level, the
+client's pinned server public key, the server's key and the insecure test seed for
+[ephemeral keys](#ephemeral-keys). A connection reports the level it reached. A server key
+is generated from the system's random generator or created from a private key of 32
+bytes; it exposes its public key.
 
 A host drives a connection like this:
 

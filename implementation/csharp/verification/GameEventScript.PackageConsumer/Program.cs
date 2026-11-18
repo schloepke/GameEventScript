@@ -36,13 +36,14 @@ internal static class Program
         var generated = GesSchemaGenerator.Generate(GesSchemaSet.Parse("schema :Ping as {\n  ready: :Boolean\n}\n"), ["Ping"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Namespace = "Consumer" });
         if (!generated.Contains("public partial struct Ping", StringComparison.Ordinal)) return Fail("The packaged generator did not write the schema type.");
         var network = GesSchemaSet.Parse("wire schema :Ping as { ready: :Boolean }\nnetwork :Game as {\n  server sends :Ping reliable\n}\n").Network("Game").Bind();
-        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0);
-        var server = GesNetworkConnection.CreateServer(network, 0);
+        var serverKey = GesNetworkKey.Generate();
+        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0, new GesNetworkOptions { ServerPublicKey = serverKey.PublicKey.ToArray() });
+        var server = GesNetworkConnection.CreateServer(network, 0, new GesNetworkOptions { Key = serverKey });
         var loopback = new GesNetworkLoopback(client, server);
         loopback.Advance(0);
         server.Accept();
         loopback.Advance(0);
-        if (client.State != GesNetworkState.Connected) return Fail("The packaged network connection did not connect.");
+        if (client.State != GesNetworkState.Connected || client.Security != GesNetworkSecurity.Verified) return Fail("The packaged network connection did not connect.");
 #if GES_SOCKETS
         if (typeof(GesNetworkSocketListener).Assembly.GetName().Name != "GameEventScript.Network.Sockets") return Fail("The packaged socket transport did not load.");
 #endif

@@ -52,6 +52,15 @@ public static class GesNetworkCodes
 
     /// <summary>The host cancelled a transfer without giving its own code.</summary>
     public const string TransferCancelled = "network.transferCancelled";
+
+    /// <summary>A server without a key received a key request or a sealed <c>hello</c>.</summary>
+    public const string Insecure = "network.insecure";
+
+    /// <summary>A client that requires <see cref="GesNetworkSecurity.Verified"/> has no pinned key and received a server key.</summary>
+    public const string Unverified = "network.unverified";
+
+    /// <summary>A sealed <c>hello</c>, <c>welcome</c> or packet does not authenticate.</summary>
+    public const string AuthenticationFailed = "network.authenticationFailed";
 }
 
 /// <summary>The result of sending a payload on a route.</summary>
@@ -250,6 +259,29 @@ public sealed class GesNetworkOptions
     /// <summary>Gets or sets whether this side accepts and sends deflate-compressed transfers. The default is true.</summary>
     public bool DeflateTransfers { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets the lowest security level this side accepts. A client without a pinned key closes with
+    /// <see cref="GesNetworkCodes.Unverified"/> when it requires <see cref="GesNetworkSecurity.Verified"/>; a server above
+    /// <see cref="GesNetworkSecurity.None"/> needs a <see cref="Key"/>. The default is <see cref="GesNetworkSecurity.Verified"/>.
+    /// </summary>
+    public GesNetworkSecurity MinimumSecurity { get; set; } = GesNetworkSecurity.Verified;
+
+    /// <summary>
+    /// Gets or sets the server's pinned public key of 32 bytes; client only. A client with a pinned key seals its first
+    /// <c>hello</c> and reaches <see cref="GesNetworkSecurity.Verified"/>. The default is none. The array is copied when a
+    /// connection is created.
+    /// </summary>
+    public byte[]? ServerPublicKey { get; set; }
+
+    /// <summary>Gets or sets the server's key; server only. A server with a key encrypts every session. The default is none.</summary>
+    public GesNetworkKey? Key { get; set; }
+
+    /// <summary>
+    /// Gets or sets a seed that derives the connection's ephemeral keys instead of the system's random generator.
+    /// INSECURE: anyone who knows the seed reads the session. For tests and golden bytes only. The default is none.
+    /// </summary>
+    public ulong? InsecureTestKeySeed { get; set; }
+
     // The packet limit in effect: the configured one, or the transport's default.
     internal int PacketLimit => MaxPacketBytes != 0 ? MaxPacketBytes : Transport == GesNetworkTransport.Datagram ? GesNetworkWire.MinimumPacketBytes : 16384;
 
@@ -268,5 +300,24 @@ public sealed class GesNetworkOptions
         if (MaxTransferBytes is < 0 or > GesNetworkWire.MaximumTransferBytes) throw new ArgumentOutOfRangeException(nameof(MaxTransferBytes));
         if (Transport is not (GesNetworkTransport.Message or GesNetworkTransport.Stream or GesNetworkTransport.Datagram))
             throw new ArgumentOutOfRangeException(nameof(Transport));
+        if (MinimumSecurity is not (GesNetworkSecurity.None or GesNetworkSecurity.Encrypted or GesNetworkSecurity.Verified))
+            throw new ArgumentOutOfRangeException(nameof(MinimumSecurity));
+        if (ServerPublicKey is { Length: not GesNetworkX25519.KeyBytes }) throw new ArgumentException("A server public key holds 32 bytes.", nameof(ServerPublicKey));
     }
+}
+
+/// <summary>The security level of a session.</summary>
+public enum GesNetworkSecurity
+{
+    /// <summary>The session is not encrypted.</summary>
+    None,
+
+    /// <summary>
+    /// The session is encrypted with a server key the client received during the handshake; it protects only against
+    /// attackers who read but do not change packets. A server reports this level for every encrypted session.
+    /// </summary>
+    Encrypted,
+
+    /// <summary>The session is encrypted with the server key the client was given in advance.</summary>
+    Verified,
 }

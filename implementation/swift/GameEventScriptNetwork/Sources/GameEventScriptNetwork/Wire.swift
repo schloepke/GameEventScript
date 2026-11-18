@@ -31,6 +31,7 @@ enum GesNetworkWire {
     static let welcome: UInt8 = 3
     static let close: UInt8 = 4
     static let data: UInt8 = 5
+    static let sealed: UInt8 = 6
 
     // The magic of a hello: "GESN".
     static let magic: UInt32 = 0x4e53_4547

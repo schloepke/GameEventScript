@@ -24,7 +24,7 @@ public sealed partial class GesNetworkConnection
         int length;
         if (_closePending)
         {
-            length = WriteClose(packet);
+            length = _sealing ? WriteSealedClose(packet) : WriteClose(packet);
             _closePending = false;
         }
         else if (State == GesNetworkState.Closed)
@@ -34,8 +34,23 @@ public sealed partial class GesNetworkConnection
         else if (_client && !_helloSent)
         {
             length = WriteHello(packet);
-            _helloSent = true;
-            if (_datagram) NoteHelloSent();
+            if (length < 0)
+            {
+                // The server key gives a shared secret of zeros: no hello can be sealed with it.
+                CloseLocal(GesNetworkCodes.AuthenticationFailed, string.Empty, true);
+                length = WriteClose(packet);
+                _closePending = false;
+            }
+            else
+            {
+                _helloSent = true;
+                if (_datagram) NoteHelloSent();
+            }
+        }
+        else if (_retryPending)
+        {
+            length = WriteRetry(packet);
+            _retryPending = false;
         }
         else if (_welcomePending)
         {
@@ -45,7 +60,7 @@ public sealed partial class GesNetworkConnection
         else if (State == GesNetworkState.Connected)
         {
             var limit = (int)Math.Min(SendPacketLimit, packet.Length);
-            length = _datagram ? WriteDatagramData(packet, limit) : WriteData(packet, limit);
+            length = _encrypted ? WriteSealedData(packet, limit) : _datagram ? WriteDatagramData(packet, limit) : WriteData(packet, limit);
             if (length == 0) return 0;
         }
         else
@@ -77,16 +92,25 @@ public sealed partial class GesNetworkConnection
         position = Wire.WriteVarint(packet, position, (uint)_maxPacket);
         position = Wire.WriteVarint(packet, position, (uint)_maxBaseline);
         position = WriteTransferLimits(packet, position);
-        position = Wire.WriteVarint(packet, position, (uint)_token.Length);
-        _token.CopyTo(packet.Slice(position));
-        position += _token.Length;
-        return _datagram ? WriteHelloCookie(packet, position) : Wire.WriteVarint(packet, position, 0);
+        position = Wire.WriteVarint(packet, position, (uint)_cookie.Length);
+        _cookie.CopyTo(packet.Slice(position));
+        position = WriteHelloSecurity(packet, position + _cookie.Length);
+        if (position < 0 || !_datagram || position >= Wire.MinimumPacketBytes) return position;
+        packet.Slice(position, Wire.MinimumPacketBytes - position).Clear();
+        return Wire.MinimumPacketBytes;
     }
 
     private int WriteWelcome(Span<byte> packet)
     {
+        if (_encrypted) return WriteSealedWelcome(packet);
         packet[0] = Wire.Welcome;
-        var position = Wire.WriteVarint(packet, 1, Wire.Version);
+        return WriteWelcomeFields(packet, 1);
+    }
+
+    // Writes the welcome fields from the position on and returns the end.
+    private int WriteWelcomeFields(Span<byte> packet, int position)
+    {
+        position = Wire.WriteVarint(packet, position, Wire.Version);
         position = Wire.WriteVarint(packet, position, (uint)_maxPacket);
         position = Wire.WriteVarint(packet, position, (uint)_maxBaseline);
         return WriteTransferLimits(packet, position);

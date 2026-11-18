@@ -178,6 +178,17 @@ enum NetworkApiObservations {
             case "deflateTransfers":
                 guard let value = entry.value.boolValue else { throw ConformanceExecutionError.invalidInput("Expected a Boolean") }
                 options.deflateTransfers = value
+            case "minimumSecurity":
+                switch entry.value.stringValue {
+                case "none": options.minimumSecurity = .none
+                case "encrypted": options.minimumSecurity = .encrypted
+                default: options.minimumSecurity = .verified
+                }
+            case "key": options.key = try GesNetworkKey(privateKey: try bytes(entry.value.stringValue ?? ""))
+            case "serverPublicKey": options.serverPublicKey = try bytes(entry.value.stringValue ?? "")
+            case "testKeySeed":
+                guard let text = entry.value.numberValue, let value = UInt64(text) else { throw ConformanceExecutionError.invalidInput("Expected an unsigned integer") }
+                options.insecureTestKeySeed = value
             default: throw ConformanceExecutionError.invalidInput("Unknown network option")
             }
         }
@@ -243,8 +254,14 @@ enum NetworkApiObservations {
         case .connected: state = "connected"
         case .closed: state = "closed"
         }
+        let security: String
+        switch connection.security {
+        case .verified: security = "verified"
+        case .encrypted: security = "encrypted"
+        case .none: security = "none"
+        }
         return [
-            "state": state, "roundTripMicroseconds": connection.roundTripMicroseconds, "queuedSendBytes": connection.queuedSendBytes,
+            "state": state, "security": security, "roundTripMicroseconds": connection.roundTripMicroseconds, "queuedSendBytes": connection.queuedSendBytes,
             "pendingReceiveBytes": connection.pendingReceiveBytes,
         ]
     }

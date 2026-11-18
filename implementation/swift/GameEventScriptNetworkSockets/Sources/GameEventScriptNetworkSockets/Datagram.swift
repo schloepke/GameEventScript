@@ -18,8 +18,9 @@ extension GesNetworkSocketListener {
     ///   - network: The bound network of every session.
     ///   - options: The options of every server connection, using `.datagram`; the defaults when omitted.
     /// - Returns: The listener. Its sessions send through its socket, so close it only after them.
-    /// - Throws: `GesApiError.invalidArgument` when the options use another transport or are out of range; a
-    ///   SwiftNIO error when the address cannot be resolved or bound.
+    /// - Throws: `GesApiError.invalidArgument` when the options use another transport or are out of range, or
+    ///   name no key while their lowest security level is above none, as the defaults do; a SwiftNIO error when the
+    ///   address cannot be resolved or bound.
     public static func listenUdp(host: String, port: Int, network: GesBoundNetwork, options: GesNetworkOptions? = nil) async throws -> sending GesNetworkSocketListener {
         let (resolved, limit) = try resolve(options, .datagram, network)
         let local = try await NIOThreadPool.singleton.runIfActive { try SocketAddress.makeAddressResolvingHost(host, port: port) }

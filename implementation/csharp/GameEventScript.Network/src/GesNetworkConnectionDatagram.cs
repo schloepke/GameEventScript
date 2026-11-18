@@ -134,52 +134,13 @@ public sealed partial class GesNetworkConnection
         _helloInterval = Math.Min(_helloInterval, long.MaxValue / 2) * 2;
     }
 
-    // Writes the cookie and pads the datagram hello to 1200 bytes.
-    private int WriteHelloCookie(Span<byte> packet, int position)
-    {
-        position = Wire.WriteVarint(packet, position, (uint)_cookie.Length);
-        _cookie.CopyTo(packet.Slice(position));
-        position += _cookie.Length;
-        if (position >= Wire.MinimumPacketBytes) return position;
-        packet.Slice(position, Wire.MinimumPacketBytes - position).Clear();
-        return Wire.MinimumPacketBytes;
-    }
-
-    // Skips the cookie of a datagram hello and checks its padding; false when it closed the connection.
-    private bool ReadHelloCookie(ReadOnlySpan<byte> packet, ref int position)
-    {
-        if (Wire.ReadVarint(packet, ref position, out var length) != 1 || length > Wire.MaximumCookieBytes || packet.Length - position < length ||
-            packet.Length < Wire.MinimumPacketBytes)
-            return Fail(GesNetworkCodes.Malformed);
-        position += (int)length;
-        foreach (var value in packet.Slice(position))
-        {
-            if (value != 0) return Fail(GesNetworkCodes.Malformed);
-        }
-
-        position = packet.Length;
-        return true;
-    }
-
-    private void ReceiveRetry(ReadOnlySpan<byte> packet)
-    {
-        var position = 1;
-        if (Wire.ReadVarint(packet, ref position, out var length) != 1 || length is < 1 or > Wire.MaximumCookieBytes || packet.Length - position != length)
-        {
-            Fail(GesNetworkCodes.Malformed);
-            return;
-        }
-
-        _cookie = packet.Slice(position).ToArray();
-        _helloSent = false;
-        _helloInterval = HelloInterval;
-    }
-
     // ---- Receiving ----
 
     // Handles a datagram by type and state: repetitions and late packets of the handshake are ignored.
     private void ReceiveDatagramPacket(ReadOnlySpan<byte> packet)
     {
+        if (_encrypted && packet[0] != Wire.Sealed && (_keys!.Largest >= 0 || packet[0] == Wire.Data)) return;
+        if (packet[0] != Wire.Sealed) _lastReceive = _now;
         switch (packet[0])
         {
             case Wire.Close:
@@ -203,17 +164,21 @@ public sealed partial class GesNetworkConnection
                 break;
             case Wire.Welcome when _client && State == GesNetworkState.Connected:
                 break;
-            case Wire.Data when State == GesNetworkState.Connected:
+            case Wire.Data when State == GesNetworkState.Connected && !_encrypted:
                 ReceiveDatagramData(packet);
                 break;
             case Wire.Data when _client && State == GesNetworkState.Hello:
+                break;
+            case Wire.Sealed when State == GesNetworkState.Connected && _encrypted:
+                ReceiveSealed(packet);
+                break;
+            case Wire.Sealed when _client && State == GesNetworkState.Hello:
                 break;
             default:
                 Fail(GesNetworkCodes.Malformed);
                 break;
         }
     }
-
 
     private void ReceiveDatagramData(ReadOnlySpan<byte> packet)
     {

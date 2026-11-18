@@ -29,7 +29,7 @@ public sealed class GesNetworkDatagramTests
     private const int World = 2;
     private const int BulkBlob = 3;
 
-    private static readonly GesNetworkOptions Options = new() { Transport = GesNetworkTransport.Datagram };
+    private static readonly GesNetworkOptions Options = new() { MinimumSecurity = GesNetworkSecurity.None, Transport = GesNetworkTransport.Datagram };
 
     private static (GesNetworkConnection Client, GesNetworkConnection Server) Pair()
     {

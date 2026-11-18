@@ -17,7 +17,7 @@ final class NetworkCookiesTests: XCTestCase {
     private static let address: [UInt8] = [10, 0, 0, 1, 0x1f, 0x90]
 
     private static var options: GesNetworkOptions {
-        var options = GesNetworkOptions()
+        var options = GesNetworkOptions.plain
         options.transport = .datagram
         return options
     }
@@ -64,7 +64,7 @@ final class NetworkCookiesTests: XCTestCase {
 
     func testNegativeTimesUseTheFloorWindow() throws {
         let gate = try GesNetworkCookies(key: Self.key, windowMicroseconds: Self.window)
-        var retry = [UInt8](repeating: 0, count: 26)
+        var retry = [UInt8](repeating: 0, count: 27)
         XCTAssertEqual(try gate.check(packet: try hello(try client()), address: Self.address, now: -1, retry: &retry), .retry)
         XCTAssertEqual(retry[2..<10].reversed().reduce(UInt64(0)) { $0 << 8 | UInt64($1) }, UInt64.max)
     }

@@ -131,10 +131,16 @@ Common data values include Number, Boolean, Text, Tag, List, Map and `nothing`.
 Numbers may carry a unit, such as seconds (`0.2s`), meters (`10m`), degrees
 (`90°`), speeds (`3m/s`), forces (`21400N`), frequencies (`20Hz` or `20/s`),
 areas (`2m²`), volumes (`0.5m³`), intensities (`0.014W/m²`), levels (`6dB`),
-thermal conductance (`3kW/K`) or heat capacity (`2kJ/K`).
+thermal conductance (`3kW/K`), heat capacity (`2kJ/K`), pressures (`101.3kPa`),
+densities (`1000kg/m³`), specific energies (`46MJ/kg`) and heat capacities
+(`4.18kJ/(kg·K)`), torques (`5N·m`), moments of inertia (`2kg·m²`), angular
+accelerations (`90°/s²`), mass flows (`3kg/s`), resistances (`4.7kΩ`) or
+charges (`2Ah`).
 Prefixed spellings like `250ms`, `2km` or `2t` are converted to the base unit.
 Units follow physics where it is defined: `10m / 2s` is `5m/s`, `2kg * 3m/s²`
-is `6N`, `2m * 3m` is `6m²`, `(3m)²` is `9m²` and `1 / 2s` is `0.5Hz`;
+is `6N`, `2m * 3m` is `6m²`, `(3m)²` is `9m²`, `1 / 2s` is `0.5Hz` and
+`12V / 2A` is `6Ω`; a force times a length stays energy (`2N * 3m` is `6J`),
+so a torque comes from a literal or `as :Quantity(N·m)`;
 unsupported combinations such as `2N + 3J` give `nothing`.
 The complete unit list and derivation table are in the
 [language specification](../../specs/Language.md#quantities). A percentage

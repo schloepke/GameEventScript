@@ -1527,6 +1527,16 @@ portable name used by bytecode, assembler text and host APIs:
 | decibel | `dB` | | `decibel` |
 | watt per kelvin | `W/K` | | `wattPerKelvin` |
 | joule per kelvin | `J/K` | | `joulePerKelvin` |
+| pascal | `Pa` | | `pascal` |
+| kilogram per cubic meter | `kg/m³` | `kg/m^3` | `kilogramPerCubicMeter` |
+| joule per kilogram | `J/kg` | | `joulePerKilogram` |
+| joule per kilogram kelvin | `J/(kg·K)` | `J/(kg*K)` | `joulePerKilogramKelvin` |
+| newton meter | `N·m` | `N*m`, `Nm` | `newtonMeter` |
+| kilogram square meter | `kg·m²` | `kg*m^2` | `kilogramSquareMeter` |
+| degree per second squared | `°/s²` | `deg/s^2` | `degreePerSecondSquared` |
+| kilogram per second | `kg/s` | | `kilogramPerSecond` |
+| ohm | `Ω` | `ohm` | `ohm` |
+| coulomb | `C` | | `coulomb` |
 
 Each quantity has exactly one unit: temperature is kelvin only, mass kilogram
 only, and display scales such as Celsius are the host's business. The square
@@ -1534,6 +1544,18 @@ and cube meter carry areas and volumes, the watt per square meter carries flux
 or intensity at a receiver, the decibel carries a level on a logarithmic
 scale, the watt per kelvin carries thermal conductance and the joule per kelvin
 heat capacity.
+
+> **Since: Unreleased** — pascal through coulomb
+
+The pascal carries pressure, the kilogram per cubic meter density, the joule
+per kilogram specific energy, the joule per kilogram kelvin specific heat
+capacity, the newton meter torque, the kilogram square meter the moment of
+inertia, the degree per second squared angular acceleration, the kilogram per
+second mass flow, the ohm resistance and the coulomb charge. The ohm sign
+U+2126 reads as `Ω` (U+03A9), which formatting uses. A torque and an energy
+are different units even though both are a force times a distance: `N × m`
+derives `J`, and `N·m` arises only from a literal, a cast or a derivation of
+its own.
 
 Literals additionally accept prefixed spellings as sugar. They scale the value
 exactly to the base unit at compile time; the value keeps the base unit and
@@ -1552,6 +1574,12 @@ formats with the base symbol:
 | `mW/m²`/`mW/m^2`, `kW/m²`/`kW/m^2` | 0.001 W/m², 1000 W/m² |
 | `mW/K`, `kW/K`, `MW/K` | 0.001 W/K, 1000 W/K, 1 000 000 W/K |
 | `kJ/K`, `MJ/K` | 1000 J/K, 1 000 000 J/K |
+| `kPa`, `hPa`, `MPa` | 1000 Pa, 100 Pa, 1 000 000 Pa |
+| `kJ/kg`, `MJ/kg` | 1000 J/kg, 1 000 000 J/kg |
+| `kJ/(kg·K)`/`kJ/(kg*K)` | 1000 J/(kg·K) |
+| `kN·m`/`kN*m`/`kNm` | 1000 N·m |
+| `mΩ`, `kΩ`, `MΩ` | 0.001 Ω, 1000 Ω, 1 000 000 Ω |
+| `Ah`, `mAh` | 3600 C, 3.6 C |
 | `/s` | 1 Hz |
 
 For example `1.5kWh` is `5400000J`, `250ms` is `0.25s`, `14mW/m²` is
@@ -1560,11 +1588,18 @@ that is not periodic, such as messages per second: `4/s` is `4Hz`. Gram,
 Celsius, Fahrenheit, bits, bytes and bit rates are not units; rates of
 information are frequencies.
 
+A literal's unit runs to the first character that cannot continue a unit
+spelling, and a `(` directly after `/` opens a parenthesized part whose `)`
+belongs to the unit. So `5N*m`, `3kg*m^2`, `10kg/s` and `4J/(kg*K)` are single
+literals, not products or quotients; write `5N * 1m` or `10kg / 1s` with
+whitespace for the operation.
+
 `:Quantity(unit)` accepts `none`, every symbol and ASCII spelling, and the long
 names `meter`, `second` and `degree`; `degree/s` is accepted for `°/s` because
 `°` reads as `degree`. Whitespace between the parts of a unit name is ignored and
 `÷` reads as `/`, so `:Quantity(m / s)` and `:Quantity(m÷s)` are `:Quantity(m/s)`
-and `:Quantity(W / m ^ 2)` is `:Quantity(W/m²)`.
+and `:Quantity(W / m ^ 2)` is `:Quantity(W/m²)`; likewise `:Quantity(J / (kg * K))`
+is `:Quantity(J/(kg·K))`.
 Prefixed spellings are not type names. `:Percentage` is
 not a quantity unit; it is a separate value kind. The names `meter`, `second`,
 `degree`, and `seconds` are not quantity types of their own. `:Quantity(none)`
@@ -1582,7 +1617,7 @@ so `10m / 2m` is `5`. `abs` and `hypot` keep the unit, rounding follows
 is unchanged, and powers follow [Numbers](#numbers) with this table. Any
 other product or quotient of two units follows this derivation table, where
 multiplication is commutative; every other combination, such as `2N + 3J`,
-`6kg / 2s` or `2K * 3K`, gives `nothing`:
+`6kg * 2s` or `2K * 3K`, gives `nothing`:
 
 | Operation | Result |
 | --- | --- |
@@ -1642,11 +1677,64 @@ multiplication is commutative; every other combination, such as `2N + 3J`,
 | `J/K × Hz` | `W/K` |
 | `W/K / Hz` | `J/K` |
 | `W/K / (J/K)` | `Hz` |
+| `Pa × m²` | `N` |
+| `N / m²` | `Pa` |
+| `N / Pa` | `m²` |
+| `Pa × m³` | `J` |
+| `J / m³` | `Pa` |
+| `J / Pa` | `m³` |
+| `kg / m³` | `kg/m³` |
+| `kg/m³ × m³` | `kg` |
+| `kg / (kg/m³)` | `m³` |
+| `kg/m³ × J/kg` | `Pa` |
+| `Pa / (J/kg)` | `kg/m³` |
+| `Pa / (kg/m³)` | `J/kg` |
+| `J / kg` | `J/kg` |
+| `J/kg × kg` | `J` |
+| `J / (J/kg)` | `kg` |
+| `J/kg / K` | `J/(kg·K)` |
+| `J/(kg·K) × K` | `J/kg` |
+| `J/kg / (J/(kg·K))` | `K` |
+| `J/K / kg` | `J/(kg·K)` |
+| `J/(kg·K) × kg` | `J/K` |
+| `J/K / (J/(kg·K))` | `kg` |
+| `kg × m²` | `kg·m²` |
+| `kg·m² / kg` | `m²` |
+| `kg·m² / m²` | `kg` |
+| `°/s / s` | `°/s²` |
+| `°/s² × s` | `°/s` |
+| `°/s / (°/s²)` | `s` |
+| `°/s × Hz` | `°/s²` |
+| `°/s² / Hz` | `°/s` |
+| `°/s² / (°/s)` | `Hz` |
+| `kg / s` | `kg/s` |
+| `kg/s × s` | `kg` |
+| `kg / (kg/s)` | `s` |
+| `kg × Hz` | `kg/s` |
+| `kg/s / Hz` | `kg` |
+| `kg/s / kg` | `Hz` |
+| `V / A` | `Ω` |
+| `Ω × A` | `V` |
+| `V / Ω` | `A` |
+| `A × s` | `C` |
+| `C / s` | `A` |
+| `C / A` | `s` |
+| `A / Hz` | `C` |
+| `C × Hz` | `A` |
+| `A / C` | `Hz` |
+| `V × C` | `J` |
+| `J / V` | `C` |
+| `J / C` | `V` |
 
 So `1 / 2s` is `0.5Hz`; use `as :Quantity(none)` when a plain number is
 needed. The derivations apply to numbers and to a vector multiplied or divided
 by a number. Integer division (`div`), `mod`, `rem`, points and percentages
 keep their derivation-free rules, so `10m div 2s` and `50% / 2s` are `nothing`.
+
+The table derives no radians: a torque over a moment of inertia,
+`N·m / kg·m²`, would be an angular acceleration in rad/s², not °/s², so it
+gives `nothing`, as does a torque times an angle. A squared speed is not a
+specific energy, so `3m/s * 3m/s` is `nothing` too.
 
 The decibel has no derivations: a level never converts to or from watts, so
 `3dB * 2W` is `nothing`. Same-unit rules apply as for every unit, so levels add

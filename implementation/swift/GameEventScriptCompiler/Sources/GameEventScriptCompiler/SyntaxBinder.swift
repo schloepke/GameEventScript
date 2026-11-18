@@ -383,7 +383,9 @@ final class GesSyntaxBinder {
             try c.advance()
             try c.newlines()
             var unit = ""
-            while !c.is(.rightParen) {
+            var depth = 0
+            while !c.is(.rightParen) || depth > 0 {
+                if c.is(.leftParen) { depth += 1 } else if c.is(.rightParen) { depth -= 1 }
                 let part = try c.advance()
                 unit += part.kind == .superscriptInteger ? part.text == "2" ? "²" : "³" : part.text
                 try c.newlines()

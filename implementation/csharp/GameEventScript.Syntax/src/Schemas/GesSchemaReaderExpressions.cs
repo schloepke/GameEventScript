@@ -420,16 +420,16 @@ internal sealed partial class GesSchemaSourceReader
     }
 
     // A number with its suffix. Besides the ends of other literals it stops at an operator; a minus continues only an exponent.
-    // A power sign continues the literal only where it belongs to its unit, as in `16m²` or `16m^2`; otherwise, as in `2²` or
-    // `2s²`, the longest literal before it is the base of a power.
+    // A power sign, a `*` or a parenthesized part continues the literal only where it belongs to its unit, as in `16m²`,
+    // `5N*m` or `3J/(kg·K)`; otherwise, as in `2²` or `2s²`, the longest literal before it is the base of a power.
     private GesSchemaValueSyntax ReadExpressionLiteral()
     {
         var offset = _position;
-        var end = _position;
-        while (end < _text.Length && !IsExpressionLiteralEnd(end)) end++;
+        var end = LiteralEnd(offset, expression: true);
         var value = GesSchemaLiterals.Read(_text, offset, end);
         for (var cut = end - 1; value is null && cut > offset; cut--)
-            if (_text[cut] is '^' or '\u00B2' or '\u00B3' && GesSchemaLiterals.Read(_text, offset, cut) is { } shorter)
+            if ((_text[cut] is '^' or '\u00B2' or '\u00B3' or '*' || (_text[cut] == '/' && cut + 1 < end && _text[cut + 1] == '('))
+                && GesSchemaLiterals.Read(_text, offset, cut) is { } shorter)
             {
                 value = shorter;
                 end = cut;

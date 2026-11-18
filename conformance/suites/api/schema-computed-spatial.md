@@ -1882,3 +1882,31 @@ schema:
   canonical: "gess1\nschema S\nfield a Quantity(meter) between 0e0 1e0 step 1e-2\ncomputed v Vector(meter) (multiply (vector (field a) (field a) (quantity meter 0e0)) (number 2e0))\ncomputed b Box(meter) (boxAround (point (field a) (quantity meter 0e0) (quantity meter 0e0)) (field v))\ncomputed w Quantity(meter) (part x (part size (field b)))\n"
   hash: "166b69167cbd2fa8"
 ```
+
+
+---
+
+## Test: a star or a parenthesized part continues a literal only where it completes a unit
+
+`5N*m` and `4J/(kg*K)` are single literals, while `5m*x`, `6J/(2kg)` and `6J/(2m)` are a product and quotients of a shorter literal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-compound-unit-literals
+schemaApi:
+  sources:
+    - "schema :Probe as {\n  x: :Number between 0 and 10 step 1\n  a: :Quantity(m) computed by 5m*x\n  b: :Quantity(J/kg) computed by 6J/(2kg)\n  c: :Quantity(N·m) computed by 5N*m\n  d: :Quantity(J/(kg·K)) computed by 4J/(kg*K)\n  e: :Quantity(N) computed by 6J/(2m)\n}\n"
+  root: "Probe"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Probe\nfield x Number between 0e0 1e1 step 1e0\ncomputed a Quantity(meter) (multiply (quantity meter 5e0) (field x))\ncomputed b Quantity(joulePerKilogram) (divide (quantity joule 6e0) (quantity kilogram 2e0))\ncomputed c Quantity(newtonMeter) (quantity newtonMeter 5e0)\ncomputed d Quantity(joulePerKilogramKelvin) (quantity joulePerKilogramKelvin 4e0)\ncomputed e Quantity(newton) (divide (quantity joule 6e0) (quantity meter 2e0))\n"
+  hash: "a3bfff271919b523"
+```

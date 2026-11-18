@@ -561,13 +561,26 @@
     private mutating func unit() throws -> GesQuantityUnit? {
         if !consume(40) { return nil }
         let start = position
-        guard let end = bytes[start...].firstIndex(of: 41) else { throw Failure(offset: start, message: "Expected ')'.") }
+        // A unit such as `J/(kg·K)` nests parentheses; the closing one at depth zero ends it.
+        var end = start
+        var depth = 0
+        while end < bytes.count && (bytes[end] != 41 || depth > 0) {
+            if bytes[end] == 40 { depth += 1 } else if bytes[end] == 41 { depth -= 1 }
+            end += 1
+        }
+        if end == bytes.count { throw Failure(offset: start, message: "Expected ')'.") }
         var written: [UInt8] = []
         var index = start
         while index < end {
-            if bytes[index] == 0xC3 && index + 1 < end && bytes[index + 1] == 0xB7 {
-                written.append(47)
+            // `÷` reads as `/`, `×` and `⋅` as `*`.
+            if bytes[index] == 0xC3 && index + 1 < end && (bytes[index + 1] == 0xB7 || bytes[index + 1] == 0x97) {
+                written.append(bytes[index + 1] == 0xB7 ? 47 : 42)
                 index += 2
+                continue
+            }
+            if bytes[index] == 0xE2 && index + 2 < end && bytes[index + 1] == 0x8B && bytes[index + 2] == 0x85 {
+                written.append(42)
+                index += 3
                 continue
             }
             if bytes[index] != 32 && bytes[index] != 9 { written.append(bytes[index]) }
@@ -706,8 +719,7 @@
     // A number with its suffix. The value stays an exact decimal, since quantization and the hash depend on it.
     private mutating func literal() throws -> GesSchemaValueSyntax {
         let offset = position
-        var end = position
-        while end < bytes.count && !isLiteralEnd(end) { end += 1 }
+        let end = literalEnd(from: offset, expression: false)
         if end == offset { throw failure("Expected a number.") }
         guard let read = GesSchemaLiterals.read(Array(bytes[offset..<end])) else {
             throw Failure(offset: offset, message: "Expected an exact finite number with a unit known to literals.")
@@ -720,6 +732,35 @@
         result.text = String(decoding: bytes[offset..<end], as: UTF8.self)
         result.offset = offset
         return result
+    }
+
+    // The end of a literal from `start`. A parenthesized unit part after `/`, as in `3J/(kg·K)`, belongs to the literal; in an
+    // expression a `*` between letters also continues it, as in `5N*m`, and reading falls back to a shorter literal before it.
+    func literalEnd(from start: Int, expression: Bool) -> Int {
+        var end = start
+        while end < bytes.count {
+            let byte = bytes[end]
+            if byte == 40 && end > start && bytes[end - 1] == 47 {
+                var close = end + 1
+                var depth = 1
+                while close < bytes.count && depth > 0 && bytes[close] != 32 && bytes[close] != 9 && bytes[close] != 13 && bytes[close] != 10 {
+                    if bytes[close] == 40 { depth += 1 } else if bytes[close] == 41 { depth -= 1 }
+                    close += 1
+                }
+                if depth != 0 { break }
+                end = close
+                continue
+            }
+            if expression {
+                let previous = end > start ? bytes[end - 1] : 0
+                let letter = (previous >= 65 && previous <= 90) || (previous >= 97 && previous <= 122)
+                if isExpressionLiteralEnd(end) && !(byte == 42 && letter) { break }
+            } else if isLiteralEnd(end) {
+                break
+            }
+            end += 1
+        }
+        return end
     }
 
     func isLiteralEnd(_ index: Int) -> Bool {

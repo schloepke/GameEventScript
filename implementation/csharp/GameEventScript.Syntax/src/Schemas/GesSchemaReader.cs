@@ -677,11 +677,14 @@ internal sealed partial class GesSchemaSourceReader
     {
         if (!Consume('(')) return null;
         var start = _position;
-        var end = _text.IndexOf(')', start);
-        if (end < 0) throw new SyntaxFailure(start, "Expected ')'.");
+        // A unit such as `J/(kg·K)` nests parentheses; the closing one at depth zero ends it.
+        var end = start;
+        for (var depth = 0; end < _text.Length && (_text[end] != ')' || depth > 0); end++)
+            depth += _text[end] == '(' ? 1 : _text[end] == ')' ? -1 : 0;
+        if (end == _text.Length) throw new SyntaxFailure(start, "Expected ')'.");
         var builder = new System.Text.StringBuilder();
         for (var index = start; index < end; index++)
-            if (_text[index] is not (' ' or '\t')) builder.Append(_text[index] == '÷' ? '/' : _text[index]);
+            if (_text[index] is not (' ' or '\t')) builder.Append(_text[index] switch { '÷' => '/', '×' or '⋅' => '*', var other => other });
         _position = end + 1;
         return GesQuantityUnits.ParseQuantityName(builder.ToString()) ?? throw new SyntaxFailure(start, "A type names a base unit; a prefixed spelling such as kN is only for literals.");
     }
@@ -806,12 +809,37 @@ internal sealed partial class GesSchemaSourceReader
     private GesSchemaValueSyntax ReadLiteral()
     {
         var offset = _position;
-        var end = _position;
-        while (end < _text.Length && !IsLiteralEnd(end)) end++;
+        var end = LiteralEnd(offset, expression: false);
         if (end == offset) throw Failure("Expected a number.");
         var value = GesSchemaLiterals.Read(_text, offset, end) ?? throw new SyntaxFailure(offset, "Expected an exact finite number with a unit known to literals.");
         _position = end;
         return new GesSchemaValueSyntax { Value = value.Value, Unit = value.Unit, IsPercent = value.IsPercent, Text = _text.Substring(offset, end - offset), Offset = offset };
+    }
+
+    // The end of a literal from `start`. A parenthesized unit part after `/`, as in `3J/(kg·K)`, belongs to the literal; in an
+    // expression a `*` between letters also continues it, as in `5N*m`, and reading falls back to a shorter literal before it.
+    private int LiteralEnd(int start, bool expression)
+    {
+        var end = start;
+        while (end < _text.Length)
+        {
+            var c = _text[end];
+            if (c == '(' && end > start && _text[end - 1] == '/')
+            {
+                var close = end + 1;
+                var depth = 1;
+                for (; close < _text.Length && depth > 0 && _text[close] is not (' ' or '\t' or '\r' or '\n'); close++)
+                    depth += _text[close] switch { '(' => 1, ')' => -1, _ => 0 };
+                if (depth != 0) break;
+                end = close;
+                continue;
+            }
+
+            if (expression ? IsExpressionLiteralEnd(end) && !(c == '*' && end > start && _text[end - 1] is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z')) : IsLiteralEnd(end)) break;
+            end++;
+        }
+
+        return end;
     }
 
     private bool IsLiteralEnd(int index)

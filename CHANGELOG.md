@@ -52,10 +52,22 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   sealed datagram is dropped; on a stream or message transport it closes the session. `InsecureTestKeySeed` makes
   handshakes reproducible for tests. By default a connection requires a pinned key (`MinimumSecurity` is `Verified`);
   in-process sessions and sessions over TLS set it to `None`.
+- Ten physical units (UnitIds 21 to 30): `Pa` (with `kPa`, `hPa`, `MPa`), `kg/m³`, `J/kg` (`kJ/kg`, `MJ/kg`),
+  `J/(kg·K)` (`kJ/(kg·K)`), `N·m` (also `N*m`, `Nm`; `kN·m`), `kg·m²`, `°/s²`, `kg/s`, `Ω` (also `ohm`; `mΩ`, `kΩ`,
+  `MΩ`) and `C` (with `Ah` and `mAh`), with their `:Quantity(...)` types and derivations such as `N / m² → Pa`,
+  `kg / m³`, `J / kg`, `A × s → C` and `V / A → Ω`. Newton times meter stays `J`; `N·m` arises only from a literal or a
+  cast. Literals such as `5N*m` and `4J/(kg*K)` are read as one unit literal; in `.gess` computed expressions a shorter
+  literal is read where the longer one would not complete a unit, as in `5m*x` (specs/Language.md#quantities).
 
 ### Changed
 - The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the
   Network Sockets package uses; CI builds every library with Swift 6.1.
+- A quotient of a mass by a time such as `6kg / 2s` is now `3kg/s` instead of nothing; other products and quotients
+  that now derive one of the new units change the same way (specs/Language.md#quantities).
+- Swift `GesQuantityUnit` has new cases `pascal`, `kilogramPerCubicMeter`, `joulePerKilogram`,
+  `joulePerKilogramKelvin`, `newtonMeter`, `kilogramSquareMeter`, `degreePerSecondSquared`, `kilogramPerSecond`, `ohm`
+  and `coulomb`, so an exhaustive `switch` over it must handle them (or add a `default`); C# `GesQuantityUnit` gains
+  the same members and existing values keep their numbers.
 
 ## [0.5.0] — 2026-11-16
 

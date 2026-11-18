@@ -463,6 +463,8 @@ schema :SoundMade as {
   function or `abs` is its whole operand, and the function is then the base of a power as in GES: `sqrt(x) ^ 2` is
   `(sqrt x) ^ 2` and `floor(x)²` squares the floor, while `sqrt x ^ 2` is the root of `x ^ 2`. A
   power sign belongs to a literal where it completes a unit, as in `16m²`, and is a power otherwise, as in `2²` or `2s²`.
+  Likewise a `*` after a unit letter and a parenthesized part after `/` belong to a literal where they complete a unit,
+  as in `5N*m` or `4J/(kg*K)`, and are a product or a quotient otherwise, as in `5m*x` or `6J/(2kg)`.
 - **Names in backticks** (*Since: 0.5.0*). A name that GES reserves, such as `length`, `e`, `pi` or `on`, names a
   field or let only in backticks, as `` `length` / 2 ``, since a script record reads the plain word differently: `e` is
   Euler's number there. Without backticks it is `schema.invalidExpression`. Backticks are spelling only: the field is the

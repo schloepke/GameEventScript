@@ -103,7 +103,7 @@ struct GesLiteralParser {
 
     private mutating func scalar() -> GesValue? {
         let start = position
-        while position < bytes.count && !Self.space(bytes[position]) && ![44, 93, 91, 41].contains(bytes[position]) { position += 1 }
+        position = GesNumberLiteral.tokenEnd(bytes, from: position, brackets: true)
         if start == position { return nil }
         let token = String(decoding: bytes[start..<position], as: UTF8.self)
         switch token {
@@ -340,7 +340,7 @@ struct GesLiteralParser {
                 if index > 2 || index <= previous || (previous >= 0 && index != previous + 1) { return nil }
                 previous = index
                 let start = position
-                while position < bytes.count && !Self.space(bytes[position]) && bytes[position] != 44 && bytes[position] != 41 { position += 1 }
+                position = GesNumberLiteral.tokenEnd(bytes, from: position, brackets: false)
                 if start == position { return nil }
                 let token = String(decoding: bytes[start..<position], as: UTF8.self)
                 guard let value = GesTextNumberCast.read(token, percentage: token.hasSuffix("%"), allowGrouping: false) else { return nil }

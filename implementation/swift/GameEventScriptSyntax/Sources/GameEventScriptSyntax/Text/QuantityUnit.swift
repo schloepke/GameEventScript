@@ -45,6 +45,26 @@ public enum GesQuantityUnit: String, Hashable, Sendable {
     case wattPerKelvin
     /// Heat capacity measured in joules per kelvin.
     case joulePerKelvin
+    /// Pressure or stress measured in pascals.
+    case pascal
+    /// Density measured in kilograms per cubic meter.
+    case kilogramPerCubicMeter
+    /// Specific energy measured in joules per kilogram.
+    case joulePerKilogram
+    /// Specific heat capacity measured in joules per kilogram kelvin.
+    case joulePerKilogramKelvin
+    /// Torque measured in newton meters.
+    case newtonMeter
+    /// Moment of inertia measured in kilogram square meters.
+    case kilogramSquareMeter
+    /// Angular acceleration measured in degrees per second squared.
+    case degreePerSecondSquared
+    /// Mass flow measured in kilograms per second.
+    case kilogramPerSecond
+    /// Electrical resistance measured in ohms.
+    case ohm
+    /// Electric charge measured in coulombs.
+    case coulomb
 
     /// Canonical text suffix that formatting appends, such as `m`, `m/s` or `°/s`; empty for unitless values.
     public var suffix: String {
@@ -70,6 +90,16 @@ public enum GesQuantityUnit: String, Hashable, Sendable {
         case .decibel: "dB"
         case .wattPerKelvin: "W/K"
         case .joulePerKelvin: "J/K"
+        case .pascal: "Pa"
+        case .kilogramPerCubicMeter: "kg/m³"
+        case .joulePerKilogram: "J/kg"
+        case .joulePerKilogramKelvin: "J/(kg·K)"
+        case .newtonMeter: "N·m"
+        case .kilogramSquareMeter: "kg·m²"
+        case .degreePerSecondSquared: "°/s²"
+        case .kilogramPerSecond: "kg/s"
+        case .ohm: "Ω"
+        case .coulomb: "C"
         }
     }
 }

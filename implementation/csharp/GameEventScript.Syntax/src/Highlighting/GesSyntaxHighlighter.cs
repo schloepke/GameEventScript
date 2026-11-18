@@ -226,7 +226,7 @@ internal static class GesSourceHighlighting
     // intrinsics, the units of a quantity type and the directive dot of inline assembly.
     private static void Refine(GesSyntaxNode node, GesSyntaxTree tree, GesSyntaxKind[] kinds)
     {
-        var unit = false;
+        var unit = 0;
         var position = node.FirstToken;
         foreach (var child in node.Children)
         {
@@ -237,19 +237,21 @@ internal static class GesSourceHighlighting
         for (; position < node.EndToken; position++) Own(node, tree.Tokens, position, kinds, ref unit);
     }
 
-    // `unit` holds while the node's own tokens are inside the parentheses of a quantity type, such as `:Quantity(m/s)`.
-    private static void Own(GesSyntaxNode node, IReadOnlyList<GesToken> tokens, int index, GesSyntaxKind[] kinds, ref bool unit)
+    // `unit` counts the open parentheses while the node's own tokens are inside a quantity type, such as `:Quantity(m/s)`
+    // or `:Quantity(J/(kg·K))`; all but the outer pair belong to the unit.
+    private static void Own(GesSyntaxNode node, IReadOnlyList<GesToken> tokens, int index, GesSyntaxKind[] kinds, ref int unit)
     {
         var token = tokens[index];
         if (token.Kind == GesTokenKind.LeftParen && index > 0 && tokens[index - 1].Kind == GesTokenKind.TypeName && tokens[index - 1].Text == ":Quantity")
         {
-            unit = true;
+            unit = 1;
             return;
         }
-        if (unit)
+        if (unit > 0)
         {
-            if (token.Kind == GesTokenKind.RightParen) unit = false;
-            else if (token.Kind != GesTokenKind.NewLine) kinds[index] = GesSyntaxKind.Builtin;
+            if (token.Kind == GesTokenKind.LeftParen) unit++;
+            else if (token.Kind == GesTokenKind.RightParen && --unit == 0) return;
+            if (token.Kind != GesTokenKind.NewLine) kinds[index] = GesSyntaxKind.Builtin;
             return;
         }
 

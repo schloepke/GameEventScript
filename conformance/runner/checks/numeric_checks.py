@@ -16,6 +16,10 @@ UNIT_SPELLINGS = {
     'cubicMeter': ('m³', 'm^3'), 'wattPerSquareMeter': ('W/m²', 'W/m^2'), 'kelvin': ('K',),
     'degreePerSecond': ('°/s', 'deg/s'), 'decibel': ('dB',),
     'wattPerKelvin': ('W/K',), 'joulePerKelvin': ('J/K',),
+    'pascal': ('Pa',), 'kilogramPerCubicMeter': ('kg/m³', 'kg/m^3'), 'joulePerKilogram': ('J/kg',),
+    'joulePerKilogramKelvin': ('J/(kg·K)', 'J/(kg*K)'), 'newtonMeter': ('N·m', 'N*m', 'Nm'),
+    'kilogramSquareMeter': ('kg·m²', 'kg*m²', 'kg·m^2', 'kg*m^2'), 'degreePerSecondSquared': ('°/s²', '°/s^2', 'deg/s²', 'deg/s^2'),
+    'kilogramPerSecond': ('kg/s',), 'ohm': ('Ω', '\u2126', 'ohm'), 'coulomb': ('C',),
 }
 UNITS = {spelling: ':' + name for name, spellings in UNIT_SPELLINGS.items() for spelling in (name, ':' + name, *spellings)}
 

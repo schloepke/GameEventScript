@@ -181,10 +181,29 @@
     @_spi(Syntax) public static func possibleSuffixEnd(_ text: String) -> Bool {
         let scalars = text.unicodeScalars
         switch scalars.last {
-        case "s", "m", "h", "z", "g", "t", "B", "N", "J", "W", "V", "A", "K", "°", "²", "³": return true
+        case "s", "m", "h", "z", "g", "t", "a", "B", "C", "N", "J", "W", "V", "A", "K", ")", "°", "²", "³", "\u{03A9}", "\u{2126}": return true
         case "2", "3": return scalars.dropLast().last == "^"
         default: return false
         }
+    }
+
+    // The end of an unquoted scalar token from `start`: whitespace, a comma or a `)` ends it, and inside a list also `[`
+    // and `]`. A `(` right after `/` opens a unit part such as `J/(kg·K)`, whose `)` belongs to the token.
+    @_spi(Syntax) public static func tokenEnd(_ bytes: [UInt8], from start: Int, brackets: Bool) -> Int {
+        var position = start
+        var depth = 0
+        while position < bytes.count {
+            let byte = bytes[position]
+            if byte == 32 || byte == 9 || byte == 13 || byte == 10 || byte == 44 || brackets && (byte == 91 || byte == 93) { break }
+            if byte == 40 && position > start && bytes[position - 1] == 47 {
+                depth += 1
+            } else if byte == 41 {
+                if depth == 0 { break }
+                depth -= 1
+            }
+            position += 1
+        }
+        return position
     }
 
     // Compares backwards over the scalar view, so matching allocates nothing.

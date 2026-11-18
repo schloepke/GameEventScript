@@ -480,8 +480,11 @@ internal sealed partial class GesSyntaxBinder
         c.Advance();
         c.SkipNewLines();
         var unit = new StringBuilder();
-        while (!c.Is(RightParen))
+        var depth = 0;
+        while (!c.Is(RightParen) || depth > 0)
         {
+            if (c.Is(LeftParen)) depth++;
+            else if (c.Is(RightParen)) depth--;
             var part = c.Advance();
             unit.Append(part.Kind == SuperscriptInteger ? part.Text == "2" ? "²" : "³" : part.Text);
             c.SkipNewLines();

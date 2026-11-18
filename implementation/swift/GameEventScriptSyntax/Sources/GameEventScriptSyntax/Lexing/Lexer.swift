@@ -165,14 +165,14 @@
         "&": (.operatorCollectionIntersect, "&"), "+": (.operatorPlus, "+"), "-": (.operatorMinus, "-"), "*": (.operatorMultiply, "*"), "/": (.operatorDivide, "/"), "!": (.operatorNot, "!"),
         "·": (.operatorMultiply, "*"), "×": (.operatorMultiply, "*"), "⋅": (.operatorMultiply, "*"), "÷": (.operatorDivide, "/"), "−": (.operatorMinus, "-"),
         "∞": (.mathConstantInfinity, "infinity"), "π": (.mathConstantPi, "pi"), "∏": (.mathConstantPi, "pi"), "ℇ": (.mathConstantE, "e"), "τ": (.mathConstantTau, "tau"),
-        "√": (.intrinsicSqrt, "sqrt"), "∛": (.intrinsicCbrt, "cbrt"), "°": (.identifier, "degree"), "∧": (.operatorAnd, "and"), "∨": (.operatorOr, "or"),
+        "√": (.intrinsicSqrt, "sqrt"), "∛": (.intrinsicCbrt, "cbrt"), "°": (.identifier, "degree"), "Ω": (.identifier, "ohm"), "\u{2126}": (.identifier, "ohm"), "∧": (.operatorAnd, "and"), "∨": (.operatorOr, "or"),
         "∈": (.in, "in"), "∉": (.notIn, "not in"), "⊕": (.operatorXor, "xor"), "≤": (.operatorLessOrEqual, "<="), "≥": (.operatorGreaterOrEqual, ">="),
         "¬": (.operatorNot, "!"), "~": (.operatorNot, "!"), "≠": (.operatorNotEqual, "<>"), "→": (.operatorImplication, "->"), "⇒": (.operatorImplication, "->"), "↦": (.projectionArrow, "=>"),
         "²": (.superscriptInteger, "2"), "³": (.superscriptInteger, "3"),
     ]
 
     static let unitStarts = GesQuantityUnit.suffixStarts
-    static let boundaries = Set("(){}[],;.:#+-*/!~&|^=<>·×÷−∞∏ℇτφ√∛°∧∨∈∉⊕⋅≤≥¬≠≈≅→⇒↦²³".unicodeScalars)
+    static let boundaries = Set("(){}[],;.:#+-*/!~&|^=<>·×÷−∞∏ℇτφ√∛°Ω\u{2126}∧∨∈∉⊕⋅≤≥¬≠≈≅→⇒↦²³".unicodeScalars)
     var current: Unicode.Scalar { peek(0) }
 
     func peek(_ offset: Int = 1) -> Unicode.Scalar { index + offset < scalars.count ? scalars[index + offset] : "\0" }

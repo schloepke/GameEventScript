@@ -14,10 +14,10 @@ final class UnitSuffixSetTests: XCTestCase {
         }
     }
 
-    // The five UnitId bits accept the defined ids 0 to 20 and reject the reserved rest.
-    func testUnitIdsZeroToTwentyAreDefinedAndTheRestReserved() {
+    // The five UnitId bits accept the defined ids 0 to 30 and reject the reserved rest.
+    func testUnitIdsZeroToThirtyAreDefinedAndTheRestReserved() {
         for raw in UInt8(0)..<32 {
-            XCTAssertEqual(GesQuantityUnit(unitID: raw) != nil, raw <= 20, "\(raw)")
+            XCTAssertEqual(GesQuantityUnit(unitID: raw) != nil, raw <= 30, "\(raw)")
             guard let unit = GesQuantityUnit(unitID: raw) else { continue }
             XCTAssertEqual(unit.unitID, raw)
             // The root search relies on every unit having its symbol in the spelling table.

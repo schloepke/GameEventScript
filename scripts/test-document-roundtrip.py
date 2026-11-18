@@ -43,7 +43,9 @@ EXACT = {"mode": "exact"}
 UNITS = [("", None), ("m", "meter"), ("s", "second"), ("N", "newton"), ("J", "joule"), ("W", "watt"), ("V", "volt"), ("Hz", "hertz"),
          ("kg", "kilogram"), ("A", "ampere"), ("K", "kelvin"), ("°", "degree"), ("m/s", "meterPerSecond"), ("m/s²", "meterPerSecondSquared"),
          ("°/s", "degreePerSecond"), ("m²", "squareMeter"), ("m³", "cubicMeter"), ("W/m²", "wattPerSquareMeter"), ("dB", "decibel"),
-         ("W/K", "wattPerKelvin"), ("J/K", "joulePerKelvin")]
+         ("W/K", "wattPerKelvin"), ("J/K", "joulePerKelvin"), ("Pa", "pascal"), ("kg/m³", "kilogramPerCubicMeter"),
+         ("J/kg", "joulePerKilogram"), ("J/(kg·K)", "joulePerKilogramKelvin"), ("N·m", "newtonMeter"), ("kg·m²", "kilogramSquareMeter"),
+         ("°/s²", "degreePerSecondSquared"), ("kg/s", "kilogramPerSecond"), ("Ω", "ohm"), ("C", "coulomb")]
 TEXTS = ["", "plain", "say \"hi\"", "it's", "line\nbreak", "carriage\rreturn", "crlf\r\nend", "tab\there", "// not a comment",
          "[1, 2", "#tag", "true", "123", "😀 non-BMP", "Grüße", "trailing ", " leading", "a: b, c"]
 KEYS = ["plain", "two words", "a\"b", "it's", "", "😀", "x:y", "Upper", "with\nbreak", "// key"]

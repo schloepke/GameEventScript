@@ -226,7 +226,7 @@
           "name": "constant.numeric.percentage.gameeventscript"
         },
         {
-          "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:mW/K|kW/K|MW/K|W/K|kJ/K|MJ/K|J/K|mW/m²|mW/m\\^2|kW/m²|kW/m\\^2|W/m²|W/m\\^2|m/s²|m/s\\^2|deg/s|cm²|cm\\^2|km²|km\\^2|°/s|m/s|m²|m\\^2|m³|m\\^3|kWh|kHz|deg|Wh|Hz|/s|dB|km|mm|cm|ms|kg|kN|kJ|MJ|mW|kW|MW|kV|°|m|s|t|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])",
+          "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:kJ/\\(kg·K\\)|kJ/\\(kg\\*K\\)|J/\\(kg·K\\)|J/\\(kg\\*K\\)|deg/s\\^2|kg/m\\^3|kg·m\\^2|kg\\*m\\^2|deg/s²|mW/m\\^2|kW/m\\^2|MJ/kg|kJ/kg|kg/m³|kg·m²|kg\\*m²|°/s\\^2|mW/m²|kW/m²|W/m\\^2|m/s\\^2|deg/s|J/kg|kg/s|kN·m|kN\\*m|°/s²|W/m²|mW/K|kW/K|MW/K|kJ/K|MJ/K|m/s²|cm\\^2|km\\^2|kNm|N·m|N\\*m|W/K|J/K|cm²|km²|°/s|m/s|m\\^2|m\\^3|kWh|kHz|deg|MPa|kPa|hPa|mAh|ohm|Nm|m²|m³|Wh|Hz|/s|Pa|Ah|dB|mΩ|kΩ|MΩ|mΩ|kΩ|MΩ|km|ms|mm|cm|kg|kN|kJ|MJ|mW|kW|MW|kV|°|Ω|Ω|m|s|t|N|J|W|V|A|K|C)(?=$|[^A-Za-z0-9_])",
           "name": "constant.numeric.unit.gameeventscript"
         },
         {
@@ -393,7 +393,7 @@
       "comment": "Parenthesized extension calls accept trailing member and collection suffixes; existing punctuation and selector rules tokenize them without an extra scope.",
       "patterns": [
         {
-          "match": ":(Quantity)(\\()((?:none|W/K|J/K|W/m²|W/m\\^2|m/s²|m/s\\^2|deg/s|degree/s|°/s|m/s|m²|m\\^2|m³|m\\^3|degree|meter|second|deg|kg|Hz|dB|°|m|s|N|J|W|V|A|K))(\\))(?=$|[^A-Za-z0-9_])",
+          "match": ":(Quantity)(\\()((?:degree/s\\^2|degree/s²|degree/s|J/\\(kg·K\\)|J/\\(kg\\*K\\)|deg/s\\^2|degree|second|kg/m\\^3|kg·m\\^2|kg\\*m\\^2|deg/s²|meter|m/s\\^2|W/m\\^2|deg/s|kg/m³|kg·m²|kg\\*m²|°/s\\^2|none|m/s²|W/m²|J/kg|°/s²|kg/s|deg|m/s|m\\^2|m\\^3|°/s|W/K|J/K|N·m|N\\*m|ohm|kg|Hz|m²|m³|dB|Pa|Nm|°|m|s|N|J|W|V|A|K|Ω|Ω|C))(\\))(?=$|[^A-Za-z0-9_])",
           "name": "support.type.primitive.quantity.gameeventscript",
           "captures": {
             "1": {

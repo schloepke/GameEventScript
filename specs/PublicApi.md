@@ -339,13 +339,17 @@ predicate operations never use locale; formatting returns canonical GES text.
 
 > **Since: 0.5.0** — physical units
 
+> **Since: Unreleased** — `UnitPascal` through `UnitCoulomb`
+
 `QuantityUnit` has one member per defined UnitId: C# `UnitNone`, `UnitDegree`,
 `UnitMeter`, `UnitSecond`, `UnitMeterPerSecond`, `UnitMeterPerSecondSquared`,
 `UnitKilogram`, `UnitNewton`, `UnitJoule`, `UnitWatt`, `UnitVolt`, `UnitAmpere`,
 `UnitHertz`, `UnitSquareMeter`, `UnitCubicMeter`, `UnitWattPerSquareMeter`,
-`UnitKelvin`, `UnitDegreePerSecond`, `UnitDecibel`, `UnitWattPerKelvin` and
-`UnitJoulePerKelvin`, plus the invalid sentinel
-`UnitInvalid`; Swift uses the same cases in lower camel case (`.none`,
+`UnitKelvin`, `UnitDegreePerSecond`, `UnitDecibel`, `UnitWattPerKelvin`,
+`UnitJoulePerKelvin`, `UnitPascal`, `UnitKilogramPerCubicMeter`,
+`UnitJoulePerKilogram`, `UnitJoulePerKilogramKelvin`, `UnitNewtonMeter`,
+`UnitKilogramSquareMeter`, `UnitDegreePerSecondSquared`, `UnitKilogramPerSecond`,
+`UnitOhm` and `UnitCoulomb`, plus the invalid sentinel `UnitInvalid`; Swift uses the same cases in lower camel case (`.none`,
 `.meterPerSecond`, …), whose raw values are the portable unit names. C#
 `GesQuantityUnits.ToTypeName`/`ParseTypeName` convert portable names and
 `ToSuffix` returns the canonical symbol, which Swift exposes as `suffix`;

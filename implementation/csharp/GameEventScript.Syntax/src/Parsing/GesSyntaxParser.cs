@@ -857,8 +857,11 @@ internal sealed partial class GesSyntaxParser
             SkipNewLines();
             Expect(LeftParen);
             SkipNewLines();
-            while (!Is(RightParen))
+            var depth = 0;
+            while (!Is(RightParen) || depth > 0)
             {
+                if (Is(LeftParen)) depth++;
+                else if (Is(RightParen)) depth--;
                 Advance();
                 SkipNewLines();
             }
@@ -868,7 +871,8 @@ internal sealed partial class GesSyntaxParser
         return typeName;
     }
 
-    // A quantity unit is a name optionally followed by `/` and further unit parts, such as `m/s`, `m/s^2` or `°/s`.
+    // A quantity unit is a name optionally followed by `/`, `*` and further unit parts, such as `m/s`, `m/s^2`, `°/s`,
+    // `N·m` or `J/(kg·K)`; parentheses inside the unit nest.
     private bool IsQuantityTypeSpecifierAhead()
     {
         if (_reader.PeekSignificant(0).Kind != LeftParen) return false;
@@ -876,11 +880,17 @@ internal sealed partial class GesSyntaxParser
         // Uppercase unit symbols such as N or Hz read as message-name tokens.
         if (_reader.PeekSignificant(1).Kind is not (Identifier or Message or IntrinsicDeg)) return false;
 
-        for (var offset = 2; offset < 8; offset++)
+        var depth = 0;
+        for (var offset = 2; offset < 12; offset++)
         {
             var kind = _reader.PeekSignificant(offset).Kind;
-            if (kind == RightParen) return true;
-            if (kind is not (Identifier or Message or OperatorDivide or OperatorPower or SuperscriptInteger or GesTokenKind.Float)) return false;
+            if (kind == RightParen)
+            {
+                if (depth == 0) return true;
+                depth--;
+            }
+            else if (kind == LeftParen) depth++;
+            else if (kind is not (Identifier or Message or OperatorDivide or OperatorMultiply or OperatorPower or SuperscriptInteger or GesTokenKind.Float)) return false;
         }
 
         return false;

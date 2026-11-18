@@ -39,6 +39,12 @@ here.
 - Specify signatures, certificates or keys, trust policy and rollback behavior
   separately; V1 only reserves the security section range and provides no
   authenticity guarantee.
+- Replace the closed UnitId list with dimension-vector units (exponents of the
+  SI base dimensions plus angle) at the next `.gesb` format change, once the
+  one-byte UnitId space is full. Only UnitId 31 remains free; the vector form
+  would also allow combinations the list rejects, such as `J/(kg·m²)`, and keep
+  torque distinct from energy without special rules. Update Bytecode, Language,
+  both unit tables, the schema wire format and the Swift macro mirror together.
 
 ## Language
 

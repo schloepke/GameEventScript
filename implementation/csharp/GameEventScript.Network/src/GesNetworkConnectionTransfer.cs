@@ -65,7 +65,7 @@ public sealed partial class GesNetworkConnection
         if (!_datagram && index == 0 && _sendBulk.Started) _written.CancelNewest();
         CancelQueued(index, code);
         if (_datagram && !QueueCancel(route, (ushort)transferId, code)) return true;
-        AddEvent(GesNetworkEventKind.TransferCancelled, route, default, Counter.None, code, string.Empty, false, transferId);
+        if (!AddEvent(GesNetworkEventKind.TransferCancelled, route, default, Counter.None, code, string.Empty, false, transferId)) Fail(GesNetworkCodes.QueueFull);
         return true;
     }
 
@@ -264,8 +264,8 @@ public sealed partial class GesNetworkConnection
 
     private bool AddCancelled(int route, ushort id, ReadOnlySpan<char> code)
     {
-        AddEvent(GesNetworkEventKind.TransferCancelled, route, default, Counter.None, code.ToString(), string.Empty, true, id);
-        return true;
+        return AddEvent(GesNetworkEventKind.TransferCancelled, route, default, Counter.None, code.ToString(), string.Empty, true, id)
+            || Fail(GesNetworkCodes.QueueFull);
     }
 
     // Checks a received transfer and reports its data as a message; a transfer that fails a check is cancelled. False
@@ -311,7 +311,7 @@ public sealed partial class GesNetworkConnection
     // Cancels a received transfer that failed a check and tells the sender.
     private bool RefuseTransfer(int route, ushort id, string code)
     {
-        AddEvent(GesNetworkEventKind.TransferCancelled, route, default, Counter.None, code, string.Empty, false, id);
+        if (!AddEvent(GesNetworkEventKind.TransferCancelled, route, default, Counter.None, code, string.Empty, false, id)) return Fail(GesNetworkCodes.QueueFull);
         return QueueCancel(route, id, code);
     }
 
@@ -339,7 +339,7 @@ public sealed partial class GesNetworkConnection
 
             var bytes = Math.Min(confirmed - _written.Start, _written.Total);
             if (bytes <= _written.Reported) return;
-            AddProgress(_written.Route, _written.Id, bytes, _written.Total);
+            if (!AddProgress(_written.Route, _written.Id, bytes, _written.Total)) return;
             _written.Reported = bytes;
             if (bytes < _written.Total) return;
             _written.Pop();

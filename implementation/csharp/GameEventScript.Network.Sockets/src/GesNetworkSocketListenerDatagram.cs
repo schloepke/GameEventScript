@@ -33,7 +33,7 @@ public sealed partial class GesNetworkSocketListener
     /// <param name="network">The bound network of every session.</param>
     /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Datagram"/>; the defaults when omitted.</param>
     /// <returns>The listener. Its sessions send through its socket, so dispose it only after them.</returns>
-    /// <exception cref="ArgumentException">The options use another transport or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
+    /// <exception cref="ArgumentException">The options use another transport, name an insecure test key seed or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
     /// <exception cref="SocketException">The address cannot be bound.</exception>
     public static GesNetworkSocketListener ListenUdp(IPEndPoint endPoint, GesBoundNetwork network, GesNetworkOptions? options = null) =>
         new(endPoint, network, options, GesNetworkTransport.Datagram, null);
@@ -117,7 +117,7 @@ public sealed partial class GesNetworkSocketListener
 
                         break;
                     case GesNetworkCookieResult.Accept:
-                        Admit(socket, address, chunk);
+                        Admit(socket, address, source.Address, chunk);
                         break;
                     default:
                         ArrayPool<byte>.Shared.Return(bytes);
@@ -131,16 +131,29 @@ public sealed partial class GesNetworkSocketListener
         }
     }
 
-    // Registers a validated address with its hello and offers it to the host; a full queue drops the hello, and the
-    // client sends it again.
-    private void Admit(Socket socket, SocketAddress address, GesNetworkSocketSession.Chunk hello)
+    // Registers a validated address with its hello and offers it to the host; a full queue or an IP address that
+    // holds its limit drops the hello, and the client sends it again.
+    private void Admit(Socket socket, SocketAddress address, IPAddress source, GesNetworkSocketSession.Chunk hello)
     {
+        if (!_places.Wait(0))
+        {
+            ArrayPool<byte>.Shared.Return(hello.Bytes);
+            return;
+        }
+
+        if (!Enter(source))
+        {
+            _places.Release();
+            ArrayPool<byte>.Shared.Return(hello.Bytes);
+            return;
+        }
+
         var copy = new SocketAddress(address.Family, address.Size);
         address.Buffer.Span[..address.Size].CopyTo(copy.Buffer.Span);
         var peer = new GesNetworkDatagramPeer(this, socket, copy);
         peer.Received.Writer.TryWrite(hello);
         _peers[copy] = peer;
-        if (!_pending.Writer.TryWrite(new Pending(null, null, peer))) peer.Dispose();
+        Offer(new Pending(null, null, peer, source));
     }
 
     // The address for validation: the 4 or 16 bytes of the IP address and the port, most significant byte first.
@@ -163,4 +176,11 @@ internal sealed class GesNetworkDatagramPeer(GesNetworkSocketListener listener, 
 
     // Gives the address back to address validation.
     public void Dispose() => listener.Remove(this);
+
+    // Drops a client the host never took: returns its buffered datagrams and gives the address back.
+    internal void Discard()
+    {
+        while (Received.Reader.TryRead(out var chunk)) System.Buffers.ArrayPool<byte>.Shared.Return(chunk.Bytes);
+        Dispose();
+    }
 }

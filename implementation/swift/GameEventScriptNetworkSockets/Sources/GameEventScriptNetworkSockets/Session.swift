@@ -55,7 +55,7 @@ public final class GesNetworkSocketSession {
     ///   - port: The server's port.
     ///   - connection: A client connection created with `.stream`; its timeout runs from its creation.
     /// - Returns: The session.
-    /// - Throws: `GesApiError.invalidArgument` when the connection is no client of the stream transport; a SwiftNIO
+    /// - Throws: `GesApiError.invalidArgument` when the connection is no client of the stream transport or uses insecure test keys; a SwiftNIO
     ///   error when the connection cannot be opened.
     public static func connectTcp(host: String, port: Int, connection: sending GesNetworkConnection) async throws -> sending GesNetworkSocketSession {
         try require(connection, .stream, client: true)
@@ -75,7 +75,7 @@ public final class GesNetworkSocketSession {
     ///   - url: The `ws` or `wss` endpoint, such as `wss://example.org/game?room=1`; IPv6 hosts stand in brackets.
     ///   - connection: A client connection created with `.message`; its timeout runs from its creation.
     /// - Returns: The session.
-    /// - Throws: `GesApiError.invalidArgument` when the connection is no client of the message transport or the URL
+    /// - Throws: `GesApiError.invalidArgument` when the connection is no client of the message transport or uses insecure test keys or the URL
     ///   is no `ws` or `wss` endpoint; `GesNetworkSocketError` when the server refuses the upgrade; a SwiftNIO error
     ///   when the connection cannot be opened.
     public static func connectWebSocket(url: String, connection: sending GesNetworkConnection) async throws -> sending GesNetworkSocketSession {
@@ -117,6 +117,7 @@ public final class GesNetworkSocketSession {
     static func require(_ connection: GesNetworkConnection, _ transport: GesNetworkTransport, client: Bool) throws {
         if connection.transport != transport { throw GesApiError.invalidArgument("The connection must use the \(transport) transport.") }
         if connection.isClient != client { throw GesApiError.invalidArgument(client ? "The connection must be a client." : "The connection must be a server.") }
+        if connection.usesInsecureTestKeys { throw GesApiError.invalidArgument("A socket transport refuses insecure test keys.") }
     }
 
     /// Feeds the received bytes into the connection, advances it to `now`, reports the end of the transport and sends

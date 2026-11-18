@@ -42,7 +42,7 @@ extension GesNetworkConnection {
         if !datagram && index == 0 && sendBulk.started { written.cancelNewest() }
         cancelQueued(index, code)
         if datagram && !queueCancel(route, UInt16(transferId), code) { return true }
-        _ = addEvent(.transferCancelled, route, UnsafeRawBufferPointer(start: nil, count: 0), .none, code, "", false, transferId)
+        if !addEvent(.transferCancelled, route, UnsafeRawBufferPointer(start: nil, count: 0), .none, code, "", false, transferId) { fail(GesNetworkCodes.queueFull) }
         return true
     }
 
@@ -211,8 +211,8 @@ extension GesNetworkConnection {
     func isPeerCancelled(_ id: UInt16) -> Bool { peerCancelled[Int(id >> 6)] & (UInt64(1) << UInt64(id & 63)) != 0 }
 
     private func addCancelled(_ route: Int, _ id: UInt16, _ code: UnsafeRawBufferPointer) -> Bool {
-        _ = addEvent(.transferCancelled, route, UnsafeRawBufferPointer(start: nil, count: 0), .none, String(decoding: code, as: UTF8.self), "", true, Int(id))
-        return true
+        addEvent(.transferCancelled, route, UnsafeRawBufferPointer(start: nil, count: 0), .none, String(decoding: code, as: UTF8.self), "", true, Int(id))
+            || fail(GesNetworkCodes.queueFull)
     }
 
     // Checks a received transfer and reports its data as a message; a transfer that fails a check is cancelled. False
@@ -253,7 +253,7 @@ extension GesNetworkConnection {
 
     // Cancels a received transfer that failed a check and tells the sender.
     private func refuseTransfer(_ route: Int, _ id: UInt16, _ code: String) -> Bool {
-        _ = addEvent(.transferCancelled, route, UnsafeRawBufferPointer(start: nil, count: 0), .none, code, "", false, Int(id))
+        if !addEvent(.transferCancelled, route, UnsafeRawBufferPointer(start: nil, count: 0), .none, code, "", false, Int(id)) { return fail(GesNetworkCodes.queueFull) }
         return queueCancel(route, id, code)
     }
 
@@ -276,7 +276,7 @@ extension GesNetworkConnection {
             }
             let bytes = min(confirmed - written.start, written.total)
             if bytes <= written.reported { return }
-            addProgress(written.route, written.id, bytes, written.total)
+            if !addProgress(written.route, written.id, bytes, written.total) { return }
             written.reported = bytes
             if bytes < written.total { return }
             written.pop()

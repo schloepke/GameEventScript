@@ -18,7 +18,7 @@ extension GesNetworkSocketListener {
     ///   - network: The bound network of every session.
     ///   - options: The options of every server connection, using `.datagram`; the defaults when omitted.
     /// - Returns: The listener. Its sessions send through its socket, so close it only after them.
-    /// - Throws: `GesApiError.invalidArgument` when the options use another transport or are out of range, or
+    /// - Throws: `GesApiError.invalidArgument` when the options use another transport, name an insecure test key seed or are out of range, or
     ///   name no key while their lowest security level is above none, as the defaults do; a SwiftNIO error when the
     ///   address cannot be resolved or bound.
     public static func listenUdp(host: String, port: Int, network: GesBoundNetwork, options: GesNetworkOptions? = nil) async throws -> sending GesNetworkSocketListener {
@@ -49,7 +49,7 @@ extension GesNetworkSocketSession {
     ///   - connection: A client connection created with `.datagram`; its timeout runs from its creation.
     /// - Returns: The session. UDP has no connection setup, so a missing server shows only as the connection's
     ///   timeout.
-    /// - Throws: `GesApiError.invalidArgument` when the connection is no client of the datagram transport; a SwiftNIO
+    /// - Throws: `GesApiError.invalidArgument` when the connection is no client of the datagram transport or uses insecure test keys; a SwiftNIO
     ///   error when the host cannot be resolved or the socket cannot be opened.
     public static func connectUdp(host: String, port: Int, connection: sending GesNetworkConnection) async throws -> sending GesNetworkSocketSession {
         try require(connection, .datagram, client: true)

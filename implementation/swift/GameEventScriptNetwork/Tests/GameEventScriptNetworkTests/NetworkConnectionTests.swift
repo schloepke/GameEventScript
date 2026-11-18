@@ -81,6 +81,52 @@ final class NetworkConnectionTests: XCTestCase {
         return (try GesNetworkConnection.makeClient(network: network, now: 0, options: options), try GesNetworkConnection.makeServer(network: network, now: 0, options: options))
     }
 
+    private func fastFrames() -> GesNetworkOptions {
+        var options = GesNetworkOptions.plain
+        options.maxFramesPerSecond = 1_000_000
+        return options
+    }
+
+    func testUntakenEventsBeyondTheLimitCloseWithQueueFull() throws {
+        let loop = try connected(fastFrames())
+        for _ in 0...65536 { XCTAssertEqual(loop.server.send(route: blob, payload: [0]), .queued) }
+        var now: Int64 = 0
+        while now < 60_000_000 && loop.client.state != .closed {
+            try loop.advance(now)
+            now += 10_000
+        }
+        let events = drain(loop.client)
+        XCTAssertEqual(events.count, 65537)
+        XCTAssertEqual(events.filter { $0 == "message \(blob) 00" }.count, 65536)
+        XCTAssertEqual(events.last, "closed network.queueFull '' local")
+    }
+
+    func testTakenEventsFreeTheirPlaceAndKeepTheirOrder() throws {
+        let loop = try connected(fastFrames())
+        var expected: [String] = []
+        var received: [String] = []
+        var now: Int64 = 0
+        for round in 0..<3 {
+            for index in 0..<40_000 {
+                let payload: [UInt8] = [1, UInt8(truncatingIfNeeded: round * 40_000 + index)]
+                XCTAssertEqual(loop.server.send(route: blob, payload: payload), .queued)
+                expected.append("message \(blob) \(hex(payload))")
+            }
+            for _ in 0..<100 {
+                now += 10_000
+                try loop.advance(now)
+            }
+            for _ in 0..<30_000 {
+                let next = loop.client.nextEvent()
+                XCTAssertEqual(next.kind, .message)
+                received.append("message \(next.route) \(hex(next.payload))")
+            }
+        }
+        received += drain(loop.client)
+        XCTAssertEqual(loop.client.state, .connected)
+        XCTAssertEqual(received, expected)
+    }
+
     func testHandshakeReportsTheTokenAndConnectsBothSides() throws {
         let loop = try connected()
         XCTAssertEqual(loop.server.state, .connected)

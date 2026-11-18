@@ -463,11 +463,15 @@ internal sealed class GesNetworkPartial
 
     internal ReadOnlySpan<byte> Message => _buffer.AsSpan(0, (int)Total);
 
+    // The bytes the message's storage holds.
+    internal long Capacity => _buffer.Length + _arrived.Length;
+
+    // Starts a message; its storage grows to exactly the total, which the caller counted as pending before.
     internal void Start(uint channel, ushort id, uint total)
     {
-        if (_buffer.Length < total) _buffer = new byte[Math.Max(total, Math.Min((long)_buffer.Length * 2, int.MaxValue))];
+        if (_buffer.Length < total) _buffer = new byte[total];
         var bits = (int)((total + 7) / 8);
-        if (_arrived.Length < bits) _arrived = new byte[Math.Max(bits, Math.Min(_arrived.Length * 2, int.MaxValue))];
+        if (_arrived.Length < bits) _arrived = new byte[bits];
         else Array.Clear(_arrived, 0, bits);
         Active = true;
         Cancelled = false;
@@ -477,14 +481,22 @@ internal sealed class GesNetworkPartial
         Received = 0;
     }
 
-    // Marks the message with the id cancelled; its fragments are ignored and it is skipped in order.
+    // Marks the message with the id cancelled and frees its storage; its fragments are ignored and it is skipped in
+    // order.
     internal void Cancel(uint channel, ushort id)
     {
+        FreeStorage();
         Active = Cancelled = true;
         Channel = channel;
         Id = id;
         Total = 0;
         Received = 0;
+    }
+
+    internal void FreeStorage()
+    {
+        _buffer = [];
+        _arrived = [];
     }
 
     // Writes the bytes of a chunk that did not arrive before; bytes that did keep their first value.
@@ -510,18 +522,36 @@ internal sealed class GesNetworkOrderedReceive
 
     private readonly GesNetworkPartial?[] _messages = new GesNetworkPartial?[Window];
 
-    // Delivered messages wait here for reuse, so a warmed session receives without allocating.
+    // Delivered messages wait here for reuse, so a warmed session receives without allocating. The storage they keep
+    // stays within the retention limit: a message whose storage would exceed it is kept without.
     private readonly Stack<GesNetworkPartial> _free = new();
+    private readonly long _retention;
+    private long _retained;
 
     internal ushort NextId;
 
-    internal GesNetworkPartial Message(ushort id) => _messages[id % Window] ??= _free.Count > 0 ? _free.Pop() : new GesNetworkPartial();
+    // The storage the messages kept for reuse hold.
+    internal long Retained => _retained;
+
+    internal GesNetworkOrderedReceive(long retention) => _retention = retention;
+
+    internal GesNetworkPartial Message(ushort id)
+    {
+        ref var slot = ref _messages[id % Window];
+        if (slot is not null) return slot;
+        if (_free.Count == 0) return slot = new GesNetworkPartial();
+        slot = _free.Pop();
+        _retained -= slot.Capacity;
+        return slot;
+    }
 
     // Frees the slot of a delivered message and keeps the message for reuse.
     internal void Release(GesNetworkPartial message)
     {
         message.Active = false;
         _messages[message.Id % Window] = null;
+        if (_retained + message.Capacity > _retention) message.FreeStorage();
+        _retained += message.Capacity;
         _free.Push(message);
     }
 

@@ -11,6 +11,7 @@ import GameEventScriptRuntime
 public final class GesNetworkConnection {
     static let microsecondsPerSecond: Int64 = 1_000_000
     static let sendTimeWindow = 256
+    static let maxPendingEvents = 65536
 
     /// The bound network both sides must share.
     public let network: GesBoundNetwork
@@ -165,6 +166,9 @@ public final class GesNetworkConnection {
     /// `GesNetworkSecurity.encrypted` for every encrypted session.
     public internal(set) var security: GesNetworkSecurity = .none
 
+    /// Whether the connection derives its ephemeral keys from `GesNetworkOptions.insecureTestKeySeed`.
+    public var usesInsecureTestKeys: Bool { testKeys }
+
     // Bulk transfers, see ConnectionTransfer.swift: the codecs and hash, created when first needed.
     var deflater: GesNetworkDeflater?
     var inflater: GesNetworkInflater?
@@ -268,8 +272,8 @@ public final class GesNetworkConnection {
         fragmentKeys = [Int64](repeating: 0, count: fragments)
         fragmentOffsets = [Int](repeating: 0, count: fragments)
         fragmentLengths = [Int](repeating: 0, count: fragments)
-        orderedReliable = datagram ? GesNetworkOrderedReceive() : nil
-        orderedBulk = datagram ? GesNetworkOrderedReceive() : nil
+        orderedReliable = datagram ? GesNetworkOrderedReceive(retention: options.maxPendingReceiveBytes) : nil
+        orderedBulk = datagram ? GesNetworkOrderedReceive(retention: 2 * (options.maxTransferBytes + Int64(GesNetworkWire.transferHeaderBytes))) : nil
         self.token = token
         self.now = now
         lastReceive = now
@@ -321,9 +325,9 @@ public final class GesNetworkConnection {
 
     /// Changes the send budget.
     /// - Parameter value: The bytes per second this side sends; 0 sends without a budget.
-    /// - Throws: `GesApiError.invalidArgument` when the value is negative.
+    /// - Throws: `GesApiError.invalidArgument` when the value is negative or above 1073741824.
     public func setSendBudgetBytesPerSecond(_ value: Int64) throws {
-        if value < 0 { throw GesApiError.invalidArgument("The send budget is not negative.") }
+        if !(0...GesNetworkOptions.maximumBytes).contains(value) { throw GesApiError.invalidArgument("The send budget is 0 to 1073741824 bytes per second.") }
         if budget == 0 { budgetUnits = budgetCapacity }
         budget = value
     }
@@ -532,6 +536,7 @@ public final class GesNetworkConnection {
                 total: 0
             )
         }
+        compactEvents()
         let entry = events[eventHead]
         eventHead += 1
         if entry.counter == .pending {
@@ -551,6 +556,34 @@ public final class GesNetworkConnection {
             bytes: entry.bytes,
             total: entry.total
         )
+    }
+
+    // Moves the pending events and their payloads to the front once the taken ones occupy at least as much as the pending
+    // ones, so the queue and its arena stay within twice their pending size while a host never empties them.
+    private func compactEvents() {
+        let taken = events[eventHead].offset
+        let count = events.count - eventHead
+        if eventHead < 16 || eventHead < count || taken < arenaLength - taken { return }
+        if arenaLength > taken { arena!.copyMemory(from: arena! + taken, byteCount: arenaLength - taken) }
+        arenaLength -= taken
+        for index in 0..<count {
+            let entry = events[eventHead + index]
+            events[index] = EventEntry(
+                kind: entry.kind,
+                route: entry.route,
+                offset: entry.offset - taken,
+                length: entry.length,
+                counter: entry.counter,
+                code: entry.code,
+                detail: entry.detail,
+                byPeer: entry.byPeer,
+                transferId: entry.transferId,
+                bytes: entry.bytes,
+                total: entry.total
+            )
+        }
+        events.removeLast(eventHead)
+        eventHead = 0
     }
 
     func closeLocal(_ code: String, _ detail: String, _ sendPacket: Bool) {
@@ -584,7 +617,8 @@ public final class GesNetworkConnection {
         return false
     }
 
-    // Adds an event; a counted payload adds to its pending received bytes. Returns false when they exceed their limit.
+    // Adds an event; a counted payload adds to its pending received bytes. Returns false when they exceed their limit or
+    // the pending events their count; a closed event always fits.
     func addEvent(
         _ kind: GesNetworkEventKind,
         _ route: Int,
@@ -614,6 +648,7 @@ public final class GesNetworkConnection {
         _ bytes: Int64,
         _ total: Int64
     ) -> UnsafeMutableRawBufferPointer? {
+        if events.count - eventHead >= GesNetworkConnection.maxPendingEvents && kind != .closed { return nil }
         if counter == .pending {
             pending += Int64(length)
             if pending > maxPending { return nil }
@@ -651,8 +686,9 @@ public final class GesNetworkConnection {
         return reserved
     }
 
-    // Reports the progress of a transfer; it replaces the newest event when that reports the same transfer.
-    func addProgress(_ route: Int, _ id: UInt16, _ bytes: Int64, _ total: Int64) {
+    // Reports the progress of a transfer; it replaces the newest event when that reports the same transfer. False when
+    // it closed the connection because too many events are pending.
+    func addProgress(_ route: Int, _ id: UInt16, _ bytes: Int64, _ total: Int64) -> Bool {
         if events.count > eventHead {
             let last = events[events.count - 1]
             if last.kind == .transferProgress && last.route == route && last.transferId == Int(id) {
@@ -669,10 +705,10 @@ public final class GesNetworkConnection {
                     bytes: bytes,
                     total: total
                 )
-                return
+                return true
             }
         }
-        _ = reserveEvent(.transferProgress, route, 0, .none, "", "", false, Int(id), bytes, total)
+        return reserveEvent(.transferProgress, route, 0, .none, "", "", false, Int(id), bytes, total) != nil || fail(GesNetworkCodes.queueFull)
     }
 
     // Refills a token bucket of units per microsecond up to its capacity, without overflow.

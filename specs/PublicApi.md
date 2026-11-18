@@ -828,7 +828,7 @@ The optional Sockets package (C# `GameEventScript.Network.Sockets`, .NET 8; Swif
 | session control | `Send(route, payload)`, `Publish(route, payload)`, `Accept()`, `Refuse(detail)`, `Close(detail)`, `NextEvent()` | `send(route:payload:)`, `publish(route:payload:)`, `accept()`, `refuse(_:)`, `close(_:)`, `nextEvent()` |
 | topics | server `Subscribe(route)`, `Unsubscribe(route)` | `subscribe(route:)`, `unsubscribe(route:)` (throwing) |
 | transfers | `LastTransferId`, `Cancel(route, transferId, code)` with optional code returning `bool` | `lastTransferId`, `cancel(route:transferId:code:)` (throwing) with defaulted code returning `Bool` |
-| state | `State`, `Security`, `IsClient`, `Transport`, `MaxPacketBytes`, `Now`, `RoundTripMicroseconds`, `PendingReceiveBytes`, `QueuedSendBytes`, settable `SendBudgetBytesPerSecond` | the same properties; `setSendBudgetBytesPerSecond(_:)` |
+| state | `State`, `Security`, `IsClient`, `Transport`, `MaxPacketBytes`, `Now`, `RoundTripMicroseconds`, `PendingReceiveBytes`, `QueuedSendBytes`, `UsesInsecureTestKeys`, settable `SendBudgetBytesPerSecond` | the same properties; `setSendBudgetBytesPerSecond(_:)` |
 | event | `readonly ref struct GesNetworkEvent` with `Kind`, `Route`, `Payload` (span), `Code`, `Detail`, `ByPeer`, `TransferId`, `Bytes`, `Total` | `struct GesNetworkEvent` with `kind`, `route`, `payload` (borrowed `UnsafeRawBufferPointer`), `code`, `detail`, `byPeer`, `transferId`, `bytes`, `total` |
 | enums | `GesNetworkEventKind`, `GesNetworkState`, `GesNetworkTransport`, `GesNetworkSendStatus` | the same enums |
 | options | `sealed class GesNetworkOptions` with settable limits and timings, including `MaxBaselineBytes`, `MaxTransferBytes`, `DeflateTransfers`, `MinimumSecurity` (default `Verified`), `ServerPublicKey`, `Key` and `InsecureTestKeySeed` | `struct GesNetworkOptions` with the same properties in lower camel case |
@@ -842,8 +842,8 @@ The optional Sockets package (C# `GameEventScript.Network.Sockets`, .NET 8; Swif
 `Send` and `Publish` never throw; they report `GesNetworkSendStatus`, including `NotSubscribed` for a server topic without subscription. `Subscribe` and `Unsubscribe` are idempotent and throw on a client or on a route that is no server topic. A sent transfer gets the next id of the bulk numbering across all bulk routes, which `LastTransferId` reports; `Cancel` returns `false` without a connection and for an unknown or completely sent transfer and throws on a route this side does not send in bulk or an invalid code. An event's payload stays valid until the next
 `NextEvent` call. A peer's violation closes the connection with a `network.*` code and never throws; API misuse
 (a time going back, `Accept` outside a pending handshake, a too-small transmit buffer, a server without `Key` whose
-`MinimumSecurity` is above `None`) throws the port's argument or
-operation error. A socket session's event loop only moves bytes; the connection is touched only where `Update`
+`MinimumSecurity` is above `None`, an option outside its range, insecure test keys on a socket transport) throws the
+port's argument or operation error. A socket session's event loop only moves bytes; the connection is touched only where `Update`
 runs.
 
 ## Host construction and lifecycle API

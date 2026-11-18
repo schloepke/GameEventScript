@@ -222,6 +222,7 @@ public sealed class GesNetworkDatagramTests
 
     [TestMethod]
     [TestCategory("Allocation")]
+    [DoNotParallelize]
     public void WarmedDatagramSessionAllocatesNothing()
     {
         var simulator = Connected(3, 100, 50, true);

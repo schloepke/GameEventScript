@@ -16,6 +16,7 @@ public sealed partial class GesNetworkConnection
 {
     private const long MicrosecondsPerSecond = 1_000_000;
     private const int SendTimeWindow = 256;
+    private const int MaxPendingEvents = 65536;
 
     private readonly bool _client;
     private readonly GesNetworkTransport _transport;
@@ -132,8 +133,8 @@ public sealed partial class GesNetworkConnection
         _fragmentLengths = new int[fragments];
         if (_datagram)
         {
-            _orderedReliable = new GesNetworkOrderedReceive();
-            _orderedBulk = new GesNetworkOrderedReceive();
+            _orderedReliable = new GesNetworkOrderedReceive(_maxPending);
+            _orderedBulk = new GesNetworkOrderedReceive(MaxPendingBulk);
         }
 
         for (var index = 0; index < _routeCount; index++)
@@ -233,13 +234,13 @@ public sealed partial class GesNetworkConnection
     /// Gets or sets the send budget in bytes per second; 0 for none. The host may change it at any time, for example
     /// from <see cref="RoundTripMicroseconds"/>; this is the congestion hook.
     /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException">The value is negative.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The value is negative or above 1073741824.</exception>
     public long SendBudgetBytesPerSecond
     {
         get => _budget;
         set
         {
-            if (value < 0) throw new ArgumentOutOfRangeException(nameof(value));
+            if (value is < 0 or > GesNetworkOptions.MaximumBytes) throw new ArgumentOutOfRangeException(nameof(value));
             if (_budget == 0) _budgetUnits = BudgetCapacity;
             _budget = value;
         }
@@ -437,6 +438,8 @@ public sealed partial class GesNetworkConnection
             return new GesNetworkEvent(GesNetworkEventKind.None, -1, default, string.Empty, string.Empty, false, -1, 0, 0);
         }
 
+        CompactEvents();
+
         ref readonly var entry = ref _events[_eventHead++];
         if (entry.Counter == Counter.Pending) _pending -= entry.Length;
         else if (entry.Counter == Counter.Bulk) _pendingBulk -= entry.Length;
@@ -450,6 +453,26 @@ public sealed partial class GesNetworkConnection
             entry.TransferId,
             entry.Bytes,
             entry.Total);
+    }
+
+    // Moves the pending events and their payloads to the front once the taken ones occupy at least as much as the pending
+    // ones, so the queue and its arena stay within twice their pending size while a host never empties them.
+    private void CompactEvents()
+    {
+        var taken = _events[_eventHead].Offset;
+        var count = _eventCount - _eventHead;
+        if (_eventHead < 16 || _eventHead < count || taken < _arenaLength - taken) return;
+        _arena.AsSpan(taken, _arenaLength - taken).CopyTo(_arena);
+        _arenaLength -= taken;
+        for (var i = 0; i < count; i++)
+        {
+            ref readonly var entry = ref _events[_eventHead + i];
+            _events[i] = new EventEntry(entry.Kind, entry.Route, entry.Offset - taken, entry.Length, entry.Counter, entry.Code, entry.Detail, entry.ByPeer, entry.TransferId, entry.Bytes, entry.Total);
+        }
+
+        Array.Clear(_events, count, _eventCount - count);
+        _eventHead = 0;
+        _eventCount = count;
     }
 
     private void CloseLocal(string code, string detail, bool sendPacket)
@@ -492,7 +515,8 @@ public sealed partial class GesNetworkConnection
         return false;
     }
 
-    // Adds an event; a counted payload adds to its pending received bytes. Returns false when they exceed their limit.
+    // Adds an event; a counted payload adds to its pending received bytes. Returns false when they exceed their limit or
+    // the pending events their count; a closed event always fits.
     private bool AddEvent(
         GesNetworkEventKind kind,
         int route,
@@ -524,6 +548,7 @@ public sealed partial class GesNetworkConnection
         out Span<byte> reserved)
     {
         reserved = default;
+        if (_eventCount - _eventHead >= MaxPendingEvents && kind != GesNetworkEventKind.Closed) return false;
         if (counter == Counter.Pending)
         {
             _pending += length;
@@ -544,8 +569,9 @@ public sealed partial class GesNetworkConnection
         return true;
     }
 
-    // Reports the progress of a transfer; it replaces the newest event when that reports the same transfer.
-    private void AddProgress(int route, ushort id, long bytes, long total)
+    // Reports the progress of a transfer; it replaces the newest event when that reports the same transfer. False when
+    // it closed the connection because too many events are pending.
+    private bool AddProgress(int route, ushort id, long bytes, long total)
     {
         if (_eventCount > _eventHead)
         {
@@ -553,11 +579,12 @@ public sealed partial class GesNetworkConnection
             if (last.Kind == GesNetworkEventKind.TransferProgress && last.Route == route && last.TransferId == id)
             {
                 last = new EventEntry(last.Kind, route, last.Offset, 0, Counter.None, string.Empty, string.Empty, false, id, bytes, total);
-                return;
+                return true;
             }
         }
 
-        ReserveEvent(GesNetworkEventKind.TransferProgress, route, 0, Counter.None, string.Empty, string.Empty, false, id, bytes, total, out _);
+        return ReserveEvent(GesNetworkEventKind.TransferProgress, route, 0, Counter.None, string.Empty, string.Empty, false, id, bytes, total, out _)
+            || Fail(GesNetworkCodes.QueueFull);
     }
 
     // Refills a token bucket of units per microsecond up to its capacity, without overflow.

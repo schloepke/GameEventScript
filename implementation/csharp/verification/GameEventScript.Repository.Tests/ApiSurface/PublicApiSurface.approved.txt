@@ -1606,6 +1606,7 @@ sealed class GameEventScript.Network.GesNetworkConnection
   property GameEventScript.Network.GesNetworkState State { get }
   property GameEventScript.Network.GesNetworkTransport Transport { get }
   property System.Boolean IsClient { get }
+  property System.Boolean UsesInsecureTestKeys { get }
   property System.Int32 LastTransferId { get }
   property System.Int32 MaxPacketBytes { get }
   property System.Int64 NextDeadline { get }

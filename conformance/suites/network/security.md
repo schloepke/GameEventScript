@@ -522,6 +522,150 @@ network:
 ```
 ---
 
+## Test: A later retry replaces a forged key
+
+On the datagram transport anyone can send a `retry`. A client without a pinned key takes the key of a later
+`retry` while no `welcome` has authenticated, so a forged `retry` that arrives first cannot block the session. A
+`retry` that arrives before the client has sent its `hello` is ignored.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: forged-retry
+networkApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  network: "Game"
+  token: "74"
+  options: {"transport": "datagram", "minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"transport": "datagram", "minimumSecurity": "encrypted", "testKeySeed": 7}
+  link: "none"
+  steps:
+    - {"receive": {"side": "client", "bytes": "0200202fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74"}}
+    - {"transmit": "client"}
+    - {"deliver": {"side": "server", "packets": [0]}}
+    - {"transmit": "server"}
+    - {"receive": {"side": "client", "bytes": "0200202fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74"}}
+    - {"transmit": "client"}
+    - {"deliver": {"side": "client", "packets": [0]}}
+    - {"transmit": "client"}
+    - {"deliver": {"side": "server", "packets": [0]}}
+    - {"accept": true}
+    - {"transmit": "server"}
+    - {"deliver": {"side": "client", "packets": [0]}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "client packet 1200:7ec685f70fe17ddc"
+    - "server packet 02002007a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c"
+    - "client packet 1200:65196b921d006208"
+    - "client packet 1200:4e7527259d64ac22"
+    - "server connecting 74"
+    - "server connected"
+    - "server packet 0313161fee9cd11698667241f20bdb4fd76e462ce37311e308d7b28358b2602762bf386c1636dc424abbbe971d73743298de34a3926f5b115502263b"
+    - "client connected"
+  client: {"state": "connected", "security": "encrypted"}
+  server: {"state": "connected", "security": "encrypted"}
+```
+---
+
+## Test: A plain close after a sealed welcome closes a stream
+
+Once a client has read a sealed `welcome`, only sealed packets may close the session; on the message and stream
+transports a plain `close` is malformed.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: plain-close-stream
+networkApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  network: "Game"
+  token: "74"
+  options: {"minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"minimumSecurity": "verified", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
+  link: "none"
+  steps:
+    - {"transmit": "client"}
+    - {"deliver": {"side": "server", "packets": [0]}}
+    - {"accept": true}
+    - {"transmit": "server"}
+    - {"deliver": {"side": "client", "packets": [0]}}
+    - {"receive": {"side": "client", "bytes": "04116e6574776f726b2e6d616c666f726d656400"}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001000240d87ce093ab5d739dc153383b6bce22d93a9d476802bd599efa5864d22128191166a9b7f12a3430311523a8471a89b1938e"
+    - "server connecting 74"
+    - "server connected"
+    - "server packet 0313161fee9cd11698667241f20bdb4fd76e462ce37311e308d7b28358b260276294fc98f38db465f9da88a4291c5ac11bc8c1f9602665615fdc75c5e1"
+    - "client connected"
+    - "client closed network.malformed local \"\""
+  client: {"state": "closed"}
+```
+---
+
+## Test: A plain close after a sealed welcome is a dropped datagram
+
+On the datagram transport a client drops a plain `close` after a sealed `welcome`, so a forged one cannot end the
+session. The server reads a plain `close` until a sealed data packet authenticates, because the client closes without
+encryption until it reads the `welcome`; after that it drops one too.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: plain-close-datagram
+networkApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  network: "Game"
+  token: "74"
+  options: {"transport": "datagram", "minimumSecurity": "encrypted", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
+  clientOptions: {"transport": "datagram", "minimumSecurity": "verified", "serverPublicKey": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c", "testKeySeed": 7}
+  link: "none"
+  steps:
+    - {"transmit": "client"}
+    - {"deliver": {"side": "server", "packets": [0]}}
+    - {"accept": true}
+    - {"transmit": "server"}
+    - {"deliver": {"side": "client", "packets": [0]}}
+    - {"receive": {"side": "client", "bytes": "04116e6574776f726b2e6d616c666f726d656400"}}
+    - {"send": {"side": "client", "route": 0, "payload": "05"}}
+    - {"transmit": "client"}
+    - {"deliver": {"side": "server", "packets": [0]}}
+    - {"receive": {"side": "server", "bytes": "04116e6574776f726b2e6d616c666f726d656400"}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "client packet 1200:abce6247562c84f5"
+    - "server connecting 74"
+    - "server connected"
+    - "server packet 0313161fee9cd11698667241f20bdb4fd76e462ce37311e308d7b28358b2602762c33b68c9789039f142a91532bbacf61d26e89929702052238b51d4"
+    - "client connected"
+    - "client send queued"
+    - "client packet 0600006d74ecaa3b2297798e426a09fa7a609702a94b2dad083cfb43"
+    - "server message 0 05"
+  client: {"state": "connected"}
+  server: {"state": "connected"}
+```
+---
+
 ## Test: A server above the level none needs a key
 
 Creating a server connection whose lowest level is above none without a key is an invalid argument.

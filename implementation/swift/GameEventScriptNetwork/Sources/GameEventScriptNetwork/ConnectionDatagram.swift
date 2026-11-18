@@ -75,8 +75,9 @@ extension GesNetworkConnection {
 
     // Handles a datagram by type and state: repetitions and late packets of the handshake are ignored.
     func receiveDatagramPacket(_ packet: UnsafeRawBufferPointer) {
-        // An encrypted session drops plain data, and every plain packet once a sealed one authenticated.
-        if encrypted && packet[0] != Wire.sealed && ((keys?.largest ?? -1) >= 0 || packet[0] == Wire.data) { return }
+        // An encrypted session drops plain data, every plain packet on a client and every plain packet on a server once
+        // a sealed one authenticated.
+        if encrypted && packet[0] != Wire.sealed && (isClient || (keys?.largest ?? -1) >= 0 || packet[0] == Wire.data) { return }
         if packet[0] != Wire.sealed { lastReceive = now }
         switch packet[0] {
         case Wire.close:
@@ -87,7 +88,7 @@ extension GesNetworkConnection {
             break
         case Wire.hello where !isClient && state == .connected:
             welcomePending = true
-        case Wire.retry where isClient && state == .hello:
+        case Wire.retry where isClient && state == .hello && helloWritten:
             receiveRetry(packet)
         case Wire.retry where isClient:
             break
@@ -121,6 +122,8 @@ extension GesNetworkConnection {
                 fail(GesNetworkCodes.malformed)
                 return
             }
+            // Progress the acknowledgement reports may exceed the pending events.
+            if state == .closed { return }
             position += 6
         }
 
@@ -180,9 +183,10 @@ extension GesNetworkConnection {
         }
 
         acknowledged = acknowledgePacket(named) || acknowledged
-        for bit in 0..<32 where (bits & (UInt32(1) << UInt32(bit))) != 0 {
+        for bit in 0..<32 where (bits & (UInt32(1) << UInt32(bit))) != 0 && state != .closed {
             acknowledged = acknowledgePacket(named - 1 - Int64(bit)) || acknowledged
         }
+        if state == .closed { return true }
 
         sendReliable.popDone()
         sendBulk.popDone()
@@ -222,7 +226,7 @@ extension GesNetworkConnection {
             }
             if lane >= Self.laneLatest { continue }
             if lane == Self.laneBulk {
-                acknowledgeBulk(key, fragmentLengths[fragment])
+                if !acknowledgeBulk(key, fragmentLengths[fragment]) { return true }
                 continue
             }
             var route = 0
@@ -234,16 +238,17 @@ extension GesNetworkConnection {
         return true
     }
 
-    // Acknowledges a fragment of a transfer and reports the transfer's acknowledged bytes.
-    private func acknowledgeBulk(_ key: Int64, _ length: Int) {
+    // Acknowledges a fragment of a transfer and reports the transfer's acknowledged bytes; false when it closed the
+    // connection.
+    private func acknowledgeBulk(_ key: Int64, _ length: Int) -> Bool {
         var index = 0
-        if !sendBulk.find(key, &index) || sendBulk.isCancelled(index) { return }
+        if !sendBulk.find(key, &index) || sendBulk.isCancelled(index) { return true }
         let before = sendBulk.acknowledgedBytes(index)
         var route = 0
         var number = 0
         _ = sendBulk.acknowledge(key, length, &route, &number)
         let after = sendBulk.acknowledgedBytes(index)
-        if after != before { addProgress(sendBulk.route(index), sendBulk.entryId(index), Int64(after), Int64(sendBulk.entryLength(index))) }
+        return after == before || addProgress(sendBulk.route(index), sendBulk.entryId(index), Int64(after), Int64(sendBulk.entryLength(index)))
     }
 
     // Declares lost the outstanding packets older than the largest acknowledged one whose order or delay ran out.
@@ -332,7 +337,7 @@ extension GesNetworkConnection {
         }
         let message = ordered.message(id)
         if !message.active || message.id != id {
-            message.start(channel, id, total)
+            // The total counts as pending before the message's storage grows to it.
             if bulk {
                 pendingBulk += Int64(total)
                 if pendingBulk > maxPendingBulk { return fail(GesNetworkCodes.queueFull) }
@@ -340,6 +345,7 @@ extension GesNetworkConnection {
                 pending += Int64(total)
                 if pending > maxPending { return fail(GesNetworkCodes.queueFull) }
             }
+            message.start(channel, id, total)
         } else if message.cancelled {
             // Fragments of a transfer the sender cancelled are still in flight.
             return true
@@ -349,7 +355,7 @@ extension GesNetworkConnection {
 
         let received = message.received
         message.write(Int(offset), chunk)
-        if bulk && message.received != received { addProgress(route, id, message.received, Int64(total)) }
+        if bulk && message.received != received && !addProgress(route, id, message.received, Int64(total)) { return false }
         return deliverOrdered(ordered)
     }
 
@@ -384,9 +390,10 @@ extension GesNetworkConnection {
             let ahead = id &- reference
             if (message.active || message.hasReported) && (ahead == 0 || ahead >= 32768) { return true }
             if message.active { pending -= Int64(message.total) }
-            message.start(channel, id, total)
+            message.active = false
             pending += Int64(total)
             if pending > maxPending { return fail(GesNetworkCodes.queueFull) }
+            message.start(channel, id, total)
         }
 
         message.write(offset, chunk)

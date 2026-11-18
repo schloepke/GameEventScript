@@ -84,6 +84,49 @@ public sealed class GesNetworkConnectionTests
     }
 
     [TestMethod]
+    public void UntakenEventsBeyondTheLimitCloseWithQueueFull()
+    {
+        var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxFramesPerSecond = 1_000_000 });
+        for (var index = 0; index <= 65536; index++) Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, [0]));
+        for (var now = 0L; now < 60_000_000 && loop.Client.State != GesNetworkState.Closed; now += 10_000) loop.Advance(now);
+        var events = Drain(loop.Client);
+        Assert.HasCount(65537, events);
+        Assert.AreEqual(65536, events.Count(entry => entry == $"message {Blob} 00"));
+        Assert.AreEqual("closed network.queueFull '' local", events[^1]);
+    }
+
+    [TestMethod]
+    public void TakenEventsFreeTheirPlaceAndKeepTheirOrder()
+    {
+        var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxFramesPerSecond = 1_000_000 });
+        var expected = new List<string>();
+        var received = new List<string>();
+        var now = 0L;
+        for (var round = 0; round < 3; round++)
+        {
+            for (var index = 0; index < 40_000; index++)
+            {
+                var payload = new byte[] { 1, (byte)(round * 40_000 + index) };
+                Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, payload));
+                expected.Add($"message {Blob} {Convert.ToHexString(payload)}");
+            }
+
+            for (var step = 0; step < 100; step++) loop.Advance(now += 10_000);
+            for (var index = 0; index < 30_000; index++) received.Add(Message(loop.Client.NextEvent()));
+        }
+
+        received.AddRange(Drain(loop.Client));
+        Assert.AreEqual(GesNetworkState.Connected, loop.Client.State);
+        CollectionAssert.AreEqual(expected, received);
+    }
+
+    private static string Message(GesNetworkEvent next)
+    {
+        Assert.AreEqual(GesNetworkEventKind.Message, next.Kind);
+        return $"message {next.Route} {Convert.ToHexString(next.Payload)}";
+    }
+
+    [TestMethod]
     public void HandshakeReportsTheTokenAndConnectsBothSides()
     {
         var loop = Connected();
@@ -316,6 +359,7 @@ public sealed class GesNetworkConnectionTests
 
     [TestMethod]
     [TestCategory("Allocation")]
+    [DoNotParallelize]
     public void WarmedSessionAllocatesNothing()
     {
         var loop = Connected(new GesNetworkOptions { MinimumSecurity = GesNetworkSecurity.None, MaxPacketBytes = 1200 });

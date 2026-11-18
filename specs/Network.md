@@ -82,7 +82,7 @@ nowhere in a network.
 
 | Code | Condition |
 | --- | --- |
-| `schema.unknownName` | a route names no declared schema, message or message set |
+| `schema.unknownName` | a route names no declared schema, message or message set, or a rate names no constant of its file |
 | `schema.invalidRoute` | a route names a declaration of the wrong kind or without a `wire` role, an abstract schema, a class its verb does not take, a rate on `sends`, or a rate that is no time, not positive or above `3600s` |
 | `schema.duplicateRoute` | a side names the same root twice with the same verb |
 | `schema.tooLarge` | a network has more than 64 routes |
@@ -283,14 +283,16 @@ limit plus 86 instead of the pending received bytes; exceeding it is
 and the total of the transfer's message, header included. The receiver reports the
 bytes it holds whenever a frame adds bytes; the sender reports the bytes the peer
 acknowledged: on a stream or message transport the written bytes up to the end of
-each acknowledged packet, on a datagram transport the acknowledged bytes of the
+each acknowledged packet that is one of the last 256 data packets it sent, on a datagram transport the acknowledged bytes of the
 transfer. A progress event replaces the newest pending event when that reports the same
 transfer, so a host that takes events late sees one event with the latest count. The
 receiver's `message` follows its last progress event.
 
 **Cancelling.** The sender's host cancels a queued transfer by its id with an optional
 code, `network.transferCancelled` when it gives none, as long as not every byte was sent
-once; afterwards the cancel reports false. Cancelling sends a
+once; afterwards, for an id no queued transfer of the route carries and on a connection
+that is not connected the cancel reports false and changes nothing. A route this side
+does not send as bulk or an invalid code is `invalidArgument`. Cancelling sends a
 [cancel frame](#control-frames) to the receiver, also for a transfer not yet started, and
 reports `transferCancelled` locally. The receiver cancels a transfer that fails a check
 the same way. A cancelled transfer sends no further bytes, keeps its id, and reports
@@ -342,26 +344,31 @@ document; the host may change them per connection.
 
 | Limit | Default | Exceeded |
 | --- | --- | --- |
-| largest packet received and sent, 1200 to 65535 bytes | 16384; 1200 on a datagram transport | `network.packetTooLarge` |
+| largest packet received and sent, 1200 to 65535 bytes; 0 selects the default | 16384; 1200 on a datagram transport | `network.packetTooLarge` |
 | baseline limit: full record bytes of a topic's ring, 0 to 1073741824 | 65536 | older states leave the ring |
-| pending received bytes: incomplete messages and undelivered events, without bulk | 4194304 | `network.queueFull` |
+| pending received bytes: incomplete messages and undelivered events, without bulk, 1 to 1073741824 | 4194304 | `network.queueFull` |
 | transfer limit: data of one transfer sent and received, 0 to 1073741824 | 67108864 | status `messageTooLarge`; `network.transferTooLarge` |
-| frames received per second, token bucket of one second | 4096 | `network.rateExceeded` |
-| queued reliable bytes to send | 1048576 | status `queueFull` |
-| timeout without a received packet | 10 s | `network.timeout` |
-| keepalive after the last sent packet | 1 s | |
-| delay of an acknowledgement | 10 ms | |
-| send budget in bytes per second, 0 for none | 0 | sending waits |
+| frames received per second, token bucket of one second, 1 to 1000000 | 4096 | `network.rateExceeded` |
+| queued reliable bytes to send, 1 to 1073741824 | 1048576 | status `queueFull` |
+| timeout without a received packet, 1 µs to 1 h | 10 s | `network.timeout` |
+| keepalive after the last sent packet, 1 µs to 1 h | 1 s | |
+| delay of an acknowledgement, 0 to 1 h | 10 ms | |
+| send budget in bytes per second, 0 to 1073741824, 0 for none | 0 | sending waits |
 
 A message is longer than its route allows when its total length exceeds the
 [largest encoding](Schemas.md#largest-encoding) of the route's bound root, plus the mode
 byte of a [topic message](#topic-messages): `network.messageTooLarge`. A side sends packets no larger than the smaller of its own
 packet limit and the peer's announced one, and transfers no larger than the smaller transfer
-limit. Deflate is used only when both sides accept it.
+limit. Deflate is used only when both sides accept it. A value outside its range is
+`invalidArgument`.
+
+At most 65536 events wait untaken; any further event other than `closed` closes the
+connection with `network.queueFull`. Taken events free their place.
 
 The frame bucket starts full with as many frames as the limit and refills with the limit
 per second, counted in exact integer steps of one microsecond. The send budget is a
-bucket of at most the send packet size that refills with the budget per second; a data
+bucket of at most the send packet size that starts full, also when a budget replaces none,
+and refills with the budget per second; a data
 packet with frames is sent only while the bucket is not negative and is then subtracted
 in full. `hello`, `welcome`, `close` and data packets without frames ignore the budget.
 The host may change the budget at any time, for example from the measured round-trip
@@ -381,8 +388,8 @@ that has sent nothing for the keepalive interval sends a data packet without fra
 keepalive.
 
 The round-trip time is measured when an acknowledgement names a newer sequence than
-before and that packet asked for acknowledgement: the sample is the time since that
-packet was sent. It includes the peer's acknowledgement delay. The first sample sets the
+before and that packet asked for acknowledgement and is one of the last 256 data packets
+the side sent: the sample is the time since that packet was sent. It includes the peer's acknowledgement delay. The first sample sets the
 estimate; each later one moves it by an eighth of the difference, in integer arithmetic
 that truncates toward zero.
 
@@ -465,8 +472,10 @@ of the class to report, modulo 65536; an id up to 8192 behind is a duplicate and
 ignored, and any other id is `network.malformed`. The frames of one id arrive in any
 order; they must name the same channel and total, else `network.malformed`. Bytes of a
 range received already keep their first value. A message counts its total toward the
-pending received bytes from its first frame. Complete messages are reported in id order:
-a message complete before an earlier one waits for it.
+pending received bytes from its first frame, before the receiver reserves memory for it,
+and a cancelled transfer frees its memory at once, so the pending limits bound the memory
+of incomplete messages; memory kept for reuse stays within the same limits. Complete
+messages are reported in id order: a message complete before an earlier one waits for it.
 
 **Packet order.** A data packet carries owed confirmation frames first, then lost and new
 cancel frames, then reliable resends and new reliable fragments, then per latest route its resends, its current
@@ -513,9 +522,10 @@ ring is ignored.
 - The client sends `hello` and repeats it while no `welcome` arrives: after 1 s, then
   after twice the previous interval each time. Without `welcome` it closes with
   `network.timeout` like any connection, so loss can fail the handshake.
-- A `retry` received in the state `Hello` stores its cookie when the cookie is not empty,
-  takes its key as [encryption](#security-levels) allows, and the client sends `hello` at
-  once; the interval starts again at 1 s. A `retry` in another state is ignored.
+- A `retry` received in the state `Hello` after the first `hello` was sent stores its
+  cookie when the cookie is not empty, takes its key as [encryption](#security-levels)
+  allows, and the client sends `hello` at once; the interval starts again at 1 s. Any
+  other `retry` is ignored.
 - A server in `AwaitAccept` ignores `hello`; a server in `Connected` answers each `hello`
   with the same `welcome` bytes it sent first. In both states it does not read the `hello`.
 - The client accepts the first `welcome` it can read in the state `Hello` and ignores data
@@ -782,11 +792,13 @@ to a `retry` with a key follow its options:
 | no | `encrypted` | key request | the client takes the key and sends a sealed `hello` |
 | no | `none` | plain, with the token | the client takes the key and sends a sealed `hello` |
 
-A client takes a key once; it ignores the key of every later `retry`. On a stream or
-message transport a client accepts one `retry`, only in answer to a `hello` that is not
-sealed, and only with an empty cookie and a key; any other `retry` there is
-`network.malformed`. On a datagram transport the [datagram handshake](#datagram-handshake)
-processes a `retry` in the state `Hello` and ignores it in every other state.
+A client without a pinned key takes the key of each `retry` that carries one, so a key
+from a later `retry` replaces an earlier one: until a `welcome` authenticates, any of them
+may be forged. On a stream or message transport a client accepts one `retry`, only in
+answer to a `hello` that is not sealed, and only with an empty cookie and a key; any other
+`retry` there is `network.malformed`. On a datagram transport the
+[datagram handshake](#datagram-handshake) processes a `retry` in the state `Hello` after
+the client sent its first `hello` and ignores it otherwise.
 
 The server's options hold a key or none and the lowest level it accepts, `verified` by
 default; `verified` and `encrypted` mean the same for a server. A server whose lowest
@@ -862,8 +874,9 @@ The inner packet is a `data` packet without its sequence, type byte `5` included
 form; the packet limit applies to the sealed packet.
 
 Each side numbers its sealed packets from 0 per direction; a `close` takes the next
-number, and a `data` packet's sequence is the low 16 bits of its number. The number
-stays below 2^62. A direction's key changes every 2^24 packets without a signal:
+number, and a `data` packet's sequence is the low 16 bits of its number. A sender does
+not check the number against 2^62: even a million packets per second take more than
+100000 years to reach it. A direction's key changes every 2^24 packets without a signal:
 
 - `iv = Expand(secret, "ges iv", 12)`
 - `key = Expand(secret, "ges key" ‖ epoch, 32)`, with `epoch = number >> 24` as 8 bytes
@@ -882,8 +895,10 @@ dropped on a datagram transport, without counting as received for the timeout; o
 other transports it closes the session with `network.authenticationFailed`.
 
 Before `welcome` the server closes without encryption, refusals included, so their
-detail is not protected. A client accepts a plain `close` until it has authenticated a
-sealed packet; after that a plain packet is dropped on a datagram transport and is
+detail is not protected. A client accepts a plain `close` until it has read a sealed
+`welcome`; a server accepts one until it has authenticated a sealed `data` packet, because the
+client closes without encryption until it reads the `welcome`. After that a plain packet
+is dropped on a datagram transport, without counting as received for the timeout, and is
 `network.malformed` on the others. A plain `data` packet on an encrypted session and a
 sealed packet on a session that is not encrypted are never valid.
 
@@ -929,8 +944,8 @@ vectors do not establish these properties; reviews of the code do.
 | `network.schemaMismatch` | the network hash or route count differs |
 | `network.malformed` | a packet or frame breaks this format or the session order |
 | `network.packetTooLarge` | a packet exceeds the packet limit |
-| `network.messageTooLarge` | a message exceeds its route's largest encoding |
-| `network.queueFull` | pending received bytes exceed their limit |
+| `network.messageTooLarge` | a message exceeds its route's largest encoding, or a bulk message the transfer limit plus 43 header bytes |
+| `network.queueFull` | pending received bytes or untaken events exceed their limit |
 | `network.rateExceeded` | more frames arrive than the frame limit allows |
 | `network.timeout` | no packet arrived within the timeout |
 | `network.refused` | the server's host refused the client |
@@ -942,7 +957,7 @@ vectors do not establish these properties; reviews of the code do.
 | `network.transferCancelled` | the host cancelled a transfer without its own code |
 | `network.insecure` | a server without a key receives a key request or a sealed `hello` |
 | `network.unverified` | a client that requires `verified` has no pinned key and receives a `retry` with a key |
-| `network.authenticationFailed` | a sealed `hello` does not authenticate, or a sealed `welcome` or packet does not on a stream or message transport |
+| `network.authenticationFailed` | a sealed `hello` does not authenticate, an X25519 result is 32 zero bytes, or a sealed `welcome` or packet does not authenticate on a stream or message transport |
 
 ## Security
 
@@ -959,8 +974,8 @@ An [encrypted](#encryption) session hides and authenticates every packet after
 proves the server. The protocol never proves the client; the token does.
 
 An attacker who can drop or forge packets can always prevent a session or end it early:
-on a datagram transport through lost packets, a forged `retry` or a forged plain `close`
-during the handshake. Address validation proves only that the client receives at its
+on a datagram transport through lost packets, forged `retry` packets or a forged plain
+`close` during the handshake. Address validation proves only that the client receives at its
 address.
 
 ## API
@@ -973,6 +988,16 @@ The socket transports are the separate packages `GameEventScript.Network.Sockets
 (C#, .NET 8, `TcpListener`, `WebSocket.CreateFromStream` and `Socket` for UDP) and
 `GameEventScriptNetworkSockets` (Swift, SwiftNIO). The [public API](PublicApi.md#network)
 owns the member names per port.
+
+A socket listener holds at most 64 clients that wait for the host or still run their
+WebSocket upgrade. Accepting pauses while it holds them all; a validated UDP `hello`
+beyond them is dropped, and the client sends it again. One IP address holds at most 8 of
+these clients: the listener closes its further TCP and WebSocket sockets and drops its
+further UDP `hello` packets. A client the host takes frees its place.
+
+An insecure test key seed derives a connection's ephemeral keys from a known value, so
+anyone who knows it reads the session; it exists only for tests and golden bytes. The
+socket listeners and connects refuse options and connections that use it.
 
 | Concept | C# | Swift |
 | --- | --- | --- |

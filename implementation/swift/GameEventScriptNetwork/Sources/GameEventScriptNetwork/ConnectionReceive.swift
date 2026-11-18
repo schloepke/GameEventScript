@@ -114,7 +114,8 @@ extension GesNetworkConnection {
 
         lastReceive = now
         switch packet[0] {
-        case Wire.close where (keys?.largest ?? -1) < 0:
+        // A client accepts a plain close until it read a sealed welcome, a server until it authenticated a packet.
+        case Wire.close where isClient ? !encrypted : (keys?.largest ?? -1) < 0:
             receiveClose(packet)
         case Wire.retry where isClient && state == .hello && helloSent:
             receiveRetry(packet)
@@ -316,6 +317,8 @@ extension GesNetworkConnection {
                 fail(GesNetworkCodes.malformed)
                 return
             }
+            // Progress the acknowledgement reports may exceed the pending events.
+            if state == .closed { return }
             position += 6
         }
 
@@ -392,7 +395,7 @@ extension GesNetworkConnection {
             if assembly.active || id != assembly.nextId { return fail(GesNetworkCodes.malformed) }
             assembly.nextId &+= 1
             if length == total {
-                if bulk { addProgress(route, id, Int64(total), Int64(total)) }
+                if bulk && !addProgress(route, id, Int64(total), Int64(total)) { return false }
                 return deliver(route, id, chunk)
             }
             assembly.start(channel, id, total)
@@ -409,7 +412,7 @@ extension GesNetworkConnection {
         }
 
         assembly.append(chunk)
-        if bulk { addProgress(route, id, Int64(assembly.received), Int64(total)) }
+        if bulk && !addProgress(route, id, Int64(assembly.received), Int64(total)) { return false }
         if assembly.received != Int(total) { return true }
         assembly.active = false
         // The message's bytes are pending already; the event counts them again.

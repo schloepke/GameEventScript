@@ -55,7 +55,7 @@ public final class GesNetworkSocketListener {
     ///   - network: The bound network of every session.
     ///   - options: The options of every server connection, using `.stream`; the defaults when omitted.
     /// - Returns: The listener.
-    /// - Throws: `GesApiError.invalidArgument` when the options use another transport or are out of range, or
+    /// - Throws: `GesApiError.invalidArgument` when the options use another transport, name an insecure test key seed or are out of range, or
     ///   name no key while their lowest security level is above none, as the defaults do; a SwiftNIO error when the
     ///   address cannot be bound.
     public static func listenTcp(host: String, port: Int, network: GesBoundNetwork, options: GesNetworkOptions? = nil) async throws -> sending GesNetworkSocketListener {
@@ -71,7 +71,7 @@ public final class GesNetworkSocketListener {
     ///   - options: The options of every server connection, using `.message`; the defaults when omitted.
     /// - Returns: The listener. It speaks plain `ws`; a browser client needs `wss` through a TLS-terminating proxy.
     /// - Throws: `GesApiError.invalidArgument` when the path does not start with `/`, or the options use another
-    ///   transport or are out of range, or name no key while their lowest security level is above none, as the
+    ///   transport, name an insecure test key seed or are out of range, or name no key while their lowest security level is above none, as the
     ///   defaults do; a SwiftNIO error when the address cannot be bound.
     public static func listenWebSocket(host: String, port: Int, path: String, network: GesBoundNetwork, options: GesNetworkOptions? = nil) async throws -> sending GesNetworkSocketListener {
         if !path.hasPrefix("/") { throw GesApiError.invalidArgument("The path starts with '/'.") }
@@ -84,6 +84,7 @@ public final class GesNetworkSocketListener {
         var resolved = options ?? GesNetworkOptions()
         if options == nil { resolved.transport = transport }
         if resolved.transport != transport { throw GesApiError.invalidArgument("The options must use the \(transport) transport.") }
+        if resolved.insecureTestKeySeed != nil { throw GesApiError.invalidArgument("A socket transport refuses insecure test keys.") }
         return (resolved, try GesNetworkConnection.makeServer(network: network, now: 0, options: resolved).maxPacketBytes)
     }
 
@@ -101,13 +102,20 @@ public final class GesNetworkSocketListener {
             .childChannelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: GesNetworkSocketInbox.readBytes))
             .childChannelInitializer { child in
                 child.eventLoop.makeCompletedFuture {
+                    let address = child.remoteAddress?.ipAddress
                     if let path {
-                        queue.beginUpgrade()
-                        try child.pipeline.syncOperations.addHandler(GesNetworkSocketServerUpgradeHandler(path: path, limit: limit, queue: queue))
+                        if !queue.beginUpgrade(address) { throw GesNetworkSocketQueue.Refused() }
+                        try child.pipeline.syncOperations.addHandler(GesNetworkSocketServerUpgradeHandler(path: path, limit: limit, address: address, queue: queue))
                     } else {
+                        if !queue.enter(address) { throw GesNetworkSocketQueue.Refused() }
                         let inbox = GesNetworkSocketInbox()
-                        try child.pipeline.syncOperations.addHandler(GesNetworkSocketStreamHandler(inbox: inbox))
-                        queue.offer(child, inbox)
+                        do {
+                            try child.pipeline.syncOperations.addHandler(GesNetworkSocketStreamHandler(inbox: inbox))
+                        } catch {
+                            queue.leave(address)
+                            throw error
+                        }
+                        queue.offer(child, inbox, address)
                     }
                 }
             }
@@ -140,15 +148,24 @@ public final class GesNetworkSocketListener {
 }
 
 // The clients that are ready or still upgrading, shared between the event loops and the host. Accepting pauses
-// while they reach the capacity and resumes when the host takes one.
+// while they reach the capacity and resumes when the host takes one; an IP address may hold at most `perAddress` of
+// them, and its further sockets are closed.
 final class GesNetworkSocketQueue: @unchecked Sendable {
     static let capacity = 64
+    static let perAddress = 8
+
+    // Closes a socket the queue refuses.
+    struct Refused: Error {}
+
+    private typealias Entry = (channel: Channel, inbox: GesNetworkSocketInbox, peer: GesNetworkDatagramPeer?, address: String?)
 
     private let lock = NIOLock()
     // A UDP client is its peer on the listener's shared channel.
-    private var entries: [(Channel, GesNetworkSocketInbox, GesNetworkDatagramPeer?)] = []
+    private var entries: [Entry] = []
     private var head = 0
     private var upgrading = 0
+    // The ready and upgrading clients of each IP address.
+    private var addresses: [String: Int] = [:]
     private var held = false
     private var closed = false
     private var server: Channel?
@@ -170,36 +187,58 @@ final class GesNetworkSocketQueue: @unchecked Sendable {
         }
     }
 
-    func beginUpgrade() { lock.withLock { upgrading += 1 } }
+    // Counts a client of the address; false when the address holds `perAddress` clients or the queue is closed.
+    func enter(_ address: String?) -> Bool {
+        lock.withLock { enterLocked(address) }
+    }
 
-    func upgradeEnded() {
+    // Gives back the place of a client of the address that is not queued.
+    func leave(_ address: String?) {
+        lock.withLock { leaveLocked(address) }
+    }
+
+    // Counts an upgrading client of the address; false like `enter(_:)`.
+    func beginUpgrade(_ address: String?) -> Bool {
+        lock.withLock {
+            if !enterLocked(address) { return false }
+            upgrading += 1
+            return true
+        }
+    }
+
+    // Ends an upgrade; a client that is not queued gives its address's place back.
+    func upgradeEnded(_ address: String?, queued: Bool) {
         let server = lock.withLock {
             upgrading -= 1
+            if !queued { leaveLocked(address) }
             return release()
         }
         server?.read()
     }
 
-    func offer(_ channel: Channel, _ inbox: GesNetworkSocketInbox) {
+    func offer(_ channel: Channel, _ inbox: GesNetworkSocketInbox, _ address: String?) {
         let accepted = lock.withLock {
             if closed { return false }
-            entries.append((channel, inbox, nil))
+            entries.append((channel, inbox, nil, address))
             return true
         }
         if !accepted { channel.close(promise: nil) }
     }
 
-    // Queues a validated UDP client; false when the queue is full or closed, and the client sends hello again.
+    // Queues a validated UDP client; false when the queue is full or closed or its IP address holds `perAddress`
+    // clients, and the client sends hello again.
     func offer(_ channel: Channel, _ peer: GesNetworkDatagramPeer) -> Bool {
         lock.withLock {
-            if closed || entries.count - head + upgrading >= Self.capacity { return false }
-            entries.append((channel, peer.inbox, peer))
+            if entries.count - head + upgrading >= Self.capacity { return false }
+            let address = peer.address.ipAddress
+            if !enterLocked(address) { return false }
+            entries.append((channel, peer.inbox, peer, address))
             return true
         }
     }
 
     func take() -> (Channel, GesNetworkSocketInbox, GesNetworkDatagramPeer?)? {
-        let (entry, server): ((Channel, GesNetworkSocketInbox, GesNetworkDatagramPeer?)?, Channel?) = lock.withLock {
+        let (entry, server): (Entry?, Channel?) = lock.withLock {
             if head == entries.count { return (nil, nil) }
             let entry = entries[head]
             head += 1
@@ -207,23 +246,40 @@ final class GesNetworkSocketQueue: @unchecked Sendable {
                 entries.removeAll(keepingCapacity: true)
                 head = 0
             }
+            leaveLocked(entry.address)
             return (entry, release())
         }
         server?.read()
-        return entry
+        guard let entry else { return nil }
+        return (entry.channel, entry.inbox, entry.peer)
     }
 
     func close() {
         let pending = lock.withLock {
             closed = true
-            let pending = entries[head...].map { ($0.0, $0.2) }
+            let pending = entries[head...].map { ($0.channel, $0.peer) }
             entries.removeAll()
             head = 0
+            addresses.removeAll()
             return pending
         }
         for (channel, peer) in pending {
             if let peer { peer.release() } else { channel.close(promise: nil) }
         }
+    }
+
+    private func enterLocked(_ address: String?) -> Bool {
+        if closed { return false }
+        guard let address else { return true }
+        let count = addresses[address, default: 0]
+        if count >= Self.perAddress { return false }
+        addresses[address] = count + 1
+        return true
+    }
+
+    private func leaveLocked(_ address: String?) {
+        guard let address, let count = addresses[address] else { return }
+        if count <= 1 { addresses[address] = nil } else { addresses[address] = count - 1 }
     }
 
     // The server channel to read on when accepting held and a place is free; called under the lock.

@@ -275,6 +275,28 @@ final class SocketTests: XCTestCase {
         await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network) }
     }
 
+    func testSocketTransportsRefuseInsecureTestKeys() async throws {
+        let network = try Self.game()
+        var server = Self.secureServer(.stream)
+        server.insecureTestKeySeed = 1
+        await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network, options: server) }
+        server.transport = .datagram
+        await assertInvalidArgument { _ = try await GesNetworkSocketListener.listenUdp(host: "127.0.0.1", port: 0, network: network, options: server) }
+        for transport in [GesNetworkTransport.stream, .message, .datagram] {
+            var options = Self.secureClient(transport)
+            options.insecureTestKeySeed = 1
+            XCTAssertTrue(try GesNetworkConnection.makeClient(network: network, now: 0, options: options).usesInsecureTestKeys)
+            await assertInvalidArgument {
+                let connection = try GesNetworkConnection.makeClient(network: network, now: 0, options: options)
+                switch transport {
+                case .stream: _ = try await GesNetworkSocketSession.connectTcp(host: "127.0.0.1", port: 1, connection: connection)
+                case .message: _ = try await GesNetworkSocketSession.connectWebSocket(url: "ws://127.0.0.1:1/game", connection: connection)
+                case .datagram: _ = try await GesNetworkSocketSession.connectUdp(host: "127.0.0.1", port: 1, connection: connection)
+                }
+            }
+        }
+    }
+
     func testUdpCarriesASessionOverIpv6() async throws {
         let network = try Self.game()
         let listener: GesNetworkSocketListener
@@ -463,6 +485,57 @@ final class SocketTests: XCTestCase {
         XCTAssertEqual(try Self.waitFor(server), "connecting tok")
         try await socket.close()
         server.close()
+        listener.close()
+    }
+
+    // Opens a raw TCP socket that sends nothing.
+    private static func rawConnect(_ port: Int) async throws -> Channel {
+        try await ClientBootstrap(group: MultiThreadedEventLoopGroup.singleton).connect(host: "127.0.0.1", port: port).get()
+    }
+
+    // True when the server ends the socket in time.
+    private static func ended(_ channel: Channel) -> Bool {
+        let deadline = now + limit
+        while now < deadline {
+            if !channel.isActive { return true }
+            usleep(1000)
+        }
+        return false
+    }
+
+    func testAnAddressHoldsAtMostEightWaitingClients() async throws {
+        let listener = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: Self.game(), options: Self.options(.stream))
+        var clients: [Channel] = []
+        for _ in 0..<10 { clients.append(try await Self.rawConnect(listener.localEndPoint.port!)) }
+        // The listener closes two sockets and keeps eight for the host.
+        let deadline = Self.now + Self.limit
+        while Self.now < deadline && clients.filter({ !$0.isActive }).count < 2 { usleep(1000) }
+        XCTAssertEqual(clients.filter { !$0.isActive }.count, 2)
+        var sessions: [GesNetworkSocketSession] = []
+        while Self.now < deadline && sessions.count < 8 {
+            if let session = try listener.accept(now: Self.now) { sessions.append(session) } else { usleep(1000) }
+        }
+        XCTAssertEqual(sessions.count, 8)
+        XCTAssertNil(try listener.accept(now: Self.now))
+        for session in sessions { session.close() }
+        // Taken clients give their places back.
+        let another = try await Self.rawConnect(listener.localEndPoint.port!)
+        try Self.acceptOne(listener).close()
+        try await another.close()
+        for client in clients { try? await client.close() }
+        listener.close()
+    }
+
+    func testUpgradingClientsCountForTheirAddress() async throws {
+        let listener = try await GesNetworkSocketListener.listenWebSocket(host: "127.0.0.1", port: 0, path: "/game", network: Self.game(), options: Self.options(.message))
+        var clients: [Channel] = []
+        for _ in 0..<8 { clients.append(try await Self.rawConnect(listener.localEndPoint.port!)) }
+        // Eight sockets wait in their upgrade without sending a request; the ninth is closed.
+        let ninth = try await Self.rawConnect(listener.localEndPoint.port!)
+        XCTAssertTrue(Self.ended(ninth))
+        XCTAssertTrue(clients.allSatisfy { $0.isActive })
+        XCTAssertNil(try listener.accept(now: Self.now))
+        for client in clients { try? await client.close() }
         listener.close()
     }
 

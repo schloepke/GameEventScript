@@ -340,13 +340,16 @@ final class GesNetworkSocketServerUpgradeHandler: ChannelInboundHandler, Removab
     private let path: String
     private let limit: Int
     private let queue: GesNetworkSocketQueue
+    // The client's IP address, which holds a place in the queue while the upgrade runs and while the client waits.
+    private let address: String?
     private var buffer: ByteBuffer?
     private var timeout: Scheduled<Void>?
     private var done = false
 
-    init(path: String, limit: Int, queue: GesNetworkSocketQueue) {
+    init(path: String, limit: Int, address: String?, queue: GesNetworkSocketQueue) {
         self.path = path
         self.limit = limit
+        self.address = address
         self.queue = queue
     }
 
@@ -363,7 +366,7 @@ final class GesNetworkSocketServerUpgradeHandler: ChannelInboundHandler, Removab
         timeout?.cancel()
         if !done {
             done = true
-            queue.upgradeEnded()
+            queue.upgradeEnded(address, queued: false)
         }
     }
 
@@ -386,14 +389,16 @@ final class GesNetworkSocketServerUpgradeHandler: ChannelInboundHandler, Removab
             response = GesNetworkSocketUpgrade.status(400, "Bad Request")
         }
 
-        stop(context)
         let written = context.writeAndFlush(Self.wrapOutboundOut(context.channel.allocator.buffer(string: response.text)))
         if !response.upgrade {
+            stop(context)
             let channel = context.channel
             written.whenComplete { _ in channel.close(promise: nil) }
             return
         }
 
+        // A write that fails at once may already have closed the channel.
+        if done { return }
         let inbox = GesNetworkSocketInbox()
         do {
             try context.pipeline.syncOperations.addHandlers(
@@ -401,6 +406,7 @@ final class GesNetworkSocketServerUpgradeHandler: ChannelInboundHandler, Removab
                 position: .after(self)
             )
         } catch {
+            stop(context)
             context.close(promise: nil)
             return
         }
@@ -408,8 +414,10 @@ final class GesNetworkSocketServerUpgradeHandler: ChannelInboundHandler, Removab
         let rest = buffer!
         buffer = nil
         if rest.readableBytes > 0 { context.fireChannelRead(Self.wrapInboundOut(rest)) }
+        // The queued client keeps its address's place until the host takes it.
+        queue.offer(context.channel, inbox, address)
+        stop(context, queued: true)
         context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
-        queue.offer(context.channel, inbox)
     }
 
     func channelInactive(context: ChannelHandlerContext) {
@@ -418,10 +426,10 @@ final class GesNetworkSocketServerUpgradeHandler: ChannelInboundHandler, Removab
     }
 
     // The upgrade is over; the listener counts it no longer.
-    private func stop(_ context: ChannelHandlerContext) {
+    private func stop(_ context: ChannelHandlerContext, queued: Bool = false) {
         if done { return }
         done = true
         timeout?.cancel()
-        queue.upgradeEnded()
+        queue.upgradeEnded(address, queued: queued)
     }
 }

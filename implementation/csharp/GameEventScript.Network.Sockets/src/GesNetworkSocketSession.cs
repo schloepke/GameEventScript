@@ -63,7 +63,7 @@ public sealed class GesNetworkSocketSession : IDisposable
     /// <param name="connection">A client connection created with <see cref="GesNetworkTransport.Stream"/>; its timeout runs from its creation.</param>
     /// <param name="cancellationToken">Cancels connecting.</param>
     /// <returns>The session.</returns>
-    /// <exception cref="ArgumentException">The connection is no client of the stream transport.</exception>
+    /// <exception cref="ArgumentException">The connection is no client of the stream transport or uses insecure test keys.</exception>
     /// <exception cref="SocketException">The connection could not be opened.</exception>
     public static async Task<GesNetworkSocketSession> ConnectTcpAsync(string host, int port, GesNetworkConnection connection, CancellationToken cancellationToken = default)
     {
@@ -86,7 +86,7 @@ public sealed class GesNetworkSocketSession : IDisposable
     /// <param name="connection">A client connection created with <see cref="GesNetworkTransport.Message"/>; its timeout runs from its creation.</param>
     /// <param name="cancellationToken">Cancels connecting.</param>
     /// <returns>The session.</returns>
-    /// <exception cref="ArgumentException">The connection is no client of the message transport.</exception>
+    /// <exception cref="ArgumentException">The connection is no client of the message transport or uses insecure test keys.</exception>
     /// <exception cref="WebSocketException">The WebSocket could not be opened.</exception>
     public static async Task<GesNetworkSocketSession> ConnectWebSocketAsync(Uri uri, GesNetworkConnection connection, CancellationToken cancellationToken = default)
     {
@@ -111,7 +111,7 @@ public sealed class GesNetworkSocketSession : IDisposable
     /// <param name="connection">A client connection created with <see cref="GesNetworkTransport.Datagram"/>; its timeout runs from its creation.</param>
     /// <param name="cancellationToken">Cancels resolving the host.</param>
     /// <returns>The session. UDP has no connection setup, so a missing server shows only as the connection's timeout.</returns>
-    /// <exception cref="ArgumentException">The connection is no client of the datagram transport.</exception>
+    /// <exception cref="ArgumentException">The connection is no client of the datagram transport or uses insecure test keys.</exception>
     /// <exception cref="SocketException">The host cannot be resolved or the socket cannot be opened.</exception>
     public static async Task<GesNetworkSocketSession> ConnectUdpAsync(string host, int port, GesNetworkConnection connection, CancellationToken cancellationToken = default)
     {
@@ -145,6 +145,7 @@ public sealed class GesNetworkSocketSession : IDisposable
         ArgumentNullException.ThrowIfNull(connection);
         if (connection.Transport != transport) throw new ArgumentException($"The connection must use the {transport} transport.", nameof(connection));
         if (connection.IsClient != client) throw new ArgumentException(client ? "The connection must be a client." : "The connection must be a server.", nameof(connection));
+        if (connection.UsesInsecureTestKeys) throw new ArgumentException("A socket transport refuses insecure test keys.", nameof(connection));
     }
 
     /// <summary>

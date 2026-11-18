@@ -55,6 +55,9 @@ public sealed partial class GesNetworkConnection
     /// </summary>
     public GesNetworkSecurity Security => _security;
 
+    /// <summary>Gets whether the connection derives its ephemeral keys from <see cref="GesNetworkOptions.InsecureTestKeySeed"/>.</summary>
+    public bool UsesInsecureTestKeys => _testKeys;
+
     // The keys of an encrypted connection, allocated once it uses encryption.
     private sealed class Keys
     {
@@ -334,7 +337,9 @@ public sealed partial class GesNetworkConnection
             _ephemeralStale = true;
         }
 
-        if (keyLength != 0 && _serverKey is null)
+        // A later retry replaces the key of an earlier one: until a welcome authenticates, any of them may be forged.
+        var key = packet.Slice(position);
+        if (keyLength != 0 && !_pinned && !key.SequenceEqual(_serverKey))
         {
             if (_minimumSecurity == GesNetworkSecurity.Verified)
             {
@@ -342,7 +347,7 @@ public sealed partial class GesNetworkConnection
                 return;
             }
 
-            _serverKey = packet.Slice(position).ToArray();
+            _serverKey = key.ToArray();
             _ephemeralStale = true;
         }
 

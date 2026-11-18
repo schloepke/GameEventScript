@@ -7,7 +7,7 @@
 
 A `network` declaration in a [schema](Schemas.md) names which records a client and a server
 exchange and how each one is delivered. A session carries those encoded records between the two
-sides over a TCP stream, a WebSocket or an in-process transport. The session core is a
+sides over a TCP stream, a WebSocket, UDP datagrams or an in-process transport. The session core is a
 synchronous state machine: you pass it received bytes and the current time, and it hands you
 events and the bytes to send. It never opens a socket, starts a thread or reads a clock.
 
@@ -228,6 +228,9 @@ delivers only the newest state of a `latest` topic. A UDP listener answers an un
 with a cookie first and creates a connection only for a client that returns it, so a forged
 source address gains nothing. Datagrams hold at most 1200 bytes by default, which passes almost
 every path.
+
+A listener keeps at most 64 clients waiting for `Accept`, at most 8 of them from one IP address,
+so take ready clients every frame.
 
 ## 7. Protect the connection
 

@@ -139,7 +139,9 @@ public sealed partial class GesNetworkConnection
     // Handles a datagram by type and state: repetitions and late packets of the handshake are ignored.
     private void ReceiveDatagramPacket(ReadOnlySpan<byte> packet)
     {
-        if (_encrypted && packet[0] != Wire.Sealed && (_keys!.Largest >= 0 || packet[0] == Wire.Data)) return;
+        // An encrypted session drops plain data, every plain packet on a client and every plain packet on a server once
+        // a sealed one authenticated.
+        if (_encrypted && packet[0] != Wire.Sealed && (_client || _keys!.Largest >= 0 || packet[0] == Wire.Data)) return;
         if (packet[0] != Wire.Sealed) _lastReceive = _now;
         switch (packet[0])
         {
@@ -154,7 +156,7 @@ public sealed partial class GesNetworkConnection
             case Wire.Hello when !_client && State == GesNetworkState.Connected:
                 _welcomePending = true;
                 break;
-            case Wire.Retry when _client && State == GesNetworkState.Hello:
+            case Wire.Retry when _client && State == GesNetworkState.Hello && _helloWritten:
                 ReceiveRetry(packet);
                 break;
             case Wire.Retry when _client:
@@ -197,6 +199,9 @@ public sealed partial class GesNetworkConnection
                 Fail(GesNetworkCodes.Malformed);
                 return;
             }
+
+            // Progress the acknowledgement reports may exceed the pending events.
+            if (State == GesNetworkState.Closed) return;
 
             position += 6;
         }
@@ -262,10 +267,12 @@ public sealed partial class GesNetworkConnection
         }
 
         acknowledged |= AcknowledgePacket(named);
-        for (var bit = 0; bit < 32; bit++)
+        for (var bit = 0; bit < 32 && State != GesNetworkState.Closed; bit++)
         {
             if ((bits & (1u << bit)) != 0) acknowledged |= AcknowledgePacket(named - 1 - bit);
         }
+
+        if (State == GesNetworkState.Closed) return true;
 
         _sendReliable.PopDone();
         _sendBulk.PopDone();
@@ -313,7 +320,7 @@ public sealed partial class GesNetworkConnection
             if (lane >= LaneLatest) continue;
             if (lane == LaneBulk)
             {
-                AcknowledgeBulk(key, _fragmentLengths[fragment]);
+                if (!AcknowledgeBulk(key, _fragmentLengths[fragment])) return true;
                 continue;
             }
 
@@ -324,14 +331,15 @@ public sealed partial class GesNetworkConnection
         return true;
     }
 
-    // Acknowledges a fragment of a transfer and reports the transfer's acknowledged bytes.
-    private void AcknowledgeBulk(long key, int length)
+    // Acknowledges a fragment of a transfer and reports the transfer's acknowledged bytes; false when it closed the
+    // connection.
+    private bool AcknowledgeBulk(long key, int length)
     {
-        if (!_sendBulk.Find(key, out var index) || _sendBulk.Cancelled(index)) return;
+        if (!_sendBulk.Find(key, out var index) || _sendBulk.Cancelled(index)) return true;
         var before = _sendBulk.AcknowledgedBytes(index);
         _sendBulk.Acknowledge(key, length, out _, out _);
         var after = _sendBulk.AcknowledgedBytes(index);
-        if (after != before) AddProgress(_sendBulk.Route(index), _sendBulk.EntryId(index), after, _sendBulk.Entry(index).Length);
+        return after == before || AddProgress(_sendBulk.Route(index), _sendBulk.EntryId(index), after, _sendBulk.Entry(index).Length);
     }
 
     // Declares lost the outstanding packets older than the largest acknowledged one whose order or delay ran out.
@@ -411,7 +419,7 @@ public sealed partial class GesNetworkConnection
         var message = ordered.Message(id);
         if (!message.Active || message.Id != id)
         {
-            message.Start(channel, id, total);
+            // The total counts as pending before the message's storage grows to it.
             if (bulk)
             {
                 _pendingBulk += total;
@@ -422,6 +430,8 @@ public sealed partial class GesNetworkConnection
                 _pending += total;
                 if (_pending > _maxPending) return Fail(GesNetworkCodes.QueueFull);
             }
+
+            message.Start(channel, id, total);
         }
         else if (message.Cancelled)
         {
@@ -435,7 +445,7 @@ public sealed partial class GesNetworkConnection
 
         var received = message.Received;
         message.Write((int)offset, chunk);
-        if (bulk && message.Received != received) AddProgress(route, id, message.Received, total);
+        if (bulk && message.Received != received && !AddProgress(route, id, message.Received, total)) return false;
         return DeliverOrdered(ordered);
     }
 
@@ -476,9 +486,10 @@ public sealed partial class GesNetworkConnection
             var ahead = (ushort)(id - reference);
             if ((message.Active || message.HasReported) && ahead is 0 or >= 32768) return true;
             if (message.Active) _pending -= message.Total;
-            message.Start(channel, id, total);
+            message.Active = false;
             _pending += total;
             if (_pending > _maxPending) return Fail(GesNetworkCodes.QueueFull);
+            message.Start(channel, id, total);
         }
 
         message.Write(offset, chunk);

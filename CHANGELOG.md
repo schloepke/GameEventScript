@@ -16,9 +16,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   it and computes its hash (`GesSchemaSet.Network`, Swift `network(_:)`).
 - The Network package (C# `GameEventScript.Network`, netstandard2.1; Swift `GameEventScriptNetwork`) holds a
   synchronous session state machine with a handshake over version and network hash, sequence numbers, acknowledgements,
-  keepalive, timeout, a send budget and `network.*` codes, plus an in-process loopback and a seeded simulator.
+  keepalive, timeout, a send budget, bounded options, at most 65536 untaken events and `network.*` codes, plus an
+  in-process loopback and a seeded simulator.
 - The Network Sockets package (C# `GameEventScript.Network.Sockets` on .NET 8; Swift `GameEventScriptNetworkSockets`
-  over SwiftNIO) carries a session over TCP or WebSocket, including `wss` clients.
+  over SwiftNIO) carries a session over TCP or WebSocket, including `wss` clients. Its listeners hold at most 64
+  waiting clients, at most 8 per IP address.
 - `ges schema generate --root <Network>` writes the wire types of a network's routes and one type with the network
   hash, a route index per route, the rate of each `at most every` route and a typed function per route that encodes
   its root into a buffer and sends or publishes it (`ServerPublishWorld`, Swift `serverPublishWorld`;

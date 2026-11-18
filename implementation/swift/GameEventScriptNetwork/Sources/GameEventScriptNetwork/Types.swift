@@ -146,19 +146,19 @@ public struct GesNetworkOptions: Sendable, Equatable {
     /// The largest packet this side sends or receives, from 1200 to 65535 bytes, or 0 for the transport's default:
     /// 1200 on the datagram transport, else 16384.
     public var maxPacketBytes = 0
-    /// The largest number of received bytes not yet taken as events.
+    /// The largest number of received bytes not yet taken as events, 1 to 1073741824.
     public var maxPendingReceiveBytes: Int64 = 4_194_304
-    /// The most frames the peer may send per second.
+    /// The most frames the peer may send per second, 1 to 1000000.
     public var maxFramesPerSecond = 4096
-    /// The largest number of reliable bytes waiting to be sent.
+    /// The largest number of reliable bytes waiting to be sent, 1 to 1073741824.
     public var maxSendQueueBytes: Int64 = 1_048_576
-    /// How long the connection waits for anything from the peer.
+    /// How long the connection waits for anything from the peer, 1 to 3600000000.
     public var timeoutMicroseconds: Int64 = 10_000_000
-    /// How long a connected side stays silent before it sends an empty data packet.
+    /// How long a connected side stays silent before it sends an empty data packet, 1 to 3600000000.
     public var keepaliveMicroseconds: Int64 = 1_000_000
-    /// How long an acknowledgement may wait for frames to travel with.
+    /// How long an acknowledgement may wait for frames to travel with, 0 to 3600000000.
     public var ackDelayMicroseconds: Int64 = 10_000
-    /// The bytes per second this side sends; 0 sends without a budget.
+    /// The bytes per second this side sends, 0 to 1073741824; 0 sends without a budget.
     public var sendBudgetBytesPerSecond: Int64 = 0
     /// The baseline limit this side announces, 0 to 1073741824: the full record bytes a topic's ring of recent states
     /// holds. The smaller limit of both sides applies.
@@ -178,11 +178,17 @@ public struct GesNetworkOptions: Sendable, Equatable {
     /// The server's key; server only. A server with a key encrypts every session. The default is none.
     public var key: GesNetworkKey?
     /// A seed that derives the connection's ephemeral keys instead of the system's random generator. INSECURE: anyone
-    /// who knows the seed reads the session. For tests and golden bytes only. The default is none.
+    /// who knows the seed reads the session. For tests and golden bytes only: the socket transports refuse such
+    /// options and connections. The default is none.
     public var insecureTestKeySeed: UInt64?
 
     /// Creates the default options.
     public init() {}
+
+    // The largest byte limits and send budget, frame rate and time interval in microseconds.
+    static let maximumBytes: Int64 = 1 << 30
+    static let maximumFramesPerSecond = 1_000_000
+    static let maximumInterval: Int64 = 3_600_000_000
 
     // The packet limit in effect: the configured one, or the transport's default.
     var packetLimit: Int { maxPacketBytes != 0 ? maxPacketBytes : transport == .datagram ? GesNetworkWire.minimumPacketBytes : 16384 }
@@ -191,13 +197,13 @@ public struct GesNetworkOptions: Sendable, Equatable {
         if maxPacketBytes != 0 && (maxPacketBytes < GesNetworkWire.minimumPacketBytes || maxPacketBytes > GesNetworkWire.maximumPacketBytes) {
             throw GesApiError.invalidArgument("The packet limit is 0 or 1200 to 65535 bytes.")
         }
-        if maxPendingReceiveBytes < 1 { throw GesApiError.invalidArgument("The pending receive limit is at least 1 byte.") }
-        if maxFramesPerSecond < 1 { throw GesApiError.invalidArgument("The frame rate is at least 1 frame per second.") }
-        if maxSendQueueBytes < 1 { throw GesApiError.invalidArgument("The send queue limit is at least 1 byte.") }
-        if timeoutMicroseconds < 1 { throw GesApiError.invalidArgument("The timeout is at least 1 microsecond.") }
-        if keepaliveMicroseconds < 1 { throw GesApiError.invalidArgument("The keepalive is at least 1 microsecond.") }
-        if ackDelayMicroseconds < 0 { throw GesApiError.invalidArgument("The acknowledgement delay is not negative.") }
-        if sendBudgetBytesPerSecond < 0 { throw GesApiError.invalidArgument("The send budget is not negative.") }
+        if !(1...Self.maximumBytes).contains(maxPendingReceiveBytes) { throw GesApiError.invalidArgument("The pending receive limit is 1 to 1073741824 bytes.") }
+        if !(1...Self.maximumFramesPerSecond).contains(maxFramesPerSecond) { throw GesApiError.invalidArgument("The frame rate is 1 to 1000000 frames per second.") }
+        if !(1...Self.maximumBytes).contains(maxSendQueueBytes) { throw GesApiError.invalidArgument("The send queue limit is 1 to 1073741824 bytes.") }
+        if !(1...Self.maximumInterval).contains(timeoutMicroseconds) { throw GesApiError.invalidArgument("The timeout is 1 to 3600000000 microseconds.") }
+        if !(1...Self.maximumInterval).contains(keepaliveMicroseconds) { throw GesApiError.invalidArgument("The keepalive is 1 to 3600000000 microseconds.") }
+        if !(0...Self.maximumInterval).contains(ackDelayMicroseconds) { throw GesApiError.invalidArgument("The acknowledgement delay is 0 to 3600000000 microseconds.") }
+        if !(0...Self.maximumBytes).contains(sendBudgetBytesPerSecond) { throw GesApiError.invalidArgument("The send budget is 0 to 1073741824 bytes per second.") }
         if maxBaselineBytes < 0 || maxBaselineBytes > Int64(GesNetworkWire.maximumBaselineBytes) {
             throw GesApiError.invalidArgument("The baseline limit is 0 to 1073741824 bytes.")
         }

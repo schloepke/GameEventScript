@@ -492,11 +492,15 @@ final class GesNetworkPartial {
         return buffer.withUnsafeBytes { body(UnsafeRawBufferPointer(rebasing: $0[0..<length])) }
     }
 
+    // The bytes the message's storage holds.
+    var capacity: Int64 { Int64(buffer.count + arrived.count) }
+
+    // Starts a message; its storage grows to exactly the total, which the caller counted as pending before.
     func start(_ channel: UInt32, _ id: UInt16, _ total: UInt32) {
-        if buffer.count < Int(total) { buffer = [UInt8](repeating: 0, count: max(Int(total), min(buffer.count * 2, Int(Int32.max)))) }
+        if buffer.count < Int(total) { buffer = [UInt8](repeating: 0, count: Int(total)) }
         let bits = Int((total + 7) / 8)
         if arrived.count < bits {
-            arrived = [UInt8](repeating: 0, count: max(bits, min(arrived.count * 2, Int(Int32.max))))
+            arrived = [UInt8](repeating: 0, count: bits)
         } else if bits > 0 {
             arrived.withUnsafeMutableBytes { _ = $0.baseAddress!.initializeMemory(as: UInt8.self, repeating: 0, count: bits) }
         }
@@ -508,14 +512,21 @@ final class GesNetworkPartial {
         received = 0
     }
 
-    // Marks the message with the id cancelled; its fragments are ignored and it is skipped in order.
+    // Marks the message with the id cancelled and frees its storage; its fragments are ignored and it is skipped in
+    // order.
     func cancel(_ channel: UInt32, _ id: UInt16) {
+        freeStorage()
         active = true
         cancelled = true
         self.channel = channel
         self.id = id
         total = 0
         received = 0
+    }
+
+    func freeStorage() {
+        buffer = []
+        arrived = []
     }
 
     // Writes the bytes of a chunk that did not arrive before; bytes that did keep their first value.
@@ -544,15 +555,29 @@ final class GesNetworkOrderedReceive {
 
     private var messages = [GesNetworkPartial?](repeating: nil, count: GesNetworkOrderedReceive.window)
 
-    // Delivered messages wait here for reuse, so a warmed session receives without allocating.
+    // Delivered messages wait here for reuse, so a warmed session receives without allocating. The storage they keep
+    // stays within the retention limit: a message whose storage would exceed it is kept without.
     private var free: [GesNetworkPartial] = []
+    private let retention: Int64
+    // The storage the messages kept for reuse hold.
+    private(set) var retained: Int64 = 0
 
     var nextId: UInt16 = 0
+
+    init(retention: Int64) {
+        self.retention = retention
+    }
 
     func message(_ id: UInt16) -> GesNetworkPartial {
         let slot = Int(id) % Self.window
         if let message = messages[slot] { return message }
-        let message = free.popLast() ?? GesNetworkPartial()
+        let message: GesNetworkPartial
+        if let reused = free.popLast() {
+            retained -= reused.capacity
+            message = reused
+        } else {
+            message = GesNetworkPartial()
+        }
         messages[slot] = message
         return message
     }
@@ -561,6 +586,8 @@ final class GesNetworkOrderedReceive {
     func release(_ message: GesNetworkPartial) {
         message.active = false
         messages[Int(message.id) % Self.window] = nil
+        if retained + message.capacity > retention { message.freeStorage() }
+        retained += message.capacity
         free.append(message)
     }
 

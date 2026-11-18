@@ -240,7 +240,7 @@ A source is a sequence of declarations in any order; a reference may come before
 
 - **`network :Name as { ... }`** declares the routes between a client and a server: which side sends or publishes
   which wire root in which delivery class. [GES network](Network.md#declaration) owns its rules, errors, binding and
-  hash. A network is no type and no root. *Since: Unreleased.*
+  hash. A network is no type; only code generation takes it as a root. *Since: Unreleased.*
 
 Schemas, messages, message sets, tag sets and networks share one namespace across all sources.
 
@@ -759,7 +759,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidUnion` | a union alternative repeats a type name or has `delta within`, or a union with `:Nothing` is `optional` |
 | `schema.invalidBound` | an `integer` bound is fractional or outside Int64, or a Dice bound is outside `1` to `2^31 - 1` |
 | `schema.tooWide` | a quantized field exceeds the [limits](#quantization), a bound or default of a fractional field or a fractional let becomes infinite or zero in binary64, or Flags have more than 64 members |
-| `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows, or a network has more than 64 routes |
+| `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows, or a [network](Network.md#declaration) has too many routes |
 | `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
 | `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
 | `schema.packedField` | a [packed schema](#packed-schemas) holds a field without a fixed width, an `optional` field, a key, a union or a computed field |
@@ -768,7 +768,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.computedMayBeAbsent` | a required [computed field](#computed-fields) reads an optional field that may be absent without `has value` or `default` |
 | `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name without backticks, an optional list in an aggregate), gives `hypot` or `atan2` another number of arguments, combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
 | `schema.invalidRoute` | a [network route](Network.md#declaration) breaks its rules |
-| `schema.duplicateRoute` | a network side names the same root twice with the same verb |
+| `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,

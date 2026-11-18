@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -19,12 +20,15 @@ namespace GameEventScript.Network.Sockets;
 /// <summary>
 /// Accepts TCP, WebSocket or UDP clients for a server. A background task accepts sockets and, for WebSocket, answers
 /// the HTTP upgrade, or for UDP reads the shared socket, validates unknown addresses and routes each datagram to its
-/// client; the host takes each ready client with <see cref="Accept"/> on its own thread.
+/// client; the host takes each ready client with <see cref="Accept"/> on its own thread. At most 64 clients wait or
+/// upgrade at once, accepting pauses while they do, and one IP address holds at most 8 of them; its further sockets
+/// are closed.
 /// </summary>
 public sealed partial class GesNetworkSocketListener : IDisposable
 {
     private const int MaxRequestBytes = 8192;
     private const int PendingClients = 64;
+    private const int PendingPerAddress = 8;
     private static readonly TimeSpan UpgradeTimeout = TimeSpan.FromSeconds(10);
     private const string WebSocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -33,6 +37,10 @@ public sealed partial class GesNetworkSocketListener : IDisposable
     private readonly GesNetworkOptions _options;
     private readonly string? _path;
     private readonly Channel<Pending> _pending = Channel.CreateBounded<Pending>(new BoundedChannelOptions(PendingClients) { SingleReader = true });
+    // The places of the clients that wait or upgrade; accepting waits for one.
+    private readonly SemaphoreSlim _places = new(PendingClients);
+    // The waiting and upgrading clients of each IP address, under its own lock.
+    private readonly Dictionary<IPAddress, int> _addresses = [];
     private readonly CancellationTokenSource _cancel = new();
     private bool _disposed;
 
@@ -42,6 +50,7 @@ public sealed partial class GesNetworkSocketListener : IDisposable
         _network = network ?? throw new ArgumentNullException(nameof(network));
         options ??= new GesNetworkOptions { Transport = transport };
         if (options.Transport != transport) throw new ArgumentException($"The options must use the {transport} transport.", nameof(options));
+        if (options.InsecureTestKeySeed.HasValue) throw new ArgumentException("A socket transport refuses insecure test keys.", nameof(options));
         // Creating a connection checks the options, so a listener never accepts clients it cannot serve.
         _ = GesNetworkConnection.CreateServer(network, 0, options);
         _options = options;
@@ -66,7 +75,7 @@ public sealed partial class GesNetworkSocketListener : IDisposable
     /// <param name="network">The bound network of every session.</param>
     /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Stream"/>; the defaults when omitted.</param>
     /// <returns>The listener.</returns>
-    /// <exception cref="ArgumentException">The options use another transport or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
+    /// <exception cref="ArgumentException">The options use another transport, name an insecure test key seed or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
     /// <exception cref="SocketException">The address cannot be bound.</exception>
     public static GesNetworkSocketListener ListenTcp(IPEndPoint endPoint, GesBoundNetwork network, GesNetworkOptions? options = null) =>
         new(endPoint, network, options, GesNetworkTransport.Stream, null);
@@ -77,7 +86,7 @@ public sealed partial class GesNetworkSocketListener : IDisposable
     /// <param name="network">The bound network of every session.</param>
     /// <param name="options">The options of every server connection, using <see cref="GesNetworkTransport.Message"/>; the defaults when omitted.</param>
     /// <returns>The listener. It speaks plain <c>ws</c>; a browser client needs <c>wss</c> through a TLS-terminating proxy.</returns>
-    /// <exception cref="ArgumentException">The path does not start with <c>/</c>, or the options use another transport or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
+    /// <exception cref="ArgumentException">The path does not start with <c>/</c>, or the options use another transport, name an insecure test key seed or are out of range, or name no key while their lowest security level is above none, as the defaults do.</exception>
     /// <exception cref="SocketException">The address cannot be bound.</exception>
     public static GesNetworkSocketListener ListenWebSocket(IPEndPoint endPoint, string path, GesBoundNetwork network, GesNetworkOptions? options = null)
     {
@@ -97,6 +106,7 @@ public sealed partial class GesNetworkSocketListener : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (!_pending.Reader.TryRead(out var pending)) return null;
+        Leave(pending.Address);
         var connection = GesNetworkConnection.CreateServer(_network, now, _options);
         if (pending.Peer != null) return GesNetworkSocketSession.FromPeer(connection, pending.Peer);
         return pending.WebSocket != null
@@ -126,32 +136,78 @@ public sealed partial class GesNetworkSocketListener : IDisposable
         {
             while (true)
             {
-                var client = await _listener!.AcceptTcpClientAsync(_cancel.Token).ConfigureAwait(false);
+                await _places.WaitAsync(_cancel.Token).ConfigureAwait(false);
+                TcpClient client;
+                try
+                {
+                    client = await _listener!.AcceptTcpClientAsync(_cancel.Token).ConfigureAwait(false);
+                }
+                catch
+                {
+                    _places.Release();
+                    throw;
+                }
+
+                var address = (client.Client.RemoteEndPoint as IPEndPoint)?.Address;
+                if (!Enter(address))
+                {
+                    _places.Release();
+                    client.Dispose();
+                    continue;
+                }
+
                 client.NoDelay = true;
-                if (_path == null) await OfferAsync(new Pending(client, null, null)).ConfigureAwait(false);
-                else _ = UpgradeAsync(client);
+                if (_path == null) Offer(new Pending(client, null, null, address));
+                else _ = UpgradeAsync(client, address);
             }
         }
-        catch (Exception exception) when (exception is SocketException or ObjectDisposedException or OperationCanceledException or ChannelClosedException)
+        catch (Exception exception) when (exception is SocketException or ObjectDisposedException or OperationCanceledException)
         {
             // The listener stopped.
         }
     }
 
-    private async Task OfferAsync(Pending pending)
+    // Queues a client that holds a place; a disposed listener closes it.
+    private void Offer(Pending pending)
     {
-        try
+        if (_pending.Writer.TryWrite(pending)) return;
+        Leave(pending.Address);
+        pending.Dispose();
+    }
+
+    // Counts a client of the address; false when the address already holds its limit or the listener is disposed.
+    private bool Enter(IPAddress? address)
+    {
+        if (address == null) return !_disposed;
+        lock (_addresses)
         {
-            await _pending.Writer.WriteAsync(pending, _cancel.Token).ConfigureAwait(false);
-        }
-        catch
-        {
-            pending.Dispose();
-            throw;
+            if (_disposed) return false;
+            _addresses.TryGetValue(address, out var count);
+            if (count >= PendingPerAddress) return false;
+            _addresses[address] = count + 1;
+            return true;
         }
     }
 
-    private async Task UpgradeAsync(TcpClient client)
+    // Gives back the place of a client that no longer waits or upgrades.
+    private void Leave(IPAddress? address)
+    {
+        if (address != null)
+        {
+            lock (_addresses)
+            {
+                if (_addresses.TryGetValue(address, out var count))
+                {
+                    if (count <= 1) _addresses.Remove(address);
+                    else _addresses[address] = count - 1;
+                }
+            }
+        }
+
+        _places.Release();
+    }
+
+    private async Task UpgradeAsync(TcpClient client, IPAddress? address)
     {
         try
         {
@@ -163,15 +219,17 @@ public sealed partial class GesNetworkSocketListener : IDisposable
             await stream.WriteAsync(Encoding.ASCII.GetBytes(response.Text), timeout.Token).ConfigureAwait(false);
             if (!response.Upgrade)
             {
+                Leave(address);
                 client.Dispose();
                 return;
             }
 
             var socket = WebSocket.CreateFromStream(stream, isServer: true, subProtocol: null, keepAliveInterval: TimeSpan.Zero);
-            await OfferAsync(new Pending(client, socket, null)).ConfigureAwait(false);
+            Offer(new Pending(client, socket, null, address));
         }
-        catch (Exception exception) when (exception is IOException or SocketException or ObjectDisposedException or OperationCanceledException or ChannelClosedException)
+        catch (Exception exception) when (exception is IOException or SocketException or ObjectDisposedException or OperationCanceledException)
         {
+            Leave(address);
             client.Dispose();
         }
     }
@@ -227,13 +285,14 @@ public sealed partial class GesNetworkSocketListener : IDisposable
     private static (string Text, bool Upgrade) Status(int code, string reason) =>
         ($"HTTP/1.1 {code} {reason}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", false);
 
-    private readonly record struct Pending(TcpClient? Owner, WebSocket? WebSocket, GesNetworkDatagramPeer? Peer) : IDisposable
+    // A client that waits for the host, holding a place of its IP address.
+    private readonly record struct Pending(TcpClient? Owner, WebSocket? WebSocket, GesNetworkDatagramPeer? Peer, IPAddress? Address) : IDisposable
     {
         public void Dispose()
         {
             WebSocket?.Dispose();
             Owner?.Dispose();
-            Peer?.Dispose();
+            Peer?.Discard();
         }
     }
 }

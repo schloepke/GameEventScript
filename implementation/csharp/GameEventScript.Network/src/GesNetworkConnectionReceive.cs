@@ -114,7 +114,8 @@ public sealed partial class GesNetworkConnection
         _lastReceive = _now;
         switch (packet[0])
         {
-            case Wire.Close when _keys is not { Largest: >= 0 }:
+            // A client accepts a plain close until it read a sealed welcome, a server until it authenticated a packet.
+            case Wire.Close when _client ? !_encrypted : _keys is not { Largest: >= 0 }:
                 ReceiveClose(packet);
                 break;
             case Wire.Retry when _client && State == GesNetworkState.Hello && _helloSent:
@@ -341,6 +342,9 @@ public sealed partial class GesNetworkConnection
                 return;
             }
 
+            // Progress the acknowledgement reports may exceed the pending events.
+            if (State == GesNetworkState.Closed) return;
+
             position += 6;
         }
 
@@ -423,7 +427,7 @@ public sealed partial class GesNetworkConnection
             assembly.NextId++;
             if (length == total)
             {
-                if (bulk) AddProgress(route, id, total, total);
+                if (bulk && !AddProgress(route, id, total, total)) return false;
                 return Deliver(route, id, chunk);
             }
 
@@ -446,7 +450,7 @@ public sealed partial class GesNetworkConnection
         }
 
         assembly.Append(chunk);
-        if (bulk) AddProgress(route, id, assembly.Received, total);
+        if (bulk && !AddProgress(route, id, assembly.Received, total)) return false;
         if (assembly.Received != total) return true;
         assembly.Active = false;
         // The message's bytes are pending already; the event counts them again.

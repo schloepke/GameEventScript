@@ -181,6 +181,29 @@ public sealed class GesNetworkSocketTests
     }
 
     [TestMethod]
+    public async Task SocketTransportsRefuseInsecureTestKeys()
+    {
+        var network = Game();
+        var server = new GesNetworkOptions { Transport = GesNetworkTransport.Stream, Key = ServerKey, InsecureTestKeySeed = 1 };
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenTcp(Loopback, network, server));
+        server.Transport = GesNetworkTransport.Datagram;
+        Assert.ThrowsExactly<ArgumentException>(() => GesNetworkSocketListener.ListenUdp(Loopback, network, server));
+        foreach (var transport in new[] { GesNetworkTransport.Stream, GesNetworkTransport.Message, GesNetworkTransport.Datagram })
+        {
+            var options = SecureClient(transport);
+            options.InsecureTestKeySeed = 1;
+            var connection = GesNetworkConnection.CreateClient(network, default, Now, options);
+            Assert.IsTrue(connection.UsesInsecureTestKeys);
+            await Assert.ThrowsExactlyAsync<ArgumentException>(() => transport switch
+            {
+                GesNetworkTransport.Stream => GesNetworkSocketSession.ConnectTcpAsync("127.0.0.1", 1, connection),
+                GesNetworkTransport.Message => GesNetworkSocketSession.ConnectWebSocketAsync(new Uri("ws://127.0.0.1:1/game"), connection),
+                _ => GesNetworkSocketSession.ConnectUdpAsync("127.0.0.1", 1, connection),
+            });
+        }
+    }
+
+    [TestMethod]
     public async Task UdpValidatesAnUnknownAddressWithoutState()
     {
         var network = Game();
@@ -257,6 +280,89 @@ public sealed class GesNetworkSocketTests
         }
 
         throw new AssertFailedException("No client was accepted in time.");
+    }
+
+    [TestMethod]
+    public async Task AnAddressHoldsAtMostEightWaitingClients()
+    {
+        using var listener = GesNetworkSocketListener.ListenTcp(Loopback, Game(), Options(GesNetworkTransport.Stream));
+        var clients = new List<TcpClient>();
+        try
+        {
+            for (var index = 0; index < 10; index++)
+            {
+                var client = new TcpClient();
+                await client.ConnectAsync(IPAddress.Loopback, listener.LocalEndPoint.Port);
+                clients.Add(client);
+            }
+
+            // The listener closes the ninth and tenth socket and keeps eight for the host.
+            Assert.AreEqual(0, await ReadEnd(clients[8]));
+            Assert.AreEqual(0, await ReadEnd(clients[9]));
+            var sessions = new List<GesNetworkSocketSession>();
+            var deadline = Stopwatch.StartNew();
+            while (sessions.Count < 8 && deadline.Elapsed < Limit)
+            {
+                if (listener.Accept(Now) is { } session) sessions.Add(session);
+                else Thread.Sleep(1);
+            }
+
+            Assert.HasCount(8, sessions);
+            Assert.IsNull(listener.Accept(Now));
+            foreach (var session in sessions) session.Dispose();
+
+            // Taken clients give their places back.
+            using var another = new TcpClient();
+            await another.ConnectAsync(IPAddress.Loopback, listener.LocalEndPoint.Port);
+            AcceptOne(listener).Dispose();
+        }
+        finally
+        {
+            foreach (var client in clients) client.Dispose();
+        }
+    }
+
+    [TestMethod]
+    public async Task UpgradingClientsCountForTheirAddress()
+    {
+        using var listener = GesNetworkSocketListener.ListenWebSocket(Loopback, "/game", Game(), Options(GesNetworkTransport.Message));
+        var clients = new List<TcpClient>();
+        try
+        {
+            for (var index = 0; index < 9; index++)
+            {
+                var client = new TcpClient();
+                await client.ConnectAsync(IPAddress.Loopback, listener.LocalEndPoint.Port);
+                clients.Add(client);
+            }
+
+            // Eight sockets wait in their upgrade without sending a request; the ninth is closed.
+            Assert.AreEqual(0, await ReadEnd(clients[8]));
+            Assert.IsNull(listener.Accept(Now));
+        }
+        finally
+        {
+            foreach (var client in clients) client.Dispose();
+        }
+    }
+
+    // Reads until the server ends the socket and returns the number of bytes read.
+    private static async Task<int> ReadEnd(TcpClient client)
+    {
+        using var timeout = new CancellationTokenSource(Limit);
+        var buffer = new byte[64];
+        var total = 0;
+        try
+        {
+            int read;
+            while ((read = await client.GetStream().ReadAsync(buffer, timeout.Token)) > 0) total += read;
+        }
+        catch (IOException)
+        {
+            // A reset ends the socket too.
+        }
+
+        return total;
     }
 
     [TestMethod]

@@ -223,25 +223,31 @@ public sealed class GesNetworkOptions
     /// </summary>
     public int MaxPacketBytes { get; set; }
 
-    /// <summary>Gets or sets the limit of pending received bytes: incomplete messages and undelivered events. The default is 4194304.</summary>
+    /// <summary>
+    /// Gets or sets the limit of pending received bytes, 1 to 1073741824: incomplete messages and undelivered events. The
+    /// default is 4194304.
+    /// </summary>
     public long MaxPendingReceiveBytes { get; set; } = 4194304;
 
-    /// <summary>Gets or sets the frames received per second, a token bucket of one second. The default is 4096.</summary>
+    /// <summary>Gets or sets the frames received per second, 1 to 1000000, a token bucket of one second. The default is 4096.</summary>
     public int MaxFramesPerSecond { get; set; } = 4096;
 
-    /// <summary>Gets or sets the limit of queued reliable bytes to send. The default is 1048576.</summary>
+    /// <summary>Gets or sets the limit of queued reliable bytes to send, 1 to 1073741824. The default is 1048576.</summary>
     public long MaxSendQueueBytes { get; set; } = 1048576;
 
-    /// <summary>Gets or sets the timeout without a received packet in microseconds. The default is 10 seconds.</summary>
+    /// <summary>Gets or sets the timeout without a received packet in microseconds, 1 to 3600000000. The default is 10 seconds.</summary>
     public long TimeoutMicroseconds { get; set; } = 10_000_000;
 
-    /// <summary>Gets or sets the keepalive interval after the last sent packet in microseconds. The default is 1 second.</summary>
+    /// <summary>
+    /// Gets or sets the keepalive interval after the last sent packet in microseconds, 1 to 3600000000. The default is 1
+    /// second.
+    /// </summary>
     public long KeepaliveMicroseconds { get; set; } = 1_000_000;
 
-    /// <summary>Gets or sets the delay of an acknowledgement in microseconds. The default is 10 milliseconds.</summary>
+    /// <summary>Gets or sets the delay of an acknowledgement in microseconds, 0 to 3600000000. The default is 10 milliseconds.</summary>
     public long AckDelayMicroseconds { get; set; } = 10_000;
 
-    /// <summary>Gets or sets the initial send budget in bytes per second; 0 for none. The default is 0.</summary>
+    /// <summary>Gets or sets the initial send budget in bytes per second, 0 to 1073741824; 0 for none. The default is 0.</summary>
     public long SendBudgetBytesPerSecond { get; set; }
 
     /// <summary>
@@ -278,9 +284,15 @@ public sealed class GesNetworkOptions
 
     /// <summary>
     /// Gets or sets a seed that derives the connection's ephemeral keys instead of the system's random generator.
-    /// INSECURE: anyone who knows the seed reads the session. For tests and golden bytes only. The default is none.
+    /// INSECURE: anyone who knows the seed reads the session. For tests and golden bytes only: the socket transports
+    /// refuse such options and connections. The default is none.
     /// </summary>
     public ulong? InsecureTestKeySeed { get; set; }
+
+    // The largest byte limits and send budget, frame rate and time interval in microseconds.
+    internal const long MaximumBytes = 1 << 30;
+    internal const int MaximumFramesPerSecond = 1_000_000;
+    internal const long MaximumInterval = 3_600_000_000;
 
     // The packet limit in effect: the configured one, or the transport's default.
     internal int PacketLimit => MaxPacketBytes != 0 ? MaxPacketBytes : Transport == GesNetworkTransport.Datagram ? GesNetworkWire.MinimumPacketBytes : 16384;
@@ -289,13 +301,13 @@ public sealed class GesNetworkOptions
     {
         if (MaxPacketBytes != 0 && MaxPacketBytes is < GesNetworkWire.MinimumPacketBytes or > GesNetworkWire.MaximumPacketBytes)
             throw new ArgumentOutOfRangeException(nameof(MaxPacketBytes), "The packet limit is 0 or 1200 to 65535 bytes.");
-        if (MaxPendingReceiveBytes < 1) throw new ArgumentOutOfRangeException(nameof(MaxPendingReceiveBytes));
-        if (MaxFramesPerSecond < 1) throw new ArgumentOutOfRangeException(nameof(MaxFramesPerSecond));
-        if (MaxSendQueueBytes < 1) throw new ArgumentOutOfRangeException(nameof(MaxSendQueueBytes));
-        if (TimeoutMicroseconds < 1) throw new ArgumentOutOfRangeException(nameof(TimeoutMicroseconds));
-        if (KeepaliveMicroseconds < 1) throw new ArgumentOutOfRangeException(nameof(KeepaliveMicroseconds));
-        if (AckDelayMicroseconds < 0) throw new ArgumentOutOfRangeException(nameof(AckDelayMicroseconds));
-        if (SendBudgetBytesPerSecond < 0) throw new ArgumentOutOfRangeException(nameof(SendBudgetBytesPerSecond));
+        if (MaxPendingReceiveBytes is < 1 or > MaximumBytes) throw new ArgumentOutOfRangeException(nameof(MaxPendingReceiveBytes));
+        if (MaxFramesPerSecond is < 1 or > MaximumFramesPerSecond) throw new ArgumentOutOfRangeException(nameof(MaxFramesPerSecond));
+        if (MaxSendQueueBytes is < 1 or > MaximumBytes) throw new ArgumentOutOfRangeException(nameof(MaxSendQueueBytes));
+        if (TimeoutMicroseconds is < 1 or > MaximumInterval) throw new ArgumentOutOfRangeException(nameof(TimeoutMicroseconds));
+        if (KeepaliveMicroseconds is < 1 or > MaximumInterval) throw new ArgumentOutOfRangeException(nameof(KeepaliveMicroseconds));
+        if (AckDelayMicroseconds is < 0 or > MaximumInterval) throw new ArgumentOutOfRangeException(nameof(AckDelayMicroseconds));
+        if (SendBudgetBytesPerSecond is < 0 or > MaximumBytes) throw new ArgumentOutOfRangeException(nameof(SendBudgetBytesPerSecond));
         if (MaxBaselineBytes is < 0 or > GesNetworkWire.MaximumBaselineBytes) throw new ArgumentOutOfRangeException(nameof(MaxBaselineBytes));
         if (MaxTransferBytes is < 0 or > GesNetworkWire.MaximumTransferBytes) throw new ArgumentOutOfRangeException(nameof(MaxTransferBytes));
         if (Transport is not (GesNetworkTransport.Message or GesNetworkTransport.Stream or GesNetworkTransport.Datagram))

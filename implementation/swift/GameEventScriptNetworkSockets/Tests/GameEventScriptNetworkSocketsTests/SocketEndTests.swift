@@ -228,10 +228,11 @@ final class SocketEndTests: XCTestCase {
 
         // Without input the server end has no deadline before its keepalive; the client's next poll sends and wakes it.
         let sending = Unchecked(value: (client, clientEvents))
-        let sender = Task.detached {
+        let route = Self.commands
+        let sender = Task.detached { @Sendable in
             try await Task.sleep(nanoseconds: 100_000_000)
             let (client, events) = sending.value
-            _ = client.send(route: Self.commands, payload: [3])
+            _ = client.send(route: route, payload: [3])
             try client.poll(events.handle)
         }
         let deadline = Self.now + Self.limit

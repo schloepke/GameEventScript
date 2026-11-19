@@ -95,7 +95,8 @@ public sealed partial class GesNetworkSocketListener
                 var chunk = new GesNetworkSocketSession.Chunk(bytes, length);
                 if (_peers.TryGetValue(address, out var peer))
                 {
-                    if (!peer.Received.Writer.TryWrite(chunk)) ArrayPool<byte>.Shared.Return(bytes);
+                    if (peer.Received.Writer.TryWrite(chunk)) Signal.Set();
+                    else ArrayPool<byte>.Shared.Return(bytes);
                     continue;
                 }
 

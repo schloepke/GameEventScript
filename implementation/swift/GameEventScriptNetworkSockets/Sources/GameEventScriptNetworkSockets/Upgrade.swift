@@ -399,7 +399,7 @@ final class GesNetworkSocketServerUpgradeHandler: ChannelInboundHandler, Removab
 
         // A write that fails at once may already have closed the channel.
         if done { return }
-        let inbox = GesNetworkSocketInbox()
+        let inbox = GesNetworkSocketInbox(signal: queue.signal)
         do {
             try context.pipeline.syncOperations.addHandlers(
                 GesNetworkSocketWebSocketHandler.handlers(inbox: inbox, limit: limit, masks: false),

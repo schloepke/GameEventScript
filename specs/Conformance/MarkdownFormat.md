@@ -953,16 +953,17 @@ the link), `accept: true` and `refuse: detail` decide on the server, `close` tak
 take `side` and `route`, `cancel` takes `side`, `route`, the transfer `id` and an optional `code`,
 `receive` takes `side` and hexadecimal `bytes`, `deliver` takes `side` and the `packets` of the other
 side's last `transmit` by index, `transmit: side` and `transportClosed: side` act on one side,
-`budget` takes `side` and `bytesPerSecond`, and `cookie` checks `bytes` or the client's last
+`budget` takes `side` and `bytesPerSecond`, `beginTick: side` and `endTick: side` open and close a
+[tick](../Network.md#ticks), `include` takes `side` and `route`, and `cookie` checks `bytes` or the client's last
 transmitted `packet` at an [address validation gate](../Network.md#address-validation) with `key`,
 `windowMicroseconds`, `now` and `address`. A payload is lowercase hexadecimal or a mapping of `length`
 and `seed` whose byte *i* is (*i* + `seed`) mod 251.
 
 The adapter records a trace: `<side> send <status>` and `<side> publish <status>` for each send,
-`<side> cancel true|false` for each cancel, `<side> packet <bytes>` for each transmitted packet,
+`<side> cancel true|false` for each cancel, `<side> endTick <status>` for each closed tick, `<side> packet <bytes>` for each transmitted packet,
 `cookie accept|retry <hex>|drop` for each cookie step, `<side> error invalidOperation|invalidArgument`
 for a rejected call, and after every step the events of the client and then of the server as
-`<side> connecting <bytes>`, `<side> connected`, `<side> message <route> <bytes>`, `<side> progress
+`<side> connecting <bytes>`, `<side> connected`, `<side> message <route> <bytes>`, `<side> tick <number>`, `<side> progress
 <route> <id> <bytes>/<total>`, `<side> cancelled <route> <id> <code> peer|local` and `<side> closed
 <code> peer|local "<detail>"`. Bytes print as `-` when empty, as hexadecimal up to 32 bytes (512 for a
 packet), and otherwise as `<length>:<FNV-1a 64 hex>`. The expectation `network` holds the exact `trace` and

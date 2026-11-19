@@ -6,7 +6,7 @@ import GameEventScriptRuntime
 
 // Runs scripted steps over a client and a server connection and records their events and packets as trace lines.
 enum NetworkApiObservations {
-    private static let steps: Set<String> = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget", "deliver", "cookie", "cancel"]
+    private static let steps: Set<String> = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget", "deliver", "cookie", "cancel", "beginTick", "include", "endTick"]
 
     static func validate(_ input: Input) throws {
         try Validation.fields(input, ["sources", "clientSources", "network", "options", "clientOptions", "token", "link", "steps"])
@@ -79,6 +79,9 @@ enum NetworkApiObservations {
                     trace.append("\(name) cancel \(cancelled)")
                 case "subscribe": try connection.subscribe(route: Int(try integer(step.required("route"))))
                 case "unsubscribe": try connection.unsubscribe(route: Int(try integer(step.required("route"))))
+                case "beginTick": try connection.beginTick()
+                case "include": try connection.include(route: Int(try integer(step.required("route"))))
+                case "endTick": trace.append("\(name) endTick \(try connection.endTick())")
                 case "receive": try connection.receive(bytes(step.text("bytes")), now: now)
                 case "transmit":
                     var buffer = [UInt8](repeating: 0, count: connection.maxPacketBytes + 5)
@@ -222,6 +225,7 @@ enum NetworkApiObservations {
             case .closed: trace.append("\(name) closed \(next.code) \(next.byPeer ? "peer" : "local") \"\(next.detail)\"")
             case .transferProgress: trace.append("\(name) progress \(next.route) \(next.transferId) \(next.bytes)/\(next.total)")
             case .transferCancelled: trace.append("\(name) cancelled \(next.route) \(next.transferId) \(next.code) \(next.byPeer ? "peer" : "local")")
+            case .tick: trace.append("\(name) tick \(next.tickNumber)")
             }
         }
     }

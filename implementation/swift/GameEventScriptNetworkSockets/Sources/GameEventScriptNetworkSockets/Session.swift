@@ -10,13 +10,14 @@ import NIOSSL
 import NIOWebSocket
 
 /// Carries one `GesNetworkConnection` over a TCP stream, a WebSocket or UDP. SwiftNIO event loops only move bytes: the
-/// host calls `update(now:)` on its own task or thread, which feeds received bytes into the connection, advances it
-/// and hands its packets to the socket. The connection is touched only by the host.
+/// host calls `receive(now:)` and `transmit()`, or `update(now:)` for both, on its own task or thread, which feeds
+/// received bytes into the connection, advances it and hands its packets to the socket. The connection is touched only
+/// by the host. As a `GesNetworkLink` it is the transport of an end.
 ///
 /// A session is not `Sendable`; it belongs to one isolation domain at a time and may be transferred to another.
 /// Releasing it closes the socket like `close()`.
 public final class GesNetworkSocketSession {
-    /// The connection this session carries. Use it only where `update(now:)` is called.
+    /// The connection this session carries. Use it only where `receive(now:)` and `transmit()` are called.
     public let connection: GesNetworkConnection
 
     // How packets travel on the channel.
@@ -26,12 +27,15 @@ public final class GesNetworkSocketSession {
         case datagram
     }
 
-    private let channel: Channel
+    // Nil while a connector's transport still opens.
+    private var channel: Channel?
     private let inbox: GesNetworkSocketInbox
     private let framing: Framing
     // The remote address of a UDP session, which sends through it; nil for every other session.
-    let peer: GesNetworkDatagramPeer?
-    private let writer: GesNetworkSocketWriter
+    private(set) var peer: GesNetworkDatagramPeer?
+    private var writer: GesNetworkSocketWriter?
+    // The transport a connector opens in the background; nil for a session created open.
+    private let opening: GesNetworkSocketOpening?
     // The packets of one update, transmitted straight into the buffer the writer hands to the event loop.
     private var outgoing: ByteBuffer
     private let packetBytes: Int
@@ -41,13 +45,34 @@ public final class GesNetworkSocketSession {
 
     init(connection: GesNetworkConnection, channel: Channel, inbox: GesNetworkSocketInbox, framing: Framing, peer: GesNetworkDatagramPeer? = nil) {
         self.connection = connection
-        self.channel = channel
         self.inbox = inbox
         self.framing = framing
-        self.peer = peer
         packetBytes = connection.maxPacketBytes + 3
-        writer = GesNetworkSocketWriter(channel: channel, framing: framing, peer: peer, masks: connection.isClient)
         outgoing = channel.allocator.buffer(capacity: framing == .stream ? GesNetworkSocketWriter.streamBytes : 0)
+        opening = nil
+        start(channel, peer)
+    }
+
+    // A session whose transport opens in the background: packets wait in the connection until it is open, and a
+    // failure to open ends the transport through the inbox.
+    init(connection: GesNetworkConnection, inbox: GesNetworkSocketInbox, framing: Framing, opening: GesNetworkSocketOpening) {
+        self.connection = connection
+        self.inbox = inbox
+        self.framing = framing
+        packetBytes = connection.maxPacketBytes + 3
+        outgoing = ByteBufferAllocator().buffer(capacity: framing == .stream ? GesNetworkSocketWriter.streamBytes : 0)
+        self.opening = opening
+    }
+
+    private func start(_ channel: Channel, _ peer: GesNetworkDatagramPeer?) {
+        self.channel = channel
+        self.peer = peer
+        writer = GesNetworkSocketWriter(channel: channel, framing: framing, peer: peer, masks: connection.isClient)
+    }
+
+    // Takes the transport once the connector opened it.
+    private func adopt() {
+        if channel == nil, let (channel, peer) = opening?.take() { start(channel, peer) }
     }
 
     deinit {
@@ -65,14 +90,18 @@ public final class GesNetworkSocketSession {
     public static func connectTcp(host: String, port: Int, connection: sending GesNetworkConnection) async throws -> sending GesNetworkSocketSession {
         try require(connection, .stream, client: true)
         let inbox = GesNetworkSocketInbox()
-        let channel = try await ClientBootstrap(group: MultiThreadedEventLoopGroup.singleton)
+        let channel = try await openTcp(host: host, port: port, inbox: inbox)
+        return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, framing: .stream)
+    }
+
+    static func openTcp(host: String, port: Int, inbox: GesNetworkSocketInbox) async throws -> Channel {
+        try await ClientBootstrap(group: MultiThreadedEventLoopGroup.singleton)
             .channelOption(.tcpOption(.tcp_nodelay), value: 1)
             .channelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: GesNetworkSocketInbox.readBytes))
             .channelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture { try channel.pipeline.syncOperations.addHandler(GesNetworkSocketStreamHandler(inbox: inbox)) }
             }
             .connect(host: host, port: port).get()
-        return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, framing: .stream)
     }
 
     /// Opens a WebSocket for a client connection of the message transport.
@@ -86,9 +115,13 @@ public final class GesNetworkSocketSession {
     public static func connectWebSocket(url: String, connection: sending GesNetworkConnection) async throws -> sending GesNetworkSocketSession {
         try require(connection, .message, client: true)
         let endpoint = try GesNetworkSocketEndpoint(url)
-        let tls = try endpoint.secure ? NIOSSLContext(configuration: .makeClientConfiguration()) : nil
         let inbox = GesNetworkSocketInbox()
-        let limit = connection.maxPacketBytes
+        let channel = try await openWebSocket(endpoint: endpoint, limit: connection.maxPacketBytes, inbox: inbox)
+        return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, framing: .webSocket)
+    }
+
+    static func openWebSocket(endpoint: GesNetworkSocketEndpoint, limit: Int, inbox: GesNetworkSocketInbox) async throws -> Channel {
+        let tls = try endpoint.secure ? NIOSSLContext(configuration: .makeClientConfiguration()) : nil
         let loop = MultiThreadedEventLoopGroup.singleton.next()
         let upgraded = loop.makePromise(of: Void.self)
         let channel: Channel
@@ -116,7 +149,7 @@ public final class GesNetworkSocketSession {
             channel.close(promise: nil)
             throw error
         }
-        return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, framing: .webSocket)
+        return channel
     }
 
     static func require(_ connection: GesNetworkConnection, _ transport: GesNetworkTransport, client: Bool) throws {
@@ -126,12 +159,24 @@ public final class GesNetworkSocketSession {
     }
 
     /// Feeds the received bytes into the connection, advances it to `now`, reports the end of the transport and sends
-    /// every due packet. Call it where the session lives, then take the connection's events.
+    /// every due packet: `receive(now:)` followed by `transmit()`. Call it where the session lives, then take the
+    /// connection's events.
     /// - Parameter now: The current time in microseconds, not earlier than the connection's time.
     /// - Throws: `GesApiError.invalidOperation` when the session is closed; `GesApiError.invalidArgument` when the
     ///   time goes back.
     public func update(now: Int64) throws {
+        try receive(now: now)
+        try transmit()
+    }
+
+    /// Feeds the received bytes into the connection, advances it to `now` and reports the end of the transport. Call
+    /// it where the session lives.
+    /// - Parameter now: The current time in microseconds, not earlier than the connection's time.
+    /// - Throws: `GesApiError.invalidOperation` when the session is closed; `GesApiError.invalidArgument` when the
+    ///   time goes back.
+    public func receive(now: Int64) throws {
         if closed { throw GesApiError.invalidOperation("The session is closed.") }
+        adopt()
         // The end flag is taken with the chunks, so no chunk received before the end is left behind.
         let (ended, resume) = inbox.take(into: &chunks)
         defer { chunks.removeAll(keepingCapacity: true) }
@@ -139,10 +184,18 @@ public final class GesNetworkSocketSession {
             try chunk.withUnsafeReadableBytes { try connection.receive($0, now: now) }
         }
 
-        if resume { channel.read() }
+        if resume { channel?.read() }
         try connection.advance(now)
         if ended { connection.transportClosed() }
-        if outgoingCompleted { return }
+    }
+
+    /// Hands every packet the connection has due to the socket. While a connector's transport still opens the
+    /// packets wait in the connection. Call it where the session lives.
+    /// - Throws: `GesApiError.invalidOperation` when the session is closed.
+    public func transmit() throws {
+        if closed { throw GesApiError.invalidOperation("The session is closed.") }
+        adopt()
+        guard let writer, !outgoingCompleted else { return }
         // A stream carries the packets back to back; every other framing gets each packet with its length.
         let prefix = framing == .stream ? 0 : 4
         var room = writer.room
@@ -171,10 +224,60 @@ public final class GesNetworkSocketSession {
     }
 
     private func release() {
+        if let channel {
+            Self.release(channel, peer)
+        } else if let (channel, peer) = opening?.release() {
+            Self.release(channel, peer)
+        }
+    }
+
+    static func release(_ channel: Channel, _ peer: GesNetworkDatagramPeer?) {
         if let peer {
             peer.release()
         } else {
             channel.close(promise: nil)
+        }
+    }
+}
+
+extension GesNetworkSocketSession: GesNetworkLink {}
+
+// The transport a connector opens on SwiftNIO's event loops for a session on the host: the host takes it once it is
+// open, and a transport that opens after the session closed is released at once.
+final class GesNetworkSocketOpening: @unchecked Sendable {
+    private enum State {
+        case pending
+        case opened(Channel, GesNetworkDatagramPeer?)
+        case done
+    }
+
+    private let lock = NIOLock()
+    private var state = State.pending
+
+    // Hands the open transport to the session; false when the session closed meanwhile, and the caller releases it.
+    func complete(_ channel: Channel, _ peer: GesNetworkDatagramPeer?) -> Bool {
+        lock.withLock {
+            guard case .pending = state else { return false }
+            state = .opened(channel, peer)
+            return true
+        }
+    }
+
+    // The open transport, once; nil while it still opens.
+    func take() -> (Channel, GesNetworkDatagramPeer?)? {
+        lock.withLock {
+            guard case .opened(let channel, let peer) = state else { return nil }
+            state = .done
+            return (channel, peer)
+        }
+    }
+
+    // Ends the opening: returns a transport that opened but was not taken, for the session to release.
+    func release() -> (Channel, GesNetworkDatagramPeer?)? {
+        lock.withLock {
+            defer { state = .done }
+            guard case .opened(let channel, let peer) = state else { return nil }
+            return (channel, peer)
         }
     }
 }

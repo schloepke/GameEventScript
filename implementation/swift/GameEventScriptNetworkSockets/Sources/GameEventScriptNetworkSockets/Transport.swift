@@ -19,7 +19,8 @@ public struct GesNetworkSocketError: Error, Sendable, CustomStringConvertible {
 }
 
 // The received chunks of one socket, written on its event loop and taken on the host thread. Reading pauses
-// while the chunks reach the capacity and resumes when the host takes them; datagrams are dropped instead.
+// while the chunks reach the capacity and resumes when the host takes them; datagrams are dropped instead. Every
+// chunk and the end wake the signal of the end that waits for the socket.
 final class GesNetworkSocketInbox: @unchecked Sendable {
     static let capacity = 64
     static let readBytes = 16384
@@ -31,16 +32,28 @@ final class GesNetworkSocketInbox: @unchecked Sendable {
     private var chunks: [ByteBuffer] = []
     private var ended = false
     private var held = false
+    private let signal: GesNetworkSocketSignal?
 
-    func push(_ chunk: ByteBuffer) { lock.withLock { chunks.append(chunk) } }
+    init(signal: GesNetworkSocketSignal? = nil) { self.signal = signal }
 
-    func pushDatagram(_ datagram: ByteBuffer) {
-        lock.withLock {
-            if chunks.count < Self.datagramCapacity { chunks.append(datagram) }
-        }
+    func push(_ chunk: ByteBuffer) {
+        lock.withLock { chunks.append(chunk) }
+        signal?.set()
     }
 
-    func end() { lock.withLock { ended = true } }
+    func pushDatagram(_ datagram: ByteBuffer) {
+        let pushed = lock.withLock {
+            if chunks.count >= Self.datagramCapacity { return false }
+            chunks.append(datagram)
+            return true
+        }
+        if pushed { signal?.set() }
+    }
+
+    func end() {
+        lock.withLock { ended = true }
+        signal?.set()
+    }
 
     // Whether the socket may read on; otherwise it holds until the host takes the chunks.
     func mayRead() -> Bool {

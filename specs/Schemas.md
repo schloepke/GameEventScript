@@ -1725,6 +1725,12 @@ makes the `GesPoly`: an immutable polygon that checks its validity when it is ma
 with `wire.typeMismatch` at the field's path, as the [value path](#value-path) does, and reading sets it to zero. An `optional` field adds a presence flag and, for a value
 type, a nullable view. A message adds a Boolean per tag, and a message set holds the selected
 member and one record per message. After a failed read the values of the target are unspecified.
+
+<a id="message-cases"></a>A message set also generates its nested type `Case` with one case per member that holds the
+member's record: C# an abstract class with one sealed subclass per member and its record in `Value`, for pattern
+matching; Swift an enum with one associated value per case, `Sendable` when its records are. C# `ToCase()` (Swift
+`asCase`) returns the selected member as a case, and `Assign(case)` (Swift `assign(_:)`) selects the case's member and
+takes its record. — **Since: Unreleased**
 A field named like its type, which C# does not allow, gets the suffix `Value` in every language.
 
 A schema with a [recursive List](#recursion) is a class whose List holds records of itself. Its internal methods take the
@@ -1923,6 +1929,66 @@ public enum Game {
 }
 ```
 
+### Typed ends
+
+> **Since: Unreleased**
+
+Beside its constants, a network root generates one typed end per side, nested in the network type: `Game.Client` and
+`Game.Server`, C# `sealed class` and Swift `final class`. Each wraps an [end](Network.md#ends) of its side, which it takes
+when it is created and whose bound network must have the network's hash (else C# `ArgumentException`, Swift
+`GesApiError.invalidArgument`), and hides route indices, payload bytes and buffers. The untyped end and the connection stay
+reachable (C# `End` and `Connection`, Swift `end` and `connection`; on the server `Connection(client)`).
+
+**Sending.** Per outgoing route a method named after the side's verb: `Send` or `Publish` (Swift `send(_:)`,
+`publish(_:)`) with the root record, on the server also `Send(value, client)` (Swift `send(_:client:)`) for one client. It
+writes the record into a buffer that the end owns, sized by the largest root encoding of the side, and returns the end's
+send status; a record that does not encode fails like its own write. A message-set root also takes its
+[case](#message-cases). The methods allocate nothing for a record. The typed end also forwards closing, and on the server
+refusing, per-client closing, and, when the side publishes topics, subscribing and unsubscribing with the nested enum
+`Topic` of its topics.
+
+**Ticks.** A side that publishes topics opens a [tick](Network.md#ticks) through its typed end. The nested `Tick` offers
+`Publish` per topic and `Include(Topic)`. C# `BeginTick()` returns it as a `readonly struct` whose `Dispose` closes the
+tick once: a further call, also on a copy, does nothing. Swift `publishTick(_:)` passes it to a closure, closes the tick
+after the closure, also when it throws, and returns the status of closing.
+
+```csharp
+using (var tick = server.BeginTick())
+{
+    tick.Publish(world);
+    tick.Include(Game.Server.Topic.Weather);
+}
+```
+
+```swift
+try server.publishTick { tick in
+    try tick.publish(world)
+    try tick.include(.weather)
+}
+```
+
+**Receiving.** `Poll` hands typed events. C# takes a handler of the nested interface `IClientHandler` or `IServerHandler`
+with one method per event, each with an empty default, called without allocating for a struct handler. Swift `poll(_:)`
+takes a closure over the nested enum `ClientEvent` or `ServerEvent`. One method or case per received route carries its
+record, borrowed until the handler returns: the end owns one record per route and reads into it, so a large world at a
+high rate allocates nothing in C#. Swift cases carry a copy of the record. A message-set root carries its case. An event is
+named after the root, or after verb and root (`SentWorld`, `PublishedWorld`) when the other side both sends and publishes
+that root. The events of the end follow: `Connected` and `Disconnected` on the client, `Connecting`, `ClientConnected` and
+`ClientDisconnected` on the server, `Tick`, `TransferProgress`, `TransferCancelled` and `Received`; server events carry
+the client id. A received name that repeats one of these fails with `generate.nameCollision`. A payload that does not
+decode as its root closes the connection with the detail `undecodable :Root` and reports nothing.
+
+```swift
+try client.poll { event in
+    switch event {
+    case .connected(let security): status = security
+    case .world(let world): view.world = world
+    case .received: view.commit()
+    default: break
+    }
+}
+```
+
 ### Schema sets
 
 > **Since: Unreleased**
@@ -1948,7 +2014,8 @@ when it no longer binds. `--use-schemas <A.Name>` (option `UseSchemaSet`) declar
 generation declared under its qualified name, so wire code and models of one target embed the sources once; that
 generation must hold every source and parameter the using one needs. Both options together, a name that is no
 identifier or a keyword, or a qualified name with an empty or invalid part fail with `generate.usage`; a set name that
-another type of the generation has fails with `generate.nameCollision`. Model code with `--schemas` declares its set
+another type of the generation has, or with C# the name of one of the set's members (`Hash`, `Set`, `Parameters`,
+`Bind`, `BindNetwork`, `ReadDocument`, `__set`), fails with `generate.nameCollision`. Model code with `--schemas` declares its set
 with the model sources and no parameters.
 
 `--import <Module>` (option `Imports`), repeatable, adds `import Module` lines to generated Swift after the runtime

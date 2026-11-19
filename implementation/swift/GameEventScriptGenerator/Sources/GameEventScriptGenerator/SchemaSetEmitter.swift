@@ -14,6 +14,9 @@ struct GesSchemaSetReference {
     // The name that generated code calls it by: C# with global::, Swift as given.
     let qualified: String
 
+    // The members of the generated C# class.
+    private static let csharpMembers: Set<String> = ["__set", "Hash", "Set", "Parameters", "Bind", "BindNetwork", "ReadDocument"]
+
     // Checks the options and gives the schema set of the generation, or nil without one.
     static func from(_ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> GesSchemaSetReference? {
         let swift = options.language == .swift
@@ -29,6 +32,10 @@ struct GesSchemaSetReference {
         }
         if let name = options.schemaSet {
             if !identifier(name, keywords) { throw GesGeneratorError(GesGeneratorError.usage, "The schema set name '\(name)' is no identifier.") }
+            // C# names no member like its type; Swift allows it.
+            if !swift && csharpMembers.contains(name) {
+                throw GesGeneratorError(GesGeneratorError.nameCollision, "The schema set name '\(name)' is the name of one of its members.")
+            }
             let space = try GesSchemaPlanner.namespace(options.namespace, keywords)
             return GesSchemaSetReference(declared: name, qualified: swift ? name : "global::" + space.map { $0 + "." }.joined() + name)
         }

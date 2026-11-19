@@ -101,6 +101,17 @@ final class GesNetworkTopic {
         if index >= oldest && index < added { packets[(first + Int(index - oldest)) % Self.maximumStates] = packet }
     }
 
+    // Whether the held state with the number is confirmed; false when the ring does not hold it.
+    func isConfirmed(_ number: UInt16) -> Bool {
+        var index = count - 1
+        while index >= 0 {
+            let slot = (first + index) % Self.maximumStates
+            if numbers[slot] == number { return confirmed[slot] }
+            index -= 1
+        }
+        return false
+    }
+
     // Confirms the held state with the number; a state no longer held is skipped.
     func confirm(_ number: UInt16) {
         var index = count - 1

@@ -152,10 +152,11 @@ enum GesSwiftEmitter {
         for network in layout.networks {
             document.units.append(
                 GesCodeUnit(owner: network.name) { code in
-                    self.network(&code, network, access, schemaSet?.qualified) { root in
+                    try self.network(&code, network, access, schemaSet?.qualified) { root in
                         // A packed root that the models declare has its wire members in an enum `<Name>Wire`.
                         let type = types.first { $0.name == root }!
-                        return type.layout.packedWidth > 0 && packed == nil ? (models + root, "\(root)Wire.write(value, into: buffer)") : (root, "value.write(into: buffer)")
+                        let shared = type.layout.packedWidth > 0 && packed == nil
+                        return NetworkRoot(type: shared ? models + root : root, wire: shared ? root + "Wire" : nil, plan: type)
                     }
                 }
             )
@@ -561,7 +562,10 @@ enum GesSwiftEmitter {
     }
 
     static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String, _ context: Context) throws(GesGeneratorError) {
-        var names: Names = [("selected", "the selected member"), ("Member", GesSchemaPlanner.nestedTypeOrigin + "of the members")]
+        var names: Names = [
+            ("selected", "the selected member"), ("Member", GesSchemaPlanner.nestedTypeOrigin + "of the members"), ("Case", GesSchemaPlanner.nestedTypeOrigin + "of the messages"),
+            ("asCase", "the generated member asCase"), ("assign", "the generated member assign"),
+        ]
         for name in reserved { names.append((name, "the generated member " + name)) }
         if context.values {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
@@ -596,6 +600,7 @@ enum GesSwiftEmitter {
         code.blank()
         publicMethods(&code, access, type.membersAreClasses ? "" : "mutating ", write, read, "message")
         if context.values { valueMembers(&code, type, access, context.holder, schemaSet: context.schemaSet) }
+        messageCases(&code, type, access)
         code.blank()
         code.line("/// The messages of the set, in declared order.")
         code.open("\(access)enum Member: \(underlying(type.members.count)), Sendable {")
@@ -604,6 +609,37 @@ enum GesSwiftEmitter {
             code.line("case \(member(name))")
         }
         code.close()
+        code.close()
+    }
+
+    // The message of a set as an enum with one case per member, holding that member's record, and the conversions both ways.
+    static func messageCases(_ code: inout Code, _ type: GesPlanType, _ access: String) {
+        code.blank()
+        code.line("/// The selected message as a case.")
+        code.open("\(access)var asCase: Case {")
+        code.line("switch selected {")
+        for name in type.members { code.line("case .\(member(name)): .\(member(name))(self.\(member(name)))") }
+        code.line("}")
+        code.close()
+        code.blank()
+        code.line("/// Selects the message of a case and stores its record.")
+        code.line("/// - Parameter value: The message.")
+        code.open("\(access)\(type.membersAreClasses ? "" : "mutating ")func assign(_ value: Case) {")
+        code.line("switch value {")
+        for name in type.members {
+            code.line("case .\(member(name))(let value):")
+            code.line("    selected = .\(member(name))")
+            code.line("    self.\(member(name)) = value")
+        }
+        code.line("}")
+        code.close()
+        code.blank()
+        code.line("/// A message of the set as a value: one case per message, holding its record.")
+        code.open("\(access)enum Case\(type.membersAreClasses ? "" : ": Sendable") {")
+        for name in type.members {
+            code.line("/// The message `\(name)`.")
+            code.line("case \(member(name))(\(name))")
+        }
         code.close()
     }
 
@@ -883,9 +919,27 @@ enum GesSwiftEmitter {
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32" }
 
+    // The root of a route: its type, and for a packed root the models declare, the enum `<Name>Wire` of its wire members.
+    struct NetworkRoot {
+        let type: String
+        let wire: String?
+        let plan: GesPlanType
+
+        var isSet: Bool { plan.kind == .messages }
+
+        // The type whose `maxByteCount` bounds an encoding.
+        var owner: String { wire ?? type }
+
+        func write(_ value: String, _ buffer: String) -> String { wire.map { "\($0).write(\(value), into: \(buffer))" } ?? "\(value).write(into: \(buffer))" }
+
+        func read(_ record: String, _ data: String) -> String { wire.map { "\($0).read(&\(record), from: \(data))" } ?? "\(record).read(from: \(data))" }
+
+        var initial: String { wire == nil ? type + "()" : type + "(uncheckedRawValue: 0)" }
+    }
+
     // The constants of a network, its hash, the index of each route and the rate of each topic that has one, and a
     // function per route that encodes its root and sends or publishes it.
-    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String, _ schemaSet: String?, _ root: (String) -> (type: String, write: String)) {
+    static func network(_ code: inout Code, _ network: GesLayoutNetwork, _ access: String, _ schemaSet: String?, _ roots: (String) -> NetworkRoot) throws(GesGeneratorError) {
         code.line("/// The network `:\(network.name)`: its hash, the index of each route, the rate of each topic that has one and a typed function per route.")
         code.open("\(access)enum \(network.name) {")
         code.line("/// The network hash over the routes and their bound roots, which the handshake compares.")
@@ -913,7 +967,9 @@ enum GesSwiftEmitter {
         for route in network.routes {
             let publishes = route.verb == "publishes"
             let verb = publishes ? "publish" : "send"
-            let (type, write) = root(route.root)
+            let root = roots(route.root)
+            let type = root.type
+            let write = root.write("value", "buffer")
             code.blank()
             code.line("/// Encodes a record into a buffer and \(publishes ? "publishes" : "sends") it on the route `\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`.")
             code.line("/// - Parameters:")
@@ -927,6 +983,305 @@ enum GesSwiftEmitter {
             code.line("return connection.\(verb)(route: \(GesSchemaPlanner.camel(route.name)), payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))")
             code.close()
         }
+        for client in [true, false] {
+            let end = try GesNetworkEndPlan.plan(network, client: client)
+            typedEnd(&code, network, end, access, roots)
+            endEvent(&code, network, end, access, roots)
+        }
+        code.close()
+    }
+
+    // A typed end: it encodes the roots of its side into one buffer, reads the roots it receives into one record per route
+    // and hands them to the closure of a poll as events.
+    static func typedEnd(_ code: inout Code, _ network: GesLayoutNetwork, _ end: GesNetworkEndPlan, _ access: String, _ roots: (String) -> NetworkRoot) {
+        let isClient = end.client
+        let endType = isClient ? "GesNetworkClientEnd" : "GesNetworkServerEnd"
+        let eventType = end.name + "Event"
+        let side = isClient ? "client" : "server"
+        let net = network.name
+
+        // Distinct prefixes keep the scratch record of an outgoing message set apart from the record of each received route.
+        func field(_ name: String) -> String { "__" + GesSchemaPlanner.camel(name) }
+
+        func outgoing(_ route: GesLayoutRoute) -> String { "__out_" + GesSchemaPlanner.camel((route.verb == "sends" ? "Send" : "Publish") + route.root) }
+
+        func routeName(_ route: GesLayoutRoute) -> String { net + "." + GesSchemaPlanner.camel(route.name) }
+
+        func caseName(_ name: String) -> String { self.name(GesSchemaPlanner.camel(name)) }
+
+        code.blank()
+        code.line("/// The typed \(side) end of `:\(net)`: it encodes the records the \(side) sends and publishes and hands the records it receives")
+        code.line("/// to the closure of `poll(_:)` as `\(eventType)` values. A received record that is a class is borrowed: it stays valid until")
+        code.line("/// the closure returns.")
+        code.open("\(access)final class \(end.name) {")
+        code.line("/// The wrapped end.")
+        code.line("\(access)let end: \(endType)")
+        code.line("private let __buffer: UnsafeMutableRawBufferPointer")
+        for route in end.outgoing {
+            let root = roots(route.root)
+            if root.isSet { code.line("private var \(outgoing(route)) = \(root.initial)") }
+        }
+        for (route, name) in end.incoming { code.line("private var \(field(name)) = \(roots(route.root).initial)") }
+        code.blank()
+        code.line("/// Wraps an end of the network.")
+        code.line("/// - Parameter end: The end; its bound network must have the hash `\(net).hash`.")
+        code.line("/// - Throws: `GesApiError.invalidArgument` when the end's network has another hash.")
+        code.open("\(access)init(_ end: \(endType)) throws {")
+        code.line("guard end.network.hash == \(net).hash else { throw GesApiError.invalidArgument(\"The end's network is no :\(net).\") }")
+        code.line("self.end = end")
+        var sizes: [String] = []
+        for route in end.outgoing {
+            let owner = roots(route.root).owner + ".maxByteCount"
+            if !sizes.contains(owner) { sizes.append(owner) }
+        }
+        let size = sizes.count == 0 ? "0" : sizes.count == 1 ? sizes[0] : "max(\(sizes.joined(separator: ", ")))"
+        code.line("__buffer = .allocate(byteCount: \(size), alignment: 1)")
+        code.close()
+        code.blank()
+        code.line("deinit { __buffer.deallocate() }")
+        if isClient {
+            code.blank()
+            code.line("/// The end's connection.")
+            code.line("\(access)var connection: GesNetworkConnection { end.connection }")
+        } else {
+            code.blank()
+            code.line("/// The number of connected clients.")
+            code.line("\(access)var clientCount: Int { end.clientCount }")
+            code.blank()
+            code.line("/// Returns the connection of a client.")
+            code.line("/// - Parameter client: The client.")
+            code.line("/// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.")
+            code.line("\(access)func connection(client: Int) throws -> GesNetworkConnection { try end.connection(client: client) }")
+        }
+        for route in end.outgoing {
+            let root = roots(route.root)
+            let publishes = route.verb == "publishes"
+            let verb = publishes ? "publish" : "send"
+            let what = "`\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`"
+            var targets: [(parameters: String, arguments: String, doc: String)] = [("", "", publishes ? "to the subscribed clients" : isClient ? "to the server" : "to every client")]
+            if !isClient && !publishes { targets.append((", client: Int", ", client: client", "to one client")) }
+            for (parameters, arguments, doc) in targets {
+                let toClient = !arguments.isEmpty
+                let throwing = toClient ? "throws" : "throws(GesWireError)"
+                let label = "\(endType).\(verb)(route:payload:\(toClient ? "client:" : ""))"
+                let failure = "/// - Throws: `GesWireError` when a value does not fit its field\(toClient ? "; `GesApiError.invalidArgument` when the client is not connected to the end" : "")."
+                code.blank()
+                code.line("/// Encodes a record and \(publishes ? "publishes" : "sends") it on the route \(what)\(isClient ? "" : ", " + doc).")
+                self.parameters(&code, toClient, "The record.")
+                code.line("/// - Returns: The status of `\(label)`.")
+                code.line(failure)
+                code.line("@discardableResult")
+                code.open("\(access)func \(verb)(_ value: \(root.type)\(parameters)) \(throwing) -> GesNetworkSendStatus {")
+                code.line("let count = try \(root.write("value", "__buffer"))")
+                code.line("return \(toClient ? "try " : "")end.\(verb)(route: \(routeName(route)), payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count])\(arguments))")
+                code.close()
+                if !root.isSet { continue }
+                code.blank()
+                code.line("/// Encodes a message and \(publishes ? "publishes" : "sends") it on the route \(what)\(isClient ? "" : ", " + doc).")
+                self.parameters(&code, toClient, "The message.")
+                code.line("/// - Returns: The status of `\(label)`.")
+                code.line(failure)
+                code.line("@discardableResult")
+                code.open("\(access)func \(verb)(_ value: \(root.type).Case\(parameters)) \(throwing) -> GesNetworkSendStatus {")
+                code.line("\(outgoing(route)).assign(value)")
+                code.line("return try \(verb)(\(outgoing(route))\(arguments))")
+                code.close()
+            }
+        }
+        if !isClient {
+            code.blank()
+            code.line("/// Refuses a connecting client; call it while the closure of `poll(_:)` handles its `connecting` event.")
+            code.line("/// - Parameters:")
+            code.line("///   - client: The client.")
+            code.line("///   - detail: The detail sent to the client.")
+            code.line("/// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.")
+            code.line("\(access)func refuse(client: Int, detail: String) throws { try end.refuse(client: client, detail: detail) }")
+            code.blank()
+            code.line("/// Closes the connection of one client with a detail.")
+            code.line("/// - Parameters:")
+            code.line("///   - client: The client.")
+            code.line("///   - detail: The detail sent to the client.")
+            code.line("/// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.")
+            code.line("\(access)func close(client: Int, detail: String) throws { try end.close(client: client, detail: detail) }")
+        }
+        code.blank()
+        code.line(isClient ? "/// Closes the connection with a detail." : "/// Closes every connection with a detail and stops accepting clients.")
+        code.line("/// - Parameter detail: The detail sent to the \(isClient ? "server" : "clients").")
+        code.line("\(access)func close(_ detail: String) { end.close(detail) }")
+        if end.hasTopics { tickMembers(&code, end, access, roots) }
+        code.blank()
+        code.line("/// Polls the end and hands every event to the closure. Never blocks.")
+        code.line("/// - Parameter handler: The closure; a received record that is a class stays valid until it returns.")
+        code.line("/// - Throws: `GesApiError.invalidOperation` when the end is released or polled already; an error of a link or the closure.")
+        code.open("\(access)func poll(_ handler: (\(eventType)) throws -> Void) throws {")
+        code.line("try end.poll { event in try self.__handle(event, handler) }")
+        code.close()
+        code.blank()
+        code.open("private func __handle(_ event: GesNetworkEndEvent, _ handler: (\(eventType)) throws -> Void) throws {")
+        let client = isClient ? "" : "client: event.client, "
+        code.line("switch event.kind {")
+        if isClient {
+            code.line("case .connected:")
+            code.line("    try handler(.connected(security: event.security))")
+            code.line("case .disconnected:")
+            code.line("    try handler(.disconnected(code: event.code, detail: event.detail, byPeer: event.byPeer))")
+        } else {
+            code.line("case .connecting:")
+            code.line("    try handler(.connecting(client: event.client, token: event.payload))")
+            code.line("case .clientConnected:")
+            code.line("    try handler(.clientConnected(client: event.client, security: event.security))")
+            code.line("case .clientDisconnected:")
+            code.line("    try handler(.clientDisconnected(client: event.client, code: event.code, detail: event.detail, byPeer: event.byPeer))")
+        }
+        if !end.incoming.isEmpty {
+            code.line("case .message:")
+            code.line("    switch event.route {")
+            for (route, name) in end.incoming {
+                let root = roots(route.root)
+                let record = field(name)
+                code.line("    case \(routeName(route)):")
+                code.line("        do {")
+                code.line("            _ = try \(root.read(record, "event.payload"))")
+                code.line("        } catch {")
+                code.line("            \(isClient ? "" : "try ")end.close(\(isClient ? "" : "client: event.client, detail: ")\"undecodable :\(route.root)\")")
+                code.line("            return")
+                code.line("        }")
+                code.line("        try handler(.\(caseName(name))(\(client)\(record)\(root.isSet ? ".asCase" : "")))")
+            }
+            code.line("    default:")
+            code.line("        break")
+            code.line("    }")
+        }
+        code.line("case .tick:")
+        code.line("    try handler(.tick(\(client)number: event.tickNumber))")
+        code.line("case .transferProgress:")
+        code.line("    try handler(.transferProgress(\(client)route: event.route, transferId: event.transferId, bytes: event.bytes, total: event.total))")
+        code.line("case .transferCancelled:")
+        code.line("    try handler(.transferCancelled(\(client)route: event.route, transferId: event.transferId, code: event.code))")
+        code.line("case .received:")
+        code.line("    try handler(.received)")
+        code.line("default:")
+        code.line("    break")
+        code.line("}")
+        code.close()
+        code.close()
+    }
+
+    // The topic members of a typed end that publishes: subscriptions on the server, the tick and the topic enum.
+    static func tickMembers(_ code: inout Code, _ end: GesNetworkEndPlan, _ access: String, _ roots: (String) -> NetworkRoot) {
+        if !end.client {
+            for (verb, doc) in [("subscribe", "Subscribes a client to a topic."), ("unsubscribe", "Unsubscribes a client from a topic.")] {
+                code.blank()
+                code.line("/// \(doc)")
+                code.line("/// - Parameters:")
+                code.line("///   - client: The client.")
+                code.line("///   - topic: The topic.")
+                code.line("/// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.")
+                code.line("\(access)func \(verb)(client: Int, topic: Topic) throws { try end.\(verb)(client: client, route: topic.rawValue) }")
+            }
+        }
+        code.blank()
+        code.line("/// Opens a tick, runs the body with it and closes it, also when the body throws: the tick's publications arrive together.")
+        code.line("/// - Parameter body: The body; it publishes on the tick and includes latest topics.")
+        code.line("/// - Returns: The status of closing the tick.")
+        code.line("/// - Throws: `GesApiError.invalidOperation` when a tick is open already; an error of the body.")
+        code.line("@discardableResult")
+        code.open("\(access)func publishTick(_ body: (Tick) throws -> Void) throws -> GesNetworkSendStatus {")
+        code.line("try end.beginTick()")
+        code.open("do {")
+        code.line("try body(Tick(self))")
+        code.close("} catch {")
+        code.indent()
+        code.line("_ = try? end.endTick()")
+        code.line("throw error")
+        code.close()
+        code.line("return try end.endTick()")
+        code.close()
+        code.blank()
+        code.line("/// The topics the \(end.client ? "client" : "server") publishes.")
+        code.open("\(access)enum Topic: Int, Sendable {")
+        for route in end.topics {
+            code.line("/// The topic `\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`.")
+            code.line("case \(name(GesSchemaPlanner.camel(route.root))) = \(route.index)")
+        }
+        code.close()
+        code.blank()
+        code.line("/// An open tick of `publishTick(_:)`: its publications arrive together.")
+        code.open("\(access)struct Tick {")
+        code.line("private let __end: \(end.name)")
+        code.blank()
+        code.line("fileprivate init(_ end: \(end.name)) { __end = end }")
+        for route in end.topics {
+            let root = roots(route.root)
+            for (type, what) in root.isSet ? [(root.type, "record"), (root.type + ".Case", "message")] : [(root.type, "record")] {
+                code.blank()
+                code.line("/// Publishes a \(what) on the topic `:\(route.root)` as a member of the tick.")
+                code.line("/// - Parameter value: The value.")
+                code.line("/// - Returns: The status of the publication.")
+                code.line("/// - Throws: `GesWireError` when a value does not fit its field.")
+                code.line("@discardableResult")
+                code.line("\(access)func publish(_ value: \(type)) throws(GesWireError) -> GesNetworkSendStatus { try __end.publish(value) }")
+            }
+        }
+        code.blank()
+        code.line("/// Makes a latest topic a member of the tick with its last published state.")
+        code.line("/// - Parameter topic: The topic.")
+        code.line("/// - Throws: `GesApiError.invalidOperation` when the topic has no published state; `GesApiError.invalidArgument` when it is no latest topic.")
+        code.line("\(access)func include(_ topic: Topic) throws { try __end.end.include(route: topic.rawValue) }")
+        code.close()
+    }
+
+    static func parameters(_ code: inout Code, _ client: Bool, _ value: String) {
+        if !client {
+            code.line("/// - Parameter value: \(value)")
+            return
+        }
+        code.line("/// - Parameters:")
+        code.line("///   - value: \(value)")
+        code.line("///   - client: The client.")
+    }
+
+    // The events of a typed end, one case per event.
+    static func endEvent(_ code: inout Code, _ network: GesLayoutNetwork, _ end: GesNetworkEndPlan, _ access: String, _ roots: (String) -> NetworkRoot) {
+        let isClient = end.client
+        let client = isClient ? "" : "client: Int, "
+
+        func event(_ summary: String, _ declaration: String) {
+            code.line("/// \(summary)")
+            code.line("case \(declaration)")
+        }
+
+        code.blank()
+        code.line("/// An event of the typed \(isClient ? "client" : "server") end `\(end.name)`.\(isClient ? "" : " Every event of a client carries the client.")")
+        code.open("\(access)enum \(end.name)Event {")
+        if isClient {
+            event("The session is established, with the reached security.", "connected(security: GesNetworkSecurity)")
+            event("The connection closed, with its code, its detail and whether the server closed it.", "disconnected(code: String, detail: String, byPeer: Bool)")
+        } else {
+            event(
+                "A client asks to connect with its token, valid until the closure returns; refuse it with `Server.refuse(client:detail:)` before the closure returns, or it is accepted.",
+                "connecting(client: Int, token: UnsafeRawBufferPointer)"
+            )
+            event("A client is connected, with the reached security.", "clientConnected(client: Int, security: GesNetworkSecurity)")
+            event(
+                "A client's connection closed, with its code, its detail and whether the client closed it; the client leaves the end.",
+                "clientDisconnected(client: Int, code: String, detail: String, byPeer: Bool)"
+            )
+        }
+        for (route, name) in end.incoming {
+            let root = roots(route.root)
+            event(
+                "A \(root.isSet ? "message" : "record") arrived on the route `\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`.",
+                "\(self.name(GesSchemaPlanner.camel(name)))(\(client)\(root.isSet ? root.type + ".Case" : root.type))"
+            )
+        }
+        event("A tick is complete; the events of its changed members precede it.", "tick(\(client)number: Int)")
+        event(
+            "A transfer on a bulk route advanced, with the route index, the transfer, the bytes received so far and the total bytes.",
+            "transferProgress(\(client)route: Int, transferId: Int, bytes: Int64, total: Int64)"
+        )
+        event("A transfer was cancelled, with the route index, the transfer and the cancel code; the session continues.", "transferCancelled(\(client)route: Int, transferId: Int, code: String)")
+        event("The last event of a poll that reported at least one message or tick.", "received")
         code.close()
     }
 

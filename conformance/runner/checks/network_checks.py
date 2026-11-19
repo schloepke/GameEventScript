@@ -16,7 +16,7 @@ SECURITY = ('none', 'encrypted', 'verified')
 CLIENT_SECURITY = ('none', 'development', 'pinned')
 SERVER_SECURITY = ('none', 'key')
 STEPS = {'advance', 'accept', 'refuse', 'close', 'send', 'receive', 'transmit', 'transportClosed', 'budget',
-         'publish', 'subscribe', 'unsubscribe', 'deliver', 'cookie', 'cancel'}
+         'publish', 'subscribe', 'unsubscribe', 'deliver', 'cookie', 'cancel', 'beginTick', 'include', 'endTick'}
 TRANSPORTS = ('message', 'stream', 'datagram')
 LINK_FIELDS = {'seed', 'latencyMicroseconds', 'jitterMicroseconds', 'lossPerMille', 'duplicatePerMille', 'reorder'}
 SIDE_FIELDS = {'state', 'security', 'roundTripMicroseconds', 'queuedSendBytes', 'pendingReceiveBytes'}
@@ -102,7 +102,7 @@ def step(raw):
         return {'action': name}
     if name == 'refuse':
         return {'action': name, 'detail': text(value, 'refuse detail')}
-    if name in ('transmit', 'transportClosed'):
+    if name in ('transmit', 'transportClosed', 'beginTick', 'endTick'):
         return {'action': name, 'side': side(value)}
     if name == 'deliver':
         # Passes packets of the other side's last transmit step, by index, in the listed order.
@@ -142,7 +142,7 @@ def step(raw):
         closed(value, {'side', 'route', 'payload'}, name + ' step')
         result['route'] = integer(value.get('route'), 'route', -1, 1 << 20)
         result['payload'] = payload(value.get('payload'))
-    elif name in ('subscribe', 'unsubscribe'):
+    elif name in ('subscribe', 'unsubscribe', 'include'):
         closed(value, {'side', 'route'}, name + ' step')
         result['route'] = integer(value.get('route'), 'route', -1, 1 << 20)
     elif name == 'receive':

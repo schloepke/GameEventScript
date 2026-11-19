@@ -115,7 +115,7 @@ public sealed partial class GesNetworkConnection
             if (publishes) baseline = Math.Max(baseline, bytes);
             if (route.DeliveryClass == GesNetworkClass.Bulk) transfer = Math.Max(transfer, bytes);
             else if (!local) received = Math.Max(received, publishes ? bytes + 1 : bytes);
-            else if (route.DeliveryClass == GesNetworkClass.Reliable) sent = Math.Max(sent, bytes);
+            else if (route.DeliveryClass == GesNetworkClass.Reliable) sent = Math.Max(sent, publishes ? bytes + 1 : bytes);
         }
 
         _maxPending = Derived(options.MaxPendingReceiveBytes, GesNetworkOptions.DefaultPendingReceiveBytes, received, GesNetworkOptions.MaximumBytes);
@@ -169,6 +169,24 @@ public sealed partial class GesNetworkConnection
             else if (_datagram) _partialLatest[index] = new GesNetworkPartial();
             else _receiveLatest[index] = new GesNetworkReassembly();
         }
+
+        _lastRecords = new byte[]?[_routeCount];
+        _lastLengths = new int[_routeCount];
+        _hasLast = new bool[_routeCount];
+        _stageKinds = new byte[_routeCount];
+        _stageRecords = new byte[]?[_routeCount];
+        _stageLengths = new int[_routeCount];
+        _tickMembers = new bool[_routeCount];
+        _tickUnsent = new bool[_routeCount];
+        _tickNames = new ushort[_routeCount];
+        _heldRecords = new byte[]?[_routeCount];
+        _heldLengths = new int[_routeCount];
+        _heldNumbers = new ushort[_routeCount];
+        _held = new bool[_routeCount];
+        _reportedNumbers = new ushort[_routeCount];
+        _reported = new bool[_routeCount];
+        _heldTickRoutes = new int[_routeCount];
+        _heldTickStates = new ushort[_routeCount];
 
         if (token.Length > GesNetworkWire.MaximumTokenBytes) throw new ArgumentException("A token holds at most 512 bytes.", nameof(token));
         _token = token.ToArray();
@@ -339,7 +357,9 @@ public sealed partial class GesNetworkConnection
         if (payload.Length >= _maxBytes[route]) return GesNetworkSendStatus.MessageTooLarge;
         if (_sendLatest[route] is { } slot)
         {
-            slot.Set(payload);
+            KeepLast(route, payload);
+            if (_tickOpen) StageState(route, payload);
+            else slot.Set(payload);
             return GesNetworkSendStatus.Queued;
         }
 
@@ -369,7 +389,7 @@ public sealed partial class GesNetworkConnection
         if (!topic.Subscribed) return;
         topic.Subscribed = false;
         topic.Clear();
-        _sendLatest[route]?.DropUnstarted();
+        if (_sendLatest[route]?.DropUnstarted() == true) DropMember(route);
     }
 
     private GesNetworkTopic ServerTopic(int route)
@@ -382,8 +402,9 @@ public sealed partial class GesNetworkConnection
 
     // Writes the message of a new state into the topic's scratch: a delta against the newest confirmed state when it is
     // shorter than the full record, else the full record. The number is the new state's. Returns the message length.
-    private int EncodeState(GesNetworkTopic topic, ReadOnlySpan<byte> record, ushort number)
+    private int EncodeState(GesNetworkTopic topic, ReadOnlySpan<byte> record, ushort number, bool member = false)
     {
+        var flag = member ? GesNetworkWire.TickMember : (byte)0;
         var message = topic.Scratch;
         var distance = topic.Base(_datagram ? -1 : _ackedIndex, number, out var baseline);
         if (distance > 0)
@@ -393,7 +414,7 @@ public sealed partial class GesNetworkConnection
                 var length = GesSchemaDelta.Encode(topic.Schema, record, baseline, message.AsSpan(1));
                 if (length < record.Length)
                 {
-                    message[0] = (byte)distance;
+                    message[0] = (byte)(distance | flag);
                     return length + 1;
                 }
             }
@@ -403,7 +424,7 @@ public sealed partial class GesNetworkConnection
             }
         }
 
-        message[0] = 0;
+        message[0] = flag;
         record.CopyTo(message.AsSpan(1));
         return record.Length + 1;
     }
@@ -465,9 +486,10 @@ public sealed partial class GesNetworkConnection
             entry.Code,
             entry.Detail,
             entry.ByPeer,
-            entry.TransferId,
+            entry.Kind == GesNetworkEventKind.Tick ? -1 : entry.TransferId,
             entry.Bytes,
-            entry.Total);
+            entry.Total,
+            entry.Kind == GesNetworkEventKind.Tick ? entry.TransferId : -1);
     }
 
     // Moves the pending events and their payloads to the front once the taken ones occupy at least as much as the pending
@@ -512,6 +534,7 @@ public sealed partial class GesNetworkConnection
         _sendBulk.Clear();
         DropTransfers();
         foreach (var slot in _sendLatest) slot?.Clear();
+        DropTicks();
         _ackDue = false;
         _welcomePending = false;
         _retryPending = false;
@@ -524,7 +547,7 @@ public sealed partial class GesNetworkConnection
     private bool HasPendingFrames()
     {
         if (_datagram) return HasPendingDatagramFrames();
-        if (_sendReliable.Count > 0 || _sendBulk.Count > 0 || _cancelCount > 0) return true;
+        if (_sendReliable.Count > 0 || _sendBulk.Count > 0 || _cancelCount > 0 || _tickFrameDue) return true;
         foreach (var slot in _sendLatest)
         {
             if (slot is { HasCurrent: true }) return true;

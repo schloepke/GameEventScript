@@ -9,7 +9,7 @@ using GameEventScript.Network;
 // Runs scripted steps over a client and a server connection and records their events and packets as trace lines.
 internal static class NetworkApiObservations
 {
-    private static readonly string[] Steps = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget", "deliver", "cookie", "cancel"];
+    private static readonly string[] Steps = ["advance", "accept", "refuse", "close", "send", "publish", "subscribe", "unsubscribe", "receive", "transmit", "transportClosed", "budget", "deliver", "cookie", "cancel", "beginTick", "include", "endTick"];
 
     internal static void Validate(JsonElement input)
     {
@@ -99,6 +99,15 @@ internal static class NetworkApiObservations
                         break;
                     case "unsubscribe":
                         connection.Unsubscribe(step.GetProperty("route").GetInt32());
+                        break;
+                    case "beginTick":
+                        connection.BeginTick();
+                        break;
+                    case "include":
+                        connection.Include(step.GetProperty("route").GetInt32());
+                        break;
+                    case "endTick":
+                        trace.Add($"{name} endTick {SendStatus(connection.EndTick())}");
                         break;
                     case "receive":
                         connection.Receive(Convert.FromHexString(step.GetProperty("bytes").GetString()!), now);
@@ -291,6 +300,9 @@ internal static class NetworkApiObservations
                     break;
                 case GesNetworkEventKind.TransferCancelled:
                     trace.Add($"{name} cancelled {next.Route} {next.TransferId} {next.Code} {(next.ByPeer ? "peer" : "local")}");
+                    break;
+                case GesNetworkEventKind.Tick:
+                    trace.Add($"{name} tick {next.TickNumber}");
                     break;
             }
         }

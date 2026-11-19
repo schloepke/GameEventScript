@@ -111,6 +111,9 @@ public enum GesNetworkEventKind: Sendable, Equatable {
     case transferProgress
     /// A transfer was cancelled by this side, by its host or by the peer; the session continues.
     case transferCancelled
+    /// A tick is complete: the message events of its changed members precede it. `GesNetworkEvent.tickNumber` tells
+    /// its number.
+    case tick
 }
 
 /// One event of a connection.
@@ -135,6 +138,8 @@ public struct GesNetworkEvent {
     public let bytes: Int64
     /// The encoded length of a progress event's transfer; 0 for other events.
     public let total: Int64
+    /// The number, 0 to 65535, of a tick event; -1 for other events.
+    public let tickNumber: Int
 }
 
 /// The limits and timings of a connection. Times are microseconds.

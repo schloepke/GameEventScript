@@ -16,10 +16,11 @@ namespace GameEventScript.Network.Sockets;
 
 /// <summary>
 /// Carries one <see cref="GesNetworkConnection"/> over a TCP stream, a WebSocket or UDP. Background tasks only move bytes:
-/// the host calls <see cref="Update"/> on its own thread, which feeds received bytes into the connection, advances
-/// it and hands its packets to the sender. The connection is touched only by the host thread.
+/// the host calls <see cref="Receive"/> and <see cref="Transmit"/>, or <see cref="Update"/> for both, on its own thread,
+/// which feed received bytes into the connection, advance it and hand its packets to the sender. The connection is
+/// touched only by the host thread. As an <see cref="IGesNetworkLink"/> it is the transport of an end.
 /// </summary>
-public sealed class GesNetworkSocketSession : IDisposable
+public sealed class GesNetworkSocketSession : IGesNetworkLink
 {
     private const int ReadBytes = 16384;
     private const int ReceivedChunks = 64;
@@ -34,16 +35,25 @@ public sealed class GesNetworkSocketSession : IDisposable
     // A datagram is dropped rather than waited for when this many are not yet taken.
     internal const int ReceivedDatagrams = 256;
 
-    private readonly Stream? _stream;
-    private readonly WebSocket? _webSocket;
-    private readonly Socket? _datagram;
+    // A disposed session of a closed connection writes its last packets for at most this long.
+    private static readonly TimeSpan OrderlyEnd = TimeSpan.FromSeconds(10);
+
+    // Set once the transport is open, before the background tasks start; the host thread never reads them.
+    private Stream? _stream;
+    private WebSocket? _webSocket;
+    private Socket? _datagram;
+    private IDisposable? _owner;
     private readonly GesNetworkDatagramPeer? _peer;
-    private readonly IDisposable _owner;
+    private readonly GesNetworkSocketSignal? _signal;
     private readonly Channel<Chunk> _received;
     private readonly Channel<Chunk> _outgoing = Channel.CreateUnbounded<Chunk>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
     private readonly CancellationTokenSource _cancel = new();
     private readonly int _packetBytes;
     private readonly int _chunkBytes;
+    private readonly bool _batch;
+    private readonly CancellationToken _cancelToken;
+    private readonly object _gate = new();
+    private Task? _writer;
     // Packets are written straight into a buffer that the write task gives back here. The unwritten limit bounds
     // their number, so the session keeps its own rather than relying on the shared pool across threads.
     private readonly ConcurrentQueue<byte[]> _free = new();
@@ -53,23 +63,22 @@ public sealed class GesNetworkSocketSession : IDisposable
     private bool _outgoingCompleted;
     private bool _disposed;
 
-    private GesNetworkSocketSession(GesNetworkConnection connection, Stream? stream, WebSocket? webSocket, Socket? datagram, GesNetworkDatagramPeer? peer, IDisposable owner)
+    private GesNetworkSocketSession(GesNetworkConnection connection, GesNetworkDatagramPeer? peer, GesNetworkSocketSignal? signal)
     {
         Connection = connection;
-        _stream = stream;
-        _webSocket = webSocket;
-        _datagram = datagram;
         _peer = peer;
-        _owner = owner;
+        _signal = signal;
+        _cancelToken = _cancel.Token;
+        _batch = connection.Transport == GesNetworkTransport.Stream;
         _packetBytes = connection.MaxPacketBytes + 3;
-        _chunkBytes = stream != null ? Math.Max(WriteBytes, _packetBytes) : _packetBytes;
+        _chunkBytes = _batch ? Math.Max(WriteBytes, _packetBytes) : _packetBytes;
         // A server's datagrams arrive through its listener, which reads the shared socket.
-        _received = peer?.Received ?? (datagram != null ? DatagramChannel() : Channel.CreateBounded<Chunk>(new BoundedChannelOptions(ReceivedChunks) { SingleReader = true, SingleWriter = true }));
-        if (peer == null) _ = Task.Run(ReadAsync);
-        _ = Task.Run(WriteAsync);
+        _received = peer?.Received ?? (connection.Transport == GesNetworkTransport.Datagram
+            ? DatagramChannel()
+            : Channel.CreateBounded<Chunk>(new BoundedChannelOptions(ReceivedChunks) { SingleReader = true, SingleWriter = true }));
     }
 
-    /// <summary>Gets the connection this session carries. Use it only on the thread that calls <see cref="Update"/>.</summary>
+    /// <summary>Gets the connection this session carries. Use it only on the thread that calls <see cref="Receive"/> and <see cref="Transmit"/>.</summary>
     public GesNetworkConnection Connection { get; }
 
     /// <summary>Opens a TCP connection for a client connection of the stream transport.</summary>
@@ -87,7 +96,7 @@ public sealed class GesNetworkSocketSession : IDisposable
         try
         {
             await client.ConnectAsync(host, port, cancellationToken).ConfigureAwait(false);
-            return new GesNetworkSocketSession(connection, client.GetStream(), null, null, null, client);
+            return FromStream(connection, client.GetStream(), client);
         }
         catch
         {
@@ -111,7 +120,7 @@ public sealed class GesNetworkSocketSession : IDisposable
         try
         {
             await socket.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
-            return new GesNetworkSocketSession(connection, null, socket, null, null, socket);
+            return FromWebSocket(connection, socket, socket);
         }
         catch
         {
@@ -131,13 +140,21 @@ public sealed class GesNetworkSocketSession : IDisposable
     public static async Task<GesNetworkSocketSession> ConnectUdpAsync(string host, int port, GesNetworkConnection connection, CancellationToken cancellationToken = default)
     {
         Require(connection, GesNetworkTransport.Datagram, client: true);
+        var socket = await OpenUdpAsync(host, port, cancellationToken).ConfigureAwait(false);
+        var session = new GesNetworkSocketSession(connection, null, null);
+        session.Start(null, null, socket, socket);
+        return session;
+    }
+
+    internal static async Task<Socket> OpenUdpAsync(string host, int port, CancellationToken cancellationToken)
+    {
         var addresses = await Dns.GetHostAddressesAsync(host, cancellationToken).ConfigureAwait(false);
         if (addresses.Length == 0) throw new SocketException((int)SocketError.HostNotFound);
         var socket = new Socket(addresses[0].AddressFamily, SocketType.Dgram, ProtocolType.Udp);
         try
         {
             await socket.ConnectAsync(new IPEndPoint(addresses[0], port), cancellationToken).ConfigureAwait(false);
-            return new GesNetworkSocketSession(connection, null, null, socket, null, socket);
+            return socket;
         }
         catch
         {
@@ -146,11 +163,74 @@ public sealed class GesNetworkSocketSession : IDisposable
         }
     }
 
-    internal static GesNetworkSocketSession FromStream(GesNetworkConnection connection, Stream stream, IDisposable owner) => new(connection, stream, null, null, null, owner);
+    internal static GesNetworkSocketSession FromStream(GesNetworkConnection connection, Stream stream, IDisposable owner, GesNetworkSocketSignal? signal = null)
+    {
+        var session = new GesNetworkSocketSession(connection, null, signal);
+        session.Start(stream, null, null, owner);
+        return session;
+    }
 
-    internal static GesNetworkSocketSession FromWebSocket(GesNetworkConnection connection, WebSocket socket, IDisposable owner) => new(connection, null, socket, null, null, owner);
+    internal static GesNetworkSocketSession FromWebSocket(GesNetworkConnection connection, WebSocket socket, IDisposable owner, GesNetworkSocketSignal? signal = null)
+    {
+        var session = new GesNetworkSocketSession(connection, null, signal);
+        session.Start(null, socket, null, owner);
+        return session;
+    }
 
-    internal static GesNetworkSocketSession FromPeer(GesNetworkConnection connection, GesNetworkDatagramPeer peer) => new(connection, null, null, peer.Socket, peer, peer);
+    internal static GesNetworkSocketSession FromPeer(GesNetworkConnection connection, GesNetworkDatagramPeer peer, GesNetworkSocketSignal? signal)
+    {
+        var session = new GesNetworkSocketSession(connection, peer, signal);
+        session.Start(null, null, peer.Socket, peer);
+        return session;
+    }
+
+    // Creates a session whose transport opens in the background; packets wait for it, and a failure ends the transport.
+    internal static GesNetworkSocketSession Opening(GesNetworkConnection connection, GesNetworkSocketSignal signal, Func<CancellationToken, Task<Opened>> open)
+    {
+        var session = new GesNetworkSocketSession(connection, null, signal);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var opened = await open(session._cancelToken).ConfigureAwait(false);
+                session.Start(opened.Stream, opened.WebSocket, opened.Datagram, opened.Owner);
+            }
+            catch (Exception)
+            {
+                // Any failure to open, whatever its kind, is the end of the transport.
+                session.End();
+            }
+        });
+        return session;
+    }
+
+    // Takes the open transport and starts moving bytes; a session disposed meanwhile releases it at once.
+    private void Start(Stream? stream, WebSocket? webSocket, Socket? datagram, IDisposable owner)
+    {
+        lock (_gate)
+        {
+            if (_disposed)
+            {
+                owner.Dispose();
+                return;
+            }
+
+            _stream = stream;
+            _webSocket = webSocket;
+            _datagram = datagram;
+            _owner = owner;
+            if (_peer == null) _ = Task.Run(ReadAsync);
+            _writer = Task.Run(WriteAsync);
+        }
+
+        _signal?.Set();
+    }
+
+    private void End()
+    {
+        _transportEnded = true;
+        _signal?.Set();
+    }
 
     internal static Channel<Chunk> DatagramChannel() =>
         Channel.CreateBounded<Chunk>(new BoundedChannelOptions(ReceivedDatagrams) { SingleReader = true, SingleWriter = true });
@@ -165,11 +245,24 @@ public sealed class GesNetworkSocketSession : IDisposable
 
     /// <summary>
     /// Feeds the received bytes into the connection, advances it to <paramref name="now"/>, reports the end of the
-    /// transport and sends every due packet. Call it on the host thread, then take the connection's events.
+    /// transport and sends every due packet: <see cref="Receive"/> followed by <see cref="Transmit"/>. Call it on the
+    /// host thread, then take the connection's events.
     /// </summary>
     /// <param name="now">The current time in microseconds, not earlier than the connection's time.</param>
     /// <exception cref="ObjectDisposedException">The session is disposed.</exception>
     public void Update(long now)
+    {
+        Receive(now);
+        Transmit();
+    }
+
+    /// <summary>
+    /// Feeds the received bytes into the connection, advances it to <paramref name="now"/> and reports the end of the
+    /// transport. Call it on the host thread.
+    /// </summary>
+    /// <param name="now">The current time in microseconds, not earlier than the connection's time.</param>
+    /// <exception cref="ObjectDisposedException">The session is disposed.</exception>
+    public void Receive(long now)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         // Read the end flag before draining, so no chunk written before the end is left behind.
@@ -182,6 +275,16 @@ public sealed class GesNetworkSocketSession : IDisposable
 
         Connection.Advance(now);
         if (ended) Connection.TransportClosed();
+    }
+
+    /// <summary>
+    /// Hands every packet the connection has due to the sender. While the transport still opens the packets wait for
+    /// it. Call it on the host thread.
+    /// </summary>
+    /// <exception cref="ObjectDisposedException">The session is disposed.</exception>
+    public void Transmit()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (_outgoingCompleted) return;
         var more = true;
         while (more && Interlocked.Read(ref _unwritten) < UnwrittenBytes)
@@ -195,7 +298,7 @@ public sealed class GesNetworkSocketSession : IDisposable
                 more = written > 0;
                 length += written;
             }
-            while (more && _stream != null && length + _packetBytes <= _chunkBytes);
+            while (more && _batch && length + _packetBytes <= _chunkBytes);
 
             if (length == 0) break;
             _transmit = null;
@@ -210,14 +313,38 @@ public sealed class GesNetworkSocketSession : IDisposable
         }
     }
 
-    /// <summary>Stops both background tasks and releases the socket without sending anything more.</summary>
+    /// <summary>
+    /// Releases the socket. When the connection is closed and its last packets are handed to the sender, they are
+    /// still written and the transport ends in order, within the connection's timeout; otherwise both background tasks
+    /// stop at once without sending anything more.
+    /// </summary>
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-        _cancel.Cancel();
+        Task? writer;
+        IDisposable? owner;
+        lock (_gate)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            writer = _writer;
+            owner = _owner;
+        }
+
         _outgoing.Writer.TryComplete();
-        _owner.Dispose();
+        if (_outgoingCompleted && writer is { IsCompleted: false })
+        {
+            _cancel.CancelAfter(OrderlyEnd);
+            _ = writer.ContinueWith(_ => Release(owner), TaskScheduler.Default);
+            return;
+        }
+
+        Release(owner);
+    }
+
+    private void Release(IDisposable? owner)
+    {
+        _cancel.Cancel();
+        owner?.Dispose();
         _cancel.Dispose();
     }
 
@@ -235,7 +362,7 @@ public sealed class GesNetworkSocketSession : IDisposable
         }
         finally
         {
-            _transportEnded = true;
+            End();
         }
     }
 
@@ -244,14 +371,15 @@ public sealed class GesNetworkSocketSession : IDisposable
         while (true)
         {
             var bytes = ArrayPool<byte>.Shared.Rent(ReadBytes);
-            var length = await stream.ReadAsync(bytes.AsMemory(0, ReadBytes), _cancel.Token).ConfigureAwait(false);
+            var length = await stream.ReadAsync(bytes.AsMemory(0, ReadBytes), _cancelToken).ConfigureAwait(false);
             if (length == 0)
             {
                 ArrayPool<byte>.Shared.Return(bytes);
                 return;
             }
 
-            await _received.Writer.WriteAsync(new Chunk(bytes, length), _cancel.Token).ConfigureAwait(false);
+            await _received.Writer.WriteAsync(new Chunk(bytes, length), _cancelToken).ConfigureAwait(false);
+            _signal?.Set();
         }
     }
 
@@ -268,7 +396,7 @@ public sealed class GesNetworkSocketSession : IDisposable
             ValueWebSocketReceiveResult result;
             do
             {
-                result = await socket.ReceiveAsync(bytes.AsMemory(length, limit + 1 - length), _cancel.Token).ConfigureAwait(false);
+                result = await socket.ReceiveAsync(bytes.AsMemory(length, limit + 1 - length), _cancelToken).ConfigureAwait(false);
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
                     ArrayPool<byte>.Shared.Return(bytes);
@@ -281,7 +409,8 @@ public sealed class GesNetworkSocketSession : IDisposable
 
             var last = result.MessageType == WebSocketMessageType.Text || length > limit;
             if (result.MessageType == WebSocketMessageType.Text) length = 0;
-            await _received.Writer.WriteAsync(new Chunk(bytes, length), _cancel.Token).ConfigureAwait(false);
+            await _received.Writer.WriteAsync(new Chunk(bytes, length), _cancelToken).ConfigureAwait(false);
+            _signal?.Set();
             if (last) return;
         }
     }
@@ -298,7 +427,7 @@ public sealed class GesNetworkSocketSession : IDisposable
             int length;
             try
             {
-                length = await socket.ReceiveAsync(bytes.AsMemory(0, limit + 1), SocketFlags.None, _cancel.Token).ConfigureAwait(false);
+                length = await socket.ReceiveAsync(bytes.AsMemory(0, limit + 1), SocketFlags.None, _cancelToken).ConfigureAwait(false);
             }
             catch (SocketException exception) when (exception.SocketErrorCode == SocketError.MessageSize)
             {
@@ -310,7 +439,8 @@ public sealed class GesNetworkSocketSession : IDisposable
                 continue;
             }
 
-            if (!_received.Writer.TryWrite(new Chunk(bytes, length))) ArrayPool<byte>.Shared.Return(bytes);
+            if (_received.Writer.TryWrite(new Chunk(bytes, length))) _signal?.Set();
+            else ArrayPool<byte>.Shared.Return(bytes);
         }
     }
 
@@ -328,8 +458,8 @@ public sealed class GesNetworkSocketSession : IDisposable
             {
                 try
                 {
-                    if (_stream != null) await _stream.WriteAsync(chunk.Bytes.AsMemory(0, chunk.Length), _cancel.Token).ConfigureAwait(false);
-                    else if (_webSocket != null) await _webSocket.SendAsync(chunk.Bytes.AsMemory(0, chunk.Length), WebSocketMessageType.Binary, true, _cancel.Token).ConfigureAwait(false);
+                    if (_stream != null) await _stream.WriteAsync(chunk.Bytes.AsMemory(0, chunk.Length), _cancelToken).ConfigureAwait(false);
+                    else if (_webSocket != null) await _webSocket.SendAsync(chunk.Bytes.AsMemory(0, chunk.Length), WebSocketMessageType.Binary, true, _cancelToken).ConfigureAwait(false);
                     else await SendDatagramAsync(chunk).ConfigureAwait(false);
                 }
                 finally
@@ -342,17 +472,17 @@ public sealed class GesNetworkSocketSession : IDisposable
             // The connection closed and its last packet is sent: end the transport in order.
             if (_stream != null)
             {
-                await _stream.FlushAsync(_cancel.Token).ConfigureAwait(false);
+                await _stream.FlushAsync(_cancelToken).ConfigureAwait(false);
                 if (_owner is TcpClient client) client.Client.Shutdown(SocketShutdown.Send);
             }
             else if (_webSocket?.State == WebSocketState.Open)
             {
-                await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, _cancel.Token).ConfigureAwait(false);
+                await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, _cancelToken).ConfigureAwait(false);
             }
         }
         catch (Exception exception) when (exception is IOException or SocketException or WebSocketException or ObjectDisposedException or OperationCanceledException)
         {
-            _transportEnded = true;
+            End();
         }
         finally
         {
@@ -365,8 +495,8 @@ public sealed class GesNetworkSocketSession : IDisposable
     {
         try
         {
-            if (_peer != null) await _datagram!.SendToAsync(chunk.Bytes.AsMemory(0, chunk.Length), SocketFlags.None, _peer.Address, _cancel.Token).ConfigureAwait(false);
-            else await _datagram!.SendAsync(chunk.Bytes.AsMemory(0, chunk.Length), SocketFlags.None, _cancel.Token).ConfigureAwait(false);
+            if (_peer != null) await _datagram!.SendToAsync(chunk.Bytes.AsMemory(0, chunk.Length), SocketFlags.None, _peer.Address, _cancelToken).ConfigureAwait(false);
+            else await _datagram!.SendAsync(chunk.Bytes.AsMemory(0, chunk.Length), SocketFlags.None, _cancelToken).ConfigureAwait(false);
         }
         catch (SocketException exception) when (IsTransient(exception.SocketErrorCode))
         {
@@ -375,4 +505,6 @@ public sealed class GesNetworkSocketSession : IDisposable
     }
 
     internal readonly record struct Chunk(byte[] Bytes, int Length);
+
+    internal readonly record struct Opened(Stream? Stream, WebSocket? WebSocket, Socket? Datagram, IDisposable Owner);
 }

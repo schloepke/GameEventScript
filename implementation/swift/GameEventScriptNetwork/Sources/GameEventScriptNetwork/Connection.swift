@@ -190,6 +190,48 @@ public final class GesNetworkConnection {
     /// The id of the transfer the latest successful `send(route:payload:)` on a bulk route queued; -1 before the first.
     public internal(set) var lastTransferId = -1
 
+    // Ticks, see ConnectionTick.swift. The last published record of each latest topic this side publishes.
+    var lastRecords: [[UInt8]]
+    var lastLengths: [Int]
+    var hasLast: [Bool]
+
+    // The members of the open tick, or of the closed tick that waits, with the records of the published ones.
+    var tickOpen = false
+    var tickWaiting = false
+    var stageKinds: [UInt8]
+    var stageRecords: [[UInt8]]
+    var stageLengths: [Int]
+    var stageCount = 0
+
+    // The tick in transmission: its members, the states they name, the members whose state is not yet completely sent,
+    // and whether its frame is due. After its frame is written it stays current for resends on a datagram transport
+    // until the next tick starts.
+    var tickSending = false
+    var tickCurrent = false
+    var tickFrameDue = false
+    var tickNumber: UInt16 = 0
+    var nextTick: UInt16 = 0
+    var tickPending = 0
+    var tickMembers: [Bool]
+    var tickUnsent: [Bool]
+    var tickNames: [UInt16]
+
+    // Receiving: the held member state per route, the last reported state per latest topic, the held incomplete tick
+    // and the last reported tick.
+    var heldRecords: [[UInt8]]
+    var heldLengths: [Int]
+    var heldNumbers: [UInt16]
+    var held: [Bool]
+    var reportedNumbers: [UInt16]
+    var reported: [Bool]
+    var hasHeldTick = false
+    var heldTick: UInt16 = 0
+    var heldTickCount = 0
+    var heldTickRoutes: [Int]
+    var heldTickStates: [UInt16]
+    var hasReportedTick = false
+    var reportedTick: UInt16 = 0
+
     // An unset limit is the larger of its default and what the network needs, at most the largest limit.
     private static func derived(_ limit: Int64?, _ fallback: Int64, _ needed: Int64, _ maximum: Int64) -> Int64 { limit ?? min(max(fallback, needed), maximum) }
 
@@ -239,7 +281,7 @@ public final class GesNetworkConnection {
             } else if !local {
                 received = max(received, publishes ? bytes + 1 : bytes)
             } else if route.deliveryClass == .reliable {
-                sent = max(sent, bytes)
+                sent = max(sent, publishes ? bytes + 1 : bytes)
             }
         }
         maxPending = Self.derived(options.maxPendingReceiveBytes, GesNetworkOptions.defaultPendingReceiveBytes, received, GesNetworkOptions.maximumBytes)
@@ -278,6 +320,23 @@ public final class GesNetworkConnection {
         self.sendLatest = sendLatest
         self.receiveLatest = receiveLatest
         self.partialLatest = partialLatest
+        lastRecords = [[UInt8]](repeating: [], count: routeCount)
+        lastLengths = [Int](repeating: 0, count: routeCount)
+        hasLast = [Bool](repeating: false, count: routeCount)
+        stageKinds = [UInt8](repeating: 0, count: routeCount)
+        stageRecords = [[UInt8]](repeating: [], count: routeCount)
+        stageLengths = [Int](repeating: 0, count: routeCount)
+        tickMembers = [Bool](repeating: false, count: routeCount)
+        tickUnsent = [Bool](repeating: false, count: routeCount)
+        tickNames = [UInt16](repeating: 0, count: routeCount)
+        heldRecords = [[UInt8]](repeating: [], count: routeCount)
+        heldLengths = [Int](repeating: 0, count: routeCount)
+        heldNumbers = [UInt16](repeating: 0, count: routeCount)
+        held = [Bool](repeating: false, count: routeCount)
+        reportedNumbers = [UInt16](repeating: 0, count: routeCount)
+        reported = [Bool](repeating: false, count: routeCount)
+        heldTickRoutes = [Int](repeating: 0, count: routeCount)
+        heldTickStates = [UInt16](repeating: 0, count: routeCount)
         // Only a datagram connection records its packets and restores the order of what it receives.
         let datagramRoutes = datagram ? routeCount : 0
         let records = datagram ? Self.recordedPackets : 0
@@ -432,7 +491,8 @@ public final class GesNetworkConnection {
         if !topic.subscribed { return .notSubscribed }
         if Int64(payload.count) >= maxBytes[route] { return .messageTooLarge }
         if let slot = sendLatest[route] {
-            slot.set(payload)
+            keepLast(route, payload)
+            if tickOpen { stageState(route, payload) } else { slot.set(payload) }
             return .queued
         }
         let length = encodeState(topic, payload, topic.next)
@@ -473,7 +533,7 @@ public final class GesNetworkConnection {
         if !topic.subscribed { return }
         topic.subscribed = false
         topic.clear()
-        sendLatest[route]?.dropUnstarted()
+        if sendLatest[route]?.dropUnstarted() == true { dropMember(route) }
     }
 
     private func serverTopic(_ route: Int) throws -> GesNetworkTopic {
@@ -485,7 +545,8 @@ public final class GesNetworkConnection {
 
     // Writes the message of a new state into the topic's scratch: a delta against the newest confirmed state when it
     // is shorter than the full record, else the full record. The number is the new state's. Returns the message length.
-    func encodeState(_ topic: GesNetworkTopic, _ record: UnsafeRawBufferPointer, _ number: UInt16) -> Int {
+    func encodeState(_ topic: GesNetworkTopic, _ record: UnsafeRawBufferPointer, _ number: UInt16, member: Bool = false) -> Int {
+        let flag = member ? GesNetworkWire.tickMember : 0
         let message = topic.scratch
         var baseline = UnsafeRawBufferPointer(start: nil, count: 0)
         let distance = topic.base(datagram ? -1 : ackedIndex, number, &baseline)
@@ -494,11 +555,11 @@ public final class GesNetworkConnection {
             if let length = try? GesSchemaDelta.encode(topic.schema, record: record, baseline: baseline, into: UnsafeMutableRawBufferPointer(rebasing: message[1...])),
                 length < record.count
             {
-                message[0] = UInt8(distance)
+                message[0] = UInt8(distance) | flag
                 return length + 1
             }
         }
-        message[0] = 0
+        message[0] = flag
         if record.count > 0 { (message.baseAddress! + 1).copyMemory(from: record.baseAddress!, byteCount: record.count) }
         return record.count + 1
     }
@@ -554,7 +615,8 @@ public final class GesNetworkConnection {
                 byPeer: false,
                 transferId: -1,
                 bytes: 0,
-                total: 0
+                total: 0,
+                tickNumber: -1
             )
         }
         compactEvents()
@@ -573,9 +635,10 @@ public final class GesNetworkConnection {
             code: entry.code,
             detail: entry.detail,
             byPeer: entry.byPeer,
-            transferId: entry.transferId,
+            transferId: entry.kind == .tick ? -1 : entry.transferId,
             bytes: entry.bytes,
-            total: entry.total
+            total: entry.total,
+            tickNumber: entry.kind == .tick ? entry.transferId : -1
         )
     }
 
@@ -625,6 +688,7 @@ public final class GesNetworkConnection {
         sendBulk.clear()
         dropTransfers()
         for slot in sendLatest { slot?.clear() }
+        dropTicks()
         ackDue = false
         welcomePending = false
         retryPending = false
@@ -633,7 +697,7 @@ public final class GesNetworkConnection {
 
     func hasPendingFrames() -> Bool {
         if datagram { return hasPendingDatagramFrames() }
-        if sendReliable.count > 0 || sendBulk.count > 0 || cancels.pendingCount > 0 { return true }
+        if sendReliable.count > 0 || sendBulk.count > 0 || cancels.pendingCount > 0 || tickFrameDue { return true }
         for slot in sendLatest where slot?.hasCurrent == true { return true }
         return false
     }

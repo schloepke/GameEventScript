@@ -410,6 +410,73 @@ network:
 
 ---
 
+## Test: A derived send queue holds the largest full record of a reliable topic
+
+The largest root of :Blob encodes in 1048576 bytes. The need of the queued reliable bytes includes the mode byte of a topic message, so its full record of 1048577 bytes fits an unset limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: derived-send-queue-topic
+networkApi:
+  sources: ["wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 1048573 }\nnetwork :Game as { server publishes :Blob reliable }\n"]
+  network: "Game"
+  steps:
+    - {"advance": 0}
+    - {"accept": true}
+    - {"advance": 0}
+    - {"subscribe": {"side": "server", "route": 0}}
+    - {"publish": {"side": "server", "route": 0, "payload": {"length": 1048576, "seed": 1}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "server connecting -"
+    - "server connected"
+    - "client connected"
+    - "server publish queued"
+```
+
+---
+
+## Test: An explicit send queue limit does not add the mode byte
+
+### Case description
+
+```yaml
+gesBlock: case
+id: explicit-send-queue-topic
+networkApi:
+  sources: ["wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 1048573 }\nnetwork :Game as { server publishes :Blob reliable }\n"]
+  network: "Game"
+  options: {"maxSendQueueBytes": 1048576}
+  steps:
+    - {"advance": 0}
+    - {"accept": true}
+    - {"advance": 0}
+    - {"subscribe": {"side": "server", "route": 0}}
+    - {"publish": {"side": "server", "route": 0, "payload": {"length": 1048576, "seed": 1}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "server connecting -"
+    - "server connected"
+    - "client connected"
+    - "server publish queueFull"
+```
+
+---
+
 ## Test: An explicit send queue limit stays as set
 
 ### Case description

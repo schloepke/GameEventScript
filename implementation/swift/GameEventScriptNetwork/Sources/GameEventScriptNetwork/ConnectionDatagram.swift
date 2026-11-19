@@ -15,6 +15,7 @@ extension GesNetworkConnection {
     static let helloRepeatInterval: Int64 = microsecondsPerSecond
 
     // Fragment lanes: cancel frames, reliable, bulk, then one per latest route.
+    static let laneTick = -2
     private static let laneCancel = -1
     private static let laneReliable = 0
     private static let laneBulk = 1
@@ -52,7 +53,7 @@ extension GesNetworkConnection {
     func hasPendingDatagramFrames() -> Bool {
         // A full send window (the packet 1024 before the next one still outstanding) holds every frame back.
         if sentCount >= Int64(Self.recordedPackets) && recordOutstanding[Int(sentCount % Int64(Self.recordedPackets))] { return false }
-        if cancels.pendingCount > 0 || sendReliable.lost.count > 0 || sendReliable.hasNew || sendBulk.lost.count > 0 || sendBulk.hasNew { return true }
+        if tickFrameDue || cancels.pendingCount > 0 || sendReliable.lost.count > 0 || sendReliable.hasNew || sendBulk.lost.count > 0 || sendBulk.hasNew { return true }
         for slot in sendLatest where slot?.hasPending == true { return true }
         return false
     }
@@ -226,7 +227,7 @@ extension GesNetworkConnection {
                 cancels.confirm(key)
                 continue
             }
-            if lane >= Self.laneLatest { continue }
+            if lane >= Self.laneLatest || lane == Self.laneTick { continue }
             if lane == Self.laneBulk {
                 if !acknowledgeBulk(key, fragmentLengths[fragment]) { return true }
                 continue
@@ -288,7 +289,9 @@ extension GesNetworkConnection {
             let key = fragmentKeys[fragment]
             let offset = fragmentOffsets[fragment]
             let length = fragmentLengths[fragment]
-            if lane == Self.laneCancel {
+            if lane == Self.laneTick {
+                loseTickFrame(UInt16(truncatingIfNeeded: key))
+            } else if lane == Self.laneCancel {
                 cancels.lose(key)
             } else if lane == Self.laneReliable {
                 sendReliable.lose(key, offset, length)
@@ -311,6 +314,8 @@ extension GesNetworkConnection {
             let kind = packet[position]
             position += 1
             if kind == Wire.controlConfirmation { return receiveConfirmation(packet, &position) }
+            // A tick frame is resent while its tick is current, so its packet asks.
+            if kind == Wire.controlTick && asks { return receiveTick(packet, &position) }
             // A cancel frame is resent until acknowledged, so its packet asks.
             if kind != Wire.controlCancel || !asks { return fail(GesNetworkCodes.malformed) }
             return receiveCancel(packet, &position)
@@ -490,6 +495,7 @@ extension GesNetworkConnection {
             for route in 0..<routeCount {
                 if let latest = sendLatest[route] { position = writeDatagramLatest(route, latest, packet, position, limit) }
             }
+            position = writeTickFrame(packet, position, limit)
             position = writeDatagramQueue(sendBulk, &nextBulkId, Self.laneBulk, packet, position, limit)
         }
 
@@ -528,7 +534,7 @@ extension GesNetworkConnection {
         return position
     }
 
-    private func recordFragment(_ lane: Int, _ key: Int64, _ offset: Int, _ length: Int) {
+    func recordFragment(_ lane: Int, _ key: Int64, _ offset: Int, _ length: Int) {
         let fragment = Int(fragmentTail % Int64(Self.recordedFragments))
         fragmentLanes[fragment] = lane
         fragmentKeys[fragment] = key
@@ -630,7 +636,7 @@ extension GesNetworkConnection {
             let length: Int
             if let topic {
                 if !slot.started {
-                    topic.messageLength = slot.withCurrent { encodeState(topic, $0, slot.nextId) }
+                    topic.messageLength = slot.withCurrent { encodeState(topic, $0, slot.nextId, member: slot.currentMember) }
                     if topic.message.baseAddress == nil { topic.message = .allocate(byteCount: topic.scratch.count, alignment: 8) }
                     topic.message.baseAddress!.copyMemory(from: topic.scratch.baseAddress!, byteCount: topic.messageLength)
                 }
@@ -651,6 +657,7 @@ extension GesNetworkConnection {
             recordFragment(lane, Int64(slot.id), offset, chunk)
             slot.offset += chunk
             if slot.offset < length { break }
+            if slot.currentMember { completeMember(route, slot.id) }
             slot.complete()
         }
         return position

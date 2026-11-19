@@ -105,6 +105,18 @@ internal sealed class GesNetworkTopic
         if (index >= oldest && index < _added) _packets[(_first + (int)(index - oldest)) % MaximumStates] = packet;
     }
 
+    // Whether the held state with the number is confirmed; false when the ring does not hold it.
+    internal bool IsConfirmed(ushort number)
+    {
+        for (var index = _count - 1; index >= 0; index--)
+        {
+            var slot = (_first + index) % MaximumStates;
+            if (_numbers[slot] == number) return _confirmed[slot];
+        }
+
+        return false;
+    }
+
     // Confirms the held state with the number; a state no longer held is skipped.
     internal void Confirm(ushort number)
     {

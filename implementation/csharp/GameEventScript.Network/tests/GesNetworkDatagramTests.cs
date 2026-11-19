@@ -40,16 +40,16 @@ public sealed class GesNetworkDatagramTests
         InsecureTestKeySeed = 7,
     };
 
-    private static (GesNetworkConnection Client, GesNetworkConnection Server) Pair(bool encrypted = false)
+    private static (GesNetworkConnection Client, GesNetworkConnection Server) Pair(bool encrypted = false, GesNetworkOptions? plain = null)
     {
         var network = GesSchemaSet.Parse(Source).Network("Game").Bind();
-        return (GesNetworkConnection.CreateClient(network, default, 0, encrypted ? EncryptedClient : Options),
-            GesNetworkConnection.CreateServer(network, 0, encrypted ? EncryptedServer : Options));
+        return (GesNetworkConnection.CreateClient(network, default, 0, encrypted ? EncryptedClient : plain ?? Options),
+            GesNetworkConnection.CreateServer(network, 0, encrypted ? EncryptedServer : plain ?? Options));
     }
 
-    private static GesNetworkSimulator Connected(long seed, int loss, int duplicate, bool reorder, bool encrypted = false)
+    private static GesNetworkSimulator Connected(long seed, int loss, int duplicate, bool reorder, bool encrypted = false, GesNetworkOptions? plain = null)
     {
-        var (client, server) = Pair(encrypted);
+        var (client, server) = Pair(encrypted, plain);
         var simulator = new GesNetworkSimulator(client, server, seed, 20_000, 15_000, loss, duplicate, reorder);
         simulator.Advance(0);
         for (var step = 0; step < 1000 && server.State == GesNetworkState.AwaitHello; step++) simulator.Advance(simulator.NextDeadline);
@@ -336,5 +336,36 @@ public sealed class GesNetworkDatagramTests
         for (var index = 0; index < kept.Count; index++) CollectionAssert.AreEqual(kept[index], received[index]);
         simulator.Advance(simulator.Now + 2_000_000);
         Assert.AreEqual(0, simulator.Server.QueuedSendBytes);
+    }
+
+    [TestMethod]
+    public void AnUnconfirmedCancelKeepsLaterTransfersWithinTheReceiveWindow()
+    {
+        // Many small transfers in a short time: the receiver allows their frame rate.
+        var options = new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, Transport = GesNetworkTransport.Datagram, MaxFramesPerSecond = 1_000_000 };
+        var simulator = Connected(13, 0, 0, false, plain: options);
+        Assert.AreEqual(GesNetworkSendStatus.Queued, simulator.Server.Send(BulkBlob, [1]));
+        Assert.IsTrue(simulator.Server.Cancel(BulkBlob, simulator.Server.LastTransferId));
+        for (var index = 1; index < 8192; index++) Assert.AreEqual(GesNetworkSendStatus.Queued, simulator.Server.Send(BulkBlob, [(byte)index]), $"transfer {index}");
+
+        // The cancel of transfer 0 is not confirmed yet, so transfer 8192 would lie outside the receiver's window.
+        Assert.AreEqual(GesNetworkSendStatus.QueueFull, simulator.Server.Send(BulkBlob, [0]));
+        var received = 0;
+        for (var step = 0; step < 4000 && received < 8191; step++)
+        {
+            simulator.Advance(simulator.Now + 16_667);
+            for (var next = simulator.Client.NextEvent(); next.Kind != GesNetworkEventKind.None; next = simulator.Client.NextEvent())
+            {
+                Assert.AreNotEqual(GesNetworkEventKind.Closed, next.Kind, next.Code);
+                if (next.Kind == GesNetworkEventKind.Message) received++;
+            }
+
+            Messages(simulator.Server);
+        }
+
+        Assert.AreEqual(8191, received);
+        simulator.Advance(simulator.Now + 2_000_000);
+        Assert.AreEqual(GesNetworkSendStatus.Queued, simulator.Server.Send(BulkBlob, [0]));
+        Assert.AreEqual(GesNetworkState.Connected, simulator.Client.State);
     }
 }

@@ -333,6 +333,86 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             return reader.Finish();
         }
 
+
+        /// <summary>Returns the selected message as a new case that holds the member record.</summary>
+        /// <returns>The case.</returns>
+        /// <exception cref="GesWireException"><see cref="Selected"/> names no message of the set.</exception>
+        public readonly Case ToCase() => Selected switch
+        {
+            Member.Move => new Case.Move(Move),
+            Member.Fire => new Case.Fire(Fire),
+            _ => throw new GesWireException(GesWireException.OutOfRange, ""),
+        };
+
+        /// <summary>Selects the message of a case and takes its member record.</summary>
+        /// <param name="value">The case.</param>
+        /// <exception cref="global::System.ArgumentNullException"><paramref name="value"/> is null.</exception>
+        public void Assign(Case value)
+        {
+            switch (value)
+            {
+                case Case.Move @move:
+                    Selected = Member.Move;
+                    Move = @move.Value;
+                    break;
+                case Case.Fire @fire:
+                    Selected = Member.Fire;
+                    Fire = @fire.Value;
+                    break;
+                default:
+                    throw new global::System.ArgumentNullException(nameof(value));
+            }
+        }
+
+        /// <summary>One message of the set as a case: match <c>case Commands.Case.Move value</c>.</summary>
+        public abstract class Case
+        {
+            private protected Case()
+            {
+            }
+
+            /// <summary>Gets the message of the case.</summary>
+            public abstract Member Selected { get; }
+
+            /// <summary>The message <c>Move</c>.</summary>
+            public sealed class Move : Case
+            {
+                /// <summary>Creates the case with an empty record.</summary>
+                public Move()
+                {
+                }
+
+                /// <summary>Creates the case with a record.</summary>
+                /// <param name="value">The record.</param>
+                public Move(global::GameEventScript.Tests.Generator.Network.Wire.Move value) => Value = value;
+
+                /// <summary>The record of the message.</summary>
+                public global::GameEventScript.Tests.Generator.Network.Wire.Move Value;
+
+                /// <inheritdoc/>
+                public override Member Selected => Member.Move;
+            }
+
+            /// <summary>The message <c>Fire</c>.</summary>
+            public sealed class Fire : Case
+            {
+                /// <summary>Creates the case with an empty record.</summary>
+                public Fire()
+                {
+                }
+
+                /// <summary>Creates the case with a record.</summary>
+                /// <param name="value">The record.</param>
+                public Fire(global::GameEventScript.Tests.Generator.Network.Wire.Fire value) => Value = value;
+
+                /// <summary>The record of the message.</summary>
+                public global::GameEventScript.Tests.Generator.Network.Wire.Fire Value;
+
+                /// <inheritdoc/>
+                public override Member Selected => Member.Fire;
+            }
+        }
+
         /// <summary>The messages of the set, in declared order.</summary>
         public enum Member : byte
         {
@@ -830,7 +910,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         }
     }
 
-    /// <summary>The network <c>:Game</c>: its hash, the index of each route, the rate of each topic that has one and a typed function per route.</summary>
+    /// <summary>The network <c>:Game</c>: its hash, the index of each route, the rate of each topic that has one, a typed function per route and the typed ends.</summary>
     internal static class Game
     {
         /// <summary>The network hash over the routes and their bound roots, which the handshake compares.</summary>
@@ -874,5 +954,494 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         /// <exception cref="GesWireException">A value does not fit its field, or the buffer is too small.</exception>
         public static GesNetworkSendStatus ServerSendChunk(GesNetworkConnection connection, in global::GameEventScript.Tests.Generator.Network.Wire.Chunk value, Span<byte> buffer)
             => connection.Send(ServerSendsChunk, buffer.Slice(0, value.Write(buffer)));
+
+        /// <summary>
+        /// The typed client end of <c>:Game</c>: it encodes the records the client sends and publishes and hands the records it
+        /// receives to an <see cref="IClientHandler"/>. Received records are borrowed: they stay valid until the handler method returns.
+        /// </summary>
+        public sealed class Client
+        {
+            private readonly byte[] __buffer;
+            private global::GameEventScript.Tests.Generator.Network.Wire.Commands __out_sendCommands;
+            private global::GameEventScript.Tests.Generator.Network.Wire.World __world;
+            private global::GameEventScript.Tests.Generator.Network.Wire.Chunk __chunk;
+
+            /// <summary>Wraps an end of the network.</summary>
+            /// <param name="end">The end; its bound network must have the hash <see cref="Hash"/>.</param>
+            /// <exception cref="global::System.ArgumentNullException"><paramref name="end"/> is null.</exception>
+            /// <exception cref="global::System.ArgumentException">The end's network has another hash.</exception>
+            public Client(GesNetworkClientEnd end)
+            {
+                End = end ?? throw new global::System.ArgumentNullException(nameof(end));
+                if (end.Network.Hash != Hash) throw new global::System.ArgumentException("The end's network is no :Game.", nameof(end));
+                __buffer = new byte[global::GameEventScript.Tests.Generator.Network.Wire.Commands.MaxByteCount];
+            }
+
+            /// <summary>Gets the wrapped end.</summary>
+            public GesNetworkClientEnd End { get; }
+
+            /// <summary>Gets the end's connection.</summary>
+            public GesNetworkConnection Connection => End.Connection;
+
+            /// <summary>Encodes a record and sends it on the route <c>client sends :Commands reliable</c>.</summary>
+            /// <param name="value">The record.</param>
+            /// <returns>The status of <see cref="GesNetworkClientEnd.Send(int, ReadOnlySpan{byte})"/>.</returns>
+            /// <exception cref="GesWireException">A value does not fit its field.</exception>
+            public GesNetworkSendStatus Send(in global::GameEventScript.Tests.Generator.Network.Wire.Commands value) => End.Send(ClientSendsCommands, __buffer.AsSpan(0, value.Write(__buffer)));
+
+            /// <summary>Encodes a message and sends it on the route <c>client sends :Commands reliable</c>.</summary>
+            /// <param name="value">The message.</param>
+            /// <returns>The status of <see cref="GesNetworkClientEnd.Send(int, ReadOnlySpan{byte})"/>.</returns>
+            /// <exception cref="global::System.ArgumentNullException"><paramref name="value"/> is null.</exception>
+            /// <exception cref="GesWireException">A value does not fit its field.</exception>
+            public GesNetworkSendStatus Send(global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case value)
+            {
+                __out_sendCommands.Assign(value);
+                return Send(in __out_sendCommands);
+            }
+
+            /// <summary>Closes the connection with a detail.</summary>
+            /// <param name="detail">The detail sent to the server.</param>
+            public void Close(string detail) => End.Close(detail);
+
+            /// <summary>Polls the end and hands every event to the handler's typed methods. Never blocks.</summary>
+            /// <typeparam name="THandler">The handler type; a struct that implements every method is called without allocating.</typeparam>
+            /// <param name="handler">The handler.</param>
+            /// <exception cref="global::System.ObjectDisposedException">The end is disposed.</exception>
+            public void Poll<THandler>(ref THandler handler) where THandler : IClientHandler
+            {
+                var adapter = new __Adapter<THandler>(this, handler);
+                try
+                {
+                    End.Poll(ref adapter);
+                }
+                finally
+                {
+                    handler = adapter.Handler;
+                }
+            }
+
+            private void __Handle<THandler>(ref THandler handler, GesNetworkEndEvent networkEvent) where THandler : IClientHandler
+            {
+                switch (networkEvent.Kind)
+                {
+                    case GesNetworkEndEventKind.Connected:
+                        handler.OnConnected(networkEvent.Security);
+                        break;
+                    case GesNetworkEndEventKind.Disconnected:
+                        handler.OnDisconnected(networkEvent.Code, networkEvent.Detail, networkEvent.ByPeer);
+                        break;
+                    case GesNetworkEndEventKind.Message:
+                        switch (networkEvent.Route)
+                        {
+                            case ServerPublishesWorld:
+                                try
+                                {
+                                    __world.Read(networkEvent.Payload);
+                                }
+                                catch (GesWireException)
+                                {
+                                    End.Close("undecodable :World");
+                                    break;
+                                }
+
+                                handler.OnWorld(in __world);
+                                break;
+                            case ServerSendsChunk:
+                                try
+                                {
+                                    __chunk.Read(networkEvent.Payload);
+                                }
+                                catch (GesWireException)
+                                {
+                                    End.Close("undecodable :Chunk");
+                                    break;
+                                }
+
+                                handler.OnChunk(in __chunk);
+                                break;
+                        }
+
+                        break;
+                    case GesNetworkEndEventKind.Tick:
+                        handler.OnTick(networkEvent.TickNumber);
+                        break;
+                    case GesNetworkEndEventKind.TransferProgress:
+                        handler.OnTransferProgress(networkEvent.Route, networkEvent.TransferId, networkEvent.Bytes, networkEvent.Total);
+                        break;
+                    case GesNetworkEndEventKind.TransferCancelled:
+                        handler.OnTransferCancelled(networkEvent.Route, networkEvent.TransferId, networkEvent.Code);
+                        break;
+                    case GesNetworkEndEventKind.Received:
+                        handler.OnReceived();
+                        break;
+                }
+            }
+
+            private struct __Adapter<THandler> : IGesNetworkEndHandler where THandler : IClientHandler
+            {
+                private readonly Client __end;
+                internal THandler Handler;
+
+                internal __Adapter(Client end, THandler handler)
+                {
+                    __end = end;
+                    Handler = handler;
+                }
+
+                public void Handle(GesNetworkEndEvent networkEvent) => __end.__Handle(ref Handler, networkEvent);
+            }
+        }
+
+        /// <summary>
+        /// The events of the typed client end <see cref="Client"/>; every method does nothing by default. A struct handler that
+        /// leaves a method to its default is boxed when that method is called.
+        /// </summary>
+        public interface IClientHandler
+        {
+
+            /// <summary>The session is established.</summary>
+            /// <param name="security">The reached security.</param>
+            void OnConnected(GesNetworkSecurity security)
+            {
+            }
+
+            /// <summary>The connection closed.</summary>
+            /// <param name="code">The close code.</param>
+            /// <param name="detail">The detail.</param>
+            /// <param name="byPeer">Whether the server closed it.</param>
+            void OnDisconnected(string code, string detail, bool byPeer)
+            {
+            }
+
+            /// <summary>A record arrived on the route <c>server publishes :World latest</c>.</summary>
+            /// <param name="value">The record, which is valid until the method returns.</param>
+            void OnWorld(in global::GameEventScript.Tests.Generator.Network.Wire.World value)
+            {
+            }
+
+            /// <summary>A record arrived on the route <c>server sends :Chunk bulk</c>.</summary>
+            /// <param name="value">The record, which is valid until the method returns.</param>
+            void OnChunk(in global::GameEventScript.Tests.Generator.Network.Wire.Chunk value)
+            {
+            }
+
+            /// <summary>A tick is complete; the events of its changed members precede it.</summary>
+            /// <param name="number">The tick number.</param>
+            void OnTick(int number)
+            {
+            }
+
+            /// <summary>A transfer on a bulk route advanced.</summary>
+            /// <param name="route">The route index.</param>
+            /// <param name="transferId">The transfer.</param>
+            /// <param name="bytes">The bytes received so far.</param>
+            /// <param name="total">The total bytes.</param>
+            void OnTransferProgress(int route, int transferId, long bytes, long total)
+            {
+            }
+
+            /// <summary>A transfer was cancelled; the session continues.</summary>
+            /// <param name="route">The route index.</param>
+            /// <param name="transferId">The transfer.</param>
+            /// <param name="code">The cancel code.</param>
+            void OnTransferCancelled(int route, int transferId, string code)
+            {
+            }
+
+            /// <summary>The last event of a poll that reported at least one message or tick.</summary>
+            void OnReceived()
+            {
+            }
+        }
+
+        /// <summary>
+        /// The typed server end of <c>:Game</c>: it encodes the records the server sends and publishes and hands the records it
+        /// receives to an <see cref="IServerHandler"/>. Received records are borrowed: they stay valid until the handler method returns.
+        /// </summary>
+        public sealed class Server
+        {
+            private readonly byte[] __buffer;
+            private global::GameEventScript.Tests.Generator.Network.Wire.Commands __commands;
+            private readonly global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case.Move __case_commands_Move = new();
+            private readonly global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case.Fire __case_commands_Fire = new();
+
+            /// <summary>Wraps an end of the network.</summary>
+            /// <param name="end">The end; its bound network must have the hash <see cref="Hash"/>.</param>
+            /// <exception cref="global::System.ArgumentNullException"><paramref name="end"/> is null.</exception>
+            /// <exception cref="global::System.ArgumentException">The end's network has another hash.</exception>
+            public Server(GesNetworkServerEnd end)
+            {
+                End = end ?? throw new global::System.ArgumentNullException(nameof(end));
+                if (end.Network.Hash != Hash) throw new global::System.ArgumentException("The end's network is no :Game.", nameof(end));
+                __buffer = new byte[global::System.Math.Max(global::GameEventScript.Tests.Generator.Network.Wire.World.MaxByteCount, global::GameEventScript.Tests.Generator.Network.Wire.Chunk.MaxByteCount)];
+            }
+
+            /// <summary>Gets the wrapped end.</summary>
+            public GesNetworkServerEnd End { get; }
+
+            /// <summary>Gets the number of connected clients.</summary>
+            public int ClientCount => End.ClientCount;
+
+            /// <summary>Gets the connection of a client.</summary>
+            /// <param name="client">The client.</param>
+            /// <returns>The connection.</returns>
+            /// <exception cref="global::System.ArgumentException">The client is not connected to the end.</exception>
+            public GesNetworkConnection Connection(int client) => End.Connection(client);
+
+            /// <summary>Encodes a record and publishes it on the route <c>server publishes :World latest</c>, to the subscribed clients.</summary>
+            /// <param name="value">The record.</param>
+            /// <returns>The status of <see cref="GesNetworkServerEnd.Publish(int, ReadOnlySpan{byte})"/>.</returns>
+            /// <exception cref="GesWireException">A value does not fit its field.</exception>
+            public GesNetworkSendStatus Publish(in global::GameEventScript.Tests.Generator.Network.Wire.World value) => End.Publish(ServerPublishesWorld, __buffer.AsSpan(0, value.Write(__buffer)));
+
+            /// <summary>Encodes a record and sends it on the route <c>server sends :Chunk bulk</c>, to every client.</summary>
+            /// <param name="value">The record.</param>
+            /// <returns>The status of <see cref="GesNetworkServerEnd.Send(int, ReadOnlySpan{byte})"/>.</returns>
+            /// <exception cref="GesWireException">A value does not fit its field.</exception>
+            public GesNetworkSendStatus Send(in global::GameEventScript.Tests.Generator.Network.Wire.Chunk value) => End.Send(ServerSendsChunk, __buffer.AsSpan(0, value.Write(__buffer)));
+
+            /// <summary>Encodes a record and sends it on the route <c>server sends :Chunk bulk</c>, to one client.</summary>
+            /// <param name="value">The record.</param>
+            /// <param name="client">The client.</param>
+            /// <returns>The status of <see cref="GesNetworkServerEnd.Send(int, ReadOnlySpan{byte}, int)"/>.</returns>
+            /// <exception cref="GesWireException">A value does not fit its field.</exception>
+            public GesNetworkSendStatus Send(in global::GameEventScript.Tests.Generator.Network.Wire.Chunk value, int client) => End.Send(ServerSendsChunk, __buffer.AsSpan(0, value.Write(__buffer)), client);
+
+            /// <summary>Refuses a connecting client; call it while the handler handles its <c>OnConnecting</c>.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="detail">The detail sent to the client.</param>
+            public void Refuse(int client, string detail) => End.Refuse(client, detail);
+
+            /// <summary>Closes the connection of one client with a detail.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="detail">The detail sent to the client.</param>
+            public void Close(int client, string detail) => End.Close(client, detail);
+
+            /// <summary>Closes every connection with a detail and stops accepting clients.</summary>
+            /// <param name="detail">The detail sent to the clients.</param>
+            public void Close(string detail) => End.Close(detail);
+
+            /// <summary>Subscribes a client to a topic.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="topic">The topic.</param>
+            public void Subscribe(int client, Topic topic) => End.Subscribe(client, (int)topic);
+
+            /// <summary>Unsubscribes a client from a topic.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="topic">The topic.</param>
+            public void Unsubscribe(int client, Topic topic) => End.Unsubscribe(client, (int)topic);
+
+            private int __ticks;
+            private bool __tickOpen;
+
+            /// <summary>Opens a tick; disposing the returned tick closes it.</summary>
+            /// <returns>The open tick.</returns>
+            /// <exception cref="global::System.InvalidOperationException">A tick is open already.</exception>
+            public Tick BeginTick()
+            {
+                End.BeginTick();
+                __tickOpen = true;
+                return new Tick(this, unchecked(++__ticks));
+            }
+
+            /// <summary>The topics the server publishes.</summary>
+            public enum Topic
+            {
+                /// <summary>The topic <c>server publishes :World latest</c>.</summary>
+                World = ServerPublishesWorld,
+            }
+
+            /// <summary>An open tick: its publications arrive together. <see cref="Dispose"/> closes it.</summary>
+            public readonly struct Tick : global::System.IDisposable
+            {
+                private readonly Server __end;
+                private readonly int __number;
+
+                internal Tick(Server end, int number)
+                {
+                    __end = end;
+                    __number = number;
+                }
+
+                /// <summary>Publishes a record on the topic <c>:World</c> as a member of the tick.</summary>
+                /// <param name="value">The value.</param>
+                /// <returns>The status of the publication.</returns>
+                /// <exception cref="GesWireException">A value does not fit its field.</exception>
+                public GesNetworkSendStatus Publish(in global::GameEventScript.Tests.Generator.Network.Wire.World value) => __end.Publish(in value);
+
+                /// <summary>Makes a latest topic a member of the tick with its last published state.</summary>
+                /// <param name="topic">The topic.</param>
+                /// <exception cref="global::System.InvalidOperationException">The topic has no published state.</exception>
+                /// <exception cref="global::System.ArgumentException">The topic is no latest topic.</exception>
+                public void Include(Topic topic) => __end.End.Include((int)topic);
+
+                /// <summary>Closes the tick. A further call, also on a copy, does nothing.</summary>
+                public void Dispose()
+                {
+                    if (__end is null || !__end.__tickOpen || __end.__ticks != __number) return;
+                    __end.__tickOpen = false;
+                    __end.End.EndTick();
+                }
+            }
+
+            /// <summary>Polls the end and hands every event to the handler's typed methods. Never blocks.</summary>
+            /// <typeparam name="THandler">The handler type; a struct that implements every method is called without allocating.</typeparam>
+            /// <param name="handler">The handler.</param>
+            /// <exception cref="global::System.ObjectDisposedException">The end is disposed.</exception>
+            public void Poll<THandler>(ref THandler handler) where THandler : IServerHandler
+            {
+                var adapter = new __Adapter<THandler>(this, handler);
+                try
+                {
+                    End.Poll(ref adapter);
+                }
+                finally
+                {
+                    handler = adapter.Handler;
+                }
+            }
+
+            private void __Handle<THandler>(ref THandler handler, GesNetworkEndEvent networkEvent) where THandler : IServerHandler
+            {
+                switch (networkEvent.Kind)
+                {
+                    case GesNetworkEndEventKind.Connecting:
+                        handler.OnConnecting(networkEvent.Client, networkEvent.Payload);
+                        break;
+                    case GesNetworkEndEventKind.ClientConnected:
+                        handler.OnClientConnected(networkEvent.Client, networkEvent.Security);
+                        break;
+                    case GesNetworkEndEventKind.ClientDisconnected:
+                        handler.OnClientDisconnected(networkEvent.Client, networkEvent.Code, networkEvent.Detail, networkEvent.ByPeer);
+                        break;
+                    case GesNetworkEndEventKind.Message:
+                        switch (networkEvent.Route)
+                        {
+                            case ClientSendsCommands:
+                                try
+                                {
+                                    __commands.Read(networkEvent.Payload);
+                                }
+                                catch (GesWireException)
+                                {
+                                    End.Close(networkEvent.Client, "undecodable :Commands");
+                                    break;
+                                }
+
+                                switch (__commands.Selected)
+                                {
+                                    case global::GameEventScript.Tests.Generator.Network.Wire.Commands.Member.Move:
+                                        __case_commands_Move.Value = __commands.Move;
+                                        handler.OnCommands(networkEvent.Client, __case_commands_Move);
+                                        break;
+                                    case global::GameEventScript.Tests.Generator.Network.Wire.Commands.Member.Fire:
+                                        __case_commands_Fire.Value = __commands.Fire;
+                                        handler.OnCommands(networkEvent.Client, __case_commands_Fire);
+                                        break;
+                                }
+
+                                break;
+                        }
+
+                        break;
+                    case GesNetworkEndEventKind.Tick:
+                        handler.OnTick(networkEvent.Client, networkEvent.TickNumber);
+                        break;
+                    case GesNetworkEndEventKind.TransferProgress:
+                        handler.OnTransferProgress(networkEvent.Client, networkEvent.Route, networkEvent.TransferId, networkEvent.Bytes, networkEvent.Total);
+                        break;
+                    case GesNetworkEndEventKind.TransferCancelled:
+                        handler.OnTransferCancelled(networkEvent.Client, networkEvent.Route, networkEvent.TransferId, networkEvent.Code);
+                        break;
+                    case GesNetworkEndEventKind.Received:
+                        handler.OnReceived();
+                        break;
+                }
+            }
+
+            private struct __Adapter<THandler> : IGesNetworkEndHandler where THandler : IServerHandler
+            {
+                private readonly Server __end;
+                internal THandler Handler;
+
+                internal __Adapter(Server end, THandler handler)
+                {
+                    __end = end;
+                    Handler = handler;
+                }
+
+                public void Handle(GesNetworkEndEvent networkEvent) => __end.__Handle(ref Handler, networkEvent);
+            }
+        }
+
+        /// <summary>
+        /// The events of the typed server end <see cref="Server"/>; every method does nothing by default. A struct handler that
+        /// leaves a method to its default is boxed when that method is called.
+        /// </summary>
+        public interface IServerHandler
+        {
+
+            /// <summary>A client asks to connect; refuse it with <see cref="Server.Refuse"/> before the method returns, or it is accepted.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="token">The client's token, valid until the method returns.</param>
+            void OnConnecting(int client, ReadOnlySpan<byte> token)
+            {
+            }
+
+            /// <summary>A client is connected.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="security">The reached security.</param>
+            void OnClientConnected(int client, GesNetworkSecurity security)
+            {
+            }
+
+            /// <summary>A client's connection closed; the client leaves the end.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="code">The close code.</param>
+            /// <param name="detail">The detail.</param>
+            /// <param name="byPeer">Whether the client closed it.</param>
+            void OnClientDisconnected(int client, string code, string detail, bool byPeer)
+            {
+            }
+
+            /// <summary>A message arrived on the route <c>client sends :Commands reliable</c>.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="value">The message, whose record is valid until the method returns.</param>
+            void OnCommands(int client, global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case value)
+            {
+            }
+
+            /// <summary>A tick is complete; the events of its changed members precede it.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="number">The tick number.</param>
+            void OnTick(int client, int number)
+            {
+            }
+
+            /// <summary>A transfer on a bulk route advanced.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="route">The route index.</param>
+            /// <param name="transferId">The transfer.</param>
+            /// <param name="bytes">The bytes received so far.</param>
+            /// <param name="total">The total bytes.</param>
+            void OnTransferProgress(int client, int route, int transferId, long bytes, long total)
+            {
+            }
+
+            /// <summary>A transfer was cancelled; the session continues.</summary>
+            /// <param name="client">The client.</param>
+            /// <param name="route">The route index.</param>
+            /// <param name="transferId">The transfer.</param>
+            /// <param name="code">The cancel code.</param>
+            void OnTransferCancelled(int client, int route, int transferId, string code)
+            {
+            }
+
+            /// <summary>The last event of a poll that reported at least one message or tick.</summary>
+            void OnReceived()
+            {
+            }
+        }
     }
 }

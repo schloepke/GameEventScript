@@ -132,6 +132,8 @@ only	csharp	Compiler	GesUnitFloatLiteralExpressionNode
 only	csharp	Compiler	GesUnitIntegerLiteralExpressionNode
 only	csharp	Compiler	GesValidationErrors
 only	csharp	Compiler	GesVariadicTaggedExpressionNode
+only	csharp	Network	GesNetworkEndHandler
+only	csharp	Network	GesNetworkEnds
 only	csharp	Runtime	GesCallbackFailureError
 only	csharp	Runtime	GesCustomObject
 only	csharp	Runtime	GesEmptyExternalTypeCatalog
@@ -163,6 +165,7 @@ only	csharp	Runtime	GesVmListBuilder
 only	csharp	Runtime	GesVmMapBuilder
 only	csharp	Runtime	GesVmOrderBuilder
 only	csharp	Runtime	GesVmUnitCalculation
+only	csharp	Sockets	GesNetworkSocketWaits
 only	csharp	Syntax	GesDocumentNodeKind
 only	csharp	Syntax	GesTokenReader
 only	swift	Compiler	GesArgument
@@ -206,4 +209,5 @@ only	swift	Runtime	GesValueFactory
 only	swift	Runtime	GesValueKind
 only	swift	Runtime	GesValueObject
 only	swift	Runtime	GesValueOutput
+only	swift	Sockets	GesNetworkSocketOpening
 only	swift	Syntax	GesNames

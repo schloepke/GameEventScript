@@ -327,6 +327,35 @@ extension NetworkWire {
             return try read(from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), byteLimit: byteLimit)
         }
 
+        /// The selected message as a case.
+        var asCase: Case {
+            switch selected {
+            case .move: .move(self.move)
+            case .fire: .fire(self.fire)
+            }
+        }
+
+        /// Selects the message of a case and stores its record.
+        /// - Parameter value: The message.
+        mutating func assign(_ value: Case) {
+            switch value {
+            case .move(let value):
+                selected = .move
+                self.move = value
+            case .fire(let value):
+                selected = .fire
+                self.fire = value
+            }
+        }
+
+        /// A message of the set as a value: one case per message, holding its record.
+        enum Case: Sendable {
+            /// The message `Move`.
+            case move(Move)
+            /// The message `Fire`.
+            case fire(Fire)
+        }
+
         /// The messages of the set, in declared order.
         enum Member: UInt8, Sendable {
             /// The message `Move`.
@@ -879,6 +908,318 @@ extension NetworkWire {
         static func serverSendChunk(_ value: Chunk, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> GesNetworkSendStatus {
             let count = try value.write(into: buffer)
             return connection.send(route: serverSendsChunk, payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))
+        }
+
+        /// The typed client end of `:Game`: it encodes the records the client sends and publishes and hands the records it receives
+        /// to the closure of `poll(_:)` as `ClientEvent` values. A received record that is a class is borrowed: it stays valid until
+        /// the closure returns.
+        final class Client {
+            /// The wrapped end.
+            let end: GesNetworkClientEnd
+            private let __buffer: UnsafeMutableRawBufferPointer
+            private var __out_sendCommands = Commands()
+            private var __world = World()
+            private var __chunk = Chunk()
+
+            /// Wraps an end of the network.
+            /// - Parameter end: The end; its bound network must have the hash `Game.hash`.
+            /// - Throws: `GesApiError.invalidArgument` when the end's network has another hash.
+            init(_ end: GesNetworkClientEnd) throws {
+                guard end.network.hash == Game.hash else { throw GesApiError.invalidArgument("The end's network is no :Game.") }
+                self.end = end
+                __buffer = .allocate(byteCount: Commands.maxByteCount, alignment: 1)
+            }
+
+            deinit { __buffer.deallocate() }
+
+            /// The end's connection.
+            var connection: GesNetworkConnection { end.connection }
+
+            /// Encodes a record and sends it on the route `client sends :Commands reliable`.
+            /// - Parameter value: The record.
+            /// - Returns: The status of `GesNetworkClientEnd.send(route:payload:)`.
+            /// - Throws: `GesWireError` when a value does not fit its field.
+            @discardableResult
+            func send(_ value: Commands) throws(GesWireError) -> GesNetworkSendStatus {
+                let count = try value.write(into: __buffer)
+                return end.send(route: Game.clientSendsCommands, payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count]))
+            }
+
+            /// Encodes a message and sends it on the route `client sends :Commands reliable`.
+            /// - Parameter value: The message.
+            /// - Returns: The status of `GesNetworkClientEnd.send(route:payload:)`.
+            /// - Throws: `GesWireError` when a value does not fit its field.
+            @discardableResult
+            func send(_ value: Commands.Case) throws(GesWireError) -> GesNetworkSendStatus {
+                __out_sendCommands.assign(value)
+                return try send(__out_sendCommands)
+            }
+
+            /// Closes the connection with a detail.
+            /// - Parameter detail: The detail sent to the server.
+            func close(_ detail: String) { end.close(detail) }
+
+            /// Polls the end and hands every event to the closure. Never blocks.
+            /// - Parameter handler: The closure; a received record that is a class stays valid until it returns.
+            /// - Throws: `GesApiError.invalidOperation` when the end is released or polled already; an error of a link or the closure.
+            func poll(_ handler: (ClientEvent) throws -> Void) throws {
+                try end.poll { event in try self.__handle(event, handler) }
+            }
+
+            private func __handle(_ event: GesNetworkEndEvent, _ handler: (ClientEvent) throws -> Void) throws {
+                switch event.kind {
+                case .connected:
+                    try handler(.connected(security: event.security))
+                case .disconnected:
+                    try handler(.disconnected(code: event.code, detail: event.detail, byPeer: event.byPeer))
+                case .message:
+                    switch event.route {
+                    case Game.serverPublishesWorld:
+                        do {
+                            _ = try __world.read(from: event.payload)
+                        } catch {
+                            end.close("undecodable :World")
+                            return
+                        }
+                        try handler(.world(__world))
+                    case Game.serverSendsChunk:
+                        do {
+                            _ = try __chunk.read(from: event.payload)
+                        } catch {
+                            end.close("undecodable :Chunk")
+                            return
+                        }
+                        try handler(.chunk(__chunk))
+                    default:
+                        break
+                    }
+                case .tick:
+                    try handler(.tick(number: event.tickNumber))
+                case .transferProgress:
+                    try handler(.transferProgress(route: event.route, transferId: event.transferId, bytes: event.bytes, total: event.total))
+                case .transferCancelled:
+                    try handler(.transferCancelled(route: event.route, transferId: event.transferId, code: event.code))
+                case .received:
+                    try handler(.received)
+                default:
+                    break
+                }
+            }
+        }
+
+        /// An event of the typed client end `Client`.
+        enum ClientEvent {
+            /// The session is established, with the reached security.
+            case connected(security: GesNetworkSecurity)
+            /// The connection closed, with its code, its detail and whether the server closed it.
+            case disconnected(code: String, detail: String, byPeer: Bool)
+            /// A record arrived on the route `server publishes :World latest`.
+            case world(World)
+            /// A record arrived on the route `server sends :Chunk bulk`.
+            case chunk(Chunk)
+            /// A tick is complete; the events of its changed members precede it.
+            case tick(number: Int)
+            /// A transfer on a bulk route advanced, with the route index, the transfer, the bytes received so far and the total bytes.
+            case transferProgress(route: Int, transferId: Int, bytes: Int64, total: Int64)
+            /// A transfer was cancelled, with the route index, the transfer and the cancel code; the session continues.
+            case transferCancelled(route: Int, transferId: Int, code: String)
+            /// The last event of a poll that reported at least one message or tick.
+            case received
+        }
+
+        /// The typed server end of `:Game`: it encodes the records the server sends and publishes and hands the records it receives
+        /// to the closure of `poll(_:)` as `ServerEvent` values. A received record that is a class is borrowed: it stays valid until
+        /// the closure returns.
+        final class Server {
+            /// The wrapped end.
+            let end: GesNetworkServerEnd
+            private let __buffer: UnsafeMutableRawBufferPointer
+            private var __commands = Commands()
+
+            /// Wraps an end of the network.
+            /// - Parameter end: The end; its bound network must have the hash `Game.hash`.
+            /// - Throws: `GesApiError.invalidArgument` when the end's network has another hash.
+            init(_ end: GesNetworkServerEnd) throws {
+                guard end.network.hash == Game.hash else { throw GesApiError.invalidArgument("The end's network is no :Game.") }
+                self.end = end
+                __buffer = .allocate(byteCount: max(World.maxByteCount, Chunk.maxByteCount), alignment: 1)
+            }
+
+            deinit { __buffer.deallocate() }
+
+            /// The number of connected clients.
+            var clientCount: Int { end.clientCount }
+
+            /// Returns the connection of a client.
+            /// - Parameter client: The client.
+            /// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.
+            func connection(client: Int) throws -> GesNetworkConnection { try end.connection(client: client) }
+
+            /// Encodes a record and publishes it on the route `server publishes :World latest`, to the subscribed clients.
+            /// - Parameter value: The record.
+            /// - Returns: The status of `GesNetworkServerEnd.publish(route:payload:)`.
+            /// - Throws: `GesWireError` when a value does not fit its field.
+            @discardableResult
+            func publish(_ value: World) throws(GesWireError) -> GesNetworkSendStatus {
+                let count = try value.write(into: __buffer)
+                return end.publish(route: Game.serverPublishesWorld, payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count]))
+            }
+
+            /// Encodes a record and sends it on the route `server sends :Chunk bulk`, to every client.
+            /// - Parameter value: The record.
+            /// - Returns: The status of `GesNetworkServerEnd.send(route:payload:)`.
+            /// - Throws: `GesWireError` when a value does not fit its field.
+            @discardableResult
+            func send(_ value: Chunk) throws(GesWireError) -> GesNetworkSendStatus {
+                let count = try value.write(into: __buffer)
+                return end.send(route: Game.serverSendsChunk, payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count]))
+            }
+
+            /// Encodes a record and sends it on the route `server sends :Chunk bulk`, to one client.
+            /// - Parameters:
+            ///   - value: The record.
+            ///   - client: The client.
+            /// - Returns: The status of `GesNetworkServerEnd.send(route:payload:client:)`.
+            /// - Throws: `GesWireError` when a value does not fit its field; `GesApiError.invalidArgument` when the client is not connected to the end.
+            @discardableResult
+            func send(_ value: Chunk, client: Int) throws -> GesNetworkSendStatus {
+                let count = try value.write(into: __buffer)
+                return try end.send(route: Game.serverSendsChunk, payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count]), client: client)
+            }
+
+            /// Refuses a connecting client; call it while the closure of `poll(_:)` handles its `connecting` event.
+            /// - Parameters:
+            ///   - client: The client.
+            ///   - detail: The detail sent to the client.
+            /// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.
+            func refuse(client: Int, detail: String) throws { try end.refuse(client: client, detail: detail) }
+
+            /// Closes the connection of one client with a detail.
+            /// - Parameters:
+            ///   - client: The client.
+            ///   - detail: The detail sent to the client.
+            /// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.
+            func close(client: Int, detail: String) throws { try end.close(client: client, detail: detail) }
+
+            /// Closes every connection with a detail and stops accepting clients.
+            /// - Parameter detail: The detail sent to the clients.
+            func close(_ detail: String) { end.close(detail) }
+
+            /// Subscribes a client to a topic.
+            /// - Parameters:
+            ///   - client: The client.
+            ///   - topic: The topic.
+            /// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.
+            func subscribe(client: Int, topic: Topic) throws { try end.subscribe(client: client, route: topic.rawValue) }
+
+            /// Unsubscribes a client from a topic.
+            /// - Parameters:
+            ///   - client: The client.
+            ///   - topic: The topic.
+            /// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.
+            func unsubscribe(client: Int, topic: Topic) throws { try end.unsubscribe(client: client, route: topic.rawValue) }
+
+            /// Opens a tick, runs the body with it and closes it, also when the body throws: the tick's publications arrive together.
+            /// - Parameter body: The body; it publishes on the tick and includes latest topics.
+            /// - Returns: The status of closing the tick.
+            /// - Throws: `GesApiError.invalidOperation` when a tick is open already; an error of the body.
+            @discardableResult
+            func publishTick(_ body: (Tick) throws -> Void) throws -> GesNetworkSendStatus {
+                try end.beginTick()
+                do {
+                    try body(Tick(self))
+                } catch {
+                    _ = try? end.endTick()
+                    throw error
+                }
+                return try end.endTick()
+            }
+
+            /// The topics the server publishes.
+            enum Topic: Int, Sendable {
+                /// The topic `server publishes :World latest`.
+                case world = 1
+            }
+
+            /// An open tick of `publishTick(_:)`: its publications arrive together.
+            struct Tick {
+                private let __end: Server
+
+                fileprivate init(_ end: Server) { __end = end }
+
+                /// Publishes a record on the topic `:World` as a member of the tick.
+                /// - Parameter value: The value.
+                /// - Returns: The status of the publication.
+                /// - Throws: `GesWireError` when a value does not fit its field.
+                @discardableResult
+                func publish(_ value: World) throws(GesWireError) -> GesNetworkSendStatus { try __end.publish(value) }
+
+                /// Makes a latest topic a member of the tick with its last published state.
+                /// - Parameter topic: The topic.
+                /// - Throws: `GesApiError.invalidOperation` when the topic has no published state; `GesApiError.invalidArgument` when it is no latest topic.
+                func include(_ topic: Topic) throws { try __end.end.include(route: topic.rawValue) }
+            }
+
+            /// Polls the end and hands every event to the closure. Never blocks.
+            /// - Parameter handler: The closure; a received record that is a class stays valid until it returns.
+            /// - Throws: `GesApiError.invalidOperation` when the end is released or polled already; an error of a link or the closure.
+            func poll(_ handler: (ServerEvent) throws -> Void) throws {
+                try end.poll { event in try self.__handle(event, handler) }
+            }
+
+            private func __handle(_ event: GesNetworkEndEvent, _ handler: (ServerEvent) throws -> Void) throws {
+                switch event.kind {
+                case .connecting:
+                    try handler(.connecting(client: event.client, token: event.payload))
+                case .clientConnected:
+                    try handler(.clientConnected(client: event.client, security: event.security))
+                case .clientDisconnected:
+                    try handler(.clientDisconnected(client: event.client, code: event.code, detail: event.detail, byPeer: event.byPeer))
+                case .message:
+                    switch event.route {
+                    case Game.clientSendsCommands:
+                        do {
+                            _ = try __commands.read(from: event.payload)
+                        } catch {
+                            try end.close(client: event.client, detail: "undecodable :Commands")
+                            return
+                        }
+                        try handler(.commands(client: event.client, __commands.asCase))
+                    default:
+                        break
+                    }
+                case .tick:
+                    try handler(.tick(client: event.client, number: event.tickNumber))
+                case .transferProgress:
+                    try handler(.transferProgress(client: event.client, route: event.route, transferId: event.transferId, bytes: event.bytes, total: event.total))
+                case .transferCancelled:
+                    try handler(.transferCancelled(client: event.client, route: event.route, transferId: event.transferId, code: event.code))
+                case .received:
+                    try handler(.received)
+                default:
+                    break
+                }
+            }
+        }
+
+        /// An event of the typed server end `Server`. Every event of a client carries the client.
+        enum ServerEvent {
+            /// A client asks to connect with its token, valid until the closure returns; refuse it with `Server.refuse(client:detail:)` before the closure returns, or it is accepted.
+            case connecting(client: Int, token: UnsafeRawBufferPointer)
+            /// A client is connected, with the reached security.
+            case clientConnected(client: Int, security: GesNetworkSecurity)
+            /// A client's connection closed, with its code, its detail and whether the client closed it; the client leaves the end.
+            case clientDisconnected(client: Int, code: String, detail: String, byPeer: Bool)
+            /// A message arrived on the route `client sends :Commands reliable`.
+            case commands(client: Int, Commands.Case)
+            /// A tick is complete; the events of its changed members precede it.
+            case tick(client: Int, number: Int)
+            /// A transfer on a bulk route advanced, with the route index, the transfer, the bytes received so far and the total bytes.
+            case transferProgress(client: Int, route: Int, transferId: Int, bytes: Int64, total: Int64)
+            /// A transfer was cancelled, with the route index, the transfer and the cancel code; the session continues.
+            case transferCancelled(client: Int, route: Int, transferId: Int, code: String)
+            /// The last event of a poll that reported at least one message or tick.
+            case received
         }
     }
 }

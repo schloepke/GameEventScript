@@ -105,7 +105,7 @@ public final class GesNetworkSocketListener {
                         try child.pipeline.syncOperations.addHandler(GesNetworkSocketServerUpgradeHandler(path: path, limit: limit, address: address, queue: queue))
                     } else {
                         if !queue.enter(address) { throw GesNetworkSocketQueue.Refused() }
-                        let inbox = GesNetworkSocketInbox()
+                        let inbox = GesNetworkSocketInbox(signal: queue.signal)
                         do {
                             try child.pipeline.syncOperations.addHandler(GesNetworkSocketStreamHandler(inbox: inbox))
                         } catch {
@@ -144,6 +144,11 @@ public final class GesNetworkSocketListener {
     }
 }
 
+extension GesNetworkSocketListener: GesNetworkAcceptor {
+    // Wakes the end that waits for this listener.
+    var signal: GesNetworkSocketSignal { queue.signal }
+}
+
 // The clients that are ready or still upgrading, shared between the event loops and the host. Accepting pauses
 // while they reach the capacity and resumes when the host takes one; an IP address may hold at most `perAddress` of
 // them, and its further sockets are closed.
@@ -156,6 +161,8 @@ final class GesNetworkSocketQueue: @unchecked Sendable {
 
     private typealias Entry = (channel: Channel, inbox: GesNetworkSocketInbox, peer: GesNetworkDatagramPeer?, address: String?)
 
+    // Wakes the end that waits for the listener's clients and their sockets.
+    let signal = GesNetworkSocketSignal()
     private let lock = NIOLock()
     // A UDP client is its peer on the listener's shared channel.
     private var entries: [Entry] = []
@@ -219,19 +226,21 @@ final class GesNetworkSocketQueue: @unchecked Sendable {
             entries.append((channel, inbox, nil, address))
             return true
         }
-        if !accepted { channel.close(promise: nil) }
+        if accepted { signal.set() } else { channel.close(promise: nil) }
     }
 
     // Queues a validated UDP client; false when the queue is full or closed or its IP address holds `perAddress`
     // clients, and the client sends hello again.
     func offer(_ channel: Channel, _ peer: GesNetworkDatagramPeer) -> Bool {
-        lock.withLock {
+        let accepted = lock.withLock {
             if entries.count - head + upgrading >= Self.capacity { return false }
             let address = peer.address.ipAddress
             if !enterLocked(address) { return false }
             entries.append((channel, peer.inbox, peer, address))
             return true
         }
+        if accepted { signal.set() }
+        return accepted
     }
 
     func take() -> (Channel, GesNetworkSocketInbox, GesNetworkDatagramPeer?)? {

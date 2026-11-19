@@ -35,6 +35,11 @@ public sealed class GesSchemaSetGenerateTests
             Assert.AreEqual("generate.nameCollision", Code(() => Generate(new() { Language = language, SchemaSet = "S" })));
         }
 
+        // A C# member cannot share its class's name; a Swift member can.
+        foreach (var name in new[] { "Set", "Hash", "Parameters", "Bind", "BindNetwork", "ReadDocument" })
+            Assert.AreEqual("generate.nameCollision", Code(() => Generate(new() { Language = GesSchemaLanguage.CSharp, SchemaSet = name })));
+        StringAssert.Contains(Generate(new() { Language = GesSchemaLanguage.Swift, SchemaSet = "Set" }), "enum Set");
+
         // Only Swift files import modules.
         Assert.AreEqual("generate.usage", Code(() => Generate(new() { Language = GesSchemaLanguage.CSharp, Imports = ["Shared"] })));
         Assert.AreEqual("generate.usage", Code(() => Generate(new() { Language = GesSchemaLanguage.Swift, Imports = ["Shared.Net"] })));

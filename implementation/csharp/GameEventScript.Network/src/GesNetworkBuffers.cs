@@ -339,13 +339,22 @@ internal sealed class GesNetworkLatestSlot(bool datagram)
     // Whether the current message has fragments to send, new or lost.
     internal bool HasPending => (HasCurrent && !Sent) || Lost.Count > 0;
 
-    internal void Set(ReadOnlySpan<byte> payload)
+    // Whether the current or the waiting message is a tick member. A later message that replaces an unstarted member
+    // takes its membership, so the tick names the newest state.
+    internal bool CurrentMember;
+    internal bool WaitingMember;
+
+    // Whether a message was ever completely sent: Id then names the newest one.
+    internal bool HasSent;
+
+    internal void Set(ReadOnlySpan<byte> payload, bool member = false)
     {
         if (HasCurrent && Started && !Sent)
         {
             if (_waiting.Length < payload.Length) _waiting = new byte[Math.Max(payload.Length, _waiting.Length * 2)];
             payload.CopyTo(_waiting);
             WaitingLength = payload.Length;
+            WaitingMember = member || (HasWaiting && WaitingMember);
             HasWaiting = true;
             Lost.Clear();
             return;
@@ -353,6 +362,7 @@ internal sealed class GesNetworkLatestSlot(bool datagram)
 
         if (_current.Length < payload.Length) _current = new byte[Math.Max(payload.Length, _current.Length * 2)];
         payload.CopyTo(_current);
+        CurrentMember = member || (HasCurrent && !Started && CurrentMember);
         CurrentLength = payload.Length;
         HasCurrent = true;
         Started = Sent = false;
@@ -366,15 +376,18 @@ internal sealed class GesNetworkLatestSlot(bool datagram)
     {
         Started = false;
         Offset = 0;
+        HasSent = true;
         if (HasWaiting)
         {
             (_current, _waiting) = (_waiting, _current);
             CurrentLength = WaitingLength;
+            CurrentMember = WaitingMember;
             HasWaiting = false;
             Lost.Clear();
             return;
         }
 
+        CurrentMember = false;
         if (datagram)
         {
             Started = Sent = true;
@@ -392,16 +405,20 @@ internal sealed class GesNetworkLatestSlot(bool datagram)
 
     internal void Clear()
     {
-        HasCurrent = HasWaiting = Started = Sent = false;
+        HasCurrent = HasWaiting = Started = Sent = CurrentMember = WaitingMember = HasSent = false;
         Offset = 0;
         Lost.Clear();
     }
 
-    // Drops the messages not yet started; a started one is completed.
-    internal void DropUnstarted()
+    // Drops the messages not yet started; a started one is completed. Returns whether a dropped one was a tick member.
+    internal bool DropUnstarted()
     {
-        HasWaiting = false;
-        if (!Started) HasCurrent = false;
+        var member = HasWaiting && WaitingMember;
+        HasWaiting = WaitingMember = false;
+        if (Started) return member;
+        member |= HasCurrent && CurrentMember;
+        HasCurrent = CurrentMember = false;
+        return member;
     }
 }
 

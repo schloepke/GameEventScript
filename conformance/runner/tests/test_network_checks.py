@@ -55,6 +55,17 @@ class NetworkInputTests(unittest.TestCase):
                           {'action': 'publish', 'side': 'server', 'route': 2, 'payload': {'hex': '0500'}},
                           {'action': 'unsubscribe', 'side': 'server', 'route': 2}], steps)
 
+    def test_tick_steps_reach_the_adapter(self):
+        steps = prepare(self.case('handshake-loopback', steps=[
+            {'beginTick': 'server'}, {'include': {'side': 'server', 'route': 1}}, {'endTick': 'server'}]))['steps']
+        self.assertEqual([{'action': 'beginTick', 'side': 'server'},
+                          {'action': 'include', 'side': 'server', 'route': 1},
+                          {'action': 'endTick', 'side': 'server'}], steps)
+        for step in ({'beginTick': {'side': 'server'}}, {'include': {'side': 'server'}},
+                     {'include': {'side': 'server', 'route': 1, 'payload': '00'}}):
+            with self.assertRaises(InvalidDocument, msg=step):
+                prepare(self.case('handshake-loopback', steps=[step]))
+
     def test_transfer_steps_and_options_reach_the_adapter(self):
         request = prepare(self.case('handshake-loopback', options={'maxTransferBytes': 4, 'deflateTransfers': False}, steps=[
             {'cancel': {'side': 'server', 'route': 3, 'id': 0}},

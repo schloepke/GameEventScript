@@ -105,7 +105,7 @@ internal static partial class GesSwiftEmitter
         {
             // A packed root that the models declare has its wire members in an enum `<Name>Wire`.
             var type = types.Find(candidate => candidate.Name == root)!;
-            return type.Layout.PackedWidth > 0 && packed is null ? (models + root, $"{root}Wire.write(value, into: buffer)") : (root, "value.write(into: buffer)");
+            return new NetworkRoot(type.Layout.PackedWidth > 0 && packed is null ? models + root : root, type.Layout.PackedWidth > 0 && packed is null ? root + "Wire" : null, type);
         })));
         context.TopLevel = GesSchemaPlanner.TopLevel(types, sets, layout.Networks);
         if (modelSpace is not null)
@@ -576,7 +576,11 @@ internal static partial class GesSwiftEmitter
 
     private static void MessageSet(GesSchemaPlanner.Code code, GesPlanType type, string access, Context context)
     {
-        var names = new List<(string, string)> { ("selected", "the selected member"), ("Member", GesSchemaPlanner.NestedTypeOrigin + "of the members") };
+        var names = new List<(string, string)>
+        {
+            ("selected", "the selected member"), ("Member", GesSchemaPlanner.NestedTypeOrigin + "of the members"), ("Case", GesSchemaPlanner.NestedTypeOrigin + "of the messages"),
+            ("asCase", "the generated member asCase"), ("assign", "the generated member assign")
+        };
         foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
         if (context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
@@ -614,6 +618,7 @@ internal static partial class GesSwiftEmitter
         code.Blank();
         PublicMethods(code, access, type.MembersAreClasses ? "" : "mutating ", write, read, "message");
         if (context.Values) ValueMembers(code, type, access, context.Holder, context.SchemaSet);
+        MessageCases(code, type, access);
         code.Blank();
         code.Line("/// The messages of the set, in declared order.");
         code.Open($"{access}enum Member: {Underlying(type.Members.Count)}, Sendable {{");
@@ -624,6 +629,42 @@ internal static partial class GesSwiftEmitter
         }
 
         code.Close();
+        code.Close();
+    }
+
+    // The message of a set as an enum with one case per member, holding that member's record, and the conversions both ways.
+    private static void MessageCases(GesSchemaPlanner.Code code, GesPlanType type, string access)
+    {
+        code.Blank();
+        code.Line("/// The selected message as a case.");
+        code.Open($"{access}var asCase: Case {{");
+        code.Line("switch selected {");
+        foreach (var member in type.Members) code.Line($"case .{Member(member)}: .{Member(member)}(self.{Member(member)})");
+        code.Line("}");
+        code.Close();
+        code.Blank();
+        code.Line("/// Selects the message of a case and stores its record.");
+        code.Line("/// - Parameter value: The message.");
+        code.Open($"{access}{(type.MembersAreClasses ? "" : "mutating ")}func assign(_ value: Case) {{");
+        code.Line("switch value {");
+        foreach (var member in type.Members)
+        {
+            code.Line($"case .{Member(member)}(let value):");
+            code.Line($"    selected = .{Member(member)}");
+            code.Line($"    self.{Member(member)} = value");
+        }
+
+        code.Line("}");
+        code.Close();
+        code.Blank();
+        code.Line("/// A message of the set as a value: one case per message, holding its record.");
+        code.Open($"{access}enum Case{(type.MembersAreClasses ? "" : ": Sendable")} {{");
+        foreach (var member in type.Members)
+        {
+            code.Line($"/// The message `{member}`.");
+            code.Line($"case {Member(member)}({member})");
+        }
+
         code.Close();
     }
 
@@ -938,7 +979,28 @@ internal static partial class GesSwiftEmitter
 
     // The constants of a network, its hash, the index of each route and the rate of each topic that has one, and a
     // function per route that encodes its root and sends or publishes it.
-    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access, string? schemaSet, Func<string, (string Type, string Write)> root)
+    // The root of a route: its type, and for a packed root the models declare, the enum `<Name>Wire` of its wire members.
+    private sealed class NetworkRoot(string type, string? wire, GesPlanType plan)
+    {
+        internal string Type { get; } = type;
+
+        internal string? Wire { get; } = wire;
+
+        internal GesPlanType Plan { get; } = plan;
+
+        internal bool IsSet => Plan.Kind == GesSchemaKind.Messages;
+
+        // The type whose `maxByteCount` bounds an encoding.
+        internal string Owner => Wire ?? Type;
+
+        internal string Write(string value, string buffer) => Wire is null ? $"{value}.write(into: {buffer})" : $"{Wire}.write({value}, into: {buffer})";
+
+        internal string Read(string record, string data) => Wire is null ? $"{record}.read(from: {data})" : $"{Wire}.read(&{record}, from: {data})";
+
+        internal string Initial => Wire is null ? Type + "()" : Type + "(uncheckedRawValue: 0)";
+    }
+
+    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access, string? schemaSet, Func<string, NetworkRoot> roots)
     {
         code.Line($"/// The network `:{network.Name}`: its hash, the index of each route, the rate of each topic that has one and a typed function per route.");
         code.Open($"{access}enum {network.Name} {{");
@@ -972,7 +1034,9 @@ internal static partial class GesSwiftEmitter
         {
             var publishes = route.Verb == "publishes";
             var verb = publishes ? "publish" : "send";
-            var (type, write) = root(route.Root);
+            var root = roots(route.Root);
+            var type = root.Type;
+            var write = root.Write("value", "buffer");
             code.Blank();
             code.Line($"/// Encodes a record into a buffer and {(publishes ? "publishes" : "sends")} it on the route `{route.Side} {route.Verb} :{route.Root} {route.Class}`.");
             code.Line("/// - Parameters:");
@@ -987,6 +1051,328 @@ internal static partial class GesSwiftEmitter
             code.Close();
         }
 
+        foreach (var client in new[] { true, false })
+        {
+            var end = GesNetworkEndPlan.Plan(network, client);
+            TypedEnd(code, network, end, access, roots);
+            EndEvent(code, network, end, access, roots);
+        }
+
+        code.Close();
+    }
+
+    // A typed end: it encodes the roots of its side into one buffer, reads the roots it receives into one record per route
+    // and hands them to the closure of a poll as events.
+    private static void TypedEnd(GesSchemaPlanner.Code code, GesLayoutNetwork network, GesNetworkEndPlan end, string access, Func<string, NetworkRoot> roots)
+    {
+        var isClient = end.Client;
+        var endType = isClient ? "GesNetworkClientEnd" : "GesNetworkServerEnd";
+        var eventType = end.Name + "Event";
+        var side = isClient ? "client" : "server";
+        var net = network.Name;
+        // Distinct prefixes keep the scratch record of an outgoing message set apart from the record of each received route.
+        string Field(string name) => "__" + GesSchemaPlanner.Camel(name);
+        string Outgoing(GesLayoutRoute route) => "__out_" + GesSchemaPlanner.Camel((route.Verb == "sends" ? "Send" : "Publish") + route.Root);
+        string Route(GesLayoutRoute route) => net + "." + GesSchemaPlanner.Camel(route.Name);
+        string Case(string name) => Name(GesSchemaPlanner.Camel(name));
+        code.Blank();
+        code.Line($"/// The typed {side} end of `:{net}`: it encodes the records the {side} sends and publishes and hands the records it receives");
+        code.Line($"/// to the closure of `poll(_:)` as `{eventType}` values. A received record that is a class is borrowed: it stays valid until");
+        code.Line("/// the closure returns.");
+        code.Open($"{access}final class {end.Name} {{");
+        code.Line("/// The wrapped end.");
+        code.Line($"{access}let end: {endType}");
+        code.Line("private let __buffer: UnsafeMutableRawBufferPointer");
+        foreach (var route in end.Outgoing)
+        {
+            var root = roots(route.Root);
+            if (root.IsSet) code.Line($"private var {Outgoing(route)} = {root.Initial}");
+        }
+
+        foreach (var (route, name) in end.Incoming) code.Line($"private var {Field(name)} = {roots(route.Root).Initial}");
+        code.Blank();
+        code.Line("/// Wraps an end of the network.");
+        code.Line($"/// - Parameter end: The end; its bound network must have the hash `{net}.hash`.");
+        code.Line("/// - Throws: `GesApiError.invalidArgument` when the end's network has another hash.");
+        code.Open($"{access}init(_ end: {endType}) throws {{");
+        code.Line($"guard end.network.hash == {net}.hash else {{ throw GesApiError.invalidArgument(\"The end's network is no :{net}.\") }}");
+        code.Line("self.end = end");
+        var sizes = new List<string>();
+        foreach (var route in end.Outgoing)
+        {
+            var owner = roots(route.Root).Owner + ".maxByteCount";
+            if (!sizes.Contains(owner)) sizes.Add(owner);
+        }
+
+        var size = sizes.Count switch { 0 => "0", 1 => sizes[0], _ => $"max({string.Join(", ", sizes)})" };
+        code.Line($"__buffer = .allocate(byteCount: {size}, alignment: 1)");
+        code.Close();
+        code.Blank();
+        code.Line("deinit { __buffer.deallocate() }");
+        if (isClient)
+        {
+            code.Blank();
+            code.Line("/// The end's connection.");
+            code.Line($"{access}var connection: GesNetworkConnection {{ end.connection }}");
+        }
+        else
+        {
+            code.Blank();
+            code.Line("/// The number of connected clients.");
+            code.Line($"{access}var clientCount: Int {{ end.clientCount }}");
+            code.Blank();
+            code.Line("/// Returns the connection of a client.");
+            code.Line("/// - Parameter client: The client.");
+            code.Line("/// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.");
+            code.Line($"{access}func connection(client: Int) throws -> GesNetworkConnection {{ try end.connection(client: client) }}");
+        }
+
+        foreach (var route in end.Outgoing)
+        {
+            var root = roots(route.Root);
+            var publishes = route.Verb == "publishes";
+            var verb = publishes ? "publish" : "send";
+            var what = $"`{route.Side} {route.Verb} :{route.Root} {route.Class}`";
+            var targets = new List<(string Parameters, string Arguments, string Doc)> { ("", "", publishes ? "to the subscribed clients" : isClient ? "to the server" : "to every client") };
+            if (!isClient && !publishes) targets.Add((", client: Int", ", client: client", "to one client"));
+            foreach (var (parameters, arguments, doc) in targets)
+            {
+                var toClient = arguments.Length > 0;
+                var throws = toClient ? "throws" : "throws(GesWireError)";
+                var label = $"{endType}.{verb}(route:payload:{(toClient ? "client:" : "")})";
+                code.Blank();
+                code.Line($"/// Encodes a record and {(publishes ? "publishes" : "sends")} it on the route {what}{(isClient ? "" : ", " + doc)}.");
+                Parameters(code, toClient, "The record.");
+                code.Line($"/// - Returns: The status of `{label}`.");
+                code.Line($"/// - Throws: `GesWireError` when a value does not fit its field{(toClient ? "; `GesApiError.invalidArgument` when the client is not connected to the end" : "")}.");
+                code.Line("@discardableResult");
+                code.Open($"{access}func {verb}(_ value: {root.Type}{parameters}) {throws} -> GesNetworkSendStatus {{");
+                code.Line($"let count = try {root.Write("value", "__buffer")}");
+                code.Line($"return {(toClient ? "try " : "")}end.{verb}(route: {Route(route)}, payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count]){arguments})");
+                code.Close();
+                if (!root.IsSet) continue;
+                code.Blank();
+                code.Line($"/// Encodes a message and {(publishes ? "publishes" : "sends")} it on the route {what}{(isClient ? "" : ", " + doc)}.");
+                Parameters(code, toClient, "The message.");
+                code.Line($"/// - Returns: The status of `{label}`.");
+                code.Line($"/// - Throws: `GesWireError` when a value does not fit its field{(toClient ? "; `GesApiError.invalidArgument` when the client is not connected to the end" : "")}.");
+                code.Line("@discardableResult");
+                code.Open($"{access}func {verb}(_ value: {root.Type}.Case{parameters}) {throws} -> GesNetworkSendStatus {{");
+                code.Line($"{Outgoing(route)}.assign(value)");
+                code.Line($"return try {verb}({Outgoing(route)}{arguments})");
+                code.Close();
+            }
+        }
+
+        if (!isClient)
+        {
+            code.Blank();
+            code.Line("/// Refuses a connecting client; call it while the closure of `poll(_:)` handles its `connecting` event.");
+            code.Line("/// - Parameters:");
+            code.Line("///   - client: The client.");
+            code.Line("///   - detail: The detail sent to the client.");
+            code.Line("/// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.");
+            code.Line($"{access}func refuse(client: Int, detail: String) throws {{ try end.refuse(client: client, detail: detail) }}");
+            code.Blank();
+            code.Line("/// Closes the connection of one client with a detail.");
+            code.Line("/// - Parameters:");
+            code.Line("///   - client: The client.");
+            code.Line("///   - detail: The detail sent to the client.");
+            code.Line("/// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.");
+            code.Line($"{access}func close(client: Int, detail: String) throws {{ try end.close(client: client, detail: detail) }}");
+        }
+
+        code.Blank();
+        code.Line(isClient ? "/// Closes the connection with a detail." : "/// Closes every connection with a detail and stops accepting clients.");
+        code.Line($"/// - Parameter detail: The detail sent to the {(isClient ? "server" : "clients")}.");
+        code.Line($"{access}func close(_ detail: String) {{ end.close(detail) }}");
+        if (end.HasTopics)
+        {
+            if (!isClient)
+            {
+                foreach (var (verb, doc) in new[] { ("subscribe", "Subscribes a client to a topic."), ("unsubscribe", "Unsubscribes a client from a topic.") })
+                {
+                    code.Blank();
+                    code.Line($"/// {doc}");
+                    code.Line("/// - Parameters:");
+                    code.Line("///   - client: The client.");
+                    code.Line("///   - topic: The topic.");
+                    code.Line("/// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.");
+                    code.Line($"{access}func {verb}(client: Int, topic: Topic) throws {{ try end.{verb}(client: client, route: topic.rawValue) }}");
+                }
+            }
+
+            code.Blank();
+            code.Line("/// Opens a tick, runs the body with it and closes it, also when the body throws: the tick's publications arrive together.");
+            code.Line("/// - Parameter body: The body; it publishes on the tick and includes latest topics.");
+            code.Line("/// - Returns: The status of closing the tick.");
+            code.Line("/// - Throws: `GesApiError.invalidOperation` when a tick is open already; an error of the body.");
+            code.Line("@discardableResult");
+            code.Open($"{access}func publishTick(_ body: (Tick) throws -> Void) throws -> GesNetworkSendStatus {{");
+            code.Line("try end.beginTick()");
+            code.Open("do {");
+            code.Line("try body(Tick(self))");
+            code.Close("} catch {");
+            code.Indent();
+            code.Line("_ = try? end.endTick()");
+            code.Line("throw error");
+            code.Close();
+            code.Line("return try end.endTick()");
+            code.Close();
+            code.Blank();
+            code.Line($"/// The topics the {side} publishes.");
+            code.Open($"{access}enum Topic: Int, Sendable {{");
+            foreach (var route in end.Topics)
+            {
+                code.Line($"/// The topic `{route.Side} {route.Verb} :{route.Root} {route.Class}`.");
+                code.Line($"case {Case(route.Root)} = {route.Index}");
+            }
+
+            code.Close();
+            code.Blank();
+            code.Line("/// An open tick of `publishTick(_:)`: its publications arrive together.");
+            code.Open($"{access}struct Tick {{");
+            code.Line($"private let __end: {end.Name}");
+            code.Blank();
+            code.Line($"fileprivate init(_ end: {end.Name}) {{ __end = end }}");
+            foreach (var route in end.Topics)
+            {
+                var root = roots(route.Root);
+                foreach (var (type, what) in root.IsSet ? new[] { (root.Type, "record"), (root.Type + ".Case", "message") } : new[] { (root.Type, "record") })
+                {
+                    code.Blank();
+                    code.Line($"/// Publishes a {what} on the topic `:{route.Root}` as a member of the tick.");
+                    code.Line("/// - Parameter value: The value.");
+                    code.Line("/// - Returns: The status of the publication.");
+                    code.Line("/// - Throws: `GesWireError` when a value does not fit its field.");
+                    code.Line("@discardableResult");
+                    code.Line($"{access}func publish(_ value: {type}) throws(GesWireError) -> GesNetworkSendStatus {{ try __end.publish(value) }}");
+                }
+            }
+
+            code.Blank();
+            code.Line("/// Makes a latest topic a member of the tick with its last published state.");
+            code.Line("/// - Parameter topic: The topic.");
+            code.Line("/// - Throws: `GesApiError.invalidOperation` when the topic has no published state; `GesApiError.invalidArgument` when it is no latest topic.");
+            code.Line($"{access}func include(_ topic: Topic) throws {{ try __end.end.include(route: topic.rawValue) }}");
+            code.Close();
+        }
+
+        code.Blank();
+        code.Line($"/// Polls the end and hands every event to the closure. Never blocks.");
+        code.Line("/// - Parameter handler: The closure; a received record that is a class stays valid until it returns.");
+        code.Line("/// - Throws: `GesApiError.invalidOperation` when the end is released or polled already; an error of a link or the closure.");
+        code.Open($"{access}func poll(_ handler: ({eventType}) throws -> Void) throws {{");
+        code.Line("try end.poll { event in try self.__handle(event, handler) }");
+        code.Close();
+        code.Blank();
+        code.Open($"private func __handle(_ event: GesNetworkEndEvent, _ handler: ({eventType}) throws -> Void) throws {{");
+        var client = isClient ? "" : "client: event.client, ";
+        code.Line("switch event.kind {");
+        if (isClient)
+        {
+            code.Line("case .connected:");
+            code.Line("    try handler(.connected(security: event.security))");
+            code.Line("case .disconnected:");
+            code.Line("    try handler(.disconnected(code: event.code, detail: event.detail, byPeer: event.byPeer))");
+        }
+        else
+        {
+            code.Line("case .connecting:");
+            code.Line("    try handler(.connecting(client: event.client, token: event.payload))");
+            code.Line("case .clientConnected:");
+            code.Line("    try handler(.clientConnected(client: event.client, security: event.security))");
+            code.Line("case .clientDisconnected:");
+            code.Line("    try handler(.clientDisconnected(client: event.client, code: event.code, detail: event.detail, byPeer: event.byPeer))");
+        }
+
+        if (end.Incoming.Count > 0)
+        {
+            code.Line("case .message:");
+            code.Line("    switch event.route {");
+            foreach (var (route, name) in end.Incoming)
+            {
+                var root = roots(route.Root);
+                var field = Field(name);
+                code.Line($"    case {Route(route)}:");
+                code.Line("        do {");
+                code.Line($"            _ = try {root.Read(field, "event.payload")}");
+                code.Line("        } catch {");
+                code.Line($"            {(isClient ? "" : "try ")}end.close({(isClient ? "" : "client: event.client, detail: ")}\"undecodable :{route.Root}\")");
+                code.Line("            return");
+                code.Line("        }");
+                code.Line($"        try handler(.{Case(name)}({client}{field}{(root.IsSet ? ".asCase" : "")}))");
+            }
+
+            code.Line("    default:");
+            code.Line("        break");
+            code.Line("    }");
+        }
+
+        code.Line("case .tick:");
+        code.Line($"    try handler(.tick({client}number: event.tickNumber))");
+        code.Line("case .transferProgress:");
+        code.Line($"    try handler(.transferProgress({client}route: event.route, transferId: event.transferId, bytes: event.bytes, total: event.total))");
+        code.Line("case .transferCancelled:");
+        code.Line($"    try handler(.transferCancelled({client}route: event.route, transferId: event.transferId, code: event.code))");
+        code.Line("case .received:");
+        code.Line("    try handler(.received)");
+        code.Line("default:");
+        code.Line("    break");
+        code.Line("}");
+        code.Close();
+        code.Close();
+    }
+
+    private static void Parameters(GesSchemaPlanner.Code code, bool client, string value)
+    {
+        if (!client)
+        {
+            code.Line($"/// - Parameter value: {value}");
+            return;
+        }
+
+        code.Line("/// - Parameters:");
+        code.Line($"///   - value: {value}");
+        code.Line("///   - client: The client.");
+    }
+
+    // The events of a typed end, one case per event.
+    private static void EndEvent(GesSchemaPlanner.Code code, GesLayoutNetwork network, GesNetworkEndPlan end, string access, Func<string, NetworkRoot> roots)
+    {
+        var isClient = end.Client;
+        var client = isClient ? "" : "client: Int, ";
+        void Case(string summary, string declaration)
+        {
+            code.Line($"/// {summary}");
+            code.Line($"case {declaration}");
+        }
+
+        code.Blank();
+        code.Line($"/// An event of the typed {(isClient ? "client" : "server")} end `{end.Name}`.{(isClient ? "" : " Every event of a client carries the client.")}");
+        code.Open($"{access}enum {end.Name}Event {{");
+        if (isClient)
+        {
+            Case("The session is established, with the reached security.", "connected(security: GesNetworkSecurity)");
+            Case("The connection closed, with its code, its detail and whether the server closed it.", "disconnected(code: String, detail: String, byPeer: Bool)");
+        }
+        else
+        {
+            Case("A client asks to connect with its token, valid until the closure returns; refuse it with `Server.refuse(client:detail:)` before the closure returns, or it is accepted.", "connecting(client: Int, token: UnsafeRawBufferPointer)");
+            Case("A client is connected, with the reached security.", "clientConnected(client: Int, security: GesNetworkSecurity)");
+            Case("A client's connection closed, with its code, its detail and whether the client closed it; the client leaves the end.", "clientDisconnected(client: Int, code: String, detail: String, byPeer: Bool)");
+        }
+
+        foreach (var (route, name) in end.Incoming)
+        {
+            var root = roots(route.Root);
+            Case($"A {(root.IsSet ? "message" : "record")} arrived on the route `{route.Side} {route.Verb} :{route.Root} {route.Class}`.", $"{Name(GesSchemaPlanner.Camel(name))}({client}{(root.IsSet ? root.Type + ".Case" : root.Type)})");
+        }
+
+        Case("A tick is complete; the events of its changed members precede it.", $"tick({client}number: Int)");
+        Case("A transfer on a bulk route advanced, with the route index, the transfer, the bytes received so far and the total bytes.", $"transferProgress({client}route: Int, transferId: Int, bytes: Int64, total: Int64)");
+        Case("A transfer was cancelled, with the route index, the transfer and the cancel code; the session continues.", $"transferCancelled({client}route: Int, transferId: Int, code: String)");
+        Case("The last event of a poll that reported at least one message or tick.", "received");
         code.Close();
     }
 

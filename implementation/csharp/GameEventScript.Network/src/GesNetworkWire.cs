@@ -31,6 +31,10 @@ internal static class GesNetworkWire
     // Kinds of a control frame on channel 0.
     internal const byte ControlConfirmation = 0;
     internal const byte ControlCancel = 1;
+    internal const byte ControlTick = 2;
+
+    // The mode byte bit of a tick member.
+    internal const byte TickMember = 0x80;
 
     internal const byte Hello = 1;
     internal const byte Retry = 2;

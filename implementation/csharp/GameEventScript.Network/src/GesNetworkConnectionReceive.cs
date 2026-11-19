@@ -396,8 +396,11 @@ public sealed partial class GesNetworkConnection
         if (Wire.ReadVarint(packet, ref position, out var channel) != 1 || channel > _routeCount) return Fail(GesNetworkCodes.Malformed);
         if (channel == 0)
         {
-            // Control frames: a stream or message transport carries only cancels.
-            if (position == packet.Length || packet[position++] != Wire.ControlCancel) return Fail(GesNetworkCodes.Malformed);
+            // Control frames: a stream or message transport carries only cancels and ticks.
+            if (position == packet.Length) return Fail(GesNetworkCodes.Malformed);
+            var kind = packet[position++];
+            if (kind == Wire.ControlTick) return ReceiveTick(packet, ref position);
+            if (kind != Wire.ControlCancel) return Fail(GesNetworkCodes.Malformed);
             return ReceiveCancel(packet, ref position);
         }
 
@@ -466,12 +469,17 @@ public sealed partial class GesNetworkConnection
         if (_classes[route] == GesNetworkClass.Bulk) return DeliverTransfer(route, id, message);
         if (_topics[route] is { } topic)
         {
-            if (message.IsEmpty || message[0] > GesNetworkTopic.MaximumStates) return Fail(GesNetworkCodes.Malformed);
-            var number = _classes[route] == GesNetworkClass.Latest ? id : topic.Next++;
+            if (message.IsEmpty) return Fail(GesNetworkCodes.Malformed);
+            var latest = _classes[route] == GesNetworkClass.Latest;
+            // The mode byte: the distance to the delta's base, and on a latest topic whether the state is a tick member.
+            var member = (message[0] & Wire.TickMember) != 0;
+            var distance = message[0] & ~Wire.TickMember;
+            if ((member && !latest) || distance > GesNetworkTopic.MaximumStates) return Fail(GesNetworkCodes.Malformed);
+            var number = latest ? id : topic.Next++;
             var rest = message.Slice(1);
-            if (message[0] != 0)
+            if (distance != 0)
             {
-                if (!topic.Find((ushort)(number - message[0]), out var baseline)) return Fail(GesNetworkCodes.Malformed);
+                if (!topic.Find((ushort)(number - distance), out var baseline)) return Fail(GesNetworkCodes.Malformed);
                 try
                 {
                     var decoded = GesSchemaDelta.Decode(topic.Schema, rest, baseline, topic.Scratch);
@@ -485,7 +493,16 @@ public sealed partial class GesNetworkConnection
             }
 
             topic.Add(rest, _baselineLimit, number);
-            if (_datagram && _classes[route] == GesNetworkClass.Latest) OweConfirmation(route, number);
+            if (_datagram && latest) OweConfirmation(route, number);
+            if (member) return HoldMember(route, number, rest);
+            if (latest)
+            {
+                ReleaseHeld(route, number);
+                NoteReported(route, number);
+                if (!AddEvent(GesNetworkEventKind.Message, route, rest, Counter.Pending, string.Empty, string.Empty, false)) return Fail(GesNetworkCodes.QueueFull);
+                return CompleteTick();
+            }
+
             message = rest;
         }
 

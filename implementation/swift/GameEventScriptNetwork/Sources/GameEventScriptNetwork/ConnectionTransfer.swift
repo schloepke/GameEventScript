@@ -68,6 +68,9 @@ extension GesNetworkConnection {
         if sendBulk.count >= GesNetworkSendQueue.maximumStarted || sendBulk.byteCount + Int64(data.count) > min(maxTransfer, peerTransferLimit) {
             return .queueFull
         }
+        // On a datagram transport the receiver resolves ids in order; a cancel it has not confirmed holds its id open, so
+        // the new id stays within the receive window of the oldest open one.
+        if datagram && cancels.count > 0 && cancels.ownSpan(nextBulkId, localSends) >= GesNetworkSendQueue.maximumStarted { return .queueFull }
 
         let id = nextBulkId
         nextBulkId &+= 1
@@ -353,6 +356,17 @@ final class GesNetworkCancels {
         states[slot(serial)] = Self.pending
         if pendingCount == 0 || serial < pendingSerial { pendingSerial = serial }
         pendingCount += 1
+    }
+
+    // The largest distance from the next transfer id back to an unconfirmed cancel of a transfer of this side; 0 when
+    // there is none.
+    func ownSpan(_ next: UInt16, _ localSends: [Bool]) -> Int {
+        var span = 0
+        for index in 0..<count {
+            let slot = (first + index) & (routes.count - 1)
+            if states[slot] != Self.confirmed && localSends[routes[slot]] { span = max(span, Int(next &- ids[slot])) }
+        }
+        return span
     }
 
     private func grow() {

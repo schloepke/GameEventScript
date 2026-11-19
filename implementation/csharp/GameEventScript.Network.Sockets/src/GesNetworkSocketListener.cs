@@ -22,9 +22,9 @@ namespace GameEventScript.Network.Sockets;
 /// the HTTP upgrade, or for UDP reads the shared socket, validates unknown addresses and routes each datagram to its
 /// client; the host takes each ready client with <see cref="Accept"/> on its own thread. At most 64 clients wait or
 /// upgrade at once, accepting pauses while they do, and one IP address holds at most 8 of them; its further sockets
-/// are closed.
+/// are closed. As an <see cref="IGesNetworkAcceptor"/> it accepts the clients of a server end.
 /// </summary>
-public sealed partial class GesNetworkSocketListener : IDisposable
+public sealed partial class GesNetworkSocketListener : IGesNetworkAcceptor
 {
     private const int MaxRequestBytes = 8192;
     private const int PendingClients = 64;
@@ -67,6 +67,8 @@ public sealed partial class GesNetworkSocketListener : IDisposable
         _ = Task.Run(AcceptLoopAsync);
     }
 
+    internal GesNetworkSocketSignal Signal { get; } = new();
+
     /// <summary>Gets the address and port the listener accepts on, with the port the system chose for port 0.</summary>
     public IPEndPoint LocalEndPoint { get; }
 
@@ -108,11 +110,13 @@ public sealed partial class GesNetworkSocketListener : IDisposable
         if (!_pending.Reader.TryRead(out var pending)) return null;
         Leave(pending.Address);
         var connection = GesNetworkConnection.CreateServer(_network, now, _options);
-        if (pending.Peer != null) return GesNetworkSocketSession.FromPeer(connection, pending.Peer);
+        if (pending.Peer != null) return GesNetworkSocketSession.FromPeer(connection, pending.Peer, Signal);
         return pending.WebSocket != null
-            ? GesNetworkSocketSession.FromWebSocket(connection, pending.WebSocket, pending.Owner!)
-            : GesNetworkSocketSession.FromStream(connection, pending.Owner!.GetStream(), pending.Owner!);
+            ? GesNetworkSocketSession.FromWebSocket(connection, pending.WebSocket, pending.Owner!, Signal)
+            : GesNetworkSocketSession.FromStream(connection, pending.Owner!.GetStream(), pending.Owner!, Signal);
     }
+
+    IGesNetworkLink? IGesNetworkAcceptor.Accept(long now) => Accept(now);
 
     /// <summary>
     /// Stops accepting and closes every client not yet taken. TCP and WebSocket sessions already taken stay open; UDP
@@ -170,7 +174,12 @@ public sealed partial class GesNetworkSocketListener : IDisposable
     // Queues a client that holds a place; a disposed listener closes it.
     private void Offer(Pending pending)
     {
-        if (_pending.Writer.TryWrite(pending)) return;
+        if (_pending.Writer.TryWrite(pending))
+        {
+            Signal.Set();
+            return;
+        }
+
         Leave(pending.Address);
         pending.Dispose();
     }

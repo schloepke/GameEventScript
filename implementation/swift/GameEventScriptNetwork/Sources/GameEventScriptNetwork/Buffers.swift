@@ -353,21 +353,31 @@ final class GesNetworkLatestSlot {
     // Whether the current message has fragments to send, new or lost.
     var hasPending: Bool { (hasCurrent && !sent) || lost.count > 0 }
 
+    // Whether the current or the waiting message is a tick member. A later message that replaces an unstarted member
+    // takes its membership, so the tick names the newest state.
+    var currentMember = false
+    var waitingMember = false
+
+    // Whether a message was ever completely sent: id then names the newest one.
+    var hasSent = false
+
     // Calls the body with the current message's bytes.
     func withCurrent<Result>(_ body: (UnsafeRawBufferPointer) -> Result) -> Result {
         let length = currentLength
         return current.withUnsafeBytes { body(UnsafeRawBufferPointer(rebasing: $0[0..<length])) }
     }
 
-    func set(_ payload: UnsafeRawBufferPointer) {
+    func set(_ payload: UnsafeRawBufferPointer, member: Bool = false) {
         if hasCurrent && started && !sent {
             Self.copy(payload, into: &waiting)
             waitingLength = payload.count
+            waitingMember = member || (hasWaiting && waitingMember)
             hasWaiting = true
             lost.clear()
             return
         }
         Self.copy(payload, into: &current)
+        currentMember = member || (hasCurrent && !started && currentMember)
         currentLength = payload.count
         hasCurrent = true
         started = false
@@ -381,13 +391,16 @@ final class GesNetworkLatestSlot {
     func complete() {
         started = false
         offset = 0
+        hasSent = true
         if hasWaiting {
             swap(&current, &waiting)
             currentLength = waitingLength
+            currentMember = waitingMember
             hasWaiting = false
             lost.clear()
             return
         }
+        currentMember = false
         if datagram {
             started = true
             sent = true
@@ -406,14 +419,23 @@ final class GesNetworkLatestSlot {
         hasWaiting = false
         started = false
         sent = false
+        currentMember = false
+        waitingMember = false
+        hasSent = false
         offset = 0
         lost.clear()
     }
 
-    // Drops the messages not yet started; a started one is completed.
-    func dropUnstarted() {
+    // Drops the messages not yet started; a started one is completed. Returns whether a dropped one was a tick member.
+    func dropUnstarted() -> Bool {
+        var member = hasWaiting && waitingMember
         hasWaiting = false
-        if !started { hasCurrent = false }
+        waitingMember = false
+        if started { return member }
+        member = member || (hasCurrent && currentMember)
+        hasCurrent = false
+        currentMember = false
+        return member
     }
 
     private static func copy(_ payload: UnsafeRawBufferPointer, into target: inout [UInt8]) {

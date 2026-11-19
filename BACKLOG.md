@@ -86,6 +86,8 @@ here.
   - signed server keys, so a client trusts a signing key instead of pinning each server's key, with rotation;
   - an observation hook for sent and received packets and events, and replay of a recorded session;
   - benchmarks with 64 subscribers, a World of about 33 KB and deltas of about 100 bytes.
+  - models for network routes whose root is a message or message set: `--models` generates typed ends over wire
+    types only; a model end would convert each event's wire value into the model.
 - Extend packed schemas (specs/Schemas.md#packed-schemas): `optional` fields as a presence bit, spatial fields with
   fixed axes, computed fields over the word, and a block copy of a List of packed records between the bit reader or
   writer and an array of words when the bit position is byte-aligned, which needs new public bit-primitive API. Also a

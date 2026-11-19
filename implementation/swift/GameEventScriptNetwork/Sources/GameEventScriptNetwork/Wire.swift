@@ -25,6 +25,10 @@ enum GesNetworkWire {
     // Kinds of a control frame on channel 0.
     static let controlConfirmation: UInt8 = 0
     static let controlCancel: UInt8 = 1
+    static let controlTick: UInt8 = 2
+
+    // The mode byte bit of a tick member.
+    static let tickMember: UInt8 = 0x80
 
     static let hello: UInt8 = 1
     static let retry: UInt8 = 2

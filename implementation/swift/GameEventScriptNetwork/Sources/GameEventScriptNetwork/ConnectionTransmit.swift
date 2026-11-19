@@ -148,6 +148,7 @@ extension GesNetworkConnection {
             for route in 0..<routeCount {
                 if let slot = sendLatest[route] { position = writeLatest(route, slot, packet, position, limit) }
             }
+            position = writeTickFrame(packet, position, limit)
             position = writeQueue(sendBulk, &nextBulkId, packet, position, limit)
         }
 
@@ -217,7 +218,7 @@ extension GesNetworkConnection {
             let length: Int
             if let topic {
                 if !slot.started {
-                    topic.messageLength = slot.withCurrent { encodeState(topic, $0, slot.nextId) }
+                    topic.messageLength = slot.withCurrent { encodeState(topic, $0, slot.nextId, member: slot.currentMember) }
                     if topic.message.baseAddress == nil { topic.message = .allocate(byteCount: topic.scratch.count, alignment: 8) }
                     topic.message.baseAddress!.copyMemory(from: topic.scratch.baseAddress!, byteCount: topic.messageLength)
                 }
@@ -238,6 +239,7 @@ extension GesNetworkConnection {
             slot.offset += chunk
             if slot.offset < length { break }
             topic?.markSent(sentCount)
+            if slot.currentMember { completeMember(route, slot.id) }
             slot.complete()
         }
         return position

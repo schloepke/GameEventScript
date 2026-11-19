@@ -4,24 +4,37 @@
 # Module: GameEventScriptNetworkSockets
 # Update explicitly with: python3 scripts/verify-swift-api.py --update
 
+relationship {"kind":"conformsTo","source":"GameEventScriptNetworkSockets.GesNetworkSocketConnector :: final class GesNetworkSocketConnector","target":"GameEventScriptNetwork.GesNetworkConnector"}
 relationship {"kind":"conformsTo","source":"GameEventScriptNetworkSockets.GesNetworkSocketError :: struct GesNetworkSocketError","target":"Swift.CustomStringConvertible"}
 relationship {"kind":"conformsTo","source":"GameEventScriptNetworkSockets.GesNetworkSocketError :: struct GesNetworkSocketError","target":"Swift.Error"}
 relationship {"kind":"conformsTo","source":"GameEventScriptNetworkSockets.GesNetworkSocketError :: struct GesNetworkSocketError","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetworkSockets.GesNetworkSocketListener :: final class GesNetworkSocketListener","target":"GameEventScriptNetwork.GesNetworkAcceptor"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetworkSockets.GesNetworkSocketSession :: final class GesNetworkSocketSession","target":"GameEventScriptNetwork.GesNetworkLink"}
+symbol {"access":"public","declaration":"final class GesNetworkSocketConnector","kind":"swift.class","path":"GameEventScriptNetworkSockets.GesNetworkSocketConnector"}
 symbol {"access":"public","declaration":"final class GesNetworkSocketListener","kind":"swift.class","path":"GameEventScriptNetworkSockets.GesNetworkSocketListener"}
 symbol {"access":"public","declaration":"final class GesNetworkSocketSession","kind":"swift.class","path":"GameEventScriptNetworkSockets.GesNetworkSocketSession"}
 symbol {"access":"public","declaration":"func accept(now: Int64) throws -> GesNetworkSocketSession?","kind":"swift.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketListener.accept(now:)"}
 symbol {"access":"public","declaration":"func close()","kind":"swift.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketListener.close()"}
 symbol {"access":"public","declaration":"func close()","kind":"swift.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketSession.close()"}
+symbol {"access":"public","declaration":"func connect(_ connection: GesNetworkConnection) throws -> any GesNetworkLink","kind":"swift.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketConnector.connect(_:)"}
+symbol {"access":"public","declaration":"func receive(now: Int64) throws","kind":"swift.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketSession.receive(now:)"}
+symbol {"access":"public","declaration":"func transmit() throws","kind":"swift.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketSession.transmit()"}
 symbol {"access":"public","declaration":"func update(now: Int64) throws","kind":"swift.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketSession.update(now:)"}
+symbol {"access":"public","declaration":"func wait() async throws","kind":"swift.method","path":"GameEventScriptNetworkSockets.GesNetworkClientEnd.wait()","swiftExtension":{"extendedModule":"GameEventScriptNetwork","typeKind":"swift.class"}}
+symbol {"access":"public","declaration":"func wait() async throws","kind":"swift.method","path":"GameEventScriptNetworkSockets.GesNetworkServerEnd.wait()","swiftExtension":{"extendedModule":"GameEventScriptNetwork","typeKind":"swift.class"}}
 symbol {"access":"public","declaration":"init(_ message: String)","kind":"swift.init","path":"GameEventScriptNetworkSockets.GesNetworkSocketError.init(_:)"}
 symbol {"access":"public","declaration":"let connection: GesNetworkConnection","kind":"swift.property","path":"GameEventScriptNetworkSockets.GesNetworkSocketSession.connection"}
 symbol {"access":"public","declaration":"let localEndPoint: SocketAddress","kind":"swift.property","path":"GameEventScriptNetworkSockets.GesNetworkSocketListener.localEndPoint"}
 symbol {"access":"public","declaration":"let message: String","kind":"swift.property","path":"GameEventScriptNetworkSockets.GesNetworkSocketError.message"}
+symbol {"access":"public","declaration":"let transport: GesNetworkTransport","kind":"swift.property","path":"GameEventScriptNetworkSockets.GesNetworkSocketConnector.transport"}
 symbol {"access":"public","declaration":"static func connectTcp(host: String, port: Int, connection: sending GesNetworkConnection) async throws -> sending GesNetworkSocketSession","kind":"swift.type.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketSession.connectTcp(host:port:connection:)"}
 symbol {"access":"public","declaration":"static func connectUdp(host: String, port: Int, connection: sending GesNetworkConnection) async throws -> sending GesNetworkSocketSession","kind":"swift.type.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketSession.connectUdp(host:port:connection:)","swiftExtension":{"extendedModule":"GameEventScriptNetworkSockets","typeKind":"swift.class"}}
 symbol {"access":"public","declaration":"static func connectWebSocket(url: String, connection: sending GesNetworkConnection) async throws -> sending GesNetworkSocketSession","kind":"swift.type.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketSession.connectWebSocket(url:connection:)"}
 symbol {"access":"public","declaration":"static func listenTcp(host: String, port: Int, network: GesBoundNetwork, options: GesNetworkOptions) async throws -> sending GesNetworkSocketListener","kind":"swift.type.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketListener.listenTcp(host:port:network:options:)"}
 symbol {"access":"public","declaration":"static func listenUdp(host: String, port: Int, network: GesBoundNetwork, options: GesNetworkOptions) async throws -> sending GesNetworkSocketListener","kind":"swift.type.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketListener.listenUdp(host:port:network:options:)","swiftExtension":{"extendedModule":"GameEventScriptNetworkSockets","typeKind":"swift.class"}}
 symbol {"access":"public","declaration":"static func listenWebSocket(host: String, port: Int, path: String, network: GesBoundNetwork, options: GesNetworkOptions) async throws -> sending GesNetworkSocketListener","kind":"swift.type.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketListener.listenWebSocket(host:port:path:network:options:)"}
+symbol {"access":"public","declaration":"static func tcp(host: String, port: Int) throws -> GesNetworkSocketConnector","kind":"swift.type.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketConnector.tcp(host:port:)"}
+symbol {"access":"public","declaration":"static func udp(host: String, port: Int) throws -> GesNetworkSocketConnector","kind":"swift.type.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketConnector.udp(host:port:)"}
+symbol {"access":"public","declaration":"static func webSocket(_ url: String) throws -> GesNetworkSocketConnector","kind":"swift.type.method","path":"GameEventScriptNetworkSockets.GesNetworkSocketConnector.webSocket(_:)"}
 symbol {"access":"public","declaration":"struct GesNetworkSocketError","kind":"swift.struct","path":"GameEventScriptNetworkSockets.GesNetworkSocketError"}
 symbol {"access":"public","declaration":"var description: String { get }","kind":"swift.property","path":"GameEventScriptNetworkSockets.GesNetworkSocketError.description"}

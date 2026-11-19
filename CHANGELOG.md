@@ -16,8 +16,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   it and computes its hash (`GesSchemaSet.Network`, Swift `network(_:)`).
 - The Network package (C# `GameEventScript.Network`, netstandard2.1; Swift `GameEventScriptNetwork`) holds a
   synchronous session state machine with a handshake over version and network hash, sequence numbers, acknowledgements,
-  keepalive, timeout, a send budget, bounded options, at most 65536 untaken events and `network.*` codes, plus an
-  in-process loopback and a seeded simulator.
+  keepalive, timeout, a send budget, bounded options, at most 65536 untaken events and `network.*` codes, plus a
+  seeded simulator.
 - The Network Sockets package (C# `GameEventScript.Network.Sockets` on .NET 8; Swift `GameEventScriptNetworkSockets`
   over SwiftNIO) carries a session over TCP or WebSocket, including `wss` clients. Its listeners hold at most 64
   waiting clients, at most 8 per IP address. A session hands its socket about 256 KiB of unwritten packets, so a peer
@@ -29,12 +29,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - `ges schema generate --schemas <Name>` writes one public schema set type (C# `static class`, Swift `enum`) with the
   embedded sources parsed once, the parameter values, a hash, `Bind`, `BindNetwork` and `ReadDocument` and, per
   network, the bound network as `Bound` (Swift `bound`); `--use-schemas <Qualified.Name>` lets another generation
-  share it, and `--import <Module>` adds Swift import lines (specs/Schemas.md#schema-sets).
+  share it, and `--import <Module>` adds Swift import lines (specs/Schemas.md#schema-sets). A C# set may not take the
+  name of one of its members, such as `Set` or `Hash` (`generate.nameCollision`).
 - Public monotonic clocks in Runtime: `GesSystemClock` and the virtual test clock `GesVirtualClock` behind the existing
   `IGesClock` (Swift `GesClock`), for hosts and network ends.
 - Network byte limits are optional (`long?`, Swift `Int64?`): an unset `MaxPendingReceiveBytes`, `MaxSendQueueBytes`,
   `MaxBaselineBytes` or `MaxTransferBytes` grows from its default to the largest message the bound network needs there,
-  up to its maximum; an explicit value stays as set (specs/Network.md#limits).
+  a topic state with its mode byte, up to its maximum; an explicit value stays as set (specs/Network.md#limits).
 - Editor grammars highlight the `network` declaration's keywords in `.gess` sources.
 - Network topics: `Publish` sends a `publishes` route's state as a full record or as a delta against the last
   acknowledged state held in a ring of up to 32 states per subscriber, bounded by `MaxBaselineBytes` (default 65536,
@@ -72,6 +73,20 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `kg / m³`, `J / kg`, `A × s → C` and `V / A → Ω`. Newton times meter stays `J`; `N·m` arises only from a literal or a
   cast. Literals such as `5N*m` and `4J/(kg*K)` are read as one unit literal; in `.gess` computed expressions a shorter
   literal is read where the longer one would not complete a unit, as in `5m*x` (specs/Language.md#quantities).
+- Network ends (specs/Network.md#ends): `GesNetworkClientEnd` and `GesNetworkServerEnd` drive their connections over a
+  plug-in transport (`IGesNetworkConnector`, `IGesNetworkAcceptor`, `IGesNetworkLink`; Swift protocols) and an
+  injectable clock, accept sends before the handshake, accept clients unless the handler refuses them and report
+  everything as end events through `Poll`. `GesNetworkPair.Synchronous` and `Realtime` connect two ends in one process
+  and replace the loopback; `GesNetworkSocketConnector` opens TCP, WebSocket and UDP ends, and `Wait`/`WaitAsync`
+  (Swift `wait()`) sleep until the next socket packet or deadline.
+- Network ticks (specs/Network.md#ticks): `BeginTick`, `Include` and `EndTick` publish several `latest` topics as one
+  numbered tick, which the receiver reports with a `tick` event after the messages of its changed members. A newer tick
+  replaces a waiting one, whose states become latest states; the generated C# tick closes once, however often it is
+  disposed.
+- Typed ends (specs/Schemas.md#typed-ends): `ges schema generate --root <Network>` adds `Game.Client` and `Game.Server`
+  with typed `Send`/`Publish`, server ticks, a handler interface (Swift an event enum) with one method per received
+  route; an undecodable payload closes the connection. Message sets gain a `Case` type with `ToCase()` and `Assign`
+  (Swift `enum Case`, `asCase`, `assign(_:)`).
 
 ### Changed
 - The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the

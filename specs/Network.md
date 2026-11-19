@@ -9,7 +9,7 @@ This document owns GES network sessions. A `network` declaration in a
 [schema source](Schemas.md) names which wire roots a client and a server exchange, and
 in which delivery class. A session carries the encoded records of those roots between
 the two sides over a transport: a TCP stream, WebSocket messages, UDP datagrams or the
-in-process transport. A server with a key of its own [encrypts](#encryption) its sessions.
+in-process [pair](#pairs). A server with a key of its own [encrypts](#encryption) its sessions.
 The [network guide](../docs/guide/Network.md) introduces it step by step.
 
 The session core is a synchronous state machine without threads, sockets, clocks or
@@ -185,7 +185,7 @@ order:
 | `notConnected` | the connection is not `Connected` |
 | `notSubscribed` | a published topic of the server is not subscribed |
 | `messageTooLarge` | the payload is longer than the route root's largest encoding; on a bulk route also longer than the transfer limit of either side |
-| `queueFull` | the reliable queue would exceed its byte limit; on a bulk route, 8192 transfers are queued or the queued bulk bytes plus the payload would exceed the transfer limit of either side |
+| `queueFull` | the reliable queue would exceed its byte limit; on a bulk route, 8192 transfers are queued, the new transfer id would be 8192 ahead of the oldest one whose cancel the peer has not confirmed on a datagram transport, or the queued bulk bytes plus the payload would exceed the transfer limit of either side |
 | `queued` | the message is queued |
 
 A latest message never makes the queue full; it replaces the waiting one.
@@ -236,6 +236,66 @@ received the base and, after it, only states that also entered the sender's ring
 so the states from the base on fit the same limits. On a datagram transport the receiver
 of a latest topic skips states that were lost or overtaken; it then holds fewer states
 after the base, which fit the limits all the more.
+
+### Ticks
+
+> **Since: Unreleased**
+
+A tick is a set of latest topic states that one side publishes as one state of its world.
+The receiver reports a tick only when it holds every state the tick names, and then reports
+them together, so it never sees a new `World` beside an old `World_Cards`.
+
+**Publishing.** A side opens a tick, publishes the states of its members and closes it.
+While a tick is open, a publish on a latest topic the side publishes makes the state a
+member of the tick; `include` makes the topic a member with its last published state
+without publishing it again, and does nothing when the topic is a member already.
+Reliable topics, sends and transfers are never members and pass unchanged while a tick is
+open. A second publish of a member in one tick replaces its first state. Closing a tick
+reports `notConnected` on a connection that is not connected, which drops the tick, and
+otherwise `queued`; an empty tick sends nothing. Opening a tick while one is open,
+closing or including without an open tick, including a topic that has no published state
+and including a route that is no latest topic the side publishes are usage errors. On a
+server a topic that the connection has not subscribed is no member there.
+
+**Numbering.** One tick is in transmission at a time; a closed tick waits behind it. A
+waiting tick is replaced by a newer one: each of its members becomes a latest state that
+the newer tick's state of the same topic replaces, and the newer tick names the states of
+its own members. Ticks are numbered per direction from 0 modulo 65536 when their
+[tick frame](#tick-frames) is first written; a replaced tick gets no number.
+
+**Sending.** A tick starts when no earlier tick is in transmission. A published member
+then becomes the topic's waiting latest state. An included member names the topic's newest
+state when the receiver holds it and no newer state of the topic waits: on a stream or
+message transport the newest completely sent state, on a datagram transport a
+[confirmed](#confirmation-frames) one. Otherwise the tick publishes the topic's last
+published state again, as a delta against the confirmed base or as the full record. With
+no confirmed state at all every member therefore travels as a full record, and a tick
+never depends on a state lost earlier. A member state that is dropped before it starts
+leaves the tick; a tick left without members ends. The sender writes the tick frame after
+the last fragment of every state it names. A tick whose members are all held by the
+receiver sends only the tick frame, and the receiver reports only the `tick` event; a host
+uses it to move its timeline on while the world rests.
+
+**Receiving.** A state whose [mode byte](#topic-messages) marks it as a tick member enters
+the receiver's ring as usual but is not reported on arrival. The receiver holds it until
+its tick is reported or a newer member state of the route replaces it; held states count
+toward the pending received bytes. The receiver holds at most one incomplete tick. A tick
+frame whose number is 1 to 32767 ahead of the held tick, or of the last reported tick when
+none is held, replaces the held one; any other is ignored. When the receiver holds every
+state that the held tick names — held, last reported or in the ring — it reports, in route
+order, a `message` event for each member whose named state is newer than the last state
+it reported on that topic, followed by one `tick` event with the tick number.
+
+**Datagram delivery.** A packet with a tick frame asks for acknowledgement. A lost tick
+frame is sent again while its tick is the newest one in transmission and no newer tick
+started.
+
+**Rates.** A tick is published as often as the host closes ticks. `at most every` of a
+member stays advice to the host, as for single states.
+
+**Mixing.** A topic may be published alone and as a member of ticks on the same
+connection. A state published alone is reported on arrival; the receiver then counts it
+as the last reported state of that topic.
 
 ### Transfers
 
@@ -351,7 +411,8 @@ the largest encodings of the roots of the bound network:
 
 - pending received bytes: the largest message this side receives on a route that is not
   `bulk`, with the mode byte of a topic message;
-- queued reliable bytes to send: the largest root of a `reliable` route this side sends;
+- queued reliable bytes to send: the largest root of a `reliable` route this side sends,
+  with the mode byte of a topic message;
 - baseline limit: the largest root of a topic;
 - transfer limit: the largest root of a `bulk` route.
 
@@ -478,7 +539,9 @@ a data packet that asks even when no frame is due.
 transports; a message keeps its place in the send queue and counts toward the queue limit
 until every byte of it is acknowledged, and the queue head leaves then. At most 8192
 messages per class are started and still queued; the next one waits. A cancelled
-transfer leaves the queue at once; its lost fragments are not resent. In a packet each
+transfer leaves the queue at once; its lost fragments are not resent. Until the peer
+confirms its cancel frame, its id stays open: a new transfer whose id would be 8192 or
+more ahead of the oldest open id, queued or cancelled, is `queueFull`. In a packet each
 class first resends the ranges of its lost fragments in the order they were lost, then
 continues with new fragments. A range that does not fit the packet is split; its rest
 waits. A message of total 0 is acknowledged when its one frame is.
@@ -598,6 +661,7 @@ connection ignores received data and sends nothing beyond its `close` packet.
 | `connecting` | the client's token; server only |
 | `connected` | |
 | `message` | route index and payload; for a topic, the full record; for a transfer, its data and id |
+| `tick` | tick number; after the `message` events of the tick's changed members |
 | `closed` | code, detail and whether the peer sent it |
 | `transferProgress` | route index, transfer id, bytes and total of the transfer's message |
 | `transferCancelled` | route index, transfer id, code and whether the peer cancelled it |
@@ -723,8 +787,8 @@ A message is complete and reported when its chunks reach its total.
 ### Control frames
 
 A frame on channel 0 is a control frame; a kind byte follows the channel. Kind `0` is a
-[confirmation frame](#confirmation-frames), valid only on a datagram transport. Kind `1`
-is a cancel frame of a [transfer](#transfers):
+[confirmation frame](#confirmation-frames), valid only on a datagram transport. Kind `2`
+is a [tick frame](#tick-frames). Kind `1` is a cancel frame of a [transfer](#transfers):
 
 | Field | Encoding |
 | --- | --- |
@@ -740,6 +804,23 @@ bulk route, or a malformed field is `network.malformed`. On a datagram transport
 packet with a cancel frame asks for acknowledgement, and a cancel frame in a packet that
 does not ask is `network.malformed`. Control frames count toward the frame limit.
 
+### Tick frames
+
+> **Since: Unreleased**
+
+Kind `2` is the frame of a [tick](#ticks):
+
+| Field | Encoding |
+| --- | --- |
+| channel | varint `0` |
+| kind | 1 byte `2` |
+| tick | 2 bytes, the tick number |
+| count | varint, 1 to the route count |
+| per member, in route order | varint, the channel of the topic's route; 2 bytes, the number of the state it names |
+
+A count of 0 or above the route count, a member that is not a latest topic the sending
+side publishes, and a repeated or unordered member are `network.malformed`.
+
 ### Topic messages
 
 A message of a [topic](#topics) starts with a mode byte:
@@ -749,8 +830,11 @@ A message of a [topic](#topics) starts with a mode byte:
 | 0 | the full record |
 | 1 to 32 | a delta against the state that many states before this one in the topic's numbering |
 
-The receiver closes with `network.malformed` when a topic message is empty, its mode is
-above 32, its base is not in the ring, or the delta does not decode against the base or
+Bit `0x80` of the mode byte marks a state of a latest topic as a [tick](#ticks) member;
+the low seven bits keep the modes above.
+
+The receiver closes with `network.malformed` when a topic message is empty, its mode
+without the tick bit is above 32, the tick bit is set on a reliable topic, its base is not in the ring, or the delta does not decode against the base or
 leaves bytes over.
 
 ### Transports
@@ -1026,7 +1110,9 @@ socket listeners and connects refuse options and connections that use it.
 | event | `GesNetworkEvent`, a `ref struct` with a borrowed payload | `GesNetworkEvent`, a struct with a borrowed payload |
 | send and publish status | `GesNetworkSendStatus` | `GesNetworkSendStatus` |
 | codes | `GesNetworkCodes` | `GesNetworkCodes` |
-| in-process transport | `GesNetworkLoopback` | `GesNetworkLoopback` |
+| client and server end | `GesNetworkClientEnd`, `GesNetworkServerEnd` | `GesNetworkClientEnd`, `GesNetworkServerEnd` |
+| end event | `GesNetworkEndEvent`, a `ref struct` with a borrowed payload | `GesNetworkEndEvent`, a struct with a borrowed payload |
+| in-process pair | `GesNetworkPair` | `GesNetworkPair` |
 | simulated network | `GesNetworkSimulator` | `GesNetworkSimulator` |
 | address validation | `GesNetworkCookies` | `GesNetworkCookies` |
 | server key | `GesNetworkKey` | `GesNetworkKey` |
@@ -1065,6 +1151,109 @@ A host drives a connection like this:
 6. Call `advance` with the current time no later than the connection's next deadline,
    then take packets again.
 
+### Ends
+
+> **Since: Unreleased**
+
+An end owns connections and their transports and drives them from one call, so a host
+does not write the drive loop of [API](#api) itself. A client end holds one connection; a
+server end holds an acceptor and every accepted connection. Ends are synchronous and
+threadless in the core; the socket packages add connectors, acceptors and a
+[wait](#waiting).
+
+**Creating.** A client end takes the bound network, a connector, the options and a token;
+a server end takes the bound network and an acceptor. Both take a
+[clock](HostRuntime.md). A connector opens a client transport: in-process as one side of a
+[pair](#pairs) or, in the socket packages, TCP, WebSocket or UDP with host and port. An
+acceptor hands over the transports of new clients. Creating starts no I/O; the first
+`poll` connects or accepts.
+
+**Polling.** `poll` reads the current time from the end's clock and then, in this order,
+accepts waiting clients, passes every received packet to its connection, takes events
+until none is left and hands each to the caller's handler, and transmits every due
+packet. A handler may send, publish, open and close ticks and close connections; the
+packets this produces leave in the same `poll`. A handler that polls its own end again is
+a usage error. `poll` never blocks and never calls the handler outside its own call. The
+next deadline of an end is the earliest time at which a `poll` has work without new
+input: the current time before the first `poll`, else the earliest deadline of its
+connections.
+
+**Sending before the handshake.** A client end keeps sends, publishes and ticks made
+before `connected` and passes them to the connection when it connects: reliable and bulk
+messages in order, the newest state of each latest route and the newest closed tick. The
+kept reliable bytes obey the connection's send queue limit; a send that does not fit
+reports `queueFull`. Closing drops what is kept.
+
+**Server.** The server end accepts a `connecting` client after its event unless the
+handler refused it. Each client gets a stable end-local id, which events carry and
+per-client calls take; an unknown id is a usage error. By default the server end
+subscribes every connected client to every topic it publishes; the host can turn that
+off when it creates the end and subscribes and unsubscribes topics per client at any
+time. `publish` and ticks reach every connected, subscribed client; `send` without a
+client reaches every connected client and reports `queueFull` when the queue of some
+client is full. The server end keeps the last published state of each latest topic: a
+tick that includes a topic gives a client that has not received that state the state
+itself, so a client that joined later holds the complete world after its first tick. A
+client that connects while a tick is open joins it. A closed client leaves the end after
+its `clientDisconnected` event.
+
+**Events.** An end reports the events of its connections, named by side, and adds
+`received`:
+
+| End event | Data |
+| --- | --- |
+| `connecting` | server: client id and token |
+| `connected` | client: the reached security level |
+| `clientConnected` | server: client id and the reached security level |
+| `disconnected` | client: code, detail and whether the peer closed |
+| `clientDisconnected` | server: client id, code, detail and whether the peer closed |
+| `message` | client id on the server; route index and payload, borrowed until the handler returns |
+| `tick` | client id on the server; tick number |
+| `transferProgress`, `transferCancelled` | client id on the server; as the connection's events |
+| `received` | the last event of every `poll` that reported at least one `message` or `tick` |
+
+After `received` every state of the latest complete tick and every message of the `poll`
+has been reported, so a host commits its view there.
+
+**Closing.** `close` closes the client's connection, one client's or every client's with
+a detail; the `close` packets leave with the next `poll`. Releasing an end releases its
+transports once the packets already handed to them have left; a released end cannot be
+polled.
+
+**Isolation.** An end belongs to one caller at a time, like a Host, and is not
+thread-affine. Swift ends are not `Sendable`; `poll` takes a non-escaping closure, which
+inherits the caller's isolation, so an end lives inside a `@MainActor` type or any actor
+and its handler reads that actor's state directly. C#
+`Poll<THandler>(ref THandler handler)` calls a struct handler without allocating; a class
+handler works through the same interface.
+
+### Waiting
+
+> **Since: Unreleased**
+
+The socket packages wait on an end until one of its sockets has input or its next
+deadline passes, whichever comes first, without polling: C# `WaitAsync` and a blocking
+`Wait`, Swift `wait() async`. The core has no wait.
+
+### Pairs
+
+> **Since: Unreleased**
+
+A pair is a client end and a server end connected in one process without sockets, by the
+message transport with the in-process options unless the host gives others. Its two
+modes:
+
+- **realtime** uses the system clock; packets reach the other end at its next `poll`, and
+  the ends connect while they poll.
+- **synchronous** uses one virtual clock starting at 0 that only the pair moves. Creating
+  the pair runs the handshake; the server accepts the client without a `connecting`
+  event, and both ends report their connected events on their first `poll`. Every send,
+  publish, tick close, close and `poll` on either end runs both connections until no
+  packet is in flight, so what one end sends is reported by the other end's next `poll`.
+  Acknowledgements are not delayed. Timers — keepalive, timeout and resending — fire only
+  when the host advances the pair's clock; the handshake, sending and delivery never need
+  it.
+
 ### Simulated network
 
 The simulated network connects a client and a server connection in one process with
@@ -1072,8 +1261,7 @@ seeded latency, deterministic in every port. It draws from the
 [random generator](Semantics/Determinism.md) created from its seed. Each packet is
 delayed by the base latency plus a draw from 0 to the jitter inclusive, but never
 arrives before a packet sent earlier in the same direction, so order is preserved. Equal
-seeds, options and inputs give equal packets, events and times. The loopback transport is
-the simulated network without latency.
+seeds, options and inputs give equal packets, events and times.
 
 Between datagram connections the simulated network may also lose, duplicate and reorder
 packets, with a loss and a duplicate rate in per mille, 0 to 1000, and reordering on or

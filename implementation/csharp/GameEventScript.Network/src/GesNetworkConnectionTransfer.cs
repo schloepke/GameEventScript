@@ -97,6 +97,10 @@ public sealed partial class GesNetworkConnection
         if (data.Length > limit) return GesNetworkSendStatus.MessageTooLarge;
         if (_sendBulk.Count >= GesNetworkSendQueue.MaximumStarted || _sendBulk.Bytes + data.Length > Math.Min(_maxTransfer, _peerTransferLimit))
             return GesNetworkSendStatus.QueueFull;
+        // On a datagram transport the receiver resolves ids in order; a cancel it has not confirmed holds its id open, so
+        // the new id stays within the receive window of the oldest open one.
+        if (_datagram && _cancels.Count > 0 && _cancels.OwnSpan(_nextBulkId, _localSends) >= GesNetworkSendQueue.MaximumStarted)
+            return GesNetworkSendStatus.QueueFull;
 
         var id = _nextBulkId++;
         var header = 1 + Wire.VarintSize64((ulong)data.Length) + Wire.HashBytes;
@@ -428,6 +432,20 @@ internal sealed class GesNetworkCancels
         _states[Slot(serial)] = Pending;
         if (PendingCount == 0 || serial < _pendingSerial) _pendingSerial = serial;
         PendingCount++;
+    }
+
+    // The largest distance from the next transfer id back to an unconfirmed cancel of a transfer of this side; 0 when
+    // there is none.
+    internal int OwnSpan(ushort next, bool[] localSends)
+    {
+        var span = 0;
+        for (var index = 0; index < Count; index++)
+        {
+            var slot = (_first + index) & (_routes.Length - 1);
+            if (_states[slot] != Confirmed && localSends[_routes[slot]]) span = Math.Max(span, (ushort)(next - _ids[slot]));
+        }
+
+        return span;
     }
 
     private void Grow()

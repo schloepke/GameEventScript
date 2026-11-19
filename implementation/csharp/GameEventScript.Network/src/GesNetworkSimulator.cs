@@ -180,36 +180,3 @@ public sealed class GesNetworkSimulator
         internal readonly int Length = length;
     }
 }
-
-/// <summary>
-/// The in-process transport: a <see cref="GesNetworkSimulator"/> without latency, so a packet arrives at the time it
-/// is sent. Not thread-safe.
-/// </summary>
-public sealed class GesNetworkLoopback
-{
-    private readonly GesNetworkSimulator _simulator;
-
-    /// <summary>Connects a client and a server connection created at the same time.</summary>
-    /// <param name="client">The client connection.</param>
-    /// <param name="server">The server connection.</param>
-    /// <exception cref="ArgumentNullException">A connection is null.</exception>
-    /// <exception cref="ArgumentException">The connections are not a client and a server at the same time.</exception>
-    public GesNetworkLoopback(GesNetworkConnection client, GesNetworkConnection server) => _simulator = new GesNetworkSimulator(client, server, 0, 0, 0);
-
-    /// <summary>Gets the client connection.</summary>
-    public GesNetworkConnection Client => _simulator.Client;
-
-    /// <summary>Gets the server connection.</summary>
-    public GesNetworkConnection Server => _simulator.Server;
-
-    /// <summary>Gets the time in microseconds.</summary>
-    public long Now => _simulator.Now;
-
-    /// <summary>Gets the earliest deadline of both connections.</summary>
-    public long NextDeadline => _simulator.NextDeadline;
-
-    /// <summary>Exchanges all due packets and runs every deadline up to <paramref name="now"/>.</summary>
-    /// <param name="now">The new time in microseconds, not earlier than <see cref="Now"/>.</param>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="now"/> is earlier than <see cref="Now"/>.</exception>
-    public void Advance(long now) => _simulator.Advance(now);
-}

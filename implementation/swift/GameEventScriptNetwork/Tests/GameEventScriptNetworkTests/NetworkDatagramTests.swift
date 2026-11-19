@@ -32,16 +32,16 @@ final class NetworkDatagramTests: XCTestCase {
         return options
     }
 
-    private func pair() throws -> (GesNetworkConnection, GesNetworkConnection) {
+    private func pair(_ options: GesNetworkOptions = NetworkDatagramTests.options) throws -> (GesNetworkConnection, GesNetworkConnection) {
         let network = try GesSchemaSet(parsing: Self.source).network("Game").bind()
         return (
-            try GesNetworkConnection.makeClient(network: network, now: 0, options: Self.options),
-            try GesNetworkConnection.makeServer(network: network, now: 0, options: Self.options)
+            try GesNetworkConnection.makeClient(network: network, now: 0, options: options),
+            try GesNetworkConnection.makeServer(network: network, now: 0, options: options)
         )
     }
 
-    private func connected(_ seed: Int64, _ loss: Int, _ duplicate: Int, _ reorder: Bool) throws -> GesNetworkSimulator {
-        let (client, server) = try pair()
+    private func connected(_ seed: Int64, _ loss: Int, _ duplicate: Int, _ reorder: Bool, options: GesNetworkOptions = NetworkDatagramTests.options) throws -> GesNetworkSimulator {
+        let (client, server) = try pair(options)
         let simulator = try GesNetworkSimulator(
             client: client,
             server: server,
@@ -299,5 +299,36 @@ final class NetworkDatagramTests: XCTestCase {
         XCTAssertEqual(received, kept)
         try simulator.advance(simulator.now + 2_000_000)
         XCTAssertEqual(simulator.server.queuedSendBytes, 0)
+    }
+
+    func testAnUnconfirmedCancelKeepsLaterTransfersWithinTheReceiveWindow() throws {
+        // Many small transfers in a short time: the receiver allows their frame rate.
+        var options = Self.options
+        options.maxFramesPerSecond = 1_000_000
+        let simulator = try connected(13, 0, 0, false, options: options)
+        XCTAssertEqual(simulator.server.send(route: bulkBlob, payload: [1]), .queued)
+        XCTAssertTrue(try simulator.server.cancel(route: bulkBlob, transferId: simulator.server.lastTransferId))
+        for index in 1..<8192 { XCTAssertEqual(simulator.server.send(route: bulkBlob, payload: [UInt8(truncatingIfNeeded: index)]), .queued, "transfer \(index)") }
+
+        // The cancel of transfer 0 is not confirmed yet, so transfer 8192 would lie outside the receiver's window.
+        XCTAssertEqual(simulator.server.send(route: bulkBlob, payload: [0]), .queueFull)
+        var received = 0
+        var step = 0
+        while step < 4000 && received < 8191 {
+            try simulator.advance(simulator.now + 16_667)
+            while true {
+                let next = simulator.client.nextEvent()
+                if next.kind == .none { break }
+                XCTAssertNotEqual(next.kind, .closed, next.code)
+                if next.kind == .message { received += 1 }
+            }
+            _ = messages(simulator.server)
+            step += 1
+        }
+
+        XCTAssertEqual(received, 8191)
+        try simulator.advance(simulator.now + 2_000_000)
+        XCTAssertEqual(simulator.server.send(route: bulkBlob, payload: [0]), .queued)
+        XCTAssertEqual(simulator.client.state, .connected)
     }
 }

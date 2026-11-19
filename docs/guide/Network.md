@@ -102,48 +102,48 @@ let network = try Net.Game.bound // throws when the sources no longer bind like 
 
 ## 3. Connect two sides in one process
 
-A client connection carries a token for the server, such as a login ticket. The server reports
-it in a `connecting` event and accepts or refuses the client. The loopback transport moves the
-packets between both connections without latency, which is how tests and single-player modes run.
-Packets that never leave the process need no [encryption](#7-protect-the-connection): the
-in-process preset turns it off on both sides, uses the largest packets and never times out.
+An end drives one side for you: a client end owns one connection, a server end owns every client
+connection it accepts. A client carries a token for the server, such as a login ticket; the server
+end reports it in a `connecting` event and accepts the client after the handler returns unless the
+handler refused it. A pair connects a client end and a server end in one process, which is how tests
+and single-player modes run. Packets that never leave the process need no
+[encryption](#7-protect-the-connection): the in-process preset turns it off on both sides, uses the
+largest packets and never times out.
+
+A synchronous pair moves the packets right away and runs on its own clock, which only `Advance`
+moves; its events wait for the next poll. A realtime pair uses the monotonic clock instead.
 
 ```csharp
-var local = GesNetworkOptions.InProcess();
-var client = GesNetworkConnection.CreateClient(network, "ticket"u8, now: 0, local);
-var server = GesNetworkConnection.CreateServer(network, now: 0, local);
-var loopback = new GesNetworkLoopback(client, server);
+using var pair = GesNetworkPair.Synchronous(network, "ticket"u8);
+var handler = new Printer(); // implements IGesNetworkEndHandler
+pair.Server.Poll(ref handler);
+pair.Client.Poll(ref handler); // reports connected
 
-loopback.Advance(0);
-for (var e = server.NextEvent(); e.Kind != GesNetworkEventKind.None; e = server.NextEvent())
+struct Printer : IGesNetworkEndHandler
 {
-    if (e.Kind == GesNetworkEventKind.Connecting) server.Accept();
+    public void Handle(GesNetworkEndEvent e) => Console.WriteLine(e.Kind);
 }
-
-loopback.Advance(0);
-// client.State is now GesNetworkState.Connected.
 ```
 
 ```swift
-let local = GesNetworkOptions.inProcess()
-let client = try GesNetworkConnection.makeClient(network: network, token: Array("ticket".utf8), now: 0, options: local)
-let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: local)
-let loopback = try GesNetworkLoopback(client: client, server: server)
-
-try loopback.advance(0)
-while true {
-    let event = server.nextEvent()
-    if event.kind == .none { break }
-    if event.kind == .connecting { try server.accept() }
-}
-
-try loopback.advance(0)
-// client.state is now .connected.
+let pair = try GesNetworkPair.synchronous(network: network, token: Array("ticket".utf8))
+defer { pair.release() }
+try pair.server.poll { event in print(event.kind) }
+try pair.client.poll { event in print(event.kind) } // reports connected
 ```
 
-`GesNetworkSimulator` replaces the loopback when you want seeded latency and jitter. Between
-datagram connections it can also lose, duplicate and reorder packets. Equal seeds give equal
-packets, events and times in every port, so a network test is reproducible.
+A handler sees each event once; the payload of a `message` event stays valid until the handler
+returns. Ends also accept sends before the handshake completes and deliver them once it does.
+
+Generated code with `--root Game` adds typed ends, `Game.Client` and `Game.Server`, that encode and
+decode the routes' records for you and call one handler method per route, such as `OnWorld(in World)`.
+Their server end publishes a [tick](../../specs/Network.md#ticks) of several `latest` topics that the
+client receives as one consistent state. [Typed ends](../../specs/Schemas.md#typed-ends) shows both
+ports.
+
+`GesNetworkSimulator` drives two connections instead of a pair when you want seeded latency and
+jitter. Between datagram connections it can also lose, duplicate and reorder packets. Equal seeds
+give equal packets, events and times in every port, so a network test is reproducible.
 
 ## 4. Send and receive
 
@@ -187,7 +187,7 @@ is cancelled with `network.transferTooLarge` or `network.transferCorrupt`.
 
 ## 5. Drive the loop
 
-Without a loopback, your host loop does the transport's work. Each iteration:
+Ends and pairs run this loop for you. To drive a bare connection yourself, each iteration of your host loop:
 
 1. passes every received packet or stream chunk to `Receive` with the current time;
 2. takes events until `NextEvent` reports none, and accepts or refuses `connecting` clients;

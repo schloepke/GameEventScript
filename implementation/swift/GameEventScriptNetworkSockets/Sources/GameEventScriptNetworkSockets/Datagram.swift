@@ -53,14 +53,19 @@ extension GesNetworkSocketSession {
     ///   error when the host cannot be resolved or the socket cannot be opened.
     public static func connectUdp(host: String, port: Int, connection: sending GesNetworkConnection) async throws -> sending GesNetworkSocketSession {
         try require(connection, .datagram, client: true)
+        let inbox = GesNetworkSocketInbox()
+        let (channel, peer) = try await openUdp(host: host, port: port, limit: connection.maxPacketBytes, inbox: inbox)
+        return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, framing: .datagram, peer: peer)
+    }
+
+    static func openUdp(host: String, port: Int, limit: Int, inbox: GesNetworkSocketInbox) async throws -> (Channel, GesNetworkDatagramPeer) {
         let server = try await NIOThreadPool.singleton.runIfActive { try SocketAddress.makeAddressResolvingHost(host, port: port) }
         let local = try SocketAddress(ipAddress: server.protocol == .inet6 ? "::" : "0.0.0.0", port: 0)
-        let socket = GesNetworkSocketDatagramSocket(limit: connection.maxPacketBytes)
-        let peer = try GesNetworkDatagramPeer(server: server, socket: socket)
+        let socket = GesNetworkSocketDatagramSocket(limit: limit)
+        let peer = try GesNetworkDatagramPeer(server: server, socket: socket, inbox: inbox)
         socket.handler = GesNetworkSocketDatagramHandler(peer: peer)
         socket.ended = { peer.inbox.end() }
-        let channel = try await socket.open(local: local).get()
-        return GesNetworkSocketSession(connection: connection, channel: channel, inbox: peer.inbox, framing: .datagram, peer: peer)
+        return (try await socket.open(local: local).get(), peer)
     }
 }
 
@@ -68,20 +73,22 @@ extension GesNetworkSocketSession {
 // shared socket and registered with it; a client's peer is the server and owns the client's socket.
 final class GesNetworkDatagramPeer: @unchecked Sendable {
     let address: SocketAddress
-    let inbox = GesNetworkSocketInbox()
+    let inbox: GesNetworkSocketInbox
     // True for a client on a listener's shared socket, whose end gives the address back to address validation.
     let isShared: Bool
     private let owner: GesNetworkSocketDatagramSocket
     private let key: [UInt8]
 
-    fileprivate init(client: SocketAddress, socket: GesNetworkSocketDatagramSocket) {
+    fileprivate init(client: SocketAddress, socket: GesNetworkSocketDatagramSocket, signal: GesNetworkSocketSignal) {
         address = client
+        inbox = GesNetworkSocketInbox(signal: signal)
         owner = socket
         isShared = true
         key = []
     }
 
-    fileprivate init(server: SocketAddress, socket: GesNetworkSocketDatagramSocket) throws {
+    fileprivate init(server: SocketAddress, socket: GesNetworkSocketDatagramSocket, inbox: GesNetworkSocketInbox) throws {
+        self.inbox = inbox
         var key = [UInt8](repeating: 0, count: 18)
         guard let length = datagramAddressKey(server, into: &key) else { throw GesApiError.invalidArgument("The host has no IP address.") }
         address = server
@@ -283,7 +290,7 @@ private final class GesNetworkSocketDatagramRouter: ChannelInboundHandler {
     // Registers a validated address with its hello and offers it to the host; a full queue drops the hello, and the
     // client sends it again.
     private func admit(_ context: ChannelHandlerContext, _ hello: AddressedEnvelope<ByteBuffer>) {
-        let peer = GesNetworkDatagramPeer(client: hello.remoteAddress, socket: socket)
+        let peer = GesNetworkDatagramPeer(client: hello.remoteAddress, socket: socket, signal: queue.signal)
         peer.inbox.pushDatagram(hello.data)
         socket.add(peer)
         if !queue.offer(context.channel, peer) { peer.release() }

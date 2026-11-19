@@ -200,32 +200,3 @@ public final class GesNetworkSimulator {
         queue.insert(flight, at: index)
     }
 }
-
-/// The in-process transport: a `GesNetworkSimulator` without latency, so a packet arrives at the time it is sent.
-/// Not thread-safe.
-public final class GesNetworkLoopback {
-    private let simulator: GesNetworkSimulator
-
-    /// Connects a client and a server connection created at the same time.
-    /// - Parameters:
-    ///   - client: The client connection.
-    ///   - server: The server connection.
-    /// - Throws: `GesApiError.invalidArgument` when the connections are not a client and a server at the same time.
-    public init(client: GesNetworkConnection, server: GesNetworkConnection) throws {
-        simulator = try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0)
-    }
-
-    /// The client connection.
-    public var client: GesNetworkConnection { simulator.client }
-    /// The server connection.
-    public var server: GesNetworkConnection { simulator.server }
-    /// The time in microseconds.
-    public var now: Int64 { simulator.now }
-    /// The earliest deadline of both connections.
-    public var nextDeadline: Int64 { simulator.nextDeadline }
-
-    /// Exchanges all due packets and runs every deadline up to `now`.
-    /// - Parameter now: The new time in microseconds, not earlier than `now`.
-    /// - Throws: `GesApiError.invalidArgument` when the time goes back.
-    public func advance(_ now: Int64) throws { try simulator.advance(now) }
-}

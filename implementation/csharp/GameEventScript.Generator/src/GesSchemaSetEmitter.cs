@@ -17,6 +17,9 @@ internal sealed class GesSchemaSetReference(string? declared, string qualified)
     // The name that generated code calls it by: C# with global::, Swift as given.
     internal string Qualified { get; } = qualified;
 
+    // The members of the generated C# class.
+    private static readonly string[] CSharpMembers = { "__set", "Hash", "Set", "Parameters", "Bind", "BindNetwork", "ReadDocument" };
+
     // Checks the options and gives the schema set of the generation, or null without one.
     internal static GesSchemaSetReference? From(GesSchemaGenerateOptions options)
     {
@@ -31,6 +34,9 @@ internal sealed class GesSchemaSetReference(string? declared, string qualified)
         if (options.SchemaSet is { } name)
         {
             if (!Identifier(name, keywords)) throw new GesGeneratorException(GesGeneratorException.Usage, $"The schema set name '{name}' is no identifier.");
+            // C# names no member like its type; Swift allows it.
+            if (!swift && System.Array.IndexOf(CSharpMembers, name) >= 0)
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The schema set name '{name}' is the name of one of its members.");
             var space = GesSchemaPlanner.Namespace(options.Namespace, keywords);
             return new GesSchemaSetReference(name, swift ? name : "global::" + string.Concat(space.ConvertAll(part => part + ".")) + name);
         }

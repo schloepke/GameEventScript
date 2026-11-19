@@ -363,9 +363,12 @@ extension GesNetworkConnection {
         var channel: UInt32 = 0
         if Wire.readVarint(packet, &position, &channel) != 1 || Int(channel) > routeCount { return fail(GesNetworkCodes.malformed) }
         if channel == 0 {
-            // Control frames: a stream or message transport carries only cancels.
-            if position == packet.count || packet[position] != Wire.controlCancel { return fail(GesNetworkCodes.malformed) }
+            // Control frames: a stream or message transport carries only cancels and ticks.
+            if position == packet.count { return fail(GesNetworkCodes.malformed) }
+            let kind = packet[position]
             position += 1
+            if kind == Wire.controlTick { return receiveTick(packet, &position) }
+            if kind != Wire.controlCancel { return fail(GesNetworkCodes.malformed) }
             return receiveCancel(packet, &position)
         }
 
@@ -430,25 +433,37 @@ extension GesNetworkConnection {
         if classes[route] == .bulk { return deliverTransfer(route, id, message) }
         var message = message
         if let topic = topics[route] {
-            if message.isEmpty || Int(message[0]) > GesNetworkTopic.maximumStates { return fail(GesNetworkCodes.malformed) }
+            if message.isEmpty { return fail(GesNetworkCodes.malformed) }
+            let latest = classes[route] == .latest
+            // The mode byte: the distance to the delta's base, and on a latest topic whether the state is a tick member.
+            let member = message[0] & Wire.tickMember != 0
+            let distance = message[0] & ~Wire.tickMember
+            if (member && !latest) || Int(distance) > GesNetworkTopic.maximumStates { return fail(GesNetworkCodes.malformed) }
             let number: UInt16
-            if classes[route] == .latest {
+            if latest {
                 number = id
             } else {
                 number = topic.next
                 topic.next &+= 1
             }
             var rest = UnsafeRawBufferPointer(rebasing: message[1...])
-            if message[0] != 0 {
+            if distance != 0 {
                 var baseline = UnsafeRawBufferPointer(start: nil, count: 0)
-                if !topic.find(number &- UInt16(message[0]), &baseline) { return fail(GesNetworkCodes.malformed) }
+                if !topic.find(number &- UInt16(distance), &baseline) { return fail(GesNetworkCodes.malformed) }
                 guard let decoded = try? GesSchemaDelta.decode(topic.schema, delta: rest, baseline: baseline, into: topic.scratch),
                     decoded.deltaByteCount == rest.count
                 else { return fail(GesNetworkCodes.malformed) }
                 rest = UnsafeRawBufferPointer(rebasing: topic.scratch[0..<decoded.byteCount])
             }
             topic.add(rest, baselineLimit, number)
-            if datagram && classes[route] == .latest { oweConfirmation(route, number) }
+            if datagram && latest { oweConfirmation(route, number) }
+            if member { return holdMember(route, number, rest) }
+            if latest {
+                releaseHeld(route, number)
+                noteReported(route, number)
+                if !addEvent(.message, route, rest, .pending, "", "", false) { return fail(GesNetworkCodes.queueFull) }
+                return completeTick()
+            }
             message = rest
         }
         return addEvent(.message, route, message, .pending, "", "", false) || fail(GesNetworkCodes.queueFull)

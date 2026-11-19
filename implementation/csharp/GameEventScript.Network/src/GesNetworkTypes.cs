@@ -144,7 +144,13 @@ public enum GesNetworkEventKind
     TransferProgress,
 
     /// <summary>A transfer was cancelled by this side, by its host or by the peer; the session continues.</summary>
-    TransferCancelled
+    TransferCancelled,
+
+    /// <summary>
+    /// A tick is complete: the message events of its changed members precede it. <see cref="GesNetworkEvent.TickNumber"/>
+    /// tells its number.
+    /// </summary>
+    Tick
 }
 
 /// <summary>
@@ -164,8 +170,10 @@ public readonly ref struct GesNetworkEvent
         bool byPeer,
         int transferId,
         long bytes,
-        long total)
+        long total,
+        int tickNumber = -1)
     {
+        TickNumber = tickNumber;
         Kind = kind;
         Route = route;
         Payload = payload;
@@ -206,6 +214,9 @@ public readonly ref struct GesNetworkEvent
 
     /// <summary>Gets the encoded length of a progress event's transfer; 0 for other events.</summary>
     public long Total { get; }
+
+    /// <summary>Gets the number, 0 to 65535, of a tick event; -1 for other events.</summary>
+    public int TickNumber { get; }
 }
 
 /// <summary>The limits and transport of one connection. Values are checked when a connection is created.</summary>

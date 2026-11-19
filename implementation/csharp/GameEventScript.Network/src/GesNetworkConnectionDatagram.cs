@@ -20,6 +20,7 @@ public sealed partial class GesNetworkConnection
     private const long HelloInterval = MicrosecondsPerSecond;
 
     // Fragment lanes: cancel frames, reliable, bulk, then one per latest route.
+    private const int LaneTick = -2;
     private const int LaneCancel = -1;
     private const int LaneReliable = 0;
     private const int LaneBulk = 1;
@@ -109,7 +110,7 @@ public sealed partial class GesNetworkConnection
     {
         // A full send window (the packet 1024 before the next one still outstanding) holds every frame back.
         if (_sentCount >= RecordedPackets && _recordOutstanding[_sentCount % RecordedPackets]) return false;
-        if (_cancels.PendingCount > 0 || _sendReliable.Lost.Count > 0 || _sendReliable.HasNew || _sendBulk.Lost.Count > 0 || _sendBulk.HasNew) return true;
+        if (_tickFrameDue || _cancels.PendingCount > 0 || _sendReliable.Lost.Count > 0 || _sendReliable.HasNew || _sendBulk.Lost.Count > 0 || _sendBulk.HasNew) return true;
         foreach (var slot in _sendLatest)
         {
             if (slot is { HasPending: true }) return true;
@@ -319,7 +320,7 @@ public sealed partial class GesNetworkConnection
                 continue;
             }
 
-            if (lane >= LaneLatest) continue;
+            if (lane >= LaneLatest || lane == LaneTick) continue;
             if (lane == LaneBulk)
             {
                 if (!AcknowledgeBulk(key, _fragmentLengths[fragment])) return true;
@@ -376,7 +377,8 @@ public sealed partial class GesNetworkConnection
             var key = _fragmentKeys[fragment];
             var offset = _fragmentOffsets[fragment];
             var length = _fragmentLengths[fragment];
-            if (lane == LaneCancel) _cancels.Lose(key);
+            if (lane == LaneTick) LoseTickFrame((ushort)key);
+            else if (lane == LaneCancel) _cancels.Lose(key);
             else if (lane == LaneReliable) _sendReliable.Lose(key, offset, length);
             else if (lane == LaneBulk) _sendBulk.Lose(key, offset, length);
             else _sendLatest[lane - LaneLatest]?.Lose((ushort)key, offset, length);
@@ -394,6 +396,8 @@ public sealed partial class GesNetworkConnection
             if (position == packet.Length) return Fail(GesNetworkCodes.Malformed);
             var kind = packet[position++];
             if (kind == Wire.ControlConfirmation) return ReceiveConfirmation(packet, ref position);
+            // A tick frame is resent while its tick is current, so its packet asks.
+            if (kind == Wire.ControlTick && asks) return ReceiveTick(packet, ref position);
             // A cancel frame is resent until acknowledged, so its packet asks.
             if (kind != Wire.ControlCancel || !asks) return Fail(GesNetworkCodes.Malformed);
             return ReceiveCancel(packet, ref position);
@@ -594,6 +598,8 @@ public sealed partial class GesNetworkConnection
                 if (_sendLatest[route] is { } latest) position = WriteDatagramLatest(route, latest, packet, position, limit);
             }
 
+            position = WriteTickFrame(packet, position, limit);
+
             position = WriteDatagramQueue(_sendBulk, ref _nextBulkId, LaneBulk, packet, position, limit);
         }
 
@@ -703,7 +709,7 @@ public sealed partial class GesNetworkConnection
             {
                 if (!slot.Started)
                 {
-                    topic.MessageLength = EncodeState(topic, message, slot.NextId);
+                    topic.MessageLength = EncodeState(topic, message, slot.NextId, slot.CurrentMember);
                     topic.Message ??= new byte[topic.Scratch.Length];
                     topic.Scratch.AsSpan(0, topic.MessageLength).CopyTo(topic.Message);
                 }
@@ -726,6 +732,7 @@ public sealed partial class GesNetworkConnection
             RecordFragment(lane, slot.Id, offset, chunk);
             slot.Offset += chunk;
             if (slot.Offset < message.Length) break;
+            if (slot.CurrentMember) CompleteMember(route, slot.Id);
             slot.Complete();
         }
 

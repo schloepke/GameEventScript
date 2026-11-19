@@ -162,6 +162,8 @@ public sealed partial class GesNetworkConnection
                 if (_sendLatest[route] is { } slot) position = WriteLatest(route, slot, packet, position, limit);
             }
 
+            position = WriteTickFrame(packet, position, limit);
+
             position = WriteQueue(_sendBulk, ref _nextBulkId, packet, position, limit);
         }
 
@@ -230,7 +232,7 @@ public sealed partial class GesNetworkConnection
             {
                 if (!slot.Started)
                 {
-                    topic.MessageLength = EncodeState(topic, message, slot.NextId);
+                    topic.MessageLength = EncodeState(topic, message, slot.NextId, slot.CurrentMember);
                     topic.Message ??= new byte[topic.Scratch.Length];
                     topic.Scratch.AsSpan(0, topic.MessageLength).CopyTo(topic.Message);
                 }
@@ -252,6 +254,7 @@ public sealed partial class GesNetworkConnection
             slot.Offset += chunk;
             if (slot.Offset < message.Length) break;
             topic?.MarkSent(_sentCount);
+            if (slot.CurrentMember) CompleteMember(route, slot.Id);
             slot.Complete();
         }
 

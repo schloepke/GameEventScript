@@ -40,6 +40,11 @@ final class SchemaSetTests: XCTestCase {
             XCTAssertEqual(failure(GesSchemaGenerateOptions(language: language, useSchemaSet: "Game..Set")), "generate.usage")
             XCTAssertEqual(failure(GesSchemaGenerateOptions(language: language, schemaSet: "S")), "generate.nameCollision")
         }
+        // A C# member cannot share its class's name; a Swift member can.
+        for name in ["Set", "Hash", "Parameters", "Bind", "BindNetwork", "ReadDocument"] {
+            XCTAssertEqual(failure(GesSchemaGenerateOptions(language: .csharp, schemaSet: name)), "generate.nameCollision")
+        }
+        XCTAssertTrue(try generate(GesSchemaGenerateOptions(language: .swift, schemaSet: "Set")).contains("enum Set"))
         // Only Swift files import modules.
         XCTAssertEqual(failure(GesSchemaGenerateOptions(language: .csharp, imports: ["Shared"])), "generate.usage")
         XCTAssertEqual(failure(GesSchemaGenerateOptions(language: .swift, imports: ["Shared.Net"])), "generate.usage")

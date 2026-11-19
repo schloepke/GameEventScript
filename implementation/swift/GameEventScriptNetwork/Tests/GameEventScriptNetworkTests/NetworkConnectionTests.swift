@@ -28,11 +28,11 @@ final class NetworkConnectionTests: XCTestCase {
 
     private func game(_ source: String = source) throws -> GesBoundNetwork { try GesSchemaSet(parsing: source).network("Game").bind() }
 
-    private func connected(_ options: GesNetworkOptions = GesNetworkOptions.plain) throws -> GesNetworkLoopback {
+    private func connected(_ options: GesNetworkOptions = GesNetworkOptions.plain) throws -> GesNetworkSimulator {
         let network = try game()
         let client = try GesNetworkConnection.makeClient(network: network, token: Array("t".utf8), now: 0, options: options)
         let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: options)
-        let loop = try GesNetworkLoopback(client: client, server: server)
+        let loop = try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0)
         try loop.advance(0)
         XCTAssertEqual(drain(server), ["connecting t"])
         try server.accept()
@@ -58,7 +58,7 @@ final class NetworkConnectionTests: XCTestCase {
                 events.append("message \(next.route) \(hex(next.payload))")
             case .closed:
                 events.append("closed \(next.code) '\(next.detail)' \(next.byPeer ? "peer" : "local")")
-            case .transferProgress, .transferCancelled:
+            case .transferProgress, .transferCancelled, .tick:
                 break
             }
         }
@@ -134,7 +134,7 @@ final class NetworkConnectionTests: XCTestCase {
 
     func testRefusalClosesBothSidesWithTheHostDetail() throws {
         let (client, server) = try pair(GesNetworkOptions.plain)
-        let loop = try GesNetworkLoopback(client: client, server: server)
+        let loop = try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0)
         try loop.advance(0)
         _ = drain(server)
         try server.refuse("full")
@@ -147,7 +147,7 @@ final class NetworkConnectionTests: XCTestCase {
         let other = Self.source.replacingOccurrences(of: "max 6000", with: "max 5000")
         let client = try GesNetworkConnection.makeClient(network: try game(other), now: 0, options: .plain)
         let server = try GesNetworkConnection.makeServer(network: try game(), now: 0, options: .plain)
-        try GesNetworkLoopback(client: client, server: server).advance(0)
+        try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0).advance(0)
         XCTAssertEqual(drain(server), ["closed network.schemaMismatch 'Blob, Pack' local"])
         XCTAssertEqual(drain(client), ["closed network.schemaMismatch 'Blob, Pack' peer"])
     }
@@ -156,7 +156,7 @@ final class NetworkConnectionTests: XCTestCase {
         let other = Self.source.replacingOccurrences(of: "at most every 50ms", with: "at most every 60ms")
         let client = try GesNetworkConnection.makeClient(network: try game(other), now: 0, options: .plain)
         let server = try GesNetworkConnection.makeServer(network: try game(), now: 0, options: .plain)
-        try GesNetworkLoopback(client: client, server: server).advance(0)
+        try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0).advance(0)
         XCTAssertEqual(drain(server), ["closed network.schemaMismatch 'Game' local"])
     }
 
@@ -448,7 +448,7 @@ final class NetworkConnectionTests: XCTestCase {
         options.maxTransferBytes = 100
         let client = try GesNetworkConnection.makeClient(network: network, now: 0, options: options)
         let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: .plain)
-        let loop = try GesNetworkLoopback(client: client, server: server)
+        let loop = try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0)
         try loop.advance(0)
         _ = server.nextEvent()
         try server.accept()
@@ -528,7 +528,7 @@ final class NetworkConnectionTests: XCTestCase {
         )
         let client = try GesNetworkConnection.makeClient(network: network, token: Array("t".utf8), now: 0, options: .plain)
         let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: .plain)
-        let loop = try GesNetworkLoopback(client: client, server: server)
+        let loop = try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0)
         try loop.advance(0)
         XCTAssertEqual(drain(server), ["connecting t"])
         try server.accept()
@@ -563,7 +563,7 @@ final class NetworkConnectionTests: XCTestCase {
         options.maxTransferBytes = 1000
         let client = try GesNetworkConnection.makeClient(network: network, token: Array("t".utf8), now: 0, options: options)
         let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: options)
-        let loop = try GesNetworkLoopback(client: client, server: server)
+        let loop = try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0)
         try loop.advance(0)
         _ = drain(server)
         try server.accept()

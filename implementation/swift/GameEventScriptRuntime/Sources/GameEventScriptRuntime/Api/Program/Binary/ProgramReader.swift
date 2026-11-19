@@ -100,10 +100,14 @@ enum GesProgramReader {
             return lists[Int(index)]
         }
 
-        // Per group its tag count followed by its tag indexes; the flag requires at least one non-empty group.
+        // Per group its tag count followed by its tag indexes; the flag requires at least one non-empty group. Bindings
+        // naming the same list share one parsed group array, so a repeated list costs its size only once.
+        var resolvedAlternatives: [Int: [[UInt16]]] = [:]
+
         func tagAlternatives(_ index: UInt16, entry: Int) throws -> [[UInt16]] {
             if index == .max { throw bindingsReader.error(.invalidProgram, offset: bindingsReader.bytes.startIndex, entry: entry) }
             guard Int(index) < lists.count else { throw bindingsReader.error(.invalidListIndex, offset: bindingsReader.bytes.startIndex, entry: entry) }
+            if let shared = resolvedAlternatives[Int(index)] { return shared }
             let flat = lists[Int(index)]
             var groups: [[UInt16]] = []
             var position = 0
@@ -115,6 +119,7 @@ enum GesProgramReader {
                 position += count
             }
             if groups.isEmpty { throw bindingsReader.error(.invalidProgram, offset: bindingsReader.bytes.startIndex, entry: entry) }
+            resolvedAlternatives[Int(index)] = groups
             return groups
         }
 

@@ -71,6 +71,9 @@ public readonly struct GesReadOnlyArray<T> : IReadOnlyList<T>
 
     internal ReadOnlySpan<T> AsSpan() => _items;
 
+    // The backing array, which identifies instances that share storage; null for a default instance.
+    internal object? Storage => _items;
+
     internal string DecodeUtf8(Encoding encoding, int start, int length)
     {
         if (typeof(T) != typeof(byte)) throw new InvalidOperationException("Only byte arrays can be decoded as UTF-8.");

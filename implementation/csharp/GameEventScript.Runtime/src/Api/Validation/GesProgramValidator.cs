@@ -93,6 +93,7 @@ internal static class GesProgramValidator
         var functionNames = new HashSet<string>(StringComparer.Ordinal);
         var predicateNames = new HashSet<string>(StringComparer.Ordinal);
         var recordNames = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<object>? validatedAlternatives = null;
         for (var index = 0; index < program.Bindings.Entries.Count; index++)
         {
             var bind = program.Bindings.Entries[index];
@@ -103,10 +104,14 @@ internal static class GesProgramValidator
             ValidateTextIndexes(bind.ArgumentNames, program.StringConstants.Slices.Count, index);
             ValidateTextIndexes(bind.RequiredTags, program.StringConstants.Slices.Count, index);
             ValidateTextIndexes(bind.ExcludedTags, program.StringConstants.Slices.Count, index);
-            for (var group = 0; group < bind.RequiredTagAlternatives.Count; group++)
-                ValidateTextIndexes(bind.RequiredTagAlternatives[group], program.StringConstants.Slices.Count, index);
+            // A group set shared with an earlier handler already passed these checks.
+            if (bind.RequiredTagAlternatives.Count > 0 && validatedAlternatives?.Contains(bind.RequiredTagAlternatives.Storage!) != true)
+            {
+                for (var group = 0; group < bind.RequiredTagAlternatives.Count; group++)
+                    ValidateTextIndexes(bind.RequiredTagAlternatives[group], program.StringConstants.Slices.Count, index);
+            }
             ValidateBindingText(program, bind, index);
-            ValidateTagAlternatives(program, bind, index);
+            ValidateTagAlternatives(program, bind, index, ref validatedAlternatives);
             // A message-name handler receives exactly one direct `:Message` argument under the fixed synthetic label.
             if (bind.Kind == MessageNameHandler && (bind.ArgumentNames.Count != 1 || !MatchesAscii(program.StringConstants, bind.ArgumentNames[0], "message")))
                 Throw(GesProgramFormatErrorCode.InvalidProgram, "A message-name handler binding must record exactly the argument name 'message'.", (ushort)GesSectionType.Bindings, index);
@@ -431,12 +436,15 @@ internal static class GesProgramValidator
         ValidateBindingNameList(program, bind.ExcludedTags, bindingIndex, allowUnlabeled: false, "Excluded tag");
     }
 
-    // Each alternative group of a handler holds at least two distinct tags; a single tag belongs to RequiredTags.
-    private static void ValidateTagAlternatives(GameEventScriptProgram program, GesBindingSegment.Entry bind, int bindingIndex)
+    // Each alternative group of a handler holds at least two distinct tags; a single tag belongs to RequiredTags. Group
+    // sets shared by several handlers (as the Program reader produces) are checked once.
+    private static void ValidateTagAlternatives(GameEventScriptProgram program, GesBindingSegment.Entry bind, int bindingIndex, ref HashSet<object>? validated)
     {
         if (bind.RequiredTagAlternatives.Count == 0) return;
         if (bind.Kind is not (MessageHandler or MessageNameHandler))
             Throw(GesProgramFormatErrorCode.InvalidProgram, "Only message handler bindings may record tag alternatives.", (ushort)GesSectionType.Bindings, bindingIndex);
+        validated ??= []; // Arrays compare by reference.
+        if (!validated.Add(bind.RequiredTagAlternatives.Storage!)) return;
         var names = new HashSet<string>(StringComparer.Ordinal);
         for (var group = 0; group < bind.RequiredTagAlternatives.Count; group++)
         {

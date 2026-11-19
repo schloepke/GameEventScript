@@ -343,6 +343,7 @@ public readonly struct GesBindingSegment
 
         private static GesReadOnlyArray<GesReadOnlyArray<ushort>> CopyGroups(IReadOnlyList<IReadOnlyList<ushort>>? groups)
         {
+            if (groups is SharedTagGroups shared) return shared.Groups;
             if (groups is null || groups.Count == 0) return default;
             var copies = new GesReadOnlyArray<ushort>[groups.Count];
             for (var index = 0; index < copies.Length; index++) copies[index] = new GesReadOnlyArray<ushort>(groups[index]);
@@ -378,6 +379,26 @@ public readonly struct GesBindingSegment
 
     /// <summary>The binding Flags bit stating that the TagAlternativesList field names the entry's alternative groups.</summary>
     internal const byte TagAlternativesFlag = 0x01;
+
+    /// <summary>
+    /// Already immutable alternative groups that the Program reader passes to several entries; <see cref="Entry"/> adopts
+    /// them without copying.
+    /// </summary>
+    internal sealed class SharedTagGroups(GesReadOnlyArray<GesReadOnlyArray<ushort>> groups) : IReadOnlyList<IReadOnlyList<ushort>>
+    {
+        internal GesReadOnlyArray<GesReadOnlyArray<ushort>> Groups { get; } = groups;
+
+        public int Count => Groups.Count;
+
+        public IReadOnlyList<ushort> this[int index] => Groups[index];
+
+        public IEnumerator<IReadOnlyList<ushort>> GetEnumerator()
+        {
+            for (var index = 0; index < Groups.Count; index++) yield return Groups[index];
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
 
     /// <summary>
     /// Returns the encoded TagAlternativesList of <paramref name="groups"/>: per group its tag count followed by its tag

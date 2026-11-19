@@ -197,6 +197,7 @@ internal static class GesProgramReader
         if (count > reader.Remaining / 20 || reader.Remaining != count * 20) Throw(GesProgramFormatErrorCode.InvalidPayloadLength, "BindingSegment length does not match EntryCount.", reader.AbsoluteOffset, section.Type);
         var entries = new GesBindingSegment.Entry[count];
         var resolvedLists = new IReadOnlyList<ushort>?[lists.Slices.Count];
+        GesBindingSegment.SharedTagGroups?[]? resolvedAlternatives = null;
         for (var index = 0; index < count; index++)
         {
             var kind = (GesBinaryBindKind)reader.ReadByte();
@@ -211,14 +212,14 @@ internal static class GesProgramReader
             var requiredRegisters = reader.ReadUInt16();
             var requiredDepth = reader.ReadUInt16();
             var alternativesList = reader.ReadUInt16();
-            IReadOnlyList<IReadOnlyList<ushort>>? alternatives = null;
+            GesBindingSegment.SharedTagGroups? alternatives = null;
             if (flags == 0)
             {
                 if (alternativesList != 0) Throw(GesProgramFormatErrorCode.InvalidSectionReserved, "Binding TagAlternativesList must be zero without the alternatives flag.", reader.AbsoluteOffset - 2, section.Type, index);
             }
             else
             {
-                alternatives = ReadTagAlternatives(lists, alternativesList, section, index);
+                alternatives = ReadTagAlternatives(lists, resolvedAlternatives ??= new GesBindingSegment.SharedTagGroups?[lists.Slices.Count], alternativesList, section, index);
             }
 
             entries[index] = new GesBindingSegment.Entry(kind, name, arguments, entryAddress, id, requiredTags, excludedTags, requiredRegisters, requiredDepth, alternatives);
@@ -339,12 +340,14 @@ internal static class GesProgramReader
         return resolvedLists[index] = new GesReadOnlyArray<ushort>(result);
     }
 
-    private static IReadOnlyList<IReadOnlyList<ushort>> ReadTagAlternatives(GesUInt16IndexListSegment lists, ushort index, SectionDescriptor section, int entryIndex)
+    // Bindings naming the same list share one immutable group set, so a repeated list costs its size only once.
+    private static GesBindingSegment.SharedTagGroups ReadTagAlternatives(GesUInt16IndexListSegment lists, GesBindingSegment.SharedTagGroups?[] resolved, ushort index, SectionDescriptor section, int entryIndex)
     {
         if (index == ushort.MaxValue) Throw(GesProgramFormatErrorCode.InvalidProgram, "Binding with tag alternatives names no TagAlternativesList.", section.PayloadOffset, section.Type, entryIndex);
         if (index >= lists.Slices.Count) Throw(GesProgramFormatErrorCode.InvalidListIndex, "Binding references a missing UInt16 index list.", section.PayloadOffset, section.Type, entryIndex);
+        if (resolved[index] is { } shared) return shared;
         var list = lists.Resolve(index);
-        var groups = new List<IReadOnlyList<ushort>>();
+        var groups = new List<GesReadOnlyArray<ushort>>();
         var position = 0;
         while (position < list.Length)
         {
@@ -352,11 +355,11 @@ internal static class GesProgramReader
             if (count == 0 || count > list.Length - position) Throw(GesProgramFormatErrorCode.InvalidProgram, "Binding TagAlternativesList is malformed.", section.PayloadOffset, section.Type, entryIndex);
             var tags = new ushort[count];
             for (var tag = 0; tag < count; tag++) tags[tag] = list[position++];
-            groups.Add(tags);
+            groups.Add(GesReadOnlyArray<ushort>.FromOwnedArray(tags));
         }
 
         if (groups.Count == 0) Throw(GesProgramFormatErrorCode.InvalidProgram, "Binding TagAlternativesList is empty.", section.PayloadOffset, section.Type, entryIndex);
-        return groups;
+        return resolved[index] = new GesBindingSegment.SharedTagGroups(GesReadOnlyArray<GesReadOnlyArray<ushort>>.FromOwnedArray([.. groups]));
     }
 
     private static SectionDescriptor Require(List<SectionDescriptor> sections, GesSectionType type)

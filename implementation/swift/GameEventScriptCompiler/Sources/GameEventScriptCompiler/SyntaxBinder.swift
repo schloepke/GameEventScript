@@ -355,6 +355,9 @@ final class GesSyntaxBinder {
         var required: [String] = []
         var excluded: [String] = []
         var alternatives: [[String]] = []
+        // Sets beside the ordered tag lists keep long filters linear.
+        var requiredSet: Set<String> = []
+        var excludedSet: Set<String> = []
         // A `matching` filter is a conjunction of groups: a single tag is required, a `|` group needs one of its tags.
         // `without` filters hold no `|`, which the syntax validator reports.
         while true {
@@ -364,10 +367,11 @@ final class GesSyntaxBinder {
             let include = try f.advance().kind == .matching
             repeat {
                 var group: [String] = []
+                var groupSet: Set<String> = []
                 repeat {
                     try f.newlines()
                     let tag = String(try f.expect(.tag).text.dropFirst())
-                    if !group.contains(tag) { group.append(tag) }
+                    if groupSet.insert(tag).inserted { group.append(tag) }
                     try f.newlines()
                 } while try f.match(.operatorCollectionUnion)
                 if include && group.count > 1 {
@@ -375,7 +379,7 @@ final class GesSyntaxBinder {
                     continue
                 }
                 for tag in group {
-                    if include { if !required.contains(tag) { required.append(tag) } } else if !excluded.contains(tag) { excluded.append(tag) }
+                    if include { if requiredSet.insert(tag).inserted { required.append(tag) } } else if excludedSet.insert(tag).inserted { excluded.append(tag) }
                 }
             } while try f.match(.comma)
         }
@@ -396,12 +400,21 @@ final class GesSyntaxBinder {
     // Drops every group that a required tag or another kept group already satisfies, so duplicates and absorbed groups
     // vanish; the kept groups keep their source order.
     static func reduceTagAlternatives(_ required: [String], _ alternatives: [[String]]) -> [[String]] {
-        alternatives.indices.compactMap { index in
+        if alternatives.isEmpty { return [] }
+        let requiredSet = Set(required)
+        if alternatives.count == 1 { return alternatives[0].contains(where: requiredSet.contains) ? [] : alternatives }
+        // A group can only be absorbed by a group whose first tag it contains, so candidates are looked up by that tag.
+        var byFirstTag: [String: [Int]] = [:]
+        for index in alternatives.indices { byFirstTag[alternatives[index][0], default: []].append(index) }
+        return alternatives.indices.compactMap { index in
             let group = alternatives[index]
-            if group.contains(where: required.contains) { return nil }
+            if group.contains(where: requiredSet.contains) { return nil }
+            let tags = Set(group)
             // A group containing every tag of another is implied by it; of two equal groups the first stays.
-            let absorbed = alternatives.indices.contains { other in
-                other != index && alternatives[other].allSatisfy(group.contains) && (alternatives[other].count < group.count || other < index)
+            let absorbed = group.contains { tag in
+                (byFirstTag[tag] ?? []).contains { other in
+                    other != index && (alternatives[other].count < group.count || (alternatives[other].count == group.count && other < index)) && alternatives[other].allSatisfy(tags.contains)
+                }
             }
             return absorbed ? nil : group
         }

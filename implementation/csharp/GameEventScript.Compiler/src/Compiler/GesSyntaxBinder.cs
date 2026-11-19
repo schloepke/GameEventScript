@@ -423,11 +423,12 @@ internal sealed partial class GesSyntaxBinder
         var requiredTags = new List<string>();
         var excludedTags = new List<string>();
         List<List<string>>? alternatives = null;
+        var tagSets = new TagSets();
         while (true)
         {
             c.SkipNewLines();
             if (!c.IsNode(NodeKind.HandlerTagFilter)) break;
-            BindTagFilter(c.TakeNode(), requiredTags, excludedTags, ref alternatives);
+            BindTagFilter(c.TakeNode(), requiredTags, excludedTags, ref alternatives, tagSets);
         }
 
         c.SkipNewLines();
@@ -437,7 +438,15 @@ internal sealed partial class GesSyntaxBinder
 
     // A `matching` filter is a conjunction of groups: a single tag is required, a `|` group needs one of its tags.
     // `without` filters hold no `|`, which the syntax validator reports.
-    private void BindTagFilter(GesSyntaxNode node, List<string> requiredTags, List<string> excludedTags, ref List<List<string>>? alternatives)
+    // Sets beside the ordered tag lists keep long filters linear.
+    private sealed class TagSets
+    {
+        internal HashSet<string> Group { get; } = new(StringComparer.Ordinal);
+        internal HashSet<string> Required { get; } = new(StringComparer.Ordinal);
+        internal HashSet<string> Excluded { get; } = new(StringComparer.Ordinal);
+    }
+
+    private void BindTagFilter(GesSyntaxNode node, List<string> requiredTags, List<string> excludedTags, ref List<List<string>>? alternatives, TagSets sets)
     {
         var c = new Cursor(this, node);
         var matching = c.Advance().Kind == Matching;
@@ -445,11 +454,12 @@ internal sealed partial class GesSyntaxBinder
         do
         {
             group.Clear();
+            sets.Group.Clear();
             do
             {
                 c.SkipNewLines();
                 var normalized = GameEventScriptMessage.NormalizeTagName(c.Expect(Tag).Text[1..]);
-                if (normalized.Length > 0 && !group.Contains(normalized)) group.Add(normalized);
+                if (normalized.Length > 0 && sets.Group.Add(normalized)) group.Add(normalized);
                 c.SkipNewLines();
             }
             while (c.Match(OperatorCollectionUnion));
@@ -461,8 +471,9 @@ internal sealed partial class GesSyntaxBinder
             }
 
             var tags = matching ? requiredTags : excludedTags;
+            var seen = matching ? sets.Required : sets.Excluded;
             foreach (var tag in group)
-                if (!tags.Contains(tag)) tags.Add(tag);
+                if (seen.Add(tag)) tags.Add(tag);
         }
         while (c.Match(Comma));
     }
@@ -472,18 +483,41 @@ internal sealed partial class GesSyntaxBinder
     private static List<IReadOnlyList<string>>? ReduceTagAlternatives(List<string> requiredTags, List<List<string>>? alternatives)
     {
         if (alternatives is null) return null;
+        var required = new HashSet<string>(requiredTags, StringComparer.Ordinal);
         var kept = new List<IReadOnlyList<string>>();
+        if (alternatives.Count == 1)
+        {
+            if (!alternatives[0].Exists(required.Contains)) kept.Add(alternatives[0]);
+            return kept;
+        }
+
+        // A group can only be absorbed by a group whose first tag it contains, so candidates are looked up by that tag.
+        var byFirstTag = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+        for (var index = 0; index < alternatives.Count; index++)
+        {
+            if (!byFirstTag.TryGetValue(alternatives[index][0], out var starting)) byFirstTag.Add(alternatives[index][0], starting = []);
+            starting.Add(index);
+        }
+
+        var tags = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < alternatives.Count; index++)
         {
             var group = alternatives[index];
-            if (group.Exists(requiredTags.Contains)) continue;
+            if (group.Exists(required.Contains)) continue;
+            tags.Clear();
+            tags.UnionWith(group);
             var absorbed = false;
-            for (var other = 0; other < alternatives.Count && !absorbed; other++)
+            for (var tag = 0; tag < group.Count && !absorbed; tag++)
             {
-                if (other == index) continue;
-                var candidate = alternatives[other];
-                // A group containing every tag of another is implied by it; of two equal groups the first stays.
-                absorbed = candidate.TrueForAll(group.Contains) && (candidate.Count < group.Count || other < index);
+                if (!byFirstTag.TryGetValue(group[tag], out var candidates)) continue;
+                for (var position = 0; position < candidates.Count && !absorbed; position++)
+                {
+                    var other = candidates[position];
+                    if (other == index) continue;
+                    var candidate = alternatives[other];
+                    // A group containing every tag of another is implied by it; of two equal groups the first stays.
+                    absorbed = (candidate.Count < group.Count || (candidate.Count == group.Count && other < index)) && candidate.TrueForAll(tags.Contains);
+                }
             }
 
             if (!absorbed) kept.Add(group);

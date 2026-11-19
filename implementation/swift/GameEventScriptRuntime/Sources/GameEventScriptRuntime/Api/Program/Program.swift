@@ -586,3 +586,12 @@ public struct GesOpaqueSection: Sendable {
         self.originalOrdinal = originalOrdinal
     }
 }
+
+extension GesBindingSegment.Entry {
+    /// The address of the alternative groups' storage, which identifies entries sharing one group array (as the Program
+    /// reader produces per list) while the Program is alive; nil without alternatives.
+    var tagAlternativesIdentity: UnsafeRawPointer? {
+        if requiredTagAlternatives.isEmpty { return nil }
+        return requiredTagAlternatives.withUnsafeBufferPointer { $0.baseAddress.map(UnsafeRawPointer.init) }
+    }
+}

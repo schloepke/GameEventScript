@@ -115,6 +115,7 @@ internal sealed class GesLinkedProgram
         if (count == 0) return [];
         var handlers = new Handler[count];
         var handlerIndex = 0;
+        Dictionary<object, string[][]>? alternatives = null;
         foreach (var bind in program.Bindings.Entries)
         {
             if (bind.Kind is not (MessageHandler or MessageNameHandler)) continue;
@@ -123,7 +124,7 @@ internal sealed class GesLinkedProgram
             handlers[handlerIndex++] = new Handler(
                 GesMessageSignature.Create(name, arguments),
                 ReadStrings(bind.RequiredTags),
-                ReadTagAlternatives(bind.RequiredTagAlternatives),
+                ReadTagAlternatives(bind.RequiredTagAlternatives, ref alternatives),
                 ReadStrings(bind.ExcludedTags),
                 bind.Kind == MessageHandler,
                 bind.EntryAddress,
@@ -134,11 +135,16 @@ internal sealed class GesLinkedProgram
         return handlers;
     }
 
-    private string[][]? ReadTagAlternatives(GesReadOnlyArray<GesReadOnlyArray<ushort>> groups)
+    // Handlers whose entries share one group set (as the Program reader produces) share one resolved copy.
+    private string[][]? ReadTagAlternatives(GesReadOnlyArray<GesReadOnlyArray<ushort>> groups, ref Dictionary<object, string[][]>? resolved)
     {
         if (groups.Count == 0) return null;
+        var storage = groups.Storage!;
+        resolved ??= new Dictionary<object, string[][]>(); // Arrays compare by reference.
+        if (resolved.TryGetValue(storage, out var shared)) return shared;
         var values = new string[groups.Count][];
         for (var group = 0; group < values.Length; group++) values[group] = ReadStrings(groups[group]);
+        resolved.Add(storage, values);
         return values;
     }
 

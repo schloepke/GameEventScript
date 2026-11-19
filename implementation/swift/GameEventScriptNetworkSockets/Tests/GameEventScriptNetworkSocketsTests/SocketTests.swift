@@ -493,7 +493,7 @@ final class SocketTests: XCTestCase {
         let server = try Self.acceptOne(listener)
         try await socket.writeAndFlush(Self.frame(.text, Array("hello".utf8))).get()
         XCTAssertEqual(try Self.waitFor(server), "closed network.malformed local")
-        try await socket.close()
+        try? await socket.close()
         server.close()
         listener.close()
     }
@@ -504,7 +504,7 @@ final class SocketTests: XCTestCase {
         let server = try Self.acceptOne(listener)
         try await socket.writeAndFlush(Self.frame(.binary, [UInt8](repeating: 0, count: 16385))).get()
         XCTAssertEqual(try Self.waitFor(server), "closed network.packetTooLarge local")
-        try await socket.close()
+        try? await socket.close()
         server.close()
         listener.close()
     }
@@ -561,7 +561,7 @@ final class SocketTests: XCTestCase {
         // Taken clients give their places back.
         let another = try await Self.rawConnect(listener.localEndPoint.port!)
         try Self.acceptOne(listener).close()
-        try await another.close()
+        try? await another.close()
         for client in clients { try? await client.close() }
         listener.close()
     }

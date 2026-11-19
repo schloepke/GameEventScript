@@ -26,11 +26,12 @@ final class NetworkTickTests: XCTestCase {
     private let beta = 2
     private let log = 3
 
-    private func connected(_ transport: GesNetworkTransport, loss: Int = 0, seed: Int64 = 0) throws -> GesNetworkSimulator {
+    private func connected(_ transport: GesNetworkTransport, loss: Int = 0, seed: Int64 = 0, maxFramesPerSecond: Int = 4096) throws -> GesNetworkSimulator {
         let network = try GesSchemaSet(parsing: Self.source).network("Game").bind()
         var options = GesNetworkOptions.plain
         options.transport = transport
         let client = try GesNetworkConnection.makeClient(network: network, now: 0, options: options)
+        options.maxFramesPerSecond = maxFramesPerSecond
         let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: options)
         let simulator = try GesNetworkSimulator(
             client: client,
@@ -78,6 +79,37 @@ final class NetworkTickTests: XCTestCase {
 
     private func settle(_ simulator: GesNetworkSimulator) throws {
         for _ in 0..<50 { try simulator.advance(simulator.now + 10_000) }
+    }
+
+    func testPacketsAboveTheFrameLimitWaitForTheFrameBucket() throws {
+        for transport in [GesNetworkTransport.message, .stream] {
+            let simulator = try connected(transport, maxFramesPerSecond: 4)
+            let client = simulator.client
+            let server = simulator.server
+            let start = simulator.now
+            var expected: [String] = []
+            for x in 0..<12 {
+                XCTAssertEqual(client.send(route: commands, payload: [UInt8(x)]), .queued)
+                expected.append("message \(commands) " + String(format: "%02X", x))
+                try simulator.advance(simulator.now)
+            }
+            // The server took frames until its bucket ran dry; the simulator holds the rest instead of closing it.
+            XCTAssertFalse(server.canReceive, "\(transport)")
+            XCTAssertGreaterThan(server.nextDeadline, simulator.now, "\(transport)")
+            XCTAssertGreaterThan(simulator.packetsInFlight, 0, "\(transport)")
+            var received = drain(server)
+            XCTAssertLessThan(received.count, expected.count, "\(transport)")
+            var step = 0
+            while step < 1000 && received.count < expected.count {
+                try simulator.advance(simulator.nextDeadline)
+                received += drain(server)
+                step += 1
+            }
+            XCTAssertEqual(received, expected, "\(transport)")
+            XCTAssertEqual(server.state, .connected, "\(transport)")
+            XCTAssertEqual(client.state, .connected, "\(transport)")
+            XCTAssertGreaterThanOrEqual(simulator.now, start + 1_000_000, "\(transport)")
+        }
     }
 
     func testTickReportsItsChangedMembersAndThenTheTick() throws {

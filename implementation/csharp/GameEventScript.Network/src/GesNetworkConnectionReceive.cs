@@ -13,7 +13,8 @@ public sealed partial class GesNetworkConnection
     /// <summary>
     /// Passes received bytes: one packet on a message transport, any chunk of the byte stream on a stream transport.
     /// The connection first advances to <paramref name="now"/>. Errors close the connection with their code; once
-    /// closed, received bytes are ignored.
+    /// closed, received bytes are ignored. On a stream or message transport, bytes passed while <see cref="CanReceive"/>
+    /// is false close the connection with <c>network.rateExceeded</c>.
     /// </summary>
     /// <param name="data">The received bytes; they are not retained.</param>
     /// <param name="now">The current time in microseconds, not earlier than <see cref="Now"/>.</param>
@@ -22,6 +23,12 @@ public sealed partial class GesNetworkConnection
     {
         Advance(now);
         if (State == GesNetworkState.Closed) return;
+        if (!_datagram && _frameUnits < MicrosecondsPerSecond && !data.IsEmpty)
+        {
+            Fail(GesNetworkCodes.RateExceeded);
+            return;
+        }
+
         if (_transport != GesNetworkTransport.Stream)
         {
             ReceivePacket(data);
@@ -112,6 +119,7 @@ public sealed partial class GesNetworkConnection
         }
 
         _lastReceive = _now;
+        _packetFrames = 0;
         switch (packet[0])
         {
             // A client accepts a plain close until it read a sealed welcome, a server until it authenticated a packet.
@@ -389,9 +397,11 @@ public sealed partial class GesNetworkConnection
     }
 
     // Reads one frame; false when it closed the connection.
+    // A packet that was let in may take the bucket below zero, but no packet carries more frames than the bucket holds.
     private bool ReceiveFrame(ReadOnlySpan<byte> packet, ref int position)
     {
-        if (_frameUnits < MicrosecondsPerSecond) return Fail(GesNetworkCodes.RateExceeded);
+        if (_packetFrames >= _framesPerSecond) return Fail(GesNetworkCodes.RateExceeded);
+        _packetFrames++;
         _frameUnits -= MicrosecondsPerSecond;
         if (Wire.ReadVarint(packet, ref position, out var channel) != 1 || channel > _routeCount) return Fail(GesNetworkCodes.Malformed);
         if (channel == 0)

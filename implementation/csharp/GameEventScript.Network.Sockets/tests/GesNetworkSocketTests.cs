@@ -370,10 +370,7 @@ public sealed class GesNetworkSocketTests
     {
         var network = Game();
         using var listener = GesNetworkSocketListener.ListenTcp(Loopback, network, Options(GesNetworkTransport.Stream));
-        // Large socket buffers, as on Linux, hold thousands of queued messages that the client then reads at once.
-        var options = Options(GesNetworkTransport.Stream);
-        options.MaxFramesPerSecond = 1_000_000;
-        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, options);
+        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, Options(GesNetworkTransport.Stream));
         using var client = await GesNetworkSocketSession.ConnectTcpAsync("127.0.0.1", listener.LocalEndPoint.Port, connection);
         using var server = AcceptOne(listener);
         Assert.AreEqual("connecting tok", Await(server, client));
@@ -391,6 +388,8 @@ public sealed class GesNetworkSocketTests
             if (status == GesNetworkSendStatus.QueueFull)
             {
                 // The close packet leaves past the full socket's bound and reaches the client behind every queued message.
+                // Large socket buffers, as on Linux, hold more messages than the frame limit lets in at once; the
+                // client's session leaves them unread until its frame bucket refills.
                 server.Connection.Close("done");
                 server.Transmit();
                 var last = "";

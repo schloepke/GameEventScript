@@ -40,6 +40,8 @@ public final class GesNetworkSocketSession {
     private var outgoing: ByteBuffer
     private let packetBytes: Int
     private var chunks: [ByteBuffer] = []
+    private var nextChunk = 0
+    private var inboxEnded = false
     private var outgoingCompleted = false
     private var closed = false
 
@@ -170,23 +172,39 @@ public final class GesNetworkSocketSession {
     }
 
     /// Feeds the received bytes into the connection, advances it to `now` and reports the end of the transport. Call
-    /// it where the session lives.
+    /// it where the session lives. While `GesNetworkConnection.canReceive` is false the bytes wait, and once the
+    /// received chunks fill the inbox the socket stops reading, so the peer's sending slows down.
     /// - Parameter now: The current time in microseconds, not earlier than the connection's time.
     /// - Throws: `GesApiError.invalidOperation` when the session is closed; `GesApiError.invalidArgument` when the
     ///   time goes back.
     public func receive(now: Int64) throws {
         if closed { throw GesApiError.invalidOperation("The session is closed.") }
         adopt()
-        // The end flag is taken with the chunks, so no chunk received before the end is left behind.
-        let (ended, resume) = inbox.take(into: &chunks)
-        defer { chunks.removeAll(keepingCapacity: true) }
-        for chunk in chunks {
+        // Advancing refills the frame bucket, which may let in the chunks that still wait. It follows the first feed,
+        // so the timeout does not run out while received bytes wait.
+        var drained = try feed(now)
+        try connection.advance(now)
+        if !drained { drained = try feed(now) }
+        if inboxEnded && drained { connection.transportClosed() }
+    }
+
+    // Takes new chunks from the inbox only once the taken ones are fed, so a full inbox holds the socket's reading.
+    private func feed(_ now: Int64) throws -> Bool {
+        while true {
+            if nextChunk == chunks.count {
+                chunks.removeAll(keepingCapacity: true)
+                nextChunk = 0
+                // The end flag is taken with the chunks, so no chunk received before the end is left behind.
+                let (ended, resume) = inbox.take(into: &chunks)
+                inboxEnded = ended
+                if resume { channel?.read() }
+                if chunks.isEmpty { return true }
+            }
+            if !connection.canReceive { return false }
+            let chunk = chunks[nextChunk]
+            nextChunk += 1
             try chunk.withUnsafeReadableBytes { try connection.receive($0, now: now) }
         }
-
-        if resume { channel?.read() }
-        try connection.advance(now)
-        if ended { connection.transportClosed() }
     }
 
     /// Hands every packet the connection has due to the socket. While a connector's transport still opens the

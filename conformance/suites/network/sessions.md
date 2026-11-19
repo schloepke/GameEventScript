@@ -1259,7 +1259,7 @@ network:
 
 ## Test: More frames than the frame limit
 
-The frame bucket starts with as many frames as the limit; a further frame in the same instant closes the receiver with `network.rateExceeded`.
+A packet may carry at most as many frames as the frame limit; a packet with more closes the receiver with `network.rateExceeded` after the frames within the limit.
 
 ### Case description
 
@@ -1290,6 +1290,48 @@ network:
     - "server connecting -"
     - "server connected"
     - "server packet 03018080018080048080802001"
+    - "server message 0 07"
+    - "server message 0 07"
+    - "server closed network.rateExceeded local \"\""
+```
+
+---
+
+## Test: A packet into an empty frame bucket
+
+A packet may take the frame bucket to zero; a further packet in the same instant, before the bucket refills one frame, closes the receiver with `network.rateExceeded`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: rate-exceeded-empty-bucket
+networkApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  network: "Game"
+  options: {"maxFramesPerSecond": 3}
+  token: ""
+  link: "none"
+  steps:
+    - {"transmit": "client"}
+    - {"receive": {"side": "server", "bytes": "014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001000000"}}
+    - {"accept": true}
+    - {"transmit": "server"}
+    - {"receive": {"side": "server", "bytes": "05020000010000000101070101000001010701020000010107"}}
+    - {"receive": {"side": "server", "bytes": "05020000010000000101070101000001010701020000010107"}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001000000"
+    - "server connecting -"
+    - "server connected"
+    - "server packet 03018080018080048080802001"
+    - "server message 0 07"
     - "server message 0 07"
     - "server message 0 07"
     - "server closed network.rateExceeded local \"\""

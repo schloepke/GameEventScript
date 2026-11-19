@@ -187,19 +187,28 @@ public sealed class GesNetworkPair : IDisposable
 
         public GesNetworkConnection Connection => connection;
 
-        public void Receive(long now)
+        private bool Feed(long now)
         {
-            if (_ended) return;
-            now = Math.Max(now, connection.Now);
             while (_inbox.Count > 0)
             {
+                if (!connection.CanReceive) return false;
                 var (bytes, length) = _inbox.Dequeue();
                 connection.Receive(bytes.AsSpan(0, length), now);
                 pair._pool.Push(bytes);
             }
 
+            return true;
+        }
+
+        public void Receive(long now)
+        {
+            if (_ended) return;
+            now = Math.Max(now, connection.Now);
+            // Packets wait while the connection takes no bytes; advancing refills its frame bucket.
+            var drained = Feed(now);
             connection.Advance(now);
-            if (Peer!._disposed || _disposed)
+            if (!drained) drained = Feed(now);
+            if (drained && (Peer!._disposed || _disposed))
             {
                 _ended = true;
                 connection.TransportClosed();

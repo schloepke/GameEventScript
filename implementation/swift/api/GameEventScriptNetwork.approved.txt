@@ -248,6 +248,7 @@ symbol {"access":"public","declaration":"struct GesNetworkKey","kind":"swift.str
 symbol {"access":"public","declaration":"struct GesNetworkOptions","kind":"swift.struct","path":"GameEventScriptNetwork.GesNetworkOptions"}
 symbol {"access":"public","declaration":"struct GesNetworkServerSecurity","kind":"swift.struct","path":"GameEventScriptNetwork.GesNetworkServerSecurity"}
 symbol {"access":"public","declaration":"var ackDelayMicroseconds: Int64","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.ackDelayMicroseconds"}
+symbol {"access":"public","declaration":"var canReceive: Bool { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.canReceive"}
 symbol {"access":"public","declaration":"var clientCount: Int { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkServerEnd.clientCount"}
 symbol {"access":"public","declaration":"var clientSecurity: GesNetworkClientSecurity?","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.clientSecurity"}
 symbol {"access":"public","declaration":"var connection: GesNetworkConnection { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkLink.connection"}

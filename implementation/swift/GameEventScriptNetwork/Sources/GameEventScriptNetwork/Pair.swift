@@ -111,10 +111,9 @@ public final class GesNetworkPair {
             self.connection = connection
         }
 
-        func receive(now: Int64) throws {
-            if ended { return }
-            let now = max(now, connection.now)
+        private func feed(_ now: Int64) throws -> Bool {
             while inboxHead < inbox.count {
+                if !connection.canReceive { return false }
                 let (bytes, length) = inbox[inboxHead]
                 inbox[inboxHead] = ([], 0)
                 inboxHead += 1
@@ -123,8 +122,17 @@ public final class GesNetworkPair {
             }
             inbox.removeAll(keepingCapacity: true)
             inboxHead = 0
+            return true
+        }
+
+        func receive(now: Int64) throws {
+            if ended { return }
+            let now = max(now, connection.now)
+            // Packets wait while the connection takes no bytes; advancing refills its frame bucket.
+            var drained = try feed(now)
             try connection.advance(now)
-            if peer?.closed ?? true || closed {
+            if !drained { drained = try feed(now) }
+            if drained && (peer?.closed ?? true || closed) {
                 ended = true
                 connection.transportClosed()
             }

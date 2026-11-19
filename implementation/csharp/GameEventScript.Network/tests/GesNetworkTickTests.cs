@@ -29,14 +29,14 @@ public sealed class GesNetworkTickTests
     private const int Beta = 2;
     private const int Log = 3;
 
-    private static GesNetworkOptions Options(GesNetworkTransport transport) =>
-        new() { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, Transport = transport };
+    private static GesNetworkOptions Options(GesNetworkTransport transport, int maxFramesPerSecond = 4096) =>
+        new() { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, Transport = transport, MaxFramesPerSecond = maxFramesPerSecond };
 
-    private static GesNetworkSimulator Connected(GesNetworkTransport transport, int lossPerMille = 0, long seed = 0)
+    private static GesNetworkSimulator Connected(GesNetworkTransport transport, int lossPerMille = 0, long seed = 0, int maxFramesPerSecond = 4096)
     {
         var network = GesSchemaSet.Parse(Source).Network("Game").Bind();
         var client = GesNetworkConnection.CreateClient(network, default, 0, Options(transport));
-        var server = GesNetworkConnection.CreateServer(network, 0, Options(transport));
+        var server = GesNetworkConnection.CreateServer(network, 0, Options(transport, maxFramesPerSecond));
         var simulator = new GesNetworkSimulator(client, server, seed, lossPerMille == 0 ? 0 : 5_000, lossPerMille == 0 ? 0 : 20_000, lossPerMille, 0, lossPerMille != 0);
         simulator.Advance(0);
         for (var step = 0; step < 1000 && server.State == GesNetworkState.AwaitHello; step++) simulator.Advance(simulator.NextDeadline);
@@ -67,6 +67,41 @@ public sealed class GesNetworkTickTests
     private static void Settle(GesNetworkSimulator simulator)
     {
         for (var step = 0; step < 50; step++) simulator.Advance(simulator.Now + 10_000);
+    }
+
+    [TestMethod]
+    [DataRow(GesNetworkTransport.Message)]
+    [DataRow(GesNetworkTransport.Stream)]
+    public void PacketsAboveTheFrameLimitWaitForTheFrameBucket(GesNetworkTransport transport)
+    {
+        var simulator = Connected(transport, maxFramesPerSecond: 4);
+        var client = simulator.Client;
+        var server = simulator.Server;
+        var start = simulator.Now;
+        var expected = new List<string>();
+        for (var x = 0; x < 12; x++)
+        {
+            Assert.AreEqual(GesNetworkSendStatus.Queued, client.Send(Commands, [(byte)x]));
+            expected.Add($"message {Commands} {x:X2}");
+            simulator.Advance(simulator.Now);
+        }
+
+        // The server took frames until its bucket ran dry; the simulator holds the rest instead of closing it.
+        Assert.IsFalse(server.CanReceive);
+        Assert.IsGreaterThan(simulator.Now, server.NextDeadline);
+        Assert.IsGreaterThan(0, simulator.PacketsInFlight);
+        var received = Drain(server);
+        Assert.IsLessThan(expected.Count, received.Count);
+        for (var step = 0; step < 1000 && received.Count < expected.Count; step++)
+        {
+            simulator.Advance(simulator.NextDeadline);
+            received.AddRange(Drain(server));
+        }
+
+        CollectionAssert.AreEqual(expected, received);
+        Assert.AreEqual(GesNetworkState.Connected, server.State);
+        Assert.AreEqual(GesNetworkState.Connected, client.State);
+        Assert.IsGreaterThanOrEqualTo(start + 1_000_000, simulator.Now);
     }
 
     [TestMethod]

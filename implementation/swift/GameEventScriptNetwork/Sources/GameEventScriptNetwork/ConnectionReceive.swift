@@ -9,7 +9,8 @@ extension GesNetworkConnection {
     /// Passes received bytes: one packet on a message transport, any chunk of the byte stream on a stream transport.
     ///
     /// The connection first advances to `now`. Errors close the connection with their code; once closed, received
-    /// bytes are ignored.
+    /// bytes are ignored. On a stream or message transport, bytes passed while `canReceive` is false close the
+    /// connection with `network.rateExceeded`.
     /// - Parameters:
     ///   - data: The received bytes; they are not retained.
     ///   - now: The current time in microseconds, not earlier than `now`.
@@ -17,6 +18,10 @@ extension GesNetworkConnection {
     public func receive(_ data: UnsafeRawBufferPointer, now: Int64) throws {
         try advance(now)
         if state == .closed { return }
+        if !datagram && frameUnits < Self.microsecondsPerSecond && !data.isEmpty {
+            fail(GesNetworkCodes.rateExceeded)
+            return
+        }
         if transport != .stream {
             receivePacket(data)
             return
@@ -113,6 +118,7 @@ extension GesNetworkConnection {
         }
 
         lastReceive = now
+        packetFrames = 0
         switch packet[0] {
         // A client accepts a plain close until it read a sealed welcome, a server until it authenticated a packet.
         case Wire.close where isClient ? !encrypted : (keys?.largest ?? -1) < 0:
@@ -357,8 +363,10 @@ extension GesNetworkConnection {
     }
 
     // Reads one frame; false when it closed the connection.
+    // A packet that was let in may take the bucket below zero, but no packet carries more frames than the bucket holds.
     private func receiveFrame(_ packet: UnsafeRawBufferPointer, _ position: inout Int) -> Bool {
-        if frameUnits < Self.microsecondsPerSecond { return fail(GesNetworkCodes.rateExceeded) }
+        if packetFrames >= framesPerSecond { return fail(GesNetworkCodes.rateExceeded) }
+        packetFrames += 1
         frameUnits -= Self.microsecondsPerSecond
         var channel: UInt32 = 0
         if Wire.readVarint(packet, &position, &channel) != 1 || Int(channel) > routeCount { return fail(GesNetworkCodes.malformed) }

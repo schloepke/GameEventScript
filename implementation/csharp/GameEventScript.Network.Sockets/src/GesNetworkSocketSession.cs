@@ -280,7 +280,8 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
 
     /// <summary>
     /// Feeds the received bytes into the connection, advances it to <paramref name="now"/> and reports the end of the
-    /// transport. Call it on the host thread.
+    /// transport. Call it on the host thread. While <see cref="GesNetworkConnection.CanReceive"/> is false the bytes
+    /// wait, and once the queue of received chunks is full the socket stops reading, so the peer's sending slows down.
     /// </summary>
     /// <param name="now">The current time in microseconds, not earlier than the connection's time.</param>
     /// <exception cref="ObjectDisposedException">The session is disposed.</exception>
@@ -289,14 +290,25 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
         ObjectDisposedException.ThrowIf(_disposed, this);
         // Read the end flag before draining, so no chunk written before the end is left behind.
         var ended = _transportEnded;
-        while (_received.Reader.TryRead(out var chunk))
+        // Advancing refills the frame bucket, which may let in the chunks that still wait. It follows the first feed,
+        // so the timeout does not run out while received bytes wait.
+        var drained = Feed(now);
+        Connection.Advance(now);
+        if (!drained) drained = Feed(now);
+        if (ended && drained) Connection.TransportClosed();
+    }
+
+    private bool Feed(long now)
+    {
+        while (_received.Reader.TryPeek(out var chunk))
         {
+            if (!Connection.CanReceive) return false;
+            _received.Reader.TryRead(out _);
             Connection.Receive(chunk.Bytes.AsSpan(0, chunk.Length), now);
             ArrayPool<byte>.Shared.Return(chunk.Bytes);
         }
 
-        Connection.Advance(now);
-        if (ended) Connection.TransportClosed();
+        return true;
     }
 
     /// <summary>

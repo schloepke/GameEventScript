@@ -79,6 +79,7 @@ public final class GesNetworkConnection {
     var ackDeadline: Int64 = 0
 
     var frameUnits: Int64
+    var packetFrames: Int64 = 0
     var budget: Int64
     var budgetUnits: Int64 = 0
 
@@ -399,6 +400,11 @@ public final class GesNetworkConnection {
     /// The reliable and bulk bytes not yet completely sent, on a datagram transport not yet completely acknowledged.
     public var queuedSendBytes: Int64 { sendReliable.byteCount + sendBulk.byteCount }
 
+    /// Whether `receive(_:now:)` takes further bytes. On a stream or message transport it is false while the frame
+    /// bucket holds less than one frame, after the frames received drew it down; leave the bytes unread until
+    /// `advance(_:)` refilled the bucket, which `nextDeadline` includes. Always true on a datagram transport.
+    public var canReceive: Bool { datagram || state == .closed || frameUnits >= Self.microsecondsPerSecond }
+
     /// The bytes per second this side sends; 0 sends without a budget. Change it with
     /// `setSendBudgetBytesPerSecond(_:)`, for example from a congestion controller.
     public var sendBudgetBytesPerSecond: Int64 { budget }
@@ -413,7 +419,8 @@ public final class GesNetworkConnection {
     }
 
     /// The time in microseconds at which the connection next needs `advance(_:)` or `transmit(into:)`: the timeout,
-    /// keepalive, acknowledgement or budget refill, and on a datagram transport also the repetition of the hello, loss
+    /// keepalive, acknowledgement, budget refill or, while `canReceive` is false, the frame refill, and on a datagram
+    /// transport also the repetition of the hello, loss
     /// detection or probe timeout; `Int64.max` once closed.
     public var nextDeadline: Int64 {
         if state == .closed { return .max }
@@ -422,6 +429,9 @@ public final class GesNetworkConnection {
         if ackDue { deadline = min(deadline, ackDeadline) }
         if budget > 0 && budgetUnits < 0 && hasPendingFrames() {
             deadline = min(deadline, now + (-budgetUnits + budget - 1) / budget)
+        }
+        if !datagram && frameUnits < Self.microsecondsPerSecond {
+            deadline = min(deadline, now + (Self.microsecondsPerSecond - frameUnits + framesPerSecond - 1) / framesPerSecond)
         }
         if datagram { deadline = min(deadline, datagramDeadline()) }
         return deadline

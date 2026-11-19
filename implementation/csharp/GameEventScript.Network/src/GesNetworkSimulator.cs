@@ -94,8 +94,8 @@ public sealed class GesNetworkSimulator
         get
         {
             var deadline = Math.Min(Client.NextDeadline, Server.NextDeadline);
-            if (_toServer.Count > 0) deadline = Math.Min(deadline, _toServer[0].Time);
-            if (_toClient.Count > 0) deadline = Math.Min(deadline, _toClient[0].Time);
+            deadline = Math.Min(deadline, Arrival(_toServer, Server));
+            deadline = Math.Min(deadline, Arrival(_toClient, Client));
             return Math.Max(deadline, Now);
         }
     }
@@ -115,8 +115,8 @@ public sealed class GesNetworkSimulator
             var next = NextDeadline;
             if (next > now || next == long.MaxValue) break;
             Now = next;
-            var toServer = _toServer.Count > 0 && _toServer[0].Time == next;
-            var toClient = _toClient.Count > 0 && _toClient[0].Time == next;
+            var toServer = Arrival(_toServer, Server) == next;
+            var toClient = Arrival(_toClient, Client) == next;
             if (toServer && (!toClient || _toServer[0].Sequence < _toClient[0].Sequence)) Deliver(_toServer, Server);
             else if (toClient) Deliver(_toClient, Client);
             else
@@ -132,8 +132,19 @@ public sealed class GesNetworkSimulator
         TransmitAll();
     }
 
+    // A stream or message connection that takes no bytes leaves its packets waiting until its frame bucket refills.
+    private static long Arrival(List<Flight> queue, GesNetworkConnection receiver)
+    {
+        if (queue.Count == 0) return long.MaxValue;
+        var time = queue[0].Time;
+        return receiver.CanReceive ? time : Math.Max(time, receiver.NextDeadline);
+    }
+
     private void Deliver(List<Flight> queue, GesNetworkConnection receiver)
     {
+        // The bucket refills up to the arrival; if it still holds no frame, the packet waits for the next refill.
+        receiver.Advance(Now);
+        if (!receiver.CanReceive) return;
         var flight = queue[0];
         queue.RemoveAt(0);
         receiver.Receive(flight.Bytes.AsSpan(0, flight.Length), Now);

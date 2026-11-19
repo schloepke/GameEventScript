@@ -73,6 +73,7 @@ public sealed partial class GesNetworkConnection
     private long _ackDeadline;
 
     private long _frameUnits;
+    private long _packetFrames;
     private long _budget;
     private long _budgetUnits;
 
@@ -264,6 +265,14 @@ public sealed partial class GesNetworkConnection
     public long QueuedSendBytes => _sendReliable.Bytes + _sendBulk.Bytes;
 
     /// <summary>
+    /// Gets whether <see cref="Receive"/> takes further bytes. On a stream or message transport it is false while the
+    /// frame bucket holds less than one frame, after the frames received drew it down; leave the bytes unread until
+    /// <see cref="Advance"/> refilled the bucket, which <see cref="NextDeadline"/> includes. Always true on a datagram
+    /// transport.
+    /// </summary>
+    public bool CanReceive => _datagram || State == GesNetworkState.Closed || _frameUnits >= MicrosecondsPerSecond;
+
+    /// <summary>
     /// Gets or sets the send budget in bytes per second; 0 for none. The host may change it at any time, for example
     /// from <see cref="RoundTripMicroseconds"/>; this is the congestion hook.
     /// </summary>
@@ -280,8 +289,8 @@ public sealed partial class GesNetworkConnection
     }
 
     /// <summary>
-    /// Gets the latest time at which <see cref="Advance"/> must be called: the timeout, keepalive, acknowledgement or
-    /// budget refill, and on a datagram transport also the repetition of <c>hello</c>, loss detection or probe timeout;
+    /// Gets the latest time at which <see cref="Advance"/> must be called: the timeout, keepalive, acknowledgement,
+    /// budget refill or, while <see cref="CanReceive"/> is false, the frame refill, and on a datagram transport also the repetition of <c>hello</c>, loss detection or probe timeout;
     /// <see cref="long.MaxValue"/> once closed.
     /// </summary>
     public long NextDeadline
@@ -294,6 +303,8 @@ public sealed partial class GesNetworkConnection
             if (_ackDue) deadline = Math.Min(deadline, _ackDeadline);
             if (_budget > 0 && _budgetUnits < 0 && HasPendingFrames())
                 deadline = Math.Min(deadline, _now + (-_budgetUnits + _budget - 1) / _budget);
+            if (!_datagram && _frameUnits < MicrosecondsPerSecond)
+                deadline = Math.Min(deadline, _now + (MicrosecondsPerSecond - _frameUnits + _framesPerSecond - 1) / _framesPerSecond);
             if (_datagram) deadline = Math.Min(deadline, DatagramDeadline());
             return deadline;
         }

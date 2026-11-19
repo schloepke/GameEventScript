@@ -91,9 +91,7 @@ public final class GesNetworkSimulator {
 
     /// The earliest time at which a packet arrives or a connection has a deadline.
     public var nextDeadline: Int64 {
-        var deadline = min(client.nextDeadline, server.nextDeadline)
-        if toServerHead < toServer.count { deadline = min(deadline, toServer[toServerHead].time) }
-        if toClientHead < toClient.count { deadline = min(deadline, toClient[toClientHead].time) }
+        let deadline = min(client.nextDeadline, server.nextDeadline, arrival(toServer: true), arrival(toServer: false))
         return max(deadline, now)
     }
 
@@ -108,8 +106,8 @@ public final class GesNetworkSimulator {
             let next = nextDeadline
             if next > now || next == .max { break }
             self.now = next
-            let serverDue = toServerHead < toServer.count && toServer[toServerHead].time == next
-            let clientDue = toClientHead < toClient.count && toClient[toClientHead].time == next
+            let serverDue = arrival(toServer: true) == next
+            let clientDue = arrival(toServer: false) == next
             if serverDue && (!clientDue || toServer[toServerHead].sequence < toClient[toClientHead].sequence) {
                 try deliver(toServer: true)
             } else if clientDue {
@@ -126,29 +124,45 @@ public final class GesNetworkSimulator {
         try transmitAll()
     }
 
-    private func deliver(toServer direction: Bool) throws {
-        // The queue gives up its reference to the bytes, so the free buffer is unique and is reused without a copy.
-        var flight: Flight
+    // A stream or message connection that takes no bytes leaves its packets waiting until its frame bucket refills.
+    private func arrival(toServer direction: Bool) -> Int64 {
+        let receiver = direction ? server : client
+        let time: Int64
         if direction {
-            flight = toServer[toServerHead]
-            toServer[toServerHead].bytes = []
-            toServerHead += 1
-            if toServerHead == toServer.count {
-                toServer.removeAll(keepingCapacity: true)
-                toServerHead = 0
-            }
+            if toServerHead == toServer.count { return .max }
+            time = toServer[toServerHead].time
         } else {
-            flight = toClient[toClientHead]
-            toClient[toClientHead].bytes = []
-            toClientHead += 1
-            if toClientHead == toClient.count {
-                toClient.removeAll(keepingCapacity: true)
-                toClientHead = 0
-            }
+            if toClientHead == toClient.count { return .max }
+            time = toClient[toClientHead].time
         }
-        try flight.bytes.withUnsafeBytes { try (direction ? server : client).receive(UnsafeRawBufferPointer(rebasing: $0[0..<flight.length]), now: now) }
+        return receiver.canReceive ? time : max(time, receiver.nextDeadline)
+    }
+
+    private func deliver(toServer direction: Bool) throws {
+        // The bucket refills up to the arrival; if it still holds no frame, the packet waits for the next refill.
+        let receiver = direction ? server : client
+        try receiver.advance(now)
+        if !receiver.canReceive { return }
+        var flight = direction ? Self.pop(&toServer, &toServerHead) : Self.pop(&toClient, &toClientHead)
+        try flight.bytes.withUnsafeBytes { try receiver.receive(UnsafeRawBufferPointer(rebasing: $0[0..<flight.length]), now: now) }
         free.append(flight.bytes)
         flight.bytes = []
+    }
+
+    // The queue gives up its reference to the bytes, so the free buffer is unique and is reused without a copy. The
+    // delivered prefix goes once it is half the queue, so the storage stays bounded while packets remain in flight.
+    private static func pop(_ queue: inout [Flight], _ head: inout Int) -> Flight {
+        let flight = queue[head]
+        queue[head].bytes = []
+        head += 1
+        if head == queue.count {
+            queue.removeAll(keepingCapacity: true)
+            head = 0
+        } else if head >= 32 && head * 2 >= queue.count {
+            queue.removeSubrange(0..<head)
+            head = 0
+        }
+        return flight
     }
 
     private func transmitAll() throws {

@@ -444,7 +444,15 @@ length; a further send or publish on a `reliable` route reports `queueFull`. A m
 its place once it is sent, on a datagram transport once it is acknowledged.
 
 The frame bucket starts full with as many frames as the limit and refills with the limit
-per second, counted in exact integer steps of one microsecond. The send budget is a
+per second, counted in exact integer steps of one microsecond. On a datagram transport a
+frame is accepted only while the bucket holds one. On a stream or message transport the
+bucket limits what the receiver takes in instead: received bytes are accepted while it
+holds at least one frame, and every frame of a packet they complete draws one frame, also
+below zero. A packet with more frames than the limit closes the connection, and so do bytes
+passed while the bucket holds less than one frame. The connection reports whether it takes
+further bytes, and its next deadline includes the time at which the bucket holds a frame
+again. A host leaves the received bytes unread until then, so the transport's flow control
+slows the sender. The send budget is a
 bucket of at most the send packet size that starts full, also when a budget replaces none,
 and refills with the budget per second; a data
 packet with frames is sent only while the bucket is not negative and is then subtracted
@@ -1049,7 +1057,7 @@ vectors do not establish these properties; reviews of the code do.
 | `network.packetTooLarge` | a packet exceeds the packet limit |
 | `network.messageTooLarge` | a message exceeds its route's largest encoding, or a bulk message the transfer limit plus 43 header bytes |
 | `network.queueFull` | pending received bytes or untaken events exceed their limit |
-| `network.rateExceeded` | more frames arrive than the frame limit allows |
+| `network.rateExceeded` | more frames arrive than the frame limit allows; on a stream or message transport a packet with more frames than the limit or bytes passed while the connection takes none |
 | `network.timeout` | no packet arrived within the timeout |
 | `network.refused` | the server's host refused the client |
 | `network.unexpectedRoute` | a frame uses a route the peer does not send |
@@ -1102,6 +1110,11 @@ then stops. Further packets wait in the connection, so a peer that reads slowly 
 connection's send queue and `send` reports `queueFull`. The close packet of a closed
 connection passes that bound, so closing always reaches the socket.
 
+A TCP or WebSocket session passes received bytes only while its connection takes them.
+The rest waits in about 64 read chunks, and then the session stops reading, so the
+peer's sending slows down; a session reports the end of its transport after the last
+chunk. A UDP session passes every datagram.
+
 An insecure test key seed derives a connection's ephemeral keys from a known value, so
 anyone who knows it reads the session; it exists only for tests and golden bytes. The
 socket listeners and connects refuse options and connections that use it.
@@ -1147,7 +1160,8 @@ A host drives a connection like this:
 
 1. Create a client connection with the bound network, the token and the current time, or
    a server connection with the bound network and the current time.
-2. Pass every received packet or stream chunk with the current time.
+2. Pass every received packet or stream chunk with the current time; on a stream or message
+   transport leave them unread while the connection takes no further bytes.
 3. Take events until none is left; accept or refuse a `connecting` client.
 4. Send and publish, directly or through the [typed functions](Schemas.md#network-constants)
    of generated code, and on the server subscribe and unsubscribe topics.
@@ -1259,11 +1273,15 @@ modes:
   the pair runs the handshake; the server accepts the client without a `connecting`
   event, and both ends report their connected events on their first `poll`. Every send,
   publish, tick close, close and `poll` on either end runs both connections until no
-  packet is in flight, so what one end sends is reported by the other end's next `poll`.
+  packet moves, so what one end sends is reported by the other end's next `poll`.
   Acknowledgements are not delayed: the pair runs with an acknowledgement delay of 0. Timers — keepalive, timeout and resending — fire only
   when the host advances the pair's clock; the handshake, sending and delivery never need
   it. Advancing a realtime pair, or a pair while one of its ends is polled, is a usage
   error.
+
+In both modes a packet waits in the pair while the receiving connection takes no further
+bytes, in a synchronous pair until the host advances the clock far enough to refill the
+[frame bucket](#limits).
 
 ### Simulated network
 
@@ -1272,7 +1290,9 @@ seeded latency, deterministic in every port. It draws from the
 [random generator](Semantics/Determinism.md) created from its seed. Each packet is
 delayed by the base latency plus a draw from 0 to the jitter inclusive, but never
 arrives before a packet sent earlier in the same direction, so order is preserved. Equal
-seeds, options and inputs give equal packets, events and times.
+seeds, options and inputs give equal packets, events and times. A packet for a stream or
+message connection that takes no further bytes arrives once the connection's frame bucket
+refills, at its next deadline, and the packets behind it wait too.
 
 Between datagram connections the simulated network may also lose, duplicate and reorder
 packets, with a loss and a duplicate rate in per mille, 0 to 1000, and reordering on or

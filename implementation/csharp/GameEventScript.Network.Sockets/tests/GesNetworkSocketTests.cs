@@ -370,7 +370,10 @@ public sealed class GesNetworkSocketTests
     {
         var network = Game();
         using var listener = GesNetworkSocketListener.ListenTcp(Loopback, network, Options(GesNetworkTransport.Stream));
-        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, Options(GesNetworkTransport.Stream));
+        // Large socket buffers, as on Linux, hold thousands of queued messages that the client then reads at once.
+        var options = Options(GesNetworkTransport.Stream);
+        options.MaxFramesPerSecond = 1_000_000;
+        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, options);
         using var client = await GesNetworkSocketSession.ConnectTcpAsync("127.0.0.1", listener.LocalEndPoint.Port, connection);
         using var server = AcceptOne(listener);
         Assert.AreEqual("connecting tok", Await(server, client));

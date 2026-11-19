@@ -122,13 +122,18 @@ final class NetworkAllocationTests: XCTestCase {
                 }
             }
 
-            // Random loss reaches rare new peaks of held messages and packets in flight, and the buffers grow to each.
-            // With this seed the last growth happens before round 5500.
+            // Random loss reaches rare new peaks of held messages and packets in flight, and the buffers grow to each; the
+            // allocator's capacity rounding decides which peak still grows a buffer. Such growth is rare, while an
+            // allocation per round shows in every window, so one of four windows must allocate nothing.
             for _ in 0..<6000 { try round() }
-            XCTAssertTrue(ges_allocation_begin())
-            for _ in 0..<2500 { try round() }
-            let sample = ges_allocation_end()
-            XCTAssertTrue(sample.valid, label)
+            var sample = ges_allocation_sample()
+            for _ in 0..<4 {
+                XCTAssertTrue(ges_allocation_begin())
+                for _ in 0..<2500 { try round() }
+                sample = ges_allocation_end()
+                XCTAssertTrue(sample.valid, label)
+                if sample.allocations == 0 { break }
+            }
             XCTAssertEqual(sample.allocations, 0, label)
             XCTAssertEqual(sample.bytes, 0, label)
             XCTAssertEqual(client.state, .connected, label)

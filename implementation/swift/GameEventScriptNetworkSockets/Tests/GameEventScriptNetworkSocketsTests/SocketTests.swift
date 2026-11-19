@@ -440,7 +440,10 @@ final class SocketTests: XCTestCase {
     func testASlowPeerFillsTheSendQueue() async throws {
         let network = try Self.game()
         let listener = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network, options: Self.options(.stream))
-        let connection = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: Self.options(.stream))
+        // Large socket buffers, as on Linux, hold thousands of queued messages that the client then reads at once.
+        var options = Self.options(.stream)
+        options.maxFramesPerSecond = 1_000_000
+        let connection = try GesNetworkConnection.makeClient(network: network, token: Self.token, now: Self.now, options: options)
         let client = try await GesNetworkSocketSession.connectTcp(host: "127.0.0.1", port: listener.localEndPoint.port!, connection: connection)
         let server = try Self.acceptOne(listener)
         XCTAssertEqual(try Self.waitFor(server, client), "connecting tok")

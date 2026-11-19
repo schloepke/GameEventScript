@@ -314,6 +314,9 @@ public sealed class GesNetworkOptions
     /// <summary>Gets or sets the delay of an acknowledgement in microseconds, 0 to 3600000000. The default is 10 milliseconds.</summary>
     public long AckDelayMicroseconds { get; set; } = 10_000;
 
+    // A copy whose changes leave these options alone.
+    internal GesNetworkOptions Copy() => (GesNetworkOptions)MemberwiseClone();
+
     /// <summary>Gets or sets the initial send budget in bytes per second, 0 to 1073741824; 0 for none. The default is 0.</summary>
     public long SendBudgetBytesPerSecond { get; set; }
 

@@ -200,7 +200,8 @@ internal static class GesProgramReader
         for (var index = 0; index < count; index++)
         {
             var kind = (GesBinaryBindKind)reader.ReadByte();
-            if (reader.ReadByte() != 0) Throw(GesProgramFormatErrorCode.InvalidSectionFlags, "Binding Flags must be zero.", reader.AbsoluteOffset - 1, section.Type, index);
+            var flags = reader.ReadByte();
+            if ((flags & ~GesBindingSegment.TagAlternativesFlag) != 0) Throw(GesProgramFormatErrorCode.InvalidSectionFlags, "Binding Flags contain an unknown bit.", reader.AbsoluteOffset - 1, section.Type, index);
             var id = reader.ReadUInt16();
             var name = reader.ReadUInt16();
             var arguments = ResolveList(lists, resolvedLists, reader.ReadUInt16(), section, index);
@@ -209,8 +210,18 @@ internal static class GesProgramReader
             var entryAddress = reader.ReadUInt16();
             var requiredRegisters = reader.ReadUInt16();
             var requiredDepth = reader.ReadUInt16();
-            if (reader.ReadUInt16() != 0) Throw(GesProgramFormatErrorCode.InvalidSectionReserved, "Binding Reserved must be zero.", reader.AbsoluteOffset - 2, section.Type, index);
-            entries[index] = new GesBindingSegment.Entry(kind, name, arguments, entryAddress, id, requiredTags, excludedTags, requiredRegisters, requiredDepth);
+            var alternativesList = reader.ReadUInt16();
+            IReadOnlyList<IReadOnlyList<ushort>>? alternatives = null;
+            if (flags == 0)
+            {
+                if (alternativesList != 0) Throw(GesProgramFormatErrorCode.InvalidSectionReserved, "Binding TagAlternativesList must be zero without the alternatives flag.", reader.AbsoluteOffset - 2, section.Type, index);
+            }
+            else
+            {
+                alternatives = ReadTagAlternatives(lists, alternativesList, section, index);
+            }
+
+            entries[index] = new GesBindingSegment.Entry(kind, name, arguments, entryAddress, id, requiredTags, excludedTags, requiredRegisters, requiredDepth, alternatives);
         }
         reader.RequireEnd();
         return new GesBindingSegment(entries);
@@ -326,6 +337,26 @@ internal static class GesProgramReader
         var result = new ushort[list.Length];
         for (var element = 0; element < list.Length; element++) result[element] = list[element];
         return resolvedLists[index] = new GesReadOnlyArray<ushort>(result);
+    }
+
+    private static IReadOnlyList<IReadOnlyList<ushort>> ReadTagAlternatives(GesUInt16IndexListSegment lists, ushort index, SectionDescriptor section, int entryIndex)
+    {
+        if (index == ushort.MaxValue) Throw(GesProgramFormatErrorCode.InvalidProgram, "Binding with tag alternatives names no TagAlternativesList.", section.PayloadOffset, section.Type, entryIndex);
+        if (index >= lists.Slices.Count) Throw(GesProgramFormatErrorCode.InvalidListIndex, "Binding references a missing UInt16 index list.", section.PayloadOffset, section.Type, entryIndex);
+        var list = lists.Resolve(index);
+        var groups = new List<IReadOnlyList<ushort>>();
+        var position = 0;
+        while (position < list.Length)
+        {
+            var count = list[position++];
+            if (count == 0 || count > list.Length - position) Throw(GesProgramFormatErrorCode.InvalidProgram, "Binding TagAlternativesList is malformed.", section.PayloadOffset, section.Type, entryIndex);
+            var tags = new ushort[count];
+            for (var tag = 0; tag < count; tag++) tags[tag] = list[position++];
+            groups.Add(tags);
+        }
+
+        if (groups.Count == 0) Throw(GesProgramFormatErrorCode.InvalidProgram, "Binding TagAlternativesList is empty.", section.PayloadOffset, section.Type, entryIndex);
+        return groups;
     }
 
     private static SectionDescriptor Require(List<SectionDescriptor> sections, GesSectionType type)

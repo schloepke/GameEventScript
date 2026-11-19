@@ -146,6 +146,11 @@ final class SocketEndTests: XCTestCase {
 
     // A TCP client end and server end whose transfer limits differ.
     private static func bulkEnds(client clientTransfer: Int64, server serverTransfer: Int64) async throws -> (GesNetworkClientEnd, GesNetworkServerEnd) {
+        let (client, server, _) = try await bulkEndsAndPort(client: clientTransfer, server: serverTransfer)
+        return (client, server)
+    }
+
+    private static func bulkEndsAndPort(client clientTransfer: Int64, server serverTransfer: Int64) async throws -> (GesNetworkClientEnd, GesNetworkServerEnd, Int) {
         var serverOptions = options(.stream)
         serverOptions.maxTransferBytes = serverTransfer
         var clientOptions = options(.stream)
@@ -153,8 +158,9 @@ final class SocketEndTests: XCTestCase {
         let listener = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: bulk(), options: serverOptions)
         let clock = GesSystemClock()
         let server = try GesNetworkServerEnd(network: bulk(), acceptor: listener, clock: clock)
-        let client = try GesNetworkClientEnd(network: bulk(), connector: GesNetworkSocketConnector.tcp(host: "127.0.0.1", port: listener.localEndPoint.port!), options: clientOptions, clock: clock)
-        return (client, server)
+        let port = listener.localEndPoint.port!
+        let client = try GesNetworkClientEnd(network: bulk(), connector: GesNetworkSocketConnector.tcp(host: "127.0.0.1", port: port), options: clientOptions, clock: clock)
+        return (client, server, port)
     }
 
     func testAKeptTransferBeyondThePeersLimitIsCancelled() async throws {
@@ -189,6 +195,37 @@ final class SocketEndTests: XCTestCase {
         XCTAssertEqual(server.send(route: 1, payload: [1, 2]), .queued)
         try await Self.run(client, clientEvents, server, serverEvents) { clientEvents.events.contains("message 1 0102") }
         XCTAssertEqual(clientEvents.events, ["Connected", "message 1 0102"])
+    }
+
+    func testASendToEveryClientBeyondOneClientsLimitReachesNone() async throws {
+        let (client, server, port) = try await Self.bulkEndsAndPort(client: 4, server: 1000)
+        var options = Self.options(.stream)
+        options.maxTransferBytes = 1000
+        let second = try GesNetworkClientEnd(network: Self.bulk(), connector: GesNetworkSocketConnector.tcp(host: "127.0.0.1", port: port), options: options, clock: GesSystemClock())
+        defer {
+            client.release()
+            second.release()
+            server.release()
+        }
+        let clientEvents = Recorder()
+        let secondEvents = Recorder()
+        let serverEvents = Recorder()
+
+        func pollSecond(_ done: () -> Bool) -> Bool {
+            try? second.poll(secondEvents.handle)
+            return done()
+        }
+
+        try await Self.run(client, clientEvents, server, serverEvents) {
+            pollSecond { serverEvents.events.filter { $0 == "ClientConnected" }.count == 2 && secondEvents.events.contains("Connected") }
+        }
+        // The second client's limit takes the payload; the first one's does not, so neither receives it.
+        XCTAssertEqual(server.send(route: 1, payload: [1, 2, 3, 4, 5, 6]), .messageTooLarge)
+        XCTAssertEqual(server.send(route: 1, payload: [1, 2]), .queued)
+        try await Self.run(client, clientEvents, server, serverEvents) {
+            pollSecond { clientEvents.events.contains("message 1 0102") && secondEvents.events.contains("message 1 0102") }
+        }
+        XCTAssertEqual(secondEvents.events, ["Connected", "message 1 0102"])
     }
 
     func testEndsConnectExchangeAndCloseOverWebSocket() async throws { try await endsConnectExchangeAndClose(.message) }

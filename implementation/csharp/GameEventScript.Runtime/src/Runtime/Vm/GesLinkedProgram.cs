@@ -29,10 +29,11 @@ internal sealed class GesLinkedProgram
         internal string SignatureId { get; }
     }
 
-    internal readonly struct Handler(GesMessageSignature signature, string[] requiredTags, string[] excludedTags, bool matchArguments, ushort entryAddress, ushort requiredRegisterCount, ushort requiredCallStackDepth)
+    internal readonly struct Handler(GesMessageSignature signature, string[] requiredTags, string[][]? requiredTagAlternatives, string[] excludedTags, bool matchArguments, ushort entryAddress, ushort requiredRegisterCount, ushort requiredCallStackDepth)
     {
         internal GesMessageSignature Signature { get; } = signature;
         internal string[] RequiredTags { get; } = requiredTags;
+        internal string[][]? RequiredTagAlternatives { get; } = requiredTagAlternatives;
         internal string[] ExcludedTags { get; } = excludedTags;
         internal bool MatchArguments { get; } = matchArguments;
         internal ushort EntryAddress { get; } = entryAddress;
@@ -122,6 +123,7 @@ internal sealed class GesLinkedProgram
             handlers[handlerIndex++] = new Handler(
                 GesMessageSignature.Create(name, arguments),
                 ReadStrings(bind.RequiredTags),
+                ReadTagAlternatives(bind.RequiredTagAlternatives),
                 ReadStrings(bind.ExcludedTags),
                 bind.Kind == MessageHandler,
                 bind.EntryAddress,
@@ -130,6 +132,14 @@ internal sealed class GesLinkedProgram
         }
 
         return handlers;
+    }
+
+    private string[][]? ReadTagAlternatives(GesReadOnlyArray<GesReadOnlyArray<ushort>> groups)
+    {
+        if (groups.Count == 0) return null;
+        var values = new string[groups.Count][];
+        for (var group = 0; group < values.Length; group++) values[group] = ReadStrings(groups[group]);
+        return values;
     }
 
     private string[] ReadStrings(System.Collections.Generic.IReadOnlyList<ushort> pointers)

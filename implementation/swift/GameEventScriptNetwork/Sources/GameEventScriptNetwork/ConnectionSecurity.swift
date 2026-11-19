@@ -89,7 +89,7 @@ extension GesNetworkConnection {
     private static let helloSealedByte: UInt8 = 2
 
     // The bytes a sealed data packet adds: the type and the tag.
-    private static let sealedOverhead = 1 + GesNetworkAead.tagBytes
+    static let sealedOverhead = 1 + GesNetworkAead.tagBytes
     private static let epochShift: Int64 = 24
     private static let packetNumberLimit: Int64 = 1 << 62
 

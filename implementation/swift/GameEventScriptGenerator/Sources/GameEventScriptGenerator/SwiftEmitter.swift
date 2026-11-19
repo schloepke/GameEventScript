@@ -1001,7 +1001,8 @@ enum GesSwiftEmitter {
         let side = isClient ? "client" : "server"
         let net = network.name
 
-        // Distinct prefixes keep the scratch record of an outgoing message set apart from the record of each received route.
+        // Distinct prefixes keep the scratch record of an outgoing message set and the internal members (__send_buffer,
+        // __handle_event: an underscore before a lowercase letter, which no root name has) apart from each received route.
         func field(_ name: String) -> String { "__" + GesSchemaPlanner.camel(name) }
 
         func outgoing(_ route: GesLayoutRoute) -> String { "__out_" + GesSchemaPlanner.camel((route.verb == "sends" ? "Send" : "Publish") + route.root) }
@@ -1017,7 +1018,7 @@ enum GesSwiftEmitter {
         code.open("\(access)final class \(end.name) {")
         code.line("/// The wrapped end.")
         code.line("\(access)let end: \(endType)")
-        code.line("private let __buffer: UnsafeMutableRawBufferPointer")
+        code.line("private let __send_buffer: UnsafeMutableRawBufferPointer")
         for route in end.outgoing {
             let root = roots(route.root)
             if root.isSet { code.line("private var \(outgoing(route)) = \(root.initial)") }
@@ -1036,10 +1037,10 @@ enum GesSwiftEmitter {
             if !sizes.contains(owner) { sizes.append(owner) }
         }
         let size = sizes.count == 0 ? "0" : sizes.count == 1 ? sizes[0] : "max(\(sizes.joined(separator: ", ")))"
-        code.line("__buffer = .allocate(byteCount: \(size), alignment: 1)")
+        code.line("__send_buffer = .allocate(byteCount: \(size), alignment: 1)")
         code.close()
         code.blank()
-        code.line("deinit { __buffer.deallocate() }")
+        code.line("deinit { __send_buffer.deallocate() }")
         if isClient {
             code.blank()
             code.line("/// The end's connection.")
@@ -1073,8 +1074,8 @@ enum GesSwiftEmitter {
                 code.line(failure)
                 code.line("@discardableResult")
                 code.open("\(access)func \(verb)(_ value: \(root.type)\(parameters)) \(throwing) -> GesNetworkSendStatus {")
-                code.line("let count = try \(root.write("value", "__buffer"))")
-                code.line("return \(toClient ? "try " : "")end.\(verb)(route: \(routeName(route)), payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count])\(arguments))")
+                code.line("let count = try \(root.write("value", "__send_buffer"))")
+                code.line("return \(toClient ? "try " : "")end.\(verb)(route: \(routeName(route)), payload: UnsafeRawBufferPointer(rebasing: __send_buffer[..<count])\(arguments))")
                 code.close()
                 if !root.isSet { continue }
                 code.blank()
@@ -1115,10 +1116,10 @@ enum GesSwiftEmitter {
         code.line("/// - Parameter handler: The closure; a received record that is a class stays valid until it returns.")
         code.line("/// - Throws: `GesApiError.invalidOperation` when the end is released or polled already; an error of a link or the closure.")
         code.open("\(access)func poll(_ handler: (\(eventType)) throws -> Void) throws {")
-        code.line("try end.poll { event in try self.__handle(event, handler) }")
+        code.line("try end.poll { event in try self.__handle_event(event, handler) }")
         code.close()
         code.blank()
-        code.open("private func __handle(_ event: GesNetworkEndEvent, _ handler: (\(eventType)) throws -> Void) throws {")
+        code.open("private func __handle_event(_ event: GesNetworkEndEvent, _ handler: (\(eventType)) throws -> Void) throws {")
         let client = isClient ? "" : "client: event.client, "
         code.line("switch event.kind {")
         if isClient {

@@ -1021,8 +1021,9 @@ enum GesCSharpEmitter {
         let handler = "I\(end.name)Handler"
         let side = isClient ? "client" : "server"
 
-        // Distinct prefixes keep the scratch record of an outgoing message set and the cached cases apart from the record of
-        // each received route, whatever its root is called.
+        // Distinct prefixes keep the scratch record of an outgoing message set, the cached cases and the internal fields
+        // (__send_buffer, __tick_count, __tick_open: an underscore before a lowercase letter, which no root name has)
+        // apart from the record of each received route, whatever its root is called.
         func field(_ name: String) -> String { "__" + GesSchemaPlanner.camel(name) }
 
         func outgoing(_ route: GesLayoutRoute) -> String { "__out_" + GesSchemaPlanner.camel((route.verb == "sends" ? "Send" : "Publish") + route.root) }
@@ -1036,7 +1037,7 @@ enum GesCSharpEmitter {
         code.line("/// </summary>")
         code.line("public sealed class \(end.name)")
         code.open("{")
-        code.line("private readonly byte[] __buffer;")
+        code.line("private readonly byte[] __send_buffer;")
         for route in end.outgoing {
             let root = roots(route.root)
             if !root.isSet { continue }
@@ -1064,7 +1065,7 @@ enum GesCSharpEmitter {
         }
         var size = sizes.first ?? "0"
         for index in sizes.indices.dropFirst() { size = "global::System.Math.Max(\(size), \(sizes[index]))" }
-        code.line("__buffer = new byte[\(size)];")
+        code.line("__send_buffer = new byte[\(size)];")
         code.close()
         code.blank()
         code.line("/// <summary>Gets the wrapped end.</summary>")
@@ -1098,7 +1099,7 @@ enum GesCSharpEmitter {
                 if !arguments.isEmpty { code.line("/// <param name=\"client\">The client.</param>") }
                 code.line("/// <returns>The status of <see cref=\"\(endType).\(verb)(int, ReadOnlySpan{byte}\(arguments.isEmpty ? "" : ", int"))\"/>.</returns>")
                 code.line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>")
-                code.line("public GesNetworkSendStatus \(verb)(in \(root.type) value\(parameters)) => End.\(verb)(\(route.name), __buffer.AsSpan(0, value.Write(__buffer))\(arguments));")
+                code.line("public GesNetworkSendStatus \(verb)(in \(root.type) value\(parameters)) => End.\(verb)(\(route.name), __send_buffer.AsSpan(0, value.Write(__send_buffer))\(arguments));")
                 if !root.isSet { continue }
                 let scratch = outgoing(route)
                 code.blank()
@@ -1258,8 +1259,8 @@ enum GesCSharpEmitter {
             code.line("public void Unsubscribe(int client, Topic topic) => End.Unsubscribe(client, (int)topic);")
         }
         code.blank()
-        code.line("private int __ticks;")
-        code.line("private bool __tickOpen;")
+        code.line("private int __tick_count;")
+        code.line("private bool __tick_open;")
         code.blank()
         code.line("/// <summary>Opens a tick; disposing the returned tick closes it.</summary>")
         code.line("/// <returns>The open tick.</returns>")
@@ -1267,8 +1268,8 @@ enum GesCSharpEmitter {
         code.line("public Tick BeginTick()")
         code.open("{")
         code.line("End.BeginTick();")
-        code.line("__tickOpen = true;")
-        code.line("return new Tick(this, unchecked(++__ticks));")
+        code.line("__tick_open = true;")
+        code.line("return new Tick(this, unchecked(++__tick_count));")
         code.close()
         code.blank()
         code.line("/// <summary>The topics the \(side) publishes.</summary>")
@@ -1313,8 +1314,8 @@ enum GesCSharpEmitter {
         code.line("/// <summary>Closes the tick. A further call, also on a copy, does nothing.</summary>")
         code.line("public void Dispose()")
         code.open("{")
-        code.line("if (__end is null || !__end.__tickOpen || __end.__ticks != __number) return;")
-        code.line("__end.__tickOpen = false;")
+        code.line("if (__end is null || !__end.__tick_open || __end.__tick_count != __number) return;")
+        code.line("__end.__tick_open = false;")
         code.line("__end.End.EndTick();")
         code.close()
         code.close()

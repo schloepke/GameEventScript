@@ -444,7 +444,7 @@ per second, counted in exact integer steps of one microsecond. The send budget i
 bucket of at most the send packet size that starts full, also when a budget replaces none,
 and refills with the budget per second; a data
 packet with frames is sent only while the bucket is not negative and is then subtracted
-in full. `hello`, `welcome`, `close` and data packets without frames ignore the budget.
+in full, an encrypted packet with its type byte and tag. `hello`, `welcome`, `close` and data packets without frames ignore the budget.
 The host may change the budget at any time, for example from the measured round-trip
 time; this is the congestion hook.
 
@@ -1197,7 +1197,7 @@ subscribes every connected client to every topic it publishes; the host can turn
 off when it creates the end and subscribes and unsubscribes topics per client at any
 time. `publish` and ticks reach every connected, subscribed client; `send` without a
 client reaches every connected client. Both report `messageTooLarge` when the payload
-exceeds the limits of some client, else `queueFull` when the queue of some client is full. The server end keeps the last published state of each latest topic: a
+exceeds the limits of some client, and then no client receives it, else `queueFull` when the queue of some client is full, and then the others received it. The server end keeps the last published state of each latest topic: a
 tick that includes a topic gives a client that has not received that state the state
 itself, so a client that joined later holds the complete world after its first tick. A
 client that connects while a tick is open joins it. A closed client leaves the end after
@@ -1256,7 +1256,7 @@ modes:
   event, and both ends report their connected events on their first `poll`. Every send,
   publish, tick close, close and `poll` on either end runs both connections until no
   packet is in flight, so what one end sends is reported by the other end's next `poll`.
-  Acknowledgements are not delayed. Timers — keepalive, timeout and resending — fire only
+  Acknowledgements are not delayed: the pair runs with an acknowledgement delay of 0. Timers — keepalive, timeout and resending — fire only
   when the host advances the pair's clock; the handshake, sending and delivery never need
   it. Advancing a realtime pair, or a pair while one of its ends is polled, is a usage
   error.

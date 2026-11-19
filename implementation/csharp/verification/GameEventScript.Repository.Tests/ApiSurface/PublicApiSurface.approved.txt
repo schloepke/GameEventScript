@@ -75,8 +75,9 @@ struct GameEventScript.Api.GesBindingSegment
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesBindingSegment.Entry> Entries { get }
   property System.UInt16 EntryCount { get }
 struct GameEventScript.Api.GesBindingSegment.Entry
-  ctor Entry(GameEventScript.Api.GesBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt16 entryAddress, System.UInt16 id, System.Collections.Generic.IReadOnlyList<System.UInt16> requiredTags, System.Collections.Generic.IReadOnlyList<System.UInt16> excludedTags, System.UInt16 requiredRegisterCount, System.UInt16 requiredCallStackDepth)
+  ctor Entry(GameEventScript.Api.GesBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt16 entryAddress, System.UInt16 id, System.Collections.Generic.IReadOnlyList<System.UInt16> requiredTags, System.Collections.Generic.IReadOnlyList<System.UInt16> excludedTags, System.UInt16 requiredRegisterCount, System.UInt16 requiredCallStackDepth, System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<System.UInt16>> requiredTagAlternatives)
   property GameEventScript.Api.GesBinaryBindKind Kind { get }
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesReadOnlyArray<System.UInt16>> RequiredTagAlternatives { get }
   property GameEventScript.Api.GesReadOnlyArray<System.UInt16> ArgumentNames { get }
   property GameEventScript.Api.GesReadOnlyArray<System.UInt16> ExcludedTags { get }
   property GameEventScript.Api.GesReadOnlyArray<System.UInt16> RequiredTags { get }
@@ -548,6 +549,7 @@ static class GameEventScript.Api.GesDiagnosticCodes
   field static System.String ValidateInvalidMessageCase
   field static System.String ValidateInvalidPredicate
   field static System.String ValidateInvalidTag
+  field static System.String ValidateInvalidTagFilter
   field static System.String ValidateInvalidTypeConstructor
   field static System.String ValidateMissingCallable
   field static System.String ValidatePredicateFunctionConflict

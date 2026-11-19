@@ -24,6 +24,7 @@ internal static class GesSyntaxValidator
     internal const string DuplicateHandlerParameter = "validate.duplicateHandlerParameter";
     internal const string DuplicatePublishArgument = "validate.duplicatePublishArgument";
     internal const string UnresolvedVariable = "validate.unresolvedVariable";
+    internal const string InvalidTagFilter = "validate.invalidTagFilter";
 
     // The tree must come from a source without syntax errors.
     internal static IReadOnlyList<GesSyntaxDiagnostic> Validate(GesSyntaxTree tree) => new Walker(tree).Run();
@@ -260,6 +261,7 @@ internal static class GesSyntaxValidator
             var asParameter = Child(node, NodeKind.Parameter);
             var parameters = asParameter is null ? Parameters(Child(node, NodeKind.ParameterList)) : [(asParameter, OwnToken(asParameter, GesSyntaxRole.Parameter), false, true)];
             var hasTags = Child(node, NodeKind.HandlerTagFilter) is not null;
+            if (hasTags) CheckTagFilters(node, message);
             if (message == "initialization")
             {
                 if (asParameter is not null || parameters.Count != 0)
@@ -286,6 +288,18 @@ internal static class GesSyntaxValidator
             }
 
             Statements(Child(node, NodeKind.Block)!, validationScope, shadowScope);
+        }
+
+        // Alternatives with `|` belong to `matching`; a `without` filter lists excluded tags with commas only.
+        private void CheckTagFilters(GesSyntaxNode node, string message)
+        {
+            foreach (var child in node.Children)
+            {
+                if (child.Kind != NodeKind.HandlerTagFilter || _tokens[child.FirstToken].Kind != Without) continue;
+                for (var token = child.FirstToken; token < child.EndToken; token++)
+                    if (_tokens[token].Kind == OperatorCollectionUnion)
+                        Report(InvalidTagFilter, "A 'without' filter cannot use '|' alternatives; separate excluded tags with ','", message, GesSyntaxSymbolKind.Handler, (token, token));
+            }
         }
 
         // Statements ----------------------------------------------------------------------------------------------

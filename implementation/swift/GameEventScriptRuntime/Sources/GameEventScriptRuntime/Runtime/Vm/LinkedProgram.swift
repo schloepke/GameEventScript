@@ -9,6 +9,8 @@ final class GesLinkedProgram {
         let signature: GesMessageSignature
         let binding: GesBindingSegment.Entry
         let requiredTags: [String]
+        /// The `|` groups of the handler's `matching` clauses; nil when it has none.
+        let requiredTagAlternatives: [[String]]?
         let excludedTags: [String]
     }
 
@@ -59,6 +61,7 @@ final class GesLinkedProgram {
                         signature: .init(name: name, parameters: labels),
                         binding: binding,
                         requiredTags: binding.requiredTags.map { program.stringConstants[Int($0)] },
+                        requiredTagAlternatives: binding.requiredTagAlternatives.isEmpty ? nil : binding.requiredTagAlternatives.map { $0.map { program.stringConstants[Int($0)] } },
                         excludedTags: binding.excludedTags.map { program.stringConstants[Int($0)] }
                     )
                 )

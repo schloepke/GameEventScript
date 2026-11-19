@@ -91,8 +91,20 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   route; an undecodable payload closes the connection, whose later events the handler no longer sees. A root, tag set or
   network named like a type nested in the network (`Client`, `Topic`, ...) fails with `generate.nameCollision`. Message sets gain a `Case` type with `ToCase()` and `Assign`
   (Swift `enum Case`, `asCase`, `assign(_:)`).
+- Tag alternatives in handler filters (specs/Language.md#messages-and-dispatch): `matching #lidar | #ultrasonic, #front`
+  requires at least one tag of each `|` group besides every plain tag; `|` binds tighter than `,`, repeated clauses add
+  groups, and `undeliverable` filters work the same way. `|` inside `without` fails with `validate.invalidTagFilter`.
+  Handlers without `|` compile unchanged; `.gesb` stores the groups behind binding flag `0x01` in the former reserved
+  field (`RequiredTagAlternatives`, Swift `requiredTagAlternatives`; GESA `tagAlternatives=[...]`).
 
 ### Changed
+- A server end's `Send` to every client on a bulk route reports `MessageTooLarge` before any client receives the
+  payload when it exceeds the transfer limit of some client; the send budget also counts an encrypted packet's type byte
+  and tag; a synchronous pair acknowledges at once whatever acknowledgement delay its options set
+  (specs/Network.md#ends).
+- Generated network ends keep their internal fields apart from received roots of any name, and a C# network whose
+  constant, property or typed function would take the network's name fails with `generate.nameCollision` instead of
+  generating code that does not compile (specs/Schemas.md#network-constants).
 - The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the
   Network Sockets package uses; CI builds every library with Swift 6.1.
 - A quotient of a mass by a time such as `6kg / 2s` is now `3kg/s` instead of nothing; other products and quotients

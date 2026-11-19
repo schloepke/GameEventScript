@@ -86,6 +86,13 @@ public sealed class GesSchemaGenerateTests
 
         StringAssert.Contains(Generate(Network("ClientEvent", "Game"), "Game", GesSchemaLanguage.CSharp), "ClientEvent");
         StringAssert.Contains(Generate(Network("IClientHandler", "Game"), "Game", GesSchemaLanguage.Swift), "IClientHandler");
+
+        // C# forbids a member named like the network class: its hash, bound network, route constants and functions.
+        foreach (var network in new[] { "Hash", "Bound", "ServerPublishesChunk", "ServerPublishChunk" })
+        {
+            Assert.AreEqual("generate.nameCollision", Code(() => Generate(Network("Chunk", network), network, GesSchemaLanguage.CSharp)), network);
+            StringAssert.Contains(Generate(Network("Chunk", network), network, GesSchemaLanguage.Swift), network);
+        }
     }
 
     [TestMethod]

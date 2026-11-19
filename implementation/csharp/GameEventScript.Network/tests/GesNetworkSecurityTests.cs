@@ -95,6 +95,45 @@ public sealed class GesNetworkSecurityTests
     [DataRow(GesNetworkTransport.Stream)]
     [DataRow(GesNetworkTransport.Message)]
     [DataRow(GesNetworkTransport.Datagram)]
+    public void TheSendBudgetCountsTheSealedBytes(GesNetworkTransport transport)
+    {
+        var network = Game();
+        var clientOptions = ClientOptions(transport, Pinned);
+        var serverOptions = ServerOptions(transport, ServerKey);
+        clientOptions.MaxPacketBytes = 1200;
+        serverOptions.MaxPacketBytes = 1200;
+        var client = GesNetworkConnection.CreateClient(network, "t"u8, 0, clientOptions);
+        var server = GesNetworkConnection.CreateServer(network, 0, serverOptions);
+        Exchange(client, server, 0);
+        Drain(server);
+        server.Accept();
+        Exchange(client, server, 0);
+        Assert.AreEqual(GesNetworkSecurity.Verified, client.Security);
+        // A budget that does not refill noticeably: the client spends one packet limit of bytes and then waits.
+        client.SendBudgetBytesPerSecond = 1;
+        client.Advance(1);
+        var prefix = transport == GesNetworkTransport.Stream ? 1 : 0;
+        var buffer = new byte[70_000];
+        var spent = 0;
+        var largest = 0;
+        for (var packets = 0; packets < 1000; packets++)
+        {
+            Assert.AreEqual(GesNetworkSendStatus.Queued, client.Send(Commands, [1]));
+            var length = client.Transmit(buffer);
+            if (length == 0) break;
+            Assert.AreEqual(GesNetworkWire.Sealed, buffer[prefix]);
+            spent += length - prefix;
+            largest = Math.Max(largest, length - prefix);
+        }
+
+        Assert.AreEqual(0, client.Transmit(buffer));
+        Assert.IsLessThanOrEqualTo(1200 + largest, spent);
+    }
+
+    [TestMethod]
+    [DataRow(GesNetworkTransport.Stream)]
+    [DataRow(GesNetworkTransport.Message)]
+    [DataRow(GesNetworkTransport.Datagram)]
     public void PinnedKeyGivesVerifiedSessionWhosePacketsAreSealed(GesNetworkTransport transport)
     {
         var (client, server) = Connect(transport, Pinned, ServerKey);

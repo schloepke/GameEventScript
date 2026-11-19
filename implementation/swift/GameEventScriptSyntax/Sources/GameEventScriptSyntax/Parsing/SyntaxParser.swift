@@ -595,6 +595,12 @@
                 guard currentKind == .tag else { throw failure("Expected tag literal.") }
                 advance()
                 newlines()
+                while match(.operatorCollectionUnion) {
+                    newlines()
+                    guard currentKind == .tag else { throw failure("Expected tag literal.") }
+                    advance()
+                    newlines()
+                }
             } while match(.comma)
             finishNode()
         }

@@ -1071,7 +1071,8 @@ internal static partial class GesSwiftEmitter
         var eventType = end.Name + "Event";
         var side = isClient ? "client" : "server";
         var net = network.Name;
-        // Distinct prefixes keep the scratch record of an outgoing message set apart from the record of each received route.
+        // Distinct prefixes keep the scratch record of an outgoing message set and the internal members (__send_buffer,
+        // __handle_event: an underscore before a lowercase letter, which no root name has) apart from each received route.
         string Field(string name) => "__" + GesSchemaPlanner.Camel(name);
         string Outgoing(GesLayoutRoute route) => "__out_" + GesSchemaPlanner.Camel((route.Verb == "sends" ? "Send" : "Publish") + route.Root);
         string Route(GesLayoutRoute route) => net + "." + GesSchemaPlanner.Camel(route.Name);
@@ -1083,7 +1084,7 @@ internal static partial class GesSwiftEmitter
         code.Open($"{access}final class {end.Name} {{");
         code.Line("/// The wrapped end.");
         code.Line($"{access}let end: {endType}");
-        code.Line("private let __buffer: UnsafeMutableRawBufferPointer");
+        code.Line("private let __send_buffer: UnsafeMutableRawBufferPointer");
         foreach (var route in end.Outgoing)
         {
             var root = roots(route.Root);
@@ -1106,10 +1107,10 @@ internal static partial class GesSwiftEmitter
         }
 
         var size = sizes.Count switch { 0 => "0", 1 => sizes[0], _ => $"max({string.Join(", ", sizes)})" };
-        code.Line($"__buffer = .allocate(byteCount: {size}, alignment: 1)");
+        code.Line($"__send_buffer = .allocate(byteCount: {size}, alignment: 1)");
         code.Close();
         code.Blank();
-        code.Line("deinit { __buffer.deallocate() }");
+        code.Line("deinit { __send_buffer.deallocate() }");
         if (isClient)
         {
             code.Blank();
@@ -1148,8 +1149,8 @@ internal static partial class GesSwiftEmitter
                 code.Line($"/// - Throws: `GesWireError` when a value does not fit its field{(toClient ? "; `GesApiError.invalidArgument` when the client is not connected to the end" : "")}.");
                 code.Line("@discardableResult");
                 code.Open($"{access}func {verb}(_ value: {root.Type}{parameters}) {throws} -> GesNetworkSendStatus {{");
-                code.Line($"let count = try {root.Write("value", "__buffer")}");
-                code.Line($"return {(toClient ? "try " : "")}end.{verb}(route: {Route(route)}, payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count]){arguments})");
+                code.Line($"let count = try {root.Write("value", "__send_buffer")}");
+                code.Line($"return {(toClient ? "try " : "")}end.{verb}(route: {Route(route)}, payload: UnsafeRawBufferPointer(rebasing: __send_buffer[..<count]){arguments})");
                 code.Close();
                 if (!root.IsSet) continue;
                 code.Blank();
@@ -1264,10 +1265,10 @@ internal static partial class GesSwiftEmitter
         code.Line("/// - Parameter handler: The closure; a received record that is a class stays valid until it returns.");
         code.Line("/// - Throws: `GesApiError.invalidOperation` when the end is released or polled already; an error of a link or the closure.");
         code.Open($"{access}func poll(_ handler: ({eventType}) throws -> Void) throws {{");
-        code.Line("try end.poll { event in try self.__handle(event, handler) }");
+        code.Line("try end.poll { event in try self.__handle_event(event, handler) }");
         code.Close();
         code.Blank();
-        code.Open($"private func __handle(_ event: GesNetworkEndEvent, _ handler: ({eventType}) throws -> Void) throws {{");
+        code.Open($"private func __handle_event(_ event: GesNetworkEndEvent, _ handler: ({eventType}) throws -> Void) throws {{");
         var client = isClient ? "" : "client: event.client, ";
         code.Line("switch event.kind {");
         if (isClient)

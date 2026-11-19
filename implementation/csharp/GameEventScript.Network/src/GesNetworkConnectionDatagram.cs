@@ -620,7 +620,8 @@ public sealed partial class GesNetworkConnection
         _ackDue = false;
         _probeDue = false;
         _asksSinceSend = 0;
-        if (position > start && _budget > 0) _budgetUnits -= position * MicrosecondsPerSecond;
+        // A sealed packet also spends its type byte and tag.
+        if (position > start && _budget > 0) _budgetUnits -= (position + (_encrypted ? SealedOverhead : 0)) * MicrosecondsPerSecond;
         return position;
     }
 

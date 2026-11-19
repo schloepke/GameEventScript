@@ -175,7 +175,8 @@ public sealed partial class GesNetworkConnection
         _bulkMarks[_sentCount % SendTimeWindow] = _bulkWritten;
         _sentCount++;
         _ackDue = false;
-        if (position > start && _budget > 0) _budgetUnits -= position * MicrosecondsPerSecond;
+        // A sealed packet also spends its type byte and tag.
+        if (position > start && _budget > 0) _budgetUnits -= (position + (_encrypted ? SealedOverhead : 0)) * MicrosecondsPerSecond;
         return position;
     }
 

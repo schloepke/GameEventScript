@@ -54,6 +54,20 @@ struct GesNetworkEndPlan {
                 topLevel
             )
         }
+        if !swift {
+            // C# forbids a member named like its enclosing type, so no member of the network class may take the network's name.
+            names.append(("Hash", "the network hash constant"))
+            names.append(("Bound", "the bound network property"))
+            for route in network.routes {
+                let label = "the route \(route.side) \(route.verb) :\(route.root)"
+                names.append((route.name, "the index constant of \(label)"))
+                if route.rateMicroseconds != 0 { names.append((route.name + "EveryMicroseconds", "the rate constant of \(label)")) }
+                names.append(("\(GesSchemaPlanner.pascal(route.side))\(route.verb == "publishes" ? "Publish" : "Send")\(route.root)", "the function of \(label)"))
+            }
+            for (name, origin) in names where name == network.name {
+                throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(network.name)', \(origin) is generated as '\(name)', the name of the network class that holds it.")
+            }
+        }
         try GesSchemaPlanner.unique(network.name, names, topLevel)
     }
 }

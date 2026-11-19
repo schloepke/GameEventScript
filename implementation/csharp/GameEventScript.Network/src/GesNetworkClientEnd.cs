@@ -246,14 +246,18 @@ public sealed class GesNetworkClientEnd : IDisposable
             _link ??= _connector.Connect(Connection);
             _link.Receive(now);
             var received = false;
+
+            // After the handler closed the connection, its remaining events up to the disconnect are skipped, also after the
+            // Connected event that a synchronous pair reports late.
+            var skipping = false;
             if (_reportConnected && report)
             {
                 _reportConnected = false;
+                var open = Connection.State != GesNetworkState.Closed;
                 handler.Handle(new GesNetworkEndEvent(GesNetworkEndEventKind.Connected, -1, Connection.Security));
+                skipping = open && Connection.State == GesNetworkState.Closed;
             }
 
-            // After the handler closed the connection, its remaining events up to the disconnect are skipped.
-            var skipping = false;
             for (var next = Connection.NextEvent(); next.Kind != GesNetworkEventKind.None; next = Connection.NextEvent())
             {
                 if (skipping && next.Kind != GesNetworkEventKind.Closed) continue;

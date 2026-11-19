@@ -1975,7 +1975,7 @@ high rate allocates nothing in C#. Swift cases carry a copy of the record. A mes
 named after the root, or after verb and root (`SentWorld`, `PublishedWorld`) when the other side both sends and publishes
 that root. The events of the end follow: `Connected` and `Disconnected` on the client, `Connecting`, `ClientConnected` and
 `ClientDisconnected` on the server, `Tick`, `TransferProgress`, `TransferCancelled` and `Received`; server events carry
-the client id. A received name that repeats one of these fails with `generate.nameCollision`. The types nested in a network, `Client` and `Server` with `IClientHandler` and `IServerHandler` in
+the client id. A received name that repeats one of these fails with `generate.nameCollision`; the end's internal fields never collide with received roots. In C# no constant, property or typed function of the network class may take the network's name (`generate.nameCollision`). The types nested in a network, `Client` and `Server` with `IClientHandler` and `IServerHandler` in
 C# or `ClientEvent` and `ServerEvent` in Swift, and `Topic` and `Tick` in an end that publishes, would hide a root, a tag
 set or the network of their name for the code inside; such a name fails with `generate.nameCollision` too. A payload that does not
 decode as its root closes the connection with the detail `undecodable :Root` and reports nothing; the end skips the

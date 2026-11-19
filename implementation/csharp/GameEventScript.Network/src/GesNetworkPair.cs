@@ -26,8 +26,18 @@ public sealed class GesNetworkPair : IDisposable
     private GesNetworkPair(GesBoundNetwork network, ReadOnlySpan<byte> token, GesNetworkOptions? options, bool synchronous)
     {
         options ??= GesNetworkOptions.InProcess();
-        if (synchronous) _clock = _virtual = new GesVirtualClock();
-        else _clock = new GesSystemClock();
+        if (synchronous)
+        {
+            // The virtual clock stands still between sends, so a delayed acknowledgement would only hold the queue.
+            options = options.Copy();
+            options.AckDelayMicroseconds = 0;
+            _clock = _virtual = new GesVirtualClock();
+        }
+        else
+        {
+            _clock = new GesSystemClock();
+        }
+
         var connector = new Connector(this, options);
         Client = new GesNetworkClientEnd(network, connector, options, token, _clock);
         _packetBytes = Client.Connection.MaxPacketBytes;
@@ -60,7 +70,8 @@ public sealed class GesNetworkPair : IDisposable
     /// <summary>
     /// Creates a synchronous pair on a virtual clock that starts at 0. It is connected when this returns, and both
     /// ends report their connected events on their first polls. The server accepts the client without a
-    /// <c>connecting</c> event.
+    /// <c>connecting</c> event. Both connections acknowledge at once: the pair uses the options with
+    /// <see cref="GesNetworkOptions.AckDelayMicroseconds"/> 0.
     /// </summary>
     /// <param name="network">The bound network both ends share.</param>
     /// <param name="token">The client's token.</param>

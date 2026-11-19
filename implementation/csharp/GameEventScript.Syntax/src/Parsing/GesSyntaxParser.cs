@@ -496,6 +496,12 @@ internal sealed partial class GesSyntaxParser
                 SkipNewLines();
                 Expect(Tag);
                 SkipNewLines();
+                while (Match(OperatorCollectionUnion))
+                {
+                    SkipNewLines();
+                    Expect(Tag);
+                    SkipNewLines();
+                }
             }
             while (Match(Comma));
 

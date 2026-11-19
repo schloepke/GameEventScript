@@ -292,6 +292,10 @@ public struct GesBindingSegment: Sendable, RandomAccessCollection {
         public let requiredTags: [UInt16]
         /// String indexes of tags that exclude this handler.
         public let excludedTags: [UInt16]
+        /// Alternative groups of a handler's `matching` clauses written with `|`: a message must carry at least one tag of
+        /// every group, each holding the string indexes of two or more distinct tags; empty means none. A single-tag
+        /// alternative belongs to `requiredTags`.
+        public let requiredTagAlternatives: [[UInt16]]
         /// Executable entry instruction, or UInt16.max for a non-executable binding.
         public let entryAddress: UInt16
         /// Maximum active registers required by this callable, including arguments.
@@ -300,7 +304,8 @@ public struct GesBindingSegment: Sendable, RandomAccessCollection {
         public let requiredCallStackDepth: UInt16
 
         /// Creates binding data. Names and tag values are string-table indexes; omitted IDs and entry addresses use
-        /// UInt16.max. The Program validator enforces consistency.
+        /// UInt16.max. `requiredTagAlternatives` holds the `|` groups of a handler. The Program validator enforces
+        /// consistency.
         public init(
             kind: GesBinaryBindKind,
             name: UInt16,
@@ -310,7 +315,8 @@ public struct GesBindingSegment: Sendable, RandomAccessCollection {
             requiredTags: [UInt16] = [],
             excludedTags: [UInt16] = [],
             requiredRegisterCount: UInt16 = 0,
-            requiredCallStackDepth: UInt16 = 0
+            requiredCallStackDepth: UInt16 = 0,
+            requiredTagAlternatives: [[UInt16]] = []
         ) {
             self.kind = kind
             self.id = id
@@ -318,6 +324,7 @@ public struct GesBindingSegment: Sendable, RandomAccessCollection {
             self.argumentNames = argumentNames
             self.requiredTags = requiredTags
             self.excludedTags = excludedTags
+            self.requiredTagAlternatives = requiredTagAlternatives
             self.entryAddress = entryAddress
             self.requiredRegisterCount = requiredRegisterCount
             self.requiredCallStackDepth = requiredCallStackDepth
@@ -329,6 +336,19 @@ public struct GesBindingSegment: Sendable, RandomAccessCollection {
 
     /// All entries in binding-id order.
     public let entries: [Entry]
+
+    /// The binding Flags bit stating that the TagAlternativesList field names the entry's alternative groups.
+    static let tagAlternativesFlag: UInt8 = 0x01
+
+    /// The encoded TagAlternativesList of `groups`: per group its tag count followed by its tag indexes.
+    static func flattenTagAlternatives(_ groups: [[UInt16]]) -> [UInt16] {
+        var flat: [UInt16] = []
+        for group in groups {
+            flat.append(UInt16(group.count))
+            flat.append(contentsOf: group)
+        }
+        return flat
+    }
 
     /// Creates a segment from entries in binding-id order.
     @_spi(Compiler) public init(entries: [Entry]) { self.entries = entries }

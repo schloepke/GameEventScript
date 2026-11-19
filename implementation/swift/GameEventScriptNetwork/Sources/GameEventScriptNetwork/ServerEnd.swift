@@ -12,6 +12,8 @@ public final class GesNetworkServerEnd {
         let id: Int
         let link: any GesNetworkLink
         var left = false
+        // The handler closed the connection while it handled the late ClientConnected event.
+        var skipping = false
 
         init(id: Int, link: any GesNetworkLink) {
             self.id = id
@@ -92,8 +94,8 @@ public final class GesNetworkServerEnd {
     /// - Parameters:
     ///   - route: The route index of a `publishes` route of the server.
     ///   - payload: The full record of the topic's schema; the bytes are copied.
-    /// - Returns: `queued`; `messageTooLarge` when the payload exceeds the limit of some client; `queueFull` when the
-    ///   queue of some client is full; or the status of an invalid route or payload. Clients that are not connected or not subscribed are skipped.
+    /// - Returns: `queued`; `messageTooLarge` when the payload exceeds the limit of some client, and then no client
+    ///   receives it; `queueFull` when the queue of some client is full and the others received it; or the status of an invalid route or payload. Clients that are not connected or not subscribed are skipped.
     public func publish(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus {
         var status = checker.check(route, payload.count, publish: true)
         if status != .queued { return status }
@@ -125,6 +127,8 @@ public final class GesNetworkServerEnd {
     public func send(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus {
         var status = checker.check(route, payload.count, publish: false)
         if status != .queued { return status }
+        // A transfer limit differs per client; a transfer some client rejects goes to none of them.
+        if checker.isBulk(route) && clients.contains(where: { $0.link.connection.rejectsTransfer(route, payload.count) }) { return .messageTooLarge }
         for client in clients { status = Self.merge(status, client.link.connection.send(route: route, payload: payload)) }
         return after(status)
     }
@@ -276,7 +280,10 @@ public final class GesNetworkServerEnd {
             var received = false
             if report {
                 for id in reportConnected {
-                    if let client = byId[id] { try handler(GesNetworkEndEvent(.clientConnected, client: id, security: client.link.connection.security)) }
+                    guard let client = byId[id] else { continue }
+                    let open = client.link.connection.state != .closed
+                    try handler(GesNetworkEndEvent(.clientConnected, client: id, security: client.link.connection.security))
+                    client.skipping = open && client.link.connection.state == .closed
                 }
                 reportConnected.removeAll()
             }
@@ -286,8 +293,10 @@ public final class GesNetworkServerEnd {
                 let client = clients[index]
                 let connection = client.link.connection
                 try client.link.receive(now: max(now, connection.now))
-                // After the handler closed or refused the connection, its remaining events up to the disconnect are skipped.
-                var skipping = false
+                // After the handler closed or refused the connection, its remaining events up to the disconnect are skipped, also
+                // after the ClientConnected event that a synchronous pair reports late.
+                var skipping = client.skipping
+                client.skipping = false
                 while true {
                     let next = connection.nextEvent()
                     if next.kind == .none { break }

@@ -354,20 +354,57 @@ final class GesSyntaxBinder {
         }
         var required: [String] = []
         var excluded: [String] = []
+        var alternatives: [[String]] = []
+        // A `matching` filter is a conjunction of groups: a single tag is required, a `|` group needs one of its tags.
+        // `without` filters hold no `|`, which the syntax validator reports.
         while true {
             try c.newlines()
             guard c.isNode(.handlerTagFilter) else { break }
             var f = cursor(try c.takeNode())
             let include = try f.advance().kind == .matching
             repeat {
-                try f.newlines()
-                let tag = String(try f.expect(.tag).text.dropFirst())
-                if include { if !required.contains(tag) { required.append(tag) } } else if !excluded.contains(tag) { excluded.append(tag) }
-                try f.newlines()
+                var group: [String] = []
+                repeat {
+                    try f.newlines()
+                    let tag = String(try f.expect(.tag).text.dropFirst())
+                    if !group.contains(tag) { group.append(tag) }
+                    try f.newlines()
+                } while try f.match(.operatorCollectionUnion)
+                if include && group.count > 1 {
+                    alternatives.append(group)
+                    continue
+                }
+                for tag in group {
+                    if include { if !required.contains(tag) { required.append(tag) } } else if !excluded.contains(tag) { excluded.append(tag) }
+                }
             } while try f.match(.comma)
         }
         let body = try block(c.takeNode(.block))
-        return .init(kind: kind, name: name, parameters: parameters, expression: nil, statements: body, required: required, excluded: excluded, location: location(begin, c.previous))
+        return .init(
+            kind: kind,
+            name: name,
+            parameters: parameters,
+            expression: nil,
+            statements: body,
+            required: required,
+            excluded: excluded,
+            alternatives: Self.reduceTagAlternatives(required, alternatives),
+            location: location(begin, c.previous)
+        )
+    }
+
+    // Drops every group that a required tag or another kept group already satisfies, so duplicates and absorbed groups
+    // vanish; the kept groups keep their source order.
+    static func reduceTagAlternatives(_ required: [String], _ alternatives: [[String]]) -> [[String]] {
+        alternatives.indices.compactMap { index in
+            let group = alternatives[index]
+            if group.contains(where: required.contains) { return nil }
+            // A group containing every tag of another is implied by it; of two equal groups the first stays.
+            let absorbed = alternatives.indices.contains { other in
+                other != index && alternatives[other].allSatisfy(group.contains) && (alternatives[other].count < group.count || other < index)
+            }
+            return absorbed ? nil : group
+        }
     }
 
     func typeName(_ reference: GesSyntaxNode) throws -> String {

@@ -961,7 +961,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         /// </summary>
         public sealed class Client
         {
-            private readonly byte[] __buffer;
+            private readonly byte[] __send_buffer;
             private global::GameEventScript.Tests.Generator.Network.Wire.Commands __out_sendCommands;
             private global::GameEventScript.Tests.Generator.Network.Wire.World __world;
             private global::GameEventScript.Tests.Generator.Network.Wire.Chunk __chunk;
@@ -974,7 +974,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             {
                 End = end ?? throw new global::System.ArgumentNullException(nameof(end));
                 if (end.Network.Hash != Hash) throw new global::System.ArgumentException("The end's network is no :Game.", nameof(end));
-                __buffer = new byte[global::GameEventScript.Tests.Generator.Network.Wire.Commands.MaxByteCount];
+                __send_buffer = new byte[global::GameEventScript.Tests.Generator.Network.Wire.Commands.MaxByteCount];
             }
 
             /// <summary>Gets the wrapped end.</summary>
@@ -987,7 +987,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             /// <param name="value">The record.</param>
             /// <returns>The status of <see cref="GesNetworkClientEnd.Send(int, ReadOnlySpan{byte})"/>.</returns>
             /// <exception cref="GesWireException">A value does not fit its field.</exception>
-            public GesNetworkSendStatus Send(in global::GameEventScript.Tests.Generator.Network.Wire.Commands value) => End.Send(ClientSendsCommands, __buffer.AsSpan(0, value.Write(__buffer)));
+            public GesNetworkSendStatus Send(in global::GameEventScript.Tests.Generator.Network.Wire.Commands value) => End.Send(ClientSendsCommands, __send_buffer.AsSpan(0, value.Write(__send_buffer)));
 
             /// <summary>Encodes a message and sends it on the route <c>client sends :Commands reliable</c>.</summary>
             /// <param name="value">The message.</param>
@@ -1161,7 +1161,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         /// </summary>
         public sealed class Server
         {
-            private readonly byte[] __buffer;
+            private readonly byte[] __send_buffer;
             private global::GameEventScript.Tests.Generator.Network.Wire.Commands __commands;
             private readonly global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case.Move __case_commands_Move = new();
             private readonly global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case.Fire __case_commands_Fire = new();
@@ -1174,7 +1174,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             {
                 End = end ?? throw new global::System.ArgumentNullException(nameof(end));
                 if (end.Network.Hash != Hash) throw new global::System.ArgumentException("The end's network is no :Game.", nameof(end));
-                __buffer = new byte[global::System.Math.Max(global::GameEventScript.Tests.Generator.Network.Wire.World.MaxByteCount, global::GameEventScript.Tests.Generator.Network.Wire.Chunk.MaxByteCount)];
+                __send_buffer = new byte[global::System.Math.Max(global::GameEventScript.Tests.Generator.Network.Wire.World.MaxByteCount, global::GameEventScript.Tests.Generator.Network.Wire.Chunk.MaxByteCount)];
             }
 
             /// <summary>Gets the wrapped end.</summary>
@@ -1193,20 +1193,20 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             /// <param name="value">The record.</param>
             /// <returns>The status of <see cref="GesNetworkServerEnd.Publish(int, ReadOnlySpan{byte})"/>.</returns>
             /// <exception cref="GesWireException">A value does not fit its field.</exception>
-            public GesNetworkSendStatus Publish(in global::GameEventScript.Tests.Generator.Network.Wire.World value) => End.Publish(ServerPublishesWorld, __buffer.AsSpan(0, value.Write(__buffer)));
+            public GesNetworkSendStatus Publish(in global::GameEventScript.Tests.Generator.Network.Wire.World value) => End.Publish(ServerPublishesWorld, __send_buffer.AsSpan(0, value.Write(__send_buffer)));
 
             /// <summary>Encodes a record and sends it on the route <c>server sends :Chunk bulk</c>, to every client.</summary>
             /// <param name="value">The record.</param>
             /// <returns>The status of <see cref="GesNetworkServerEnd.Send(int, ReadOnlySpan{byte})"/>.</returns>
             /// <exception cref="GesWireException">A value does not fit its field.</exception>
-            public GesNetworkSendStatus Send(in global::GameEventScript.Tests.Generator.Network.Wire.Chunk value) => End.Send(ServerSendsChunk, __buffer.AsSpan(0, value.Write(__buffer)));
+            public GesNetworkSendStatus Send(in global::GameEventScript.Tests.Generator.Network.Wire.Chunk value) => End.Send(ServerSendsChunk, __send_buffer.AsSpan(0, value.Write(__send_buffer)));
 
             /// <summary>Encodes a record and sends it on the route <c>server sends :Chunk bulk</c>, to one client.</summary>
             /// <param name="value">The record.</param>
             /// <param name="client">The client.</param>
             /// <returns>The status of <see cref="GesNetworkServerEnd.Send(int, ReadOnlySpan{byte}, int)"/>.</returns>
             /// <exception cref="GesWireException">A value does not fit its field.</exception>
-            public GesNetworkSendStatus Send(in global::GameEventScript.Tests.Generator.Network.Wire.Chunk value, int client) => End.Send(ServerSendsChunk, __buffer.AsSpan(0, value.Write(__buffer)), client);
+            public GesNetworkSendStatus Send(in global::GameEventScript.Tests.Generator.Network.Wire.Chunk value, int client) => End.Send(ServerSendsChunk, __send_buffer.AsSpan(0, value.Write(__send_buffer)), client);
 
             /// <summary>Refuses a connecting client; call it while the handler handles its <c>OnConnecting</c>.</summary>
             /// <param name="client">The client.</param>
@@ -1232,8 +1232,8 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             /// <param name="topic">The topic.</param>
             public void Unsubscribe(int client, Topic topic) => End.Unsubscribe(client, (int)topic);
 
-            private int __ticks;
-            private bool __tickOpen;
+            private int __tick_count;
+            private bool __tick_open;
 
             /// <summary>Opens a tick; disposing the returned tick closes it.</summary>
             /// <returns>The open tick.</returns>
@@ -1241,8 +1241,8 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             public Tick BeginTick()
             {
                 End.BeginTick();
-                __tickOpen = true;
-                return new Tick(this, unchecked(++__ticks));
+                __tick_open = true;
+                return new Tick(this, unchecked(++__tick_count));
             }
 
             /// <summary>The topics the server publishes.</summary>
@@ -1279,8 +1279,8 @@ namespace GameEventScript.Tests.Generator.Network.Wire
                 /// <summary>Closes the tick. A further call, also on a copy, does nothing.</summary>
                 public void Dispose()
                 {
-                    if (__end is null || !__end.__tickOpen || __end.__ticks != __number) return;
-                    __end.__tickOpen = false;
+                    if (__end is null || !__end.__tick_open || __end.__tick_count != __number) return;
+                    __end.__tick_open = false;
                     __end.End.EndTick();
                 }
             }

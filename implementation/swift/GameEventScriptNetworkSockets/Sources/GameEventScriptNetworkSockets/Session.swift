@@ -196,19 +196,20 @@ public final class GesNetworkSocketSession {
         if closed { throw GesApiError.invalidOperation("The session is closed.") }
         adopt()
         guard let writer, !outgoingCompleted else { return }
-        // A closed connection holds only its close packet, which leaves past the writer's bound.
+        try fill(writer.room)
+        // The connection may close while it transmits; its close packet then leaves within the same fill.
         let closed = connection.state == .closed
-        try fill(closed ? GesNetworkSocketWriter.unwrittenBytes : writer.room)
         if closed { outgoingCompleted = true }
         if outgoing.readableBytes > 0 || closed { writer.hand(&outgoing, finish: closed) }
     }
 
-    // Transmits the connection's due packets into the outgoing buffer, up to about the given bytes. A stream carries
-    // the packets back to back; every other framing gets each packet with its length.
+    // Transmits the connection's due packets into the outgoing buffer, up to about the given bytes. A closed connection
+    // holds only its close packet, which leaves past that bound, also when the connection closes during the fill. A
+    // stream carries the packets back to back; every other framing gets each packet with its length.
     private func fill(_ room: Int) throws {
         let prefix = framing == .stream ? 0 : 4
         var room = room
-        while room > 0 {
+        while room > 0 || connection.state == .closed {
             let length = try outgoing.writeWithUnsafeMutableBytes(minimumWritableBytes: prefix + packetBytes) { bytes in
                 let length = try connection.transmit(into: UnsafeMutableRawBufferPointer(rebasing: bytes[prefix..<prefix + packetBytes]))
                 if length == 0 { return 0 }
@@ -228,7 +229,7 @@ public final class GesNetworkSocketSession {
         if closed { return }
         closed = true
         adopt()
-        if channel == nil, let opening, connection.state == .closed, (try? fill(GesNetworkSocketWriter.unwrittenBytes)) != nil {
+        if channel == nil, let opening, connection.state == .closed, (try? fill(0)) != nil {
             let plan = GesNetworkSocketOpening.Plan(framing: framing, masks: connection.isClient, inbox: inbox)
             if opening.finish(outgoing, plan) { return }
         }

@@ -303,6 +303,22 @@ public sealed class GesNetworkEndTests
     }
 
     [TestMethod]
+    public void ASynchronousDatagramPairAcknowledgesAtOnce()
+    {
+        var options = GesNetworkOptions.InProcess();
+        options.Transport = GesNetworkTransport.Datagram;
+        options.AckDelayMicroseconds = 10_000;
+        options.MaxSendQueueBytes = 1;
+        using var pair = GesNetworkPair.Synchronous(Network(), default, options);
+        Poll(pair);
+        // The virtual clock stands still, so a delayed acknowledgement would keep the queue full until the pair advances.
+        Assert.AreEqual(GesNetworkSendStatus.Queued, pair.Client.Send(Commands, [1]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, pair.Client.Send(Commands, [2]));
+        var (_, server) = Poll(pair);
+        CollectionAssert.AreEqual(new[] { "message 0 01", "message 0 02" }, server.Events.Where(entry => entry.StartsWith("message", StringComparison.Ordinal)).ToList(), string.Join(" | ", server.Events));
+    }
+
+    [TestMethod]
     public void BulkSendsBeforeTheHandshakeAreBounded()
     {
         var network = GesSchemaSet.Parse("wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 60 }\nnetwork :Game as { client sends :Blob bulk }\n")
@@ -403,5 +419,29 @@ public sealed class GesNetworkEndTests
         second.Server.Publish(Log, [4]);
         second.Client.Poll(ref client);
         CollectionAssert.AreEqual(new[] { $"message {Log} 03", "Disconnected -1 network.closed False", "Received -1" }, client.Take());
+    }
+
+    [TestMethod]
+    public void AConnectionClosedInTheLateConnectedEventSkipsItsPendingEvents()
+    {
+        using var pair = GesNetworkPair.Synchronous(Network(), default);
+        var server = new Recorder();
+        server.OnEvent = (kind, id) =>
+        {
+            if (kind == GesNetworkEndEventKind.ClientConnected) pair.Server.Close(id, "rejected");
+        };
+        pair.Client.Send(Commands, [1]);
+        pair.Server.Poll(ref server);
+        CollectionAssert.AreEqual(new[] { "ClientConnected 0", "ClientDisconnected 0 network.closed False" }, server.Take());
+
+        using var second = GesNetworkPair.Synchronous(Network(), default);
+        var client = new Recorder();
+        client.OnEvent = (kind, _) =>
+        {
+            if (kind == GesNetworkEndEventKind.Connected) second.Client.Close("rejected");
+        };
+        second.Server.Publish(Log, [3]);
+        second.Client.Poll(ref client);
+        CollectionAssert.AreEqual(new[] { "Connected -1", "Disconnected -1 network.closed False" }, client.Take());
     }
 }

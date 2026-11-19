@@ -221,6 +221,11 @@ schema :Second as {
 }
 """
 
+# A network whose roots are named like the internal members of a typed end, which both ends publish and receive.
+NETWORK_GATE = "".join(f"wire schema :{root} as {{\n  x: :Number integer between 0 and 255\n}}\n" for root in ("Buffer", "Handle", "Ticks", "TickOpen")) + \
+    "network :Names as {\n" + "".join(f"  {side} publishes :{root} latest\n" for side in ("client", "server") for root in ("Buffer", "Handle", "Ticks", "TickOpen")) + "}\n"
+
+
 def generate(directory, sources, root, parameters, language, space, more=()):
     directory.mkdir(parents=True, exist_ok=True)
     files = []
@@ -504,6 +509,10 @@ def main():
         if code is None:
             raise SystemExit(f"The gate schema does not generate: {error}")
         target.write_text(code, encoding="utf-8")
+        code, error = generate(gate / "network", [NETWORK_GATE], "Names", [], language, space + "Network")
+        if code is None:
+            raise SystemExit(f"The network gate schema does not generate: {error}")
+        target.with_name(target.name.replace("Gate", "NetworkGate")).write_text(code, encoding="utf-8")
     # The checked-in wire and model code of the role fixture, which compare-schema-generation.py keeps current, compiles
     # under the same rules: models of every field type, spatial wire fields in 2D and 3D, and the constants and typed functions of a network.
     for name in ("RolesWire", "RolesModel", "RolesBound", "NetworkWire"):

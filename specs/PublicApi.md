@@ -299,7 +299,10 @@ The portable segment model contains these data records and operations:
   `Resolve(index)` returns one immutable indexed list view.
 - `BindingSegment`: ordered bindings containing kind, ID, name index, ordered
   argument-name indices, required/excluded tag indices, optional entry address,
-  and per-handler resource requirements.
+  and per-handler resource requirements. Each entry also exposes its handler
+  tag alternatives as ordered groups of tag string indices (C#
+  `RequiredTagAlternatives`, Swift `requiredTagAlternatives`; empty without
+  alternatives; **Since: Unreleased**).
 - `CodeSegment`: ordered 16-byte logical instructions; `Count`/`Length` and
   indexed access do not expose mutable program storage.
 

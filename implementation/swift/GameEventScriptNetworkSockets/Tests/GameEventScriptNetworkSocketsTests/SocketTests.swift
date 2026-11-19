@@ -461,6 +461,13 @@ final class SocketTests: XCTestCase {
             sent += blob.count
         }
         XCTAssertTrue(full, "The send queue never filled.")
+
+        // The close packet leaves past the full socket's bound and reaches the client behind every queued message.
+        server.connection.close("done")
+        try server.transmit()
+        var last = ""
+        while !last.hasPrefix("closed") && Self.now < deadline + Self.limit { last = try Self.waitFor(client, server) }
+        XCTAssertEqual(last, "closed network.closed peer")
         client.close()
         server.close()
         listener.close()

@@ -176,6 +176,9 @@ public final class GesNetworkPair {
     public let server: GesNetworkServerEnd
 
     private init(network: GesBoundNetwork, token: [UInt8], options: GesNetworkOptions, synchronous: Bool) throws {
+        // The virtual clock stands still between sends, so a delayed acknowledgement would only hold the queue.
+        var options = options
+        if synchronous { options.ackDelayMicroseconds = 0 }
         core = Core(synchronous: synchronous, options: options)
         client = try GesNetworkClientEnd(network: network, connector: Connector(core), options: options, token: token, clock: core.clock)
         core.packetBytes = max(client.connection.maxPacketBytes + 3, GesNetworkWire.minimumPacketBytes)
@@ -210,6 +213,7 @@ public final class GesNetworkPair {
 
     /// Creates a synchronous pair on a virtual clock that starts at 0. It is connected when this returns, and both ends
     /// report their connected events on their first polls. The server accepts the client without a `connecting` event.
+    /// Both connections acknowledge at once: the pair uses the options with ``GesNetworkOptions/ackDelayMicroseconds`` 0.
     /// - Parameters:
     ///   - network: The bound network both ends share.
     ///   - token: The client's token.

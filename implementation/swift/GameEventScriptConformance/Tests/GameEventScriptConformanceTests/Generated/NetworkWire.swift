@@ -916,7 +916,7 @@ extension NetworkWire {
         final class Client {
             /// The wrapped end.
             let end: GesNetworkClientEnd
-            private let __buffer: UnsafeMutableRawBufferPointer
+            private let __send_buffer: UnsafeMutableRawBufferPointer
             private var __out_sendCommands = Commands()
             private var __world = World()
             private var __chunk = Chunk()
@@ -927,10 +927,10 @@ extension NetworkWire {
             init(_ end: GesNetworkClientEnd) throws {
                 guard end.network.hash == Game.hash else { throw GesApiError.invalidArgument("The end's network is no :Game.") }
                 self.end = end
-                __buffer = .allocate(byteCount: Commands.maxByteCount, alignment: 1)
+                __send_buffer = .allocate(byteCount: Commands.maxByteCount, alignment: 1)
             }
 
-            deinit { __buffer.deallocate() }
+            deinit { __send_buffer.deallocate() }
 
             /// The end's connection.
             var connection: GesNetworkConnection { end.connection }
@@ -941,8 +941,8 @@ extension NetworkWire {
             /// - Throws: `GesWireError` when a value does not fit its field.
             @discardableResult
             func send(_ value: Commands) throws(GesWireError) -> GesNetworkSendStatus {
-                let count = try value.write(into: __buffer)
-                return end.send(route: Game.clientSendsCommands, payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count]))
+                let count = try value.write(into: __send_buffer)
+                return end.send(route: Game.clientSendsCommands, payload: UnsafeRawBufferPointer(rebasing: __send_buffer[..<count]))
             }
 
             /// Encodes a message and sends it on the route `client sends :Commands reliable`.
@@ -963,10 +963,10 @@ extension NetworkWire {
             /// - Parameter handler: The closure; a received record that is a class stays valid until it returns.
             /// - Throws: `GesApiError.invalidOperation` when the end is released or polled already; an error of a link or the closure.
             func poll(_ handler: (ClientEvent) throws -> Void) throws {
-                try end.poll { event in try self.__handle(event, handler) }
+                try end.poll { event in try self.__handle_event(event, handler) }
             }
 
-            private func __handle(_ event: GesNetworkEndEvent, _ handler: (ClientEvent) throws -> Void) throws {
+            private func __handle_event(_ event: GesNetworkEndEvent, _ handler: (ClientEvent) throws -> Void) throws {
                 switch event.kind {
                 case .connected:
                     try handler(.connected(security: event.security))
@@ -1033,7 +1033,7 @@ extension NetworkWire {
         final class Server {
             /// The wrapped end.
             let end: GesNetworkServerEnd
-            private let __buffer: UnsafeMutableRawBufferPointer
+            private let __send_buffer: UnsafeMutableRawBufferPointer
             private var __commands = Commands()
 
             /// Wraps an end of the network.
@@ -1042,10 +1042,10 @@ extension NetworkWire {
             init(_ end: GesNetworkServerEnd) throws {
                 guard end.network.hash == Game.hash else { throw GesApiError.invalidArgument("The end's network is no :Game.") }
                 self.end = end
-                __buffer = .allocate(byteCount: max(World.maxByteCount, Chunk.maxByteCount), alignment: 1)
+                __send_buffer = .allocate(byteCount: max(World.maxByteCount, Chunk.maxByteCount), alignment: 1)
             }
 
-            deinit { __buffer.deallocate() }
+            deinit { __send_buffer.deallocate() }
 
             /// The number of connecting and connected clients.
             var clientCount: Int { end.clientCount }
@@ -1061,8 +1061,8 @@ extension NetworkWire {
             /// - Throws: `GesWireError` when a value does not fit its field.
             @discardableResult
             func publish(_ value: World) throws(GesWireError) -> GesNetworkSendStatus {
-                let count = try value.write(into: __buffer)
-                return end.publish(route: Game.serverPublishesWorld, payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count]))
+                let count = try value.write(into: __send_buffer)
+                return end.publish(route: Game.serverPublishesWorld, payload: UnsafeRawBufferPointer(rebasing: __send_buffer[..<count]))
             }
 
             /// Encodes a record and sends it on the route `server sends :Chunk bulk`, to every client.
@@ -1071,8 +1071,8 @@ extension NetworkWire {
             /// - Throws: `GesWireError` when a value does not fit its field.
             @discardableResult
             func send(_ value: Chunk) throws(GesWireError) -> GesNetworkSendStatus {
-                let count = try value.write(into: __buffer)
-                return end.send(route: Game.serverSendsChunk, payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count]))
+                let count = try value.write(into: __send_buffer)
+                return end.send(route: Game.serverSendsChunk, payload: UnsafeRawBufferPointer(rebasing: __send_buffer[..<count]))
             }
 
             /// Encodes a record and sends it on the route `server sends :Chunk bulk`, to one client.
@@ -1083,8 +1083,8 @@ extension NetworkWire {
             /// - Throws: `GesWireError` when a value does not fit its field; `GesApiError.invalidArgument` when the client is not connected to the end.
             @discardableResult
             func send(_ value: Chunk, client: Int) throws -> GesNetworkSendStatus {
-                let count = try value.write(into: __buffer)
-                return try end.send(route: Game.serverSendsChunk, payload: UnsafeRawBufferPointer(rebasing: __buffer[..<count]), client: client)
+                let count = try value.write(into: __send_buffer)
+                return try end.send(route: Game.serverSendsChunk, payload: UnsafeRawBufferPointer(rebasing: __send_buffer[..<count]), client: client)
             }
 
             /// Refuses a connecting client; call it while the closure of `poll(_:)` handles its `connecting` event.
@@ -1164,10 +1164,10 @@ extension NetworkWire {
             /// - Parameter handler: The closure; a received record that is a class stays valid until it returns.
             /// - Throws: `GesApiError.invalidOperation` when the end is released or polled already; an error of a link or the closure.
             func poll(_ handler: (ServerEvent) throws -> Void) throws {
-                try end.poll { event in try self.__handle(event, handler) }
+                try end.poll { event in try self.__handle_event(event, handler) }
             }
 
-            private func __handle(_ event: GesNetworkEndEvent, _ handler: (ServerEvent) throws -> Void) throws {
+            private func __handle_event(_ event: GesNetworkEndEvent, _ handler: (ServerEvent) throws -> Void) throws {
                 switch event.kind {
                 case .connecting:
                     try handler(.connecting(client: event.client, token: event.payload))

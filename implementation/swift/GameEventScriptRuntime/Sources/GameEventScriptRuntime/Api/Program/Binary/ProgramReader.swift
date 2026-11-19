@@ -100,9 +100,28 @@ enum GesProgramReader {
             return lists[Int(index)]
         }
 
+        // Per group its tag count followed by its tag indexes; the flag requires at least one non-empty group.
+        func tagAlternatives(_ index: UInt16, entry: Int) throws -> [[UInt16]] {
+            if index == .max { throw bindingsReader.error(.invalidProgram, offset: bindingsReader.bytes.startIndex, entry: entry) }
+            guard Int(index) < lists.count else { throw bindingsReader.error(.invalidListIndex, offset: bindingsReader.bytes.startIndex, entry: entry) }
+            let flat = lists[Int(index)]
+            var groups: [[UInt16]] = []
+            var position = 0
+            while position < flat.count {
+                let count = Int(flat[position])
+                position += 1
+                if count == 0 || count > flat.count - position { throw bindingsReader.error(.invalidProgram, offset: bindingsReader.bytes.startIndex, entry: entry) }
+                groups.append(Array(flat[position..<position + count]))
+                position += count
+            }
+            if groups.isEmpty { throw bindingsReader.error(.invalidProgram, offset: bindingsReader.bytes.startIndex, entry: entry) }
+            return groups
+        }
+
         for index in 0..<bindCount {
             let rawKind = try bindingsReader.u8()
-            if try bindingsReader.u8() != 0 { throw bindingsReader.error(.invalidSectionFlags, offset: bindingsReader.offset - 1, entry: index) }
+            let flags = try bindingsReader.u8()
+            if flags & ~GesBindingSegment.tagAlternativesFlag != 0 { throw bindingsReader.error(.invalidSectionFlags, offset: bindingsReader.offset - 1, entry: index) }
             let id = try bindingsReader.u16()
             let name = try bindingsReader.u16()
             let argsIndex = try bindingsReader.u16()
@@ -114,9 +133,28 @@ enum GesProgramReader {
             let address = try bindingsReader.u16()
             let registers = try bindingsReader.u16()
             let depth = try bindingsReader.u16()
-            if try bindingsReader.u16() != 0 { throw bindingsReader.error(.invalidSectionReserved, offset: bindingsReader.offset - 2, entry: index) }
+            let alternativesIndex = try bindingsReader.u16()
+            var alternatives: [[UInt16]] = []
+            if flags == 0 {
+                if alternativesIndex != 0 { throw bindingsReader.error(.invalidSectionReserved, offset: bindingsReader.offset - 2, entry: index) }
+            } else {
+                alternatives = try tagAlternatives(alternativesIndex, entry: index)
+            }
             guard let kind = GesBinaryBindKind(rawValue: rawKind) else { throw bindingsReader.error(.invalidBindingKind, entry: index) }
-            bindings.append(.init(kind: kind, name: name, argumentNames: args, entryAddress: address, id: id, requiredTags: tags, excludedTags: excluded, requiredRegisterCount: registers, requiredCallStackDepth: depth))
+            bindings.append(
+                .init(
+                    kind: kind,
+                    name: name,
+                    argumentNames: args,
+                    entryAddress: address,
+                    id: id,
+                    requiredTags: tags,
+                    excludedTags: excluded,
+                    requiredRegisterCount: registers,
+                    requiredCallStackDepth: depth,
+                    requiredTagAlternatives: alternatives
+                )
+            )
         }
         var codeReader = try section(16)
         let instructionCount = try codeReader.count(limits.maxInstructions)

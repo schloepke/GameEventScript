@@ -326,6 +326,21 @@ final class NetworkEndTests: XCTestCase {
         }
     }
 
+    func testASynchronousDatagramPairAcknowledgesAtOnce() throws {
+        var options = GesNetworkOptions.inProcess()
+        options.transport = .datagram
+        options.ackDelayMicroseconds = 10_000
+        options.maxSendQueueBytes = 1
+        let pair = try GesNetworkPair.synchronous(network: network(), options: options)
+        defer { pair.release() }
+        _ = try poll(pair)
+        // The virtual clock stands still, so a delayed acknowledgement would keep the queue full until the pair advances.
+        XCTAssertEqual(pair.client.send(route: commands, payload: [1]), .queued)
+        XCTAssertEqual(pair.client.send(route: commands, payload: [2]), .queued)
+        let (_, server) = try poll(pair)
+        XCTAssertEqual(server.events.filter { $0.hasPrefix("message") }, ["message 0 01", "message 0 02"], server.events.joined(separator: " | "))
+    }
+
     func testBulkSendsBeforeTheHandshakeAreBounded() throws {
         let network = try GesSchemaSet(parsing: "wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 60 }\nnetwork :Game as { client sends :Blob bulk }\n")
             .network("Game").bind()
@@ -417,5 +432,27 @@ final class NetworkEndTests: XCTestCase {
         _ = second.server.publish(route: log, payload: [4])
         try second.client.poll(client.handle)
         XCTAssertEqual(client.take(), ["message \(log) 03", "Disconnected -1 network.closed False", "Received -1"])
+    }
+
+    func testAConnectionClosedInTheLateConnectedEventSkipsItsPendingEvents() throws {
+        let pair = try GesNetworkPair.synchronous(network: network())
+        defer { pair.release() }
+        let server = Recorder()
+        server.onEvent = { kind, id in
+            if kind == .clientConnected { try pair.server.close(client: id, detail: "rejected") }
+        }
+        _ = pair.client.send(route: commands, payload: [1])
+        try pair.server.poll(server.handle)
+        XCTAssertEqual(server.take(), ["ClientConnected 0", "ClientDisconnected 0 network.closed False"])
+
+        let second = try GesNetworkPair.synchronous(network: network())
+        defer { second.release() }
+        let client = Recorder()
+        client.onEvent = { kind, _ in
+            if kind == .connected { second.client.close("rejected") }
+        }
+        _ = second.server.publish(route: log, payload: [3])
+        try second.client.poll(client.handle)
+        XCTAssertEqual(client.take(), ["Connected -1", "Disconnected -1 network.closed False"])
     }
 }

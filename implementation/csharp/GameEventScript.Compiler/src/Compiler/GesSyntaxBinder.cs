@@ -422,30 +422,74 @@ internal sealed partial class GesSyntaxBinder
 
         var requiredTags = new List<string>();
         var excludedTags = new List<string>();
+        List<List<string>>? alternatives = null;
         while (true)
         {
             c.SkipNewLines();
             if (!c.IsNode(NodeKind.HandlerTagFilter)) break;
-            BindTagFilter(c.TakeNode(), requiredTags, excludedTags);
+            BindTagFilter(c.TakeNode(), requiredTags, excludedTags, ref alternatives);
         }
 
         c.SkipNewLines();
         var statements = BindBlock(c.TakeNode(NodeKind.Block));
-        return Set(new GesEventHandlerNode(message, dispatchKind, parameters, statements, requiredTags, excludedTags), start, c.Previous);
+        return Set(new GesEventHandlerNode(message, dispatchKind, parameters, statements, requiredTags, excludedTags, ReduceTagAlternatives(requiredTags, alternatives)), start, c.Previous);
     }
 
-    private void BindTagFilter(GesSyntaxNode node, List<string> requiredTags, List<string> excludedTags)
+    // A `matching` filter is a conjunction of groups: a single tag is required, a `|` group needs one of its tags.
+    // `without` filters hold no `|`, which the syntax validator reports.
+    private void BindTagFilter(GesSyntaxNode node, List<string> requiredTags, List<string> excludedTags, ref List<List<string>>? alternatives)
     {
         var c = new Cursor(this, node);
-        var tags = c.Advance().Kind == Matching ? requiredTags : excludedTags;
+        var matching = c.Advance().Kind == Matching;
+        var group = new List<string>();
         do
         {
-            c.SkipNewLines();
-            var normalized = GameEventScriptMessage.NormalizeTagName(c.Expect(Tag).Text[1..]);
-            if (normalized.Length > 0 && !tags.Contains(normalized)) tags.Add(normalized);
-            c.SkipNewLines();
+            group.Clear();
+            do
+            {
+                c.SkipNewLines();
+                var normalized = GameEventScriptMessage.NormalizeTagName(c.Expect(Tag).Text[1..]);
+                if (normalized.Length > 0 && !group.Contains(normalized)) group.Add(normalized);
+                c.SkipNewLines();
+            }
+            while (c.Match(OperatorCollectionUnion));
+
+            if (group.Count > 1 && matching)
+            {
+                (alternatives ??= []).Add([.. group]);
+                continue;
+            }
+
+            var tags = matching ? requiredTags : excludedTags;
+            foreach (var tag in group)
+                if (!tags.Contains(tag)) tags.Add(tag);
         }
         while (c.Match(Comma));
+    }
+
+    // Drops every group that a required tag or an earlier kept group already satisfies, so duplicates and
+    // absorbed groups vanish; the kept groups keep their source order.
+    private static List<IReadOnlyList<string>>? ReduceTagAlternatives(List<string> requiredTags, List<List<string>>? alternatives)
+    {
+        if (alternatives is null) return null;
+        var kept = new List<IReadOnlyList<string>>();
+        for (var index = 0; index < alternatives.Count; index++)
+        {
+            var group = alternatives[index];
+            if (group.Exists(requiredTags.Contains)) continue;
+            var absorbed = false;
+            for (var other = 0; other < alternatives.Count && !absorbed; other++)
+            {
+                if (other == index) continue;
+                var candidate = alternatives[other];
+                // A group containing every tag of another is implied by it; of two equal groups the first stays.
+                absorbed = candidate.TrueForAll(group.Contains) && (candidate.Count < group.Count || other < index);
+            }
+
+            if (!absorbed) kept.Add(group);
+        }
+
+        return kept.Count == 0 ? null : kept;
     }
 
     private static string CanonicalTypeName(string typeName) => typeName switch

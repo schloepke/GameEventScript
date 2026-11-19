@@ -38,6 +38,12 @@ final class GenerateTests: XCTestCase {
         }
         XCTAssertTrue(try generate(network("ClientEvent", "Game"), "Game", .csharp).contains("ClientEvent"))
         XCTAssertTrue(try generate(network("IClientHandler", "Game"), "Game", .swift).contains("IClientHandler"))
+
+        // C# forbids a member named like the network class: its hash, bound network, route constants and functions.
+        for name in ["Hash", "Bound", "ServerPublishesChunk", "ServerPublishChunk"] {
+            XCTAssertEqual(code { _ = try generate(network("Chunk", name), name, .csharp) }, "generate.nameCollision", name)
+            XCTAssertTrue(try generate(network("Chunk", name), name, .swift).contains(name))
+        }
     }
 
     func testModelsNeedTheirOwnNamespaceAndWireName() throws {

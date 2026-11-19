@@ -33,6 +33,11 @@ public sealed partial class GesNetworkConnection
 
     internal bool IsBulk(int route) => _classes[route] == GesNetworkClass.Bulk;
 
+    // Whether a transfer of this length on the bulk route exceeds a limit of this connected connection; a server end asks
+    // every client before it sends to any of them.
+    internal bool RejectsTransfer(int route, int length) =>
+        State == GesNetworkState.Connected && length > Math.Min(TransferLimit(route), _peerTransferLimit);
+
     // The bounds of the transfers this side queues before it knows the peer's transfer limit.
     internal int MaxQueuedTransfers => GesNetworkSendQueue.MaximumStarted;
 

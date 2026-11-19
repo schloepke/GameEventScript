@@ -1056,8 +1056,9 @@ internal static partial class GesCSharpEmitter
         var endType = isClient ? "GesNetworkClientEnd" : "GesNetworkServerEnd";
         var handler = $"I{end.Name}Handler";
         var side = isClient ? "client" : "server";
-        // Distinct prefixes keep the scratch record of an outgoing message set and the cached cases apart from the record of
-        // each received route, whatever its root is called.
+        // Distinct prefixes keep the scratch record of an outgoing message set, the cached cases and the internal fields
+        // (__send_buffer, __tick_count, __tick_open: an underscore before a lowercase letter, which no root name has)
+        // apart from the record of each received route, whatever its root is called.
         string Field(string name) => "__" + GesSchemaPlanner.Camel(name);
         string Outgoing(GesLayoutRoute route) => "__out_" + GesSchemaPlanner.Camel((route.Verb == "sends" ? "Send" : "Publish") + route.Root);
         string CaseField(string name, string member) => "__case_" + GesSchemaPlanner.Camel(name) + "_" + member;
@@ -1068,7 +1069,7 @@ internal static partial class GesCSharpEmitter
         code.Line($"/// </summary>");
         code.Line($"public sealed class {end.Name}");
         code.Open("{");
-        code.Line("private readonly byte[] __buffer;");
+        code.Line("private readonly byte[] __send_buffer;");
         foreach (var route in end.Outgoing)
         {
             var root = roots(route.Root);
@@ -1102,7 +1103,7 @@ internal static partial class GesCSharpEmitter
 
         var size = sizes.Count == 0 ? "0" : sizes[0];
         for (var index = 1; index < sizes.Count; index++) size = $"global::System.Math.Max({size}, {sizes[index]})";
-        code.Line($"__buffer = new byte[{size}];");
+        code.Line($"__send_buffer = new byte[{size}];");
         code.Close();
         code.Blank();
         code.Line("/// <summary>Gets the wrapped end.</summary>");
@@ -1142,7 +1143,7 @@ internal static partial class GesCSharpEmitter
                 if (arguments.Length > 0) code.Line("/// <param name=\"client\">The client.</param>");
                 code.Line($"/// <returns>The status of <see cref=\"{endType}.{verb}(int, ReadOnlySpan{{byte}}{(arguments.Length > 0 ? ", int" : "")})\"/>.</returns>");
                 code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>");
-                code.Line($"public GesNetworkSendStatus {verb}(in {root.Type} value{parameters}) => End.{verb}({route.Name}, __buffer.AsSpan(0, value.Write(__buffer)){arguments});");
+                code.Line($"public GesNetworkSendStatus {verb}(in {root.Type} value{parameters}) => End.{verb}({route.Name}, __send_buffer.AsSpan(0, value.Write(__send_buffer)){arguments});");
                 if (!root.IsSet) continue;
                 var scratch = Outgoing(route);
                 code.Blank();
@@ -1195,8 +1196,8 @@ internal static partial class GesCSharpEmitter
             }
 
             code.Blank();
-            code.Line("private int __ticks;");
-            code.Line("private bool __tickOpen;");
+            code.Line("private int __tick_count;");
+            code.Line("private bool __tick_open;");
             code.Blank();
             code.Line("/// <summary>Opens a tick; disposing the returned tick closes it.</summary>");
             code.Line("/// <returns>The open tick.</returns>");
@@ -1204,8 +1205,8 @@ internal static partial class GesCSharpEmitter
             code.Line("public Tick BeginTick()");
             code.Open("{");
             code.Line("End.BeginTick();");
-            code.Line("__tickOpen = true;");
-            code.Line("return new Tick(this, unchecked(++__ticks));");
+            code.Line("__tick_open = true;");
+            code.Line("return new Tick(this, unchecked(++__tick_count));");
             code.Close();
             code.Blank();
             code.Line($"/// <summary>The topics the {side} publishes.</summary>");
@@ -1254,8 +1255,8 @@ internal static partial class GesCSharpEmitter
             code.Line("/// <summary>Closes the tick. A further call, also on a copy, does nothing.</summary>");
             code.Line("public void Dispose()");
             code.Open("{");
-            code.Line("if (__end is null || !__end.__tickOpen || __end.__ticks != __number) return;");
-            code.Line("__end.__tickOpen = false;");
+            code.Line("if (__end is null || !__end.__tick_open || __end.__tick_count != __number) return;");
+            code.Line("__end.__tick_open = false;");
             code.Line("__end.End.EndTick();");
             code.Close();
             code.Close();

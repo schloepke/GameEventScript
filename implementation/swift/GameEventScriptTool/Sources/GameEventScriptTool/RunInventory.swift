@@ -78,10 +78,16 @@ final class RunInventory {
 
             func tags(_ prefix: String, _ values: [UInt16]) -> String { values.isEmpty ? "" : prefix + values.map { "#" + p.stringConstants[Int($0)] }.joined(separator: ", ") }
 
+            // Required tags first, then each `|` group, as one `matching` clause.
+            func matching(_ binding: GesBindingSegment.Entry) -> String {
+                let groups = binding.requiredTags.map { "#" + p.stringConstants[Int($0)] } + binding.requiredTagAlternatives.map { $0.map { "#" + p.stringConstants[Int($0)] }.joined(separator: " | ") }
+                return groups.isEmpty ? "" : " matching " + groups.joined(separator: ", ")
+            }
+
             for binding in handlers(p) {
                 let name = p.stringConstants[Int(binding.name)]
                 let signature = binding.kind == .messageNameHandler ? name + "(...) [name-only]" : name + "(" + binding.argumentNames.map { p.stringConstants[Int($0)] }.joined(separator: ",") + ") [signature]"
-                lines.append("  \(entry.id)  \(p.moduleName)  \(signature)" + tags(" matching ", binding.requiredTags) + tags(" without ", binding.excludedTags))
+                lines.append("  \(entry.id)  \(p.moduleName)  \(signature)" + matching(binding) + tags(" without ", binding.excludedTags))
             }
         }
         io.line(toError: true)

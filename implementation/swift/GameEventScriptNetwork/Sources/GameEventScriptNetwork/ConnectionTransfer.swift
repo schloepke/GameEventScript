@@ -37,13 +37,18 @@ extension GesNetworkConnection {
         if state != .connected || transferId < 0 || transferId > Int(UInt16.max) { return false }
         var index = 0
         if !sendBulk.findTransfer(route, UInt16(transferId), &index) || (datagram && index < sendBulk.cursor) { return false }
+        cancelAt(route, UInt16(transferId), index, code)
+        return true
+    }
+
+    // Cancels the queued transfer at the index of the send queue: the caller checked the connection, the id and the code.
+    private func cancelAt(_ route: Int, _ transferId: UInt16, _ index: Int, _ code: String) {
         // On a stream the started transfer is the head; its written bytes are no longer reported. The stream writes the
         // cancel frame when the placeholder reaches the head; a datagram transport sends it at once.
         if !datagram && index == 0 && sendBulk.started { written.cancelNewest() }
         cancelQueued(index, code)
-        if datagram && !queueCancel(route, UInt16(transferId), code) { return true }
-        if !addEvent(.transferCancelled, route, UnsafeRawBufferPointer(start: nil, count: 0), .none, code, "", false, transferId) { fail(GesNetworkCodes.queueFull) }
-        return true
+        if datagram && !queueCancel(route, transferId, code) { return }
+        if !addEvent(.transferCancelled, route, UnsafeRawBufferPointer(start: nil, count: 0), .none, code, "", false, Int(transferId)) { fail(GesNetworkCodes.queueFull) }
     }
 
     // Turns a queued transfer into a cancelled placeholder; a datagram transport moves its cursor past it and removes it
@@ -59,6 +64,12 @@ extension GesNetworkConnection {
         let scalars = code.unicodeScalars
         if scalars.isEmpty || scalars.count > Wire.maximumCodeBytes { return false }
         return scalars.allSatisfy { $0.value >= 0x21 && $0.value <= 0x7E }
+    }
+
+    // Whether a transfer of this length on the bulk route exceeds a limit of this connected connection; a server end asks
+    // every client before it sends to any of them.
+    func rejectsTransfer(_ route: Int, _ length: Int) -> Bool {
+        state == .connected && Int64(length) > min(transferLimit(route), peerTransferLimit)
     }
 
     // Queues a transfer: the header and the data, compressed when that is shorter and both sides allow it.
@@ -79,12 +90,16 @@ extension GesNetworkConnection {
     // limits, so the queue bounds do not apply; a transfer larger than the peer's transfer limit keeps its id and is
     // cancelled at once with network.transferTooLarge.
     func passTransfer(_ route: Int, _ data: UnsafeRawBufferPointer) {
+        if state != .connected { return }
         if Int64(data.count) <= peerTransferLimit {
             queueTransfer(route, data)
             return
         }
+        // The placeholder is the newest entry and not yet sent, so it is found behind the datagram cursor.
         queueTransfer(route, UnsafeRawBufferPointer(start: nil, count: 0))
-        _ = try? cancel(route: route, transferId: lastTransferId, code: GesNetworkCodes.transferTooLarge)
+        var index = 0
+        _ = sendBulk.findTransfer(route, UInt16(lastTransferId), &index)
+        cancelAt(route, UInt16(lastTransferId), index, GesNetworkCodes.transferTooLarge)
     }
 
     private func queueTransfer(_ route: Int, _ data: UnsafeRawBufferPointer) {

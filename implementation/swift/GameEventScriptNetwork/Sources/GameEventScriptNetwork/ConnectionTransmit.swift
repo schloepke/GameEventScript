@@ -160,7 +160,8 @@ extension GesNetworkConnection {
         bulkMarks[Int(sentCount % Int64(Self.sendTimeWindow))] = bulkWritten
         sentCount += 1
         ackDue = false
-        if position > start && budget > 0 { budgetUnits -= Int64(position) * Self.microsecondsPerSecond }
+        // A sealed packet also spends its type byte and tag.
+        if position > start && budget > 0 { budgetUnits -= Int64(position + (encrypted ? Self.sealedOverhead : 0)) * Self.microsecondsPerSecond }
         return position
     }
 

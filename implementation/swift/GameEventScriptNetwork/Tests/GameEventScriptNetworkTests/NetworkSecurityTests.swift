@@ -104,6 +104,40 @@ final class NetworkSecurityTests: XCTestCase {
         return (client, server)
     }
 
+    func testTheSendBudgetCountsTheSealedBytes() throws {
+        for transport in [GesNetworkTransport.stream, .message, .datagram] {
+            let network = try game()
+            var client = clientOptions(transport, .verified, Self.serverKey.publicKey)
+            var server = serverOptions(transport, Self.serverKey)
+            client.maxPacketBytes = 1200
+            server.maxPacketBytes = 1200
+            let clientConnection = try GesNetworkConnection.makeClient(network: network, token: Array("t".utf8), now: 0, options: client)
+            let serverConnection = try GesNetworkConnection.makeServer(network: network, now: 0, options: server)
+            try exchange(clientConnection, serverConnection, 0)
+            drain(serverConnection)
+            try serverConnection.accept()
+            try exchange(clientConnection, serverConnection, 0)
+            XCTAssertEqual(clientConnection.security, .verified)
+            // A budget that does not refill noticeably: the client spends one packet limit of bytes and then waits.
+            try clientConnection.setSendBudgetBytesPerSecond(1)
+            try clientConnection.advance(1)
+            let prefix = transport == .stream ? 1 : 0
+            var buffer = [UInt8](repeating: 0, count: 70_000)
+            var spent = 0
+            var largest = 0
+            for _ in 0..<1000 {
+                XCTAssertEqual(clientConnection.send(route: commands, payload: [1]), .queued)
+                let length = try clientConnection.transmit(into: &buffer)
+                if length == 0 { break }
+                XCTAssertEqual(buffer[prefix], sealed)
+                spent += length - prefix
+                largest = max(largest, length - prefix)
+            }
+            XCTAssertEqual(try clientConnection.transmit(into: &buffer), 0)
+            XCTAssertLessThanOrEqual(spent, 1200 + largest, "\(transport)")
+        }
+    }
+
     func testPinnedKeyGivesVerifiedSessionWhosePacketsAreSealed() throws {
         for transport in [GesNetworkTransport.stream, .message, .datagram] {
             let (client, server) = try connect(transport, .verified, Self.serverKey.publicKey, Self.serverKey)

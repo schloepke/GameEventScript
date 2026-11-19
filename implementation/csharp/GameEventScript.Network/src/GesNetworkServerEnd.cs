@@ -104,8 +104,8 @@ public sealed class GesNetworkServerEnd : IDisposable
     /// <param name="payload">The full record of the topic's schema; it is copied.</param>
     /// <returns>
     /// <see cref="GesNetworkSendStatus.Queued"/>; <see cref="GesNetworkSendStatus.MessageTooLarge"/> when the payload
-    /// exceeds the limit of some client; <see cref="GesNetworkSendStatus.QueueFull"/> when the queue of some client is
-    /// full; or the status of an invalid route or payload. Clients that are not connected or not subscribed
+    /// exceeds the limit of some client, and then no client receives it; <see cref="GesNetworkSendStatus.QueueFull"/>
+    /// when the queue of some client is full and the others received it; or the status of an invalid route or payload. Clients that are not connected or not subscribed
     /// are skipped.
     /// </returns>
     public GesNetworkSendStatus Publish(int route, ReadOnlySpan<byte> payload)
@@ -136,6 +136,13 @@ public sealed class GesNetworkServerEnd : IDisposable
     {
         var status = _check.Check(route, payload.Length, publish: false);
         if (status != GesNetworkSendStatus.Queued) return status;
+        // A transfer limit differs per client; a transfer some client rejects goes to none of them.
+        if (_check.IsBulk(route))
+        {
+            foreach (var client in _clients)
+                if (client.Link.Connection.RejectsTransfer(route, payload.Length)) return GesNetworkSendStatus.MessageTooLarge;
+        }
+
         foreach (var client in _clients)
         {
             status = Merge(status, client.Link.Connection.Send(route, payload));
@@ -276,8 +283,10 @@ public sealed class GesNetworkServerEnd : IDisposable
             {
                 foreach (var id in _reportConnected)
                 {
-                    if (_byId.TryGetValue(id, out var client))
-                        handler.Handle(new GesNetworkEndEvent(GesNetworkEndEventKind.ClientConnected, id, client.Link.Connection.Security));
+                    if (!_byId.TryGetValue(id, out var client)) continue;
+                    var open = client.Link.Connection.State != GesNetworkState.Closed;
+                    handler.Handle(new GesNetworkEndEvent(GesNetworkEndEventKind.ClientConnected, id, client.Link.Connection.Security));
+                    client.Skipping = open && client.Link.Connection.State == GesNetworkState.Closed;
                 }
 
                 _reportConnected.Clear();
@@ -291,8 +300,10 @@ public sealed class GesNetworkServerEnd : IDisposable
                 var connection = client.Link.Connection;
                 client.Link.Receive(Math.Max(now, connection.Now));
 
-                // After the handler closed or refused the connection, its remaining events up to the disconnect are skipped.
-                var skipping = false;
+                // After the handler closed or refused the connection, its remaining events up to the disconnect are skipped, also
+                // after the ClientConnected event that a synchronous pair reports late.
+                var skipping = client.Skipping;
+                client.Skipping = false;
                 for (var next = connection.NextEvent(); next.Kind != GesNetworkEventKind.None; next = connection.NextEvent())
                 {
                     if (skipping && next.Kind != GesNetworkEventKind.Closed) continue;
@@ -407,5 +418,8 @@ public sealed class GesNetworkServerEnd : IDisposable
         internal readonly int Id = id;
         internal readonly IGesNetworkLink Link = link;
         internal bool Left;
+
+        // The handler closed the connection while it handled the late ClientConnected event.
+        internal bool Skipping;
     }
 }

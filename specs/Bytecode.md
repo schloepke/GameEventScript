@@ -506,6 +506,7 @@ HandlerEntry
   Parameters: ParameterEntry[]
   SignatureLabels
   RequiredTags[]
+  RequiredTagAlternatives[][]
   ExcludedTags[]
   EntryAddress
   DeclarationOrder
@@ -1186,6 +1187,8 @@ evaluate to a single tag or to a list of tags.
 Handlers may declare static tag filters:
 
 - `matching #a, #b`: all required tags must be present.
+- `matching #a | #b, #c | #d`: each alternative group needs at least one of
+  its tags present, in addition to all required tags.
 - `without #x, #y`: none of the excluded tags may be present.
 - no filter: any tag list matches as long as the message signature matches, or
   the message name matches for `MessageNameHandler` entries.

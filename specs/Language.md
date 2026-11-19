@@ -461,6 +461,24 @@ test, not an exact-set comparison: additional message tags remain allowed.
 `without` rejects the message when it contains any listed tag. With neither
 clause, all tag sets are accepted.
 
+> **Since: Unreleased** — tag alternatives
+
+An entry of a `matching` list may join tags with `|`; the message must then
+contain at least one of them. `|` binds tighter than `,`, so a filter is a
+conjunction of alternative groups:
+
+```ges
+on Obstacle(distance) matching #lidar | #ultrasonic, #front without #stale {
+  emit Brake(distance: distance)
+}
+```
+
+This handler accepts a message tagged `#lidar, #front` or `#ultrasonic, #front`,
+but neither `#front` alone nor `#lidar, #front, #stale`. A line break may follow
+`|`. A missing alternative (`matching #a |`, `matching | #a` or
+`matching #a | | #b`) is `parse.syntax`; `|` inside a `without` list is
+`validate.invalidTagFilter`, because `without` already rejects any listed tag.
+
 For example, this handler accepts both messages below:
 
 ```ges
@@ -484,10 +502,21 @@ The corresponding rules are:
 | `without #silent` | `#a, #silent` | no |
 | `matching #a without #silent` | `#a, #b` | yes |
 | `matching #a without #silent` | `#a, #silent` | no |
+| `matching #a \| #b` | `#a` or `#b` or `#a, #b` | yes |
+| `matching #a \| #b` | `#c` or none | no |
+| `matching #a \| #b, #c \| #d` | `#a, #d` | yes |
+| `matching #a \| #b, #c \| #d` | `#a, #b` | no |
+| `matching #a \| #b without #silent` | `#b, #silent` | no |
 
 The clauses may appear in either order and may be repeated; all `matching` tags
 are combined into one required set and all `without` tags into one excluded
-set. Repeating a tag has the same meaning as listing it once. Filtering never
+set, and every alternative group of every `matching` clause must be satisfied.
+Repeating a tag has the same meaning as listing it once. The compiler normalizes
+alternative groups: it removes repeated tags within a group and repeated groups,
+treats a group of one distinct tag as a required tag, and drops a group that
+contains a required tag or contains every tag of another group, because such a
+group is always satisfied when the rest of the filter is. These rules apply to
+`undeliverable` filters in the same way. Filtering never
 removes tags: the delivered message retains its complete original tag list.
 `initialization` is the exception and cannot use tag filters. Exact-signature
 and message-name handlers are both eligible for the same message; dispatch
@@ -2684,7 +2713,9 @@ parameter ::= LOWER_NAME ['as' type_reference] | '_' VARIABLE_NAME ['as' type_re
 event_handler ::= 'on' handler_endpoint [handler_binding] handler_tag_filter* '{' separators [statement (statement_separator statement)*] separators '}'
 handler_endpoint ::= MESSAGE_NAME | 'initialization' | 'undeliverable'
 handler_binding ::= '(' [parameter (',' parameter)*] ')' | 'as' VARIABLE_NAME
-handler_tag_filter ::= ('matching' | 'without') TAG_LITERAL (',' TAG_LITERAL)*
+handler_tag_filter ::= 'matching' tag_alternatives (',' tag_alternatives)*
+                     | 'without' TAG_LITERAL (',' TAG_LITERAL)*
+tag_alternatives ::= TAG_LITERAL ('|' NL* TAG_LITERAL)*
 statement_separator ::= NL | ';'
 
 statement ::= emit_statement | publish_statement | let_statement | if_statement | for_statement | seeded_random_statement | expression_statement

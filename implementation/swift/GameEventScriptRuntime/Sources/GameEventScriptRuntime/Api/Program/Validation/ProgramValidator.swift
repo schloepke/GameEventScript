@@ -20,7 +20,7 @@ enum GesProgramValidator {
         var maxRegisters: UInt16 = 0
         var maxDepth: UInt16 = 0
         for (index, binding) in p.bindings.enumerated() {
-            let textIndices = [binding.name] + binding.argumentNames + binding.requiredTags + binding.excludedTags
+            let textIndices = [binding.name] + binding.argumentNames + binding.requiredTags + binding.excludedTags + binding.requiredTagAlternatives.joined()
             if textIndices.contains(where: { Int($0) >= p.stringConstants.count }) { throw failure(.invalidStringIndex, 4, index) }
             let name = p.stringConstants[Int(binding.name)]
             let valid: Bool
@@ -41,6 +41,7 @@ enum GesProgramValidator {
             // A message-name handler receives exactly one direct `:Message` argument under the fixed synthetic label.
             if binding.kind == .messageNameHandler, binding.argumentNames.count != 1 || !GesText.scalarEqual(p.stringConstants[Int(binding.argumentNames[0])], "message") { throw failure(.invalidProgram, 4, index) }
             for tag in binding.requiredTags + binding.excludedTags { if !GesNames.plain(p.stringConstants[Int(tag)]) { throw failure(.invalidProgram, 4, index) } }
+            try validateTagAlternatives(p, binding, index)
             if binding.kind == .function || binding.kind == .predicate {
                 let signature = "\(binding.kind.rawValue):\(name)(" + binding.argumentNames.map { p.stringConstants[Int($0)] }.joined(separator: ",") + ")"
                 if !signatures.insert(signature).inserted { throw failure(.invalidProgram, 4, index) }
@@ -71,6 +72,21 @@ enum GesProgramValidator {
         try GesProgramDebugValidator.validate(p)
         try GesProgramDebugValidator.validateOpaque(p)
         try GesProgramCallGraphValidator.validate(p)
+    }
+
+    // Each alternative group of a handler holds at least two distinct tags; a single tag belongs to requiredTags.
+    private static func validateTagAlternatives(_ p: GameEventScriptProgram, _ binding: GesBindingSegment.Entry, _ index: Int) throws {
+        if binding.requiredTagAlternatives.isEmpty { return }
+        if !binding.isHandler { throw failure(.invalidProgram, 4, index) }
+        for group in binding.requiredTagAlternatives {
+            var names: [String] = []
+            for tag in group {
+                let text = p.stringConstants[Int(tag)]
+                if !GesNames.plain(text) || names.contains(where: { GesText.scalarEqual($0, text) }) { throw failure(.invalidProgram, 4, index) }
+                names.append(text)
+            }
+            if names.count < 2 { throw failure(.invalidProgram, 4, index) }
+        }
     }
 
     static func failure(_ code: GesProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil) -> GesProgramFormatError { .init(code, sectionType: section, entryIndex: entry) }

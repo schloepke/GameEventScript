@@ -1928,3 +1928,144 @@ Start:				 // handler Start(value)
 // -------------------------------------------------------------------------------
 
 ```
+
+---
+
+## Test: tag alternatives appear as groups in the bind dump
+
+This snapshot checks that a handler's `|` groups appear as `tagAlternatives` between its required and excluded tags and in the signature comment.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-alternatives
+```
+
+### Source code under test
+
+```ges
+module tagalternativesdump
+
+on Probe(value) matching #front, #lidar | #ultrasonic, #rear | #side without #stale {
+  emit Seen(value: value)
+}
+
+on Probe as probe matching #lidar | #ultrasonic | #lidar {
+  emit Any(value: probe.name)
+}
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: tagalternativesdump
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "tagalternativesdump"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Source: compile.program-dumps.tag-alternatives.ges"
+
+.segment source "compile.program-dumps.tag-alternatives.ges"
+
+module tagalternativesdump
+
+on Probe(value) matching #front, #lidar | #ultrasonic, #rear | #side without #stale {
+  emit Seen(value: value)
+}
+
+on Probe as probe matching #lidar | #ultrasonic | #lidar {
+  emit Any(value: probe.name)
+}
+
+.region-end "Source: compile.program-dumps.tag-alternatives.ges"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_value:			.text "value"
+T_front:			.text "front"
+T_stale:			.text "stale"
+T_lidar:			.text "lidar"
+T_ultrasonic:		.text "ultrasonic"
+T_rear:				.text "rear"
+T_side:				.text "side"
+T_Probe:			.text "Probe"
+T_message:			.text "message"
+T_Seen:				.text "Seen"
+T_Any:				.text "Any"
+T_name:				.text "name"
+T_tagalternativesdump:	.text "tagalternativesdump"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+Args_0:				.registers [r0]
+Args_1:				.registers [r1]
+U16_2:				.u16 [2]
+U16_3:				.u16 [2, 3, 4, 2, 5, 6]
+U16_4:				.u16 [8]
+U16_5:				.u16 []
+U16_6:				.u16 [2, 3, 4]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Probe:		.bind MessageHandler id=0 name=T_Probe args=[T_value] entry=Probe requiredTags=[T_front] tagAlternatives=[[T_lidar, T_ultrasonic], [T_rear, T_side]] excludedTags=[T_stale] // "Probe(value) matching #front, #lidar | #ultrasonic, #rear | #side without #stale"
+Handler_Probe_2:	.bind MessageNameHandler id=1 name=T_Probe args=[T_message] entry=Probe_1 tagAlternatives=[[T_lidar, T_ultrasonic]] // "Probe as message matching #lidar | #ultrasonic"
+Outbound_Seen:		.bind OutboundMessage id=0 name=T_Seen args=[T_value] // "Seen(value)"
+Outbound_Any:		.bind OutboundMessage id=1 name=T_Any args=[T_value] // "Any(value)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+.source-line "compile.program-dumps.tag-alternatives.ges" 3 | on Probe(value) matching #front, #lidar | #ultrasonic, #rear | #side without #stale {
+Probe:				 // handler Probe(value)
+					RegisterLocals #0
+
+.source-line "compile.program-dumps.tag-alternatives.ges" 4 |   emit Seen(value: value)
+					EmitMessage Outbound_Seen, Args_0 // "Seen(value)"
+
+.source-line "compile.program-dumps.tag-alternatives.ges" 3 | on Probe(value) matching #front, #lidar | #ultrasonic, #rear | #side without #stale {
+					ReturnVoid
+
+.source-line "compile.program-dumps.tag-alternatives.ges" 7 | on Probe as probe matching #lidar | #ultrasonic | #lidar {
+Probe_1:			 // handler Probe as message
+					RegisterLocals #1
+					Cast r0(probe), r0(probe), Message
+
+.source-line "compile.program-dumps.tag-alternatives.ges" 8 |   emit Any(value: probe.name)
+					MemberAccess r1, T_name, r0(probe) // "name"
+					EmitMessage Outbound_Any, Args_1 // "Any(value)"
+
+.source-line "compile.program-dumps.tag-alternatives.ges" 7 | on Probe as probe matching #lidar | #ultrasonic | #lidar {
+					ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```

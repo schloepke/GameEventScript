@@ -27,6 +27,9 @@ extension GesBinaryBuilder {
             _ = list(args.map(Int.init))
             _ = list(required.map(Int.init))
             _ = list(excluded.map(Int.init))
+            // Only a handler with `|` groups adds their encoded list, so Programs without one keep their list indexes.
+            let alternatives = binding.requiredTagAlternatives.map { $0.map(resolve) }
+            if !alternatives.isEmpty { _ = list(alternatives.flatMap { [$0.count] + $0.map(Int.init) }) }
             return GesBindingSegment.Entry(
                 kind: binding.kind,
                 name: resolve(binding.name),
@@ -36,7 +39,8 @@ extension GesBinaryBuilder {
                 requiredTags: required,
                 excludedTags: excluded,
                 requiredRegisterCount: binding.requiredRegisterCount,
-                requiredCallStackDepth: binding.requiredCallStackDepth
+                requiredCallStackDepth: binding.requiredCallStackDepth,
+                requiredTagAlternatives: alternatives
             )
         }
         let instructions = sourceCode.map { instruction in

@@ -253,7 +253,8 @@ final class GesBinaryBuilder {
                     requiredTags: d.required.map { UInt16(text($0)) },
                     excludedTags: d.excluded.map { UInt16(text($0)) },
                     requiredRegisterCount: isHandler ? UInt16(registers) : 0,
-                    requiredCallStackDepth: isHandler ? UInt16(depth) : 0
+                    requiredCallStackDepth: isHandler ? UInt16(depth) : 0,
+                    requiredTagAlternatives: d.alternatives.map { $0.map { UInt16(text($0)) } }
                 )
             )
             if options.debugInfo.contains(.symbols) {
@@ -321,7 +322,7 @@ final class GesBinaryBuilder {
             mix(UInt64(b.argumentNames.count), 4)
             for value in b.argumentNames { mix(UInt64(value), 2) }
             for value in [b.entryAddress, b.id, b.requiredRegisterCount, b.requiredCallStackDepth] { mix(UInt64(value), 2) }
-            for list in [b.requiredTags, b.excludedTags] {
+            for list in [b.requiredTags, b.excludedTags] + b.requiredTagAlternatives {
                 mix(UInt64(list.count), 4)
                 for value in list { mix(UInt64(value), 2) }
             }

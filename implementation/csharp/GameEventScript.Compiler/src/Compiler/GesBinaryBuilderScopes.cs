@@ -21,12 +21,12 @@ internal sealed partial class GesBinaryBuilder
 
     private int CurrentRoutineId => _routineStack.Count == 0 ? NoRoutineId : _routineStack.Peek();
 
-    public GesBinaryRoutineScope BeginHandler(string messageName, IReadOnlyList<string>? argumentNames = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
-        => BeginRoutine(GesBinaryBindKind.MessageHandler, messageName, argumentNames, id, requiredTags, excludedTags);
+    public GesBinaryRoutineScope BeginHandler(string messageName, IReadOnlyList<string>? argumentNames = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null, IReadOnlyList<IReadOnlyList<string>>? requiredTagAlternatives = null)
+        => BeginRoutine(DeclareRoutine(GesBinaryBindKind.MessageHandler, messageName, argumentNames, id, requiredTags, excludedTags, requiredTagAlternatives: requiredTagAlternatives));
 
-    public GesBinaryRoutineScope BeginMessageNameHandler(string messageName, string messageArgumentName = "message", ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
+    public GesBinaryRoutineScope BeginMessageNameHandler(string messageName, string messageArgumentName = "message", ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null, IReadOnlyList<IReadOnlyList<string>>? requiredTagAlternatives = null)
         // The binding records the fixed label `message`; the source name stays a local (specs/Bytecode.md#bindings).
-        => BeginRoutine(DeclareRoutine(GesBinaryBindKind.MessageNameHandler, messageName, [messageArgumentName], id, requiredTags, excludedTags, bindArgumentNames: [MessageNameHandlerLabel]));
+        => BeginRoutine(DeclareRoutine(GesBinaryBindKind.MessageNameHandler, messageName, [messageArgumentName], id, requiredTags, excludedTags, bindArgumentNames: [MessageNameHandlerLabel], requiredTagAlternatives: requiredTagAlternatives));
 
     internal const string MessageNameHandlerLabel = "message";
 
@@ -38,21 +38,21 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryRoutineScope BeginHelper(string name, IReadOnlyList<string>? argumentNames = null) => BeginRoutine(null, name, argumentNames, id: null);
 
-    private GesBinaryRoutineScope BeginRoutine(GesBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames, ushort? id, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
-        => BeginRoutine(DeclareRoutine(kind, name, argumentNames, id, requiredTags, excludedTags));
+    private GesBinaryRoutineScope BeginRoutine(GesBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames, ushort? id)
+        => BeginRoutine(DeclareRoutine(kind, name, argumentNames, id));
 
-    public RoutinePlan DeclareRoutine(GesBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null, IReadOnlyList<string>? bindArgumentNames = null)
+    public RoutinePlan DeclareRoutine(GesBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null, IReadOnlyList<string>? bindArgumentNames = null, IReadOnlyList<IReadOnlyList<string>>? requiredTagAlternatives = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Routine name must be non-empty.", nameof(name));
         if (kind is null && id.HasValue) throw new ArgumentException("Helper routines cannot have bind ids.", nameof(id));
-        if (kind is null && ((requiredTags?.Count ?? 0) > 0 || (excludedTags?.Count ?? 0) > 0)) throw new ArgumentException("Helper routines cannot have tag filters.", nameof(requiredTags));
+        if (kind is null && ((requiredTags?.Count ?? 0) > 0 || (excludedTags?.Count ?? 0) > 0 || (requiredTagAlternatives?.Count ?? 0) > 0)) throw new ArgumentException("Helper routines cannot have tag filters.", nameof(requiredTags));
 
         var parentRoutineId = CurrentRoutineId;
         var routineId = _routines.Count;
         var entryLabel = AddLabel(name);
         var routine = new RoutinePlan(routineId, parentRoutineId, kind, name, entryLabel, CopyStringList(argumentNames));
         _routines.Add(routine);
-        if (kind.HasValue) routine.Bind = AddBind(kind.Value, name, bindArgumentNames ?? routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags);
+        if (kind.HasValue) routine.Bind = AddBind(kind.Value, name, bindArgumentNames ?? routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags, requiredTagAlternatives);
 
         return routine;
     }

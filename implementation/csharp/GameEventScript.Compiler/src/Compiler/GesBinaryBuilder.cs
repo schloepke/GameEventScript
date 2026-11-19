@@ -134,11 +134,13 @@ internal sealed partial class GesBinaryBuilder
     }
 
     public GesBindRef AddBind(GesBinaryBindKind kind, string name, IReadOnlyList<string>? argumentNames = null, GesLabelRef? entryLabel = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null,
-        IReadOnlyList<string>? excludedTags = null)
+        IReadOnlyList<string>? excludedTags = null, IReadOnlyList<IReadOnlyList<string>>? requiredTagAlternatives = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Bind name must be non-empty.", nameof(name));
         if (entryLabel.HasValue) RequireLabel(entryLabel.Value);
-        var bind = new BindPlan(_binds.Count, kind, name, CopyStringList(argumentNames), entryLabel, id, CopyStringList(requiredTags), CopyStringList(excludedTags));
+        var alternatives = new string[requiredTagAlternatives?.Count ?? 0][];
+        for (var group = 0; group < alternatives.Length; group++) alternatives[group] = CopyStringList(requiredTagAlternatives![group]);
+        var bind = new BindPlan(_binds.Count, kind, name, CopyStringList(argumentNames), entryLabel, id, CopyStringList(requiredTags), CopyStringList(excludedTags), alternatives);
         _binds.Add(bind);
         return new GesBindRef(bind.Index);
     }
@@ -216,7 +218,23 @@ internal sealed partial class GesBinaryBuilder
             builder.AddUInt16Slice(argumentNames);
             builder.AddUInt16Slice(requiredTags);
             builder.AddUInt16Slice(excludedTags);
-            builder.AddBind(new GesBindingSegment.Entry(bind.Kind, resolveText(bind.Name), argumentNames, entryAddress, id, requiredTags, excludedTags, requirements.RequiredRegisterCount, requirements.RequiredCallStackDepth));
+            // Only a handler with `|` groups adds their encoded list, so Programs without one keep their list indexes.
+            ushort[][]? alternatives = null;
+            if (bind.RequiredTagAlternatives.Length > 0)
+            {
+                alternatives = new ushort[bind.RequiredTagAlternatives.Length][];
+                var encoded = new List<ushort>();
+                for (var group = 0; group < alternatives.Length; group++)
+                {
+                    alternatives[group] = ResolveTextList(bind.RequiredTagAlternatives[group], resolveText);
+                    encoded.Add(checked((ushort)alternatives[group].Length));
+                    encoded.AddRange(alternatives[group]);
+                }
+
+                builder.AddUInt16Slice([.. encoded]);
+            }
+
+            builder.AddBind(new GesBindingSegment.Entry(bind.Kind, resolveText(bind.Name), argumentNames, entryAddress, id, requiredTags, excludedTags, requirements.RequiredRegisterCount, requirements.RequiredCallStackDepth, alternatives));
         }
 
         return result;
@@ -348,6 +366,7 @@ internal sealed partial class GesBinaryBuilder
                 hash.MixUShort(bind.RequiredCallStackDepth);
                 hash.MixList(bind.RequiredTags);
                 hash.MixList(bind.ExcludedTags);
+                for (var group = 0; group < bind.RequiredTagAlternatives.Count; group++) hash.MixList(bind.RequiredTagAlternatives[group]);
             }
 
             foreach (var instruction in _instructions)
@@ -822,7 +841,7 @@ internal sealed partial class GesBinaryBuilder
         public string DisplayName => Name ?? $"L_{Id}";
     }
 
-    private sealed record BindPlan(int Index, GesBinaryBindKind Kind, string Name, IReadOnlyList<string> ArgumentNames, GesLabelRef? EntryLabel, ushort? Id, IReadOnlyList<string> RequiredTags, IReadOnlyList<string> ExcludedTags);
+    private sealed record BindPlan(int Index, GesBinaryBindKind Kind, string Name, IReadOnlyList<string> ArgumentNames, GesLabelRef? EntryLabel, ushort? Id, IReadOnlyList<string> RequiredTags, IReadOnlyList<string> ExcludedTags, string[][] RequiredTagAlternatives);
 
     private struct RegisterInterval(int registerId, int start, int end)
     {

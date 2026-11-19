@@ -129,7 +129,10 @@ public sealed class GesNetworkSocketEndTests
             .Network("Game").Bind();
 
     // A TCP client end and server end whose transfer limits differ.
-    private static (GesNetworkClientEnd Client, GesNetworkServerEnd Server) BulkEnds(long clientTransfer, long serverTransfer)
+    private static (GesNetworkClientEnd Client, GesNetworkServerEnd Server) BulkEnds(long clientTransfer, long serverTransfer) =>
+        BulkEnds(clientTransfer, serverTransfer, out _);
+
+    private static (GesNetworkClientEnd Client, GesNetworkServerEnd Server) BulkEnds(long clientTransfer, long serverTransfer, out int port)
     {
         var serverOptions = Options(GesNetworkTransport.Stream);
         serverOptions.MaxTransferBytes = serverTransfer;
@@ -138,7 +141,8 @@ public sealed class GesNetworkSocketEndTests
         var listener = GesNetworkSocketListener.ListenTcp(new IPEndPoint(IPAddress.Loopback, 0), Bulk(), serverOptions);
         var clock = new GesSystemClock();
         var server = new GesNetworkServerEnd(Bulk(), listener, clock);
-        var client = new GesNetworkClientEnd(Bulk(), GesNetworkSocketConnector.Tcp("127.0.0.1", listener.LocalEndPoint.Port), clientOptions, default, clock);
+        port = listener.LocalEndPoint.Port;
+        var client = new GesNetworkClientEnd(Bulk(), GesNetworkSocketConnector.Tcp("127.0.0.1", port), clientOptions, default, clock);
         return (client, server);
     }
 
@@ -172,6 +176,32 @@ public sealed class GesNetworkSocketEndTests
         Assert.AreEqual(GesNetworkSendStatus.Queued, server.Send(1, [1, 2]));
         await Run(client, clientEvents, server, serverEvents, () => clientEvents.Events.Contains("message 1 0102"));
         CollectionAssert.AreEqual(new[] { "Connected", "message 1 0102" }, clientEvents.Events);
+    }
+
+    [TestMethod]
+    public async Task ASendToEveryClientBeyondOneClientsLimitReachesNone()
+    {
+        var (client, server) = BulkEnds(4, 1000, out var port);
+        using var clientEnd = client;
+        using var serverEnd = server;
+        var options = Options(GesNetworkTransport.Stream);
+        options.MaxTransferBytes = 1000;
+        using var second = new GesNetworkClientEnd(Bulk(), GesNetworkSocketConnector.Tcp("127.0.0.1", port), options, default, new GesSystemClock());
+        var clientEvents = new Recorder();
+        var secondEvents = new Recorder();
+        var serverEvents = new Recorder();
+        bool PollSecond(Func<bool> done)
+        {
+            second.Poll(ref secondEvents);
+            return done();
+        }
+
+        await Run(client, clientEvents, server, serverEvents, () => PollSecond(() => serverEvents.Events.Count(entry => entry == "ClientConnected") == 2 && secondEvents.Events.Contains("Connected")));
+        // The second client's limit takes the payload; the first one's does not, so neither receives it.
+        Assert.AreEqual(GesNetworkSendStatus.MessageTooLarge, server.Send(1, [1, 2, 3, 4, 5, 6]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, server.Send(1, [1, 2]));
+        await Run(client, clientEvents, server, serverEvents, () => PollSecond(() => clientEvents.Events.Contains("message 1 0102") && secondEvents.Events.Contains("message 1 0102")));
+        CollectionAssert.AreEqual(new[] { "Connected", "message 1 0102" }, secondEvents.Events, string.Join(" | ", secondEvents.Events));
     }
 
     [TestMethod]

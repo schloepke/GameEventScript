@@ -515,7 +515,8 @@ extension GesNetworkConnection {
         ackDue = false
         probeDue = false
         asksSinceSend = 0
-        if position > start && budget > 0 { budgetUnits -= Int64(position) * Self.microsecondsPerSecond }
+        // A sealed packet also spends its type byte and tag.
+        if position > start && budget > 0 { budgetUnits -= Int64(position + (encrypted ? Self.sealedOverhead : 0)) * Self.microsecondsPerSecond }
         return position
     }
 

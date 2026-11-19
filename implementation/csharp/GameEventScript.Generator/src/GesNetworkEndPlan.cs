@@ -84,6 +84,26 @@ internal sealed class GesNetworkEndPlan
             GesSchemaPlanner.Unique($"{network.Name}.{end.Name}", [("Topic", $"{GesSchemaPlanner.NestedTypeOrigin}of the {side} topics"), ("Tick", $"{GesSchemaPlanner.NestedTypeOrigin}of the {side} ticks")], topLevel);
         }
 
+        if (!swift)
+        {
+            // C# forbids a member named like its enclosing type, so no member of the network class may take the network's name.
+            names.Add(("Hash", "the network hash constant"));
+            names.Add(("Bound", "the bound network property"));
+            foreach (var route in network.Routes)
+            {
+                var label = $"the route {route.Side} {route.Verb} :{route.Root}";
+                names.Add((route.Name, $"the index constant of {label}"));
+                if (route.RateMicroseconds != 0) names.Add((route.Name + "EveryMicroseconds", $"the rate constant of {label}"));
+                names.Add(($"{GesSchemaPlanner.Pascal(route.Side)}{(route.Verb == "publishes" ? "Publish" : "Send")}{route.Root}", $"the function of {label}"));
+            }
+
+            foreach (var (name, origin) in names)
+            {
+                if (name == network.Name)
+                    throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{network.Name}', {origin} is generated as '{name}', the name of the network class that holds it.");
+            }
+        }
+
         GesSchemaPlanner.Unique(network.Name, names, topLevel);
     }
 }

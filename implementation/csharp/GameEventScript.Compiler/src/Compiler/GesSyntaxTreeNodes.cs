@@ -110,7 +110,8 @@ internal sealed record GesEventHandlerNode(
     IReadOnlyList<GesParameterNode> ParameterList,
     IReadOnlyList<GesStatementNode> Statements,
     IReadOnlyList<string>? RequiredTags = null,
-    IReadOnlyList<string>? ExcludedTags = null) : GesScriptNode
+    IReadOnlyList<string>? ExcludedTags = null,
+    IReadOnlyList<IReadOnlyList<string>>? RequiredTagAlternatives = null) : GesScriptNode
 {
     public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
 
@@ -119,6 +120,9 @@ internal sealed record GesEventHandlerNode(
     public IReadOnlyList<string> MatchingTags { get; } = RequiredTags ?? [];
 
     public IReadOnlyList<string> WithoutTags { get; } = ExcludedTags ?? [];
+
+    // The `|` groups of the matching filters, each of at least two tags; empty without any.
+    public IReadOnlyList<IReadOnlyList<string>> MatchingAlternatives { get; } = RequiredTagAlternatives ?? [];
 }
 
 internal sealed record GesTypeDefinitionNode(string Name, IReadOnlyList<GesTypeFieldDefinitionNode> Fields) : GesScriptNode;

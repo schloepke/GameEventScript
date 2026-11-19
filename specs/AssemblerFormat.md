@@ -133,10 +133,11 @@ The syntax is:
 
 ```text
 label: .bind Kind id=(unsigned|none) name=TextLabel args=[TextLabel, ...]
-       [entry=CodeLabel] [requiredTags=[TextLabel, ...]] [excludedTags=[TextLabel, ...]]
+       [entry=CodeLabel] [requiredTags=[TextLabel, ...]]
+       [tagAlternatives=[[TextLabel, ...], ...]] [excludedTags=[TextLabel, ...]]
 ```
 
-The `entry` field is present only when the bind has an entry address. Tag fields are emitted only when non-empty. The trailing comment resolves the logical signature and tag constraints.
+The `entry` field is present only when the bind has an entry address. Tag fields are emitted only when non-empty; `tagAlternatives` lists each alternative group in order. The trailing comment resolves the logical signature and tag constraints, writing each group as `#a | #b` inside the `matching` list.
 
 Bind-label prefixes are `Handler`, `Function`, `Predicate`, `Extension`, `Outbound`, `Record`, and `ExternalType`. Unrecognized kinds use `Bind`. Labels derive from the binding name where possible and are made unique by numeric suffixes.
 

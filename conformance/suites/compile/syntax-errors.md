@@ -2643,3 +2643,114 @@ error:
   line: 2
   column: 20
 ```
+
+---
+
+## Test: a tag alternative without a right side
+
+A `|` in a `matching` list needs a tag after it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-alternatives-trailing
+kind: compileError
+level: atomic
+sources:
+  - name: "a tag alternative without a right side.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start matching #a | {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 1
+  column: 24
+```
+
+---
+
+## Test: a tag alternative without a left side
+
+A `matching` list cannot start with `|`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-alternatives-leading
+kind: compileError
+level: atomic
+sources:
+  - name: "a tag alternative without a left side.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start matching | #a {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 1
+  column: 19
+```
+
+---
+
+## Test: an empty tag alternative
+
+Two `|` in a row leave an empty alternative.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-alternatives-empty
+kind: compileError
+level: atomic
+sources:
+  - name: "an empty tag alternative.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start matching #a | | #b {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 1
+  column: 24
+```

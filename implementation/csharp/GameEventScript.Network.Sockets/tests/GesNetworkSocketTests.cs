@@ -385,7 +385,17 @@ public sealed class GesNetworkSocketTests
         {
             server.Update(Now);
             var status = server.Connection.Send(Blob, blob);
-            if (status == GesNetworkSendStatus.QueueFull) return;
+            if (status == GesNetworkSendStatus.QueueFull)
+            {
+                // The close packet leaves past the full socket's bound and reaches the client behind every queued message.
+                server.Connection.Close("done");
+                server.Transmit();
+                var last = "";
+                while (!last.StartsWith("closed", StringComparison.Ordinal) && Clock.Elapsed < deadline + Limit) last = Await(client, server);
+                Assert.AreEqual("closed network.closed peer", last);
+                return;
+            }
+
             Assert.AreEqual(GesNetworkSendStatus.Queued, status);
         }
 

@@ -17,8 +17,8 @@ function section(type, payload, { flags = 1, version = 1 } = {}) {
     return Buffer.concat([u16(type), u16(flags), u16(version), u16(0), u32(payload.length), payload]);
 }
 
-function binding(kind, id, name, args, { required = 0xFFFF, excluded = 0xFFFF, entry = 0xFFFF, registers = 0, depth = 0 } = {}) {
-    return Buffer.concat([Buffer.from([kind, 0]), ...[id, name, args, required, excluded, entry, registers, depth, 0].map(u16)]);
+function binding(kind, id, name, args, { required = 0xFFFF, excluded = 0xFFFF, entry = 0xFFFF, registers = 0, depth = 0, alternatives = null } = {}) {
+    return Buffer.concat([Buffer.from([kind, alternatives === null ? 0 : 1]), ...[id, name, args, required, excluded, entry, registers, depth, alternatives ?? 0].map(u16)]);
 }
 
 function file(...sections) {
@@ -102,6 +102,22 @@ test('renders the groups and escapes every value from the file', () => {
     assert.ok(!html.includes('<b>'));
     assert.ok(!html.includes('<script'));
     assert.equal(html.match(/class="line"/g).length, 4);
+});
+
+test('tag alternatives are read as groups and shown with |', () => {
+    const strings = Buffer.concat([u32(5), ...['m', 'Hit', 'a', 'b', 'c'].map(text)]);
+    const lists = Buffer.concat([u32(2), u32(1), u16(4), u32(3), u16(2), u16(2), u16(3)]);
+    const metadata = Buffer.concat([u16(0), u16(1), u16(1), u16(0), Buffer.alloc(8)]);
+    const bindings = Buffer.concat([u32(1), binding(0x11, 0, 1, 0xFFFF, { required: 0, entry: 0, alternatives: 1 })]);
+    const program = readGesb(file(section(0x0001, metadata), section(0x0002, strings), section(0x0003, lists), section(0x0004, bindings), section(0x0010, u32(0))));
+    assert.deepEqual(program.problems, []);
+    assert.deepEqual(program.bindings[0].tagAlternatives, [['a', 'b']]);
+    assert.match(renderBody(program, null), /matching c, a \| b/);
+    const broken = readGesb(file(section(0x0002, strings), section(0x0003, lists), section(0x0004, Buffer.concat([u32(1), binding(0x11, 0, 1, 0xFFFF, { alternatives: 2 })]))));
+    assert.match(broken.problems.map(item => item.message).join('\n'), /list 2/);
+    const malformed = Buffer.concat([u32(1), u32(2), u16(3), u16(2)]);
+    const cut = readGesb(file(section(0x0002, strings), section(0x0003, malformed), section(0x0004, Buffer.concat([u32(1), binding(0x11, 0, 1, 0xFFFF, { alternatives: 0 })]))));
+    assert.match(cut.problems.map(item => item.message).join('\n'), /malformed/);
 });
 
 test('highlighted sources keep one element per line', () => {

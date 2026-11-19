@@ -60,13 +60,19 @@ public sealed partial class GesNetworkConnection
         if (!IsValidCode(code)) throw new ArgumentException("A code holds 1 to 64 characters from '!' to '~'.", nameof(code));
         if (State != GesNetworkState.Connected || (uint)transferId > ushort.MaxValue) return false;
         if (!_sendBulk.FindTransfer(route, (ushort)transferId, out var index) || (_datagram && index < _sendBulk.Cursor)) return false;
+        CancelAt(route, (ushort)transferId, index, code);
+        return true;
+    }
+
+    // Cancels the queued transfer at the index of the send queue: the caller checked the connection, the id and the code.
+    private void CancelAt(int route, ushort transferId, int index, string code)
+    {
         // On a stream the started transfer is the head; its written bytes are no longer reported. The stream writes the
         // cancel frame when the placeholder reaches the head; a datagram transport sends it at once.
         if (!_datagram && index == 0 && _sendBulk.Started) _written.CancelNewest();
         CancelQueued(index, code);
-        if (_datagram && !QueueCancel(route, (ushort)transferId, code)) return true;
+        if (_datagram && !QueueCancel(route, transferId, code)) return;
         if (!AddEvent(GesNetworkEventKind.TransferCancelled, route, default, Counter.None, code, string.Empty, false, transferId)) Fail(GesNetworkCodes.QueueFull);
-        return true;
     }
 
     // Turns a queued transfer into a cancelled placeholder; a datagram transport moves its cursor past it and removes it
@@ -110,14 +116,17 @@ public sealed partial class GesNetworkConnection
     // cancelled at once with network.transferTooLarge.
     internal void PassTransfer(int route, ReadOnlySpan<byte> data)
     {
+        if (State != GesNetworkState.Connected) return;
         if (data.Length <= _peerTransferLimit)
         {
             QueueTransfer(route, data);
             return;
         }
 
+        // The placeholder is the newest entry and not yet sent, so it is found behind the datagram cursor.
         QueueTransfer(route, default);
-        Cancel(route, LastTransferId, GesNetworkCodes.TransferTooLarge);
+        _sendBulk.FindTransfer(route, (ushort)LastTransferId, out var index);
+        CancelAt(route, (ushort)LastTransferId, index, GesNetworkCodes.TransferTooLarge);
     }
 
     private void QueueTransfer(int route, ReadOnlySpan<byte> data)

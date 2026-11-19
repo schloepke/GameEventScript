@@ -245,12 +245,15 @@ public final class GesNetworkClientEnd {
             }
             try link.receive(now: now)
             var received = false
+            // After the handler closed the connection, its remaining events up to the disconnect are skipped, also after the
+            // Connected event that a synchronous pair reports late.
+            var skipping = false
             if reportConnected && report {
                 reportConnected = false
+                let open = connection.state != .closed
                 try handler(GesNetworkEndEvent(.connected, client: -1, security: connection.security))
+                skipping = open && connection.state == .closed
             }
-            // After the handler closed the connection, its remaining events up to the disconnect are skipped.
-            var skipping = false
             while true {
                 let next = connection.nextEvent()
                 if next.kind == .none { break }

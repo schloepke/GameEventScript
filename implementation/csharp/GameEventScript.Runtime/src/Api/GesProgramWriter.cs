@@ -200,8 +200,9 @@ internal static class GesProgramWriter
         for (var index = 0; index < program.Bindings.Entries.Count; index++)
         {
             var bind = program.Bindings.Entries[index];
+            var alternatives = bind.RequiredTagAlternatives.Count > 0;
             writer.WriteByte((byte)bind.Kind);
-            writer.WriteByte(0);
+            writer.WriteByte(alternatives ? GesBindingSegment.TagAlternativesFlag : (byte)0);
             writer.WriteUInt16(bind.Id);
             writer.WriteUInt16(bind.Name);
             writer.WriteUInt16(FindList(lists, bind.ArgumentNames));
@@ -210,7 +211,7 @@ internal static class GesProgramWriter
             writer.WriteUInt16(bind.EntryAddress);
             writer.WriteUInt16(bind.RequiredRegisterCount);
             writer.WriteUInt16(bind.RequiredCallStackDepth);
-            writer.WriteUInt16(0);
+            writer.WriteUInt16(alternatives ? FindList(lists, GesBindingSegment.FlattenTagAlternatives(bind.RequiredTagAlternatives)) : (ushort)0);
         }
     }
 

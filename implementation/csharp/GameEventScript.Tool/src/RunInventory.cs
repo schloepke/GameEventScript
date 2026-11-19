@@ -83,7 +83,7 @@ internal sealed class RunInventory(GameEventScriptHost host, RunWorkspace worksp
                 var signature = binding.Kind == GesBinaryBindKind.MessageNameHandler
                     ? name + "(...) [name-only]"
                     : GesMessageSignature.CreateSignatureId(name, binding.ArgumentNames.Select(index => strings.Resolve(index))) + " [signature]";
-                var tags = Tags(" matching ", binding.RequiredTags, strings) + Tags(" without ", binding.ExcludedTags, strings);
+                var tags = Matching(binding, strings) + Tags(" without ", binding.ExcludedTags, strings);
                 lines.Add($"  {entry.Id}  {entry.Instance.Program.ModuleName}  {signature}{tags}");
             }
         }
@@ -195,6 +195,15 @@ internal sealed class RunInventory(GameEventScriptHost host, RunWorkspace worksp
 
     private static string Tags(string prefix, GesReadOnlyArray<ushort> tags, GesStringConstantSegment strings)
         => tags.Count == 0 ? string.Empty : prefix + string.Join(", ", tags.Select(index => "#" + strings.Resolve(index)));
+
+    // Required tags first, then each `|` group, as one `matching` clause.
+    private static string Matching(GesBindingSegment.Entry binding, GesStringConstantSegment strings)
+    {
+        var groups = binding.RequiredTags.Select(index => "#" + strings.Resolve(index))
+            .Concat(binding.RequiredTagAlternatives.Select(group => string.Join(" | ", group.Select(index => "#" + strings.Resolve(index)))))
+            .ToArray();
+        return groups.Length == 0 ? string.Empty : " matching " + string.Join(", ", groups);
+    }
 
     internal sealed record LoadedProgram(int Id, GesProgramInstance Instance, string[] Paths);
     private sealed record NativeHandler(string Name, GesSubscription Subscription);

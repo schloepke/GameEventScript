@@ -118,13 +118,12 @@ const segmentReaders = new Map([
     })],
     [0x0004, payload => repeat(payload.count(20, MAX_ENTRIES), () => {
         const kind = payload.u8();
-        payload.skip(1);
-        const entry = {
-            kind, id: payload.u16(), nameIndex: payload.u16(), argumentsList: payload.u16(), requiredList: payload.u16(),
+        const flags = payload.u8();
+        return {
+            kind, flags, id: payload.u16(), nameIndex: payload.u16(), argumentsList: payload.u16(), requiredList: payload.u16(),
             excludedList: payload.u16(), entry: payload.u16(), registers: payload.u16(), callDepth: payload.u16(),
+            alternativesList: payload.u16(),
         };
-        payload.skip(2);
-        return entry;
     })],
     [0x0010, payload => {
         const instructions = payload.count(16, MAX_ENTRIES);
@@ -288,6 +287,27 @@ function readGesb(bytes) {
         }
         return textLists.get(index);
     };
+    // Flags bit 0x01 marks tag alternatives: one list of groups, each its tag count
+    // followed by that many text indexes.
+    const alternatives = entry => {
+        if ((entry.flags & 1) === 0) return [];
+        if (entry.alternativesList >= lists.length) {
+            problem(`A reference names list ${entry.alternativesList}, which does not exist.`);
+            return [];
+        }
+        const flat = lists[entry.alternativesList];
+        const groups = [];
+        for (let offset = 0; offset < flat.length && groups.length < MAX_SHOWN_LIST_ENTRIES;) {
+            const count = flat[offset];
+            if (count === 0 || offset + 1 + count > flat.length) {
+                problem(`Tag alternatives list ${entry.alternativesList} is malformed.`);
+                break;
+            }
+            groups.push(flat.slice(offset + 1, offset + 1 + count).slice(0, MAX_SHOWN_LIST_ENTRIES).map(text));
+            offset += 1 + count;
+        }
+        return groups;
+    };
     const metadata = contents.get(0x0001);
     if (metadata) {
         program.module = text(metadata.moduleNameIndex);
@@ -307,8 +327,8 @@ function readGesb(bytes) {
         kind: BINDING_KINDS.get(entry.kind) ?? `0x${entry.kind.toString(16).padStart(2, '0')}`,
         id: entry.id === NO_INDEX ? null : entry.id,
         name: text(entry.nameIndex), arguments: textList(entry.argumentsList),
-        requiredTags: textList(entry.requiredList), excludedTags: textList(entry.excludedList),
-        entry: entry.entry === NO_INDEX ? null : entry.entry,
+        requiredTags: textList(entry.requiredList), tagAlternatives: alternatives(entry),
+        excludedTags: textList(entry.excludedList), entry: entry.entry === NO_INDEX ? null : entry.entry,
         registers: entry.registers, callDepth: entry.callDepth,
         location: locate(entry.entry, nextAddresses.get(entry.entry), sourceMap),
     }));

@@ -68,8 +68,9 @@ enum GesProgramWriter {
         try out.section(4, flags: 1, size: 4 + 20 * p.bindings.count)
         try out.length(p.bindings.count)
         for binding in p.bindings {
+            let alternatives = !binding.requiredTagAlternatives.isEmpty
             try out.u8(binding.kind.rawValue)
-            try out.u8(0)
+            try out.u8(alternatives ? GesBindingSegment.tagAlternativesFlag : 0)
             try out.u16(binding.id)
             try out.u16(binding.name)
             try out.u16(findList(binding.argumentNames))
@@ -78,7 +79,7 @@ enum GesProgramWriter {
             try out.u16(binding.entryAddress)
             try out.u16(binding.requiredRegisterCount)
             try out.u16(binding.requiredCallStackDepth)
-            try out.u16(0)
+            try out.u16(alternatives ? findList(GesBindingSegment.flattenTagAlternatives(binding.requiredTagAlternatives)) : 0)
         }
         try out.section(16, flags: 1, size: 4 + 16 * p.code.count)
         try out.length(p.code.count)

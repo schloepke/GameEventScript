@@ -286,7 +286,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
     {
         foreach (var binding in program.Bindings.Entries)
         {
-            if (binding.RequiredTags.Count > 0 || program.StringConstants.Resolve(binding.Name) != "Main") continue;
+            if (binding.RequiredTags.Count > 0 || binding.RequiredTagAlternatives.Count > 0 || program.StringConstants.Resolve(binding.Name) != "Main") continue;
             if (binding.Kind == GesBinaryBindKind.MessageNameHandler) return true;
             if (binding.Kind == GesBinaryBindKind.MessageHandler && binding.ArgumentNames.Count == 1 && program.StringConstants.Resolve(binding.ArgumentNames[0]) == "args") return true;
         }

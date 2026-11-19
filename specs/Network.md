@@ -1095,7 +1095,8 @@ further UDP `hello` packets. A client the host takes frees its place.
 
 A socket session hands its socket about 256 KiB of packets that are not yet written and
 then stops. Further packets wait in the connection, so a peer that reads slowly fills the
-connection's send queue and `send` reports `queueFull`.
+connection's send queue and `send` reports `queueFull`. The close packet of a closed
+connection passes that bound, so closing always reaches the socket.
 
 An insecure test key seed derives a connection's ephemeral keys from a known value, so
 anyone who knows it reads the session; it exists only for tests and golden bytes. The
@@ -1185,8 +1186,9 @@ before `connected` and passes them to the connection when it connects: reliable 
 messages in order, the newest state of each latest route and the newest closed tick. The
 kept reliable bytes obey the connection's send queue limit, and the kept transfers its
 limits for queued transfers against this side's transfer limit, each counted uncompressed
-with its header; a send that does not fit reports `queueFull`. Closing drops what is
-kept.
+with its header; a send that does not fit reports `queueFull`. A kept transfer beyond the
+transfer limit the server announces keeps its place in the transfer ids and is cancelled
+at once with `network.transferTooLarge`. Closing drops what is kept.
 
 **Server.** The server end accepts a `connecting` client after its event unless the
 handler accepted or refused it, also when the handler throws. Each client gets a stable end-local id, which events carry and
@@ -1194,8 +1196,8 @@ per-client calls take; an unknown id is a usage error. By default the server end
 subscribes every connected client to every topic it publishes; the host can turn that
 off when it creates the end and subscribes and unsubscribes topics per client at any
 time. `publish` and ticks reach every connected, subscribed client; `send` without a
-client reaches every connected client and reports `queueFull` when the queue of some
-client is full. The server end keeps the last published state of each latest topic: a
+client reaches every connected client. Both report `messageTooLarge` when the payload
+exceeds the limits of some client, else `queueFull` when the queue of some client is full. The server end keeps the last published state of each latest topic: a
 tick that includes a topic gives a client that has not received that state the state
 itself, so a client that joined later holds the complete world after its first tick. A
 client that connects while a tick is open joins it. A closed client leaves the end after

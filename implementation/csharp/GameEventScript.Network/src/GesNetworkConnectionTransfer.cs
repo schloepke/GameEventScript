@@ -101,7 +101,27 @@ public sealed partial class GesNetworkConnection
         // the new id stays within the receive window of the oldest open one.
         if (_datagram && _cancels.Count > 0 && _cancels.OwnSpan(_nextBulkId, _localSends) >= GesNetworkSendQueue.MaximumStarted)
             return GesNetworkSendStatus.QueueFull;
+        QueueTransfer(route, data);
+        return GesNetworkSendStatus.Queued;
+    }
 
+    // Passes a transfer a client end kept before the handshake. The end bounded its kept transfers by this side's
+    // limits, so the queue bounds do not apply; a transfer larger than the peer's transfer limit keeps its id and is
+    // cancelled at once with network.transferTooLarge.
+    internal void PassTransfer(int route, ReadOnlySpan<byte> data)
+    {
+        if (data.Length <= _peerTransferLimit)
+        {
+            QueueTransfer(route, data);
+            return;
+        }
+
+        QueueTransfer(route, default);
+        Cancel(route, LastTransferId, GesNetworkCodes.TransferTooLarge);
+    }
+
+    private void QueueTransfer(int route, ReadOnlySpan<byte> data)
+    {
         var id = _nextBulkId++;
         var header = 1 + Wire.VarintSize64((ulong)data.Length) + Wire.HashBytes;
         var message = _sendBulk.Reserve(route, header + data.Length, -1, id);
@@ -127,7 +147,6 @@ public sealed partial class GesNetworkConnection
         Hash(data, message.Slice(position, Wire.HashBytes));
         _peerCancelled[id >> 6] &= ~(1UL << (id & 63));
         LastTransferId = id;
-        return GesNetworkSendStatus.Queued;
     }
 
     // SHA-256 of the data; netstandard2.1 has no static one-shot hash.

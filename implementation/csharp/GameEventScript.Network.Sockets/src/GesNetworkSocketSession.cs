@@ -311,7 +311,8 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
         var more = true;
         while (more)
         {
-            if (Interlocked.Read(ref _unwritten) >= UnwrittenBytes)
+            // A closed connection holds only its close packet, which leaves past the bound.
+            if (Connection.State != GesNetworkState.Closed && Interlocked.Read(ref _unwritten) >= UnwrittenBytes)
             {
                 Hold();
                 break;

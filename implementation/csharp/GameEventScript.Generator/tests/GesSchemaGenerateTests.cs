@@ -70,6 +70,25 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
+    public void NetworkTypesHideNoTopLevelType()
+    {
+        // A network nests its typed ends, their handler or event types and, in an end that publishes, Topic and Tick; each
+        // would hide a root, a tag set or the network of its name for the code inside.
+        static string Network(string root, string network, string verb = "publishes")
+            => $"wire schema :{root} as {{\n  x: :Number integer between 0 and 255\n}}\nnetwork :{network} as {{\n  server {verb} :{root} reliable\n}}\n";
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            foreach (var (root, network) in new[] { ("Client", "Game"), ("Server", "Game"), ("Topic", "Game"), ("Tick", "Game"), ("Chunk", "Client"), ("Chunk", "Server") })
+                Assert.AreEqual("generate.nameCollision", Code(() => Generate(Network(root, network), network, language)), $"{root} in {network}");
+            StringAssert.Contains(Generate(Network("Topic", "Game", "sends"), "Game", language), "Game");
+            Assert.AreEqual("generate.nameCollision", Code(() => Generate(Network("Chunk", language == GesSchemaLanguage.Swift ? "ServerEvent" : "IServerHandler"), language == GesSchemaLanguage.Swift ? "ServerEvent" : "IServerHandler", language)));
+        }
+
+        StringAssert.Contains(Generate(Network("ClientEvent", "Game"), "Game", GesSchemaLanguage.CSharp), "ClientEvent");
+        StringAssert.Contains(Generate(Network("IClientHandler", "Game"), "Game", GesSchemaLanguage.Swift), "IClientHandler");
+    }
+
+    [TestMethod]
     public void PackedRootsReserveTheirWireMembers()
     {
         // Wire code that declares a packed root extends its type with the wire members, which its fields must not take.

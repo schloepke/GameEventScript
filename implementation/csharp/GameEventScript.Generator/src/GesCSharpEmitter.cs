@@ -99,6 +99,7 @@ internal static partial class GesCSharpEmitter
         if (options.Models is not null) GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
         schemaSet?.Reserve(context.TopLevel);
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: false);
+        foreach (var network in layout.Networks) GesNetworkEndPlan.CheckNested(network, context.TopLevel, swift: false);
         if (schemaSet?.Declared is { } setName)
             document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteCSharp(code, setName, access, layout.Sources, layout.Parameters, layout.Networks.Count > 0)));
         else if (options.Values && schemaSet is null) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));

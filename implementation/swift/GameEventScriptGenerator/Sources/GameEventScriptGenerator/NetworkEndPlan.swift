@@ -36,4 +36,24 @@ struct GesNetworkEndPlan {
         try GesSchemaPlanner.unique("\(network.name).\(plan.name)", names)
         return plan
     }
+
+    // The types that the emitters nest in a network and its typed ends hide every top-level type of their name for the code
+    // inside, which names roots, tag sets and the network itself: Swift without qualification, C# through the namespace, whose
+    // network class must not contain a member of its own name. Both ports and languages reject such a hiding alike.
+    static func checkNested(_ network: GesLayoutNetwork, _ topLevel: Set<String>, swift: Bool) throws(GesGeneratorError) {
+        var names: [(name: String, origin: String)] = []
+        for client in [true, false] {
+            let end = try plan(network, client: client)
+            let side = client ? "client" : "server"
+            names.append((end.name, "\(GesSchemaPlanner.nestedTypeOrigin)of the \(side) end"))
+            names.append((swift ? end.name + "Event" : "I\(end.name)Handler", "\(GesSchemaPlanner.nestedTypeOrigin)of the \(side) \(swift ? "events" : "handler")"))
+            guard end.hasTopics else { continue }
+            try GesSchemaPlanner.unique(
+                "\(network.name).\(end.name)",
+                [("Topic", "\(GesSchemaPlanner.nestedTypeOrigin)of the \(side) topics"), ("Tick", "\(GesSchemaPlanner.nestedTypeOrigin)of the \(side) ticks")],
+                topLevel
+            )
+        }
+        try GesSchemaPlanner.unique(network.name, names, topLevel)
+    }
 }

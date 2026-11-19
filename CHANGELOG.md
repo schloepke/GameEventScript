@@ -21,7 +21,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - The Network Sockets package (C# `GameEventScript.Network.Sockets` on .NET 8; Swift `GameEventScriptNetworkSockets`
   over SwiftNIO) carries a session over TCP or WebSocket, including `wss` clients. Its listeners hold at most 64
   waiting clients, at most 8 per IP address. A session hands its socket about 256 KiB of unwritten packets, so a peer
-  that reads slowly fills the send queue and `Send` reports `QueueFull`.
+  that reads slowly fills the send queue and `Send` reports `QueueFull`; the close packet still leaves.
 - `ges schema generate --root <Network>` writes the wire types of a network's routes and one type with the network
   hash, a route index per route, the rate of each `at most every` route and a typed function per route that encodes
   its root into a buffer and sends or publishes it (`ServerPublishWorld`, Swift `serverPublishWorld`;
@@ -75,7 +75,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   literal is read where the longer one would not complete a unit, as in `5m*x` (specs/Language.md#quantities).
 - Network ends (specs/Network.md#ends): `GesNetworkClientEnd` and `GesNetworkServerEnd` drive their connections over a
   plug-in transport (`IGesNetworkConnector`, `IGesNetworkAcceptor`, `IGesNetworkLink`; Swift protocols) and an
-  injectable clock, accept sends before the handshake within the connection's limits, accept clients unless the
+  injectable clock, accept sends before the handshake within the connection's limits (a kept transfer beyond the
+  peer's transfer limit is cancelled with `network.transferTooLarge`), report `MessageTooLarge` for a server broadcast
+  beyond some client's limit, accept clients unless the
   handler refuses them, skip a connection's remaining events of a poll after the handler closes it and report
   everything as end events through `Poll`. `GesNetworkPair.Synchronous` and `Realtime` connect two ends in one process
   and replace the loopback; `GesNetworkSocketConnector` opens TCP, WebSocket and UDP ends, and `Wait`/`WaitAsync`
@@ -86,7 +88,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   disposed.
 - Typed ends (specs/Schemas.md#typed-ends): `ges schema generate --root <Network>` adds `Game.Client` and `Game.Server`
   with typed `Send`/`Publish`, server ticks, a handler interface (Swift an event enum) with one method per received
-  route; an undecodable payload closes the connection, whose later events the handler no longer sees. Message sets gain a `Case` type with `ToCase()` and `Assign`
+  route; an undecodable payload closes the connection, whose later events the handler no longer sees. A root, tag set or
+  network named like a type nested in the network (`Client`, `Topic`, ...) fails with `generate.nameCollision`. Message sets gain a `Case` type with `ToCase()` and `Assign`
   (Swift `enum Case`, `asCase`, `assign(_:)`).
 
 ### Changed

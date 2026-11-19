@@ -92,8 +92,8 @@ public final class GesNetworkServerEnd {
     /// - Parameters:
     ///   - route: The route index of a `publishes` route of the server.
     ///   - payload: The full record of the topic's schema; the bytes are copied.
-    /// - Returns: `queued`; `queueFull` when the queue of some client is full; or the status of an invalid route or
-    ///   payload. Clients that are not connected or not subscribed are skipped.
+    /// - Returns: `queued`; `messageTooLarge` when the payload exceeds the limit of some client; `queueFull` when the
+    ///   queue of some client is full; or the status of an invalid route or payload. Clients that are not connected or not subscribed are skipped.
     public func publish(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus {
         var status = checker.check(route, payload.count, publish: true)
         if status != .queued { return status }
@@ -103,7 +103,7 @@ public final class GesNetworkServerEnd {
             hasKept[route] = true
             if tickOpen { members[route] = true }
         }
-        for client in clients where client.link.connection.publish(route: route, payload: payload) == .queueFull { status = .queueFull }
+        for client in clients { status = Self.merge(status, client.link.connection.publish(route: route, payload: payload)) }
         return after(status)
     }
 
@@ -125,8 +125,18 @@ public final class GesNetworkServerEnd {
     public func send(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus {
         var status = checker.check(route, payload.count, publish: false)
         if status != .queued { return status }
-        for client in clients where client.link.connection.send(route: route, payload: payload) == .queueFull { status = .queueFull }
+        for client in clients { status = Self.merge(status, client.link.connection.send(route: route, payload: payload)) }
         return after(status)
+    }
+
+    // The status of a send to every client: messageTooLarge when the payload exceeds the limit of some client, else
+    // queueFull when the queue of some client is full; clients that are not connected or not subscribed are skipped.
+    private static func merge(_ status: GesNetworkSendStatus, _ client: GesNetworkSendStatus) -> GesNetworkSendStatus {
+        switch client {
+        case .messageTooLarge: return client
+        case .queueFull where status == .queued: return client
+        default: return status
+        }
     }
 
     /// Sends a payload on a route the server sends to every connected client, as `send(route:payload:)` with borrowed

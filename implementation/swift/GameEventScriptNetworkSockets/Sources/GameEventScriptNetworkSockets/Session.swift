@@ -196,8 +196,9 @@ public final class GesNetworkSocketSession {
         if closed { throw GesApiError.invalidOperation("The session is closed.") }
         adopt()
         guard let writer, !outgoingCompleted else { return }
-        try fill(writer.room)
+        // A closed connection holds only its close packet, which leaves past the writer's bound.
         let closed = connection.state == .closed
+        try fill(closed ? GesNetworkSocketWriter.unwrittenBytes : writer.room)
         if closed { outgoingCompleted = true }
         if outgoing.readableBytes > 0 || closed { writer.hand(&outgoing, finish: closed) }
     }

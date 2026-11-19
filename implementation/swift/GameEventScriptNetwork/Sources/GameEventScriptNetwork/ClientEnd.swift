@@ -311,7 +311,7 @@ public final class GesNetworkClientEnd {
             queuedBytes += bytes
         } else {
             // As the connection bounds its started transfers, against this side's transfer limit; a transfer counts as
-            // uncompressed, so the connection takes every queued one.
+            // uncompressed. The connection takes every kept one and cancels one beyond the peer's transfer limit.
             if queuedTransfers >= GesNetworkSendQueue.maximumStarted || queuedTransferBytes + Int64(payload.count) > connection.maxTransfer { return .queueFull }
             queuedTransfers += 1
             queuedTransferBytes += GesNetworkConnection.queuedTransferBytes(payload.count)
@@ -326,6 +326,8 @@ public final class GesNetworkClientEnd {
         for entry in queue {
             if entry.publish {
                 _ = connection.publish(route: entry.route, payload: entry.payload)
+            } else if connection.isBulk(entry.route) {
+                entry.payload.withUnsafeBytes { connection.passTransfer(entry.route, $0) }
             } else {
                 _ = connection.send(route: entry.route, payload: entry.payload)
             }

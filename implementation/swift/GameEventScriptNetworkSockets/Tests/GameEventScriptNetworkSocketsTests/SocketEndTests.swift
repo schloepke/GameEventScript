@@ -45,7 +45,8 @@ final class SocketEndTests: XCTestCase {
 
         func handle(_ event: GesNetworkEndEvent) {
             switch event.kind {
-            case .received: return
+            case .received, .transferProgress: return
+            case .transferCancelled: events.append("TransferCancelled \(event.transferId) \(event.code)")
             case .message: events.append("message \(event.route) \(event.payload.map { ($0 < 16 ? "0" : "") + String($0, radix: 16, uppercase: true) }.joined())")
             case .disconnected, .clientDisconnected: events.append("\(Self.name(event.kind)) \(event.code)")
             default: events.append(Self.name(event.kind))
@@ -137,6 +138,58 @@ final class SocketEndTests: XCTestCase {
     }
 
     func testEndsConnectExchangeAndCloseOverTcp() async throws { try await endsConnectExchangeAndClose(.stream) }
+
+    private static func bulk() throws -> GesBoundNetwork {
+        try GesSchemaSet(parsing: "wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 60 }\nnetwork :Game as {\n  client sends :Blob bulk\n  server sends :Blob bulk\n}\n")
+            .network("Game").bind()
+    }
+
+    // A TCP client end and server end whose transfer limits differ.
+    private static func bulkEnds(client clientTransfer: Int64, server serverTransfer: Int64) async throws -> (GesNetworkClientEnd, GesNetworkServerEnd) {
+        var serverOptions = options(.stream)
+        serverOptions.maxTransferBytes = serverTransfer
+        var clientOptions = options(.stream)
+        clientOptions.maxTransferBytes = clientTransfer
+        let listener = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: bulk(), options: serverOptions)
+        let clock = GesSystemClock()
+        let server = try GesNetworkServerEnd(network: bulk(), acceptor: listener, clock: clock)
+        let client = try GesNetworkClientEnd(network: bulk(), connector: GesNetworkSocketConnector.tcp(host: "127.0.0.1", port: listener.localEndPoint.port!), options: clientOptions, clock: clock)
+        return (client, server)
+    }
+
+    func testAKeptTransferBeyondThePeersLimitIsCancelled() async throws {
+        // Kept before the handshake against this side's limit, the 6-byte transfer exceeds the server's limit of 4 bytes.
+        let (client, server) = try await Self.bulkEnds(client: 1000, server: 4)
+        defer {
+            client.release()
+            server.release()
+        }
+        XCTAssertEqual(client.send(route: 0, payload: [1, 2]), .queued)
+        XCTAssertEqual(client.send(route: 0, payload: [1, 2, 3, 4, 5, 6]), .queued)
+        XCTAssertEqual(client.send(route: 0, payload: [3, 4]), .queued)
+        let clientEvents = Recorder()
+        let serverEvents = Recorder()
+        try await Self.run(client, clientEvents, server, serverEvents) {
+            serverEvents.events.contains("message 0 0304") && clientEvents.events.count >= 2 && serverEvents.events.count >= 5
+        }
+        XCTAssertEqual(clientEvents.events, ["Connected", "TransferCancelled 1 network.transferTooLarge"])
+        XCTAssertEqual(serverEvents.events, ["Connecting", "ClientConnected", "message 0 0102", "TransferCancelled 1 network.transferTooLarge", "message 0 0304"])
+    }
+
+    func testASendToEveryClientReportsAPayloadBeyondAClientsLimit() async throws {
+        let (client, server) = try await Self.bulkEnds(client: 4, server: 1000)
+        defer {
+            client.release()
+            server.release()
+        }
+        let clientEvents = Recorder()
+        let serverEvents = Recorder()
+        try await Self.run(client, clientEvents, server, serverEvents) { clientEvents.events.contains("Connected") && serverEvents.events.contains("ClientConnected") }
+        XCTAssertEqual(server.send(route: 1, payload: [1, 2, 3, 4, 5, 6]), .messageTooLarge)
+        XCTAssertEqual(server.send(route: 1, payload: [1, 2]), .queued)
+        try await Self.run(client, clientEvents, server, serverEvents) { clientEvents.events.contains("message 1 0102") }
+        XCTAssertEqual(clientEvents.events, ["Connected", "message 1 0102"])
+    }
 
     func testEndsConnectExchangeAndCloseOverWebSocket() async throws { try await endsConnectExchangeAndClose(.message) }
 

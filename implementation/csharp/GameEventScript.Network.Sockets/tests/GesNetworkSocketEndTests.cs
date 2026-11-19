@@ -38,10 +38,11 @@ public sealed class GesNetworkSocketEndTests
 
         public void Handle(GesNetworkEndEvent networkEvent)
         {
-            if (networkEvent.Kind == GesNetworkEndEventKind.Received) return;
+            if (networkEvent.Kind is GesNetworkEndEventKind.Received or GesNetworkEndEventKind.TransferProgress) return;
             Events.Add(networkEvent.Kind switch
             {
                 GesNetworkEndEventKind.Message => $"message {networkEvent.Route} {Convert.ToHexString(networkEvent.Payload)}",
+                GesNetworkEndEventKind.TransferCancelled => $"TransferCancelled {networkEvent.TransferId} {networkEvent.Code}",
                 GesNetworkEndEventKind.Disconnected or GesNetworkEndEventKind.ClientDisconnected => $"{networkEvent.Kind} {networkEvent.Code}",
                 _ => networkEvent.Kind.ToString(),
             });
@@ -121,6 +122,56 @@ public sealed class GesNetworkSocketEndTests
         await Run(client, clientEvents, server, serverEvents, () => server.ClientCount == 0);
         CollectionAssert.AreEqual(new[] { "Connected", "message 1 07", "Disconnected network.closed" }, clientEvents.Events);
         Assert.AreEqual("ClientDisconnected network.closed", serverEvents.Events[^1]);
+    }
+
+    private static GesBoundNetwork Bulk() =>
+        GesSchemaSet.Parse("wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 60 }\nnetwork :Game as {\n  client sends :Blob bulk\n  server sends :Blob bulk\n}\n")
+            .Network("Game").Bind();
+
+    // A TCP client end and server end whose transfer limits differ.
+    private static (GesNetworkClientEnd Client, GesNetworkServerEnd Server) BulkEnds(long clientTransfer, long serverTransfer)
+    {
+        var serverOptions = Options(GesNetworkTransport.Stream);
+        serverOptions.MaxTransferBytes = serverTransfer;
+        var clientOptions = Options(GesNetworkTransport.Stream);
+        clientOptions.MaxTransferBytes = clientTransfer;
+        var listener = GesNetworkSocketListener.ListenTcp(new IPEndPoint(IPAddress.Loopback, 0), Bulk(), serverOptions);
+        var clock = new GesSystemClock();
+        var server = new GesNetworkServerEnd(Bulk(), listener, clock);
+        var client = new GesNetworkClientEnd(Bulk(), GesNetworkSocketConnector.Tcp("127.0.0.1", listener.LocalEndPoint.Port), clientOptions, default, clock);
+        return (client, server);
+    }
+
+    [TestMethod]
+    public async Task AKeptTransferBeyondThePeersLimitIsCancelled()
+    {
+        // Kept before the handshake against this side's limit, the 6-byte transfer exceeds the server's limit of 4 bytes.
+        var (client, server) = BulkEnds(1000, 4);
+        using var clientEnd = client;
+        using var serverEnd = server;
+        Assert.AreEqual(GesNetworkSendStatus.Queued, client.Send(0, [1, 2]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, client.Send(0, [1, 2, 3, 4, 5, 6]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, client.Send(0, [3, 4]));
+        var clientEvents = new Recorder();
+        var serverEvents = new Recorder();
+        await Run(client, clientEvents, server, serverEvents, () => serverEvents.Events.Contains("message 0 0304") && clientEvents.Events.Count >= 2 && serverEvents.Events.Count >= 5);
+        CollectionAssert.AreEqual(new[] { "Connected", "TransferCancelled 1 network.transferTooLarge" }, clientEvents.Events, string.Join(" | ", clientEvents.Events));
+        CollectionAssert.AreEqual(new[] { "Connecting", "ClientConnected", "message 0 0102", "TransferCancelled 1 network.transferTooLarge", "message 0 0304" }, serverEvents.Events, string.Join(" | ", serverEvents.Events));
+    }
+
+    [TestMethod]
+    public async Task ASendToEveryClientReportsAPayloadBeyondAClientsLimit()
+    {
+        var (client, server) = BulkEnds(4, 1000);
+        using var clientEnd = client;
+        using var serverEnd = server;
+        var clientEvents = new Recorder();
+        var serverEvents = new Recorder();
+        await Run(client, clientEvents, server, serverEvents, () => clientEvents.Events.Contains("Connected") && serverEvents.Events.Contains("ClientConnected"));
+        Assert.AreEqual(GesNetworkSendStatus.MessageTooLarge, server.Send(1, [1, 2, 3, 4, 5, 6]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, server.Send(1, [1, 2]));
+        await Run(client, clientEvents, server, serverEvents, () => clientEvents.Events.Contains("message 1 0102"));
+        CollectionAssert.AreEqual(new[] { "Connected", "message 1 0102" }, clientEvents.Events);
     }
 
     [TestMethod]

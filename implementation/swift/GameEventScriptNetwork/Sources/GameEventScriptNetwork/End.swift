@@ -173,6 +173,8 @@ extension GesNetworkConnection {
 
     func isLatest(_ route: Int) -> Bool { classes[route] == .latest }
 
+    func isBulk(_ route: Int) -> Bool { classes[route] == .bulk }
+
     // The bytes an uncompressed transfer of this length takes in the send queue: its header and its data.
     static func queuedTransferBytes(_ length: Int) -> Int64 { Int64(1 + GesNetworkWire.varintSize64(UInt64(length)) + GesNetworkWire.hashBytes + length) }
 

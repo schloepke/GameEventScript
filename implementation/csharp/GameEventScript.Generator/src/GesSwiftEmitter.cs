@@ -139,6 +139,7 @@ internal static partial class GesSwiftEmitter
 
         schemaSet?.Reserve(context.TopLevel);
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: true);
+        foreach (var network in layout.Networks) GesNetworkEndPlan.CheckNested(network, context.TopLevel, swift: true);
 
         // Split files reach the sources of another file, so the holder is internal there.
         var shared = options.Split != GesSchemaSplit.None;

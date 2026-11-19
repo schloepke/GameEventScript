@@ -115,6 +115,7 @@ enum GesCSharpEmitter {
             )
         }
         try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: false)
+        for network in layout.networks { try GesNetworkEndPlan.checkNested(network, context.topLevel, swift: false) }
         let shared = options.split != .none
         if let setName = schemaSet?.declared {
             document.units.append(GesCodeUnit(owner: "") { code in GesSchemaSetReference.writeCSharp(&code, setName, access, layout.sources, layout.parameters, networks: !layout.networks.isEmpty) })

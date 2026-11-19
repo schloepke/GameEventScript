@@ -326,7 +326,7 @@ public sealed class GesNetworkClientEnd : IDisposable
         else
         {
             // As the connection bounds its started transfers, against this side's transfer limit; a transfer counts as
-            // uncompressed, so the connection takes every queued one.
+            // uncompressed. The connection takes every kept one and cancels one beyond the peer's transfer limit.
             if (_queuedTransfers >= Connection.MaxQueuedTransfers || _queuedTransferBytes + payload.Length > Connection.MaxTransferQueueBytes)
                 return GesNetworkSendStatus.QueueFull;
             _queuedTransfers++;
@@ -344,6 +344,7 @@ public sealed class GesNetworkClientEnd : IDisposable
         foreach (var entry in _queue)
         {
             if (entry.Publish) Connection.Publish(entry.Route, entry.Payload);
+            else if (Connection.IsBulk(entry.Route)) Connection.PassTransfer(entry.Route, entry.Payload);
             else Connection.Send(entry.Route, entry.Payload);
         }
 

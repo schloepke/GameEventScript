@@ -71,7 +71,23 @@ extension GesNetworkConnection {
         // On a datagram transport the receiver resolves ids in order; a cancel it has not confirmed holds its id open, so
         // the new id stays within the receive window of the oldest open one.
         if datagram && cancels.count > 0 && cancels.ownSpan(nextBulkId, localSends) >= GesNetworkSendQueue.maximumStarted { return .queueFull }
+        queueTransfer(route, data)
+        return .queued
+    }
 
+    // Passes a transfer a client end kept before the handshake. The end bounded its kept transfers by this side's
+    // limits, so the queue bounds do not apply; a transfer larger than the peer's transfer limit keeps its id and is
+    // cancelled at once with network.transferTooLarge.
+    func passTransfer(_ route: Int, _ data: UnsafeRawBufferPointer) {
+        if Int64(data.count) <= peerTransferLimit {
+            queueTransfer(route, data)
+            return
+        }
+        queueTransfer(route, UnsafeRawBufferPointer(start: nil, count: 0))
+        _ = try? cancel(route: route, transferId: lastTransferId, code: GesNetworkCodes.transferTooLarge)
+    }
+
+    private func queueTransfer(_ route: Int, _ data: UnsafeRawBufferPointer) {
         let id = nextBulkId
         nextBulkId &+= 1
         let header = 1 + Wire.varintSize64(UInt64(data.count)) + Wire.hashBytes
@@ -101,7 +117,6 @@ extension GesNetworkConnection {
         }
         peerCancelled[Int(id >> 6)] &= ~(UInt64(1) << UInt64(id & 63))
         lastTransferId = Int(id)
-        return .queued
     }
 
     private func hash(_ data: UnsafeRawBufferPointer, _ target: UnsafeMutableRawBufferPointer) {

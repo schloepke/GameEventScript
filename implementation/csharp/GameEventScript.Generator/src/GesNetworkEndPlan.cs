@@ -67,4 +67,23 @@ internal sealed class GesNetworkEndPlan
         GesSchemaPlanner.Unique($"{network.Name}.{plan.Name}", names);
         return plan;
     }
+
+    // The types that the emitters nest in a network and its typed ends hide every top-level type of their name for the code
+    // inside, which names roots, tag sets and the network itself: Swift without qualification, C# through the namespace, whose
+    // network class must not contain a member of its own name. Both ports and languages reject such a hiding alike.
+    internal static void CheckNested(GesLayoutNetwork network, ICollection<string> topLevel, bool swift)
+    {
+        var names = new List<(string, string)>();
+        foreach (var client in new[] { true, false })
+        {
+            var end = Plan(network, client);
+            var side = client ? "client" : "server";
+            names.Add((end.Name, $"{GesSchemaPlanner.NestedTypeOrigin}of the {side} end"));
+            names.Add((swift ? end.Name + "Event" : $"I{end.Name}Handler", $"{GesSchemaPlanner.NestedTypeOrigin}of the {side} {(swift ? "events" : "handler")}"));
+            if (!end.HasTopics) continue;
+            GesSchemaPlanner.Unique($"{network.Name}.{end.Name}", [("Topic", $"{GesSchemaPlanner.NestedTypeOrigin}of the {side} topics"), ("Tick", $"{GesSchemaPlanner.NestedTypeOrigin}of the {side} ticks")], topLevel);
+        }
+
+        GesSchemaPlanner.Unique(network.Name, names, topLevel);
+    }
 }

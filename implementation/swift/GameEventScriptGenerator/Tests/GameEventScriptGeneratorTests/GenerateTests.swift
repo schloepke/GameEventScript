@@ -21,6 +21,25 @@ final class GenerateTests: XCTestCase {
         }
     }
 
+    func testNetworkTypesHideNoTopLevelType() throws {
+        // A network nests its typed ends, their handler or event types and, in an end that publishes, Topic and Tick; each
+        // would hide a root, a tag set or the network of its name for the code inside.
+        func network(_ root: String, _ network: String, _ verb: String = "publishes") -> String {
+            "wire schema :\(root) as {\n  x: :Number integer between 0 and 255\n}\nnetwork :\(network) as {\n  server \(verb) :\(root) reliable\n}\n"
+        }
+
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            for (root, name) in [("Client", "Game"), ("Server", "Game"), ("Topic", "Game"), ("Tick", "Game"), ("Chunk", "Client"), ("Chunk", "Server")] {
+                XCTAssertEqual(code { _ = try generate(network(root, name), name, language) }, "generate.nameCollision", "\(root) in \(name)")
+            }
+            XCTAssertTrue(try generate(network("Topic", "Game", "sends"), "Game", language).contains("Game"))
+            let handler = language == .swift ? "ServerEvent" : "IServerHandler"
+            XCTAssertEqual(code { _ = try generate(network("Chunk", handler), handler, language) }, "generate.nameCollision")
+        }
+        XCTAssertTrue(try generate(network("ClientEvent", "Game"), "Game", .csharp).contains("ClientEvent"))
+        XCTAssertTrue(try generate(network("IClientHandler", "Game"), "Game", .swift).contains("IClientHandler"))
+    }
+
     func testModelsNeedTheirOwnNamespaceAndWireName() throws {
         let set = try GesSchemaSet(parsing: "wire model packed schema :Cell as { a: :Boolean }\nwire schema :CellWire as { b: :Boolean }\nwire model schema :Grid as { c: :List(:Cell) max 4 }\n")
         let roots = ["Cell", "Grid"]

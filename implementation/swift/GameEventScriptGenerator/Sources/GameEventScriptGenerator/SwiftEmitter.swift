@@ -162,6 +162,7 @@ enum GesSwiftEmitter {
             )
         }
         try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: true)
+        for network in layout.networks { try GesNetworkEndPlan.checkNested(network, context.topLevel, swift: true) }
         // Split files reach the sources of another file, so the holder is internal there.
         let shared = options.split != .none
         if let setName = schemaSet?.declared {

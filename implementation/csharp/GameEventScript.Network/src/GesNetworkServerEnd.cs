@@ -103,8 +103,9 @@ public sealed class GesNetworkServerEnd : IDisposable
     /// <param name="route">The route index of a <c>publishes</c> route of the server.</param>
     /// <param name="payload">The full record of the topic's schema; it is copied.</param>
     /// <returns>
-    /// <see cref="GesNetworkSendStatus.Queued"/>; <see cref="GesNetworkSendStatus.QueueFull"/> when the queue of some
-    /// client is full; or the status of an invalid route or payload. Clients that are not connected or not subscribed
+    /// <see cref="GesNetworkSendStatus.Queued"/>; <see cref="GesNetworkSendStatus.MessageTooLarge"/> when the payload
+    /// exceeds the limit of some client; <see cref="GesNetworkSendStatus.QueueFull"/> when the queue of some client is
+    /// full; or the status of an invalid route or payload. Clients that are not connected or not subscribed
     /// are skipped.
     /// </returns>
     public GesNetworkSendStatus Publish(int route, ReadOnlySpan<byte> payload)
@@ -121,7 +122,7 @@ public sealed class GesNetworkServerEnd : IDisposable
 
         foreach (var client in _clients)
         {
-            if (client.Link.Connection.Publish(route, payload) == GesNetworkSendStatus.QueueFull) status = GesNetworkSendStatus.QueueFull;
+            status = Merge(status, client.Link.Connection.Publish(route, payload));
         }
 
         return After(status);
@@ -137,11 +138,20 @@ public sealed class GesNetworkServerEnd : IDisposable
         if (status != GesNetworkSendStatus.Queued) return status;
         foreach (var client in _clients)
         {
-            if (client.Link.Connection.Send(route, payload) == GesNetworkSendStatus.QueueFull) status = GesNetworkSendStatus.QueueFull;
+            status = Merge(status, client.Link.Connection.Send(route, payload));
         }
 
         return After(status);
     }
+
+    // The status of a send to every client: messageTooLarge when the payload exceeds the limit of some client, else
+    // queueFull when the queue of some client is full; clients that are not connected or not subscribed are skipped.
+    private static GesNetworkSendStatus Merge(GesNetworkSendStatus status, GesNetworkSendStatus client) => client switch
+    {
+        GesNetworkSendStatus.MessageTooLarge => client,
+        GesNetworkSendStatus.QueueFull when status == GesNetworkSendStatus.Queued => client,
+        _ => status,
+    };
 
     /// <summary>Sends a payload on a route the server sends to one client.</summary>
     /// <param name="route">The route index of a <c>sends</c> route of the server.</param>

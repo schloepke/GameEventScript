@@ -1933,7 +1933,7 @@ Start:				 // handler Start(value)
 
 ## Test: tag alternatives appear as groups in the bind dump
 
-This snapshot checks that a handler's `|` groups appear as `tagAlternatives` between its required and excluded tags and in the signature comment.
+This snapshot checks that a handler's `|` groups appear as `tagAlternatives` between its required and excluded tags and in the signature comment, after repeated tags, repeated groups and groups containing another are dropped.
 
 ### Case description
 
@@ -1951,7 +1951,7 @@ on Probe(value) matching #front, #lidar | #ultrasonic, #rear | #side without #st
   emit Seen(value: value)
 }
 
-on Probe as probe matching #lidar | #ultrasonic | #lidar {
+on Probe as probe matching #lidar | #ultrasonic | #lidar, #rear | #ultrasonic | #lidar, #ultrasonic | #lidar {
   emit Any(value: probe.name)
 }
 ```
@@ -1980,7 +1980,7 @@ on Probe(value) matching #front, #lidar | #ultrasonic, #rear | #side without #st
   emit Seen(value: value)
 }
 
-on Probe as probe matching #lidar | #ultrasonic | #lidar {
+on Probe as probe matching #lidar | #ultrasonic | #lidar, #rear | #ultrasonic | #lidar, #ultrasonic | #lidar {
   emit Any(value: probe.name)
 }
 
@@ -2053,7 +2053,7 @@ Probe:				 // handler Probe(value)
 .source-line "compile.program-dumps.tag-alternatives.ges" 3 | on Probe(value) matching #front, #lidar | #ultrasonic, #rear | #side without #stale {
 					ReturnVoid
 
-.source-line "compile.program-dumps.tag-alternatives.ges" 7 | on Probe as probe matching #lidar | #ultrasonic | #lidar {
+.source-line "compile.program-dumps.tag-alternatives.ges" 7 | on Probe as probe matching #lidar | #ultrasonic | #lidar, #rear | #ultrasonic | #lidar, #ultrasonic | #lidar {
 Probe_1:			 // handler Probe as message
 					RegisterLocals #1
 					Cast r0(probe), r0(probe), Message
@@ -2062,7 +2062,7 @@ Probe_1:			 // handler Probe as message
 					MemberAccess r1, T_name, r0(probe) // "name"
 					EmitMessage Outbound_Any, Args_1 // "Any(value)"
 
-.source-line "compile.program-dumps.tag-alternatives.ges" 7 | on Probe as probe matching #lidar | #ultrasonic | #lidar {
+.source-line "compile.program-dumps.tag-alternatives.ges" 7 | on Probe as probe matching #lidar | #ultrasonic | #lidar, #rear | #ultrasonic | #lidar, #ultrasonic | #lidar {
 					ReturnVoid
 
 .region-end "Code"

@@ -478,7 +478,7 @@ internal sealed partial class GesSyntaxBinder
         while (c.Match(Comma));
     }
 
-    // Drops every group that a required tag or an earlier kept group already satisfies, so duplicates and
+    // Drops every group that a required tag or a smaller or earlier equal group already satisfies, so duplicates and
     // absorbed groups vanish; the kept groups keep their source order.
     private static List<IReadOnlyList<string>>? ReduceTagAlternatives(List<string> requiredTags, List<List<string>>? alternatives)
     {
@@ -487,43 +487,89 @@ internal sealed partial class GesSyntaxBinder
         var kept = new List<IReadOnlyList<string>>();
         if (alternatives.Count == 1)
         {
-            if (!alternatives[0].Exists(required.Contains)) kept.Add(alternatives[0]);
+            if (!ContainsAny(required, alternatives[0])) kept.Add(alternatives[0]);
             return kept;
         }
 
-        // A group can only be absorbed by a group whose first tag it contains, so candidates are looked up by that tag.
-        var byFirstTag = new Dictionary<string, List<int>>(StringComparer.Ordinal);
-        for (var index = 0; index < alternatives.Count; index++)
+        // Tags become dense numbers. A group satisfied by a required tag is dropped, and of equal groups the first stays.
+        var ids = new Dictionary<string, int>(StringComparer.Ordinal);
+        var counts = new List<int>();
+        var groups = new List<(List<string> Tags, int[] Ids)>();
+        var unique = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var group in alternatives)
         {
-            if (!byFirstTag.TryGetValue(alternatives[index][0], out var starting)) byFirstTag.Add(alternatives[index][0], starting = []);
-            starting.Add(index);
+            if (ContainsAny(required, group)) continue;
+            var groupIds = new int[group.Count];
+            for (var tag = 0; tag < group.Count; tag++)
+            {
+                if (!ids.TryGetValue(group[tag], out var id))
+                {
+                    ids.Add(group[tag], id = ids.Count);
+                    counts.Add(0);
+                }
+
+                groupIds[tag] = id;
+            }
+
+            Array.Sort(groupIds);
+            if (!unique.Add(string.Join(",", groupIds))) continue;
+            foreach (var id in groupIds) counts[id]++;
+            groups.Add((group, groupIds));
         }
 
-        var tags = new HashSet<string>(StringComparer.Ordinal);
-        for (var index = 0; index < alternatives.Count; index++)
+        // A group is absorbed by a smaller group whose tags it all contains, so it contains that group's rarest tag:
+        // candidates are listed under it, and a group's shared tags do not make every group a candidate.
+        var byRarestTag = new List<int>?[ids.Count];
+        var signatures = new ulong[groups.Count];
+        for (var index = 0; index < groups.Count; index++)
         {
-            var group = alternatives[index];
-            if (group.Exists(required.Contains)) continue;
-            tags.Clear();
-            tags.UnionWith(group);
-            var absorbed = false;
-            for (var tag = 0; tag < group.Count && !absorbed; tag++)
+            var rarest = groups[index].Ids[0];
+            foreach (var id in groups[index].Ids)
             {
-                if (!byFirstTag.TryGetValue(group[tag], out var candidates)) continue;
+                if (counts[id] < counts[rarest]) rarest = id;
+                signatures[index] |= 1UL << (id & 63);
+            }
+
+            (byRarestTag[rarest] ??= []).Add(index);
+        }
+
+        var marks = new int[ids.Count];
+        for (var index = 0; index < groups.Count; index++)
+        {
+            var group = groups[index].Ids;
+            foreach (var id in group) marks[id] = index + 1;
+            var absorbed = false;
+            for (var tag = 0; tag < group.Length && !absorbed; tag++)
+            {
+                var candidates = byRarestTag[group[tag]];
+                if (candidates is null) continue;
                 for (var position = 0; position < candidates.Count && !absorbed; position++)
                 {
                     var other = candidates[position];
-                    if (other == index) continue;
-                    var candidate = alternatives[other];
-                    // A group containing every tag of another is implied by it; of two equal groups the first stays.
-                    absorbed = (candidate.Count < group.Count || (candidate.Count == group.Count && other < index)) && candidate.TrueForAll(tags.Contains);
+                    var candidate = groups[other].Ids;
+                    // Distinct groups of equal size never contain each other; the signature rejects most others at once.
+                    absorbed = candidate.Length < group.Length && (signatures[other] & ~signatures[index]) == 0 && Contains(marks, index + 1, candidate);
                 }
             }
 
-            if (!absorbed) kept.Add(group);
+            if (!absorbed) kept.Add(groups[index].Tags);
         }
 
         return kept.Count == 0 ? null : kept;
+    }
+
+    private static bool ContainsAny(HashSet<string> set, List<string> tags)
+    {
+        foreach (var tag in tags)
+            if (set.Contains(tag)) return true;
+        return false;
+    }
+
+    private static bool Contains(int[] marks, int mark, int[] tags)
+    {
+        foreach (var id in tags)
+            if (marks[id] != mark) return false;
+        return true;
     }
 
     private static string CanonicalTypeName(string typeName) => typeName switch

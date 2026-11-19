@@ -92,6 +92,23 @@ final class ProgramValidationCostTests: XCTestCase {
         XCTAssertEqual(Set(linked.map { $0.withUnsafeBufferPointer { $0.baseAddress } }).count, 1)
     }
 
+    func testGroupsSharingATagAreReducedWithoutComparingEveryPair() throws {
+        // A shared first tag, repeated groups and groups containing another each made every group a candidate of every other.
+        let sources = [
+            (0..<20_000).map { "#common | #t\($0)" },
+            (0..<20_000).map { $0 % 2 == 0 ? "#a | #b" : "#a | #b | #t\($0)" },
+        ]
+        for (groups, remaining) in zip(sources, [20_000, 1]) {
+            let builder = GesProgramBuilder()
+            builder.addScript("module tags\non Probe() matching \(groups.joined(separator: ", ")) {}\n", sourceName: "tags.ges")
+            builder.withDebugInfo(.none)
+            let start = Date()
+            let program = try builder.compile()
+            XCTAssertLessThan(Date().timeIntervalSince(start), 2, "Tag alternatives must be reduced without comparing every pair.")
+            XCTAssertEqual(program.bindings.entries.first { !$0.requiredTagAlternatives.isEmpty }?.requiredTagAlternatives.count, remaining)
+        }
+    }
+
     func testCompiledAndDecodedProgramsAreMarkedValidated() throws {
         let builder = GesProgramBuilder()
         builder.addScript("module once\non Start() {}", sourceName: "once.ges")

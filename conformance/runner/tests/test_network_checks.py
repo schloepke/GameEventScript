@@ -99,12 +99,19 @@ class NetworkInputTests(unittest.TestCase):
             with self.assertRaises(InvalidDocument, msg=options):
                 prepare(self.case('handshake-loopback', options=options))
 
+    def test_send_count_reaches_the_adapter(self):
+        steps = prepare(self.cases['send-queue-message-limit'])['steps']
+        self.assertEqual({'action': 'send', 'side': 'server', 'route': 0, 'payload': {'hex': ''}, 'count': 65537}, steps[3])
+
     def test_malformed_steps_are_document_errors(self):
         for step in ({}, {'advance': 0, 'accept': True}, {'jump': 1}, {'advance': -1}, {'advance': '1'},
                      {'accept': False}, {'transmit': 'both'}, {'refuse': 1},
                      {'send': {'side': 'client', 'route': 0, 'payload': 'ABC'}},
                      {'send': {'side': 'client', 'route': 0, 'payload': {'length': 2, 'seed': 251}}},
                      {'send': {'side': 'client', 'route': 0, 'payload': '00', 'detail': ''}},
+                     {'send': {'side': 'client', 'route': 0, 'payload': '00', 'count': 0}},
+                     {'publish': {'side': 'server', 'route': 2, 'payload': '00', 'count': True}},
+                     {'close': {'side': 'server', 'count': 2}},
                      {'receive': {'side': 'server', 'bytes': '0g'}},
                      {'budget': {'side': 'server'}},
                      {'publish': {'side': 'server', 'route': 2}},

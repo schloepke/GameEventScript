@@ -15,6 +15,9 @@ internal sealed class GesNetworkSendQueue(bool preassigned = false)
     // The most messages a datagram transport has started and still holds.
     internal const int MaximumStarted = 8192;
 
+    // The most reliable messages that wait to be sent, so that empty messages cannot grow the queue without bound.
+    internal const int MaximumReliable = 65536;
+
     private byte[] _bytes = [];
     private int _head;
     private int _tail;

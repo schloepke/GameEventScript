@@ -68,12 +68,27 @@ enum NetworkApiObservations {
                 case "accept": try server.accept()
                 case "refuse": try server.refuse(step.text("detail"))
                 case "close": connection.close(try step.text("detail"))
-                case "send":
-                    let status = connection.send(route: Int(try integer(step.required("route"))), payload: try payload(step.required("payload")))
-                    trace.append("\(name) send \(status)")
-                case "publish":
-                    let status = connection.publish(route: Int(try integer(step.required("route"))), payload: try payload(step.required("payload")))
-                    trace.append("\(name) publish \(status)")
+                case "send", "publish":
+                    // count repeats the call; each run of equal results is traced once as "status xN".
+                    let route = Int(try integer(step.required("route")))
+                    let bytes = try payload(step.required("payload"))
+                    let call = { action == "send" ? connection.send(route: route, payload: bytes) : connection.publish(route: route, payload: bytes) }
+                    guard let count = step["count"] else {
+                        trace.append("\(name) \(action) \(call())")
+                        break
+                    }
+                    var last = GesNetworkSendStatus.queued
+                    var run = 0
+                    for _ in 0..<Int(try integer(count)) {
+                        let status = call()
+                        if run > 0 && status != last {
+                            trace.append("\(name) \(action) \(last) x\(run)")
+                            run = 0
+                        }
+                        last = status
+                        run += 1
+                    }
+                    trace.append("\(name) \(action) \(last) x\(run)")
                 case "cancel":
                     let cancelled = try connection.cancel(route: Int(try integer(step.required("route"))), transferId: Int(try integer(step.required("id"))), code: step["code"]?.stringValue)
                     trace.append("\(name) cancel \(cancelled)")

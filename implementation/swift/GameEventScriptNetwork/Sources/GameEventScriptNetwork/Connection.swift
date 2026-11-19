@@ -462,7 +462,7 @@ public final class GesNetworkConnection {
             slot.set(payload)
             return .queued
         }
-        if sendReliable.byteCount + Int64(payload.count) > maxSendQueue { return .queueFull }
+        if sendReliable.count >= GesNetworkSendQueue.maximumReliable || sendReliable.byteCount + Int64(payload.count) > maxSendQueue { return .queueFull }
         sendReliable.enqueue(route, payload)
         return .queued
     }
@@ -496,7 +496,7 @@ public final class GesNetworkConnection {
             return .queued
         }
         let length = encodeState(topic, payload, topic.next)
-        if sendReliable.byteCount + Int64(length) > maxSendQueue { return .queueFull }
+        if sendReliable.count >= GesNetworkSendQueue.maximumReliable || sendReliable.byteCount + Int64(length) > maxSendQueue { return .queueFull }
         sendReliable.enqueue(route, UnsafeRawBufferPointer(rebasing: topic.scratch[0..<length]), Int(topic.next))
         topic.add(payload, baselineLimit, topic.next)
         topic.next &+= 1

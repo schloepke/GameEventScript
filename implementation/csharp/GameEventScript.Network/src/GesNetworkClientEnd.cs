@@ -32,6 +32,7 @@ public sealed class GesNetworkClientEnd : IDisposable
     // Sends before the handshake: reliable and bulk ones in order, latest ones as the newest per route.
     private readonly List<Queued> _queue = [];
     private long _queuedBytes;
+    private int _queuedReliable;
     private long _queuedTransferBytes;
     private int _queuedTransfers;
     private readonly byte[]?[] _latest;
@@ -324,8 +325,9 @@ public sealed class GesNetworkClientEnd : IDisposable
         {
             // As the connection counts it: a topic state with its mode byte, so passing the queue never fills it.
             var bytes = publish ? payload.Length + 1 : payload.Length;
-            if (_queuedBytes + bytes > Connection.MaxSendQueueBytes) return GesNetworkSendStatus.QueueFull;
+            if (_queuedReliable >= GesNetworkSendQueue.MaximumReliable || _queuedBytes + bytes > Connection.MaxSendQueueBytes) return GesNetworkSendStatus.QueueFull;
             _queuedBytes += bytes;
+            _queuedReliable++;
         }
         else
         {
@@ -354,6 +356,7 @@ public sealed class GesNetworkClientEnd : IDisposable
 
         _queue.Clear();
         _queuedBytes = 0;
+        _queuedReliable = 0;
         _queuedTransferBytes = 0;
         _queuedTransfers = 0;
         PassLatest(older: true);
@@ -410,6 +413,7 @@ public sealed class GesNetworkClientEnd : IDisposable
     {
         _queue.Clear();
         _queuedBytes = 0;
+        _queuedReliable = 0;
         _queuedTransferBytes = 0;
         _queuedTransfers = 0;
         Array.Clear(_hasLatest, 0, _hasLatest.Length);

@@ -83,6 +83,24 @@ public sealed class GameEventScriptProgramReaderAllocationTests
         foreach (var handler in handlers) Assert.AreSame(handlers[0].RequiredTagAlternatives, handler.RequiredTagAlternatives);
     }
 
+    [TestMethod]
+    public void WritingHandlersThatShareOneTagAlternativesListFlattensItOnce()
+    {
+        var alternatives = string.Join(" | ", Enumerable.Range(0, 256).Select(index => $"#t{index}"));
+        var source = "module shared\n" + string.Concat(Enumerable.Range(0, 1024).Select(index => $"on Probe{index}() matching {alternatives} {{}}\n"));
+        var bytes = new GesProgramBuilder().AddScript(source, "shared.ges").Compile(new GesCompileOptions { DebugInfo = GesDebugInfoOptions.None }).Encode();
+        var program = GameEventScriptProgram.Read(bytes);
+        _ = program.Encode();
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var encoded = program.Encode();
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        CollectionAssert.AreEqual(bytes, encoded);
+        // Flattening the shared list for each of the 1024 handlers allocated about 3 MiB beyond the encoding.
+        Assert.IsLessThan(bytes.Length + 256 * 1024, allocated, $"Encoding {bytes.Length} bytes allocated {allocated} bytes.");
+    }
+
     private static byte[] CreateSharedListFixture(int bindingCount, int argumentCount)
     {
         using var stream = new MemoryStream();

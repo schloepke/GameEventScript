@@ -339,6 +339,18 @@ public sealed class GesNetworkEndTests
     }
 
     [TestMethod]
+    public void EmptyReliableSendsBeforeTheHandshakeAreBoundedByCount()
+    {
+        var network = GesSchemaSet.Parse("wire schema :Empty as {}\nnetwork :Game as { client sends :Empty reliable }\n").Network("Game").Bind();
+        var options = GesNetworkOptions.InProcess();
+        options.MaxSendQueueBytes = 1;
+        using var pair = GesNetworkPair.Realtime(network, default, options);
+        // Messages without bytes never reach the byte limit; as on the connection, their count is bounded.
+        for (var index = 0; index < 65536; index++) Assert.AreEqual(GesNetworkSendStatus.Queued, pair.Client.Send(0, []));
+        Assert.AreEqual(GesNetworkSendStatus.QueueFull, pair.Client.Send(0, []));
+    }
+
+    [TestMethod]
     public void AdvancingThePairDuringAPollThrows()
     {
         using var pair = GesNetworkPair.Synchronous(Network(), default);

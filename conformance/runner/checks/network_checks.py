@@ -133,15 +133,18 @@ def step(raw):
         if 'code' in value:
             result['code'] = text(value['code'], 'cancel code')
         return result
-    closed(value, {'side', 'detail', 'route', 'payload', 'bytes', 'bytesPerSecond'}, name + ' step')
+    closed(value, {'side', 'detail', 'route', 'payload', 'count', 'bytes', 'bytesPerSecond'}, name + ' step')
     result = {'action': name, 'side': side(value.get('side'))}
     if name == 'close':
         closed(value, {'side', 'detail'}, 'close step')
         result['detail'] = text(value.get('detail', ''), 'close detail')
     elif name in ('send', 'publish'):
-        closed(value, {'side', 'route', 'payload'}, name + ' step')
+        # count repeats the call; the trace then holds each run of equal results once, as "status xN".
+        closed(value, {'side', 'route', 'payload', 'count'}, name + ' step')
         result['route'] = integer(value.get('route'), 'route', -1, 1 << 20)
         result['payload'] = payload(value.get('payload'))
+        if 'count' in value:
+            result['count'] = integer(value['count'], name + ' count', 1, 1 << 20)
     elif name in ('subscribe', 'unsubscribe', 'include'):
         closed(value, {'side', 'route'}, name + ' step')
         result['route'] = integer(value.get('route'), 'route', -1, 1 << 20)

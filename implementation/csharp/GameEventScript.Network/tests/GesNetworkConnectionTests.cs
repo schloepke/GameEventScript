@@ -89,8 +89,11 @@ public sealed class GesNetworkConnectionTests
     public void UntakenEventsBeyondTheLimitCloseWithQueueFull()
     {
         var loop = Connected(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, MaxFramesPerSecond = 1_000_000 });
-        for (var index = 0; index <= 65536; index++) Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, [0]));
-        for (var now = 0L; now < 60_000_000 && loop.Client.State != GesNetworkState.Closed; now += 10_000) loop.Advance(now);
+        // At most 65536 reliable messages wait to be sent, so the last one follows once the first have left.
+        for (var index = 0; index < 65536; index++) Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, [0]));
+        loop.Advance(0);
+        Assert.AreEqual(GesNetworkSendStatus.Queued, loop.Server.Send(Blob, [0]));
+        for (var now = 10_000L; now < 60_000_000 && loop.Client.State != GesNetworkState.Closed; now += 10_000) loop.Advance(now);
         var events = Drain(loop.Client);
         Assert.HasCount(65537, events);
         Assert.AreEqual(65536, events.Count(entry => entry == $"message {Blob} 00"));

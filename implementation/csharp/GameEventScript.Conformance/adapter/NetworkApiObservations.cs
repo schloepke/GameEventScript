@@ -80,12 +80,8 @@ internal static class NetworkApiObservations
                         connection.Close(step.GetProperty("detail").GetString()!);
                         break;
                     case "send":
-                        var status = connection.Send(step.GetProperty("route").GetInt32(), Payload(step.GetProperty("payload")));
-                        trace.Add($"{name} send {SendStatus(status)}");
-                        break;
                     case "publish":
-                        var published = connection.Publish(step.GetProperty("route").GetInt32(), Payload(step.GetProperty("payload")));
-                        trace.Add($"{name} publish {SendStatus(published)}");
+                        Send(trace, name, action, connection, step);
                         break;
                     case "cancel":
                         var cancelled = connection.Cancel(
@@ -253,6 +249,37 @@ internal static class NetworkApiObservations
         }
 
         return options;
+    }
+
+    // Sends or publishes once, or count times with each run of equal results traced once as "status xN".
+    private static void Send(List<string> trace, string name, string action, GesNetworkConnection connection, JsonElement step)
+    {
+        var route = step.GetProperty("route").GetInt32();
+        var payload = Payload(step.GetProperty("payload"));
+        if (!step.TryGetProperty("count", out var count))
+        {
+            trace.Add($"{name} {action} {SendStatus(Call())}");
+            return;
+        }
+
+        var last = GesNetworkSendStatus.Queued;
+        var run = 0;
+        for (var index = 0; index < count.GetInt32(); index++)
+        {
+            var status = Call();
+            if (run > 0 && status != last)
+            {
+                trace.Add($"{name} {action} {SendStatus(last)} x{run}");
+                run = 0;
+            }
+
+            last = status;
+            run++;
+        }
+
+        trace.Add($"{name} {action} {SendStatus(last)} x{run}");
+
+        GesNetworkSendStatus Call() => action == "send" ? connection.Send(route, payload) : connection.Publish(route, payload);
     }
 
     private static byte[] Payload(JsonElement raw)

@@ -34,6 +34,7 @@ public final class GesNetworkClientEnd {
     // Sends before the handshake: reliable and bulk ones in order, latest ones as the newest per route.
     private var queue: [Queued] = []
     private var queuedBytes: Int64 = 0
+    private var queuedReliable = 0
     private var queuedTransferBytes: Int64 = 0
     private var queuedTransfers = 0
     private var latest: [[UInt8]]
@@ -310,8 +311,9 @@ public final class GesNetworkClientEnd {
         if connection.isReliable(route) {
             // As the connection counts it: a topic state with its mode byte, so passing the queue never fills it.
             let bytes = Int64(publish ? payload.count + 1 : payload.count)
-            if queuedBytes + bytes > connection.maxSendQueueBytes { return .queueFull }
+            if queuedReliable >= GesNetworkSendQueue.maximumReliable || queuedBytes + bytes > connection.maxSendQueueBytes { return .queueFull }
             queuedBytes += bytes
+            queuedReliable += 1
         } else {
             // As the connection bounds its started transfers, against this side's transfer limit; a transfer counts as
             // uncompressed. The connection takes every kept one and cancels one beyond the peer's transfer limit.
@@ -337,6 +339,7 @@ public final class GesNetworkClientEnd {
         }
         queue.removeAll()
         queuedBytes = 0
+        queuedReliable = 0
         queuedTransferBytes = 0
         queuedTransfers = 0
         passLatest(older: true)
@@ -388,6 +391,7 @@ public final class GesNetworkClientEnd {
     private func dropQueue() {
         queue.removeAll()
         queuedBytes = 0
+        queuedReliable = 0
         queuedTransferBytes = 0
         queuedTransfers = 0
         Self.clear(&hasLatest)

@@ -89,8 +89,11 @@ final class NetworkConnectionTests: XCTestCase {
 
     func testUntakenEventsBeyondTheLimitCloseWithQueueFull() throws {
         let loop = try connected(fastFrames())
-        for _ in 0...65536 { XCTAssertEqual(loop.server.send(route: blob, payload: [0]), .queued) }
-        var now: Int64 = 0
+        // At most 65536 reliable messages wait to be sent, so the last one follows once the first have left.
+        for _ in 0..<65536 { XCTAssertEqual(loop.server.send(route: blob, payload: [0]), .queued) }
+        try loop.advance(0)
+        XCTAssertEqual(loop.server.send(route: blob, payload: [0]), .queued)
+        var now: Int64 = 10_000
         while now < 60_000_000 && loop.client.state != .closed {
             try loop.advance(now)
             now += 10_000

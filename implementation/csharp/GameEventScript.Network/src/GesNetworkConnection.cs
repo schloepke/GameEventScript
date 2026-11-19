@@ -337,7 +337,7 @@ public sealed partial class GesNetworkConnection
             return GesNetworkSendStatus.Queued;
         }
 
-        if (_sendReliable.Bytes + payload.Length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
+        if (_sendReliable.Count >= GesNetworkSendQueue.MaximumReliable || _sendReliable.Bytes + payload.Length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
         _sendReliable.Enqueue(route, payload);
         return GesNetworkSendStatus.Queued;
     }
@@ -364,7 +364,7 @@ public sealed partial class GesNetworkConnection
         }
 
         var length = EncodeState(topic, payload, topic.Next);
-        if (_sendReliable.Bytes + length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
+        if (_sendReliable.Count >= GesNetworkSendQueue.MaximumReliable || _sendReliable.Bytes + length > _maxSendQueue) return GesNetworkSendStatus.QueueFull;
         _sendReliable.Enqueue(route, topic.Scratch.AsSpan(0, length), topic.Next);
         topic.Add(payload, _baselineLimit, topic.Next++);
         return GesNetworkSendStatus.Queued;

@@ -375,6 +375,42 @@ network:
 
 ---
 
+## Test: Empty messages fill the queue by count
+
+At most 65536 reliable messages wait to be sent, so messages without bytes cannot grow the queue without bound.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: send-queue-message-limit
+networkApi:
+  sources: ["wire schema :Empty as {}\n\nnetwork :Game as {\n  server sends :Empty reliable\n}\n"]
+  network: "Game"
+  options: {"maxSendQueueBytes": 1}
+  steps:
+    - {"advance": 0}
+    - {"accept": true}
+    - {"advance": 0}
+    - {"send": {"side": "server", "route": 0, "payload": "", "count": 65537}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "server connecting -"
+    - "server connected"
+    - "client connected"
+    - "server send queued x65536"
+    - "server send queueFull x1"
+  server: {"queuedSendBytes": 0}
+```
+
+---
+
 ## Test: Unset limits grow to the largest message
 
 An unset queued reliable bytes limit grows from its default of 1048576 to the largest message the side sends reliably; an explicit limit stays as set.

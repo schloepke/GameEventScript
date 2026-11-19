@@ -360,6 +360,17 @@ final class NetworkEndTests: XCTestCase {
         )
     }
 
+    func testEmptyReliableSendsBeforeTheHandshakeAreBoundedByCount() throws {
+        let network = try GesSchemaSet(parsing: "wire schema :Empty as {}\nnetwork :Game as { client sends :Empty reliable }\n").network("Game").bind()
+        var options = GesNetworkOptions.inProcess()
+        options.maxSendQueueBytes = 1
+        let pair = try GesNetworkPair.realtime(network: network, options: options)
+        defer { pair.release() }
+        // Messages without bytes never reach the byte limit; as on the connection, their count is bounded.
+        for _ in 0..<65536 { XCTAssertEqual(pair.client.send(route: 0, payload: []), .queued) }
+        XCTAssertEqual(pair.client.send(route: 0, payload: []), .queueFull)
+    }
+
     func testAdvancingThePairDuringAPollThrows() throws {
         let pair = try GesNetworkPair.synchronous(network: network())
         defer { pair.release() }

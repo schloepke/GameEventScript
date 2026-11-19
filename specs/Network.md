@@ -439,6 +439,10 @@ limit. Deflate is used only when both sides accept it. A value outside its range
 At most 65536 events wait untaken; any further event other than `closed` closes the
 connection with `network.queueFull`. Taken events free their place.
 
+At most 65536 reliable messages wait to be sent, also before the handshake, whatever their
+length; a further send or publish on a `reliable` route reports `queueFull`. A message frees
+its place once it is sent, on a datagram transport once it is acknowledged.
+
 The frame bucket starts full with as many frames as the limit and refills with the limit
 per second, counted in exact integer steps of one microsecond. The send budget is a
 bucket of at most the send packet size that starts full, also when a budget replaces none,

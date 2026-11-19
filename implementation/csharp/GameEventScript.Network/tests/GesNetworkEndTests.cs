@@ -301,4 +301,107 @@ public sealed class GesNetworkEndTests
         };
         Assert.ThrowsExactly<InvalidOperationException>(() => Poll(realtime, 10, client: reentrant));
     }
+
+    [TestMethod]
+    public void BulkSendsBeforeTheHandshakeAreBounded()
+    {
+        var network = GesSchemaSet.Parse("wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 60 }\nnetwork :Game as { client sends :Blob bulk }\n")
+            .Network("Game").Bind();
+        var options = GesNetworkOptions.InProcess();
+        // The first transfer takes 39 bytes: its 34-byte header and its data.
+        options.MaxTransferBytes = 41;
+        using var pair = GesNetworkPair.Realtime(network, default, options);
+        // As on the connection, the queued transfers of this side stay within its transfer limit.
+        Assert.AreEqual(GesNetworkSendStatus.Queued, pair.Client.Send(0, [1, 2, 3, 4, 5]));
+        Assert.AreEqual(GesNetworkSendStatus.QueueFull, pair.Client.Send(0, [6, 7, 8]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, pair.Client.Send(0, [6, 7]));
+        var (_, server) = Poll(pair, 50);
+        CollectionAssert.AreEqual(
+            new[] { "connecting 0 ", "ClientConnected 0", "message 0 0102030405", "message 0 0607" },
+            server.Events.Where(entry => entry is not "Received -1" and not "TransferProgress 0").ToList(),
+            string.Join(" | ", server.Events));
+    }
+
+    [TestMethod]
+    public void AdvancingThePairDuringAPollThrows()
+    {
+        using var pair = GesNetworkPair.Synchronous(Network(), default);
+        var client = new Recorder();
+        client.OnEvent = (_, _) => pair.Advance(1);
+        Assert.ThrowsExactly<InvalidOperationException>(() => Poll(pair, client: client));
+    }
+
+    [TestMethod]
+    public void AThrowingConnectingHandlerStillAcceptsTheClient()
+    {
+        using var pair = GesNetworkPair.Realtime(Network(), default);
+        var server = new Recorder();
+        server.OnEvent = (kind, _) =>
+        {
+            if (kind == GesNetworkEndEventKind.Connecting) throw new InvalidOperationException("handler");
+        };
+        var client = new Recorder();
+        var thrown = false;
+        for (var round = 0; round < 10; round++)
+        {
+            pair.Client.Poll(ref client);
+            try
+            {
+                pair.Server.Poll(ref server);
+            }
+            catch (InvalidOperationException exception) when (exception.Message == "handler")
+            {
+                thrown = true;
+            }
+        }
+
+        Assert.IsTrue(thrown);
+        Assert.AreEqual(GesNetworkState.Connected, pair.Client.Connection.State);
+        CollectionAssert.AreEqual(new[] { "Connected -1" }, client.Events);
+    }
+
+    [TestMethod]
+    public void ASendOutsideAPollBringsTheNextDeadlineForward()
+    {
+        using var pair = GesNetworkPair.Realtime(Network(), default);
+        Poll(pair, 10);
+        Assert.AreEqual(GesNetworkState.Connected, pair.Client.Connection.State);
+        var idle = pair.Client.NextDeadline;
+        pair.Client.Send(Commands, [1]);
+        Assert.IsLessThan(idle, pair.Client.NextDeadline, "The send is due with the next poll.");
+        var server = new Recorder();
+        pair.Server.Poll(ref server);
+        idle = pair.Server.NextDeadline;
+        pair.Server.Publish(Log, [2]);
+        Assert.IsLessThan(idle, pair.Server.NextDeadline, "The publish is due with the next poll.");
+    }
+
+    [TestMethod]
+    public void AConnectionClosedByTheHandlerSkipsItsRemainingEvents()
+    {
+        using var pair = GesNetworkPair.Synchronous(Network(), default);
+        var (client, server) = Poll(pair);
+        client.Take();
+        server.Take();
+        server.OnEvent = (kind, id) =>
+        {
+            if (kind == GesNetworkEndEventKind.Message) pair.Server.Close(id, "undecodable");
+        };
+        pair.Client.Send(Commands, [1]);
+        pair.Client.Send(Commands, [2]);
+        pair.Server.Poll(ref server);
+        CollectionAssert.AreEqual(new[] { $"message {Commands} 01", "ClientDisconnected 0 network.closed False", "Received -1" }, server.Take());
+
+        using var second = GesNetworkPair.Synchronous(Network(), default);
+        (client, server) = Poll(second);
+        client.Take();
+        client.OnEvent = (kind, _) =>
+        {
+            if (kind == GesNetworkEndEventKind.Message) second.Client.Close("undecodable");
+        };
+        second.Server.Publish(Log, [3]);
+        second.Server.Publish(Log, [4]);
+        second.Client.Poll(ref client);
+        CollectionAssert.AreEqual(new[] { $"message {Log} 03", "Disconnected -1 network.closed False", "Received -1" }, client.Take());
+    }
 }

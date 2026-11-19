@@ -59,9 +59,15 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
     private readonly ConcurrentQueue<byte[]> _free = new();
     private byte[]? _transmit;
     private long _unwritten;
+    // Set while packets wait for the unwritten limit, so the write task wakes the end once it falls below it.
+    private volatile bool _held;
     private volatile bool _transportEnded;
     private bool _outgoingCompleted;
     private bool _disposed;
+    // Guarded by the gate: whether the transport still opens, and whether a disposed session writes the last packets of
+    // its closed connection once it opened.
+    private bool _opening;
+    private bool _orderlyOpening;
 
     private GesNetworkSocketSession(GesNetworkConnection connection, GesNetworkDatagramPeer? peer, GesNetworkSocketSignal? signal)
     {
@@ -187,7 +193,7 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
     // Creates a session whose transport opens in the background; packets wait for it, and a failure ends the transport.
     internal static GesNetworkSocketSession Opening(GesNetworkConnection connection, GesNetworkSocketSignal signal, Func<CancellationToken, Task<Opened>> open)
     {
-        var session = new GesNetworkSocketSession(connection, null, signal);
+        var session = new GesNetworkSocketSession(connection, null, signal) { _opening = true };
         _ = Task.Run(async () =>
         {
             try
@@ -199,17 +205,20 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
             {
                 // Any failure to open, whatever its kind, is the end of the transport.
                 session.End();
+                session.OpeningFailed();
             }
         });
         return session;
     }
 
-    // Takes the open transport and starts moving bytes; a session disposed meanwhile releases it at once.
+    // Takes the open transport and starts moving bytes. A session disposed meanwhile releases it at once, unless it
+    // still writes the last packets of its closed connection: then it releases the transport once they are written.
     private void Start(Stream? stream, WebSocket? webSocket, Socket? datagram, IDisposable owner)
     {
         lock (_gate)
         {
-            if (_disposed)
+            _opening = false;
+            if (_disposed && !_orderlyOpening)
             {
                 owner.Dispose();
                 return;
@@ -221,9 +230,22 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
             _owner = owner;
             if (_peer == null) _ = Task.Run(ReadAsync);
             _writer = Task.Run(WriteAsync);
+            if (_orderlyOpening) _ = _writer.ContinueWith(_ => Release(owner), TaskScheduler.Default);
         }
 
         _signal?.Set();
+    }
+
+    // A disposed session whose transport failed to open releases what remains.
+    private void OpeningFailed()
+    {
+        lock (_gate)
+        {
+            _opening = false;
+            if (!_orderlyOpening) return;
+        }
+
+        Release(null);
     }
 
     private void End()
@@ -287,8 +309,14 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_outgoingCompleted) return;
         var more = true;
-        while (more && Interlocked.Read(ref _unwritten) < UnwrittenBytes)
+        while (more)
         {
+            if (Interlocked.Read(ref _unwritten) >= UnwrittenBytes)
+            {
+                Hold();
+                break;
+            }
+
             // A datagram or WebSocket message carries one packet; a stream write as many as fit.
             var bytes = _transmit ??= _free.TryDequeue(out var free) ? free : new byte[_chunkBytes];
             var length = 0;
@@ -313,10 +341,22 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
         }
     }
 
+    // Packets wait in the connection until the write task has written enough; it wakes the end then. Checking again
+    // after setting the flag covers a write that finished before the task could see it.
+    private void Hold()
+    {
+        _held = true;
+        if (Interlocked.Read(ref _unwritten) < UnwrittenBytes && _held)
+        {
+            _held = false;
+            _signal?.Set();
+        }
+    }
+
     /// <summary>
     /// Releases the socket. When the connection is closed and its last packets are handed to the sender, they are
-    /// still written and the transport ends in order, within the connection's timeout; otherwise both background tasks
-    /// stop at once without sending anything more.
+    /// still written, once the transport opened if it still opens, and the transport ends in order, within the
+    /// connection's timeout; otherwise both background tasks stop at once without sending anything more.
     /// </summary>
     public void Dispose()
     {
@@ -328,9 +368,16 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
             _disposed = true;
             writer = _writer;
             owner = _owner;
+
+            // The last packets wait for the transport that still opens; starting it writes them. The time limit covers the
+            // opening too, and is set before a started transport can release the cancellation.
+            _orderlyOpening = _outgoingCompleted && _opening;
+            if (_orderlyOpening) _cancel.CancelAfter(OrderlyEnd);
         }
 
         _outgoing.Writer.TryComplete();
+        if (_orderlyOpening) return;
+
         if (_outgoingCompleted && writer is { IsCompleted: false })
         {
             _cancel.CancelAfter(OrderlyEnd);
@@ -465,7 +512,11 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
                 finally
                 {
                     _free.Enqueue(chunk.Bytes);
-                    Interlocked.Add(ref _unwritten, -chunk.Bytes.Length);
+                    if (Interlocked.Add(ref _unwritten, -chunk.Bytes.Length) < UnwrittenBytes && _held)
+                    {
+                        _held = false;
+                        _signal?.Set();
+                    }
                 }
             }
 

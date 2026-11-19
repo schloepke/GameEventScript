@@ -33,6 +33,14 @@ public sealed partial class GesNetworkConnection
 
     internal bool IsBulk(int route) => _classes[route] == GesNetworkClass.Bulk;
 
+    // The bounds of the transfers this side queues before it knows the peer's transfer limit.
+    internal int MaxQueuedTransfers => GesNetworkSendQueue.MaximumStarted;
+
+    internal long MaxTransferQueueBytes => _maxTransfer;
+
+    // The bytes an uncompressed transfer of this length takes in the send queue: its header and its data.
+    internal static long QueuedTransferBytes(int length) => 1 + GesNetworkWire.VarintSize64((ulong)length) + GesNetworkWire.HashBytes + length;
+
     // Whether the last published state of a latest topic is the record.
     internal bool LastIs(int route, ReadOnlySpan<byte> record) => _hasLast[route] && record.SequenceEqual(_lastRecords[route].AsSpan(0, _lastLengths[route]));
 

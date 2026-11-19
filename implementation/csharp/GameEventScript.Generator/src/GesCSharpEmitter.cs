@@ -1115,7 +1115,7 @@ internal static partial class GesCSharpEmitter
         else
         {
             code.Blank();
-            code.Line("/// <summary>Gets the number of connected clients.</summary>");
+            code.Line("/// <summary>Gets the number of connecting and connected clients.</summary>");
             code.Line("public int ClientCount => End.ClientCount;");
             code.Blank();
             code.Line("/// <summary>Gets the connection of a client.</summary>");
@@ -1174,7 +1174,7 @@ internal static partial class GesCSharpEmitter
         }
 
         code.Blank();
-        code.Line(isClient ? "/// <summary>Closes the connection with a detail.</summary>" : "/// <summary>Closes every connection with a detail and stops accepting clients.</summary>");
+        code.Line(isClient ? "/// <summary>Closes the connection with a detail.</summary>" : "/// <summary>Closes every current connection with a detail; the end still accepts new clients.</summary>");
         code.Line($"/// <param name=\"detail\">The detail sent to the {(isClient ? "server" : "clients")}.</param>");
         code.Line("public void Close(string detail) => End.Close(detail);");
         if (end.HasTopics)

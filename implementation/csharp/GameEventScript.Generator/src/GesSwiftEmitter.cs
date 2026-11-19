@@ -1118,7 +1118,7 @@ internal static partial class GesSwiftEmitter
         else
         {
             code.Blank();
-            code.Line("/// The number of connected clients.");
+            code.Line("/// The number of connecting and connected clients.");
             code.Line($"{access}var clientCount: Int {{ end.clientCount }}");
             code.Blank();
             code.Line("/// Returns the connection of a client.");
@@ -1183,7 +1183,7 @@ internal static partial class GesSwiftEmitter
         }
 
         code.Blank();
-        code.Line(isClient ? "/// Closes the connection with a detail." : "/// Closes every connection with a detail and stops accepting clients.");
+        code.Line(isClient ? "/// Closes the connection with a detail." : "/// Closes every current connection with a detail; the end still accepts new clients.");
         code.Line($"/// - Parameter detail: The detail sent to the {(isClient ? "server" : "clients")}.");
         code.Line($"{access}func close(_ detail: String) {{ end.close(detail) }}");
         if (end.HasTopics)

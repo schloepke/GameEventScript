@@ -1047,7 +1047,7 @@ extension NetworkWire {
 
             deinit { __buffer.deallocate() }
 
-            /// The number of connected clients.
+            /// The number of connecting and connected clients.
             var clientCount: Int { end.clientCount }
 
             /// Returns the connection of a client.
@@ -1101,7 +1101,7 @@ extension NetworkWire {
             /// - Throws: `GesApiError.invalidArgument` when the client is not connected to the end.
             func close(client: Int, detail: String) throws { try end.close(client: client, detail: detail) }
 
-            /// Closes every connection with a detail and stops accepting clients.
+            /// Closes every current connection with a detail; the end still accepts new clients.
             /// - Parameter detail: The detail sent to the clients.
             func close(_ detail: String) { end.close(detail) }
 

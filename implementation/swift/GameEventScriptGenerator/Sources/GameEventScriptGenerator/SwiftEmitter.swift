@@ -1045,7 +1045,7 @@ enum GesSwiftEmitter {
             code.line("\(access)var connection: GesNetworkConnection { end.connection }")
         } else {
             code.blank()
-            code.line("/// The number of connected clients.")
+            code.line("/// The number of connecting and connected clients.")
             code.line("\(access)var clientCount: Int { end.clientCount }")
             code.blank()
             code.line("/// Returns the connection of a client.")
@@ -1105,7 +1105,7 @@ enum GesSwiftEmitter {
             code.line("\(access)func close(client: Int, detail: String) throws { try end.close(client: client, detail: detail) }")
         }
         code.blank()
-        code.line(isClient ? "/// Closes the connection with a detail." : "/// Closes every connection with a detail and stops accepting clients.")
+        code.line(isClient ? "/// Closes the connection with a detail." : "/// Closes every current connection with a detail; the end still accepts new clients.")
         code.line("/// - Parameter detail: The detail sent to the \(isClient ? "server" : "clients").")
         code.line("\(access)func close(_ detail: String) { end.close(detail) }")
         if end.hasTopics { tickMembers(&code, end, access, roots) }

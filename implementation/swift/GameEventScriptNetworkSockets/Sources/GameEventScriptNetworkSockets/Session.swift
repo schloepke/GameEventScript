@@ -67,7 +67,7 @@ public final class GesNetworkSocketSession {
     private func start(_ channel: Channel, _ peer: GesNetworkDatagramPeer?) {
         self.channel = channel
         self.peer = peer
-        writer = GesNetworkSocketWriter(channel: channel, framing: framing, peer: peer, masks: connection.isClient)
+        writer = GesNetworkSocketWriter(channel: channel, framing: framing, peer: peer, masks: connection.isClient, inbox: inbox)
     }
 
     // Takes the transport once the connector opened it.
@@ -196,9 +196,17 @@ public final class GesNetworkSocketSession {
         if closed { throw GesApiError.invalidOperation("The session is closed.") }
         adopt()
         guard let writer, !outgoingCompleted else { return }
-        // A stream carries the packets back to back; every other framing gets each packet with its length.
+        try fill(writer.room)
+        let closed = connection.state == .closed
+        if closed { outgoingCompleted = true }
+        if outgoing.readableBytes > 0 || closed { writer.hand(&outgoing, finish: closed) }
+    }
+
+    // Transmits the connection's due packets into the outgoing buffer, up to about the given bytes. A stream carries
+    // the packets back to back; every other framing gets each packet with its length.
+    private func fill(_ room: Int) throws {
         let prefix = framing == .stream ? 0 : 4
-        var room = writer.room
+        var room = room
         while room > 0 {
             let length = try outgoing.writeWithUnsafeMutableBytes(minimumWritableBytes: prefix + packetBytes) { bytes in
                 let length = try connection.transmit(into: UnsafeMutableRawBufferPointer(rebasing: bytes[prefix..<prefix + packetBytes]))
@@ -209,17 +217,20 @@ public final class GesNetworkSocketSession {
             if length == 0 { break }
             room -= length
         }
-
-        let closed = connection.state == .closed
-        if closed { outgoingCompleted = true }
-        if outgoing.readableBytes > 0 || closed { writer.hand(&outgoing, finish: closed) }
     }
 
-    /// Closes the socket without sending anything more. A server session of a UDP listener gives its client's
-    /// address back to address validation instead, because it shares the listener's socket. Closing again does nothing.
+    /// Closes the socket after the packets already handed to it; nothing more is sent. When the connection is closed
+    /// while the transport still opens, its last packets are written once the transport opened. A server session of a
+    /// UDP listener gives its client's address back to address validation instead, because it shares the listener's
+    /// socket. Closing again does nothing.
     public func close() {
         if closed { return }
         closed = true
+        adopt()
+        if channel == nil, let opening, connection.state == .closed, (try? fill(GesNetworkSocketWriter.unwrittenBytes)) != nil {
+            let plan = GesNetworkSocketOpening.Plan(framing: framing, masks: connection.isClient, inbox: inbox)
+            if opening.finish(outgoing, plan) { return }
+        }
         release()
     }
 
@@ -242,25 +253,74 @@ public final class GesNetworkSocketSession {
 
 extension GesNetworkSocketSession: GesNetworkLink {}
 
+extension GesNetworkSocketOpening {
+    // How a session that closed while its transport opened writes its last packets.
+    struct Plan {
+        let framing: GesNetworkSocketSession.Framing
+        let masks: Bool
+        let inbox: GesNetworkSocketInbox
+
+        // Writes the packets on the open transport, ends it after them and releases it.
+        func finish(_ packets: ByteBuffer, on channel: Channel, _ peer: GesNetworkDatagramPeer?) {
+            var packets = packets
+            GesNetworkSocketWriter(channel: channel, framing: framing, peer: peer, masks: masks, inbox: inbox).hand(&packets, finish: true)
+            GesNetworkSocketSession.release(channel, peer)
+        }
+    }
+}
+
 // The transport a connector opens on SwiftNIO's event loops for a session on the host: the host takes it once it is
-// open, and a transport that opens after the session closed is released at once.
+// open. A transport that opens after the session closed is released at once, after the last packets of its closed
+// connection.
 final class GesNetworkSocketOpening: @unchecked Sendable {
     private enum State {
         case pending
         case opened(Channel, GesNetworkDatagramPeer?)
+        case finishing(ByteBuffer, Plan)
         case done
     }
 
     private let lock = NIOLock()
     private var state = State.pending
 
-    // Hands the open transport to the session; false when the session closed meanwhile, and the caller releases it.
+    // Hands the open transport to the session, or writes the last packets of a session that closed meanwhile; false
+    // when the session closed without them, and the caller releases the transport.
     func complete(_ channel: Channel, _ peer: GesNetworkDatagramPeer?) -> Bool {
-        lock.withLock {
-            guard case .pending = state else { return false }
-            state = .opened(channel, peer)
-            return true
+        let finishing: (ByteBuffer, Plan)?? = lock.withLock {
+            switch state {
+            case .pending:
+                state = .opened(channel, peer)
+                return .some(nil)
+            case .finishing(let packets, let plan):
+                state = .done
+                return (packets, plan)
+            case .opened, .done:
+                return nil
+            }
         }
+        guard let finishing else { return false }
+        if let (packets, plan) = finishing { plan.finish(packets, on: channel, peer) }
+        return true
+    }
+
+    // Keeps the last packets of a closed session for the transport that still opens, or writes them on one that
+    // opened but was not taken; false when the opening ended, and the session releases what remains.
+    func finish(_ packets: ByteBuffer, _ plan: Plan) -> Bool {
+        let opened: (Channel, GesNetworkDatagramPeer?)?? = lock.withLock {
+            switch state {
+            case .pending:
+                state = .finishing(packets, plan)
+                return .some(nil)
+            case .opened(let channel, let peer):
+                state = .done
+                return (channel, peer)
+            case .finishing, .done:
+                return nil
+            }
+        }
+        guard let opened else { return false }
+        if let (channel, peer) = opened { plan.finish(packets, on: channel, peer) }
+        return true
     }
 
     // The open transport, once; nil while it still opens.
@@ -298,31 +358,40 @@ private final class GesNetworkSocketWriter: @unchecked Sendable {
     private let framing: GesNetworkSocketSession.Framing
     private let peer: GesNetworkDatagramPeer?
     private let masks: Bool
+    private let inbox: GesNetworkSocketInbox
     private let lock = NIOLock()
     // Guarded by the lock.
     private var queued: ByteBuffer
     private var scheduled = false
     private var finishing = false
+    // Whether the host found no room, so taking the queued bytes wakes its end.
+    private var held = false
     // Used only on the channel's event loop.
     private var taken: ByteBuffer
 
-    init(channel: Channel, framing: GesNetworkSocketSession.Framing, peer: GesNetworkDatagramPeer?, masks: Bool) {
+    init(channel: Channel, framing: GesNetworkSocketSession.Framing, peer: GesNetworkDatagramPeer?, masks: Bool, inbox: GesNetworkSocketInbox) {
         self.channel = channel
         self.framing = framing
         self.peer = peer
         self.masks = masks
+        self.inbox = inbox
         queued = channel.allocator.buffer(capacity: 0)
         taken = queued
     }
 
-    // How many more bytes the host may hand over now.
+    // How many more bytes the host may hand over now. Without room, the end wakes once the event loop takes the
+    // queued bytes or the channel becomes writable again.
     var room: Int {
         if let peer {
             if let socket = peer.socket, !socket.isWritable { return 0 }
         } else if !channel.isWritable {
             return 0
         }
-        return Self.unwrittenBytes - lock.withLock { queued.readableBytes }
+        return lock.withLock {
+            let room = Self.unwrittenBytes - queued.readableBytes
+            if room <= 0 { held = true }
+            return room
+        }
     }
 
     // Takes the bytes of the outgoing buffer and leaves it empty. Finishing ends the transport after these bytes.
@@ -343,12 +412,16 @@ private final class GesNetworkSocketWriter: @unchecked Sendable {
     }
 
     private func drain() {
-        let finish: Bool = lock.withLock {
+        let (finish, wake): (Bool, Bool) = lock.withLock {
             swap(&queued, &taken)
             scheduled = false
-            defer { finishing = false }
-            return finishing
+            defer {
+                finishing = false
+                held = false
+            }
+            return (finishing, held)
         }
+        if wake { inbox.wake() }
 
         switch framing {
         case .stream:

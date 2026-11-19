@@ -1173,19 +1173,23 @@ accepts waiting clients, passes every received packet to its connection, takes e
 until none is left and hands each to the caller's handler, and transmits every due
 packet. A handler may send, publish, open and close ticks and close connections; the
 packets this produces leave in the same `poll`. A handler that polls its own end again is
-a usage error. `poll` never blocks and never calls the handler outside its own call. The
-next deadline of an end is the earliest time at which a `poll` has work without new
-input: the current time before the first `poll`, else the earliest deadline of its
-connections.
+a usage error. When the handler closes the connection whose event it handles, or refuses
+the client, the end skips that connection's remaining events of the `poll` up to its
+disconnect event. `poll` never blocks and never calls the handler outside its own call.
+The next deadline of an end is the earliest time at which a `poll` has work without new
+input: the current time before the first `poll` and after a send, publish, tick close or
+close outside a `poll`, else the earliest deadline of its connections.
 
 **Sending before the handshake.** A client end keeps sends, publishes and ticks made
 before `connected` and passes them to the connection when it connects: reliable and bulk
 messages in order, the newest state of each latest route and the newest closed tick. The
-kept reliable bytes obey the connection's send queue limit; a send that does not fit
-reports `queueFull`. Closing drops what is kept.
+kept reliable bytes obey the connection's send queue limit, and the kept transfers its
+limits for queued transfers against this side's transfer limit, each counted uncompressed
+with its header; a send that does not fit reports `queueFull`. Closing drops what is
+kept.
 
 **Server.** The server end accepts a `connecting` client after its event unless the
-handler refused it. Each client gets a stable end-local id, which events carry and
+handler accepted or refused it, also when the handler throws. Each client gets a stable end-local id, which events carry and
 per-client calls take; an unknown id is a usage error. By default the server end
 subscribes every connected client to every topic it publishes; the host can turn that
 off when it creates the end and subscribes and unsubscribes topics per client at any
@@ -1252,7 +1256,8 @@ modes:
   packet is in flight, so what one end sends is reported by the other end's next `poll`.
   Acknowledgements are not delayed. Timers — keepalive, timeout and resending — fire only
   when the host advances the pair's clock; the handshake, sending and delivery never need
-  it.
+  it. Advancing a realtime pair, or a pair while one of its ends is polled, is a usage
+  error.
 
 ### Simulated network
 

@@ -26,6 +26,9 @@ public sealed class GesNetworkServerEnd : IDisposable
     private bool _disposed;
     private bool _polling;
 
+    // Whether a send, publish, tick or close outside a poll left packets that only the next poll transmits.
+    private bool _transmitDue;
+
     internal bool Polling => _polling;
     private bool _tickOpen;
     // The last published state of each latest topic, which a client connected during a tick and Include receive.
@@ -71,12 +74,16 @@ public sealed class GesNetworkServerEnd : IDisposable
     /// <summary>Gets the clock the end reads the time from.</summary>
     public IGesClock Clock => _clock;
 
-    /// <summary>Gets the earliest deadline of all clients; long.MaxValue without clients.</summary>
+    /// <summary>
+    /// Gets the earliest deadline of all clients, now while a send, publish, tick or close outside a poll left packets
+    /// for the next poll; long.MaxValue without clients.
+    /// </summary>
     /// <remarks>An acceptor has no deadline: a server end that waits for clients polls at its own pace.</remarks>
     public long NextDeadline
     {
         get
         {
+            if (_transmitDue && _clients.Count > 0) return _clock.ElapsedMicroseconds;
             var deadline = long.MaxValue;
             foreach (var client in _clients) deadline = Math.Min(deadline, client.Link.Connection.NextDeadline);
             return deadline;
@@ -227,8 +234,10 @@ public sealed class GesNetworkServerEnd : IDisposable
 
     /// <summary>
     /// Accepts every waiting client, passes received packets to every connection, hands every event to the handler and
-    /// transmits every due packet. A connecting client is accepted after its event unless the handler refused it; a
-    /// closed client leaves the end after its event. Never blocks and never calls the handler outside this call.
+    /// transmits every due packet. A connecting client is accepted after its event unless the handler accepted or
+    /// refused it, also when the handler throws; after the handler closes or refuses a client, that client's remaining
+    /// events up to its disconnect are skipped, and a closed client leaves the end after its event. Never blocks and
+    /// never calls the handler outside this call.
     /// </summary>
     /// <typeparam name="THandler">The handler type; a struct handler is called without allocating.</typeparam>
     /// <param name="handler">The handler of the events.</param>
@@ -241,6 +250,7 @@ public sealed class GesNetworkServerEnd : IDisposable
         if (_disposed) throw new ObjectDisposedException(GetType().Name);
         if (_polling) throw new InvalidOperationException("The end is polled already.");
         _polling = true;
+        _transmitDue = true;
         try
         {
             var now = _clock.ElapsedMicroseconds;
@@ -270,8 +280,12 @@ public sealed class GesNetworkServerEnd : IDisposable
                 var client = _clients[index];
                 var connection = client.Link.Connection;
                 client.Link.Receive(Math.Max(now, connection.Now));
+
+                // After the handler closed or refused the connection, its remaining events up to the disconnect are skipped.
+                var skipping = false;
                 for (var next = connection.NextEvent(); next.Kind != GesNetworkEventKind.None; next = connection.NextEvent())
                 {
+                    if (skipping && next.Kind != GesNetworkEventKind.Closed) continue;
                     var kind = GesNetworkEnds.Kind(next.Kind, client: false);
                     if (kind == GesNetworkEndEventKind.ClientConnected) Join(connection);
                     else if (kind == GesNetworkEndEventKind.ClientDisconnected) client.Left = true;
@@ -279,14 +293,31 @@ public sealed class GesNetworkServerEnd : IDisposable
                     {
                         if (kind == GesNetworkEndEventKind.ClientConnected) _reportConnected.Add(client.Id);
                     }
+                    else if (kind == GesNetworkEndEventKind.Connecting)
+                    {
+                        try
+                        {
+                            handler.Handle(new GesNetworkEndEvent(kind, client.Id, next, GesNetworkSecurity.None));
+                        }
+                        finally
+                        {
+                            // A client the handler neither accepted nor refused is accepted, also when the handler throws.
+                            if (connection.State == GesNetworkState.AwaitAccept) connection.Accept();
+                        }
+
+                        skipping = connection.State == GesNetworkState.Closed;
+                        continue;
+                    }
                     else
                     {
                         received |= kind is GesNetworkEndEventKind.Message or GesNetworkEndEventKind.Tick;
                         var security = kind == GesNetworkEndEventKind.ClientConnected ? connection.Security : GesNetworkSecurity.None;
+                        var open = connection.State != GesNetworkState.Closed;
                         handler.Handle(new GesNetworkEndEvent(kind, client.Id, next, security));
+                        skipping = open && connection.State == GesNetworkState.Closed;
                     }
 
-                    // A client the handler neither accepted nor refused is accepted.
+                    // A client is accepted when no handler sees its request.
                     if (kind == GesNetworkEndEventKind.Connecting && connection.State == GesNetworkState.AwaitAccept) connection.Accept();
                 }
             }
@@ -303,6 +334,7 @@ public sealed class GesNetworkServerEnd : IDisposable
 
             if (received) handler.Handle(new GesNetworkEndEvent(GesNetworkEndEventKind.Received, -1, GesNetworkSecurity.None));
             foreach (var client in _clients) client.Link.Transmit();
+            _transmitDue = false;
         }
         finally
         {
@@ -350,10 +382,13 @@ public sealed class GesNetworkServerEnd : IDisposable
     private Client Find(int client) =>
         _byId.TryGetValue(client, out var found) ? found : throw new ArgumentException("No client has the id.", nameof(client));
 
-    // Lets a synchronous pair deliver what a send outside a poll produced.
+    // Lets a synchronous pair deliver what a send outside a poll produced; another link transmits it with the next
+    // poll, which the next deadline brings forward.
     private GesNetworkSendStatus After(GesNetworkSendStatus status)
     {
-        if (!_polling) Pair?.Exchange();
+        if (_polling) return status;
+        if (Pair is null) _transmitDue = true;
+        else Pair.Exchange();
         return status;
     }
 

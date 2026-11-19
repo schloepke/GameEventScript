@@ -55,6 +55,9 @@ final class GesNetworkSocketInbox: @unchecked Sendable {
         signal?.set()
     }
 
+    // Wakes the end so its next poll hands over the packets that waited for the socket.
+    func wake() { signal?.set() }
+
     // Whether the socket may read on; otherwise it holds until the host takes the chunks.
     func mayRead() -> Bool {
         lock.withLock {
@@ -95,6 +98,11 @@ final class GesNetworkSocketStreamHandler: ChannelDuplexHandler {
     func channelInactive(context: ChannelHandlerContext) {
         inbox.end()
         context.fireChannelInactive()
+    }
+
+    func channelWritabilityChanged(context: ChannelHandlerContext) {
+        if context.channel.isWritable { inbox.wake() }
+        context.fireChannelWritabilityChanged()
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -197,6 +205,11 @@ final class GesNetworkSocketWebSocketHandler: ChannelDuplexHandler {
     func channelInactive(context: ChannelHandlerContext) {
         stop()
         context.fireChannelInactive()
+    }
+
+    func channelWritabilityChanged(context: ChannelHandlerContext) {
+        if context.channel.isWritable { inbox.wake() }
+        context.fireChannelWritabilityChanged()
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {

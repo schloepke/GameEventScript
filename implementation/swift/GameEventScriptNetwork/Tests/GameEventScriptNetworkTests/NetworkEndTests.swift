@@ -325,4 +325,97 @@ final class NetworkEndTests: XCTestCase {
             _ = try GesNetworkClientEnd(network: network, connector: pair.client.connector, options: options, clock: GesVirtualClock())
         }
     }
+
+    func testBulkSendsBeforeTheHandshakeAreBounded() throws {
+        let network = try GesSchemaSet(parsing: "wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 60 }\nnetwork :Game as { client sends :Blob bulk }\n")
+            .network("Game").bind()
+        var options = GesNetworkOptions.inProcess()
+        // The first transfer takes 39 bytes: its 34-byte header and its data.
+        options.maxTransferBytes = 41
+        let pair = try GesNetworkPair.realtime(network: network, options: options)
+        defer { pair.release() }
+        // As on the connection, the queued transfers of this side stay within its transfer limit.
+        XCTAssertEqual(pair.client.send(route: 0, payload: [1, 2, 3, 4, 5]), .queued)
+        XCTAssertEqual(pair.client.send(route: 0, payload: [6, 7, 8]), .queueFull)
+        XCTAssertEqual(pair.client.send(route: 0, payload: [6, 7]), .queued)
+        let (_, server) = try poll(pair, 50)
+        XCTAssertEqual(
+            server.events.filter { $0 != "Received -1" && $0 != "TransferProgress 0" },
+            ["connecting 0 ", "ClientConnected 0", "message 0 0102030405", "message 0 0607"]
+        )
+    }
+
+    func testAdvancingThePairDuringAPollThrows() throws {
+        let pair = try GesNetworkPair.synchronous(network: network())
+        defer { pair.release() }
+        let client = Recorder()
+        client.onEvent = { _, _ in try pair.advance(by: 1) }
+        assertThrows(.invalidOperation("")) { try self.poll(pair, client: client) }
+    }
+
+    func testAThrowingConnectingHandlerStillAcceptsTheClient() throws {
+        struct HandlerError: Error {}
+
+        let pair = try GesNetworkPair.realtime(network: network())
+        defer { pair.release() }
+        let server = Recorder()
+        server.onEvent = { kind, _ in
+            if kind == .connecting { throw HandlerError() }
+        }
+        let client = Recorder()
+        var thrown = false
+        for _ in 0..<10 {
+            try pair.client.poll(client.handle)
+            do {
+                try pair.server.poll(server.handle)
+            } catch is HandlerError {
+                thrown = true
+            }
+        }
+        XCTAssertTrue(thrown)
+        XCTAssertEqual(pair.client.connection.state, .connected)
+        XCTAssertEqual(client.events, ["Connected -1"])
+    }
+
+    func testASendOutsideAPollBringsTheNextDeadlineForward() throws {
+        let pair = try GesNetworkPair.realtime(network: network())
+        defer { pair.release() }
+        try poll(pair, 10)
+        XCTAssertEqual(pair.client.connection.state, .connected)
+        var idle = pair.client.nextDeadline
+        _ = pair.client.send(route: commands, payload: [1])
+        XCTAssertLessThan(pair.client.nextDeadline, idle, "The send is due with the next poll.")
+        let server = Recorder()
+        try pair.server.poll(server.handle)
+        idle = pair.server.nextDeadline
+        _ = pair.server.publish(route: log, payload: [2])
+        XCTAssertLessThan(pair.server.nextDeadline, idle, "The publish is due with the next poll.")
+    }
+
+    func testAConnectionClosedByTheHandlerSkipsItsRemainingEvents() throws {
+        let pair = try GesNetworkPair.synchronous(network: network())
+        defer { pair.release() }
+        var (client, server) = try poll(pair)
+        _ = client.take()
+        _ = server.take()
+        server.onEvent = { kind, id in
+            if kind == .message { try pair.server.close(client: id, detail: "undecodable") }
+        }
+        _ = pair.client.send(route: commands, payload: [1])
+        _ = pair.client.send(route: commands, payload: [2])
+        try pair.server.poll(server.handle)
+        XCTAssertEqual(server.take(), ["message \(commands) 01", "ClientDisconnected 0 network.closed False", "Received -1"])
+
+        let second = try GesNetworkPair.synchronous(network: network())
+        defer { second.release() }
+        (client, server) = try poll(second)
+        _ = client.take()
+        client.onEvent = { kind, _ in
+            if kind == .message { second.client.close("undecodable") }
+        }
+        _ = second.server.publish(route: log, payload: [3])
+        _ = second.server.publish(route: log, payload: [4])
+        try second.client.poll(client.handle)
+        XCTAssertEqual(client.take(), ["message \(log) 03", "Disconnected -1 network.closed False", "Received -1"])
+    }
 }

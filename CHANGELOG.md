@@ -75,7 +75,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   literal is read where the longer one would not complete a unit, as in `5m*x` (specs/Language.md#quantities).
 - Network ends (specs/Network.md#ends): `GesNetworkClientEnd` and `GesNetworkServerEnd` drive their connections over a
   plug-in transport (`IGesNetworkConnector`, `IGesNetworkAcceptor`, `IGesNetworkLink`; Swift protocols) and an
-  injectable clock, accept sends before the handshake, accept clients unless the handler refuses them and report
+  injectable clock, accept sends before the handshake within the connection's limits, accept clients unless the
+  handler refuses them, skip a connection's remaining events of a poll after the handler closes it and report
   everything as end events through `Poll`. `GesNetworkPair.Synchronous` and `Realtime` connect two ends in one process
   and replace the loopback; `GesNetworkSocketConnector` opens TCP, WebSocket and UDP ends, and `Wait`/`WaitAsync`
   (Swift `wait()`) sleep until the next socket packet or deadline.
@@ -85,7 +86,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   disposed.
 - Typed ends (specs/Schemas.md#typed-ends): `ges schema generate --root <Network>` adds `Game.Client` and `Game.Server`
   with typed `Send`/`Publish`, server ticks, a handler interface (Swift an event enum) with one method per received
-  route; an undecodable payload closes the connection. Message sets gain a `Case` type with `ToCase()` and `Assign`
+  route; an undecodable payload closes the connection, whose later events the handler no longer sees. Message sets gain a `Case` type with `ToCase()` and `Assign`
   (Swift `enum Case`, `asCase`, `assign(_:)`).
 
 ### Changed

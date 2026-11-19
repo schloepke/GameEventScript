@@ -1074,7 +1074,7 @@ enum GesCSharpEmitter {
             code.line("public GesNetworkConnection Connection => End.Connection;")
         } else {
             code.blank()
-            code.line("/// <summary>Gets the number of connected clients.</summary>")
+            code.line("/// <summary>Gets the number of connecting and connected clients.</summary>")
             code.line("public int ClientCount => End.ClientCount;")
             code.blank()
             code.line("/// <summary>Gets the connection of a client.</summary>")
@@ -1127,7 +1127,7 @@ enum GesCSharpEmitter {
             code.line("public void Close(int client, string detail) => End.Close(client, detail);")
         }
         code.blank()
-        code.line(isClient ? "/// <summary>Closes the connection with a detail.</summary>" : "/// <summary>Closes every connection with a detail and stops accepting clients.</summary>")
+        code.line(isClient ? "/// <summary>Closes the connection with a detail.</summary>" : "/// <summary>Closes every current connection with a detail; the end still accepts new clients.</summary>")
         code.line("/// <param name=\"detail\">The detail sent to the \(isClient ? "server" : "clients").</param>")
         code.line("public void Close(string detail) => End.Close(detail);")
         if end.hasTopics { tickMembers(&code, end, roots) }

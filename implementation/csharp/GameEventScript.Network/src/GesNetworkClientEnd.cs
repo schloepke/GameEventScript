@@ -20,6 +20,9 @@ public sealed class GesNetworkClientEnd : IDisposable
     private bool _disposed;
     private bool _polling;
 
+    // Whether a send, publish, tick or close outside a poll left packets that only the next poll transmits.
+    private bool _transmitDue;
+
     internal bool Polling => _polling;
     // Set by a synchronous pair, which runs both ends after every send.
     internal GesNetworkPair? Pair;
@@ -29,6 +32,8 @@ public sealed class GesNetworkClientEnd : IDisposable
     // Sends before the handshake: reliable and bulk ones in order, latest ones as the newest per route.
     private readonly List<Queued> _queue = [];
     private long _queuedBytes;
+    private long _queuedTransferBytes;
+    private int _queuedTransfers;
     private readonly byte[]?[] _latest;
     private readonly int[] _latestLengths;
     private readonly long[] _latestSerials;
@@ -98,10 +103,10 @@ public sealed class GesNetworkClientEnd : IDisposable
     public IGesClock Clock => _clock;
 
     /// <summary>
-    /// Gets the earliest time at which a poll has work without new input: now before the first poll, else the
-    /// connection's next deadline.
+    /// Gets the earliest time at which a poll has work without new input: now before the first poll and while a
+    /// send, publish, tick or close outside a poll left packets for the next poll, else the connection's next deadline.
     /// </summary>
-    public long NextDeadline => _link is null && !_disposed ? _clock.ElapsedMicroseconds : Connection.NextDeadline;
+    public long NextDeadline => (_link is null || _transmitDue) && !_disposed ? _clock.ElapsedMicroseconds : Connection.NextDeadline;
 
     private bool Waiting => Connection.State is GesNetworkState.Hello;
 
@@ -111,7 +116,7 @@ public sealed class GesNetworkClientEnd : IDisposable
     /// </summary>
     /// <param name="route">The route index of a <c>sends</c> route of the client.</param>
     /// <param name="payload">The encoded root value; it is copied.</param>
-    /// <returns>The send status; <see cref="GesNetworkSendStatus.QueueFull"/> when the waiting reliable sends would exceed the connection's send queue.</returns>
+    /// <returns>The send status; <see cref="GesNetworkSendStatus.QueueFull"/> when the waiting reliable sends would exceed the connection's send queue, or the waiting transfers its transfer limit or count.</returns>
     public GesNetworkSendStatus Send(int route, ReadOnlySpan<byte> payload)
     {
         if (!Waiting) return After(Connection.Send(route, payload));
@@ -220,7 +225,8 @@ public sealed class GesNetworkClientEnd : IDisposable
 
     /// <summary>
     /// Opens the transport on the first call, passes received packets to the connection, hands every event to the
-    /// handler and transmits every due packet. Never blocks and never calls the handler outside this call.
+    /// handler and transmits every due packet. After the handler closes the connection, its remaining events up to the
+    /// disconnect are skipped. Never blocks and never calls the handler outside this call.
     /// </summary>
     /// <typeparam name="THandler">The handler type; a struct handler is called without allocating.</typeparam>
     /// <param name="handler">The handler of the events.</param>
@@ -233,6 +239,7 @@ public sealed class GesNetworkClientEnd : IDisposable
         if (_disposed) throw new ObjectDisposedException(GetType().Name);
         if (_polling) throw new InvalidOperationException("The end is polled already.");
         _polling = true;
+        _transmitDue = true;
         try
         {
             var now = Math.Max(_clock.ElapsedMicroseconds, Connection.Now);
@@ -245,8 +252,11 @@ public sealed class GesNetworkClientEnd : IDisposable
                 handler.Handle(new GesNetworkEndEvent(GesNetworkEndEventKind.Connected, -1, Connection.Security));
             }
 
+            // After the handler closed the connection, its remaining events up to the disconnect are skipped.
+            var skipping = false;
             for (var next = Connection.NextEvent(); next.Kind != GesNetworkEventKind.None; next = Connection.NextEvent())
             {
+                if (skipping && next.Kind != GesNetworkEventKind.Closed) continue;
                 if (next.Kind == GesNetworkEventKind.Connected) PassQueue();
                 else if (next.Kind == GesNetworkEventKind.Closed) DropQueue();
                 if (!report)
@@ -258,11 +268,14 @@ public sealed class GesNetworkClientEnd : IDisposable
                 var kind = GesNetworkEnds.Kind(next.Kind, client: true);
                 received |= kind is GesNetworkEndEventKind.Message or GesNetworkEndEventKind.Tick;
                 var security = kind == GesNetworkEndEventKind.Connected ? Connection.Security : GesNetworkSecurity.None;
+                var open = Connection.State != GesNetworkState.Closed;
                 handler.Handle(new GesNetworkEndEvent(kind, -1, next, security));
+                skipping = open && Connection.State == GesNetworkState.Closed;
             }
 
             if (received) handler.Handle(new GesNetworkEndEvent(GesNetworkEndEventKind.Received, -1, GesNetworkSecurity.None));
             _link.Transmit();
+            _transmitDue = false;
         }
         finally
         {
@@ -281,10 +294,13 @@ public sealed class GesNetworkClientEnd : IDisposable
         _link?.Dispose();
     }
 
-    // Lets a synchronous pair deliver what a send outside a poll produced.
+    // Lets a synchronous pair deliver what a send outside a poll produced; another link transmits it with the next
+    // poll, which the next deadline brings forward.
     private GesNetworkSendStatus After(GesNetworkSendStatus status)
     {
-        if (!_polling) Pair?.Exchange();
+        if (_polling) return status;
+        if (Pair is null) _transmitDue = true;
+        else Pair.Exchange();
         return status;
     }
 
@@ -307,6 +323,15 @@ public sealed class GesNetworkClientEnd : IDisposable
             if (_queuedBytes + bytes > Connection.MaxSendQueueBytes) return GesNetworkSendStatus.QueueFull;
             _queuedBytes += bytes;
         }
+        else
+        {
+            // As the connection bounds its started transfers, against this side's transfer limit; a transfer counts as
+            // uncompressed, so the connection takes every queued one.
+            if (_queuedTransfers >= Connection.MaxQueuedTransfers || _queuedTransferBytes + payload.Length > Connection.MaxTransferQueueBytes)
+                return GesNetworkSendStatus.QueueFull;
+            _queuedTransfers++;
+            _queuedTransferBytes += GesNetworkConnection.QueuedTransferBytes(payload.Length);
+        }
 
         _queue.Add(new Queued(route, publish, payload.ToArray()));
         return GesNetworkSendStatus.Queued;
@@ -324,6 +349,8 @@ public sealed class GesNetworkClientEnd : IDisposable
 
         _queue.Clear();
         _queuedBytes = 0;
+        _queuedTransferBytes = 0;
+        _queuedTransfers = 0;
         PassLatest(older: true);
         if (_hasClosed) PassTick(_closed, _closedLengths, _closedMembers);
         PassLatest(older: false);
@@ -378,6 +405,8 @@ public sealed class GesNetworkClientEnd : IDisposable
     {
         _queue.Clear();
         _queuedBytes = 0;
+        _queuedTransferBytes = 0;
+        _queuedTransfers = 0;
         Array.Clear(_hasLatest, 0, _hasLatest.Length);
         Array.Clear(_staged, 0, _staged.Length);
         Array.Clear(_closedMembers, 0, _closedMembers.Length);

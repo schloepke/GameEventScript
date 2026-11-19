@@ -230,10 +230,13 @@ public final class GesNetworkPair {
     /// Moves the virtual clock of a synchronous pair forward, runs the deadlines of both ends and moves the packets
     /// they produce. Events wait for the next polls.
     /// - Parameter microseconds: The whole microseconds to add.
-    /// - Throws: `GesApiError.invalidOperation` when the pair is realtime; `GesApiError.invalidArgument` when the amount
-    ///   is negative.
+    /// - Throws: `GesApiError.invalidOperation` when the pair is realtime or an end is being polled;
+    ///   `GesApiError.invalidArgument` when the amount is negative.
     public func advance(by microseconds: Int64) throws {
         guard let virtualClock = core.virtualClock else { throw GesApiError.invalidOperation("Only a synchronous pair has a virtual clock.") }
+
+        // The event a handler holds borrows the connection's buffers, which receiving would overwrite.
+        if core.client?.polling == true || core.server?.polling == true { throw GesApiError.invalidOperation("An end of the pair is being polled.") }
         try virtualClock.advance(by: microseconds)
         let now = virtualClock.elapsedMicroseconds
         for link in core.links { try link.receive(now: now) }

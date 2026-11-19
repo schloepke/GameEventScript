@@ -1180,7 +1180,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             /// <summary>Gets the wrapped end.</summary>
             public GesNetworkServerEnd End { get; }
 
-            /// <summary>Gets the number of connected clients.</summary>
+            /// <summary>Gets the number of connecting and connected clients.</summary>
             public int ClientCount => End.ClientCount;
 
             /// <summary>Gets the connection of a client.</summary>
@@ -1218,7 +1218,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             /// <param name="detail">The detail sent to the client.</param>
             public void Close(int client, string detail) => End.Close(client, detail);
 
-            /// <summary>Closes every connection with a detail and stops accepting clients.</summary>
+            /// <summary>Closes every current connection with a detail; the end still accepts new clients.</summary>
             /// <param name="detail">The detail sent to the clients.</param>
             public void Close(string detail) => End.Close(detail);
 

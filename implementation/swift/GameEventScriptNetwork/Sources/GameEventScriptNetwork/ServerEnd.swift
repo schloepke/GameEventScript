@@ -34,6 +34,8 @@ public final class GesNetworkServerEnd {
     private var nextId = 0
     private var released = false
     private(set) var polling = false
+    // Whether a send, publish, tick or close outside a poll left packets that only the next poll transmits.
+    private var transmitDue = false
     private var tickOpen = false
     // The last published state of each latest topic, which a client connected during a tick and include receive.
     private var kept: [[UInt8]]
@@ -69,9 +71,11 @@ public final class GesNetworkServerEnd {
     /// The number of clients the end holds, connecting or connected.
     public var clientCount: Int { clients.count }
 
-    /// The earliest deadline of all clients; `Int64.max` without clients. An acceptor has no deadline: a server end that
-    /// waits for clients polls at its own pace.
+    /// The earliest deadline of all clients, now while a send, publish, tick or close outside a poll left packets for
+    /// the next poll; `Int64.max` without clients. An acceptor has no deadline: a server end that waits for clients
+    /// polls at its own pace.
     public var nextDeadline: Int64 {
+        if transmitDue && !clients.isEmpty { return clock.elapsedMicroseconds }
         var deadline = Int64.max
         for client in clients { deadline = min(deadline, client.link.connection.nextDeadline) }
         return deadline
@@ -233,8 +237,10 @@ public final class GesNetworkServerEnd {
     }
 
     /// Accepts every waiting client, passes received packets to every connection, hands every event to the handler and
-    /// transmits every due packet. A connecting client is accepted after its event unless the handler refused it; a
-    /// closed client leaves the end after its event. Never blocks and never calls the handler outside this call.
+    /// transmits every due packet. A connecting client is accepted after its event unless the handler accepted or
+    /// refused it, also when the handler throws; after the handler closes or refuses a client, that client's remaining
+    /// events up to its disconnect are skipped, and a closed client leaves the end after its event. Never blocks and
+    /// never calls the handler outside this call.
     /// - Parameter handler: The handler of the events. It may send, publish, close, refuse and open or close ticks on
     ///   the end; an event's payload is valid only until it returns.
     /// - Throws: `GesApiError.invalidOperation` when the end is released or the handler polls the end again; an error
@@ -247,6 +253,7 @@ public final class GesNetworkServerEnd {
         if released { throw GesApiError.invalidOperation("The end is released.") }
         if polling { throw GesApiError.invalidOperation("The end is polled already.") }
         polling = true
+        transmitDue = true
         do {
             defer { polling = false }
             let now = clock.elapsedMicroseconds
@@ -269,9 +276,12 @@ public final class GesNetworkServerEnd {
                 let client = clients[index]
                 let connection = client.link.connection
                 try client.link.receive(now: max(now, connection.now))
+                // After the handler closed or refused the connection, its remaining events up to the disconnect are skipped.
+                var skipping = false
                 while true {
                     let next = connection.nextEvent()
                     if next.kind == .none { break }
+                    if skipping && next.kind != .closed { continue }
                     let kind = GesNetworkEndEvent.kind(next.kind, client: false)
                     if kind == .clientConnected {
                         try join(connection)
@@ -280,11 +290,24 @@ public final class GesNetworkServerEnd {
                     }
                     if !report {
                         if kind == .clientConnected { reportConnected.append(client.id) }
+                    } else if kind == .connecting {
+                        do {
+                            try handler(GesNetworkEndEvent(kind, client: client.id, source: next, security: .none))
+                        } catch {
+                            // A client the handler neither accepted nor refused is accepted, also when the handler throws.
+                            if connection.state == .awaitAccept { try connection.accept() }
+                            throw error
+                        }
+                        if connection.state == .awaitAccept { try connection.accept() }
+                        skipping = connection.state == .closed
+                        continue
                     } else {
                         if kind == .message || kind == .tick { received = true }
+                        let open = connection.state != .closed
                         try handler(GesNetworkEndEvent(kind, client: client.id, source: next, security: kind == .clientConnected ? connection.security : .none))
+                        skipping = open && connection.state == .closed
                     }
-                    // A client the handler neither accepted nor refused is accepted.
+                    // A client is accepted when no handler sees its request.
                     if kind == .connecting && connection.state == .awaitAccept { try connection.accept() }
                 }
             }
@@ -296,6 +319,7 @@ public final class GesNetworkServerEnd {
             }
             if received { try handler(GesNetworkEndEvent(.received, client: -1, security: .none)) }
             for client in clients { try client.link.transmit() }
+            transmitDue = false
         }
         pair?.exchange()
     }
@@ -336,9 +360,11 @@ public final class GesNetworkServerEnd {
         return found
     }
 
-    // Lets a synchronous pair deliver what a send outside a poll produced.
+    // Lets a synchronous pair deliver what a send outside a poll produced; another link transmits it with the next
+    // poll, which the next deadline brings forward.
     private func after(_ status: GesNetworkSendStatus) -> GesNetworkSendStatus {
-        if !polling { pair?.exchange() }
+        if polling { return status }
+        if let pair { pair.exchange() } else { transmitDue = true }
         return status
     }
 }

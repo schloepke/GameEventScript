@@ -24,6 +24,8 @@ public final class GesNetworkClientEnd {
     private var link: (any GesNetworkLink)?
     private var released = false
     private(set) var polling = false
+    // Whether a send, publish, tick or close outside a poll left packets that only the next poll transmits.
+    private var transmitDue = false
     // Set by a synchronous pair, which runs both ends after every send.
     var pair: GesNetworkPair.Core?
     // The connected event that a synchronous pair's handshake took and the next poll reports.
@@ -32,6 +34,8 @@ public final class GesNetworkClientEnd {
     // Sends before the handshake: reliable and bulk ones in order, latest ones as the newest per route.
     private var queue: [Queued] = []
     private var queuedBytes: Int64 = 0
+    private var queuedTransferBytes: Int64 = 0
+    private var queuedTransfers = 0
     private var latest: [[UInt8]]
     private var latestLengths: [Int]
     private var latestSerials: [Int64]
@@ -90,9 +94,9 @@ public final class GesNetworkClientEnd {
     /// The bound network of the end's connection.
     public var network: GesBoundNetwork { connection.network }
 
-    /// The earliest time at which a poll has work without new input: now before the first poll, else the connection's
-    /// next deadline.
-    public var nextDeadline: Int64 { link == nil && !released ? clock.elapsedMicroseconds : connection.nextDeadline }
+    /// The earliest time at which a poll has work without new input: now before the first poll and while a send,
+    /// publish, tick or close outside a poll left packets for the next poll, else the connection's next deadline.
+    public var nextDeadline: Int64 { (link == nil || transmitDue) && !released ? clock.elapsedMicroseconds : connection.nextDeadline }
 
     private var waiting: Bool { connection.state == .hello }
 
@@ -102,7 +106,7 @@ public final class GesNetworkClientEnd {
     ///   - route: The route index of a `sends` route of the client.
     ///   - payload: The encoded root value; the bytes are copied.
     /// - Returns: The send status; `queueFull` when the waiting reliable sends would exceed the connection's send
-    ///   queue.
+    ///   queue, or the waiting transfers its transfer limit or count.
     public func send(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus {
         if !waiting { return after(connection.send(route: route, payload: payload)) }
         let status = connection.check(route, payload.count, publish: false)
@@ -214,7 +218,8 @@ public final class GesNetworkClientEnd {
     }
 
     /// Opens the transport on the first call, passes received packets to the connection, hands every event to the
-    /// handler and transmits every due packet. Never blocks and never calls the handler outside this call.
+    /// handler and transmits every due packet. After the handler closes the connection, its remaining events up to the
+    /// disconnect are skipped. Never blocks and never calls the handler outside this call.
     /// - Parameter handler: The handler of the events. It may send, publish, close and open or close ticks on the end;
     ///   an event's payload is valid only until it returns.
     /// - Throws: `GesApiError.invalidOperation` when the end is released or the handler polls the end again; an error
@@ -227,6 +232,7 @@ public final class GesNetworkClientEnd {
         if released { throw GesApiError.invalidOperation("The end is released.") }
         if polling { throw GesApiError.invalidOperation("The end is polled already.") }
         polling = true
+        transmitDue = true
         do {
             defer { polling = false }
             let now = max(clock.elapsedMicroseconds, connection.now)
@@ -243,9 +249,12 @@ public final class GesNetworkClientEnd {
                 reportConnected = false
                 try handler(GesNetworkEndEvent(.connected, client: -1, security: connection.security))
             }
+            // After the handler closed the connection, its remaining events up to the disconnect are skipped.
+            var skipping = false
             while true {
                 let next = connection.nextEvent()
                 if next.kind == .none { break }
+                if skipping && next.kind != .closed { continue }
                 if next.kind == .connected {
                     try passQueue()
                 } else if next.kind == .closed {
@@ -257,10 +266,13 @@ public final class GesNetworkClientEnd {
                 }
                 let kind = GesNetworkEndEvent.kind(next.kind, client: true)
                 if kind == .message || kind == .tick { received = true }
+                let open = connection.state != .closed
                 try handler(GesNetworkEndEvent(kind, client: -1, source: next, security: kind == .connected ? connection.security : .none))
+                skipping = open && connection.state == .closed
             }
             if received { try handler(GesNetworkEndEvent(.received, client: -1, security: .none)) }
             try link.transmit()
+            transmitDue = false
         }
         pair?.exchange()
     }
@@ -274,9 +286,11 @@ public final class GesNetworkClientEnd {
         link?.close()
     }
 
-    // Lets a synchronous pair deliver what a send outside a poll produced.
+    // Lets a synchronous pair deliver what a send outside a poll produced; another link transmits it with the next
+    // poll, which the next deadline brings forward.
     private func after(_ status: GesNetworkSendStatus) -> GesNetworkSendStatus {
-        if !polling { pair?.exchange() }
+        if polling { return status }
+        if let pair { pair.exchange() } else { transmitDue = true }
         return status
     }
 
@@ -295,6 +309,12 @@ public final class GesNetworkClientEnd {
             let bytes = Int64(publish ? payload.count + 1 : payload.count)
             if queuedBytes + bytes > connection.maxSendQueueBytes { return .queueFull }
             queuedBytes += bytes
+        } else {
+            // As the connection bounds its started transfers, against this side's transfer limit; a transfer counts as
+            // uncompressed, so the connection takes every queued one.
+            if queuedTransfers >= GesNetworkSendQueue.maximumStarted || queuedTransferBytes + Int64(payload.count) > connection.maxTransfer { return .queueFull }
+            queuedTransfers += 1
+            queuedTransferBytes += GesNetworkConnection.queuedTransferBytes(payload.count)
         }
         queue.append(Queued(route: route, publish: publish, payload: Array(payload)))
         return .queued
@@ -312,6 +332,8 @@ public final class GesNetworkClientEnd {
         }
         queue.removeAll()
         queuedBytes = 0
+        queuedTransferBytes = 0
+        queuedTransfers = 0
         passLatest(older: true)
         if hasClosed {
             try connection.beginTick()
@@ -361,6 +383,8 @@ public final class GesNetworkClientEnd {
     private func dropQueue() {
         queue.removeAll()
         queuedBytes = 0
+        queuedTransferBytes = 0
+        queuedTransfers = 0
         Self.clear(&hasLatest)
         Self.clear(&staged)
         Self.clear(&closedMembers)

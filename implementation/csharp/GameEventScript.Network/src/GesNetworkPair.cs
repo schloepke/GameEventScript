@@ -88,11 +88,14 @@ public sealed class GesNetworkPair : IDisposable
     /// produce. Events wait for the next polls.
     /// </summary>
     /// <param name="microseconds">The whole microseconds to add.</param>
-    /// <exception cref="InvalidOperationException">The pair is realtime.</exception>
+    /// <exception cref="InvalidOperationException">The pair is realtime, or an end is being polled.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="microseconds"/> is negative.</exception>
     public void Advance(long microseconds)
     {
         if (_virtual is null) throw new InvalidOperationException("Only a synchronous pair has a virtual clock.");
+
+        // The event a handler holds borrows the connection's buffers, which receiving would overwrite.
+        if (Client.Polling || Server.Polling) throw new InvalidOperationException("An end of the pair is being polled.");
         _virtual.Advance(microseconds);
         var now = _virtual.ElapsedMicroseconds;
         foreach (var link in _links) link.Receive(now);

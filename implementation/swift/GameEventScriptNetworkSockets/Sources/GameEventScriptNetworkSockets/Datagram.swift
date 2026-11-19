@@ -287,6 +287,12 @@ private final class GesNetworkSocketDatagramRouter: ChannelInboundHandler {
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {}
 
+    // Wakes the server end so its next poll hands over the datagrams that waited for the socket.
+    func channelWritabilityChanged(context: ChannelHandlerContext) {
+        if context.channel.isWritable { queue.signal.set() }
+        context.fireChannelWritabilityChanged()
+    }
+
     // Registers a validated address with its hello and offers it to the host; a full queue drops the hello, and the
     // client sends it again.
     private func admit(_ context: ChannelHandlerContext, _ hello: AddressedEnvelope<ByteBuffer>) {
@@ -313,6 +319,11 @@ private final class GesNetworkSocketDatagramHandler: ChannelInboundHandler {
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {}
+
+    func channelWritabilityChanged(context: ChannelHandlerContext) {
+        if context.channel.isWritable { peer.inbox.wake() }
+        context.fireChannelWritabilityChanged()
+    }
 }
 
 // The address for validation and for comparing sources: the 4 or 16 bytes of the IP address and the port, most

@@ -1976,7 +1976,8 @@ named after the root, or after verb and root (`SentWorld`, `PublishedWorld`) whe
 that root. The events of the end follow: `Connected` and `Disconnected` on the client, `Connecting`, `ClientConnected` and
 `ClientDisconnected` on the server, `Tick`, `TransferProgress`, `TransferCancelled` and `Received`; server events carry
 the client id. A received name that repeats one of these fails with `generate.nameCollision`. A payload that does not
-decode as its root closes the connection with the detail `undecodable :Root` and reports nothing.
+decode as its root closes the connection with the detail `undecodable :Root` and reports nothing; the end skips the
+connection's later events of that poll up to its disconnect ([ends](Network.md#ends)).
 
 ```swift
 try client.poll { event in

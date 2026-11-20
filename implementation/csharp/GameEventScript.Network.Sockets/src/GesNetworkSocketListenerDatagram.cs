@@ -82,6 +82,9 @@ public sealed partial class GesNetworkSocketListener
             {
                 var bytes = ArrayPool<byte>.Shared.Rent(limit + 1);
                 int length;
+                // Port and address of the previous datagram are cleared, so a failed receive that leaves them unwritten
+                // names no client: port 0 is no peer's.
+                address.Buffer.Span[2..address.Size].Clear();
                 try
                 {
                     length = await socket.ReceiveFromAsync(bytes.AsMemory(0, limit + 1), SocketFlags.None, address, _cancel.Token).ConfigureAwait(false);
@@ -89,7 +92,7 @@ public sealed partial class GesNetworkSocketListener
                 catch (SocketException exception) when (exception.SocketErrorCode == SocketError.MessageSize)
                 {
                     // Windows reports a datagram longer than the buffer as an error, after it filled the buffer and the
-                    // source address. A known client's connection closes with network.packetTooLarge, as on the other
+                    // source address; an address left unwritten was cleared and matches no client. A known client's connection closes with network.packetTooLarge, as on the other
                     // platforms, which cut the datagram silently; for an unknown address it is no valid hello.
                     if (_peers.TryGetValue(address, out var known))
                     {

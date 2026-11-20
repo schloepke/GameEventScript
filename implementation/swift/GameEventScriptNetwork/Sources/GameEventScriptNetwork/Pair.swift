@@ -101,6 +101,7 @@ public final class GesNetworkPair {
         unowned let core: Core
         let connection: GesNetworkConnection
         weak var peer: Link?
+        private static let heldPackets = 64
         private var inbox: [(bytes: [UInt8], length: Int)] = []
         private var inboxHead = 0
         private(set) var closed = false
@@ -144,10 +145,15 @@ public final class GesNetworkPair {
         func transmit() throws { _ = move() }
 
         // Hands every due packet to the peer's inbox; returns whether one moved.
+        // While the peer takes no bytes and its inbox holds `heldPackets`, the packets wait in the connection, as with a
+        // socket whose peer stops reading; only the close packet of a closed connection still leaves.
         func move() -> Bool {
             if closed || ended { return false }
             var moved = false
             while true {
+                if let peer, peer.inbox.count - peer.inboxHead >= Self.heldPackets && !peer.connection.canReceive && connection.state != .closed {
+                    return moved
+                }
                 var buffer = core.rent()
                 let length = (try? connection.transmit(into: &buffer)) ?? 0
                 if length == 0 {

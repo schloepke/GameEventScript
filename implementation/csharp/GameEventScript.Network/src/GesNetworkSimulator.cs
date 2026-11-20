@@ -153,14 +153,18 @@ public sealed class GesNetworkSimulator
 
     private void TransmitAll()
     {
-        Send(Client, _toServer, ref _lastToServer);
-        Send(Server, _toClient, ref _lastToClient);
+        Send(Client, Server, _toServer, ref _lastToServer);
+        Send(Server, Client, _toClient, ref _lastToClient);
     }
 
-    private void Send(GesNetworkConnection sender, List<Flight> queue, ref long last)
+    // While the receiver takes no bytes and this many packets wait for it, the sender holds its packets, as a socket
+    // whose peer stops reading does; only the close packet of a closed connection still leaves.
+    private const int HeldPackets = 64;
+
+    private void Send(GesNetworkConnection sender, GesNetworkConnection receiver, List<Flight> queue, ref long last)
     {
         int length;
-        while ((length = sender.Transmit(_buffer)) > 0)
+        while ((queue.Count < HeldPackets || receiver.CanReceive || sender.State == GesNetworkState.Closed) && (length = sender.Transmit(_buffer)) > 0)
         {
             var delay = Delay();
             if (_loss > 0 && _random.NextInclusiveInteger(0, 999) < _loss) continue;

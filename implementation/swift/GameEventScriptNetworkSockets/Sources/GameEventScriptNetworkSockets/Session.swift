@@ -126,9 +126,13 @@ public final class GesNetworkSocketSession {
         let tls = try endpoint.secure ? NIOSSLContext(configuration: .makeClientConfiguration()) : nil
         let loop = MultiThreadedEventLoopGroup.singleton.next()
         let upgraded = loop.makePromise(of: Void.self)
+        // A server that accepts the connection but never completes TLS or the upgrade must not hold it open: connecting,
+        // TLS and the upgrade together have the same time limit as an upgrade on a listener.
+        let deadline = NIODeadline.now() + GesNetworkSocketUpgrade.timeout
         let channel: Channel
         do {
             channel = try await ClientBootstrap(group: loop)
+                .connectTimeout(GesNetworkSocketUpgrade.timeout)
                 .channelOption(.tcpOption(.tcp_nodelay), value: 1)
                 .channelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: GesNetworkSocketInbox.readBytes))
                 .channelInitializer { channel in
@@ -145,9 +149,7 @@ public final class GesNetworkSocketSession {
             throw error
         }
 
-        // A server that accepts the connection but never completes TLS or the upgrade must not hold it open: the upgrade
-        // has the same time limit as on a listener.
-        let timeout = channel.eventLoop.scheduleTask(in: GesNetworkSocketUpgrade.timeout) {
+        let timeout = channel.eventLoop.scheduleTask(deadline: deadline) {
             upgraded.fail(GesNetworkSocketError("The server did not complete the WebSocket upgrade in time."))
         }
         do {

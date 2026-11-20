@@ -166,12 +166,18 @@ public final class GesNetworkSimulator {
     }
 
     private func transmitAll() throws {
-        try send(client, toServer: true)
-        try send(server, toServer: false)
+        try send(client, server, toServer: true)
+        try send(server, client, toServer: false)
     }
 
-    private func send(_ sender: GesNetworkConnection, toServer direction: Bool) throws {
+    // While the receiver takes no bytes and this many packets wait for it, the sender holds its packets, as a socket
+    // whose peer stops reading does; only the close packet of a closed connection still leaves.
+    private static let heldPackets = 64
+
+    private func send(_ sender: GesNetworkConnection, _ receiver: GesNetworkConnection, toServer direction: Bool) throws {
         while true {
+            let waiting = direction ? toServer.count - toServerHead : toClient.count - toClientHead
+            if waiting >= Self.heldPackets && !receiver.canReceive && sender.state != .closed { return }
             let length = try sender.transmit(into: &buffer)
             if length == 0 { return }
             let delay = nextDelay()

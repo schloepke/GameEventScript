@@ -232,6 +232,9 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
     // still writes the last packets of its closed connection: then it releases the transport once they are written.
     private void Start(Stream? stream, WebSocket? webSocket, Socket? datagram, IDisposable owner)
     {
+        Task writer;
+        Task? reader;
+        bool orderly;
         lock (_gate)
         {
             _opening = false;
@@ -247,9 +250,13 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
             _owner = owner;
             if (_peer == null) _reader = Task.Run(ReadAsync);
             _writer = Task.Run(WriteAsync);
-            if (_orderlyOpening) _ = ReleaseInOrderAsync(_writer, _reader, owner);
+            writer = _writer;
+            reader = _reader;
+            orderly = _orderlyOpening;
         }
 
+        // Releasing in order may run synchronously into Release, which takes the gate; it starts outside of it.
+        if (orderly) _ = ReleaseInOrderAsync(writer, reader, owner);
         _signal?.Set();
     }
 

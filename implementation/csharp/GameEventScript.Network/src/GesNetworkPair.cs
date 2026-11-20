@@ -180,6 +180,7 @@ public sealed class GesNetworkPair : IDisposable
     // One side of an in-process connection: packets wait in the inbox of the receiving side.
     private sealed class Link(GesNetworkPair pair, GesNetworkConnection connection) : IGesNetworkLink
     {
+        private const int HeldPackets = 64;
         private readonly Queue<(byte[] Bytes, int Length)> _inbox = new();
         private bool _disposed;
         private bool _ended;
@@ -217,13 +218,16 @@ public sealed class GesNetworkPair : IDisposable
 
         public void Transmit() => Move();
 
-        // Hands every due packet to the peer's inbox; returns whether one moved.
+        // Hands every due packet to the peer's inbox; returns whether one moved. While the peer takes no bytes and its
+        // inbox holds HeldPackets, the packets wait in the connection, as with a socket whose peer stops reading; only
+        // the close packet of a closed connection still leaves.
         internal bool Move()
         {
             if (_disposed || _ended) return false;
             var moved = false;
             while (true)
             {
+                if (Peer!._inbox.Count >= HeldPackets && !Peer.Connection.CanReceive && connection.State != GesNetworkState.Closed) return moved;
                 var buffer = pair.Rent();
                 var length = connection.Transmit(buffer);
                 if (length == 0)

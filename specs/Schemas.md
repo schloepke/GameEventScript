@@ -2061,9 +2061,10 @@ stamps, removes the files that the previous manifest lists and that are no longe
 alone with the warning `cli.unowned`; a missing or unreadable manifest owns nothing. It removes before it writes, so a
 file renamed only in case on a file system that ignores case is written anew, and writes the manifest last, so a run that
 fails before keeps the previous manifest and its files stay owned. With `--check` it compares the whole
-directory and fails with `cli.outdated` for every changed, missing and surplus file. Names that begin with `.` and Unity's
-`.meta` files are neither reported nor removed, so editors and engines may keep their files beside the code; SwiftPM and
-Unity both ignore the hidden manifest. Every CLI writes identical files and manifests.
+directory and fails with `cli.outdated` for every changed, missing and surplus file. Names that begin with `.`, Unity's
+`.meta` files and Godot's `.uid` files are neither reported nor removed, even when a manifest lists them, so editors and
+engines may keep their files beside the code; SwiftPM, Unity and Godot ignore the hidden manifest. Every CLI writes
+identical files and manifests.
 
 ### Model types
 

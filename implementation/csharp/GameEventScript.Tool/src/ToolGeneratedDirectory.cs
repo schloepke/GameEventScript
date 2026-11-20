@@ -8,8 +8,8 @@ using GameEventScript.Generator;
 namespace GameEventScript.Tool;
 
 // A directory that `schema generate --out-dir` owns. Writing replaces changed files, removes the files that the previous
-// manifest names and that are no longer generated, and leaves other files alone with a warning. Hidden files and Unity's
-// .meta files are never reported, so temporary files and engine metadata can live beside the code.
+// manifest names and that are no longer generated, and leaves other files alone with a warning. Hidden files, Unity's
+// .meta and Godot's .uid files are never reported or removed, so temporary files and engine metadata can live beside the code.
 internal static class ToolGeneratedDirectory
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
@@ -74,7 +74,7 @@ internal static class ToolGeneratedDirectory
     // The manifest is the last file.
     private static string GesManifestName(IReadOnlyList<GesGeneratedFile> files) => files[files.Count - 1].Path;
 
-    // The entries of the directory that a report names, ordered by name: neither hidden nor Unity metadata.
+    // The entries of the directory that a report names, ordered by name: neither hidden nor Unity .meta or Godot .uid metadata.
     private static List<string> Entries(string root)
     {
         var names = new List<string>();
@@ -82,7 +82,7 @@ internal static class ToolGeneratedDirectory
         foreach (var entry in Directory.EnumerateFileSystemEntries(root))
         {
             var name = Path.GetFileName(entry);
-            if (name.StartsWith('.') || name.EndsWith(".meta", StringComparison.Ordinal)) continue;
+            if (name.StartsWith('.') || name.EndsWith(".meta", StringComparison.Ordinal) || name.EndsWith(".uid", StringComparison.Ordinal)) continue;
             names.Add(name);
         }
 

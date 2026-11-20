@@ -102,6 +102,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   field (`RequiredTagAlternatives`, Swift `requiredTagAlternatives`; GESA `tagAlternatives=[...]`).
 
 ### Changed
+- `ges schema generate -d <dir>` treats Godot's `.uid` files like Unity's `.meta` files: a run neither warns about
+  them nor removes them, even when the manifest names them, and `--check` no longer fails on them in a Godot project.
 - A server end's `Send` to every client on a bulk route reports `MessageTooLarge` before any client receives the
   payload when it exceeds the transfer limit of some client; the send budget also counts an encrypted packet's type byte
   and tag; a synchronous pair acknowledges at once whatever acknowledgement delay its options set

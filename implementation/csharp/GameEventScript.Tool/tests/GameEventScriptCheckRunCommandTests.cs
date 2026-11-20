@@ -357,6 +357,31 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(0, Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game.Net", "-d", "out", "--check").ExitCode);
     }
 
+    /// <summary>Verifies that Godot's .uid and Unity's .meta files beside generated code are neither reported nor removed, even when a manifest names them.</summary>
+    [TestMethod]
+    public void SchemaGenerateLeavesEngineMetadataAlone()
+    {
+        Write("s.gess", "model schema :Alpha as { a: :Number }\n");
+        var write = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", "out", "--split", "file");
+        Assert.AreEqual(0, write.ExitCode, write.StandardError);
+        var output = Path.Combine(_directory, "out");
+        File.WriteAllText(Path.Combine(output, "X.cs.uid"), "uid://b0qk2b3v8x1y\n");
+        File.WriteAllText(Path.Combine(output, "X.cs.meta"), "unity\n");
+        var manifestPath = Path.Combine(output, ".ges-generated.json");
+        var manifest = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(manifestPath))!.AsObject();
+        manifest["files"]!.AsArray().Add("X.cs.uid");
+        manifest["files"]!.AsArray().Add("X.cs.meta");
+        File.WriteAllText(manifestPath, manifest.ToJsonString());
+        var rewrite = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", "out", "--split", "file");
+        Assert.AreEqual(0, rewrite.ExitCode, rewrite.StandardError);
+        Assert.IsFalse(rewrite.StandardError.Contains("warning", StringComparison.Ordinal), rewrite.StandardError);
+        Assert.IsTrue(File.Exists(Path.Combine(output, "X.cs.uid")));
+        Assert.IsTrue(File.Exists(Path.Combine(output, "X.cs.meta")));
+        var check = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", "out", "--split", "file", "--check");
+        Assert.AreEqual(0, check.ExitCode, check.StandardError);
+        Assert.AreEqual(string.Empty, check.StandardError);
+    }
+
     /// <summary>Verifies schema generate into a directory: the split, the manifest, removed and foreign files, and the check.</summary>
     [TestMethod]
     public void SchemaGenerateOwnsItsOutputDirectory()

@@ -1028,7 +1028,7 @@ enum GesCSharpEmitter {
 
         func outgoing(_ route: GesLayoutRoute) -> String { "__out_" + GesSchemaPlanner.camel((route.verb == "sends" ? "Send" : "Publish") + route.root) }
 
-        func caseField(_ name: String, _ member: String) -> String { "__case_" + GesSchemaPlanner.camel(name) + "_" + member }
+        func caseField(_ name: String, _ member: String) -> String { "__case_" + GesSchemaPlanner.camel(name) + "__" + member }
 
         code.blank()
         code.line("/// <summary>")

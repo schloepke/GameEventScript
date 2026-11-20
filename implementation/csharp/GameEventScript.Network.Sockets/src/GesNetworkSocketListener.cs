@@ -29,7 +29,7 @@ public sealed partial class GesNetworkSocketListener : IGesNetworkAcceptor
     private const int MaxRequestBytes = 8192;
     private const int PendingClients = 64;
     private const int PendingPerAddress = 8;
-    private static readonly TimeSpan UpgradeTimeout = TimeSpan.FromSeconds(10);
+    internal static readonly TimeSpan UpgradeTimeout = TimeSpan.FromSeconds(10);
     private const string WebSocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     private readonly TcpListener? _listener;

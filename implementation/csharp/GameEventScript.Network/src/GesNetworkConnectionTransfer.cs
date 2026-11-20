@@ -132,6 +132,7 @@ public sealed partial class GesNetworkConnection
     private void QueueTransfer(int route, ReadOnlySpan<byte> data)
     {
         var id = _nextBulkId++;
+        if (_nextBulkId == 0) _bulkIdsWrapped = true;
         var header = 1 + Wire.VarintSize64((ulong)data.Length) + Wire.HashBytes;
         var message = _sendBulk.Reserve(route, header + data.Length, -1, id);
         var length = -1;
@@ -250,7 +251,9 @@ public sealed partial class GesNetworkConnection
         if (_classes[route] != GesNetworkClass.Bulk) return Fail(GesNetworkCodes.Malformed);
         if (_localSends[route])
         {
-            // The receiver refused a transfer of ours: stop sending it and report it once.
+            // The receiver refused a transfer of ours: stop sending it and report it once. An id this side never gave a
+            // transfer names none.
+            if (!_bulkIdsWrapped && id >= _nextBulkId) return Fail(GesNetworkCodes.Malformed);
             if (_sendBulk.FindTransfer(route, id, out var index)) CancelQueued(index, string.Empty);
 
             if (IsPeerCancelled(id)) return true;

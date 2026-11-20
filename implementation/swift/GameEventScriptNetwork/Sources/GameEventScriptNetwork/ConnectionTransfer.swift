@@ -105,6 +105,7 @@ extension GesNetworkConnection {
     private func queueTransfer(_ route: Int, _ data: UnsafeRawBufferPointer) {
         let id = nextBulkId
         nextBulkId &+= 1
+        if nextBulkId == 0 { bulkIdsWrapped = true }
         let header = 1 + Wire.varintSize64(UInt64(data.count)) + Wire.hashBytes
         sendBulk.reserve(route, header + data.count, -1, id)
         var length = -1
@@ -207,7 +208,9 @@ extension GesNetworkConnection {
 
         if classes[route] != .bulk { return fail(GesNetworkCodes.malformed) }
         if localSends[route] {
-            // The receiver refused a transfer of ours: stop sending it and report it once.
+            // The receiver refused a transfer of ours: stop sending it and report it once. An id this side never gave a
+            // transfer names none.
+            if !bulkIdsWrapped && id >= nextBulkId { return fail(GesNetworkCodes.malformed) }
             var index = 0
             if sendBulk.findTransfer(route, id, &index) { cancelQueued(index, "") }
             if isPeerCancelled(id) { return true }

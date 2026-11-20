@@ -85,7 +85,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   handler refuses them, skip a connection's remaining events of a poll after the handler closes it and report
   everything as end events through `Poll`. `GesNetworkPair.Synchronous` and `Realtime` connect two ends in one process
   and replace the loopback; `GesNetworkSocketConnector` opens TCP, WebSocket and UDP ends, and `Wait`/`WaitAsync`
-  (Swift `wait()`) sleep until the next socket packet or deadline.
+  (Swift `wait()`) sleep until the next socket packet or deadline. The send budget counts an encrypted packet's type
+  byte and tag, and a synchronous pair acknowledges at once whatever acknowledgement delay its options set. Socket ends
+  close in order: they write their last packets, end the stream or send the WebSocket close frame, and read until the
+  peer's end for at most 10 s; a client's WebSocket upgrade also ends after 10 s.
 - Network ticks (specs/Network.md#ticks): `BeginTick`, `Include` and `EndTick` publish several `latest` topics as one
   numbered tick, which the receiver reports with a `tick` event after the messages of its changed members. A newer tick
   replaces a waiting one, whose states become latest states; the generated C# tick closes once, however often it is
@@ -93,7 +96,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Typed ends (specs/Schemas.md#typed-ends): `ges schema generate --root <Network>` adds `Game.Client` and `Game.Server`
   with typed `Send`/`Publish`, server ticks, a handler interface (Swift an event enum) with one method per received
   route; an undecodable payload closes the connection, whose later events the handler no longer sees. A root, tag set or
-  network named like a type nested in the network (`Client`, `Topic`, ...) fails with `generate.nameCollision`. Message sets gain a `Case` type with `ToCase()` and `Assign`
+  network named like a type nested in the network (`Client`, `Topic`, ...), members of the network type that coincide in
+  a language's spelling and, in C#, a member named like the network fail with `generate.nameCollision`; internal fields
+  stay apart from received roots of any name. Message sets gain a `Case` type with `ToCase()` and `Assign`
   (Swift `enum Case`, `asCase`, `assign(_:)`).
 - Tag alternatives in handler filters (specs/Language.md#messages-and-dispatch): `matching #lidar | #ultrasonic, #front`
   requires at least one tag of each `|` group besides every plain tag; `|` binds tighter than `,`, repeated clauses add
@@ -104,13 +109,6 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ### Changed
 - `ges schema generate -d <dir>` treats Godot's `.uid` files like Unity's `.meta` files: a run neither warns about
   them nor removes them, even when the manifest names them, and `--check` no longer fails on them in a Godot project.
-- A server end's `Send` to every client on a bulk route reports `MessageTooLarge` before any client receives the
-  payload when it exceeds the transfer limit of some client; the send budget also counts an encrypted packet's type byte
-  and tag; a synchronous pair acknowledges at once whatever acknowledgement delay its options set
-  (specs/Network.md#ends).
-- Generated network ends keep their internal fields apart from received roots of any name, and a C# network whose
-  constant, property or typed function would take the network's name fails with `generate.nameCollision` instead of
-  generating code that does not compile (specs/Schemas.md#network-constants).
 - The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the
   Network Sockets package uses; CI builds every library with Swift 6.1.
 - A quotient of a mass by a time such as `6kg / 2s` is now `3kg/s` instead of nothing; other products and quotients

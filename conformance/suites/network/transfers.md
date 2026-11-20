@@ -621,6 +621,50 @@ network:
 
 ---
 
+## Test: A cancel for a transfer never sent
+
+A receiver cancels only a transfer the sender started: the server gave its first transfer id 0, so a cancel frame naming id 1 is `network.malformed`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cancel-unknown-transfer
+networkApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  network: "Game"
+  token: ""
+  link: "none"
+  steps:
+    - {"transmit": "client"}
+    - {"deliver": {"side": "server", "packets": [0]}}
+    - {"accept": true}
+    - {"transmit": "server"}
+    - {"deliver": {"side": "client", "packets": [0]}}
+    - {"send": {"side": "server", "route": 3, "payload": "01"}}
+    - {"transmit": "server"}
+    - {"receive": {"side": "server", "bytes": "050300000000000000000001040001186e6574776f726b2e7472616e73666572546f6f4c61726765"}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "client packet 014745534e0166c53b960403735304a1a6879dd34d23b7d28acffa5b3c6dc56f93184d6c347b7742157d68bb79cfb58080018080048080802001000000"
+    - "server connecting -"
+    - "server connected"
+    - "server packet 03018080018080048080802001"
+    - "client connected"
+    - "server send queued"
+    - "server packet 0502000004000000232300014bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a01"
+    - "server progress 3 0 35/35"
+    - "server closed network.malformed local \"\""
+```
+
+---
+
 ## Test: Cancelling over datagrams
 
 Over datagrams the cancel frame reaches the receiver, which skips the cancelled transfer and delivers the next.

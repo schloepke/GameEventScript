@@ -1163,8 +1163,8 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         {
             private readonly byte[] __send_buffer;
             private global::GameEventScript.Tests.Generator.Network.Wire.Commands __commands;
-            private readonly global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case.Move __case_commands_Move = new();
-            private readonly global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case.Fire __case_commands_Fire = new();
+            private readonly global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case.Move __case_commands__Move = new();
+            private readonly global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case.Fire __case_commands__Fire = new();
 
             /// <summary>Wraps an end of the network.</summary>
             /// <param name="end">The end; its bound network must have the hash <see cref="Hash"/>.</param>
@@ -1332,12 +1332,12 @@ namespace GameEventScript.Tests.Generator.Network.Wire
                                 switch (__commands.Selected)
                                 {
                                     case global::GameEventScript.Tests.Generator.Network.Wire.Commands.Member.Move:
-                                        __case_commands_Move.Value = __commands.Move;
-                                        handler.OnCommands(networkEvent.Client, __case_commands_Move);
+                                        __case_commands__Move.Value = __commands.Move;
+                                        handler.OnCommands(networkEvent.Client, __case_commands__Move);
                                         break;
                                     case global::GameEventScript.Tests.Generator.Network.Wire.Commands.Member.Fire:
-                                        __case_commands_Fire.Value = __commands.Fire;
-                                        handler.OnCommands(networkEvent.Client, __case_commands_Fire);
+                                        __case_commands__Fire.Value = __commands.Fire;
+                                        handler.OnCommands(networkEvent.Client, __case_commands__Fire);
                                         break;
                                 }
 

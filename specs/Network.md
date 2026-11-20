@@ -165,7 +165,8 @@ adds those rules.
 | `latest` | the newest message per route; a message not yet started is replaced by a newer one |
 | `bulk` | every message, complete, in the order sent across all bulk routes of the direction, after all other traffic; each message is a [transfer](#transfers) |
 
-Transmission order within a packet is: reliable, then latest, then bulk. A reliable or
+Transmission order within a packet is: reliable, then latest, then the [tick frame](#tick-frames),
+then bulk; [cancel frames](#control-frames) precede them all. A reliable or
 bulk message is sent completely before the next one of its class starts; messages of
 different classes interleave in fragments. On a stream or message transport a latest
 message, once started, is completed; a newer message of the same route then waits in its
@@ -466,9 +467,10 @@ Every data packet carries a sequence number, 0 for the first and then one higher
 packet modulo 65536, and from the first received data packet on an acknowledgement: the
 newest received sequence and a bit for each of the 32 sequences before it, bit 0 for the
 sequence one older, set when that sequence was received. A data packet with at least one
-message or cancel frame, a keepalive and a [probe](#datagram-delivery) ask for acknowledgement and
+message, cancel or tick frame, a keepalive and a [probe](#datagram-delivery) ask for acknowledgement and
 set flag bit 1; a packet that only acknowledges or [confirms](#confirmation-frames) does
-not, so acknowledgements never answer each other. An asking packet is acknowledged by the next
+not, so acknowledgements never answer each other. A message, cancel or tick frame in a
+packet that does not ask is `network.malformed`. An asking packet is acknowledged by the next
 data packet, which a side sends at the latest after the acknowledgement delay. A side
 that has sent nothing for the keepalive interval sends a data packet without frames, the
 keepalive.
@@ -570,7 +572,7 @@ messages are reported in id order: a message complete before an earlier one wait
 
 **Packet order.** A data packet carries owed confirmation frames first, then lost and new
 cancel frames, then reliable resends and new reliable fragments, then per latest route its resends, its current
-message and a newer one, then bulk resends and new bulk fragments.
+message and a newer one, then the tick frame, then bulk resends and new bulk fragments.
 
 ### Latest messages on datagrams
 
@@ -753,7 +755,7 @@ is sent.
 
 | Field | Encoding |
 | --- | --- |
-| flags | 1 byte; bit 0 is set when an acknowledgement follows, bit 1 when the packet asks for acknowledgement; the other bits are zero, and a packet with message or cancel frames sets bit 1 |
+| flags | 1 byte; bit 0 is set when an acknowledgement follows, bit 1 when the packet asks for acknowledgement; the other bits are zero, and a packet with message, cancel or tick frames sets bit 1 |
 | sequence | 2 bytes |
 | acknowledgement | 2 bytes newest received sequence, 4 bytes earlier sequences, when flagged |
 | frames | until the end of the packet |
@@ -811,7 +813,8 @@ is a [tick frame](#tick-frames). Kind `1` is a cancel frame of a [transfer](#tra
 | code | text of 1 to 64 bytes from `!` to `~` |
 
 A cancel names a route the sender of the transfer sends; the receiver of the transfer
-sends one back for a transfer that failed a check. Another kind, a route that is not a
+sends one back for a transfer that failed a check. A cancel sent back for an id the sender has not
+given a transfer yet, while its ids have not wrapped around, is `network.malformed`. Another kind, a route that is not a
 bulk route, or a malformed field is `network.malformed`. On a datagram transport a
 packet with a cancel frame asks for acknowledgement, and a cancel frame in a packet that
 does not ask is `network.malformed`. Control frames count toward the frame limit.
@@ -1056,7 +1059,7 @@ vectors do not establish these properties; reviews of the code do.
 | `network.malformed` | a packet or frame breaks this format or the session order |
 | `network.packetTooLarge` | a packet exceeds the packet limit |
 | `network.messageTooLarge` | a message exceeds its route's largest encoding, or a bulk message the transfer limit plus 43 header bytes |
-| `network.queueFull` | pending received bytes or untaken events exceed their limit |
+| `network.queueFull` | pending received bytes, pending bulk bytes or untaken events exceed their limit |
 | `network.rateExceeded` | more frames arrive than the frame limit allows; on a stream or message transport a packet with more frames than the limit or bytes passed while the connection takes none |
 | `network.timeout` | no packet arrived within the timeout |
 | `network.refused` | the server's host refused the client |
@@ -1113,7 +1116,15 @@ connection passes that bound, so closing always reaches the socket.
 A TCP or WebSocket session passes received bytes only while its connection takes them.
 The rest waits in about 64 read chunks, and then the session stops reading, so the
 peer's sending slows down; a session reports the end of its transport after the last
-chunk. A UDP session passes every datagram.
+chunk. A UDP session passes every datagram; one longer than its receive buffer closes a
+known client's connection with `network.packetTooLarge` and is dropped otherwise.
+
+A TCP or WebSocket session that closes in order first writes its last packets, then ends
+its sending: TCP by closing its sending half, WebSocket with a close frame, which also
+answers the peer's close frame. It then reads and drops received bytes until the peer's
+end, for at most 10 s, before it closes the socket, so the peer reads the last packets
+instead of a reset. A WebSocket upgrade, on the listener as on the client and there with
+the TLS handshake of `wss`, fails after 10 s.
 
 An insecure test key seed derives a connection's ephemeral keys from a known value, so
 anyone who knows it reads the session; it exists only for tests and golden bytes. The

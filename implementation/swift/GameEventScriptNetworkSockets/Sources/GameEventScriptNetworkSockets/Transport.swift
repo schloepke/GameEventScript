@@ -32,13 +32,27 @@ final class GesNetworkSocketInbox: @unchecked Sendable {
     private var chunks: [ByteBuffer] = []
     private var ended = false
     private var held = false
+    // Set once a closed session no longer takes chunks: they are dropped, so reading reaches the transport's end.
+    private var discarding = false
     private let signal: GesNetworkSocketSignal?
 
     init(signal: GesNetworkSocketSignal? = nil) { self.signal = signal }
 
     func push(_ chunk: ByteBuffer) {
-        lock.withLock { chunks.append(chunk) }
-        signal?.set()
+        let pushed = lock.withLock {
+            if discarding { return false }
+            chunks.append(chunk)
+            return true
+        }
+        if pushed { signal?.set() }
+    }
+
+    // Drops the chunks not yet taken and every later one; reading no longer pauses.
+    func discard() {
+        lock.withLock {
+            discarding = true
+            chunks.removeAll()
+        }
     }
 
     func pushDatagram(_ datagram: ByteBuffer) {
@@ -61,7 +75,7 @@ final class GesNetworkSocketInbox: @unchecked Sendable {
     // Whether the socket may read on; otherwise it holds until the host takes the chunks.
     func mayRead() -> Bool {
         lock.withLock {
-            if chunks.count < Self.capacity { return true }
+            if discarding || chunks.count < Self.capacity { return true }
             held = true
             return false
         }
@@ -149,7 +163,9 @@ final class GesNetworkSocketWebSocketHandler: ChannelDuplexHandler {
             stop()
             if closeSent { context.close(promise: nil) }
         case .ping:
-            if !closeSent {
+            // A peer that pings faster than it reads would grow the outbound buffer without bound, so a ping that arrives
+            // while the channel is not writable stays unanswered; a pong only needs to answer the latest ping.
+            if !closeSent && context.channel.isWritable {
                 let pong = WebSocketFrame(fin: true, opcode: .pong, maskKey: masks ? .random() : nil, data: frame.unmaskedData)
                 context.writeAndFlush(Self.wrapOutboundOut(pong), promise: nil)
             }

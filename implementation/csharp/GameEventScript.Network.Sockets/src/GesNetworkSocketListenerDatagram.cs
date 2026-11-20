@@ -86,7 +86,24 @@ public sealed partial class GesNetworkSocketListener
                 {
                     length = await socket.ReceiveFromAsync(bytes.AsMemory(0, limit + 1), SocketFlags.None, address, _cancel.Token).ConfigureAwait(false);
                 }
-                catch (SocketException exception) when (exception.SocketErrorCode == SocketError.MessageSize || GesNetworkSocketSession.IsTransient(exception.SocketErrorCode))
+                catch (SocketException exception) when (exception.SocketErrorCode == SocketError.MessageSize)
+                {
+                    // Windows reports a datagram longer than the buffer as an error, after it filled the buffer and the
+                    // source address. A known client's connection closes with network.packetTooLarge, as on the other
+                    // platforms, which cut the datagram silently; for an unknown address it is no valid hello.
+                    if (_peers.TryGetValue(address, out var known))
+                    {
+                        if (known.Received.Writer.TryWrite(new GesNetworkSocketSession.Chunk(bytes, limit + 1))) Signal.Set();
+                        else ArrayPool<byte>.Shared.Return(bytes);
+                    }
+                    else
+                    {
+                        ArrayPool<byte>.Shared.Return(bytes);
+                    }
+
+                    continue;
+                }
+                catch (SocketException exception) when (GesNetworkSocketSession.IsTransient(exception.SocketErrorCode))
                 {
                     ArrayPool<byte>.Shared.Return(bytes);
                     continue;

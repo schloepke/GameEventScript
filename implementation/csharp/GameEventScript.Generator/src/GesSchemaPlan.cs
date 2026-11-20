@@ -676,7 +676,7 @@ internal static class GesSchemaPlanner
     [
         "Any", "AnyObject", "Array", "Bool", "CaseIterable", "Codable", "Double", "Equatable", "Error", "GameEventScriptRuntime", "Hashable",
         "Identifiable", "Int", "Int32", "Int64", "OptionSet", "Protocol", "Result", "Self", "Sendable", "String", "Swift", "Type", "UInt64",
-        "UInt8", "UTF8", "UnsafeMutableRawBufferPointer", "UnsafeRawBufferPointer"
+        "UInt8", "UTF8", "UnsafeMutableRawBufferPointer", "UnsafeRawBufferPointer", "Void"
     ];
 
     // Names of the form Ges and a capital letter belong to the runtime types that generated code names without qualification.

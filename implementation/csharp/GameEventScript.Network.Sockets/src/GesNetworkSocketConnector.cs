@@ -69,7 +69,7 @@ public sealed class GesNetworkSocketConnector : IGesNetworkConnector
             socket.Options.KeepAliveInterval = TimeSpan.Zero;
             try
             {
-                await socket.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
+                await GesNetworkSocketSession.ConnectWebSocketAsync(socket, uri, cancellationToken).ConfigureAwait(false);
                 return new(null, socket, null, socket);
             }
             catch

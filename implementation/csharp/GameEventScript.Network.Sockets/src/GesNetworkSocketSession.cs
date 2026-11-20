@@ -54,6 +54,7 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
     private readonly CancellationToken _cancelToken;
     private readonly object _gate = new();
     private Task? _writer;
+    private Task? _reader;
     // Packets are written straight into a buffer that the write task gives back here. The unwritten limit bounds
     // their number, so the session keeps its own rather than relying on the shared pool across threads.
     private readonly ConcurrentQueue<byte[]> _free = new();
@@ -125,13 +126,29 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
         socket.Options.KeepAliveInterval = TimeSpan.Zero;
         try
         {
-            await socket.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
+            await ConnectWebSocketAsync(socket, uri, cancellationToken).ConfigureAwait(false);
             return FromWebSocket(connection, socket, socket);
         }
         catch
         {
             socket.Dispose();
             throw;
+        }
+    }
+
+    // Connects within the time limit of an upgrade, so a server that accepts the connection but never completes TLS or the
+    // upgrade does not hold it open.
+    internal static async Task ConnectWebSocketAsync(ClientWebSocket socket, Uri uri, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(GesNetworkSocketListener.UpgradeTimeout);
+        try
+        {
+            await socket.ConnectAsync(uri, timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new WebSocketException("The server did not complete the WebSocket upgrade in time.");
         }
     }
 
@@ -228,9 +245,9 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
             _webSocket = webSocket;
             _datagram = datagram;
             _owner = owner;
-            if (_peer == null) _ = Task.Run(ReadAsync);
+            if (_peer == null) _reader = Task.Run(ReadAsync);
             _writer = Task.Run(WriteAsync);
-            if (_orderlyOpening) _ = _writer.ContinueWith(_ => Release(owner), TaskScheduler.Default);
+            if (_orderlyOpening) _ = ReleaseInOrderAsync(_writer, _reader, owner);
         }
 
         _signal?.Set();
@@ -374,12 +391,14 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
     public void Dispose()
     {
         Task? writer;
+        Task? reader;
         IDisposable? owner;
         lock (_gate)
         {
             if (_disposed) return;
             _disposed = true;
             writer = _writer;
+            reader = _reader;
             owner = _owner;
 
             // The last packets wait for the transport that still opens; starting it writes them. The time limit covers the
@@ -394,11 +413,47 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
         if (_outgoingCompleted && writer is { IsCompleted: false })
         {
             _cancel.CancelAfter(OrderlyEnd);
-            _ = writer.ContinueWith(_ => Release(owner), TaskScheduler.Default);
+            _ = ReleaseInOrderAsync(writer, reader, owner);
             return;
         }
 
         Release(owner);
+    }
+
+    // Releases the transport once the last packets are written and the peer ended its side too, within the time limit
+    // set before. Closing a TCP socket while received bytes are unread resets the connection, which may discard the
+    // packets that the peer has not yet read; so the bytes that still arrive are read and dropped until the peer's end.
+    private async Task ReleaseInOrderAsync(Task writer, Task? reader, IDisposable? owner)
+    {
+        try
+        {
+            await writer.ConfigureAwait(false);
+            if (reader != null && _datagram == null)
+            {
+                _ = DiscardReceivedAsync();
+                await reader.ConfigureAwait(false);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or SocketException or WebSocketException or ObjectDisposedException or OperationCanceledException)
+        {
+            // The time limit ended the wait.
+        }
+        finally
+        {
+            Release(owner);
+        }
+    }
+
+    // Drops what a disposed session still receives, so reading reaches the peer's end; the release cancels it.
+    private async Task DiscardReceivedAsync()
+    {
+        try
+        {
+            await foreach (var chunk in _received.Reader.ReadAllAsync(_cancelToken).ConfigureAwait(false)) ArrayPool<byte>.Shared.Return(chunk.Bytes);
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     private void Release(IDisposable? owner)
@@ -539,7 +594,7 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
                 await _stream.FlushAsync(_cancelToken).ConfigureAwait(false);
                 if (_owner is TcpClient client) client.Client.Shutdown(SocketShutdown.Send);
             }
-            else if (_webSocket?.State == WebSocketState.Open)
+            else if (_webSocket?.State is WebSocketState.Open or WebSocketState.CloseReceived)
             {
                 await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, _cancelToken).ConfigureAwait(false);
             }

@@ -770,7 +770,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.computedMayBeAbsent` | a required [computed field](#computed-fields) reads an optional field that may be absent without `has value` or `default` |
 | `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name without backticks, an optional list in an aggregate), gives `hypot` or `atan2` another number of arguments, combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
 | `schema.invalidRoute` | a [network route](Network.md#declaration) breaks its rules |
-| `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root |
+| `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root with the same side and verb |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
@@ -1797,7 +1797,7 @@ belongs to the runtime types that generated code names without qualification, wh
 generated Swift uses without qualification (`Any`, `AnyObject`, `Array`, `Bool`, `CaseIterable`, `Codable`, `Double`,
 `Equatable`, `Error`, `GameEventScriptRuntime`, `Hashable`, `Identifiable`, `Int`, `Int32`, `Int64`, `OptionSet`,
 `Protocol`, `Result`, `Self`, `Sendable`, `String`, `Swift`, `Type`, `UInt64`, `UInt8`, `UTF8`,
-`UnsafeMutableRawBufferPointer`, `UnsafeRawBufferPointer`), or two [split](#split-output) file names differ only in
+`UnsafeMutableRawBufferPointer`, `UnsafeRawBufferPointer`, `Void`), or two [split](#split-output) file names differ only in
 case, `generate.invalidNamespace`, and `generate.usage` when the [Generator API](PublicApi.md#schema-code-generation)
 receives no root or a split that does not fit the call. Generated C# instead qualifies every platform type it uses that
 a type or member of the same name could hide, such as `global::System.Math` and `[global::System.Flags]`, so a schema
@@ -1971,11 +1971,11 @@ try server.publishTick { tick in
 with one method per event, each with an empty default, called without allocating for a struct handler. Swift `poll(_:)`
 takes a closure over the nested enum `ClientEvent` or `ServerEvent`. One method or case per received route carries its
 record, borrowed until the handler returns: the end owns one record per route and reads into it, so a large world at a
-high rate allocates nothing in C#. Swift cases carry a copy of the record. A message-set root carries its case. An event is
+high rate allocates nothing in C#. A Swift case carries a struct record as a copy and a class record borrowed like C#. A message-set root carries its case. An event is
 named after the root, or after verb and root (`SentWorld`, `PublishedWorld`) when the other side both sends and publishes
 that root. The events of the end follow: `Connected` and `Disconnected` on the client, `Connecting`, `ClientConnected` and
 `ClientDisconnected` on the server, `Tick`, `TransferProgress`, `TransferCancelled` and `Received`; server events carry
-the client id. A received name that repeats one of these fails with `generate.nameCollision`; the end's internal fields never collide with received roots. In C# no constant, property or typed function of the network class may take the network's name (`generate.nameCollision`). The types nested in a network, `Client` and `Server` with `IClientHandler` and `IServerHandler` in
+the client id. A received name that repeats one of these fails with `generate.nameCollision`; the end's internal fields never collide with received roots. The constants, properties and typed functions of the network type must differ from one another in the spelling of each language, and in C# none may take the network's name (`generate.nameCollision`). The types nested in a network, `Client` and `Server` with `IClientHandler` and `IServerHandler` in
 C# or `ClientEvent` and `ServerEvent` in Swift, and `Topic` and `Tick` in an end that publishes, would hide a root, a tag
 set or the network of their name for the code inside; such a name fails with `generate.nameCollision` too. A payload that does not
 decode as its root closes the connection with the detail `undecodable :Root` and reports nothing; the end skips the

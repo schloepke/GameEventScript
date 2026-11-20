@@ -44,6 +44,26 @@ final class GenerateTests: XCTestCase {
             XCTAssertEqual(code { _ = try generate(network("Chunk", name), name, .csharp) }, "generate.nameCollision", name)
             XCTAssertTrue(try generate(network("Chunk", name), name, .swift).contains(name))
         }
+
+        // The members of the network type must also differ from one another: a rate constant may not repeat a route constant.
+        let rates =
+            "wire schema :X as {\n  a: :Number integer between 0 and 255\n}\nwire schema :XEveryMicroseconds as {\n  a: :Number integer between 0 and 255\n}\n"
+            + "network :Net as {\n  server publishes :X latest at most every 50ms\n  server publishes :XEveryMicroseconds latest\n}\n"
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            XCTAssertEqual(code { _ = try generate(rates, "Net", language) }, "generate.nameCollision", "\(language)")
+        }
+
+        // Swift reserves Void, which the closures of the typed ends name.
+        XCTAssertEqual(code { _ = try generate(network("Void", "Game"), "Game", .swift) }, "generate.nameCollision")
+        XCTAssertTrue(try generate(network("Void", "Game"), "Game", .csharp).contains("Void"))
+    }
+
+    func testCaseFieldsOfTypedEndsStayDistinct() throws {
+        // Message-set roots Foo_Bar with Baz and Foo with Bar_Baz would share one case field if its parts joined with one `_`.
+        let source = "wire messages :Foo_Bar as (Baz, Qux)\nwire messages :Foo as (Bar_Baz, Qux)\nmessage Baz()\nmessage Qux()\nmessage Bar_Baz()\n\nnetwork :Net as {\n  client sends :Foo_Bar reliable\n  client sends :Foo reliable\n}\n"
+        let code = try generate(source, "Net", .csharp)
+        XCTAssertTrue(code.contains("__case_foo_Bar__Baz"))
+        XCTAssertTrue(code.contains("__case_foo__Bar_Baz"))
     }
 
     func testModelsNeedTheirOwnNamespaceAndWireName() throws {

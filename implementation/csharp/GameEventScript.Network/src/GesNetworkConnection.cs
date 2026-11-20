@@ -58,6 +58,8 @@ public sealed partial class GesNetworkConnection
     private readonly GesNetworkLatestSlot?[] _sendLatest;
     private ushort _nextReliableId;
     private ushort _nextBulkId;
+    // Set once the bulk ids wrapped around, so every id may name a transfer of this side.
+    private bool _bulkIdsWrapped;
 
     private readonly GesNetworkReassembly _receiveReliable = new();
     private readonly GesNetworkReassembly _receiveBulk = new();

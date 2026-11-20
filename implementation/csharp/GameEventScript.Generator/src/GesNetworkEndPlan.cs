@@ -84,19 +84,21 @@ internal sealed class GesNetworkEndPlan
             GesSchemaPlanner.Unique($"{network.Name}.{end.Name}", [("Topic", $"{GesSchemaPlanner.NestedTypeOrigin}of the {side} topics"), ("Tick", $"{GesSchemaPlanner.NestedTypeOrigin}of the {side} ticks")], topLevel);
         }
 
+        // The members of the network type, in each language's spelling, must not repeat one another.
+        names.Add((swift ? "hash" : "Hash", "the network hash constant"));
+        names.Add((swift ? "bound" : "Bound", "the bound network property"));
+        foreach (var route in network.Routes)
+        {
+            var label = $"the route {route.Side} {route.Verb} :{route.Root}";
+            var constant = swift ? GesSchemaPlanner.Camel(route.Name) : route.Name;
+            names.Add((constant, $"the index constant of {label}"));
+            if (route.RateMicroseconds != 0) names.Add((constant + "EveryMicroseconds", $"the rate constant of {label}"));
+            names.Add(($"{(swift ? route.Side : GesSchemaPlanner.Pascal(route.Side))}{(route.Verb == "publishes" ? "Publish" : "Send")}{route.Root}", $"the function of {label}"));
+        }
+
         if (!swift)
         {
             // C# forbids a member named like its enclosing type, so no member of the network class may take the network's name.
-            names.Add(("Hash", "the network hash constant"));
-            names.Add(("Bound", "the bound network property"));
-            foreach (var route in network.Routes)
-            {
-                var label = $"the route {route.Side} {route.Verb} :{route.Root}";
-                names.Add((route.Name, $"the index constant of {label}"));
-                if (route.RateMicroseconds != 0) names.Add((route.Name + "EveryMicroseconds", $"the rate constant of {label}"));
-                names.Add(($"{GesSchemaPlanner.Pascal(route.Side)}{(route.Verb == "publishes" ? "Publish" : "Send")}{route.Root}", $"the function of {label}"));
-            }
-
             foreach (var (name, origin) in names)
             {
                 if (name == network.Name)

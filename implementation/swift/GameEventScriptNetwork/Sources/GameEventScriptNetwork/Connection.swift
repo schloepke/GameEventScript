@@ -64,6 +64,8 @@ public final class GesNetworkConnection {
     let sendLatest: [GesNetworkLatestSlot?]
     var nextReliableId: UInt16 = 0
     var nextBulkId: UInt16 = 0
+    // Set once the bulk ids wrapped around, so every id may name a transfer of this side.
+    var bulkIdsWrapped = false
 
     let receiveReliable = GesNetworkReassembly()
     let receiveBulk = GesNetworkReassembly()

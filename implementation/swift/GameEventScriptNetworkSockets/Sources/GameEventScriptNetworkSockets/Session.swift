@@ -145,9 +145,16 @@ public final class GesNetworkSocketSession {
             throw error
         }
 
+        // A server that accepts the connection but never completes TLS or the upgrade must not hold it open: the upgrade
+        // has the same time limit as on a listener.
+        let timeout = channel.eventLoop.scheduleTask(in: GesNetworkSocketUpgrade.timeout) {
+            upgraded.fail(GesNetworkSocketError("The server did not complete the WebSocket upgrade in time."))
+        }
         do {
             try await upgraded.futureResult.get()
+            timeout.cancel()
         } catch {
+            timeout.cancel()
             channel.close(promise: nil)
             throw error
         }
@@ -256,11 +263,15 @@ public final class GesNetworkSocketSession {
 
     private func release() {
         if let channel {
-            Self.release(channel, peer)
+            // The writer ends the transport after the close packet of a closed connection.
+            if outgoingCompleted { Self.releaseInOrder(channel, peer, inbox) } else { Self.release(channel, peer) }
         } else if let (channel, peer) = opening?.release() {
             Self.release(channel, peer)
         }
     }
+
+    // A disposed session of a closed connection writes its last packets for at most this long.
+    static let orderlyEnd = TimeAmount.seconds(10)
 
     static func release(_ channel: Channel, _ peer: GesNetworkDatagramPeer?) {
         if let peer {
@@ -268,6 +279,21 @@ public final class GesNetworkSocketSession {
         } else {
             channel.close(promise: nil)
         }
+    }
+
+    // Releases a transport whose output the writer ends after the last packets. Closing a TCP socket at once would
+    // discard the packets that are not yet written, and closing it while received bytes are unread resets the
+    // connection; so the bytes that still arrive are read and dropped until the peer ends its side, which closes the
+    // channel, or until the time limit.
+    static func releaseInOrder(_ channel: Channel, _ peer: GesNetworkDatagramPeer?, _ inbox: GesNetworkSocketInbox) {
+        if let peer {
+            peer.release()
+            return
+        }
+        inbox.discard()
+        channel.read()
+        let limit = channel.eventLoop.scheduleTask(in: orderlyEnd) { channel.close(promise: nil) }
+        channel.closeFuture.whenComplete { _ in limit.cancel() }
     }
 }
 
@@ -284,7 +310,7 @@ extension GesNetworkSocketOpening {
         func finish(_ packets: ByteBuffer, on channel: Channel, _ peer: GesNetworkDatagramPeer?) {
             var packets = packets
             GesNetworkSocketWriter(channel: channel, framing: framing, peer: peer, masks: masks, inbox: inbox).hand(&packets, finish: true)
-            GesNetworkSocketSession.release(channel, peer)
+            GesNetworkSocketSession.releaseInOrder(channel, peer, inbox)
         }
     }
 }

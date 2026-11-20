@@ -1061,7 +1061,7 @@ internal static partial class GesCSharpEmitter
         // apart from the record of each received route, whatever its root is called.
         string Field(string name) => "__" + GesSchemaPlanner.Camel(name);
         string Outgoing(GesLayoutRoute route) => "__out_" + GesSchemaPlanner.Camel((route.Verb == "sends" ? "Send" : "Publish") + route.Root);
-        string CaseField(string name, string member) => "__case_" + GesSchemaPlanner.Camel(name) + "_" + member;
+        string CaseField(string name, string member) => "__case_" + GesSchemaPlanner.Camel(name) + "__" + member;
         code.Blank();
         code.Line($"/// <summary>");
         code.Line($"/// The typed {side} end of <c>:{network.Name}</c>: it encodes the records the {side} sends and publishes and hands the records it");

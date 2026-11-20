@@ -3,10 +3,11 @@
 
 // The conversion of generated Swift types to and from GES values, as in the C# output.
 extension GesSwiftEmitter {
-    static func valueMembers(_ code: inout Code, _ type: GesPlanType, _ access: String, _ holder: String) {
+    static func valueMembers(_ code: inout Code, _ type: GesPlanType, _ access: String, _ holder: String, schemaSet: Bool) {
+        let name = GesSchemaPlanner.literal(type.layout.name, swift: true)
         let mutating = (type.kind == .messages ? type.membersAreClasses : type.isClass) ? "" : "mutating "
         code.blank()
-        code.line("private static let __valueSchema = \(holder).bind(\(GesSchemaPlanner.literal(type.layout.name, swift: true)), bindingHash)")
+        code.line(schemaSet ? "private static let __valueSchema = Result<GesBoundSchema, any Error> { try \(holder).bind(\(name), bindingHash: bindingHash) }" : "private static let __valueSchema = \(holder).bind(\(name), bindingHash)")
         code.blank()
         if type.kind == .schema {
             code.line("/// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.")

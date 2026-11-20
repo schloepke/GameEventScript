@@ -8,11 +8,35 @@
 // read only this model, and its JSON form is compared between the ports.
 struct GesSchemaLayout {
     static let version = 1
+    // The roots in order: the given ones, each network followed by the roots of its routes that are no root yet.
     var roots: [String]
     var parameters: [GesLayoutParameter]
     var types: [GesLayoutType]
+    // The networks among the roots, in root order.
+    var networks: [GesLayoutNetwork] = []
     // The sources the schemas come from, under their file names, which code that converts GES values embeds. Not part of the JSON.
     var sources: [GesSchemaSource]
+}
+
+// A network root: its hash bound with the layout's parameters and its routes in declared order.
+struct GesLayoutNetwork {
+    var name: String
+    var hash: UInt64
+    var routes: [GesLayoutRoute]
+}
+
+// One route: its side `client` or `server`, its verb `sends` or `publishes`, its root, its class `reliable`, `latest` or
+// `bulk` and its rate in microseconds, 0 without one.
+struct GesLayoutRoute {
+    var index: Int
+    var side: String
+    var verb: String
+    var root: String
+    var deliveryClass: String
+    var rateMicroseconds: Int64
+
+    // The name of the route's constants: side, verb and root, which identify a route within its network.
+    var name: String { (side == "client" ? "Client" : "Server") + (verb == "sends" ? "Sends" : "Publishes") + root }
 }
 
 struct GesLayoutParameter {
@@ -211,11 +235,19 @@ enum GesSchemaLayoutBuilder {
         var reached: [String: GesSchema] = [:]
         var rootNames: [String] = []
         var parameterInfos: [String: GesSchemaParameterInfo] = [:]
+        var networks: [GesNetwork] = []
         for root in roots where !rootNames.contains(root) {
             rootNames.append(root)
-            let schema = try set.schema(root)
-            reach(schema, &reached)
-            for parameter in schema.parameters { parameterInfos[parameter.name] = parameter }
+            if let network = set.networks.first(where: { $0.name == root }) {
+                // A network makes the roots of its routes roots of the generation.
+                networks.append(network)
+                for route in network.routes {
+                    if !rootNames.contains(route.root.name) { rootNames.append(route.root.name) }
+                    self.root(route.root, &reached, &parameterInfos)
+                }
+                continue
+            }
+            self.root(try set.schema(root), &reached, &parameterInfos)
         }
         var layoutParameters: [GesLayoutParameter] = []
         for name in parameterInfos.keys.sorted(by: ordinal) {
@@ -227,12 +259,32 @@ enum GesSchemaLayoutBuilder {
         }
         var types: [GesLayoutType] = []
         for name in reached.keys.sorted(by: ordinal) { types.append(try type(reached[name]!, parameters)) }
+        let layoutNetworks = try networks.map { try network($0, parameters) }
         let sources = set.sources.map { source in
             let scalars = source.name.unicodeScalars
             let start = scalars.lastIndex { $0 == "/" || $0 == "\\" }.map { scalars.index(after: $0) } ?? scalars.startIndex
             return GesSchemaSource(name: String(scalars[start...]), text: source.text)
         }
-        return GesSchemaLayout(roots: rootNames, parameters: layoutParameters, types: types, sources: sources)
+        return GesSchemaLayout(roots: rootNames, parameters: layoutParameters, types: types, networks: layoutNetworks, sources: sources)
+    }
+
+    private static func root(_ schema: GesSchema, _ reached: inout [String: GesSchema], _ parameterInfos: inout [String: GesSchemaParameterInfo]) {
+        reach(schema, &reached)
+        for parameter in schema.parameters { parameterInfos[parameter.name] = parameter }
+    }
+
+    private static func network(_ network: GesNetwork, _ parameters: GesSchemaParameters) throws -> GesLayoutNetwork {
+        let routes = network.routes.map { route in
+            GesLayoutRoute(
+                index: route.index,
+                side: route.side == .client ? "client" : "server",
+                verb: route.verb == .sends ? "sends" : "publishes",
+                root: route.root.name,
+                deliveryClass: GesBoundNetwork.className(route.deliveryClass),
+                rateMicroseconds: route.rateMicroseconds
+            )
+        }
+        return GesLayoutNetwork(name: network.name, hash: try network.bind(parameters: parameters).hash, routes: routes)
     }
 
     // Names order by their UTF-16 code units, as the C# port's ordinal comparison does.

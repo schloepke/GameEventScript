@@ -42,6 +42,10 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"mechanical and electrical unit literals and quantity types","language":"ges","source":"let p be 101.3kPa\nlet c be 4.18kJ/(kg*K)\nlet t be 5N*m\nlet r be 4.7kΩ\nlet q be 2Ah\nlet split be 10N / 2m²\nlet x be 5 as :Quantity(J/(kg·K))","expect":[{"text":"101.3kPa","kind":"number"},{"text":"4.18kJ/(kg*K)","kind":"number"},{"text":"5N*m","kind":"number"},{"text":"4.7kΩ","kind":"number"},{"text":"2Ah","kind":"number"},{"text":"10N","kind":"number"},{"text":"2m²","kind":"number"},{"text":"J/(kg·K)","kind":"builtin"}]}
+```
+
+```highlight
 {"name":"area volume flux level and rate literals","language":"ges","source":"let area be 2m²\nlet sq be 2m^2\nlet vol be 0.5m³\nlet flux be 14mW/m²\nlet level be 6dB\nlet mass be 2t\nlet split be 4 / s\nlet rate be 4/s\nlet power be (2m)²\nlet x be 5 as :Quantity(W/m^2)","expect":[{"text":"2m²","kind":"number"},{"text":"2m^2","kind":"number"},{"text":"0.5m³","kind":"number"},{"text":"14mW/m²","kind":"number"},{"text":"6dB","kind":"number"},{"text":"2t","kind":"number"},{"text":"4","kind":"number","occurrence":1},{"text":"s","kind":"identifier","occurrence":4},{"text":"4/s","kind":"number"},{"text":"2m","kind":"number","occurrence":2},{"text":"²","kind":"keyword","occurrence":2},{"text":"W/m^2","kind":"builtin"}]}
 ```
 
@@ -175,6 +179,14 @@ and ANSI text preservation.
 
 ```highlight
 {"name":"schema role on a constant","language":"gess","source":"wire constant $a be 1\n","expect":[{"text":"wire","kind":"keyword"}],"diagnostics":[{"code":"schema.invalidRole","text":"w"}]}
+```
+
+```highlight
+{"name":"schema network routes","language":"gess","source":"wire schema :World as { tick: :Boolean }\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Commands reliable\n  server publishes :World latest at most every 50ms\n  server sends :World bulk\n}\n","expect":[{"text":"network","kind":"keyword"},{"text":":Game","kind":"type"},{"text":"client","kind":"keyword"},{"text":"sends","occurrence":0,"kind":"keyword"},{"text":"reliable","kind":"keyword"},{"text":"server","occurrence":0,"kind":"keyword"},{"text":"publishes","kind":"keyword"},{"text":":World","occurrence":1,"kind":"type"},{"text":"latest","kind":"keyword"},{"text":"at","kind":"keyword"},{"text":"most","kind":"keyword"},{"text":"every","kind":"keyword"},{"text":"50ms","kind":"number"},{"text":"bulk","kind":"keyword"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"schema network without routes","language":"gess","source":"network :Game as {\n}\n","expect":[{"text":"network","kind":"keyword"}],"diagnostics":[{"code":"schema.syntax","text":"}"}]}
 ```
 
 ```highlight

@@ -40,6 +40,8 @@ MODULES = (
     ("Bridge", "implementation/csharp/GameEventScript.CSharpBridge/src", "implementation/swift/GameEventScriptSwiftBridge/Sources"),
     ("Generator", "implementation/csharp/GameEventScript.Generator/src", "implementation/swift/GameEventScriptGenerator/Sources"),
     ("Syntax", "implementation/csharp/GameEventScript.Syntax/src", "implementation/swift/GameEventScriptSyntax/Sources"),
+    ("Network", "implementation/csharp/GameEventScript.Network/src", "implementation/swift/GameEventScriptNetwork/Sources"),
+    ("Sockets", "implementation/csharp/GameEventScript.Network.Sockets/src", "implementation/swift/GameEventScriptNetworkSockets/Sources"),
 )
 
 # Permanent, deliberate single-port types (normalized names). Temporary
@@ -88,6 +90,18 @@ PLATFORM_ONLY = {
     ("swift", "Bridge", "GesConstructMacro"): "Swift macro implementation; C# uses Reflection on attributes",
     ("swift", "Bridge", "GesExtensionMacro"): "Swift macro implementation; C# uses Reflection on attributes",
     ("swift", "Bridge", "GesFunctionMacro"): "Swift macro implementation; C# uses Reflection on attributes",
+    ("swift", "Network", "GesNetworkSha256"): "Swift SHA-256 without Foundation/CryptoKit; C# uses the BCL HMACSHA256",
+    ("swift", "Network", "GesNetworkHmacSha256"): "Swift HMAC-SHA256 without Foundation/CryptoKit; C# uses the BCL HMACSHA256",
+    ("swift", "Sockets", "GesNetworkSocketClientUpgradeHandler"): "SwiftNIO client upgrade handler; C# uses ClientWebSocket",
+    ("swift", "Sockets", "GesNetworkSocketEndpoint"): "Swift ws/wss URL parsing; C# uses System.Uri",
+    ("swift", "Sockets", "GesNetworkSocketError"): "idiomatic mapping: C# ClientWebSocket throws WebSocketException for refused upgrades",
+    ("swift", "Sockets", "GesNetworkSocketGateHandler"): "SwiftNIO pipeline internals; C# uses TcpListener, Stream and WebSocket.CreateFromStream",
+    ("swift", "Sockets", "GesNetworkSocketInbox"): "SwiftNIO pipeline internals; C# uses TcpListener, Stream and WebSocket.CreateFromStream",
+    ("swift", "Sockets", "GesNetworkSocketQueue"): "SwiftNIO pipeline internals; C# uses TcpListener, Stream and WebSocket.CreateFromStream",
+    ("swift", "Sockets", "GesNetworkSocketServerUpgradeHandler"): "SwiftNIO server upgrade handler; C# answers the upgrade in GesNetworkSocketListener.Answer",
+    ("swift", "Sockets", "GesNetworkSocketStreamHandler"): "SwiftNIO pipeline internals; C# uses TcpListener, Stream and WebSocket.CreateFromStream",
+    ("swift", "Sockets", "GesNetworkSocketUpgrade"): "Swift RFC 6455 upgrade helpers; C# keeps them in GesNetworkSocketListener",
+    ("swift", "Sockets", "GesNetworkSocketWebSocketHandler"): "SwiftNIO pipeline internals; C# uses TcpListener, Stream and WebSocket.CreateFromStream",
 }
 
 # Technical types exempt from the prefix rule.

@@ -70,6 +70,9 @@ public enum GesDiagnosticCodes {
     /// A tag clause contains the literal `nothing`.
     public static let validateInvalidTag = "validate.invalidTag"
 
+    /// A `without` tag filter uses `|` alternatives, which only `matching` filters allow.
+    public static let validateInvalidTagFilter = "validate.invalidTagFilter"
+
     /// Defines the compile unsupported construct value.
     public static let compileUnsupportedConstruct = "compile.unsupportedConstruct"
 

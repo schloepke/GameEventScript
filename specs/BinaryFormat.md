@@ -153,7 +153,7 @@ BindingSegment:
 EntryCount u32
 repeat EntryCount:
     Kind                    u8
-    Flags                   u8 = 0
+    Flags                   u8
     Id                      u16
     NameStringIndex         u16
     ArgumentNamesListIndex  u16
@@ -162,8 +162,20 @@ repeat EntryCount:
     EntryAddress            u16
     RequiredRegisterCount   u16
     RequiredCallStackDepth  u16
-    Reserved                u16 = 0
+    TagAlternativesList     u16
 ```
+
+`Flags & 0x01` marks an entry with tag alternatives; every other flag bit fails
+with `InvalidSectionFlags`. Without that flag `TagAlternativesList` must be `0`,
+otherwise `InvalidSectionReserved`. With it, `TagAlternativesList` indexes one
+list holding the alternative groups in order, each as its tag count followed by
+that many tag string indexes; an index outside the list table fails with
+`InvalidListIndex`, and the sentinel, an empty list, a zero count or a count
+running past the list's end fail with `InvalidProgram`. Only `MessageHandler`
+and `MessageNameHandler` entries may carry alternatives; each group holds at
+least two distinct plain tag names, and any other use fails with
+`InvalidProgram`. The groups' semantics and normalization are defined in
+[Language](Language.md#messages-and-dispatch).
 
 `0xFFFF` is the missing ID/list/address sentinel. Executable binds require a valid
 entry address; non-executable binds use the sentinel. The program-level resource

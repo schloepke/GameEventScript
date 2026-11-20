@@ -9,6 +9,7 @@ enum GesSchemaHighlighting {
         "abstract", "packed",
         "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of", "min", "clamp", "abs", "has",
         "sqrt", "cbrt", "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "hypot", "exp", "ln", "floor", "ceil", "truncate", "round", "rad", "deg",
+        "network", "client", "server", "sends", "publishes", "reliable", "latest", "bulk", "at", "most", "every",
     ]
 
     static func highlight(_ text: String, _ spans: inout GesSpanBuilder) -> [GesSpanBuilder.Diagnostic] {

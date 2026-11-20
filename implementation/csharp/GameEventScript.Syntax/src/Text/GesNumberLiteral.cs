@@ -281,8 +281,26 @@ internal readonly struct GesNumberLiteral
     internal static bool MayEndWithSuffix(string text, int start, int end)
     {
         var last = text[end - 1];
-        return last is 's' or 'm' or 'h' or 'z' or 'g' or 't' or 'B' or 'N' or 'J' or 'W' or 'V' or 'A' or 'K' or '\u00B0' or '\u00B2' or '\u00B3'
+        return last is 's' or 'm' or 'h' or 'z' or 'g' or 't' or 'a' or 'B' or 'C' or 'N' or 'J' or 'W' or 'V' or 'A' or 'K' or ')'
+                or '\u00B0' or '\u00B2' or '\u00B3' or '\u03A9' or '\u2126'
             || last is '2' or '3' && end - start > 2 && text[end - 2] == '^';
+    }
+
+    // The end of an unquoted scalar token from `position`: whitespace, a comma or a `)` ends it, and inside a list also `[`
+    // and `]`. A `(` right after `/` opens a unit part such as `J/(kg·K)`, whose `)` belongs to the token.
+    internal static int TokenEnd(string text, int position, bool brackets)
+    {
+        var start = position;
+        var depth = 0;
+        for (; position < text.Length; position++)
+        {
+            var c = text[position];
+            if (c is ' ' or '\t' or '\r' or '\n' or ',' || brackets && c is '[' or ']') break;
+            if (c == '(' && position > start && text[position - 1] == '/') depth++;
+            else if (c == ')' && depth-- == 0) break;
+        }
+
+        return position;
     }
 
     // A unit suffix belongs to the number only when it directly follows a digit or the special values.

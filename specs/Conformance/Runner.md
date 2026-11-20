@@ -77,6 +77,7 @@ Capability IDs use the authoring ID grammar. V1 defines these core IDs:
 - `value-api`
 - `document-api`
 - `schema-api`
+- `network-api`
 - `external-types`
 - `native-handlers`
 - `publish-sink`

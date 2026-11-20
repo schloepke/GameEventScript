@@ -174,6 +174,7 @@ COMPUTED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/computed.gess"
 SPATIAL_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/spatial.gess"
 GEOMETRY_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/geometry.gess"
 PACKED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/packed.gess"
+NETWORK_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/network.gess"
 ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
 CSHARP_GENERATED = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
 SWIFT_GENERATED = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
@@ -213,6 +214,9 @@ GOLDENS = (
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--model", "packed", "--values"], "swift", "", SWIFT_GENERATED / "PackedGlobalModel.swift"),
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed", "--values", "--models", ""], "csharp", "GameEventScript.Tests.Generator.Packed.Global", CSHARP_GENERATED / "PackedGlobalWire.g.cs"),
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed", "--values", "--models", ""], "swift", "PackedGlobal", SWIFT_GENERATED / "PackedGlobalWire.swift"),
+    # The constants of a network beside the wire code of its route roots.
+    (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=2km"], "csharp", "GameEventScript.Tests.Generator.Network.Wire", CSHARP_GENERATED / "NetworkWire.g.cs"),
+    (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=2km"], "swift", "NetworkWire", SWIFT_GENERATED / "NetworkWire.swift"),
 )
 # The layouts of the role fixture, which both CLIs must print identically.
 ROLE_LAYOUTS = (["--wire", "world", "--param", "worldWidth=2000m"], ["--wire", "panels"], ["--model", "view"])
@@ -256,6 +260,33 @@ def role_splits(csharp, swift, work):
     return differences
 
 
+# Named schema sets: (directory, files, selection, language, namespace), each generated as one file by both CLIs.
+SET_OUTPUTS = tuple((directory, files, selection, language, space)
+                    for directory, files, selection, space in (
+                        (ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m", "--values", "--schemas", "RoleSchemas"], "RoleSet.Wire"),
+                        (ROLES, ROLE_FILES, ["--model", "view", "--values", "--use-schemas", "RoleSet.Wire.RoleSchemas"], "RoleModels"),
+                        (ROLES, ROLE_FILES, ["--model", "view", "--documents", "--schemas", "ViewSchemas"], "RoleView"),
+                        (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--all-roots", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas"], "SetGame"),
+                        (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=64m", "--use-schemas", "SetGame.GameSchemas"], "SetGameUse"))
+                    for language in ("csharp", "swift")) \
+    + ((NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas", "--import", "Foundation", "--import", "Shared"], "swift", "SetImports"),)
+
+
+def set_outputs(csharp, swift, work):
+    """The generated code of named schema sets, compared between the CLIs."""
+    differences = []
+    for index, (directory, files, selection, language, space) in enumerate(SET_OUTPUTS):
+        paths = [work / f"set-{index}-{name}.txt" for name in ("csharp", "swift")]
+        for command, path in zip((csharp, swift), paths):
+            run = subprocess.run([*command, "schema", "generate", *files, *selection, "--language", language, "--namespace", space, "-o", str(path)],
+                                 cwd=directory, capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
+            if run.returncode != 0:
+                differences.append(f"set {language} {' '.join(selection)}: {run.stderr.decode('utf-8', 'replace').strip()}")
+        if all(path.exists() for path in paths) and paths[0].read_bytes() != paths[1].read_bytes():
+            differences.append(f"set {language} {' '.join(selection)}: the generated code differs")
+    return differences
+
+
 def role_layouts(csharp, swift):
     """The role fixture's layouts by group, compared between the CLIs."""
     differences = []
@@ -282,12 +313,12 @@ def main():
     with tempfile.TemporaryDirectory() as temporary, ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
         work = Path(temporary)
         results = list(pool.map(lambda pair: compare(pair[0], pair[1], ["dotnet", str(args.csharp)], [str(args.swift)], work), enumerate(items)))
-        splits = role_splits(["dotnet", str(args.csharp)], [str(args.swift)], work)
+        splits = role_splits(["dotnet", str(args.csharp)], [str(args.swift)], work) + set_outputs(["dotnet", str(args.csharp)], [str(args.swift)], work)
     differences = [line for result, _ in results for line in result] + baseline_differences([entry for _, found in results for entry in found], args.update_baseline) + stale_goldens(["dotnet", str(args.csharp)], [str(args.swift)]) \
         + role_layouts(["dotnet", str(args.csharp)], [str(args.swift)]) + splits
     for line in differences:
         print(line)
-    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources, {len(ROLE_LAYOUTS)} role layouts, {2 * len(ROLE_SPLITS)} split outputs, {len(GOLDENS)} checked-in files: {len(differences)} port differences")
+    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources, {len(ROLE_LAYOUTS)} role layouts, {2 * len(ROLE_SPLITS)} split outputs, {len(SET_OUTPUTS)} schema set outputs, {len(GOLDENS)} checked-in files: {len(differences)} port differences")
     return 1 if differences else 0
 
 

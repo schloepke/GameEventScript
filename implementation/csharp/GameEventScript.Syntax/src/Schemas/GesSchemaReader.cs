@@ -16,6 +16,7 @@ internal sealed partial class GesSchemaSourceReader
 {
     internal const int MaximumInputScalars = 1048576;
     private const int MaximumTypeNesting = 32;
+    internal const int MaximumRoutes = 64;
 
     private sealed class SyntaxFailure(int offset, string message, string code = Code.Syntax) : Exception(message)
     {
@@ -118,10 +119,10 @@ internal sealed partial class GesSchemaSourceReader
 
         if (wire is not null || model is not null)
         {
-            if (word is "constant" or "parameter" or "tags") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
+            if (word is "constant" or "parameter" or "tags" or "network") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
             if (model is not null && word is "message" or "messages") throw new SyntaxFailure(offset, "A model root is a schema.", Code.InvalidRole);
         }
-        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages" or "tags") && AtRoleEnd())
+        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages" or "tags" or "network") && AtRoleEnd())
             throw new SyntaxFailure(offset, $"'{word}' is no role; a root is marked wire or model.", Code.InvalidRole);
 
         var declaration = ReadDeclaration(offset, wordOffset, word);
@@ -272,9 +273,68 @@ internal sealed partial class GesSchemaSourceReader
                 SkipSpaces();
                 return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.TagSet, Name = name, Offset = offset, Tags = ReadTagSet() };
             }
+            case "network":
+            {
+                var name = ReadTypeName();
+                SkipSpaces();
+                ExpectWord("as");
+                SkipTrivia();
+                Expect('{');
+                var routes = new List<GesSchemaRouteSyntax>();
+                SkipSeparators();
+                if (_position < _text.Length && _text[_position] == '}') throw Failure("A network has at least one route.");
+                while (!Consume('}'))
+                {
+                    if (routes.Count == MaximumRoutes) throw new SyntaxFailure(_position, "A network has at most 64 routes.", Code.TooLarge);
+                    routes.Add(ReadRoute());
+                    EndEntry('}');
+                    SkipSeparators();
+                }
+
+                return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Network, Name = name, Offset = offset, Routes = routes.ToArray() };
+            }
             default:
-                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, tags, schema, message or messages.");
+                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, tags, schema, message, messages or network.");
         }
+    }
+
+    // `client|server sends|publishes :Root reliable|latest|bulk [at most every value]` on one line.
+    private GesSchemaRouteSyntax ReadRoute()
+    {
+        var offset = _position;
+        var side = ReadWord();
+        if (side is not ("client" or "server")) throw new SyntaxFailure(offset, "A route starts with client or server.");
+        SkipSpaces();
+        var verbOffset = _position;
+        var verb = ReadWord();
+        if (verb is not ("sends" or "publishes")) throw new SyntaxFailure(verbOffset, "Expected 'sends' or 'publishes'.");
+        SkipSpaces();
+        var rootOffset = _position;
+        var root = ReadTypeName();
+        SkipSpaces();
+        var classOffset = _position;
+        var routeClass = ReadWord() switch
+        {
+            "reliable" => GesSchemaRouteClass.Reliable,
+            "latest" => GesSchemaRouteClass.Latest,
+            "bulk" => GesSchemaRouteClass.Bulk,
+            _ => throw new SyntaxFailure(classOffset, "Expected 'reliable', 'latest' or 'bulk'.")
+        };
+        SkipSpaces();
+        GesSchemaValueSyntax? rate = null;
+        if (AtWord("at"))
+        {
+            ReadWord();
+            SkipSpaces();
+            ExpectWord("most");
+            SkipSpaces();
+            ExpectWord("every");
+            SkipSpaces();
+            if (_position < _text.Length && GesText.IsAsciiLower(_text[_position])) throw Failure("A rate is a literal or a constant.");
+            rate = ReadValue();
+        }
+
+        return new GesSchemaRouteSyntax { Server = side == "server", Publishes = verb == "publishes", Root = root, RootOffset = rootOffset, Class = routeClass, ClassOffset = classOffset, Rate = rate, Offset = offset };
     }
 
     // `let name be value`; a field named let is followed by its colon instead of a name.
@@ -617,11 +677,14 @@ internal sealed partial class GesSchemaSourceReader
     {
         if (!Consume('(')) return null;
         var start = _position;
-        var end = _text.IndexOf(')', start);
-        if (end < 0) throw new SyntaxFailure(start, "Expected ')'.");
+        // A unit such as `J/(kg·K)` nests parentheses; the closing one at depth zero ends it.
+        var end = start;
+        for (var depth = 0; end < _text.Length && (_text[end] != ')' || depth > 0); end++)
+            depth += _text[end] == '(' ? 1 : _text[end] == ')' ? -1 : 0;
+        if (end == _text.Length) throw new SyntaxFailure(start, "Expected ')'.");
         var builder = new System.Text.StringBuilder();
         for (var index = start; index < end; index++)
-            if (_text[index] is not (' ' or '\t')) builder.Append(_text[index] == '÷' ? '/' : _text[index]);
+            if (_text[index] is not (' ' or '\t')) builder.Append(_text[index] switch { '÷' => '/', '×' or '⋅' => '*', var other => other });
         _position = end + 1;
         return GesQuantityUnits.ParseQuantityName(builder.ToString()) ?? throw new SyntaxFailure(start, "A type names a base unit; a prefixed spelling such as kN is only for literals.");
     }
@@ -746,12 +809,37 @@ internal sealed partial class GesSchemaSourceReader
     private GesSchemaValueSyntax ReadLiteral()
     {
         var offset = _position;
-        var end = _position;
-        while (end < _text.Length && !IsLiteralEnd(end)) end++;
+        var end = LiteralEnd(offset, expression: false);
         if (end == offset) throw Failure("Expected a number.");
         var value = GesSchemaLiterals.Read(_text, offset, end) ?? throw new SyntaxFailure(offset, "Expected an exact finite number with a unit known to literals.");
         _position = end;
         return new GesSchemaValueSyntax { Value = value.Value, Unit = value.Unit, IsPercent = value.IsPercent, Text = _text.Substring(offset, end - offset), Offset = offset };
+    }
+
+    // The end of a literal from `start`. A parenthesized unit part after `/`, as in `3J/(kg·K)`, belongs to the literal; in an
+    // expression a `*` between letters also continues it, as in `5N*m`, and reading falls back to a shorter literal before it.
+    private int LiteralEnd(int start, bool expression)
+    {
+        var end = start;
+        while (end < _text.Length)
+        {
+            var c = _text[end];
+            if (c == '(' && end > start && _text[end - 1] == '/')
+            {
+                var close = end + 1;
+                var depth = 1;
+                for (; close < _text.Length && depth > 0 && _text[close] is not (' ' or '\t' or '\r' or '\n'); close++)
+                    depth += _text[close] switch { '(' => 1, ')' => -1, _ => 0 };
+                if (depth != 0) break;
+                end = close;
+                continue;
+            }
+
+            if (expression ? IsExpressionLiteralEnd(end) && !(c == '*' && end > start && _text[end - 1] is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z')) : IsLiteralEnd(end)) break;
+            end++;
+        }
+
+        return end;
     }
 
     private bool IsLiteralEnd(int index)

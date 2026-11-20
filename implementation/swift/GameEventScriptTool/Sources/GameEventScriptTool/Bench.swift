@@ -179,7 +179,7 @@ extension Tool {
         }
         var withArgs = false
         var withoutArgs = false
-        for binding in program.bindings where binding.requiredTags.isEmpty && program.stringConstants[Int(binding.name)] == entry {
+        for binding in program.bindings where binding.requiredTags.isEmpty && binding.requiredTagAlternatives.isEmpty && program.stringConstants[Int(binding.name)] == entry {
             if binding.kind == .messageNameHandler { withoutArgs = true }
             guard binding.kind == .messageHandler else { continue }
             if binding.argumentNames.isEmpty { withoutArgs = true }

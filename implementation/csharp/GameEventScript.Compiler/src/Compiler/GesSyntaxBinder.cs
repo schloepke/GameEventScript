@@ -422,30 +422,154 @@ internal sealed partial class GesSyntaxBinder
 
         var requiredTags = new List<string>();
         var excludedTags = new List<string>();
+        List<List<string>>? alternatives = null;
+        var tagSets = new TagSets();
         while (true)
         {
             c.SkipNewLines();
             if (!c.IsNode(NodeKind.HandlerTagFilter)) break;
-            BindTagFilter(c.TakeNode(), requiredTags, excludedTags);
+            BindTagFilter(c.TakeNode(), requiredTags, excludedTags, ref alternatives, tagSets);
         }
 
         c.SkipNewLines();
         var statements = BindBlock(c.TakeNode(NodeKind.Block));
-        return Set(new GesEventHandlerNode(message, dispatchKind, parameters, statements, requiredTags, excludedTags), start, c.Previous);
+        return Set(new GesEventHandlerNode(message, dispatchKind, parameters, statements, requiredTags, excludedTags, ReduceTagAlternatives(requiredTags, alternatives)), start, c.Previous);
     }
 
-    private void BindTagFilter(GesSyntaxNode node, List<string> requiredTags, List<string> excludedTags)
+    // A `matching` filter is a conjunction of groups: a single tag is required, a `|` group needs one of its tags.
+    // `without` filters hold no `|`, which the syntax validator reports.
+    // Sets beside the ordered tag lists keep long filters linear.
+    private sealed class TagSets
+    {
+        internal HashSet<string> Group { get; } = new(StringComparer.Ordinal);
+        internal HashSet<string> Required { get; } = new(StringComparer.Ordinal);
+        internal HashSet<string> Excluded { get; } = new(StringComparer.Ordinal);
+    }
+
+    private void BindTagFilter(GesSyntaxNode node, List<string> requiredTags, List<string> excludedTags, ref List<List<string>>? alternatives, TagSets sets)
     {
         var c = new Cursor(this, node);
-        var tags = c.Advance().Kind == Matching ? requiredTags : excludedTags;
+        var matching = c.Advance().Kind == Matching;
+        var group = new List<string>();
         do
         {
-            c.SkipNewLines();
-            var normalized = GameEventScriptMessage.NormalizeTagName(c.Expect(Tag).Text[1..]);
-            if (normalized.Length > 0 && !tags.Contains(normalized)) tags.Add(normalized);
-            c.SkipNewLines();
+            group.Clear();
+            sets.Group.Clear();
+            do
+            {
+                c.SkipNewLines();
+                var normalized = GameEventScriptMessage.NormalizeTagName(c.Expect(Tag).Text[1..]);
+                if (normalized.Length > 0 && sets.Group.Add(normalized)) group.Add(normalized);
+                c.SkipNewLines();
+            }
+            while (c.Match(OperatorCollectionUnion));
+
+            if (group.Count > 1 && matching)
+            {
+                (alternatives ??= []).Add([.. group]);
+                continue;
+            }
+
+            var tags = matching ? requiredTags : excludedTags;
+            var seen = matching ? sets.Required : sets.Excluded;
+            foreach (var tag in group)
+                if (seen.Add(tag)) tags.Add(tag);
         }
         while (c.Match(Comma));
+    }
+
+    // Drops every group that a required tag or a smaller or earlier equal group already satisfies, so duplicates and
+    // absorbed groups vanish; the kept groups keep their source order.
+    private static List<IReadOnlyList<string>>? ReduceTagAlternatives(List<string> requiredTags, List<List<string>>? alternatives)
+    {
+        if (alternatives is null) return null;
+        var required = new HashSet<string>(requiredTags, StringComparer.Ordinal);
+        var kept = new List<IReadOnlyList<string>>();
+        if (alternatives.Count == 1)
+        {
+            if (!ContainsAny(required, alternatives[0])) kept.Add(alternatives[0]);
+            return kept;
+        }
+
+        // Tags become dense numbers. A group satisfied by a required tag is dropped, and of equal groups the first stays.
+        var ids = new Dictionary<string, int>(StringComparer.Ordinal);
+        var counts = new List<int>();
+        var groups = new List<(List<string> Tags, int[] Ids)>();
+        var unique = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var group in alternatives)
+        {
+            if (ContainsAny(required, group)) continue;
+            var groupIds = new int[group.Count];
+            for (var tag = 0; tag < group.Count; tag++)
+            {
+                if (!ids.TryGetValue(group[tag], out var id))
+                {
+                    ids.Add(group[tag], id = ids.Count);
+                    counts.Add(0);
+                }
+
+                groupIds[tag] = id;
+            }
+
+            Array.Sort(groupIds);
+            if (!unique.Add(string.Join(",", groupIds))) continue;
+            foreach (var id in groupIds) counts[id]++;
+            groups.Add((group, groupIds));
+        }
+
+        // A group is absorbed by a smaller group whose tags it all contains, so it contains that group's rarest tag:
+        // candidates are listed under it, and a group's shared tags do not make every group a candidate.
+        var byRarestTag = new List<int>?[ids.Count];
+        var signatures = new ulong[groups.Count];
+        for (var index = 0; index < groups.Count; index++)
+        {
+            var rarest = groups[index].Ids[0];
+            foreach (var id in groups[index].Ids)
+            {
+                if (counts[id] < counts[rarest]) rarest = id;
+                signatures[index] |= 1UL << (id & 63);
+            }
+
+            (byRarestTag[rarest] ??= []).Add(index);
+        }
+
+        var marks = new int[ids.Count];
+        for (var index = 0; index < groups.Count; index++)
+        {
+            var group = groups[index].Ids;
+            foreach (var id in group) marks[id] = index + 1;
+            var absorbed = false;
+            for (var tag = 0; tag < group.Length && !absorbed; tag++)
+            {
+                var candidates = byRarestTag[group[tag]];
+                if (candidates is null) continue;
+                for (var position = 0; position < candidates.Count && !absorbed; position++)
+                {
+                    var other = candidates[position];
+                    var candidate = groups[other].Ids;
+                    // Distinct groups of equal size never contain each other; the signature rejects most others at once.
+                    absorbed = candidate.Length < group.Length && (signatures[other] & ~signatures[index]) == 0 && Contains(marks, index + 1, candidate);
+                }
+            }
+
+            if (!absorbed) kept.Add(groups[index].Tags);
+        }
+
+        return kept.Count == 0 ? null : kept;
+    }
+
+    private static bool ContainsAny(HashSet<string> set, List<string> tags)
+    {
+        foreach (var tag in tags)
+            if (set.Contains(tag)) return true;
+        return false;
+    }
+
+    private static bool Contains(int[] marks, int mark, int[] tags)
+    {
+        foreach (var id in tags)
+            if (marks[id] != mark) return false;
+        return true;
     }
 
     private static string CanonicalTypeName(string typeName) => typeName switch
@@ -480,8 +604,11 @@ internal sealed partial class GesSyntaxBinder
         c.Advance();
         c.SkipNewLines();
         var unit = new StringBuilder();
-        while (!c.Is(RightParen))
+        var depth = 0;
+        while (!c.Is(RightParen) || depth > 0)
         {
+            if (c.Is(LeftParen)) depth++;
+            else if (c.Is(RightParen)) depth--;
             var part = c.Advance();
             unit.Append(part.Kind == SuperscriptInteger ? part.Text == "2" ? "²" : "³" : part.Text);
             c.SkipNewLines();

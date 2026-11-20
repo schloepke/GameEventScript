@@ -354,20 +354,98 @@ final class GesSyntaxBinder {
         }
         var required: [String] = []
         var excluded: [String] = []
+        var alternatives: [[String]] = []
+        // Sets beside the ordered tag lists keep long filters linear.
+        var requiredSet: Set<String> = []
+        var excludedSet: Set<String> = []
+        // A `matching` filter is a conjunction of groups: a single tag is required, a `|` group needs one of its tags.
+        // `without` filters hold no `|`, which the syntax validator reports.
         while true {
             try c.newlines()
             guard c.isNode(.handlerTagFilter) else { break }
             var f = cursor(try c.takeNode())
             let include = try f.advance().kind == .matching
             repeat {
-                try f.newlines()
-                let tag = String(try f.expect(.tag).text.dropFirst())
-                if include { if !required.contains(tag) { required.append(tag) } } else if !excluded.contains(tag) { excluded.append(tag) }
-                try f.newlines()
+                var group: [String] = []
+                var groupSet: Set<String> = []
+                repeat {
+                    try f.newlines()
+                    let tag = String(try f.expect(.tag).text.dropFirst())
+                    if groupSet.insert(tag).inserted { group.append(tag) }
+                    try f.newlines()
+                } while try f.match(.operatorCollectionUnion)
+                if include && group.count > 1 {
+                    alternatives.append(group)
+                    continue
+                }
+                for tag in group {
+                    if include { if requiredSet.insert(tag).inserted { required.append(tag) } } else if excludedSet.insert(tag).inserted { excluded.append(tag) }
+                }
             } while try f.match(.comma)
         }
         let body = try block(c.takeNode(.block))
-        return .init(kind: kind, name: name, parameters: parameters, expression: nil, statements: body, required: required, excluded: excluded, location: location(begin, c.previous))
+        return .init(
+            kind: kind,
+            name: name,
+            parameters: parameters,
+            expression: nil,
+            statements: body,
+            required: required,
+            excluded: excluded,
+            alternatives: Self.reduceTagAlternatives(required, alternatives),
+            location: location(begin, c.previous)
+        )
+    }
+
+    // Drops every group that a required tag or a smaller or earlier equal group already satisfies, so duplicates and
+    // absorbed groups vanish; the kept groups keep their source order.
+    static func reduceTagAlternatives(_ required: [String], _ alternatives: [[String]]) -> [[String]] {
+        if alternatives.isEmpty { return [] }
+        let requiredSet = Set(required)
+        if alternatives.count == 1 { return alternatives[0].contains(where: requiredSet.contains) ? [] : alternatives }
+        // Tags become dense numbers. A group satisfied by a required tag is dropped, and of equal groups the first stays.
+        var ids: [String: Int] = [:]
+        var counts: [Int] = []
+        var groups: [(tags: [String], ids: [Int])] = []
+        var unique = Set<[Int]>()
+        for group in alternatives where !group.contains(where: requiredSet.contains) {
+            let groupIds = group.map { tag in
+                if let id = ids[tag] { return id }
+                ids[tag] = counts.count
+                counts.append(0)
+                return counts.count - 1
+            }.sorted()
+            if !unique.insert(groupIds).inserted { continue }
+            for id in groupIds { counts[id] += 1 }
+            groups.append((group, groupIds))
+        }
+        // A group is absorbed by a smaller group whose tags it all contains, so it contains that group's rarest tag:
+        // candidates are listed under it, and a group's shared tags do not make every group a candidate.
+        var byRarestTag = [[Int]](repeating: [], count: counts.count)
+        var signatures = [UInt64](repeating: 0, count: groups.count)
+        for index in groups.indices {
+            var rarest = groups[index].ids[0]
+            for id in groups[index].ids {
+                if counts[id] < counts[rarest] { rarest = id }
+                signatures[index] |= 1 << UInt64(id & 63)
+            }
+            byRarestTag[rarest].append(index)
+        }
+        var marks = [Int](repeating: 0, count: counts.count)
+        var kept: [[String]] = []
+        for index in groups.indices {
+            let group = groups[index].ids
+            for id in group { marks[id] = index + 1 }
+            // Distinct groups of equal size never contain each other; the signature rejects most others at once.
+            let absorbed = group.contains { tag in
+                byRarestTag[tag].contains { other in
+                    let candidate = groups[other].ids
+                    return candidate.count < group.count && signatures[other] & ~signatures[index] == 0 && candidate.allSatisfy { marks[$0] == index + 1 }
+                }
+            }
+            if !absorbed { kept.append(groups[index].tags) }
+        }
+        return kept
     }
 
     func typeName(_ reference: GesSyntaxNode) throws -> String {
@@ -383,7 +461,9 @@ final class GesSyntaxBinder {
             try c.advance()
             try c.newlines()
             var unit = ""
-            while !c.is(.rightParen) {
+            var depth = 0
+            while !c.is(.rightParen) || depth > 0 {
+                if c.is(.leftParen) { depth += 1 } else if c.is(.rightParen) { depth -= 1 }
                 let part = try c.advance()
                 unit += part.kind == .superscriptInteger ? part.text == "2" ? "²" : "³" : part.text
                 try c.newlines()

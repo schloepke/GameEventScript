@@ -52,7 +52,8 @@ function signature(binding) {
 
 function filter(binding) {
     const parts = [];
-    if (binding.requiredTags.length > 0) parts.push('matching ' + joined(binding.requiredTags));
+    const matching = [...binding.requiredTags.map(shortened), ...binding.tagAlternatives.map(group => group.map(shortened).join(' | '))];
+    if (matching.length > 0) parts.push('matching ' + matching.join(', '));
     if (binding.excludedTags.length > 0) parts.push('without ' + joined(binding.excludedTags));
     return parts.join(' ');
 }

@@ -79,7 +79,7 @@ public static class GesSchemaGenerator
         if (parameters is null) throw new ArgumentNullException(nameof(parameters));
         if (options is null) throw new ArgumentNullException(nameof(options));
         var document = Wire(set, roots, parameters, options, out var layout);
-        return GesCodeFiles.Split(document, options.Split, set.SourceName, files => Manifest(options, model: false, layout.Roots, root => (layout.Type(root).Hash, layout.Type(root).BindingHash), layout.Parameters, files));
+        return GesCodeFiles.Split(document, options.Split, set.SourceName, files => Manifest(options, model: false, layout.Roots, layout.RootHashes, layout.Parameters, files));
     }
 
     private static GesCodeDocument Wire(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaParameters parameters, GesSchemaGenerateOptions options, out GesSchemaLayout layout)
@@ -118,7 +118,7 @@ public static class GesSchemaGenerator
         HashSet<string>? wireNames = null;
         if (modelSpace is not null)
         {
-            wireNames = GesSchemaPlanner.TopLevel(types, GesSchemaPlanner.TagSets(types, ""));
+            wireNames = GesSchemaPlanner.TopLevel(types, GesSchemaPlanner.TagSets(types, ""), layout.Networks);
             foreach (var name in packed)
             {
                 wireNames.Remove(name);
@@ -242,7 +242,7 @@ public static class GesSchemaGenerator
         if (options.Models is not null) throw new GesGeneratorException(GesGeneratorException.Usage, "Models concern wire code, which shares their types; models do not name another namespace.");
         layout = GesModelLayoutBuilder.Build(set, roots);
         // Reading documents converts through the plain values.
-        var effective = options.Documents && !options.Values ? new GesSchemaGenerateOptions { Language = options.Language, Namespace = options.Namespace, Access = options.Access, Values = true, Bindings = options.Bindings, Documents = true, Split = options.Split, ExtendNamespace = options.ExtendNamespace } : options;
+        var effective = options.Documents && !options.Values ? new GesSchemaGenerateOptions { Language = options.Language, Namespace = options.Namespace, Access = options.Access, Values = true, Bindings = options.Bindings, Documents = true, Split = options.Split, ExtendNamespace = options.ExtendNamespace, SchemaSet = options.SchemaSet, UseSchemaSet = options.UseSchemaSet, Imports = options.Imports } : options;
         return effective.Language == GesSchemaLanguage.CSharp ? GesCSharpModelEmitter.Emit(layout, effective) : GesSwiftModelEmitter.Emit(layout, effective, extended);
     }
 
@@ -264,6 +264,9 @@ public static class GesSchemaGenerator
         if (options.Documents) json.Boolean("documents", true);
         json.Boolean("checkedExclusivity", options.CheckedExclusivity);
         if (options.ExtendNamespace is { } extended) json.String("extendNamespace", extended);
+        if (options.SchemaSet is { } schemaSet) json.String("schemaSet", schemaSet);
+        if (options.UseSchemaSet is { } useSchemaSet) json.String("useSchemaSet", useSchemaSet);
+        if (options.Imports.Count > 0) json.Strings("imports", options.Imports);
         json.BeginArray("roots");
         foreach (var root in roots)
         {

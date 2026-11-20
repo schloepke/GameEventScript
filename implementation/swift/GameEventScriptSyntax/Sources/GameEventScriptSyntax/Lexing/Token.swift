@@ -192,8 +192,8 @@ extension GesToken {
     // A name in backticks is never one.
     @_spi(Syntax) public func isIdentifier(_ word: String) -> Bool { kind == .identifier && text == word && !isQuotedName }
 
-    // A name written in backticks: its spelling is its value between two backticks. Only the `°` spelling of `degree` is
-    // another identifier whose spelling differs from its value, and it is shorter. Offsets count UTF-8 bytes.
+    // A name written in backticks: its spelling is its value between two backticks. The `°` spelling of `degree` and the `Ω`
+    // spellings of `ohm` are the other identifiers whose spelling differs from their value, and none is 2 bytes longer. Offsets count UTF-8 bytes.
     @_spi(Syntax) public var isQuotedName: Bool { kind == .identifier && end - start == text.utf8.count + 2 }
 
     @_spi(Syntax) public var isNumber: Bool { kind == .float || kind == .percentage || kind == .unitNumber }

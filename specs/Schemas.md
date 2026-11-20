@@ -17,8 +17,8 @@ Scripts do not change, and a schema is not a script record. The
 [schema guide](../docs/guide/Schemas.md) introduces it step by step.
 
 Not part of this document: transport, publish/subscribe, interest management and
-the transfer of large data. [Extension points](#extension-points) names where they
-attach.
+the transfer of large data. [GES network](Network.md) owns sessions and the `network`
+declaration; [extension points](#extension-points) names where the rest attaches.
 
 ## Principles
 
@@ -71,7 +71,7 @@ messages :Combat as (Hit, Died)
 ### Grammar
 
 ```text
-source      = { constant | parameter | tagsdecl | "abstract" schema | [ roles ] ( [ packed ] schema | message | messages ) }
+source      = { constant | parameter | tagsdecl | network | "abstract" schema | [ roles ] ( [ packed ] schema | message | messages ) }
 packed      = "packed" [ "(" ( "8" | "16" | "32" | "64" ) ")" ]
 tagsdecl    = "tags" ":" TypeName "as" tagset
 roles       = role [ role ]
@@ -114,6 +114,9 @@ fallback    = "true" | "false" | "#" TagName | value | record
 record      = "[" ":" "]" | "[" entry { "," entry } "]"
 entry       = LowerName ":" ( literal | "$" ConstantName | "true" | "false" | "#" TagName | record )
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
+network     = "network" ":" TypeName "as" "{" route { route } "}"
+route       = ( "client" | "server" ) ( "sends" | "publishes" ) ":" TypeName
+              ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ]
 
 expression  = fallen [ "when" fallen { "," fallen "when" fallen } [ "," ] "otherwise" fallen ]
 fallen      = disjunction { "default" disjunction }
@@ -146,12 +149,12 @@ at most 12 decimal digits without a leading zero; a single `_` may separate two 
 `fallback` it names a `let` or a sibling field. An [expression](#computed-fields) has its own names.
 
 **Layout.** Spaces and tabs may separate any two tokens, and a line comment may end any
-line. A source may start with a BOM. Fields, lets and axes are separated by commas or line breaks,
+line. A source may start with a BOM. Fields, lets, axes and routes are separated by commas or line breaks,
 and repeated or trailing separators are allowed. Arguments, members and tags are separated by
 exactly one comma. A line break is allowed only in these places: between declarations, after
 `as`, inside the parentheses of an argument list, a member list, a tag set or a `:List`, inside
-the braces of a schema or an axis block, and before or after each `|` of a union. Each field, with its type and marker,
-otherwise stays on one line.
+the braces of a schema, an axis block or a network, and before or after each `|` of a union. Each field, with its type
+and marker, and each route otherwise stays on one line.
 
 > **Since: 0.5.0** — unions across lines
 
@@ -235,7 +238,11 @@ A source is a sequence of declarations in any order; a reference may come before
   is no root, and a union cannot hold it beside another Tag. [Generated code](#tools) declares one type per set
   that every field of it uses, instead of one per field. *Since: 0.5.0.*
 
-Schemas, messages, message sets and tag sets share one namespace across all sources.
+- **`network :Name as { ... }`** declares the routes between a client and a server: which side sends or publishes
+  which wire root in which delivery class. [GES network](Network.md#declaration) owns its rules, errors, binding and
+  hash. A network is no type; only code generation takes it as a root. *Since: Unreleased.*
+
+Schemas, messages, message sets, tag sets and networks share one namespace across all sources.
 
 A union alternative may carry a label, as in `units: :List(:Text max 64 | bind: :Loadout_UnitBind)`. Generated code
 names the alternative after its label instead of its type (`.bind`, C# `Bind`); the label changes no bytes, values,
@@ -456,6 +463,8 @@ schema :SoundMade as {
   function or `abs` is its whole operand, and the function is then the base of a power as in GES: `sqrt(x) ^ 2` is
   `(sqrt x) ^ 2` and `floor(x)²` squares the floor, while `sqrt x ^ 2` is the root of `x ^ 2`. A
   power sign belongs to a literal where it completes a unit, as in `16m²`, and is a power otherwise, as in `2²` or `2s²`.
+  Likewise a `*` after a unit letter and a parenthesized part after `/` belong to a literal where they complete a unit,
+  as in `5N*m` or `4J/(kg*K)`, and are a product or a quotient otherwise, as in `5m*x` or `6J/(2kg)`.
 - **Names in backticks** (*Since: 0.5.0*). A name that GES reserves, such as `length`, `e`, `pi` or `on`, names a
   field or let only in backticks, as `` `length` / 2 ``, since a script record reads the plain word differently: `e` is
   Euler's number there. Without backticks it is `schema.invalidExpression`. Backticks are spelling only: the field is the
@@ -752,7 +761,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidUnion` | a union alternative repeats a type name or has `delta within`, or a union with `:Nothing` is `optional` |
 | `schema.invalidBound` | an `integer` bound is fractional or outside Int64, or a Dice bound is outside `1` to `2^31 - 1` |
 | `schema.tooWide` | a quantized field exceeds the [limits](#quantization), a bound or default of a fractional field or a fractional let becomes infinite or zero in binary64, or Flags have more than 64 members |
-| `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows |
+| `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows, or a [network](Network.md#declaration) has too many routes |
 | `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
 | `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
 | `schema.packedField` | a [packed schema](#packed-schemas) holds a field without a fixed width, an `optional` field, a key, a union or a computed field |
@@ -760,6 +769,8 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidAbstract` | an abstract schema is a field type, list element, union alternative, a bound or checked root, or a model root |
 | `schema.computedMayBeAbsent` | a required [computed field](#computed-fields) reads an optional field that may be absent without `has value` or `default` |
 | `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name without backticks, an optional list in an aggregate), gives `hypot` or `atan2` another number of arguments, combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
+| `schema.invalidRoute` | a [network route](Network.md#declaration) breaks its rules |
+| `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root with the same side and verb |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
@@ -1683,8 +1694,10 @@ otherwise `d.ddde+x` or `d.ddde-x`. `:show` in the
 console and the highlighter know `.gess`, and the editor bundles have a grammar for it.
 
 `layout` prints the [generation layout](#generation-layout) of one or more roots. `--root` may be
-repeated; naming a root twice is a usage error. `--all-roots` makes every declaration of the files
-a root, in declaration order. `--wire <group>` makes the [wire roots](#roles) of the group in the given files the roots,
+repeated; naming a root twice is a usage error. A `--root` may name a [network](Network.md#declaration): it follows the
+network with the roots of its routes in route order that are not roots yet, and generated code gets the
+[network constants and typed functions](#network-constants) beside their types. *Since: Unreleased.* `--all-roots` makes every declaration of the files
+except networks a root, in declaration order. `--wire <group>` makes the [wire roots](#roles) of the group in the given files the roots,
 in declaration order, and `--model <group>` the model roots, which `layout` then prints as the [model layout](#model-layout)
 and `generate` writes as [model types](#model-types). Exactly one of `--root`, `--all-roots`, `--wire` and `--model` is
 given, a run names one group, and a group without a root in the files fails with `generate.usage`; wire and model code go to
@@ -1712,6 +1725,12 @@ makes the `GesPoly`: an immutable polygon that checks its validity when it is ma
 with `wire.typeMismatch` at the field's path, as the [value path](#value-path) does, and reading sets it to zero. An `optional` field adds a presence flag and, for a value
 type, a nullable view. A message adds a Boolean per tag, and a message set holds the selected
 member and one record per message. After a failed read the values of the target are unspecified.
+
+<a id="message-cases"></a>A message set also generates its nested type `Case` with one case per member that holds the
+member's record: C# an abstract class with one sealed subclass per member and its record in `Value`, for pattern
+matching; Swift an enum with one associated value per case, `Sendable` when its records are. C# `ToCase()` (Swift
+`asCase`) returns the selected member as a case, and `Assign(case)` (Swift `assign(_:)`) selects the case's member and
+takes its record. — **Since: Unreleased**
 A field named like its type, which C# does not allow, gets the suffix `Value` in every language.
 
 A schema with a [recursive List](#recursion) is a class whose List holds records of itself. Its internal methods take the
@@ -1768,8 +1787,8 @@ instead of a trap. `--checked-exclusivity` keeps the checks. Bounds and the end 
 checked either way, and classes are not `Sendable`, so Swift 6 does not let threads share them. `--namespace` puts the types into a C#
 namespace or nested Swift enums, and `--access internal` hides them from other modules. With
 `--check`, `generate` compares its text with the file of `-o` and fails with `cli.outdated` when it
-differs or is missing. The text starts with a header that names the roots, parameters and hashes,
-without a date or version. A generation request that cannot be carried out fails with a
+differs or is missing. The text starts with a header that names the roots, parameters and hashes (for a network its
+network hash), without a date or version. A generation request that cannot be carried out fails with a
 `generate.*` code: `generate.nameCollision` when two generated names of one type are equal (in Swift a
 `:Flags` member `#rawValue` meets the mask of its `OptionSet`), when a type that a record nests for a field, such as
 `SlotsItem` or `ModeTag`, takes the name of a schema, message or tag set of the generation, which it would hide for every
@@ -1778,7 +1797,7 @@ belongs to the runtime types that generated code names without qualification, wh
 generated Swift uses without qualification (`Any`, `AnyObject`, `Array`, `Bool`, `CaseIterable`, `Codable`, `Double`,
 `Equatable`, `Error`, `GameEventScriptRuntime`, `Hashable`, `Identifiable`, `Int`, `Int32`, `Int64`, `OptionSet`,
 `Protocol`, `Result`, `Self`, `Sendable`, `String`, `Swift`, `Type`, `UInt64`, `UInt8`, `UTF8`,
-`UnsafeMutableRawBufferPointer`, `UnsafeRawBufferPointer`), or two [split](#split-output) file names differ only in
+`UnsafeMutableRawBufferPointer`, `UnsafeRawBufferPointer`, `Void`), or two [split](#split-output) file names differ only in
 case, `generate.invalidNamespace`, and `generate.usage` when the [Generator API](PublicApi.md#schema-code-generation)
 receives no root or a split that does not fit the call. Generated C# instead qualifies every platform type it uses that
 a type or member of the same name could hide, such as `global::System.Math` and `[global::System.Flags]`, so a schema
@@ -1847,6 +1866,165 @@ only for wire code and is a usage error with `--model`.
 packed records they take far longer and much more memory than the record's own reading and writing; scripts that need
 such data take it as a Record, and native code uses the conversion above.
 
+### Network constants
+
+> **Since: Unreleased**
+
+A [network](Network.md) root generates one type named after the network: a C# `static class` and a Swift `enum` without
+cases. It holds the network hash with the given parameters, C# `const ulong Hash` and Swift `static let hash: UInt64`,
+and per route its route index, named after side, verb and root (`ClientSendsCommands`, Swift `clientSendsCommands`),
+C# `const int` and Swift `Int`. A route with `at most every` adds the interval in microseconds under the route's name and
+`EveryMicroseconds`, C# `const long` and Swift `Int64`. A network name takes part in the name checks of the generation like
+a type.
+
+Per route the type also holds a typed function named after side, imperative verb and root (`ClientSendCommands`,
+`ServerPublishWorld`, Swift `clientSendCommands`). It writes the root record into the caller's buffer, which the root's
+`MaxByteCount` bytes always suffice, and passes the written bytes to `Send` or `Publish` of the given connection with the
+route's index. It returns that call's status and allocates nothing; a record that does not encode fails like the record's
+own write (C# `GesWireException`, Swift `GesWireError`). C# takes `(GesNetworkConnection connection, in Root value,
+Span<byte> buffer)`, Swift `(_ value: Root, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer)`.
+Generated code of a network therefore uses the Network package (C# `GameEventScript.Network`, Swift
+`GameEventScriptNetwork`) besides Runtime. Receiving needs no generated member: the event's route selects the root, whose
+`Read` decodes the payload.
+
+```gess
+network :Game as {
+  client sends :Commands reliable
+  server publishes :World latest at most every 50ms
+}
+```
+
+```csharp
+public static class Game
+{
+    public const ulong Hash = 0x…UL;
+    public const int ClientSendsCommands = 0;
+    public const int ServerPublishesWorld = 1;
+    public const long ServerPublishesWorldEveryMicroseconds = 50000;
+
+    public static GesNetworkSendStatus ClientSendCommands(GesNetworkConnection connection, in Commands value, Span<byte> buffer)
+        => connection.Send(ClientSendsCommands, buffer.Slice(0, value.Write(buffer)));
+
+    public static GesNetworkSendStatus ServerPublishWorld(GesNetworkConnection connection, in World value, Span<byte> buffer)
+        => connection.Publish(ServerPublishesWorld, buffer.Slice(0, value.Write(buffer)));
+}
+```
+
+```swift
+public enum Game {
+    public static let hash: UInt64 = 0x…
+    public static let clientSendsCommands = 0
+    public static let serverPublishesWorld = 1
+    public static let serverPublishesWorldEveryMicroseconds: Int64 = 50000
+
+    public static func clientSendCommands(_ value: Commands, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> GesNetworkSendStatus {
+        let count = try value.write(into: buffer)
+        return connection.send(route: clientSendsCommands, payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))
+    }
+
+    public static func serverPublishWorld(_ value: World, on connection: GesNetworkConnection, buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> GesNetworkSendStatus {
+        let count = try value.write(into: buffer)
+        return connection.publish(route: serverPublishesWorld, payload: UnsafeRawBufferPointer(rebasing: buffer[..<count]))
+    }
+}
+```
+
+### Typed ends
+
+> **Since: Unreleased**
+
+Beside its constants, a network root generates one typed end per side, nested in the network type: `Game.Client` and
+`Game.Server`, C# `sealed class` and Swift `final class`. Each wraps an [end](Network.md#ends) of its side, which it takes
+when it is created and whose bound network must have the network's hash (else C# `ArgumentException`, Swift
+`GesApiError.invalidArgument`), and hides route indices, payload bytes and buffers. The untyped end and the connection stay
+reachable (C# `End` and `Connection`, Swift `end` and `connection`; on the server `Connection(client)`).
+
+**Sending.** Per outgoing route a method named after the side's verb: `Send` or `Publish` (Swift `send(_:)`,
+`publish(_:)`) with the root record, on the server also `Send(value, client)` (Swift `send(_:client:)`) for one client. It
+writes the record into a buffer that the end owns, sized by the largest root encoding of the side, and returns the end's
+send status; a record that does not encode fails like its own write. A message-set root also takes its
+[case](#message-cases). The methods allocate nothing for a record. The typed end also forwards closing, and on the server
+refusing, per-client closing, and, when the side publishes topics, subscribing and unsubscribing with the nested enum
+`Topic` of its topics.
+
+**Ticks.** A side that publishes topics opens a [tick](Network.md#ticks) through its typed end. The nested `Tick` offers
+`Publish` per topic and `Include(Topic)`. C# `BeginTick()` returns it as a `readonly struct` whose `Dispose` closes the
+tick once: a further call, also on a copy, does nothing. Swift `publishTick(_:)` passes it to a closure, closes the tick
+after the closure, also when it throws, and returns the status of closing.
+
+```csharp
+using (var tick = server.BeginTick())
+{
+    tick.Publish(world);
+    tick.Include(Game.Server.Topic.Weather);
+}
+```
+
+```swift
+try server.publishTick { tick in
+    try tick.publish(world)
+    try tick.include(.weather)
+}
+```
+
+**Receiving.** `Poll` hands typed events. C# takes a handler of the nested interface `IClientHandler` or `IServerHandler`
+with one method per event, each with an empty default, called without allocating for a struct handler. Swift `poll(_:)`
+takes a closure over the nested enum `ClientEvent` or `ServerEvent`. One method or case per received route carries its
+record, borrowed until the handler returns: the end owns one record per route and reads into it, so a large world at a
+high rate allocates nothing in C#. A Swift case carries a struct record as a copy and a class record borrowed like C#. A message-set root carries its case. An event is
+named after the root, or after verb and root (`SentWorld`, `PublishedWorld`) when the other side both sends and publishes
+that root. The events of the end follow: `Connected` and `Disconnected` on the client, `Connecting`, `ClientConnected` and
+`ClientDisconnected` on the server, `Tick`, `TransferProgress`, `TransferCancelled` and `Received`; server events carry
+the client id. A received name that repeats one of these fails with `generate.nameCollision`; the end's internal fields never collide with received roots. The constants, properties and typed functions of the network type must differ from one another in the spelling of each language, and in C# none may take the network's name (`generate.nameCollision`). The types nested in a network, `Client` and `Server` with `IClientHandler` and `IServerHandler` in
+C# or `ClientEvent` and `ServerEvent` in Swift, and `Topic` and `Tick` in an end that publishes, would hide a root, a tag
+set or the network of their name for the code inside; such a name fails with `generate.nameCollision` too. A payload that does not
+decode as its root closes the connection with the detail `undecodable :Root` and reports nothing; the end skips the
+connection's later events of that poll up to its disconnect ([ends](Network.md#ends)).
+
+```swift
+try client.poll { event in
+    switch event {
+    case .connected(let security): status = security
+    case .world(let world): view.world = world
+    case .received: view.commit()
+    default: break
+    }
+}
+```
+
+### Schema sets
+
+> **Since: Unreleased**
+
+`--schemas <Name>` (option `SchemaSet`) generates one public schema set type named `Name` in the generation's namespace,
+a C# `static class` and a Swift `enum` without cases, under `--access`. It embeds the schema sources under their file
+names, parses them once on first use and holds:
+
+- `Hash` (Swift `hash`), a `ulong` FNV-1a 64 hash over each source's name and text and each parameter's name and literal,
+  each followed by a zero byte, in generation order;
+- `Set` (Swift `set`), the parsed `GesSchemaSet`, and `Parameters` (Swift `parameters()`), the generation's parameter
+  values as a new instance per access (Swift per call);
+- `Bind(root, bindingHash)` and `BindNetwork(name, hash)` (Swift `bind(_:bindingHash:)` and `bindNetwork(_:hash:)`), which
+  bind with those parameters and fail when the binding or network hash differs from the given one (C#
+  `InvalidOperationException`, Swift the nested error `Mismatch` with the name);
+- `ReadDocument(text, roots)` (Swift `readDocument(_:roots:)`), document reading against the embedded sources as in
+  [model documents](#model-documents).
+
+The set replaces the per-generation helpers that `--values` and `--documents` otherwise generate: value conversions
+bind through `Bind`, model documents read through `ReadDocument`, and each [network](#network-constants) type adds
+`Bound` (Swift `bound`), the network bound once through `BindNetwork` with the generated hash, which throws on access
+when it no longer binds. `--use-schemas <A.Name>` (option `UseSchemaSet`) declares no set and uses the set that another
+generation declared under its qualified name, so wire code and models of one target embed the sources once; that
+generation must hold every source and parameter the using one needs. Both options together, a name that is no
+identifier or a keyword, or a qualified name with an empty or invalid part fail with `generate.usage`; a set name that
+another type of the generation has, or with C# the name of one of the set's members (`Hash`, `Set`, `Parameters`,
+`Bind`, `BindNetwork`, `ReadDocument`, `__set`), fails with `generate.nameCollision`. Model code with `--schemas` declares its set
+with the model sources and no parameters.
+
+`--import <Module>` (option `Imports`), repeatable, adds `import Module` lines to generated Swift after the runtime
+imports, for a set or models in another module; with C# it fails with `generate.usage`, since C# names the set
+qualified. The [split](#split-output) manifest names `schemaSet`, `useSchemaSet` and `imports` only when given. Without these options the generated code is unchanged.
+
 ### Split output
 
 > **Since: 0.5.0**
@@ -1876,16 +2054,17 @@ roots and hashes, so that it changes only with its own declarations; the single 
 The directory holds the manifest `.ges-generated.json`, canonical JSON with the members `manifest` (1), `code` (`wire` or
 `model`), `language`, `split` (`schema` or `file`), `namespace`, `access`, `values` (also `true` with `documents`, whose
 code includes the value conversions, so that equal code has an equal manifest), `bindings`, `documents` only when given, `checkedExclusivity`,
-`extendNamespace` (the part that `--extend-namespace` names) only when given, `roots` (each with `name`, `hash` and for wire code `bindingHash`), `parameters` (as in the
+`extendNamespace` (the part that `--extend-namespace` names) only when given, `schemaSet`, `useSchemaSet` and `imports` only when given, `roots` (each with `name`, `hash` and for wire code `bindingHash`, which a network leaves out), `parameters` (as in the
 [generation layout](#generation-layout); empty for models) and `files`, the generated file names in ordinal order without
 the manifest. Without `--check`, `generate` writes every file whose bytes changed, keeps unchanged files with their time
 stamps, removes the files that the previous manifest lists and that are no longer generated, and leaves every other file
 alone with the warning `cli.unowned`; a missing or unreadable manifest owns nothing. It removes before it writes, so a
 file renamed only in case on a file system that ignores case is written anew, and writes the manifest last, so a run that
 fails before keeps the previous manifest and its files stay owned. With `--check` it compares the whole
-directory and fails with `cli.outdated` for every changed, missing and surplus file. Names that begin with `.` and Unity's
-`.meta` files are neither reported nor removed, so editors and engines may keep their files beside the code; SwiftPM and
-Unity both ignore the hidden manifest. Every CLI writes identical files and manifests.
+directory and fails with `cli.outdated` for every changed, missing and surplus file. Names that begin with `.`, Unity's
+`.meta` files and Godot's `.uid` files are neither reported nor removed, even when a manifest lists them, so editors and
+engines may keep their files beside the code; SwiftPM, Unity and Godot ignore the hidden manifest. Every CLI writes
+identical files and manifests.
 
 ### Model types
 
@@ -2142,7 +2321,8 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
 `0x` and the 16 hexadecimal digits of its bit pattern.
 
 - The document has `layout` (the format version, 1), `roots` (the root names in the order
-  given, without repetition), `parameters` and `types`.
+  given, without repetition, each network followed by its route roots), `parameters`, `types` and, only with a network
+  root, `networks`.
 - A parameter has `name`, `type` (`Number`, `Quantity` or `Percentage`), `unit` (the portable
   unit name, or `none`) and `value`, the exact decimal of its value in base units as the binding
   hash spells it. Parameters are reached by any root and ordered by name.
@@ -2163,6 +2343,10 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   `#` or the sibling's name), or for a record `entries`, each with `name` and its own `default`, and `encoding`. List elements,
   axes and union alternatives are written with `name`, `path` and `encoding` only; an element is
   named `[]` and an alternative by its label or else by its type, as in its path.
+- Networks are ordered as roots. A network has `name`, `hash` (its [network hash](Network.md#network-hash) with the
+  given parameters) and `routes` in route order; a route has `index`, `side` (`client` or `server`), `verb` (`sends` or
+  `publishes`), `root`, `class` (`reliable`, `latest` or `bulk`) and `rateMicroseconds`, the rounded `at most every`
+  interval or 0 without one. *Since: Unreleased.*
 - An encoding has `kind` and the members of its kind:
   - `boolean`: none.
   - `integer`, `quantized` and `float`: `type`, `unit`, `range`; `integer` and `quantized` add
@@ -2256,7 +2440,7 @@ These build on this format and are not part of it.
 
 - **Transport** frames top-level records, adds its own type and sequence fields, and
   carries the hash at connection setup. The byte-aligned, reusable records allow
-  concatenation into packets.
+  concatenation into packets. [GES network](Network.md) is this layer.
 - **Interest management** decides which records a client receives. It owns object
   identities; a list or a packet then holds only what it selected.
 - **Publish/subscribe** maps channels to message sets or schemas.

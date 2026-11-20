@@ -22,6 +22,7 @@ struct GesAstOptimizer {
             statements: body ?? d.statements,
             required: d.required,
             excluded: d.excluded,
+            alternatives: d.alternatives,
             location: d.location
         )
     }

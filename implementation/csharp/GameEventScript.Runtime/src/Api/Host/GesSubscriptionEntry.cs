@@ -15,6 +15,7 @@ internal sealed class GesSubscriptionEntry
     private GesSubscriptionEntry(
         GesMessageSignature signature,
         string[] requiredTags,
+        string[][]? requiredTagAlternatives,
         string[] excludedTags,
         bool matchArguments,
         int priority,
@@ -26,6 +27,7 @@ internal sealed class GesSubscriptionEntry
     {
         Signature = signature;
         RequiredTags = requiredTags;
+        RequiredTagAlternatives = requiredTagAlternatives;
         ExcludedTags = excludedTags;
         MatchArguments = matchArguments;
         DispatchSignatureId = matchArguments ? signature.SignatureId : $"{signature.Name}(*)";
@@ -39,6 +41,8 @@ internal sealed class GesSubscriptionEntry
 
     internal GesMessageSignature Signature { get; }
     internal string[] RequiredTags { get; }
+    // Each group needs at least one carried tag; null for native subscriptions and handlers without `|`.
+    internal string[][]? RequiredTagAlternatives { get; }
     internal string[] ExcludedTags { get; }
     internal bool MatchArguments { get; }
     internal int Priority { get; }
@@ -59,15 +63,28 @@ internal sealed class GesSubscriptionEntry
         bool matchArguments,
         int priority,
         long order)
-        => new(signature, Copy(requiredTags), Copy(excludedTags), matchArguments, priority, order, registrationId, handler, null, 0);
+        => new(signature, Copy(requiredTags), null, Copy(excludedTags), matchArguments, priority, order, registrationId, handler, null, 0);
 
     internal static GesSubscriptionEntry ForScript(GesProgramInstance instance, GesLinkedProgram.Handler handler, int priority, long order)
-        => new(handler.Signature, handler.RequiredTags, handler.ExcludedTags, handler.MatchArguments, priority, order, 0, null, instance, handler.EntryAddress);
+        => new(handler.Signature, handler.RequiredTags, handler.RequiredTagAlternatives, handler.ExcludedTags, handler.MatchArguments, priority, order, 0, null, instance, handler.EntryAddress);
 
     internal bool Matches(GameEventScriptMessage message)
     {
         for (var index = 0; index < RequiredTags.Length; index++) if (!message.HasTag(RequiredTags[index])) return false;
         for (var index = 0; index < ExcludedTags.Length; index++) if (message.HasTag(ExcludedTags[index])) return false;
+        return RequiredTagAlternatives is null || MatchesAlternatives(RequiredTagAlternatives, message);
+    }
+
+    private static bool MatchesAlternatives(string[][] groups, GameEventScriptMessage message)
+    {
+        for (var group = 0; group < groups.Length; group++)
+        {
+            var tags = groups[group];
+            var matched = false;
+            for (var index = 0; index < tags.Length && !matched; index++) matched = message.HasTag(tags[index]);
+            if (!matched) return false;
+        }
+
         return true;
     }
 

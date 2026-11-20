@@ -16,6 +16,7 @@
     static let duplicateHandlerParameter = "validate.duplicateHandlerParameter"
     static let duplicatePublishArgument = "validate.duplicatePublishArgument"
     static let unresolvedVariable = "validate.unresolvedVariable"
+    static let invalidTagFilter = "validate.invalidTagFilter"
 
     /// The validation diagnostics of a source without syntax errors, in source order.
     @_spi(Syntax) public static func validate(_ tree: GesSyntaxTree) -> [GesSyntaxDiagnostic] { Walker(tree).run() }
@@ -252,6 +253,7 @@
             let message = text(ownToken(node, .messageName))
             let asParameter = child(node, .parameter)
             let parameters = asParameter.map { [($0, ownToken($0, .parameter), false, true)] } ?? self.parameters(child(node, .parameterList))
+            checkTagFilters(node, message)
             if message == "initialization" {
                 if asParameter != nil || !parameters.isEmpty {
                     report(invalidMessageCase, "System endpoint 'initialization' must use parameterless syntax", message, .handler, span(node))
@@ -271,6 +273,15 @@
                 shadow.declare(text(parameter.name))
             }
             statements(child(node, .block)!, validation, shadow)
+        }
+
+        // Alternatives with `|` belong to `matching`; a `without` filter lists excluded tags with commas only.
+        func checkTagFilters(_ node: GesSyntaxNode, _ message: String) {
+            for filter in node.children where filter.kind == .handlerTagFilter && tokens[filter.firstToken].kind == .without {
+                for token in filter.firstToken..<filter.endToken where tokens[token].kind == .operatorCollectionUnion {
+                    report(invalidTagFilter, "A 'without' filter cannot use '|' alternatives; separate excluded tags with ','", message, .handler, (token, token))
+                }
+            }
         }
 
         // MARK: Statements

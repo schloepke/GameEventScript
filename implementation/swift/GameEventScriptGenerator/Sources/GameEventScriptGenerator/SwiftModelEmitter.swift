@@ -10,7 +10,10 @@ enum GesSwiftModelEmitter {
     typealias Names = [(name: String, origin: String)]
 
     static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions, extended: Int) throws(GesGeneratorError) -> GesCodeDocument {
-        try GesSchemaPlanner.checkTopLevel(GesModelPlanner.topLevel(layout, swift: true), swift: true)
+        let schemaSet = try GesSchemaSetReference.from(options)
+        var topLevel = GesModelPlanner.topLevel(layout, swift: true)
+        try schemaSet?.reserve(&topLevel)
+        try GesSchemaPlanner.checkTopLevel(topLevel, swift: true)
         let access = options.access == .public ? "public " : ""
         let header = GesModelPlanner.header(layout)
         let suffix = GesSchemaPlanner.suffix(header, options)
@@ -20,6 +23,7 @@ enum GesSwiftModelEmitter {
         prologue.line("// swift-format-ignore-file")
         prologue.blank()
         prologue.line("import GameEventScriptRuntime")
+        for module in options.imports { prologue.line("import " + module) }
         if GesComputedEmitter.usesMath(layout.types.map(\.computed)) { GesComputedLibrary.mathImport(&prologue) }
         prologue.blank()
         try GesModelPlanner.checkProtocols(layout, swift: true)
@@ -33,7 +37,8 @@ enum GesSwiftModelEmitter {
         )
         document.extended = extended
         let computed = GesModelPlanner.computed(layout, GesComputedEmitter.helper(options.namespace, suffix), swift: true)
-        let documents = options.documents ? "__GesModelDocuments" + suffix : nil
+        // The call that reads a document up to its roots: the schema set's, or that of the helper holding the sources of this file.
+        let documents = !options.documents ? nil : schemaSet.map { $0.qualified + ".readDocument(text, roots: [" } ?? "__GesModelDocuments" + suffix + ".read(text, ["
         let documentType = options.documents ? try GesModelPlanner.documentType(layout, document.space) : ""
         for type in layout.types {
             let reads = layout.roots.contains(type.name) ? documents : nil
@@ -57,7 +62,10 @@ enum GesSwiftModelEmitter {
         if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, support, computed) }) }
         if let documents {
             document.units.append(GesCodeUnit(owner: "") { code in documentTypeDeclaration(&code, layout, documentType, documents, access) })
-            document.units.append(GesCodeUnit(owner: "") { code in documentsHolder(&code, layout, documents) })
+            if schemaSet == nil { document.units.append(GesCodeUnit(owner: "") { code in documentsHolder(&code, layout, "__GesModelDocuments" + suffix) }) }
+        }
+        if let setName = schemaSet?.declared {
+            document.units.append(GesCodeUnit(owner: "") { code in GesSchemaSetReference.writeSwift(&code, setName, access, layout.sources, [], networks: false) })
         }
         if options.bindings || options.values { document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support) }) }
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
@@ -84,7 +92,7 @@ enum GesSwiftModelEmitter {
         code.line("/// - Throws: `GesDocumentError` when the text is no document, names no root of this file (`document.schemaMismatch`), or")
         code.line("///   breaks its schema, with the `document.*` or `wire.*` code, the line, the column and the field path.")
         code.open("\(access)init(document text: String) throws(GesDocumentError) {")
-        code.line("let document = try \(documents).read(text, [\(layout.roots.map { GesSchemaPlanner.literal($0, swift: true) }.joined(separator: ", "))])")
+        code.line("let document = try \(documents)\(layout.roots.map { GesSchemaPlanner.literal($0, swift: true) }.joined(separator: ", "))])")
         code.open("do {")
         code.line("switch document.schema {")
         for (index, root) in layout.roots.enumerated() {
@@ -246,7 +254,7 @@ enum GesSwiftModelEmitter {
             code.line("/// - Throws: `GesDocumentError` when the text is no document, names another schema (`document.schemaMismatch`), or breaks the")
             code.line("///   schema, with the `document.*` or `wire.*` code, the line, the column and the field path.")
             code.open("\(access)init(document text: String) throws(GesDocumentError) {")
-            code.line("let document = try \(documents).read(text, [\(GesSchemaPlanner.literal(type.name, swift: true))])")
+            code.line("let document = try \(documents)\(GesSchemaPlanner.literal(type.name, swift: true))])")
             code.open("do {")
             code.line("self = try Self(value: document.value)")
             code.close("} catch {")
@@ -426,7 +434,7 @@ enum GesSwiftModelEmitter {
             code.line("/// Reads a record from GES document text with the header `:Schema(:\(type.name))`, as the records of this file do.")
             code.line("/// - Throws: `GesDocumentError` when the text is no document, names another schema or breaks the schema.")
             code.open("\(access)init(document text: String) throws(GesDocumentError) {")
-            code.line("let document = try \(documents).read(text, [\(GesSchemaPlanner.literal(type.name, swift: true))])")
+            code.line("let document = try \(documents)\(GesSchemaPlanner.literal(type.name, swift: true))])")
             code.open("do {")
             code.line("self = try Self(value: document.value)")
             code.close("} catch {")

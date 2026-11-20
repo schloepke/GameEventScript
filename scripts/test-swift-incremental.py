@@ -33,13 +33,13 @@ def verify(workspace):
     compiler_source = compiler / "Sources/GameEventScriptCompiler"
     runtime_source.mkdir(parents=True)
     compiler_source.mkdir(parents=True)
-    (runtime / "Package.swift").write_text('''// swift-tools-version: 6.0
+    (runtime / "Package.swift").write_text('''// swift-tools-version: 6.1
 import PackageDescription
 let package = Package(name: "GameEventScriptRuntime",
     products: [.library(name: "GameEventScriptRuntime", targets: ["GameEventScriptRuntime"])],
     targets: [.target(name: "GameEventScriptRuntime")])
 ''')
-    (compiler / "Package.swift").write_text('''// swift-tools-version: 6.0
+    (compiler / "Package.swift").write_text('''// swift-tools-version: 6.1
 import PackageDescription
 let package = Package(name: "GameEventScriptCompiler",
     products: [.executable(name: "probe", targets: ["GameEventScriptCompiler"])],

@@ -50,6 +50,26 @@ private struct EveryUnit {
     var wattPerKelvin: Double = 1
     @GesField(unit: .joulePerKelvin)
     var joulePerKelvin: Double = 1
+    @GesField(unit: .pascal)
+    var pascal: Double = 1
+    @GesField(unit: .kilogramPerCubicMeter)
+    var kilogramPerCubicMeter: Double = 1
+    @GesField(unit: .joulePerKilogram)
+    var joulePerKilogram: Double = 1
+    @GesField(unit: .joulePerKilogramKelvin)
+    var joulePerKilogramKelvin: Double = 1
+    @GesField(unit: .newtonMeter)
+    var newtonMeter: Double = 1
+    @GesField(unit: .kilogramSquareMeter)
+    var kilogramSquareMeter: Double = 1
+    @GesField(unit: .degreePerSecondSquared)
+    var degreePerSecondSquared: Double = 1
+    @GesField(unit: .kilogramPerSecond)
+    var kilogramPerSecond: Double = 1
+    @GesField(unit: .ohm)
+    var ohm: Double = 1
+    @GesField(unit: .coulomb)
+    var coulomb: Double = 1
 }
 
 final class MacroUnitTableTests: XCTestCase {

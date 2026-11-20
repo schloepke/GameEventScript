@@ -9,6 +9,8 @@ final class GesLinkedProgram {
         let signature: GesMessageSignature
         let binding: GesBindingSegment.Entry
         let requiredTags: [String]
+        /// The `|` groups of the handler's `matching` clauses; nil when it has none.
+        let requiredTagAlternatives: [[String]]?
         let excludedTags: [String]
     }
 
@@ -49,6 +51,17 @@ final class GesLinkedProgram {
         self.program = program
         textValues = program.stringConstants.map(GesValue.text)
         mapLayouts = .init(repeating: nil, count: program.uint16IndexLists.count)
+        // Handlers whose entries share one group array (as the Program reader produces) share one resolved copy.
+        var resolvedAlternatives: [UnsafeRawPointer: [[String]]] = [:]
+
+        func resolveAlternatives(_ binding: GesBindingSegment.Entry) -> [[String]]? {
+            guard let identity = binding.tagAlternativesIdentity else { return nil }
+            if let shared = resolvedAlternatives[identity] { return shared }
+            let names = binding.requiredTagAlternatives.map { $0.map { program.stringConstants[Int($0)] } }
+            resolvedAlternatives[identity] = names
+            return names
+        }
+
         for binding in program.bindings {
             let name = program.stringConstants[Int(binding.name)]
             let labels = binding.argumentNames.map { program.stringConstants[Int($0)] }
@@ -59,6 +72,7 @@ final class GesLinkedProgram {
                         signature: .init(name: name, parameters: labels),
                         binding: binding,
                         requiredTags: binding.requiredTags.map { program.stringConstants[Int($0)] },
+                        requiredTagAlternatives: resolveAlternatives(binding),
                         excludedTags: binding.excludedTags.map { program.stringConstants[Int($0)] }
                     )
                 )

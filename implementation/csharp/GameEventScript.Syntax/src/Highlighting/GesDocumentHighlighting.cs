@@ -164,7 +164,8 @@ internal static class GesDocumentHighlighting
     // An unquoted value token, such as `21.4kN` or `90%`, ends at whitespace, a separator, a bracket or a comment.
     private static int ValueEnd(string text, int position)
     {
-        while (position < text.Length && text[position] is not (' ' or '\t' or '\r' or '\n' or ',' or '[' or ']' or ')') && !IsComment(text, position)) position++;
+        var end = GesNumberLiteral.TokenEnd(text, position, brackets: true);
+        while (position < end && !IsComment(text, position)) position++;
         return position;
     }
 

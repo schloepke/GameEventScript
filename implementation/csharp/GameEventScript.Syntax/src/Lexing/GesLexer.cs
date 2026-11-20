@@ -743,6 +743,8 @@ internal sealed class GesLexer
                     '\u221A' => CreateToken(GesTokenKind.IntrinsicSqrt, "sqrt", line, column),
                     '\u221B' => CreateToken(GesTokenKind.IntrinsicCbrt, "cbrt", line, column),
                     '\u00B0' => CreateToken(GesTokenKind.Identifier, "degree", line, column),
+                    '\u03A9' => CreateToken(GesTokenKind.Identifier, "ohm", line, column),
+                    '\u2126' => CreateToken(GesTokenKind.Identifier, "ohm", line, column),
                     '\u2227' => CreateToken(GesTokenKind.OperatorAnd, "\u2227", line, column),
                     '\u2228' => CreateToken(GesTokenKind.OperatorOr, "\u2228", line, column),
                     '\u2208' => CreateToken(GesTokenKind.In, "in", line, column),
@@ -799,7 +801,8 @@ internal sealed class GesLexer
     // Only these characters start a unit spelling, so unitless numbers skip the suffix table. A native test keeps the
     // set in step with GesQuantityUnits.Suffixes.
     internal static bool MayStartUnitSuffix(char ch) =>
-        ch is 'm' or 's' or 'd' or 'k' or 'c' or 't' or 'M' or 'W' or 'H' or 'N' or 'J' or 'V' or 'A' or 'K' or '/' or '\u00B0';
+        ch is 'm' or 's' or 'd' or 'k' or 'c' or 't' or 'h' or 'o' or 'M' or 'W' or 'H' or 'N' or 'J' or 'V' or 'A' or 'K' or 'P' or 'C' or '/' or '\u00B0' or '\u03A9' or
+            '\u2126';
 
     private static bool IsValidUnitBoundary(char ch) => ch == '\0' || GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch);
 
@@ -809,7 +812,7 @@ internal sealed class GesLexer
 
     private static bool IsStructuralBoundary(char ch)
         => ch is '(' or ')' or '{' or '}' or '[' or ']' or ',' or ';' or '.' or ':' or '#' or '+' or '-' or '*' or '/' or '!' or '~' or '&' or '|' or '^' or '=' or '<' or '>' or
-            '\u00B7' or '\u00D7' or '\u00F7' or '\u2212' or '\u221E' or '\u220F' or '\u2107' or '\u03C4' or '\u03C6' or '\u221A' or '\u221B' or '\u00B0' or
+            '\u00B7' or '\u00D7' or '\u00F7' or '\u2212' or '\u221E' or '\u220F' or '\u2107' or '\u03C4' or '\u03C6' or '\u221A' or '\u221B' or '\u00B0' or '\u03A9' or '\u2126' or
             '\u2227' or '\u2228' or '\u2208' or '\u2209' or '\u2295' or '\u22C5' or
             '\u2264' or '\u2265' or '\u00AC' or '\u2260' or '\u2248' or '\u2245' or
             '\u2192' or '\u21D2' or '\u21A6' or '\u00B2' or '\u00B3';

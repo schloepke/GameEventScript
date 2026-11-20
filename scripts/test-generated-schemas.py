@@ -64,6 +64,11 @@ SPLITS = (("schema", ["--wire", "world", "--param", "worldWidth=2000m", "--value
           ("file", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "FileSplitWire"),
           ("schema", ["--model", "view", "--bindings", "--values"], "SchemaSplitModel"),
           ("file", ["--model", "view", "--values"], "FileSplit.Model"))
+# Named schema sets: a wire generation declares the set, split output puts it into the shared file, and a model generation
+# of the same sources in another namespace uses it for its documents.
+SETS = ((ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m", "--values", "--schemas", "RoleSchemas"], "RoleSet.Wire", "SetRolesWire", "file"),
+        (ROLES, ROLE_FILES, ["--model", "view", "--values", "--use-schemas", "RoleSet.Wire.RoleSchemas"], "RoleModels", "SetRolesModel", "schema"),
+        (ROOT / "conformance/fixtures/SchemaGeneration", ["network.gess"], ["--all-roots", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas"], "SetGame", "SetGame", None))
 GENERATED_SWIFT = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
 UNCHECKED_PROGRAM = """using System;
 using Unchecked;
@@ -215,6 +220,11 @@ schema :Second as {
   var: :List(:Shared) max 2
 }
 """
+
+# A network whose roots are named like the internal members of a typed end, which both ends publish and receive.
+NETWORK_GATE = "".join(f"wire schema :{root} as {{\n  x: :Number integer between 0 and 255\n}}\n" for root in ("Buffer", "Handle", "Ticks", "TickOpen")) + \
+    "network :Names as {\n" + "".join(f"  {side} publishes :{root} latest\n" for side in ("client", "server") for root in ("Buffer", "Handle", "Ticks", "TickOpen")) + "}\n"
+
 
 def generate(directory, sources, root, parameters, language, space, more=()):
     directory.mkdir(parents=True, exist_ok=True)
@@ -499,9 +509,13 @@ def main():
         if code is None:
             raise SystemExit(f"The gate schema does not generate: {error}")
         target.write_text(code, encoding="utf-8")
+        code, error = generate(gate / "network", [NETWORK_GATE], "Names", [], language, space + "Network")
+        if code is None:
+            raise SystemExit(f"The network gate schema does not generate: {error}")
+        target.with_name(target.name.replace("Gate", "NetworkGate")).write_text(code, encoding="utf-8")
     # The checked-in wire and model code of the role fixture, which compare-schema-generation.py keeps current, compiles
-    # under the same rules: models of every field type and spatial wire fields in 2D and 3D.
-    for name in ("RolesWire", "RolesModel", "RolesBound"):
+    # under the same rules: models of every field type, spatial wire fields in 2D and 3D, and the constants and typed functions of a network.
+    for name in ("RolesWire", "RolesModel", "RolesBound", "NetworkWire"):
         shutil.copy(GENERATED_CSHARP / f"{name}.g.cs", csharp / f"{name}.g.cs")
         shutil.copy(GENERATED_SWIFT / f"{name}.swift", swift / f"{name}.swift")
     for split, selection, space in SPLITS:
@@ -519,6 +533,13 @@ def main():
                                   "--access", "internal", "--out-dir", str(target / directory), "--split", split], cwd=PACKED.parent, capture_output=True, check=False)
             if run.returncode != 0:
                 raise SystemExit(f"The packed fixture does not generate split: {run.stderr.decode('utf-8', 'replace').strip()}")
+    for directory, files, selection, space, name, split in SETS:
+        for language, target in (("csharp", csharp), ("swift", swift)):
+            output = ["--out-dir", str(target / name), "--split", split] if split else ["-o", str(target / (f"{name}.g.cs" if language == "csharp" else f"{name}.swift"))]
+            run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", *files, *selection, "--language", language, "--namespace", space,
+                                  "--access", "internal", *output], cwd=directory, capture_output=True, check=False)
+            if run.returncode != 0:
+                raise SystemExit(f"The schema set {name} does not generate: {run.stderr.decode('utf-8', 'replace').strip()}")
     for target, generations in HIDING:
         for index, (selection, space) in enumerate(generations):
             (WORK / "swift/Sources" / target).mkdir(parents=True, exist_ok=True)
@@ -539,21 +560,28 @@ def main():
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj'}" />
+    <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Network/src/GameEventScript.Network.csproj'}" />
   </ItemGroup>
 </Project>
 """, encoding="utf-8")
     (swift / "main.swift").write_text(swift_program(entries), encoding="utf-8")
-    (WORK / "swift/Package.swift").write_text(f"""// swift-tools-version: 6.0
+    (WORK / "swift/Package.swift").write_text(f"""// swift-tools-version: 6.1
 import PackageDescription
 
 let package = Package(
     name: "Harness",
     platforms: [.macOS("10.15.4")],
-    dependencies: [.package(path: "{ROOT / 'implementation/swift/GameEventScriptRuntime'}")],
+    dependencies: [
+        .package(path: "{ROOT / 'implementation/swift/GameEventScriptRuntime'}"),
+        .package(path: "{ROOT / 'implementation/swift/GameEventScriptNetwork'}"),
+    ],
     targets: [
         .executableTarget(
             name: "Harness",
-            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
+            dependencies: [
+                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+                .product(name: "GameEventScriptNetwork", package: "GameEventScriptNetwork"),
+            ],
             swiftSettings: [.unsafeFlags(["-warnings-as-errors"]), .define("GES_CHECK_SHARING")]
         ),
         .target(
@@ -569,7 +597,10 @@ let package = Package(
         // The same sources without the check, as release builds of users compile them; one build shares the Runtime.
         .executableTarget(
             name: "Unchecked",
-            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
+            dependencies: [
+                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+                .product(name: "GameEventScriptNetwork", package: "GameEventScriptNetwork"),
+            ],
             swiftSettings: [.unsafeFlags(["-warnings-as-errors"])]
         ),
     ]
@@ -590,6 +621,7 @@ let package = Package(
   <ItemGroup>
     <Compile Include="{csharp}/**/*.g.cs" />
     <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj'}" />
+    <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Network/src/GameEventScript.Network.csproj'}" />
   </ItemGroup>
 </Project>
 """, encoding="utf-8")

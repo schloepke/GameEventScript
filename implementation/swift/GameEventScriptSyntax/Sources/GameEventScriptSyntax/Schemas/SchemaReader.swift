@@ -13,6 +13,7 @@
     }
 
     private static let maximumTypeNesting = 32
+    static let maximumRoutes = 64
 
     let bytes: [UInt8]
     var position = 0
@@ -103,13 +104,13 @@
             if written != "schema" { throw Failure(offset: wordOffset, message: "Expected 'schema' after 'packed'.") }
         }
         if wire != nil || model != nil {
-            if written == "constant" || written == "parameter" || written == "tags" {
+            if written == "constant" || written == "parameter" || written == "tags" || written == "network" {
                 throw Failure(offset: offset, message: "Only a schema, message or message set can be a root.", code: Code.invalidRole)
             }
             if model != nil && (written == "message" || written == "messages") {
                 throw Failure(offset: offset, message: "A model root is a schema.", code: Code.invalidRole)
             }
-        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags"].contains(written) && atRoleEnd() {
+        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags", "network"].contains(written) && atRoleEnd() {
             throw Failure(offset: offset, message: "'\(written)' is no role; a root is marked wire or model.", code: Code.invalidRole)
         }
         var result = try declaration(offset: offset, wordOffset: wordOffset, word: written)
@@ -228,9 +229,61 @@
             try expectWord("as")
             skipSpaces()
             result.tags = try tagSet()
+        case "network":
+            result.kind = .network
+            result.name = try typeName()
+            skipSpaces()
+            try expectWord("as")
+            skipTrivia()
+            try expect(123)
+            skipSeparators()
+            if position < bytes.count && bytes[position] == 125 { throw failure("A network has at least one route.") }
+            while !consume(125) {
+                if result.routes.count == Self.maximumRoutes { throw Failure(offset: position, message: "A network has at most 64 routes.", code: Code.tooLarge) }
+                result.routes.append(try route())
+                try endEntry(125)
+                skipSeparators()
+            }
         default:
-            throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message or messages.")
+            throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message, messages or network.")
         }
+        return result
+    }
+
+    /// `client|server sends|publishes :Root reliable|latest|bulk [at most every value]` on one line.
+    private mutating func route() throws -> GesSchemaRouteSyntax {
+        var result = GesSchemaRouteSyntax()
+        result.offset = position
+        let side = word()
+        if side != "client" && side != "server" { throw Failure(offset: result.offset, message: "A route starts with client or server.") }
+        skipSpaces()
+        let verbOffset = position
+        let verb = word()
+        if verb != "sends" && verb != "publishes" { throw Failure(offset: verbOffset, message: "Expected 'sends' or 'publishes'.") }
+        skipSpaces()
+        result.rootOffset = position
+        result.root = try typeName()
+        skipSpaces()
+        result.classOffset = position
+        switch word() {
+        case "reliable": result.routeClass = .reliable
+        case "latest": result.routeClass = .latest
+        case "bulk": result.routeClass = .bulk
+        default: throw Failure(offset: result.classOffset, message: "Expected 'reliable', 'latest' or 'bulk'.")
+        }
+        skipSpaces()
+        if atWord("at") {
+            _ = word()
+            skipSpaces()
+            try expectWord("most")
+            skipSpaces()
+            try expectWord("every")
+            skipSpaces()
+            if position < bytes.count && GesNames.lower(bytes[position]) { throw failure("A rate is a literal or a constant.") }
+            result.rate = try value()
+        }
+        result.server = side == "server"
+        result.publishes = verb == "publishes"
         return result
     }
 
@@ -508,13 +561,26 @@
     private mutating func unit() throws -> GesQuantityUnit? {
         if !consume(40) { return nil }
         let start = position
-        guard let end = bytes[start...].firstIndex(of: 41) else { throw Failure(offset: start, message: "Expected ')'.") }
+        // A unit such as `J/(kg·K)` nests parentheses; the closing one at depth zero ends it.
+        var end = start
+        var depth = 0
+        while end < bytes.count && (bytes[end] != 41 || depth > 0) {
+            if bytes[end] == 40 { depth += 1 } else if bytes[end] == 41 { depth -= 1 }
+            end += 1
+        }
+        if end == bytes.count { throw Failure(offset: start, message: "Expected ')'.") }
         var written: [UInt8] = []
         var index = start
         while index < end {
-            if bytes[index] == 0xC3 && index + 1 < end && bytes[index + 1] == 0xB7 {
-                written.append(47)
+            // `÷` reads as `/`, `×` and `⋅` as `*`.
+            if bytes[index] == 0xC3 && index + 1 < end && (bytes[index + 1] == 0xB7 || bytes[index + 1] == 0x97) {
+                written.append(bytes[index + 1] == 0xB7 ? 47 : 42)
                 index += 2
+                continue
+            }
+            if bytes[index] == 0xE2 && index + 2 < end && bytes[index + 1] == 0x8B && bytes[index + 2] == 0x85 {
+                written.append(42)
+                index += 3
                 continue
             }
             if bytes[index] != 32 && bytes[index] != 9 { written.append(bytes[index]) }
@@ -653,8 +719,7 @@
     // A number with its suffix. The value stays an exact decimal, since quantization and the hash depend on it.
     private mutating func literal() throws -> GesSchemaValueSyntax {
         let offset = position
-        var end = position
-        while end < bytes.count && !isLiteralEnd(end) { end += 1 }
+        let end = literalEnd(from: offset, expression: false)
         if end == offset { throw failure("Expected a number.") }
         guard let read = GesSchemaLiterals.read(Array(bytes[offset..<end])) else {
             throw Failure(offset: offset, message: "Expected an exact finite number with a unit known to literals.")
@@ -667,6 +732,35 @@
         result.text = String(decoding: bytes[offset..<end], as: UTF8.self)
         result.offset = offset
         return result
+    }
+
+    // The end of a literal from `start`. A parenthesized unit part after `/`, as in `3J/(kg·K)`, belongs to the literal; in an
+    // expression a `*` between letters also continues it, as in `5N*m`, and reading falls back to a shorter literal before it.
+    func literalEnd(from start: Int, expression: Bool) -> Int {
+        var end = start
+        while end < bytes.count {
+            let byte = bytes[end]
+            if byte == 40 && end > start && bytes[end - 1] == 47 {
+                var close = end + 1
+                var depth = 1
+                while close < bytes.count && depth > 0 && bytes[close] != 32 && bytes[close] != 9 && bytes[close] != 13 && bytes[close] != 10 {
+                    if bytes[close] == 40 { depth += 1 } else if bytes[close] == 41 { depth -= 1 }
+                    close += 1
+                }
+                if depth != 0 { break }
+                end = close
+                continue
+            }
+            if expression {
+                let previous = end > start ? bytes[end - 1] : 0
+                let letter = (previous >= 65 && previous <= 90) || (previous >= 97 && previous <= 122)
+                if isExpressionLiteralEnd(end) && !(byte == 42 && letter) { break }
+            } else if isLiteralEnd(end) {
+                break
+            }
+            end += 1
+        }
+        return end
     }
 
     func isLiteralEnd(_ index: Int) -> Bool {

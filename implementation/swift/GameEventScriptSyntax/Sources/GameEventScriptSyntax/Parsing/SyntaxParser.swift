@@ -319,7 +319,7 @@
 
     static let builtinTypeNames: Set<String> = ["Nothing", "Number", "Boolean", "Percentage", "Vector", "Point", "Series", "Tag", "Text", "List", "Range", "Message", "Handler", "Map", "Dice", "Bytes", "Record"]
 
-    static let quantityUnitKinds: Set<GesTokenKind> = [.identifier, .message, .operatorDivide, .operatorPower, .superscriptInteger, .float]
+    static let quantityUnitKinds: Set<GesTokenKind> = [.identifier, .message, .operatorDivide, .operatorMultiply, .operatorPower, .superscriptInteger, .float]
 
     @discardableResult func typeName() throws -> String {
         guard currentKind == .typeName else { throw failure("Expected a type name.") }
@@ -334,10 +334,12 @@
         if name == "Numeric" { throw failure("The numeric type helper is a keyword; use numeric without ':'.", typeToken) }
         if Self.builtinTypeNames.contains(name) { name = name.lowercased() }
         // Uppercase unit symbols such as N or Hz read as message-name tokens.
-        if name == "Quantity", currentKind == .leftParen, peek().isWord || peek().isIdentifier("degree") || peekKind() == .message, quantityUnitAhead() {
+        if name == "Quantity", currentKind == .leftParen, peek().isWord || peekKind() == .identifier || peekKind() == .message, quantityUnitAhead() {
             advance()
             newlines()
-            while currentKind != .rightParen {
+            var depth = 0
+            while currentKind != .rightParen || depth > 0 {
+                if currentKind == .leftParen { depth += 1 } else if currentKind == .rightParen { depth -= 1 }
                 advance()
                 newlines()
             }
@@ -347,12 +349,20 @@
         return name
     }
 
-    // A quantity unit is a name optionally followed by `/` and further unit parts, such as `m/s`, `m/s^2` or `°/s`.
+    // A quantity unit is a name optionally followed by `/`, `*` and further unit parts, such as `m/s`, `m/s^2`, `°/s`,
+    // `N·m` or `J/(kg·K)`; parentheses inside the unit nest.
     func quantityUnitAhead() -> Bool {
-        for offset in 2..<8 {
+        var depth = 0
+        for offset in 2..<12 {
             let kind = peekKind(offset)
-            if kind == .rightParen { return true }
-            if !Self.quantityUnitKinds.contains(kind) { return false }
+            if kind == .rightParen {
+                if depth == 0 { return true }
+                depth -= 1
+            } else if kind == .leftParen {
+                depth += 1
+            } else if !Self.quantityUnitKinds.contains(kind) {
+                return false
+            }
         }
         return false
     }
@@ -585,6 +595,12 @@
                 guard currentKind == .tag else { throw failure("Expected tag literal.") }
                 advance()
                 newlines()
+                while match(.operatorCollectionUnion) {
+                    newlines()
+                    guard currentKind == .tag else { throw failure("Expected tag literal.") }
+                    advance()
+                    newlines()
+                }
             } while match(.comma)
             finishNode()
         }

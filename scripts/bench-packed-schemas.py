@@ -165,7 +165,7 @@ def prepare():
 </Project>
 """, encoding="utf-8")
     (swift / "main.swift").write_text(SWIFT_PROGRAM.replace("import GameEventScriptRuntime", "#if canImport(Glibc)\nimport Glibc\n#else\nimport Darwin\n#endif\nimport GameEventScriptRuntime"), encoding="utf-8")
-    (WORK / "swift/Package.swift").write_text(f"""// swift-tools-version: 6.0
+    (WORK / "swift/Package.swift").write_text(f"""// swift-tools-version: 6.1
 import PackageDescription
 
 let package = Package(

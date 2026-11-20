@@ -34,6 +34,35 @@ internal static class GesSchemaLayoutJson
         json.BeginArray("types");
         foreach (var type in layout.Types) Type(json, type);
         json.EndArray();
+        // Layouts without a network keep their form.
+        if (layout.Networks.Count > 0)
+        {
+            json.BeginArray("networks");
+            foreach (var network in layout.Networks)
+            {
+                json.BeginObject();
+                json.String("name", network.Name);
+                json.String("hash", Hex(network.Hash));
+                json.BeginArray("routes");
+                foreach (var route in network.Routes)
+                {
+                    json.BeginObject();
+                    json.Number("index", route.Index);
+                    json.String("side", route.Side);
+                    json.String("verb", route.Verb);
+                    json.String("root", route.Root);
+                    json.String("class", route.Class);
+                    json.Number("rateMicroseconds", route.RateMicroseconds);
+                    json.EndObject();
+                }
+
+                json.EndArray();
+                json.EndObject();
+            }
+
+            json.EndArray();
+        }
+
         json.EndObject();
         return json.ToString();
     }

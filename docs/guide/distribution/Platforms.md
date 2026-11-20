@@ -18,13 +18,13 @@ successful library build is not full Conformance on that platform.
 | Product | Declared package contract | CI host and toolchain | Verification |
 | --- | --- | --- | --- |
 | C# Runtime, Compiler, CSharpBridge, Syntax | .NET Standard 2.1 | Linux x64, `ubuntu-latest`; SDK **10.0.404**, .NET **8.0.x** runtime | Full C# Conformance and native tests, allocation gate, .NET 8 package consumers, reproducibility: [C# CI](../../../.github/workflows/csharp-ci.yml), job `verify` |
-| Swift Runtime, Compiler, SwiftBridge, Syntax | Swift tools **6.0**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), job `native`; fresh tagged package consumers and root tests: job `distribution` |
-| Swift Runtime, Compiler, Generator, Syntax, SwiftBridge, CLI on Linux | Swift tools **6.0** | Linux x64, digest-pinned `swift:6.4.0-jammy` container, the image of the static Linux CLI | Native Swift Conformance of the supported corpus, Syntax, Generator and SwiftBridge tests, CLI process and terminal checks: Swift CI job `linux` |
-| Swift libraries at the minimum toolchain | Swift tools **6.0** | Linux x64, digest-pinned `swift:6.0` container | Syntax tests and builds of Runtime, Compiler and Generator: Swift CI job `linux-minimum` |
+| Swift Runtime, Compiler, SwiftBridge, Syntax | Swift tools **6.1**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), job `native`; fresh tagged package consumers and root tests: job `distribution` |
+| Swift Runtime, Compiler, Generator, Syntax, SwiftBridge, CLI on Linux | Swift tools **6.1** | Linux x64, digest-pinned `swift:6.4.0-jammy` container, the image of the static Linux CLI | Native Swift Conformance of the supported corpus, Syntax, Generator and SwiftBridge tests, CLI process and terminal checks: Swift CI job `linux` |
+| Swift libraries at the minimum toolchain | Swift tools **6.1** | Linux x64, digest-pinned `swift:6.1` container | Syntax tests and builds of Runtime, Compiler, Generator, Network and Network Sockets: Swift CI job `linux-minimum` |
 
 The pinned .NET SDK is defined in [global.json](../../../global.json).
 Swift's package tools version is a manifest requirement, not a claim that every
-product is tested with every Swift compiler from 6.0 onward. The macOS deployment
+product is tested with every Swift compiler from 6.1 onward. The macOS deployment
 target likewise does not mean that tests run on macOS 10.15.4. The local Runtime,
 Compiler and Syntax packages have no explicit Apple platform floor;
 the public root package contains the Bridge, while the CLI is a separate package. See

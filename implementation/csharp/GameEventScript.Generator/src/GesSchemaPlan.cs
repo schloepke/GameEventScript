@@ -640,12 +640,13 @@ internal static class GesSchemaPlanner
     // every reference inside the record, so that name fails like any other collision; their origins carry this prefix.
     internal const string NestedTypeOrigin = "the nested type ";
 
-    internal static HashSet<string> TopLevel(List<GesPlanType> types, List<(string Name, List<string> Tags)> sets)
+    internal static HashSet<string> TopLevel(List<GesPlanType> types, List<(string Name, List<string> Tags)> sets, List<GesLayoutNetwork>? networks = null)
     {
         var names = new HashSet<string>(System.StringComparer.Ordinal);
         foreach (var type in types)
             if (!type.IsItem) names.Add(type.Name);
         foreach (var (name, _) in sets) names.Add(name);
+        foreach (var network in networks ?? []) names.Add(network.Name);
         return names;
     }
 
@@ -675,7 +676,7 @@ internal static class GesSchemaPlanner
     [
         "Any", "AnyObject", "Array", "Bool", "CaseIterable", "Codable", "Double", "Equatable", "Error", "GameEventScriptRuntime", "Hashable",
         "Identifiable", "Int", "Int32", "Int64", "OptionSet", "Protocol", "Result", "Self", "Sendable", "String", "Swift", "Type", "UInt64",
-        "UInt8", "UTF8", "UnsafeMutableRawBufferPointer", "UnsafeRawBufferPointer"
+        "UInt8", "UTF8", "UnsafeMutableRawBufferPointer", "UnsafeRawBufferPointer", "Void"
     ];
 
     // Names of the form Ges and a capital letter belong to the runtime types that generated code names without qualification.
@@ -828,8 +829,10 @@ internal static class GesSchemaPlanner
             text.Append("//     Parameter ").Append(parameter.Name).Append(" = ").Append(parameter.Value).Append(parameter.Unit == "none" ? "" : " " + parameter.Unit).Append(".\n");
         foreach (var root in layout.Roots)
         {
-            var type = layout.Type(root);
-            text.Append("//     ").Append(root).Append(": schema hash ").Append(GesSchemaLayoutJson.Hex(type.Hash)).Append(", binding hash ").Append(GesSchemaLayoutJson.Hex(type.BindingHash)).Append(".\n");
+            var (hash, binding) = layout.RootHashes(root);
+            text.Append("//     ").Append(root).Append(binding is { } bindingHash
+                ? ": schema hash " + GesSchemaLayoutJson.Hex(hash) + ", binding hash " + GesSchemaLayoutJson.Hex(bindingHash)
+                : ": network hash " + GesSchemaLayoutJson.Hex(hash)).Append(".\n");
         }
 
         text.Append("// </auto-generated>\n");

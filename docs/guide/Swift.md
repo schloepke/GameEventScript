@@ -29,7 +29,7 @@ such as `0.1.0`. Features added after that tag require a newer release or a loca
 checkout dependency.
 
 ```swift
-// swift-tools-version: 6.0
+// swift-tools-version: 6.1
 import PackageDescription
 
 let package = Package(

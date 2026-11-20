@@ -246,8 +246,8 @@ internal static partial class GesCompiler
                     var handler = handlerGroup[handlerIndex];
                     using var sourceRange = _builder.SourceRange(handler.SourceRange);
                     using var routine = handler.DispatchKind == GesEventHandlerDispatchKind.MessageName
-                        ? _builder.BeginMessageNameHandler(handler.Message, ReadSingleOrDefault(handler.Parameters, "message"), (ushort)handlerIndex, handler.MatchingTags, handler.WithoutTags)
-                        : _builder.BeginHandler(handler.Message, handler.SignatureLabels, (ushort)handlerIndex, handler.MatchingTags, handler.WithoutTags);
+                        ? _builder.BeginMessageNameHandler(handler.Message, ReadSingleOrDefault(handler.Parameters, "message"), (ushort)handlerIndex, handler.MatchingTags, handler.WithoutTags, handler.MatchingAlternatives)
+                        : _builder.BeginHandler(handler.Message, handler.SignatureLabels, (ushort)handlerIndex, handler.MatchingTags, handler.WithoutTags, handler.MatchingAlternatives);
                     var context = LoweringContext.ForRoutine(routine);
                     for (var index = 0; index < handler.Parameters.Count; index++)
                     {

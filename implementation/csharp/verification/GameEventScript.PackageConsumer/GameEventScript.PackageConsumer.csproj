@@ -16,18 +16,26 @@
         <RestoreSources>$(GesPackageSource);https://api.nuget.org/v3/index.json</RestoreSources>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(GesUseUnityDlls)' != 'true'">
+        <DefineConstants>$(DefineConstants);GES_SOCKETS</DefineConstants>
+    </PropertyGroup>
+
     <ItemGroup Condition="'$(GesUseUnityDlls)' != 'true'">
         <PackageReference Include="GameEventScript.Syntax" Version="$(GesPackageVersion)" />
         <PackageReference Include="GameEventScript.Runtime" Version="$(GesPackageVersion)" />
         <PackageReference Include="GameEventScript.Compiler" Version="$(GesPackageVersion)" />
         <PackageReference Include="GameEventScript.CSharpBridge" Version="$(GesPackageVersion)" />
         <PackageReference Include="GameEventScript.Generator" Version="$(GesPackageVersion)" />
+        <PackageReference Include="GameEventScript.Network" Version="$(GesPackageVersion)" />
+        <!-- Sockets targets net8.0 and has no Unity DLL; only the package consumer checks it. -->
+        <PackageReference Include="GameEventScript.Network.Sockets" Version="$(GesPackageVersion)" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(GesUseUnityDlls)' == 'true'">
         <Reference Include="GameEventScript.Syntax" HintPath="$(GesUnityDllDirectory)/GameEventScript.Syntax.dll" Private="true" />
         <Reference Include="GameEventScript.Runtime" HintPath="$(GesUnityDllDirectory)/GameEventScript.Runtime.dll" Private="true" />
         <Reference Include="GameEventScript.CSharpBridge" HintPath="$(GesUnityDllDirectory)/GameEventScript.CSharpBridge.dll" Private="true" />
+        <Reference Include="GameEventScript.Network" HintPath="$(GesUnityDllDirectory)/GameEventScript.Network.dll" Private="true" />
         <Reference Include="GameEventScript.Compiler" HintPath="$(GesCompilerDllDirectory)/GameEventScript.Compiler.dll" Private="true" />
         <Reference Include="GameEventScript.Generator" HintPath="$(GesGeneratorDllDirectory)/GameEventScript.Generator.dll" Private="true" />
     </ItemGroup>

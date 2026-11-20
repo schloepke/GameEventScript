@@ -3810,3 +3810,271 @@ binary:
   outcome: validationError
   errorCode: InvalidProgram
 ```
+
+---
+
+## Test: Canonical handler tag alternatives read, rewrite, and execute
+
+A handler binding with Flags bit `0x01` stores its `|` group in the former reserved field as a list of tag count and tag indexes; the Program rewrites byte for byte and dispatches only messages that carry one tag of the group.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-alternatives
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-tag-alternatives
+  resourceId: gesb-v1.tag-alternatives
+  relativePath: GesbV1/tag-alternatives.gesb
+  sha256: 18790ACA94301997A923753E56F8FDD4D02791AD0EA2C237D4699EB645E6CF77
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  compareCompiledRuntime: true
+```
+
+### Source code under test
+
+```ges
+module tagalternatives
+
+on Start {
+  emit Probe(value: 1) with #front, #ultrasonic
+  emit Probe(value: 2) with #front
+}
+
+on Probe(value) matching #front, #lidar | #ultrasonic {
+  emit Seen(value: value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 18790ACA94301997A923753E56F8FDD4D02791AD0EA2C237D4699EB645E6CF77
+  moduleName: tagalternatives
+  opaqueSectionCount: 0
+steps:
+  execute:
+    input:
+      args: []
+    local:
+      - name: Probe
+        tags: [front, ultrasonic]
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+      - name: Probe
+        tags: [front]
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "2" }
+      - name: Seen
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
+## Test: Unknown binding flag bit is a read error
+
+Only binding flag bit `0x01` is defined; this fixture also sets bit `0x02` on the handler binding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-alternatives-unknown-flag
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-tag-alternatives-unknown-flag
+  resourceId: gesb-v1.tag-alternatives-unknown-flag
+  relativePath: GesbV1/tag-alternatives-unknown-flag.gesb
+  sha256: BCD1B0DFA933BB7DE905297D48D0552857024DBCD8C8A2BAE0F356B40FBB518B
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "set handler binding Flags to 0x03 at file byte offset 219; retain all other bytes"
+```
+
+### Source code under test
+
+```ges
+module tagalternatives
+
+on Start {
+  emit Probe(value: 1) with #front, #ultrasonic
+  emit Probe(value: 2) with #front
+}
+
+on Probe(value) matching #front, #lidar | #ultrasonic {
+  emit Seen(value: value)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: readError
+  errorCode: InvalidSectionFlags
+```
+
+---
+
+## Test: Tag alternatives field without its flag is a read error
+
+Without Flags bit `0x01` the TagAlternativesList field must be zero; this fixture clears the flag and keeps the list index 3.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-alternatives-reserved
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-tag-alternatives-reserved
+  resourceId: gesb-v1.tag-alternatives-reserved
+  relativePath: GesbV1/tag-alternatives-reserved.gesb
+  sha256: BE079E99025B38F9F93F308664BB64FDC979C5608B37940D099665F3D0EEF776
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "set handler binding Flags to 0x00 at file byte offset 219; retain all other bytes"
+```
+
+### Source code under test
+
+```ges
+module tagalternatives
+
+on Start {
+  emit Probe(value: 1) with #front, #ultrasonic
+  emit Probe(value: 2) with #front
+}
+
+on Probe(value) matching #front, #lidar | #ultrasonic {
+  emit Seen(value: value)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: readError
+  errorCode: InvalidSectionReserved
+```
+
+---
+
+## Test: Tag alternative group running past its list is invalid
+
+The group count 3 claims more tag indexes than the two the list still holds.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-alternatives-count
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-tag-alternatives-count
+  resourceId: gesb-v1.tag-alternatives-count
+  relativePath: GesbV1/tag-alternatives-count.gesb
+  sha256: 6560C92E7A7FBE9C05ED63548C553450E8867B6ADF6CFDE25C34C74AA9927C48
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "set the first element of UInt16IndexList 3 from 2 to 3 at file byte offset 182; retain all other bytes"
+```
+
+### Source code under test
+
+```ges
+module tagalternatives
+
+on Start {
+  emit Probe(value: 1) with #front, #ultrasonic
+  emit Probe(value: 2) with #front
+}
+
+on Probe(value) matching #front, #lidar | #ultrasonic {
+  emit Seen(value: value)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+```
+
+---
+
+## Test: Tag alternative group with one distinct tag is a validation error
+
+A group must hold at least two distinct tags; this fixture repeats the first tag instead of the second.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-alternatives-duplicate
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-tag-alternatives-duplicate
+  resourceId: gesb-v1.tag-alternatives-duplicate
+  relativePath: GesbV1/tag-alternatives-duplicate.gesb
+  sha256: 60092BAAD3DB42BEB7EAF61E0D750771D1499D27AB88F1CAD2F20100A0BDA174
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the second tag index of UInt16IndexList 3 with 2 at file byte offset 186; retain all other bytes"
+```
+
+### Source code under test
+
+```ges
+module tagalternatives
+
+on Start {
+  emit Probe(value: 1) with #front, #ultrasonic
+  emit Probe(value: 2) with #front
+}
+
+on Probe(value) matching #front, #lidar | #ultrasonic {
+  emit Seen(value: value)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+```

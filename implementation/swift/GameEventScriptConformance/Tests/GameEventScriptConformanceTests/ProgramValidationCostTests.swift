@@ -41,6 +41,74 @@ final class ProgramValidationCostTests: XCTestCase {
         XCTAssertLessThan(Date().timeIntervalSince(start), 5, "Validation must not scan the long list once per reference.")
     }
 
+    func testManyTagAlternativesAreValidatedQuicklyAndSharedAcrossHandlers() throws {
+        let tags = (0..<16_384).map { "#t\($0)" }.joined(separator: " | ")
+        let builder = GesProgramBuilder()
+        builder.addScript("module shared\non Probe() matching \(tags) {}\n", sourceName: "shared.ges")
+        builder.withDebugInfo(.none)
+        let program = try builder.compile()
+        let handler = try XCTUnwrap(program.bindings.entries.first { !$0.requiredTagAlternatives.isEmpty })
+        // Many handlers naming one list: the encoder writes the list once, so the binary stays small.
+        let copies = (0..<4_096).map { index in
+            GesBindingSegment.Entry(
+                kind: handler.kind,
+                name: handler.name,
+                argumentNames: handler.argumentNames,
+                entryAddress: handler.entryAddress,
+                id: handler.id == .max ? .max : UInt16(index),
+                requiredTags: handler.requiredTags,
+                excludedTags: handler.excludedTags,
+                requiredRegisterCount: handler.requiredRegisterCount,
+                requiredCallStackDepth: handler.requiredCallStackDepth,
+                requiredTagAlternatives: handler.requiredTagAlternatives
+            )
+        }
+        let crafted = GameEventScriptProgram(
+            formatVersion: program.formatVersion,
+            moduleName: program.moduleName,
+            programVersion: program.metadata.programVersion,
+            requiredRegisterCount: program.metadata.requiredRegisterCount,
+            requiredCallStackDepth: program.metadata.requiredCallStackDepth,
+            stringConstants: Array(program.stringConstants),
+            uint16IndexLists: program.uint16IndexLists.map { Array($0) },
+            bindings: program.bindings.entries.filter { $0.requiredTagAlternatives.isEmpty } + copies,
+            code: program.code.instructions,
+            debugSymbols: nil,
+            sourceMap: nil,
+            sourceArchive: nil,
+            buildMetadata: nil,
+            opaqueSections: []
+        )
+        let bytes = try crafted.encode()
+        let start = Date()
+        let instance = try GameEventScriptHost.makeBuilder().build().load(try GameEventScriptProgram.read(bytes))
+        XCTAssertLessThan(Date().timeIntervalSince(start), 5, "Duplicate tags must be found without comparing every pair.")
+        // Handlers naming one list share one group array and one resolved copy instead of a parsed or hashed copy each.
+        let handlers = instance.program.bindings.entries.filter { !$0.requiredTagAlternatives.isEmpty }
+        XCTAssertEqual(handlers.count, 4_096)
+        XCTAssertEqual(Set(handlers.map(\.tagAlternativesIdentity)).count, 1)
+        let linked = instance.linked.handlers.compactMap(\.requiredTagAlternatives)
+        XCTAssertEqual(linked.count, 4_096)
+        XCTAssertEqual(Set(linked.map { $0.withUnsafeBufferPointer { $0.baseAddress } }).count, 1)
+    }
+
+    func testGroupsSharingATagAreReducedWithoutComparingEveryPair() throws {
+        // A shared first tag, repeated groups and groups containing another each made every group a candidate of every other.
+        let sources = [
+            (0..<20_000).map { "#common | #t\($0)" },
+            (0..<20_000).map { $0 % 2 == 0 ? "#a | #b" : "#a | #b | #t\($0)" },
+        ]
+        for (groups, remaining) in zip(sources, [20_000, 1]) {
+            let builder = GesProgramBuilder()
+            builder.addScript("module tags\non Probe() matching \(groups.joined(separator: ", ")) {}\n", sourceName: "tags.ges")
+            builder.withDebugInfo(.none)
+            let start = Date()
+            let program = try builder.compile()
+            XCTAssertLessThan(Date().timeIntervalSince(start), 2, "Tag alternatives must be reduced without comparing every pair.")
+            XCTAssertEqual(program.bindings.entries.first { !$0.requiredTagAlternatives.isEmpty }?.requiredTagAlternatives.count, remaining)
+        }
+    }
+
     func testCompiledAndDecodedProgramsAreMarkedValidated() throws {
         let builder = GesProgramBuilder()
         builder.addScript("module once\non Start() {}", sourceName: "once.ges")

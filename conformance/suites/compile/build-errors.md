@@ -3609,3 +3609,40 @@ error:
   phase: "validate"
   code: "validate.invalidTag"
 ```
+
+---
+
+## Test: tag alternatives inside without
+
+`without` already rejects any listed tag, so `|` inside it is an invalid tag filter.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-alternatives-without
+kind: compileError
+level: atomic
+sources:
+  - name: "tag alternatives inside without.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start without #a | #b {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTagFilter"
+  line: 1
+  column: 21
+```

@@ -17,7 +17,8 @@ internal static class GesSchemaHighlighting
         "within", "integer", "optional", "key", "max", "depth", "tags", "wire", "model", "let",
         "default", "true", "false", "abstract", "packed", "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of",
         "min", "clamp", "abs", "has", "sqrt", "cbrt", "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "hypot", "exp", "ln",
-        "floor", "ceil", "truncate", "round", "rad", "deg"
+        "floor", "ceil", "truncate", "round", "rad", "deg", "network", "client", "server", "sends", "publishes", "reliable",
+        "latest", "bulk", "at", "most", "every"
     };
 
     internal static void Highlight(string text, GesSpanBuilder spans, List<GesHighlightDiagnostic> diagnostics)

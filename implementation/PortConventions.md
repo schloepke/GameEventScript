@@ -61,6 +61,8 @@ class files append an aspect (`GesBinaryBuilderOpcodes.cs`). Swift file names ar
 | Map/Record from entries | `GesMap(params (string, GesValue)[])` | `.map([(String, GesValue)])` | pair or entry class |
 | Member lookup | `value["name"]` | `value["name"]` | — |
 | Map traversal | `IEnumerable<KeyValuePair<string, GesValue>>` | `Sequence` | — |
+| Static member meaning none, when its type is stored in an Optional | `None` | `unencrypted` or another descriptive name, because `.none` would read as nil | `NONE` |
+| Overloads that differ only by parameter type | `Message(GesNetworkClientSecurity)` | argument labels, `message(client:)` | overloads |
 
 An error type may be absent from a port that cannot produce that error.
 

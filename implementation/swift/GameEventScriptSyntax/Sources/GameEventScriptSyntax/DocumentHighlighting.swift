@@ -141,8 +141,9 @@ enum GesDocumentHighlighting {
 
     // An unquoted value token, such as `21.4kN` or `90%`, ends at whitespace, a separator, a bracket or a comment.
     private static func valueEnd(_ bytes: [UInt8], _ start: Int) -> Int {
+        let end = GesNumberLiteral.tokenEnd(bytes, from: start, brackets: true)
         var position = start
-        while position < bytes.count && !isSpace(bytes[position]) && ![44, 91, 93, 41].contains(bytes[position]) && !isComment(bytes, position) { position += 1 }
+        while position < end && !isComment(bytes, position) { position += 1 }
         return position
     }
 

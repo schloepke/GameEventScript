@@ -111,6 +111,7 @@ private final class GesProgramDump {
             output += aligned(bindLabels[index]) + ".bind " + enumName(binding.kind) + " id=" + (binding.id == .max ? "none" : String(binding.id)) + " name=" + textLabels[Int(binding.name)] + " args=" + texts(binding.argumentNames)
             if binding.entryAddress != .max { output += " entry=" + code(binding.entryAddress) }
             if !binding.requiredTags.isEmpty { output += " requiredTags=" + texts(binding.requiredTags) }
+            if !binding.requiredTagAlternatives.isEmpty { output += " tagAlternatives=[" + binding.requiredTagAlternatives.map(texts).joined(separator: ", ") + "]" }
             if !binding.excludedTags.isEmpty { output += " excludedTags=" + texts(binding.excludedTags) }
             output += " // \"" + signature(binding, escaped: true, tags: true) + "\"\n"
         }
@@ -260,7 +261,8 @@ private final class GesProgramDump {
         var result = resolve(binding.name)
         if binding.kind == .messageNameHandler { result += " as message" } else { result += "(" + binding.argumentNames.map(resolve).joined(separator: ", ") + ")" }
         if tags {
-            if !binding.requiredTags.isEmpty { result += " matching " + binding.requiredTags.map { "#" + resolve($0) }.joined(separator: ", ") }
+            let matching = binding.requiredTags.map { "#" + resolve($0) } + binding.requiredTagAlternatives.map { $0.map { "#" + resolve($0) }.joined(separator: " | ") }
+            if !matching.isEmpty { result += " matching " + matching.joined(separator: ", ") }
             if !binding.excludedTags.isEmpty { result += " without " + binding.excludedTags.map { "#" + resolve($0) }.joined(separator: ", ") }
         }
         return result

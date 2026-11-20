@@ -8,6 +8,10 @@
    </FileRef>
    <FileRef location="group:GameEventScriptGenerator">
    </FileRef>
+   <FileRef location="group:GameEventScriptNetwork">
+   </FileRef>
+   <FileRef location="group:GameEventScriptNetworkSockets">
+   </FileRef>
    <FileRef location="group:GameEventScriptSwiftBridge">
    </FileRef>
    <FileRef location="group:GameEventScriptConformance">

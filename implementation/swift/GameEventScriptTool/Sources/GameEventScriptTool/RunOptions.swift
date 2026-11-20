@@ -177,7 +177,7 @@ extension Tool {
 
     static func hasMain(_ program: GameEventScriptProgram) -> Bool {
         program.bindings.contains {
-            guard $0.requiredTags.isEmpty, program.stringConstants[Int($0.name)] == "Main" else { return false }
+            guard $0.requiredTags.isEmpty, $0.requiredTagAlternatives.isEmpty, program.stringConstants[Int($0.name)] == "Main" else { return false }
             return $0.kind == .messageNameHandler || ($0.kind == .messageHandler && $0.argumentNames.count == 1 && program.stringConstants[Int($0.argumentNames[0])] == "args")
         }
     }

@@ -197,11 +197,13 @@ internal static class GesProgramWriter
     {
         writer.WriteUInt32(checked((uint)program.Bindings.Entries.Count));
         var lists = ListIndexes(program.UInt16IndexLists);
+        Dictionary<object, ushort>? alternativeLists = null;
         for (var index = 0; index < program.Bindings.Entries.Count; index++)
         {
             var bind = program.Bindings.Entries[index];
+            var alternatives = bind.RequiredTagAlternatives.Count > 0;
             writer.WriteByte((byte)bind.Kind);
-            writer.WriteByte(0);
+            writer.WriteByte(alternatives ? GesBindingSegment.TagAlternativesFlag : (byte)0);
             writer.WriteUInt16(bind.Id);
             writer.WriteUInt16(bind.Name);
             writer.WriteUInt16(FindList(lists, bind.ArgumentNames));
@@ -210,8 +212,19 @@ internal static class GesProgramWriter
             writer.WriteUInt16(bind.EntryAddress);
             writer.WriteUInt16(bind.RequiredRegisterCount);
             writer.WriteUInt16(bind.RequiredCallStackDepth);
-            writer.WriteUInt16(0);
+            writer.WriteUInt16(alternatives ? FindAlternativesList(lists, ref alternativeLists, bind.RequiredTagAlternatives) : (ushort)0);
         }
+    }
+
+    // Handlers that share one alternatives list share its storage, so the list index is found once per storage.
+    private static ushort FindAlternativesList(Dictionary<string, ushort> lists, ref Dictionary<object, ushort>? found, GesReadOnlyArray<GesReadOnlyArray<ushort>> groups)
+    {
+        found ??= new Dictionary<object, ushort>();
+        var storage = groups.Storage!;
+        if (found.TryGetValue(storage, out var index)) return index;
+        index = FindList(lists, GesBindingSegment.FlattenTagAlternatives(groups));
+        found.Add(storage, index);
+        return index;
     }
 
     private static int GetCodeSize(GesCodeSegment segment)

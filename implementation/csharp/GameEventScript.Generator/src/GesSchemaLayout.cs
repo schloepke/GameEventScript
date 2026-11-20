@@ -14,24 +14,69 @@ internal sealed class GesSchemaLayout
 {
     internal const int Version = 1;
 
-    internal GesSchemaLayout(List<string> roots, List<GesLayoutParameter> parameters, List<GesLayoutType> types, List<GesSchemaSource> sources)
+    internal GesSchemaLayout(List<string> roots, List<GesLayoutParameter> parameters, List<GesLayoutType> types, List<GesLayoutNetwork> networks, List<GesSchemaSource> sources)
     {
         Roots = roots;
         Parameters = parameters;
         Types = types;
+        Networks = networks;
         Sources = sources;
     }
 
+    // The roots in order: the given ones, each network followed by the roots of its routes that are no root yet.
     internal List<string> Roots { get; }
 
     internal List<GesLayoutParameter> Parameters { get; }
 
     internal List<GesLayoutType> Types { get; }
 
+    // The networks among the roots, in root order.
+    internal List<GesLayoutNetwork> Networks { get; }
+
     // The sources the schemas come from, under their file names, which code that converts GES values embeds. Not part of the JSON.
     internal List<GesSchemaSource> Sources { get; }
 
     internal GesLayoutType Type(string name) => Types.Find(type => type.Name == name) ?? throw new InvalidOperationException($"Type '{name}' is not in the layout.");
+
+    internal GesLayoutNetwork? Network(string name) => Networks.Find(network => network.Name == name);
+
+    // The hashes a root reports in headers and manifests: a network has its network hash and no binding hash.
+    internal (ulong Hash, ulong? BindingHash) RootHashes(string root)
+    {
+        if (Network(root) is { } network) return (network.Hash, null);
+        var type = Type(root);
+        return (type.Hash, type.BindingHash);
+    }
+}
+
+// A network root: its hash bound with the layout's parameters and its routes in declared order.
+internal sealed class GesLayoutNetwork(string name, ulong hash, List<GesLayoutRoute> routes)
+{
+    internal string Name { get; } = name;
+
+    internal ulong Hash { get; } = hash;
+
+    internal List<GesLayoutRoute> Routes { get; } = routes;
+}
+
+// One route: its side `client` or `server`, its verb `sends` or `publishes`, its root, its class `reliable`, `latest` or
+// `bulk` and its rate in microseconds, 0 without one.
+internal sealed class GesLayoutRoute(int index, string side, string verb, string root, string deliveryClass, long rateMicroseconds)
+{
+    internal int Index { get; } = index;
+
+    internal string Side { get; } = side;
+
+    internal string Verb { get; } = verb;
+
+    internal string Root { get; } = root;
+
+    internal string Class { get; } = deliveryClass;
+
+    internal long RateMicroseconds { get; } = rateMicroseconds;
+
+    // The name of the route's constants: side, verb and root, which identify a route within its network.
+    internal string Name => (Side == "client" ? "Client" : "Server") + (Verb == "sends" ? "Sends" : "Publishes") + Root;
 }
 
 internal sealed class GesLayoutParameter(string name, string type, string unit, string value, string literal)
@@ -254,13 +299,25 @@ internal static class GesSchemaLayoutBuilder
         var reached = new SortedDictionary<string, GesSchema>(StringComparer.Ordinal);
         var rootNames = new List<string>();
         var parameterInfos = new SortedDictionary<string, GesSchemaParameterInfo>(StringComparer.Ordinal);
+        var networks = new List<GesNetwork>();
         foreach (var root in roots)
         {
             if (rootNames.Contains(root)) continue;
             rootNames.Add(root);
-            var schema = set.Schema(root);
-            Reach(schema, reached);
-            foreach (var parameter in schema.Parameters) parameterInfos[parameter.Name] = parameter;
+            if (FindNetwork(set, root) is { } network)
+            {
+                // A network makes the roots of its routes roots of the generation.
+                networks.Add(network);
+                foreach (var route in network.Routes)
+                {
+                    if (!rootNames.Contains(route.Root.Name)) rootNames.Add(route.Root.Name);
+                    Root(route.Root, reached, parameterInfos);
+                }
+
+                continue;
+            }
+
+            Root(set.Schema(root), reached, parameterInfos);
         }
 
         var layoutParameters = new List<GesLayoutParameter>();
@@ -272,9 +329,32 @@ internal static class GesSchemaLayoutBuilder
 
         var types = new List<GesLayoutType>();
         foreach (var schema in reached.Values) types.Add(Type(schema, parameters));
+        var layoutNetworks = networks.ConvertAll(network => Network(network, parameters));
         var sources = new List<GesSchemaSource>();
         foreach (var source in set.Sources) sources.Add(new GesSchemaSource(source.Name.Substring(source.Name.LastIndexOfAny(['/', '\\']) + 1), source.Text));
-        return new GesSchemaLayout(rootNames, layoutParameters, types, sources);
+        return new GesSchemaLayout(rootNames, layoutParameters, types, layoutNetworks, sources);
+    }
+
+    private static GesNetwork? FindNetwork(GesSchemaSet set, string name)
+    {
+        foreach (var network in set.Networks)
+            if (network.Name == name) return network;
+        return null;
+    }
+
+    private static void Root(GesSchema schema, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesSchemaParameterInfo> parameterInfos)
+    {
+        Reach(schema, reached);
+        foreach (var parameter in schema.Parameters) parameterInfos[parameter.Name] = parameter;
+    }
+
+    private static GesLayoutNetwork Network(GesNetwork network, GesSchemaParameters parameters)
+    {
+        var routes = new List<GesLayoutRoute>();
+        foreach (var route in network.Routes)
+            routes.Add(new GesLayoutRoute(route.Index, route.Side == GesNetworkSide.Client ? "client" : "server", route.Verb == GesNetworkVerb.Sends ? "sends" : "publishes",
+                route.Root.Name, GesBoundNetwork.ClassName(route.DeliveryClass), route.RateMicroseconds));
+        return new GesLayoutNetwork(network.Name, network.Bind(parameters).Hash, routes);
     }
 
     private static void Reach(GesSchema schema, SortedDictionary<string, GesSchema> reached)

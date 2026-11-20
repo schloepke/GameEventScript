@@ -166,7 +166,7 @@
 
     private mutating func scalar() -> GesDocumentNode? {
         let start = position
-        while position < bytes.count && !Self.space(bytes[position]) && ![44, 93, 91, 41].contains(bytes[position]) { position += 1 }
+        position = GesNumberLiteral.tokenEnd(bytes, from: position, brackets: true)
         endTokenAtComment(start)
         if start == position { return fail(Code.unexpectedToken, position) }
         let token = String(decoding: bytes[start..<position], as: UTF8.self)
@@ -418,7 +418,7 @@
             if index > 2 || index <= previous || (previous >= 0 && index != previous + 1) { return fail(Code.invalidLiteral, formStart) }
             previous = index
             let start = position
-            while position < bytes.count && !Self.space(bytes[position]) && bytes[position] != 44 && bytes[position] != 41 { position += 1 }
+            position = GesNumberLiteral.tokenEnd(bytes, from: position, brackets: false)
             endTokenAtComment(start)
             if start == position { return fail(Code.unexpectedToken, position) }
             let token = String(decoding: bytes[start..<position], as: UTF8.self)

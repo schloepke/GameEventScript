@@ -42,6 +42,14 @@ GameEventScript Generator (build-time)
   schema generation layout and C#/Swift emitters
   -> depends only on GameEventScript Syntax and Runtime; no Runtime or Compiler depends on it
 
+GameEventScript Network
+  network declarations bound by Runtime, synchronous session state machine, ends, pairs, simulator
+  -> depends only on GameEventScript Runtime
+
+GameEventScript Network Sockets (optional)
+  TCP, WebSocket and UDP transports (.NET 8 sockets; SwiftNIO)
+  -> depends only on GameEventScript Network and Runtime; no portable module depends on it
+
 Independent Conformance runner (Python, repository tooling)
   Markdown parser, normalized test model, assertions, reports, received output
   -> communicates with internal implementation adapters over JSON
@@ -291,7 +299,10 @@ The portable segment model contains these data records and operations:
   `Resolve(index)` returns one immutable indexed list view.
 - `BindingSegment`: ordered bindings containing kind, ID, name index, ordered
   argument-name indices, required/excluded tag indices, optional entry address,
-  and per-handler resource requirements.
+  and per-handler resource requirements. Each entry also exposes its handler
+  tag alternatives as ordered groups of tag string indices (C#
+  `RequiredTagAlternatives`, Swift `requiredTagAlternatives`; empty without
+  alternatives; **Since: Unreleased**).
 - `CodeSegment`: ordered 16-byte logical instructions; `Count`/`Length` and
   indexed access do not expose mutable program storage.
 
@@ -331,13 +342,17 @@ predicate operations never use locale; formatting returns canonical GES text.
 
 > **Since: 0.5.0** — physical units
 
+> **Since: Unreleased** — `UnitPascal` through `UnitCoulomb`
+
 `QuantityUnit` has one member per defined UnitId: C# `UnitNone`, `UnitDegree`,
 `UnitMeter`, `UnitSecond`, `UnitMeterPerSecond`, `UnitMeterPerSecondSquared`,
 `UnitKilogram`, `UnitNewton`, `UnitJoule`, `UnitWatt`, `UnitVolt`, `UnitAmpere`,
 `UnitHertz`, `UnitSquareMeter`, `UnitCubicMeter`, `UnitWattPerSquareMeter`,
-`UnitKelvin`, `UnitDegreePerSecond`, `UnitDecibel`, `UnitWattPerKelvin` and
-`UnitJoulePerKelvin`, plus the invalid sentinel
-`UnitInvalid`; Swift uses the same cases in lower camel case (`.none`,
+`UnitKelvin`, `UnitDegreePerSecond`, `UnitDecibel`, `UnitWattPerKelvin`,
+`UnitJoulePerKelvin`, `UnitPascal`, `UnitKilogramPerCubicMeter`,
+`UnitJoulePerKilogram`, `UnitJoulePerKilogramKelvin`, `UnitNewtonMeter`,
+`UnitKilogramSquareMeter`, `UnitDegreePerSecondSquared`, `UnitKilogramPerSecond`,
+`UnitOhm` and `UnitCoulomb`, plus the invalid sentinel `UnitInvalid`; Swift uses the same cases in lower camel case (`.none`,
 `.meterPerSecond`, …), whose raw values are the portable unit names. C#
 `GesQuantityUnits.ToTypeName`/`ParseTypeName` convert portable names and
 `ToSuffix` returns the canonical symbol, which Swift exposes as `suffix`;
@@ -769,7 +784,7 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 | models | `ModelLayout(set, roots)`, `GenerateModels(set, roots, options)` | `modelLayout(_:roots:)`, `generateModels(_:roots:options:)` |
 | split files | `GenerateFiles(set, roots, parameters, options)`, `GenerateModelFiles(set, roots, options)`, returning `IReadOnlyList<GesGeneratedFile>` | `generateFiles(_:roots:parameters:options:)`, `generateModelFiles(_:roots:options:)`, returning `[GesGeneratedFile]` |
 | generated file | `sealed class GesGeneratedFile` with `Path`, `Text` | `struct GesGeneratedFile` with `path`, `text` |
-| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Split`, `Models`, `ExtendNamespace` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:extendNamespace:)` and the same properties |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Split`, `Models`, `ExtendNamespace`, `SchemaSet`, `UseSchemaSet`, `Imports` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:extendNamespace:schemaSet:useSchemaSet:imports:)` and the same properties |
 | split | `enum GesSchemaSplit` with `None`, `Schema`, `File` | `enum GesSchemaSplit` with `none`, `schema`, `file` |
 | target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
 | access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
@@ -798,6 +813,53 @@ relative to the output directory and its text, ordered by name, with the manifes
 nothing; the CLI owns the directory. `Split` stays `None` for `Generate` and `GenerateModels`, and the file methods need
 `Schema` or `File`; otherwise they fail with `generate.usage`. File names that differ only in ASCII case fail with
 `generate.nameCollision`.
+
+## Network
+
+> **Since: Unreleased**
+
+Runtime binds the `network` declarations of a schema set ([GES network](Network.md#declaration)). The Network
+package (C# `GameEventScript.Network`, netstandard2.1; Swift product `GameEventScriptNetwork`) holds the session
+state machine. It depends on Runtime only, is synchronous and opens no socket, starts no thread and reads no clock.
+The optional Sockets package (C# `GameEventScript.Network.Sockets`, .NET 8; Swift product
+`GameEventScriptNetworkSockets` over SwiftNIO) carries a connection over TCP, WebSocket or UDP; only it is asynchronous.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| declaration | `GesSchemaSet.Network(name)` returning `sealed class GesNetwork` with `Name`, `Routes`, `Bind(parameters)` | `network(_:)` (throwing) returning `final class GesNetwork` with `name`, `routes`, `bind(parameters:)` |
+| route | `sealed class GesNetworkRoute` with `Index`, `Channel`, `Side`, `Verb`, `Root`, `DeliveryClass`, `RateMicroseconds` | `final class GesNetworkRoute` with the same properties in lower camel case |
+| route enums | `GesNetworkSide`, `GesNetworkVerb`, `GesNetworkClass` | the same enums |
+| bound network | `sealed class GesBoundNetwork` with `Network`, `Roots`, `CanonicalForm`, `Hash` | `final class GesBoundNetwork` with `network`, `roots`, `canonicalForm`, `hash` |
+| connection | `sealed class GesNetworkConnection` with `CreateClient(network, token, now, options)`, `CreateServer(network, now, options)` | `final class GesNetworkConnection` with `makeClient(network:token:now:options:)`, `makeServer(network:now:options:)` |
+| driving | `Receive(data, now)`, `Advance(now)`, `Transmit(buffer)`, `NextDeadline`, `TransportClosed()` | `receive(_:now:)`, `advance(_:)`, `transmit(into:)`, `nextDeadline`, `transportClosed()` |
+| session control | `Send(route, payload)`, `Publish(route, payload)`, `Accept()`, `Refuse(detail)`, `Close(detail)`, `NextEvent()` | `send(route:payload:)`, `publish(route:payload:)`, `accept()`, `refuse(_:)`, `close(_:)`, `nextEvent()` |
+| topics | server `Subscribe(route)`, `Unsubscribe(route)` | `subscribe(route:)`, `unsubscribe(route:)` (throwing) |
+| transfers | `LastTransferId`, `Cancel(route, transferId, code)` with optional code returning `bool` | `lastTransferId`, `cancel(route:transferId:code:)` (throwing) with defaulted code returning `Bool` |
+| state | `State`, `Security`, `IsClient`, `Transport`, `MaxPacketBytes`, `Now`, `RoundTripMicroseconds`, `PendingReceiveBytes`, `QueuedSendBytes`, `CanReceive`, `UsesInsecureTestKeys`, settable `SendBudgetBytesPerSecond` | the same properties; `setSendBudgetBytesPerSecond(_:)` |
+| event | `readonly ref struct GesNetworkEvent` with `Kind`, `Route`, `Payload` (span), `Code`, `Detail`, `ByPeer`, `TransferId`, `Bytes`, `Total` | `struct GesNetworkEvent` with `kind`, `route`, `payload` (borrowed `UnsafeRawBufferPointer`), `code`, `detail`, `byPeer`, `transferId`, `bytes`, `total` |
+| enums | `GesNetworkEventKind`, `GesNetworkState`, `GesNetworkTransport`, `GesNetworkSendStatus` | the same enums |
+| options | `sealed class GesNetworkOptions` with settable limits and timings, including the byte limits `MaxPendingReceiveBytes`, `MaxSendQueueBytes`, `MaxBaselineBytes` and `MaxTransferBytes` as `long?`, unset by default ([derived](Network.md#limits)), `DeflateTransfers`, `ClientSecurity`, `ServerSecurity` (both unset by default) and `InsecureTestKeySeed`; presets `InProcess()`, `Message(security)`, `Stream(security)`, `Datagram(security)` with a client or server security | `struct GesNetworkOptions` with the same properties in lower camel case; the byte limits are `Int64?`; presets `inProcess()`, `message(client:)`, `message(server:)`, `stream(client:)`, `stream(server:)`, `datagram(client:)`, `datagram(server:)` |
+| security | `sealed class GesNetworkClientSecurity` with `None`, `Development`, `Pinned(serverPublicKey)`, `Level`, `ServerPublicKey` (span); `sealed class GesNetworkServerSecurity` with `None`, `Key(key)`, `ServerKey` | `struct GesNetworkClientSecurity` with `unencrypted`, `development`, `pinned(_:)` (throwing), `level`, `serverPublicKey`; `struct GesNetworkServerSecurity` with `unencrypted`, `key(_:)`, `serverKey` |
+| encryption | `sealed class GesNetworkKey` with `Generate()`, `FromPrivateKey(privateKey)`, `PublicKey` (span), `CopyPrivateKey(destination)`; `enum GesNetworkSecurity` with `None`, `Encrypted`, `Verified` | `struct GesNetworkKey` with `generate()`, `init(privateKey:)` (throwing), `publicKey`, `copyPrivateKey(into:)` (throwing); `enum GesNetworkSecurity` with `none`, `encrypted`, `verified` |
+| codes | `static class GesNetworkCodes` with `const string` members | `enum GesNetworkCodes` with `static let` members |
+| ticks | `BeginTick()`, `Include(route)`, `EndTick()` returning `GesNetworkSendStatus`; event kind `Tick` with `TickNumber` | `beginTick()`, `include(route:)`, `endTick()`, all throwing; event kind `tick` with `tickNumber` |
+| simulated network | `GesNetworkSimulator(client, server, seed, latencyMicroseconds, jitterMicroseconds, lossPerMille, duplicatePerMille, reorder)` with optional last three and `Advance(now)` | `GesNetworkSimulator(client:server:seed:latencyMicroseconds:jitterMicroseconds:lossPerMille:duplicatePerMille:reorder:)` (throwing) with defaulted last three and `advance(_:)` |
+| transport plug-ins | interfaces `IGesNetworkLink` (`Connection`, `Receive(now)`, `Transmit()`), `IGesNetworkConnector` (`Transport`, `Connect(connection)`), `IGesNetworkAcceptor` (`Accept(now)`) | protocols `GesNetworkLink` (`connection`, `receive(now:)`, `transmit()`, `close()`), `GesNetworkConnector` (`transport`, `connect(_:)`), `GesNetworkAcceptor` (`accept(now:)` returning its `Accepted` link type, `close()`), throwing where they do I/O |
+| client end | `sealed class GesNetworkClientEnd(network, connector, options, token, clock)` with `Connection`, `Network`, `Connector`, `Clock`, `NextDeadline`, `Send(route, payload)`, `Publish(route, payload)`, the tick members, `Close(detail)`, `Poll(ref handler)`, `Dispose()` | `final class GesNetworkClientEnd(network:connector:options:token:clock:)` (throwing) with `connection`, `network`, `connector`, `clock`, `nextDeadline`, `send(route:payload:)`, `publish(route:payload:)` with a buffer or `[UInt8]`, the tick members, `close(_:)`, `poll(_:)` (throwing), `release()` |
+| server end | `sealed class GesNetworkServerEnd(network, acceptor, clock, subscribeAll)` with optional `subscribeAll`, `Network`, `Acceptor`, `Clock`, `ClientCount`, `NextDeadline`, `Connection(client)`, `Send(route, payload)`, `Send(route, payload, client)`, `Publish(route, payload)`, the tick members, `Subscribe(client, route)`, `Unsubscribe(client, route)`, `Refuse(client, detail)`, `Close(client, detail)`, `Close(detail)`, `Poll(ref handler)`, `Dispose()` | `final class GesNetworkServerEnd(network:acceptor:clock:subscribeAll:)` (throwing) with the same members in lower camel case, `connection(client:)`, `send(route:payload:client:)`, `subscribe(client:route:)`, `unsubscribe(client:route:)`, `refuse(client:detail:)`, `close(client:detail:)` throwing, `release()` |
+| end events | `IGesNetworkEndHandler` with `Handle(GesNetworkEndEvent)`; `readonly ref struct GesNetworkEndEvent` with `Kind`, `Client`, `Route`, `Payload` (span), `Code`, `Detail`, `ByPeer`, `Security`, `TickNumber`, `TransferId`, `Bytes`, `Total`; `enum GesNetworkEndEventKind` | a non-escaping closure over `struct GesNetworkEndEvent` with the same properties in lower camel case and a borrowed `UnsafeRawBufferPointer`; `enum GesNetworkEndEventKind` |
+| pair | `sealed class GesNetworkPair` with `Realtime(network, token, options)`, `Synchronous(network, token, options)` with optional options, `Client`, `Server`, `IsSynchronous`, `Now`, `Advance(microseconds)`, `Dispose()` | `final class GesNetworkPair` with `realtime(network:token:options:)`, `synchronous(network:token:options:)` (throwing) with defaulted token and options, `client`, `server`, `isSynchronous`, `now`, `advance(by:)` (throwing), `release()` |
+| socket connector and wait | `GesNetworkSocketConnector.Tcp(host, port)`, `WebSocket(uri)`, `Udp(host, port)`; `Wait()` and `WaitAsync(cancellationToken)` extensions of both ends | `GesNetworkSocketConnector.tcp(host:port:)`, `webSocket(_:)`, `udp(host:port:)` (throwing); `wait()` (async, throwing) on both ends |
+| address validation | `sealed class GesNetworkCookies(key, windowMicroseconds)` with `Check(packet, address, now, retry)` returning `GesNetworkCookieResult`, `RetryBytes`, `Dispose()` | `final class GesNetworkCookies(key:windowMicroseconds:)` (throwing) with `check(_:address:now:retry:)` returning `GesNetworkCookieResult`, `retryBytes` |
+| socket listener | `GesNetworkSocketListener.ListenTcp(endPoint, network, options)`, `ListenWebSocket(endPoint, path, network, options)`, `ListenUdp(endPoint, network, options)`, `Accept(now)`, `Dispose()` | `GesNetworkSocketListener.listenTcp(host:port:network:options:)`, `listenWebSocket(host:port:path:network:options:)`, `listenUdp(host:port:network:options:)` (async), `accept(now:)`, `close()` |
+| socket session | `GesNetworkSocketSession.ConnectTcpAsync(host, port, connection, cancellationToken)`, `ConnectWebSocketAsync(uri, connection, cancellationToken)`, `ConnectUdpAsync(host, port, connection, cancellationToken)`, `Update(now)`, `Connection`, `Dispose()` | `GesNetworkSocketSession.connectTcp(host:port:connection:)`, `connectWebSocket(url:connection:)`, `connectUdp(host:port:connection:)` (async), `update(now:)`, `connection`, `close()` |
+
+`Send` and `Publish` never throw; they report `GesNetworkSendStatus`, including `NotSubscribed` for a server topic without subscription. `Subscribe` and `Unsubscribe` are idempotent and throw on a client or on a route that is no server topic. A sent transfer gets the next id of the bulk numbering across all bulk routes, which `LastTransferId` reports; `Cancel` returns `false` without a connection and for an unknown or completely sent transfer and throws on a route this side does not send in bulk or an invalid code. An event's payload stays valid until the next
+`NextEvent` call. A peer's violation closes the connection with a `network.*` code and never throws; API misuse
+(a time going back, `Accept` outside a pending handshake, a too-small transmit buffer, a connection or listener without the security of its side, a pinned key
+that is not 32 bytes, an option outside its range, insecure test keys on a socket transport) throws the
+port's argument or operation error. A socket session's event loop only moves bytes; the connection is touched only where `Update`
+runs.
 
 ## Host construction and lifecycle API
 
@@ -1615,6 +1677,15 @@ C# `IGesClock.ElapsedMicroseconds` and Swift
 microsecond source. Host builders accept `WithClock` / `withClock`; absent an
 injected source, each host uses an independent origin on the system monotonic
 clock. A shared injected clock is read serially by its embedding.
+
+> **Since: Unreleased** — public clocks
+
+C# `GesSystemClock` and Swift `GesSystemClock` measure the system monotonic clock from
+their creation without allocating; one instance can serve hosts and network ends that
+share a timeline. C# `GesVirtualClock` and Swift `GesVirtualClock` move only through
+`Advance(microseconds)` / `advance(by:)`, start at zero or at an explicit nonnegative
+time, and reject a negative amount or Int64 overflow (C# `ArgumentOutOfRangeException`,
+Swift `GesApiError.invalidArgument`) without changing the time.
 
 Host `NextMessageDelay` / `nextMessageDelay` returns optional remaining Int64
 microseconds without pumping. `Waiting` / `waiting` extends execution results

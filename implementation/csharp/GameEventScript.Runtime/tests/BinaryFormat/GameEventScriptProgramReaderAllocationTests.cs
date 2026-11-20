@@ -3,6 +3,7 @@
 
 using System.Text;
 using GameEventScript.Api;
+using GameEventScript.Runtime.Vm;
 
 namespace GameEventScript.Tests.Native.BinaryFormat;
 
@@ -39,6 +40,65 @@ public sealed class GameEventScriptProgramReaderAllocationTests
         Assert.AreEqual("_", program.StringConstants.Resolve(program.Bindings.Entries[^1].ArgumentNames[^1]));
         Assert.IsLessThanOrEqualTo(maximumAllocatedBytes, allocated,
             $"Reading {bytes.Length} bytes with {bindingCount} references to one {argumentCount}-element list allocated {allocated} bytes; C# budget: {maximumAllocatedBytes} bytes.");
+    }
+
+    [TestMethod]
+    [TestCategory("Performance")]
+    [TestCategory("Allocation")]
+    public void HandlersNamingOneTagAlternativesListShareItsGroups()
+    {
+        const int handlerCount = 512;
+        const int tagCount = 2048;
+        // Reading, validating and sharing one 2048-tag group for 512 handlers takes about 0.8 MiB; a group copy per handler adds over 2 MiB,
+        // and resolving its tag names per handler over 100 MiB.
+        const long maximumAllocatedBytes = 1536 * 1024;
+        var tags = string.Join(" | ", Enumerable.Range(0, tagCount).Select(index => "#t" + index));
+        var source = "module shared\n" + string.Concat(Enumerable.Range(0, handlerCount).Select(index => $"on Probe{index}() matching {tags} {{}}\n"));
+        var bytes = new GesProgramBuilder().AddScript(source, "shared.ges").Compile(new GesCompileOptions { DebugInfo = GesDebugInfoOptions.None }).Encode();
+        _ = GameEventScriptProgram.Read(bytes);
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var program = GameEventScriptProgram.Read(bytes);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        TestContext.WriteLine($"Reading {bytes.Length} bytes with {handlerCount} handlers naming one {tagCount}-tag group allocated {allocated} bytes; C# budget: {maximumAllocatedBytes} bytes.");
+        var handlers = program.Bindings.Entries.Where(entry => entry.RequiredTagAlternatives.Count > 0).ToArray();
+        Assert.HasCount(handlerCount, handlers);
+        Assert.AreEqual(tagCount, handlers[^1].RequiredTagAlternatives[0].Count);
+        Assert.AreSame(handlers[0].RequiredTagAlternatives.Storage, handlers[^1].RequiredTagAlternatives.Storage);
+        Assert.IsLessThanOrEqualTo(maximumAllocatedBytes, allocated,
+            $"Reading {bytes.Length} bytes with {handlerCount} handlers naming one {tagCount}-tag group allocated {allocated} bytes; C# budget: {maximumAllocatedBytes} bytes.");
+    }
+
+    [TestMethod]
+    public void LinkedHandlersNamingOneTagAlternativesListShareTheirTagNames()
+    {
+        var source = "module shared\n" + string.Concat(Enumerable.Range(0, 8).Select(index => $"on Probe{index}() matching #a | #b, #c | #d {{}}\n"));
+        var bytes = new GesProgramBuilder().AddScript(source, "shared.ges").Compile(new GesCompileOptions { DebugInfo = GesDebugInfoOptions.None }).Encode();
+        var linked = new GesLinkedProgram(GameEventScriptProgram.Read(bytes), GesEmptyExtensionRegistry.Instance, GesEmptyExternalTypeRegistry.Instance);
+
+        var handlers = linked.Handlers.Where(handler => handler.RequiredTagAlternatives is not null).ToArray();
+        Assert.HasCount(8, handlers);
+        Assert.AreEqual("d", handlers[^1].RequiredTagAlternatives![1][1]);
+        foreach (var handler in handlers) Assert.AreSame(handlers[0].RequiredTagAlternatives, handler.RequiredTagAlternatives);
+    }
+
+    [TestMethod]
+    public void WritingHandlersThatShareOneTagAlternativesListFlattensItOnce()
+    {
+        var alternatives = string.Join(" | ", Enumerable.Range(0, 256).Select(index => $"#t{index}"));
+        var source = "module shared\n" + string.Concat(Enumerable.Range(0, 1024).Select(index => $"on Probe{index}() matching {alternatives} {{}}\n"));
+        var bytes = new GesProgramBuilder().AddScript(source, "shared.ges").Compile(new GesCompileOptions { DebugInfo = GesDebugInfoOptions.None }).Encode();
+        var program = GameEventScriptProgram.Read(bytes);
+        _ = program.Encode();
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var encoded = program.Encode();
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        CollectionAssert.AreEqual(bytes, encoded);
+        // Flattening the shared list for each of the 1024 handlers allocated about 3 MiB beyond the encoding.
+        Assert.IsLessThan(bytes.Length + 256 * 1024, allocated, $"Encoding {bytes.Length} bytes allocated {allocated} bytes.");
     }
 
     private static byte[] CreateSharedListFixture(int bindingCount, int argumentCount)

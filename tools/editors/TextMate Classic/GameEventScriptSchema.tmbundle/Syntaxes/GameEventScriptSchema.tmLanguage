@@ -119,7 +119,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|tags|wire|model|let|default|true|false|abstract|packed|with|all|without|computed|by|when|otherwise|or|not|of|min|clamp|abs|has|depth|sqrt|cbrt|sin|cos|tan|asin|acos|atan2|atan|hypot|exp|ln|floor|ceil|truncate|round|rad|deg)\b</string>
+					<string>\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|tags|wire|model|let|default|true|false|abstract|packed|with|all|without|computed|by|when|otherwise|or|not|of|min|clamp|abs|has|depth|sqrt|cbrt|sin|cos|tan|asin|acos|atan2|atan|hypot|exp|ln|floor|ceil|truncate|round|rad|deg|network|client|server|sends|publishes|reliable|latest|bulk|at|most|every)\b</string>
 					<key>name</key>
 					<string>keyword.other.gameeventscript.schema</string>
 				</dict>

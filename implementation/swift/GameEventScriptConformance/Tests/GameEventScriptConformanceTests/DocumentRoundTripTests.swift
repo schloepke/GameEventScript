@@ -31,6 +31,10 @@ final class DocumentRoundTripTests: XCTestCase {
             "[3cm², 2t, 14mW/m², 2.5kW/m², 3km², 4mW, 2m³, 6dB, 3Hz, 2.5kW/K, 250mW/K, 4MJ/K, 3J/K]",
             try GesValue(literal: "[0.0003m², 2000kg, 0.014W/m², 2500W/m², 3000000m², 0.004W, 2m³, 6dB, 3Hz, 2500W/K, 0.25W/K, 4000000J/K, 3J/K]").formatted()
         )
+        XCTAssertEqual(
+            "[101.3kPa, 1.2kg/m³, 4kJ/kg, 4.18kJ/(kg·K), 2.5kN·m, 3kg·m², 9°/s², 10kg/s, 500mΩ, 7200C]",
+            try GesValue(literal: "[101300Pa, 1.2kg/m^3, 4000J/kg, 4180J/(kg*K), 2500N*m, 3kg*m^2, 9deg/s^2, 10kg/s, 0.5ohm, 7200C]").formatted()
+        )
     }
 
     func testValuesWithoutReadableLiteralTextAreRejected() throws {

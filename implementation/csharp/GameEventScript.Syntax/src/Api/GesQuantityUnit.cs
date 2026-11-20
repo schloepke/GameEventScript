@@ -92,6 +92,46 @@ public enum GesQuantityUnit : byte
     /// Identifies the joule per kelvin (J/K), for heat capacity.
     /// </summary>
     UnitJoulePerKelvin = 20,
+    /// <summary>
+    /// Identifies the pascal (Pa), for pressure and stress.
+    /// </summary>
+    UnitPascal = 21,
+    /// <summary>
+    /// Identifies the kilogram per cubic meter (kg/m³), for density.
+    /// </summary>
+    UnitKilogramPerCubicMeter = 22,
+    /// <summary>
+    /// Identifies the joule per kilogram (J/kg), for specific energy.
+    /// </summary>
+    UnitJoulePerKilogram = 23,
+    /// <summary>
+    /// Identifies the joule per kilogram kelvin (J/(kg·K)), for specific heat capacity.
+    /// </summary>
+    UnitJoulePerKilogramKelvin = 24,
+    /// <summary>
+    /// Identifies the newton meter (N·m), for torque.
+    /// </summary>
+    UnitNewtonMeter = 25,
+    /// <summary>
+    /// Identifies the kilogram square meter (kg·m²), for moment of inertia.
+    /// </summary>
+    UnitKilogramSquareMeter = 26,
+    /// <summary>
+    /// Identifies the degree per second squared (°/s²), for angular acceleration.
+    /// </summary>
+    UnitDegreePerSecondSquared = 27,
+    /// <summary>
+    /// Identifies the kilogram per second (kg/s), for mass flow.
+    /// </summary>
+    UnitKilogramPerSecond = 28,
+    /// <summary>
+    /// Identifies the ohm (Ω), for electrical resistance.
+    /// </summary>
+    UnitOhm = 29,
+    /// <summary>
+    /// Identifies the coulomb (C), for electric charge.
+    /// </summary>
+    UnitCoulomb = 30,
 
     /// <summary>
     /// Identifies the unit invalid value.

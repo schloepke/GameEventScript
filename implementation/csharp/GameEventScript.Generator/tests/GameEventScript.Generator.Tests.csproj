@@ -11,5 +11,6 @@
         <ProjectReference Include="../../GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
         <ProjectReference Include="../src/GameEventScript.Generator.csproj" />
         <ProjectReference Include="../../GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" />
+        <ProjectReference Include="../../GameEventScript.Network/src/GameEventScript.Network.csproj" />
     </ItemGroup>
 </Project>

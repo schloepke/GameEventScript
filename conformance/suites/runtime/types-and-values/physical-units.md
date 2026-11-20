@@ -1322,6 +1322,576 @@ error: { phase: compile, code: compile.unsupportedConstruct }
 
 ---
 
+## Test: mechanical, electrical and thermal literals
+
+Pressure, density, specific energy and heat, torque, moment of inertia, angular acceleration, mass flow, resistance and charge read with their prefixed and ASCII spellings, normalize to the base unit, and a spaced quotient derives the same unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: mechanical-literals
+sources:
+  - name: mechanical-literals.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start {
+  emit Lexed(pressure: 5Pa, hecto: 2hPa, kilo: 101.3kPa, mega: 2MPa, density: 1.2kg/m³, densityAscii: 3kg/m^3, specificEnergy: 4J/kg, kiloSpecific: 2kJ/kg, megaSpecific: 3MJ/kg, specificHeat: 4J/(kg·K), specificHeatAscii: 4J/(kg*K), kiloSpecificHeat: 4.18kJ/(kg·K), torque: 5N·m, torqueStar: 5N*m, torqueJoined: 5Nm, kiloTorque: 2kN·m, inertia: 3kg·m², inertiaAscii: 3kg*m^2, angular: 9°/s², angularAscii: 9deg/s^2, massFlow: 10kg/s, resistance: 4Ω, ohmSign: 4Ω, ohmWord: 4ohm, kiloOhm: 2kΩ, megaOhm: 2MΩ, milliOhm: 500mΩ, charge: 3C, ampereHours: 2Ah, milliampereHours: 500mAh, split: 10N / 2m²)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| start | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  start:
+    local:
+      - name: Lexed
+        args:
+          - name: pressure
+            value: { type: ":Quantity.int64", value: "5", unit: ":pascal" }
+          - name: hecto
+            value: { type: ":Quantity.int64", value: "200", unit: ":pascal" }
+          - name: kilo
+            value: { type: ":Quantity.int64", value: "101300", unit: ":pascal" }
+          - name: mega
+            value: { type: ":Quantity.int64", value: "2000000", unit: ":pascal" }
+          - name: density
+            value: { type: ":Quantity.binary64", value: "1.2", unit: ":kilogramPerCubicMeter" }
+          - name: densityAscii
+            value: { type: ":Quantity.int64", value: "3", unit: ":kilogramPerCubicMeter" }
+          - name: specificEnergy
+            value: { type: ":Quantity.int64", value: "4", unit: ":joulePerKilogram" }
+          - name: kiloSpecific
+            value: { type: ":Quantity.int64", value: "2000", unit: ":joulePerKilogram" }
+          - name: megaSpecific
+            value: { type: ":Quantity.int64", value: "3000000", unit: ":joulePerKilogram" }
+          - name: specificHeat
+            value: { type: ":Quantity.int64", value: "4", unit: ":joulePerKilogramKelvin" }
+          - name: specificHeatAscii
+            value: { type: ":Quantity.int64", value: "4", unit: ":joulePerKilogramKelvin" }
+          - name: kiloSpecificHeat
+            value: { type: ":Quantity.int64", value: "4180", unit: ":joulePerKilogramKelvin" }
+          - name: torque
+            value: { type: ":Quantity.int64", value: "5", unit: ":newtonMeter" }
+          - name: torqueStar
+            value: { type: ":Quantity.int64", value: "5", unit: ":newtonMeter" }
+          - name: torqueJoined
+            value: { type: ":Quantity.int64", value: "5", unit: ":newtonMeter" }
+          - name: kiloTorque
+            value: { type: ":Quantity.int64", value: "2000", unit: ":newtonMeter" }
+          - name: inertia
+            value: { type: ":Quantity.int64", value: "3", unit: ":kilogramSquareMeter" }
+          - name: inertiaAscii
+            value: { type: ":Quantity.int64", value: "3", unit: ":kilogramSquareMeter" }
+          - name: angular
+            value: { type: ":Quantity.int64", value: "9", unit: ":degreePerSecondSquared" }
+          - name: angularAscii
+            value: { type: ":Quantity.int64", value: "9", unit: ":degreePerSecondSquared" }
+          - name: massFlow
+            value: { type: ":Quantity.int64", value: "10", unit: ":kilogramPerSecond" }
+          - name: resistance
+            value: { type: ":Quantity.int64", value: "4", unit: ":ohm" }
+          - name: ohmSign
+            value: { type: ":Quantity.int64", value: "4", unit: ":ohm" }
+          - name: ohmWord
+            value: { type: ":Quantity.int64", value: "4", unit: ":ohm" }
+          - name: kiloOhm
+            value: { type: ":Quantity.int64", value: "2000", unit: ":ohm" }
+          - name: megaOhm
+            value: { type: ":Quantity.int64", value: "2000000", unit: ":ohm" }
+          - name: milliOhm
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":ohm" }
+          - name: charge
+            value: { type: ":Quantity.int64", value: "3", unit: ":coulomb" }
+          - name: ampereHours
+            value: { type: ":Quantity.int64", value: "7200", unit: ":coulomb" }
+          - name: milliampereHours
+            value: { type: ":Quantity.int64", value: "1800", unit: ":coulomb" }
+          - name: split
+            value: { type: ":Quantity.int64", value: "5", unit: ":pascal" }
+```
+
+---
+
+## Test: mechanical, electrical and thermal derivations match for folded and runtime operands
+
+Force and energy derive pressure, mass and volume derive density, energy and mass derive specific energy and heat, mass and area derive the moment of inertia, time and frequency derive angular acceleration, mass flow and charge, and voltage, current, resistance and charge derive each other, identically for constant-folded literals and runtime arguments. A force times a distance stays an energy; a torque over a moment of inertia, a squared velocity and a torque times an angle derive nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: mechanical-derivations
+sources:
+  - name: mechanical-derivations.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Derive(f, ar, pr, en, vol, m, rho, se, t, sh, hc, i, w, s, aa, mf, hz, v, amp, r, q) {
+  emit Runtime(pressure: f / ar, area: f / pr, pressureFromEnergy: en / vol, volume: en / pr, force: pr * ar, energyFromPressure: vol * pr, density: m / vol, volumeFromDensity: m / rho, mass: rho * vol, densityFromPressure: pr / se, specificFromPressure: pr / rho, pressureFromDensity: se * rho, specificEnergy: en / m, massFromEnergy: en / se, energyFromSpecific: se * m, specificHeat: se / t, temperature: se / sh, specificHeatFromCapacity: hc / m, massFromCapacity: hc / sh, specificFromHeat: t * sh, capacity: sh * m, inertia: m * ar, areaFromInertia: i / m, massFromInertia: i / ar, angular: w / s, angularTime: w / aa, angularRate: aa * s, angularFromRate: hz * w, rateFromAngular: aa / hz, angularFrequency: aa / w, massFlow: m / s, flowTime: m / mf, flowMass: s * mf, flowFromRate: m * hz, massFromFlow: mf / hz, flowFrequency: mf / m, resistance: v / amp, current: v / r, voltage: amp * r, charge: s * amp, currentFromCharge: q / s, chargeTime: q / amp, chargeFromRate: amp / hz, chargeFrequency: amp / q, currentFromRate: q * hz, energyFromCharge: q * v, chargeFromEnergy: en / v, voltageFromCharge: en / q)
+  emit Folded(pressure: 12N / 3m², area: 12N / 4Pa, pressureFromEnergy: 24J / 2m³, volume: 24J / 4Pa, force: 4Pa * 3m², energyFromPressure: 2m³ * 4Pa, density: 12kg / 2m³, volumeFromDensity: 12kg / 2kg/m³, mass: 2kg/m³ * 2m³, densityFromPressure: 4Pa / 2J/kg, specificFromPressure: 4Pa / 2kg/m³, pressureFromDensity: 2J/kg * 2kg/m³, specificEnergy: 24J / 12kg, massFromEnergy: 24J / 2J/kg, energyFromSpecific: 2J/kg * 12kg, specificHeat: 2J/kg / 2K, temperature: 2J/kg / 1J/(kg·K), specificHeatFromCapacity: 24J/K / 12kg, massFromCapacity: 24J/K / 1J/(kg·K), specificFromHeat: 2K * 1J/(kg·K), capacity: 1J/(kg·K) * 12kg, inertia: 12kg * 3m², areaFromInertia: 24kg·m² / 12kg, massFromInertia: 24kg·m² / 3m², angular: 6°/s / 2s, angularTime: 6°/s / 3°/s², angularRate: 3°/s² * 2s, angularFromRate: 2Hz * 6°/s, rateFromAngular: 3°/s² / 2Hz, angularFrequency: 3°/s² / 6°/s, massFlow: 12kg / 2s, flowTime: 12kg / 6kg/s, flowMass: 2s * 6kg/s, flowFromRate: 12kg * 2Hz, massFromFlow: 6kg/s / 2Hz, flowFrequency: 6kg/s / 12kg, resistance: 12V / 3A, current: 12V / 4Ω, voltage: 3A * 4Ω, charge: 2s * 3A, currentFromCharge: 6C / 2s, chargeTime: 6C / 3A, chargeFromRate: 3A / 2Hz, chargeFrequency: 3A / 6C, currentFromRate: 6C * 2Hz, energyFromCharge: 6C * 12V, chargeFromEnergy: 24J / 12V, voltageFromCharge: 24J / 6C)
+  emit Other(torqueOverInertia: 12N·m / 2kg·m², velocitySquared: 3m/s * 3m/s, forceTimesDistance: 2N * 3m, torqueTimesAngle: 2N·m * 3°, mixed: 2N·m + 3J, cancelled: 6Ω / 3Ω)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| derive | Derive | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  derive:
+    input:
+      args:
+        - name: f
+          value: { type: ":Quantity.int64", value: "12", unit: ":newton" }
+        - name: ar
+          value: { type: ":Quantity.int64", value: "3", unit: ":squareMeter" }
+        - name: pr
+          value: { type: ":Quantity.int64", value: "4", unit: ":pascal" }
+        - name: en
+          value: { type: ":Quantity.int64", value: "24", unit: ":joule" }
+        - name: vol
+          value: { type: ":Quantity.int64", value: "2", unit: ":cubicMeter" }
+        - name: m
+          value: { type: ":Quantity.int64", value: "12", unit: ":kilogram" }
+        - name: rho
+          value: { type: ":Quantity.int64", value: "2", unit: ":kilogramPerCubicMeter" }
+        - name: se
+          value: { type: ":Quantity.int64", value: "2", unit: ":joulePerKilogram" }
+        - name: t
+          value: { type: ":Quantity.int64", value: "2", unit: ":kelvin" }
+        - name: sh
+          value: { type: ":Quantity.int64", value: "1", unit: ":joulePerKilogramKelvin" }
+        - name: hc
+          value: { type: ":Quantity.int64", value: "24", unit: ":joulePerKelvin" }
+        - name: i
+          value: { type: ":Quantity.int64", value: "24", unit: ":kilogramSquareMeter" }
+        - name: w
+          value: { type: ":Quantity.int64", value: "6", unit: ":degreePerSecond" }
+        - name: s
+          value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+        - name: aa
+          value: { type: ":Quantity.int64", value: "3", unit: ":degreePerSecondSquared" }
+        - name: mf
+          value: { type: ":Quantity.int64", value: "6", unit: ":kilogramPerSecond" }
+        - name: hz
+          value: { type: ":Quantity.int64", value: "2", unit: ":hertz" }
+        - name: v
+          value: { type: ":Quantity.int64", value: "12", unit: ":volt" }
+        - name: amp
+          value: { type: ":Quantity.int64", value: "3", unit: ":ampere" }
+        - name: r
+          value: { type: ":Quantity.int64", value: "4", unit: ":ohm" }
+        - name: q
+          value: { type: ":Quantity.int64", value: "6", unit: ":coulomb" }
+    local:
+      - name: Runtime
+        args:
+          - name: pressure
+            value: { type: ":Quantity.int64", value: "4", unit: ":pascal" }
+          - name: area
+            value: { type: ":Quantity.int64", value: "3", unit: ":squareMeter" }
+          - name: pressureFromEnergy
+            value: { type: ":Quantity.int64", value: "12", unit: ":pascal" }
+          - name: volume
+            value: { type: ":Quantity.int64", value: "6", unit: ":cubicMeter" }
+          - name: force
+            value: { type: ":Quantity.int64", value: "12", unit: ":newton" }
+          - name: energyFromPressure
+            value: { type: ":Quantity.int64", value: "8", unit: ":joule" }
+          - name: density
+            value: { type: ":Quantity.int64", value: "6", unit: ":kilogramPerCubicMeter" }
+          - name: volumeFromDensity
+            value: { type: ":Quantity.int64", value: "6", unit: ":cubicMeter" }
+          - name: mass
+            value: { type: ":Quantity.int64", value: "4", unit: ":kilogram" }
+          - name: densityFromPressure
+            value: { type: ":Quantity.int64", value: "2", unit: ":kilogramPerCubicMeter" }
+          - name: specificFromPressure
+            value: { type: ":Quantity.int64", value: "2", unit: ":joulePerKilogram" }
+          - name: pressureFromDensity
+            value: { type: ":Quantity.int64", value: "4", unit: ":pascal" }
+          - name: specificEnergy
+            value: { type: ":Quantity.int64", value: "2", unit: ":joulePerKilogram" }
+          - name: massFromEnergy
+            value: { type: ":Quantity.int64", value: "12", unit: ":kilogram" }
+          - name: energyFromSpecific
+            value: { type: ":Quantity.int64", value: "24", unit: ":joule" }
+          - name: specificHeat
+            value: { type: ":Quantity.int64", value: "1", unit: ":joulePerKilogramKelvin" }
+          - name: temperature
+            value: { type: ":Quantity.int64", value: "2", unit: ":kelvin" }
+          - name: specificHeatFromCapacity
+            value: { type: ":Quantity.int64", value: "2", unit: ":joulePerKilogramKelvin" }
+          - name: massFromCapacity
+            value: { type: ":Quantity.int64", value: "24", unit: ":kilogram" }
+          - name: specificFromHeat
+            value: { type: ":Quantity.int64", value: "2", unit: ":joulePerKilogram" }
+          - name: capacity
+            value: { type: ":Quantity.int64", value: "12", unit: ":joulePerKelvin" }
+          - name: inertia
+            value: { type: ":Quantity.int64", value: "36", unit: ":kilogramSquareMeter" }
+          - name: areaFromInertia
+            value: { type: ":Quantity.int64", value: "2", unit: ":squareMeter" }
+          - name: massFromInertia
+            value: { type: ":Quantity.int64", value: "8", unit: ":kilogram" }
+          - name: angular
+            value: { type: ":Quantity.int64", value: "3", unit: ":degreePerSecondSquared" }
+          - name: angularTime
+            value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+          - name: angularRate
+            value: { type: ":Quantity.int64", value: "6", unit: ":degreePerSecond" }
+          - name: angularFromRate
+            value: { type: ":Quantity.int64", value: "12", unit: ":degreePerSecondSquared" }
+          - name: rateFromAngular
+            value: { type: ":Quantity.binary64", value: "1.5", unit: ":degreePerSecond" }
+          - name: angularFrequency
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":hertz" }
+          - name: massFlow
+            value: { type: ":Quantity.int64", value: "6", unit: ":kilogramPerSecond" }
+          - name: flowTime
+            value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+          - name: flowMass
+            value: { type: ":Quantity.int64", value: "12", unit: ":kilogram" }
+          - name: flowFromRate
+            value: { type: ":Quantity.int64", value: "24", unit: ":kilogramPerSecond" }
+          - name: massFromFlow
+            value: { type: ":Quantity.int64", value: "3", unit: ":kilogram" }
+          - name: flowFrequency
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":hertz" }
+          - name: resistance
+            value: { type: ":Quantity.int64", value: "4", unit: ":ohm" }
+          - name: current
+            value: { type: ":Quantity.int64", value: "3", unit: ":ampere" }
+          - name: voltage
+            value: { type: ":Quantity.int64", value: "12", unit: ":volt" }
+          - name: charge
+            value: { type: ":Quantity.int64", value: "6", unit: ":coulomb" }
+          - name: currentFromCharge
+            value: { type: ":Quantity.int64", value: "3", unit: ":ampere" }
+          - name: chargeTime
+            value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+          - name: chargeFromRate
+            value: { type: ":Quantity.binary64", value: "1.5", unit: ":coulomb" }
+          - name: chargeFrequency
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":hertz" }
+          - name: currentFromRate
+            value: { type: ":Quantity.int64", value: "12", unit: ":ampere" }
+          - name: energyFromCharge
+            value: { type: ":Quantity.int64", value: "72", unit: ":joule" }
+          - name: chargeFromEnergy
+            value: { type: ":Quantity.int64", value: "2", unit: ":coulomb" }
+          - name: voltageFromCharge
+            value: { type: ":Quantity.int64", value: "4", unit: ":volt" }
+      - name: Folded
+        args:
+          - name: pressure
+            value: { type: ":Quantity.int64", value: "4", unit: ":pascal" }
+          - name: area
+            value: { type: ":Quantity.int64", value: "3", unit: ":squareMeter" }
+          - name: pressureFromEnergy
+            value: { type: ":Quantity.int64", value: "12", unit: ":pascal" }
+          - name: volume
+            value: { type: ":Quantity.int64", value: "6", unit: ":cubicMeter" }
+          - name: force
+            value: { type: ":Quantity.int64", value: "12", unit: ":newton" }
+          - name: energyFromPressure
+            value: { type: ":Quantity.int64", value: "8", unit: ":joule" }
+          - name: density
+            value: { type: ":Quantity.int64", value: "6", unit: ":kilogramPerCubicMeter" }
+          - name: volumeFromDensity
+            value: { type: ":Quantity.int64", value: "6", unit: ":cubicMeter" }
+          - name: mass
+            value: { type: ":Quantity.int64", value: "4", unit: ":kilogram" }
+          - name: densityFromPressure
+            value: { type: ":Quantity.int64", value: "2", unit: ":kilogramPerCubicMeter" }
+          - name: specificFromPressure
+            value: { type: ":Quantity.int64", value: "2", unit: ":joulePerKilogram" }
+          - name: pressureFromDensity
+            value: { type: ":Quantity.int64", value: "4", unit: ":pascal" }
+          - name: specificEnergy
+            value: { type: ":Quantity.int64", value: "2", unit: ":joulePerKilogram" }
+          - name: massFromEnergy
+            value: { type: ":Quantity.int64", value: "12", unit: ":kilogram" }
+          - name: energyFromSpecific
+            value: { type: ":Quantity.int64", value: "24", unit: ":joule" }
+          - name: specificHeat
+            value: { type: ":Quantity.int64", value: "1", unit: ":joulePerKilogramKelvin" }
+          - name: temperature
+            value: { type: ":Quantity.int64", value: "2", unit: ":kelvin" }
+          - name: specificHeatFromCapacity
+            value: { type: ":Quantity.int64", value: "2", unit: ":joulePerKilogramKelvin" }
+          - name: massFromCapacity
+            value: { type: ":Quantity.int64", value: "24", unit: ":kilogram" }
+          - name: specificFromHeat
+            value: { type: ":Quantity.int64", value: "2", unit: ":joulePerKilogram" }
+          - name: capacity
+            value: { type: ":Quantity.int64", value: "12", unit: ":joulePerKelvin" }
+          - name: inertia
+            value: { type: ":Quantity.int64", value: "36", unit: ":kilogramSquareMeter" }
+          - name: areaFromInertia
+            value: { type: ":Quantity.int64", value: "2", unit: ":squareMeter" }
+          - name: massFromInertia
+            value: { type: ":Quantity.int64", value: "8", unit: ":kilogram" }
+          - name: angular
+            value: { type: ":Quantity.int64", value: "3", unit: ":degreePerSecondSquared" }
+          - name: angularTime
+            value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+          - name: angularRate
+            value: { type: ":Quantity.int64", value: "6", unit: ":degreePerSecond" }
+          - name: angularFromRate
+            value: { type: ":Quantity.int64", value: "12", unit: ":degreePerSecondSquared" }
+          - name: rateFromAngular
+            value: { type: ":Quantity.binary64", value: "1.5", unit: ":degreePerSecond" }
+          - name: angularFrequency
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":hertz" }
+          - name: massFlow
+            value: { type: ":Quantity.int64", value: "6", unit: ":kilogramPerSecond" }
+          - name: flowTime
+            value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+          - name: flowMass
+            value: { type: ":Quantity.int64", value: "12", unit: ":kilogram" }
+          - name: flowFromRate
+            value: { type: ":Quantity.int64", value: "24", unit: ":kilogramPerSecond" }
+          - name: massFromFlow
+            value: { type: ":Quantity.int64", value: "3", unit: ":kilogram" }
+          - name: flowFrequency
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":hertz" }
+          - name: resistance
+            value: { type: ":Quantity.int64", value: "4", unit: ":ohm" }
+          - name: current
+            value: { type: ":Quantity.int64", value: "3", unit: ":ampere" }
+          - name: voltage
+            value: { type: ":Quantity.int64", value: "12", unit: ":volt" }
+          - name: charge
+            value: { type: ":Quantity.int64", value: "6", unit: ":coulomb" }
+          - name: currentFromCharge
+            value: { type: ":Quantity.int64", value: "3", unit: ":ampere" }
+          - name: chargeTime
+            value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+          - name: chargeFromRate
+            value: { type: ":Quantity.binary64", value: "1.5", unit: ":coulomb" }
+          - name: chargeFrequency
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":hertz" }
+          - name: currentFromRate
+            value: { type: ":Quantity.int64", value: "12", unit: ":ampere" }
+          - name: energyFromCharge
+            value: { type: ":Quantity.int64", value: "72", unit: ":joule" }
+          - name: chargeFromEnergy
+            value: { type: ":Quantity.int64", value: "2", unit: ":coulomb" }
+          - name: voltageFromCharge
+            value: { type: ":Quantity.int64", value: "4", unit: ":volt" }
+      - name: Other
+        args:
+          - name: torqueOverInertia
+            value: { type: ":Nothing" }
+          - name: velocitySquared
+            value: { type: ":Nothing" }
+          - name: forceTimesDistance
+            value: { type: ":Quantity.int64", value: "6", unit: ":joule" }
+          - name: torqueTimesAngle
+            value: { type: ":Nothing" }
+          - name: mixed
+            value: { type: ":Nothing" }
+          - name: cancelled
+            value: { type: ":Number.int64", value: "2" }
+```
+
+---
+
+## Test: mechanical, electrical and thermal units are quantity types and format with their base symbol
+
+Casts and checks accept the symbol, its ASCII spellings, ignored whitespace and ÷; formatting uses the base symbol, also after a prefixed or scaled spelling, and `parse` reads the same spellings, a parenthesized unit included.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: mechanical-names
+sources:
+  - name: mechanical-names.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start {
+  emit Names(pressure: 5 as :Quantity(Pa), density: 5 as :Quantity(kg/m³), densityAscii: 5 as :Quantity(kg/m^3), specificEnergy: 5 as :Quantity(J/kg), specificHeat: 5 as :Quantity(J/(kg·K)), specificHeatAscii: 5 as :Quantity(J / (kg * K)), torque: 5 as :Quantity(N·m), torqueStar: 5 as :Quantity(N*m), torqueJoined: 5 as :Quantity(Nm), inertia: 5 as :Quantity(kg·m²), inertiaAscii: 5 as :Quantity(kg*m^2), angular: 5 as :Quantity(°/s²), angularAscii: 5 as :Quantity(deg/s^2), massFlow: 5 as :Quantity(kg÷s), resistance: 5 as :Quantity(Ω), ohmSign: 5 as :Quantity(Ω), ohmWord: 5 as :Quantity(ohm), charge: 5 as :Quantity(C), matches: 5N·m is :Quantity(N·m), other: 5N·m is :Quantity(J))
+  emit Formatted(pressure: 101.3kPa as :Text, specificHeat: 4.18kJ/(kg·K) as :Text, torque: 2kN*m as :Text, resistance: 2kΩ as :Text, charge: 2Ah as :Text)
+  emit Parsed(specificHeat: parse "4.18kJ/(kg·K)", torque: parse "2N*m", resistance: parse "5kΩ", charge: parse "500mAh")
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| start | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  start:
+    local:
+      - name: Names
+        args:
+          - name: pressure
+            value: { type: ":Quantity.int64", value: "5", unit: ":pascal" }
+          - name: density
+            value: { type: ":Quantity.int64", value: "5", unit: ":kilogramPerCubicMeter" }
+          - name: densityAscii
+            value: { type: ":Quantity.int64", value: "5", unit: ":kilogramPerCubicMeter" }
+          - name: specificEnergy
+            value: { type: ":Quantity.int64", value: "5", unit: ":joulePerKilogram" }
+          - name: specificHeat
+            value: { type: ":Quantity.int64", value: "5", unit: ":joulePerKilogramKelvin" }
+          - name: specificHeatAscii
+            value: { type: ":Quantity.int64", value: "5", unit: ":joulePerKilogramKelvin" }
+          - name: torque
+            value: { type: ":Quantity.int64", value: "5", unit: ":newtonMeter" }
+          - name: torqueStar
+            value: { type: ":Quantity.int64", value: "5", unit: ":newtonMeter" }
+          - name: torqueJoined
+            value: { type: ":Quantity.int64", value: "5", unit: ":newtonMeter" }
+          - name: inertia
+            value: { type: ":Quantity.int64", value: "5", unit: ":kilogramSquareMeter" }
+          - name: inertiaAscii
+            value: { type: ":Quantity.int64", value: "5", unit: ":kilogramSquareMeter" }
+          - name: angular
+            value: { type: ":Quantity.int64", value: "5", unit: ":degreePerSecondSquared" }
+          - name: angularAscii
+            value: { type: ":Quantity.int64", value: "5", unit: ":degreePerSecondSquared" }
+          - name: massFlow
+            value: { type: ":Quantity.int64", value: "5", unit: ":kilogramPerSecond" }
+          - name: resistance
+            value: { type: ":Quantity.int64", value: "5", unit: ":ohm" }
+          - name: ohmSign
+            value: { type: ":Quantity.int64", value: "5", unit: ":ohm" }
+          - name: ohmWord
+            value: { type: ":Quantity.int64", value: "5", unit: ":ohm" }
+          - name: charge
+            value: { type: ":Quantity.int64", value: "5", unit: ":coulomb" }
+          - name: matches
+            value: { type: ":Boolean", value: true }
+          - name: other
+            value: { type: ":Boolean", value: false }
+      - name: Formatted
+        args:
+          - name: pressure
+            value: { type: ":Text", value: "101300Pa" }
+          - name: specificHeat
+            value: { type: ":Text", value: "4180J/(kg·K)" }
+          - name: torque
+            value: { type: ":Text", value: "2000N·m" }
+          - name: resistance
+            value: { type: ":Text", value: "2000Ω" }
+          - name: charge
+            value: { type: ":Text", value: "7200C" }
+      - name: Parsed
+        args:
+          - name: specificHeat
+            value: { type: ":Quantity.int64", value: "4180", unit: ":joulePerKilogramKelvin" }
+          - name: torque
+            value: { type: ":Quantity.int64", value: "2", unit: ":newtonMeter" }
+          - name: resistance
+            value: { type: ":Quantity.int64", value: "5000", unit: ":ohm" }
+          - name: charge
+            value: { type: ":Quantity.int64", value: "1800", unit: ":coulomb" }
+```
+
+---
+
+## Test: `kPa` is not a quantity type name
+
+Prefixed spellings are literal sugar only, so `:Quantity(kPa)` is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: pressure-prefixed-type-name-rejected
+kind: compileError
+sources:
+  - name: pressure-prefixed-type-name-rejected.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start { let value be 5 as :Quantity(kPa) }
+```
+
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.unsupportedConstruct }
+```
+
+---
+
+## Test: `Ah` is not a quantity type name
+
+Scaled spellings are literal sugar only, so `:Quantity(Ah)` is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: ampere-hours-type-name-rejected
+kind: compileError
+sources:
+  - name: ampere-hours-type-name-rejected.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start { let value be 5 as :Quantity(Ah) }
+```
+
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.unsupportedConstruct }
+```
+
+---
+
 ## Test: same-unit quotients cancel and scalars keep the unit
 
 Dividing equal units gives a unitless number, scalar factors keep any unit, and vectors divided by seconds become velocities.
@@ -1497,8 +2067,8 @@ sources:
 ```ges
 module main
 on Derive(m, s, force, energy, mass) {
-  emit Runtime(squaredTime: s * s, mixed: force + energy, massRate: mass / s, integerDivision: m div s, percentage: 50% / s, pace: s / m, less: m < s)
-  emit Folded(squaredTime: 2s * 3s, mixed: 2N + 3J, massRate: 6kg / 2s, integerDivision: 10m div 2s, percentage: 50% / 2s, pace: 2s / 3m, less: 2m < 3s)
+  emit Runtime(squaredTime: s * s, mixed: force + energy, massTime: mass * s, integerDivision: m div s, percentage: 50% / s, pace: s / m, less: m < s)
+  emit Folded(squaredTime: 2s * 3s, mixed: 2N + 3J, massTime: 6kg * 2s, integerDivision: 10m div 2s, percentage: 50% / 2s, pace: 2s / 3m, less: 2m < 3s)
 }
 ```
 
@@ -1533,7 +2103,7 @@ steps:
             value: { type: ":Nothing" }
           - name: mixed
             value: { type: ":Nothing" }
-          - name: massRate
+          - name: massTime
             value: { type: ":Nothing" }
           - name: integerDivision
             value: { type: ":Nothing" }
@@ -1549,7 +2119,7 @@ steps:
             value: { type: ":Nothing" }
           - name: mixed
             value: { type: ":Nothing" }
-          - name: massRate
+          - name: massTime
             value: { type: ":Nothing" }
           - name: integerDivision
             value: { type: ":Nothing" }

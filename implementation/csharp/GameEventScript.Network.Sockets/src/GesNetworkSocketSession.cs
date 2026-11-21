@@ -95,14 +95,14 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
     /// <param name="cancellationToken">Cancels connecting.</param>
     /// <returns>The session.</returns>
     /// <exception cref="ArgumentException">The connection is no client of the stream transport or uses insecure test keys.</exception>
-    /// <exception cref="SocketException">The connection could not be opened.</exception>
+    /// <exception cref="SocketException">The connection could not be opened or was not opened within 10 s.</exception>
     public static async Task<GesNetworkSocketSession> ConnectTcpAsync(string host, int port, GesNetworkConnection connection, CancellationToken cancellationToken = default)
     {
         Require(connection, GesNetworkTransport.Stream, client: true);
         var client = new TcpClient { NoDelay = true };
         try
         {
-            await client.ConnectAsync(host, port, cancellationToken).ConfigureAwait(false);
+            await ConnectTcpAsync(client, host, port, cancellationToken).ConfigureAwait(false);
             return FromStream(connection, client.GetStream(), client);
         }
         catch
@@ -133,6 +133,22 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
         {
             socket.Dispose();
             throw;
+        }
+    }
+
+    // Connects within the time limit of an upgrade, so a server whose packets vanish fails as soon as on SwiftNIO instead of
+    // after the system's retries.
+    internal static async Task ConnectTcpAsync(TcpClient client, string host, int port, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(GesNetworkSocketListener.UpgradeTimeout);
+        try
+        {
+            await client.ConnectAsync(host, port, timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new SocketException((int)SocketError.TimedOut);
         }
     }
 

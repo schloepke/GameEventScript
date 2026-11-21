@@ -1123,8 +1123,8 @@ A TCP or WebSocket session that closes in order first writes its last packets, t
 its sending: TCP by closing its sending half, WebSocket with a close frame, which also
 answers the peer's close frame. It then reads and drops received bytes until the peer's
 end, for at most 10 s, before it closes the socket, so the peer reads the last packets
-instead of a reset. A WebSocket upgrade, on the listener as on the client and there with
-the TLS handshake of `wss`, fails after 10 s.
+instead of a reset. A TCP connect fails after 10 s, and so does a WebSocket upgrade, on
+the listener as on the client and there with the TLS handshake of `wss`.
 
 An insecure test key seed derives a connection's ephemeral keys from a known value, so
 anyone who knows it reads the session; it exists only for tests and golden bytes. The
@@ -1304,8 +1304,9 @@ seeded latency, deterministic in every port. It draws from the
 delayed by the base latency plus a draw from 0 to the jitter inclusive, but never
 arrives before a packet sent earlier in the same direction, so order is preserved. Equal
 seeds, options and inputs give equal packets, events and times. A packet for a stream or
-message connection that takes no further bytes arrives once the connection's frame bucket
-refills, at its next deadline, and the packets behind it wait too. While 64 packets are
+message connection that takes no further bytes arrives at the time its frame bucket holds
+a frame again, whatever other deadlines the connection has, and the packets behind it
+wait too. While 64 packets are
 under way to such a connection, the sender keeps its further packets as in a
 [pair](#pairs); a deadline it has reached that needs a packet, such as a keepalive, waits
 with them until the connection takes bytes again.

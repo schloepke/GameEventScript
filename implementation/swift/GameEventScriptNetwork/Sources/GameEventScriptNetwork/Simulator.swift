@@ -132,7 +132,8 @@ public final class GesNetworkSimulator {
         return deadline <= sender.now && held(toServer: direction) ? .max : deadline
     }
 
-    // A stream or message connection that takes no bytes leaves its packets waiting until its frame bucket refills.
+    // A stream or message connection that takes no bytes leaves its packets waiting until its frame bucket refills. Its
+    // other deadlines do not count here: one it has reached while held as a sender would make the packet due at once.
     private func arrival(toServer direction: Bool) -> Int64 {
         let receiver = direction ? server : client
         let time: Int64
@@ -143,7 +144,7 @@ public final class GesNetworkSimulator {
             if toClientHead == toClient.count { return .max }
             time = toClient[toClientHead].time
         }
-        return receiver.canReceive ? time : max(time, receiver.nextDeadline)
+        return receiver.canReceive ? time : max(time, receiver.frameRefill)
     }
 
     private func deliver(toServer direction: Bool) throws {

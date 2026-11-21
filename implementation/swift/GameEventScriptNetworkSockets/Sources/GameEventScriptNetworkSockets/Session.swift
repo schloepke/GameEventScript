@@ -88,7 +88,7 @@ public final class GesNetworkSocketSession {
     ///   - connection: A client connection created with `.stream`; its timeout runs from its creation.
     /// - Returns: The session.
     /// - Throws: `GesApiError.invalidArgument` when the connection is no client of the stream transport or uses insecure test keys; a SwiftNIO
-    ///   error when the connection cannot be opened.
+    ///   error when the connection cannot be opened or is not opened within 10 s.
     public static func connectTcp(host: String, port: Int, connection: sending GesNetworkConnection) async throws -> sending GesNetworkSocketSession {
         try require(connection, .stream, client: true)
         let inbox = GesNetworkSocketInbox()
@@ -98,6 +98,7 @@ public final class GesNetworkSocketSession {
 
     static func openTcp(host: String, port: Int, inbox: GesNetworkSocketInbox) async throws -> Channel {
         try await ClientBootstrap(group: MultiThreadedEventLoopGroup.singleton)
+            .connectTimeout(GesNetworkSocketUpgrade.timeout)
             .channelOption(.tcpOption(.tcp_nodelay), value: 1)
             .channelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: GesNetworkSocketInbox.readBytes))
             .channelInitializer { channel in

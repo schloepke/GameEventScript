@@ -431,6 +431,37 @@ final class NetworkConnectionTests: XCTestCase {
         XCTAssertEqual(transfers(loop.server).last, received[received.count - 2])
     }
 
+    func testSendersHeldTowardEachOtherStillDeliver() throws {
+        // Both sides send more than 64 packets toward a peer that takes one frame per second, so the simulator holds
+        // both senders; each held packet still arrives at the receiver's frame refill.
+        let source = Self.source
+            .replacingOccurrences(of: "max 6000 }\nwire messages", with: "max 150000 }\nwire messages")
+            .replacingOccurrences(of: "  server sends :Pack bulk", with: "  server sends :Pack bulk\n  client sends :Pack bulk")
+        let network = try game(source)
+        var options = GesNetworkOptions.plain
+        options.transport = .message
+        options.maxPacketBytes = 1200
+        options.maxFramesPerSecond = 1
+        options.deflateTransfers = false
+        let client = try GesNetworkConnection.makeClient(network: network, token: [], now: 0, options: options)
+        let server = try GesNetworkConnection.makeServer(network: network, now: 0, options: options)
+        let loop = try GesNetworkSimulator(client: client, server: server, seed: 0, latencyMicroseconds: 0, jitterMicroseconds: 0)
+        try loop.advance(0)
+        _ = server.nextEvent()
+        try server.accept()
+        try loop.advance(1000)
+        XCTAssertEqual(client.state, .connected)
+        XCTAssertEqual(server.send(route: bulkBlob, payload: bytes(150_000, 3)), .queued)
+        XCTAssertEqual(client.send(route: 4, payload: bytes(150_000, 4)), .queued)
+        try loop.advance(400_000_000)
+        XCTAssertEqual(client.state, .connected)
+        XCTAssertEqual(server.state, .connected)
+        XCTAssertEqual(client.queuedSendBytes, 0)
+        XCTAssertEqual(server.queuedSendBytes, 0)
+        XCTAssertTrue(transfers(client).contains("message \(bulkBlob) 0 150000"))
+        XCTAssertTrue(transfers(server).contains("message 4 0 150000"))
+    }
+
     func testTransferWithoutCompressionCarriesTheData() throws {
         var options = GesNetworkOptions.plain
         options.deflateTransfers = false

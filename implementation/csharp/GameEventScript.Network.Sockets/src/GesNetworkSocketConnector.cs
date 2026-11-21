@@ -43,7 +43,7 @@ public sealed class GesNetworkSocketConnector : IGesNetworkConnector
             var client = new TcpClient { NoDelay = true };
             try
             {
-                await client.ConnectAsync(host, port, cancellationToken).ConfigureAwait(false);
+                await GesNetworkSocketSession.ConnectTcpAsync(client, host, port, cancellationToken).ConfigureAwait(false);
                 return new(client.GetStream(), null, null, client);
             }
             catch

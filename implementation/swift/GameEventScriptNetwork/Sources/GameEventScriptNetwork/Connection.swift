@@ -407,6 +407,11 @@ public final class GesNetworkConnection {
     /// `advance(_:)` refilled the bucket, which `nextDeadline` includes. Always true on a datagram transport.
     public var canReceive: Bool { datagram || state == .closed || frameUnits >= Self.microsecondsPerSecond }
 
+    // The time at which the frame bucket of a stream or message connection holds a frame again.
+    var frameRefill: Int64 {
+        frameUnits >= Self.microsecondsPerSecond ? now : now + (Self.microsecondsPerSecond - frameUnits + framesPerSecond - 1) / framesPerSecond
+    }
+
     /// The bytes per second this side sends; 0 sends without a budget. Change it with
     /// `setSendBudgetBytesPerSecond(_:)`, for example from a congestion controller.
     public var sendBudgetBytesPerSecond: Int64 { budget }
@@ -433,7 +438,7 @@ public final class GesNetworkConnection {
             deadline = min(deadline, now + (-budgetUnits + budget - 1) / budget)
         }
         if !datagram && frameUnits < Self.microsecondsPerSecond {
-            deadline = min(deadline, now + (Self.microsecondsPerSecond - frameUnits + framesPerSecond - 1) / framesPerSecond)
+            deadline = min(deadline, frameRefill)
         }
         if datagram { deadline = min(deadline, datagramDeadline()) }
         return deadline

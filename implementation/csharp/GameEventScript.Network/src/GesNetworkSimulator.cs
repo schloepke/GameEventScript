@@ -141,12 +141,13 @@ public sealed class GesNetworkSimulator
         return deadline <= sender.Now && Held(sender, receiver, queue) ? long.MaxValue : deadline;
     }
 
-    // A stream or message connection that takes no bytes leaves its packets waiting until its frame bucket refills.
+    // A stream or message connection that takes no bytes leaves its packets waiting until its frame bucket refills. Its
+    // other deadlines do not count here: one it has reached while held as a sender would make the packet due at once.
     private static long Arrival(FlightQueue queue, GesNetworkConnection receiver)
     {
         if (queue.Count == 0) return long.MaxValue;
         var time = queue.Front.Time;
-        return receiver.CanReceive ? time : Math.Max(time, receiver.NextDeadline);
+        return receiver.CanReceive ? time : Math.Max(time, receiver.FrameRefill);
     }
 
     private void Deliver(FlightQueue queue, GesNetworkConnection receiver)

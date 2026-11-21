@@ -528,6 +528,40 @@ public sealed class GesNetworkConnectionTests
     }
 
     [TestMethod]
+    public void SendersHeldTowardEachOtherStillDeliver()
+    {
+        // Both sides send more than 64 packets toward a peer that takes one frame per second, so the simulator holds
+        // both senders; each held packet still arrives at the receiver's frame refill.
+        var network = Game(Source.Replace("max 6000 }\nwire messages", "max 150000 }\nwire messages").Replace("  server sends :Pack bulk", "  server sends :Pack bulk\n  client sends :Pack bulk"));
+        var options = new GesNetworkOptions
+        {
+            ClientSecurity = GesNetworkClientSecurity.None,
+            ServerSecurity = GesNetworkServerSecurity.None,
+            Transport = GesNetworkTransport.Message,
+            MaxPacketBytes = 1200,
+            MaxFramesPerSecond = 1,
+            DeflateTransfers = false,
+        };
+        var client = GesNetworkConnection.CreateClient(network, default, 0, options);
+        var server = GesNetworkConnection.CreateServer(network, 0, options);
+        var loop = new GesNetworkSimulator(client, server, 0, 0, 0);
+        loop.Advance(0);
+        server.NextEvent();
+        server.Accept();
+        loop.Advance(1000);
+        Assert.AreEqual(GesNetworkState.Connected, client.State);
+        Assert.AreEqual(GesNetworkSendStatus.Queued, server.Send(BulkBlob, Bytes(150_000, 3)));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, client.Send(4, Bytes(150_000, 4)));
+        loop.Advance(400_000_000);
+        Assert.AreEqual(GesNetworkState.Connected, client.State);
+        Assert.AreEqual(GesNetworkState.Connected, server.State);
+        Assert.AreEqual(0L, client.QueuedSendBytes);
+        Assert.AreEqual(0L, server.QueuedSendBytes);
+        CollectionAssert.Contains(Transfers(client), $"message {BulkBlob} 0 150000");
+        CollectionAssert.Contains(Transfers(server), "message 4 0 150000");
+    }
+
+    [TestMethod]
     public void TransferWithoutCompressionCarriesTheData()
     {
         var loop = Connected(new GesNetworkOptions { ClientSecurity = GesNetworkClientSecurity.None, ServerSecurity = GesNetworkServerSecurity.None, DeflateTransfers = false });

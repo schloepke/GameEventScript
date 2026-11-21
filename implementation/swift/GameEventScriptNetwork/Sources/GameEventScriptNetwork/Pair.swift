@@ -7,7 +7,10 @@ import GameEventScriptRuntime
 ///
 /// A realtime pair runs on the system clock and moves packets when the ends poll. A synchronous pair runs on a virtual
 /// clock, is connected when created and moves every packet before a send, publish, tick, close or poll returns: what
-/// one end sends is reported by the other end's next poll. Both ends of a pair belong to one caller at a time.
+/// one end sends is reported by the other end's next poll. In both modes a packet waits while the receiving connection
+/// takes no further bytes, in a synchronous pair until the host advances the clock far enough to refill its frame bucket;
+/// while 64 packets wait, the sending connection keeps its further packets. Both ends of a pair belong to one caller at a
+/// time.
 public final class GesNetworkPair {
     // The state the ends, the connector, the acceptor and the links share. It refers to the ends weakly, so that the
     // ends own it and no cycle remains.

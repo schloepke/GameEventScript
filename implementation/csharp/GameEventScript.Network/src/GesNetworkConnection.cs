@@ -274,6 +274,9 @@ public sealed partial class GesNetworkConnection
     /// </summary>
     public bool CanReceive => _datagram || State == GesNetworkState.Closed || _frameUnits >= MicrosecondsPerSecond;
 
+    // The time at which the frame bucket of a stream or message connection holds a frame again.
+    internal long FrameRefill => _frameUnits >= MicrosecondsPerSecond ? _now : _now + (MicrosecondsPerSecond - _frameUnits + _framesPerSecond - 1) / _framesPerSecond;
+
     /// <summary>
     /// Gets or sets the send budget in bytes per second; 0 for none. The host may change it at any time, for example
     /// from <see cref="RoundTripMicroseconds"/>; this is the congestion hook.
@@ -306,7 +309,7 @@ public sealed partial class GesNetworkConnection
             if (_budget > 0 && _budgetUnits < 0 && HasPendingFrames())
                 deadline = Math.Min(deadline, _now + (-_budgetUnits + _budget - 1) / _budget);
             if (!_datagram && _frameUnits < MicrosecondsPerSecond)
-                deadline = Math.Min(deadline, _now + (MicrosecondsPerSecond - _frameUnits + _framesPerSecond - 1) / _framesPerSecond);
+                deadline = Math.Min(deadline, FrameRefill);
             if (_datagram) deadline = Math.Min(deadline, DatagramDeadline());
             return deadline;
         }

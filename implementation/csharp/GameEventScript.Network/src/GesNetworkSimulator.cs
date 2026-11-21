@@ -23,8 +23,8 @@ public sealed class GesNetworkSimulator
     private readonly int _duplicate;
     private readonly bool _reorder;
     // The packets on their way in arrival order: by time, then in the order sent.
-    private readonly List<Flight> _toServer = [];
-    private readonly List<Flight> _toClient = [];
+    private readonly FlightQueue _toServer = new();
+    private readonly FlightQueue _toClient = new();
     private readonly Stack<byte[]> _free = new();
     private readonly byte[] _buffer = new byte[GesNetworkWire.MaximumPacketBytes + 3];
     private long _lastToServer;
@@ -93,7 +93,7 @@ public sealed class GesNetworkSimulator
     {
         get
         {
-            var deadline = Math.Min(Client.NextDeadline, Server.NextDeadline);
+            var deadline = Math.Min(Deadline(Client, Server, _toServer), Deadline(Server, Client, _toClient));
             deadline = Math.Min(deadline, Arrival(_toServer, Server));
             deadline = Math.Min(deadline, Arrival(_toClient, Client));
             return Math.Max(deadline, Now);
@@ -115,9 +115,10 @@ public sealed class GesNetworkSimulator
             var next = NextDeadline;
             if (next > now || next == long.MaxValue) break;
             Now = next;
-            var toServer = Arrival(_toServer, Server) == next;
-            var toClient = Arrival(_toClient, Client) == next;
-            if (toServer && (!toClient || _toServer[0].Sequence < _toClient[0].Sequence)) Deliver(_toServer, Server);
+            // A packet that waited for a frame refill may be due since before the current time.
+            var toServer = Arrival(_toServer, Server) <= next;
+            var toClient = Arrival(_toClient, Client) <= next;
+            if (toServer && (!toClient || _toServer.Front.Sequence < _toClient.Front.Sequence)) Deliver(_toServer, Server);
             else if (toClient) Deliver(_toClient, Client);
             else
             {
@@ -132,21 +133,28 @@ public sealed class GesNetworkSimulator
         TransmitAll();
     }
 
+    // A held sender cannot transmit, so a deadline it has already reached, such as a keepalive, waits for the
+    // receiver's frame refill, which counts on its own.
+    private static long Deadline(GesNetworkConnection sender, GesNetworkConnection receiver, FlightQueue queue)
+    {
+        var deadline = sender.NextDeadline;
+        return deadline <= sender.Now && Held(sender, receiver, queue) ? long.MaxValue : deadline;
+    }
+
     // A stream or message connection that takes no bytes leaves its packets waiting until its frame bucket refills.
-    private static long Arrival(List<Flight> queue, GesNetworkConnection receiver)
+    private static long Arrival(FlightQueue queue, GesNetworkConnection receiver)
     {
         if (queue.Count == 0) return long.MaxValue;
-        var time = queue[0].Time;
+        var time = queue.Front.Time;
         return receiver.CanReceive ? time : Math.Max(time, receiver.NextDeadline);
     }
 
-    private void Deliver(List<Flight> queue, GesNetworkConnection receiver)
+    private void Deliver(FlightQueue queue, GesNetworkConnection receiver)
     {
         // The bucket refills up to the arrival; if it still holds no frame, the packet waits for the next refill.
         receiver.Advance(Now);
         if (!receiver.CanReceive) return;
-        var flight = queue[0];
-        queue.RemoveAt(0);
+        var flight = queue.Pop();
         receiver.Receive(flight.Bytes.AsSpan(0, flight.Length), Now);
         _free.Push(flight.Bytes);
     }
@@ -161,10 +169,13 @@ public sealed class GesNetworkSimulator
     // whose peer stops reading does; only the close packet of a closed connection still leaves.
     private const int HeldPackets = 64;
 
-    private void Send(GesNetworkConnection sender, GesNetworkConnection receiver, List<Flight> queue, ref long last)
+    private static bool Held(GesNetworkConnection sender, GesNetworkConnection receiver, FlightQueue queue) =>
+        queue.Count >= HeldPackets && !receiver.CanReceive && sender.State != GesNetworkState.Closed;
+
+    private void Send(GesNetworkConnection sender, GesNetworkConnection receiver, FlightQueue queue, ref long last)
     {
         int length;
-        while ((queue.Count < HeldPackets || receiver.CanReceive || sender.State == GesNetworkState.Closed) && (length = sender.Transmit(_buffer)) > 0)
+        while (!Held(sender, receiver, queue) && (length = sender.Transmit(_buffer)) > 0)
         {
             var delay = Delay();
             if (_loss > 0 && _random.NextInclusiveInteger(0, 999) < _loss) continue;
@@ -176,15 +187,51 @@ public sealed class GesNetworkSimulator
     private long Delay() => _latency + _random.NextInclusiveInteger(0, _jitter);
 
     // Adds a packet in arrival order; without reordering it arrives no earlier than the packet sent before.
-    private void Enqueue(List<Flight> queue, ref long last, long delay, int length)
+    private void Enqueue(FlightQueue queue, ref long last, long delay, int length)
     {
         var time = Now + delay;
         if (!_reorder) time = last = Math.Max(time, last);
         var bytes = _free.Count > 0 ? _free.Pop() : new byte[_buffer.Length];
         _buffer.AsSpan(0, length).CopyTo(bytes);
-        var index = queue.Count;
-        while (index > 0 && queue[index - 1].Time > time) index--;
-        queue.Insert(index, new Flight(time, _sequence++, bytes, length));
+        queue.Insert(new Flight(time, _sequence++, bytes, length));
+    }
+
+    // The packets of one direction in arrival order. Delivered packets advance a head instead of shifting the list; the
+    // delivered prefix goes once it is half the list, so the storage stays bounded while packets remain in flight.
+    private sealed class FlightQueue
+    {
+        private readonly List<Flight> _flights = [];
+        private int _head;
+
+        internal int Count => _flights.Count - _head;
+
+        internal Flight Front => _flights[_head];
+
+        internal Flight Pop()
+        {
+            var flight = _flights[_head];
+            _flights[_head] = default;
+            _head++;
+            if (_head == _flights.Count)
+            {
+                _flights.Clear();
+                _head = 0;
+            }
+            else if (_head >= 32 && _head * 2 >= _flights.Count)
+            {
+                _flights.RemoveRange(0, _head);
+                _head = 0;
+            }
+
+            return flight;
+        }
+
+        internal void Insert(Flight flight)
+        {
+            var index = _flights.Count;
+            while (index > _head && _flights[index - 1].Time > flight.Time) index--;
+            _flights.Insert(index, flight);
+        }
     }
 
     private readonly struct Flight(long time, long sequence, byte[] bytes, int length)

@@ -91,7 +91,7 @@ public final class GesNetworkSimulator {
 
     /// The earliest time at which a packet arrives or a connection has a deadline.
     public var nextDeadline: Int64 {
-        let deadline = min(client.nextDeadline, server.nextDeadline, arrival(toServer: true), arrival(toServer: false))
+        let deadline = min(deadline(of: client, toServer: true), deadline(of: server, toServer: false), arrival(toServer: true), arrival(toServer: false))
         return max(deadline, now)
     }
 
@@ -106,8 +106,9 @@ public final class GesNetworkSimulator {
             let next = nextDeadline
             if next > now || next == .max { break }
             self.now = next
-            let serverDue = arrival(toServer: true) == next
-            let clientDue = arrival(toServer: false) == next
+            // A packet that waited for a frame refill may be due since before the current time.
+            let serverDue = arrival(toServer: true) <= next
+            let clientDue = arrival(toServer: false) <= next
             if serverDue && (!clientDue || toServer[toServerHead].sequence < toClient[toClientHead].sequence) {
                 try deliver(toServer: true)
             } else if clientDue {
@@ -122,6 +123,13 @@ public final class GesNetworkSimulator {
         try client.advance(now)
         try server.advance(now)
         try transmitAll()
+    }
+
+    // A held sender cannot transmit, so a deadline it has already reached, such as a keepalive, waits for the
+    // receiver's frame refill, which counts on its own.
+    private func deadline(of sender: GesNetworkConnection, toServer direction: Bool) -> Int64 {
+        let deadline = sender.nextDeadline
+        return deadline <= sender.now && held(toServer: direction) ? .max : deadline
     }
 
     // A stream or message connection that takes no bytes leaves its packets waiting until its frame bucket refills.
@@ -166,18 +174,24 @@ public final class GesNetworkSimulator {
     }
 
     private func transmitAll() throws {
-        try send(client, server, toServer: true)
-        try send(server, client, toServer: false)
+        try send(client, toServer: true)
+        try send(server, toServer: false)
     }
 
     // While the receiver takes no bytes and this many packets wait for it, the sender holds its packets, as a socket
     // whose peer stops reading does; only the close packet of a closed connection still leaves.
     private static let heldPackets = 64
 
-    private func send(_ sender: GesNetworkConnection, _ receiver: GesNetworkConnection, toServer direction: Bool) throws {
+    private func held(toServer direction: Bool) -> Bool {
+        let waiting = direction ? toServer.count - toServerHead : toClient.count - toClientHead
+        let sender = direction ? client : server
+        let receiver = direction ? server : client
+        return waiting >= Self.heldPackets && !receiver.canReceive && sender.state != .closed
+    }
+
+    private func send(_ sender: GesNetworkConnection, toServer direction: Bool) throws {
         while true {
-            let waiting = direction ? toServer.count - toServerHead : toClient.count - toClientHead
-            if waiting >= Self.heldPackets && !receiver.canReceive && sender.state != .closed { return }
+            if held(toServer: direction) { return }
             let length = try sender.transmit(into: &buffer)
             if length == 0 { return }
             let delay = nextDelay()

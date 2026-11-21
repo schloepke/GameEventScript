@@ -255,7 +255,8 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
             orderly = _orderlyOpening;
         }
 
-        // Releasing in order may run synchronously into Release, which takes the gate; it starts outside of it.
+        // Releasing in order may run synchronously into Release, which disposes the transport and runs the cancellation
+        // callbacks; neither belongs under the gate.
         if (orderly) _ = ReleaseInOrderAsync(writer, reader, owner);
         _signal?.Set();
     }

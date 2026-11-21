@@ -1307,7 +1307,8 @@ seeds, options and inputs give equal packets, events and times. A packet for a s
 message connection that takes no further bytes arrives once the connection's frame bucket
 refills, at its next deadline, and the packets behind it wait too. While 64 packets are
 under way to such a connection, the sender keeps its further packets as in a
-[pair](#pairs).
+[pair](#pairs); a deadline it has reached that needs a packet, such as a keepalive, waits
+with them until the connection takes bytes again.
 
 Between datagram connections the simulated network may also lose, duplicate and reorder
 packets, with a loss and a duplicate rate in per mille, 0 to 1000, and reordering on or

@@ -1434,3 +1434,103 @@ network:
     - "server packet 16384:5e0ad958a755c9c5"
     - "server packet 2318:22cb8dbe3a05057c"
 ```
+
+---
+
+## Test: A sender holds packets for a receiver that takes no bytes
+
+While the receiver's frame bucket is empty and 64 packets wait for it, the sender keeps the rest of its data queued instead of transmitting it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: held-packets
+networkApi:
+  sources: ["wire schema :Pack as { data: :List(:Number integer between 0 and 255) max 200000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Files as {\n  client sends :Commands reliable\n  server sends :Pack bulk\n}\n"]
+  network: "Files"
+  token: ""
+  options: {"transport": "message", "maxPacketBytes": 1200}
+  clientOptions: {"transport": "message", "maxPacketBytes": 1200, "deflateTransfers": false, "maxFramesPerSecond": 1}
+  steps:
+    - {"advance": 0}
+    - {"accept": true}
+    - {"advance": 0}
+    - {"send": {"side": "server", "route": 1, "payload": "01"}}
+    - {"advance": 1000}
+    - {"send": {"side": "server", "route": 1, "payload": {"length": 150000, "seed": 3}}}
+    - {"advance": 2000}
+    - {"advance": 2000000}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "server connecting -"
+    - "server connected"
+    - "client connected"
+    - "server send queued"
+    - "client progress 1 0 35/35"
+    - "client message 1 01"
+    - "server send queued"
+    - "client progress 1 1 2373/150036"
+    - "server progress 1 0 35/35"
+    - "server progress 1 1 1187/150036"
+  client: {"state": "connected", "pendingReceiveBytes": 2373}
+  server: {"state": "connected", "queuedSendBytes": 150036}
+```
+
+---
+
+## Test: Held packets arrive once the receiver takes bytes again
+
+A transfer held for a receiver with a low frame limit arrives completely as its frame bucket refills, including packets that waited past their arrival time.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: held-packets-drain
+networkApi:
+  sources: ["wire schema :Pack as { data: :List(:Number integer between 0 and 255) max 200000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Files as {\n  client sends :Commands reliable\n  server sends :Pack bulk\n}\n"]
+  network: "Files"
+  token: ""
+  options: {"transport": "message", "maxPacketBytes": 1200}
+  clientOptions: {"transport": "message", "maxPacketBytes": 1200, "deflateTransfers": false, "maxFramesPerSecond": 1}
+  steps:
+    - {"advance": 0}
+    - {"accept": true}
+    - {"advance": 0}
+    - {"send": {"side": "server", "route": 1, "payload": "01"}}
+    - {"advance": 1000}
+    - {"send": {"side": "server", "route": 1, "payload": {"length": 150000, "seed": 3}}}
+    - {"advance": 2000}
+    - {"advance": 2000000}
+    - {"advance": 200000000}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+network:
+  trace:
+    - "server connecting -"
+    - "server connected"
+    - "client connected"
+    - "server send queued"
+    - "client progress 1 0 35/35"
+    - "client message 1 01"
+    - "server send queued"
+    - "client progress 1 1 2373/150036"
+    - "server progress 1 0 35/35"
+    - "server progress 1 1 1187/150036"
+    - "client progress 1 1 150036/150036"
+    - "client message 1 150000:443cd2709d875145"
+    - "server progress 1 1 150036/150036"
+  client: {"state": "connected", "pendingReceiveBytes": 0}
+  server: {"state": "connected", "queuedSendBytes": 0}
+```

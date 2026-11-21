@@ -319,6 +319,30 @@ public sealed class GesNetworkEndTests
     }
 
     [TestMethod]
+    public void ASynchronousPairHoldsPacketsForAnEndThatTakesNoBytes()
+    {
+        var network = GesSchemaSet.Parse("wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 200000 }\nnetwork :Game as { client sends :Blob bulk }\n")
+            .Network("Game").Bind();
+        var options = GesNetworkOptions.InProcess();
+        options.MaxPacketBytes = 1200;
+        options.MaxFramesPerSecond = 1;
+        options.DeflateTransfers = false;
+        using var pair = GesNetworkPair.Synchronous(network, default, options);
+        Poll(pair);
+        // The first transfer empties the server's frame bucket.
+        Assert.AreEqual(GesNetworkSendStatus.Queued, pair.Client.Send(0, [1]));
+        Assert.AreEqual(GesNetworkSendStatus.Queued, pair.Client.Send(0, new byte[150_000]));
+        // The server takes one frame a second, so 64 packets wait for it and the rest of the transfer stays queued.
+        Assert.IsGreaterThan(0L, pair.Client.Connection.QueuedSendBytes);
+        // Once the queue is empty, up to 64 packets still wait for the server's frames.
+        for (var step = 0; step < 300; step++) pair.Advance(1_000_000);
+        var (_, server) = Poll(pair);
+        Assert.AreEqual(0L, pair.Client.Connection.QueuedSendBytes);
+        Assert.AreEqual(GesNetworkState.Connected, pair.Client.Connection.State);
+        Assert.AreEqual(1, server.Events.Count(entry => entry.StartsWith("message 0 ", StringComparison.Ordinal) && entry.Length == 10 + 300_000));
+    }
+
+    [TestMethod]
     public void BulkSendsBeforeTheHandshakeAreBounded()
     {
         var network = GesSchemaSet.Parse("wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 60 }\nnetwork :Game as { client sends :Blob bulk }\n")

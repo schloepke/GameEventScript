@@ -92,8 +92,9 @@ public sealed partial class GesNetworkSocketListener
                 catch (SocketException exception) when (exception.SocketErrorCode == SocketError.MessageSize)
                 {
                     // Windows reports a datagram longer than the buffer as an error, after it filled the buffer and the
-                    // source address; an address left unwritten was cleared and matches no client. A known client's connection closes with network.packetTooLarge, as on the other
-                    // platforms, which cut the datagram silently; for an unknown address it is no valid hello.
+                    // source address; an address left unwritten was cleared and matches no client. A known client's
+                    // connection closes with network.packetTooLarge, as on the other platforms, which cut the datagram
+                    // silently; for an unknown address it is no valid hello.
                     if (_peers.TryGetValue(address, out var known))
                     {
                         if (known.Received.Writer.TryWrite(new GesNetworkSocketSession.Chunk(bytes, limit + 1))) Signal.Set();

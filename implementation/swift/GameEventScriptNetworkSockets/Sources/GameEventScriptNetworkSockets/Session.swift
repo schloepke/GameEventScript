@@ -122,6 +122,8 @@ public final class GesNetworkSocketSession {
         return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, framing: .webSocket)
     }
 
+    static let upgradeTimedOut = "The server did not complete the WebSocket upgrade in time."
+
     static func openWebSocket(endpoint: GesNetworkSocketEndpoint, limit: Int, inbox: GesNetworkSocketInbox) async throws -> Channel {
         let tls = try endpoint.secure ? NIOSSLContext(configuration: .makeClientConfiguration()) : nil
         let loop = MultiThreadedEventLoopGroup.singleton.next()
@@ -144,13 +146,15 @@ public final class GesNetworkSocketSession {
                 }
                 .connect(host: endpoint.host, port: endpoint.port).get()
         } catch {
-            // The handler may never have run; a promise must not be left open.
+            // The handler may never have run; a promise must not be left open. The time limit ending while connecting is
+            // the same failure as ending during the upgrade.
             upgraded.fail(error)
+            if case ChannelError.connectTimeout = error { throw GesNetworkSocketError(Self.upgradeTimedOut) }
             throw error
         }
 
         let timeout = channel.eventLoop.scheduleTask(deadline: deadline) {
-            upgraded.fail(GesNetworkSocketError("The server did not complete the WebSocket upgrade in time."))
+            upgraded.fail(GesNetworkSocketError(Self.upgradeTimedOut))
         }
         do {
             try await upgraded.futureResult.get()

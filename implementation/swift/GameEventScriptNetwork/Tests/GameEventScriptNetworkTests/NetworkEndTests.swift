@@ -341,6 +341,29 @@ final class NetworkEndTests: XCTestCase {
         XCTAssertEqual(server.events.filter { $0.hasPrefix("message") }, ["message 0 01", "message 0 02"], server.events.joined(separator: " | "))
     }
 
+    func testASynchronousPairHoldsPacketsForAnEndThatTakesNoBytes() throws {
+        let network = try GesSchemaSet(parsing: "wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 200000 }\nnetwork :Game as { client sends :Blob bulk }\n")
+            .network("Game").bind()
+        var options = GesNetworkOptions.inProcess()
+        options.maxPacketBytes = 1200
+        options.maxFramesPerSecond = 1
+        options.deflateTransfers = false
+        let pair = try GesNetworkPair.synchronous(network: network, options: options)
+        defer { pair.release() }
+        _ = try poll(pair)
+        // The first transfer empties the server's frame bucket.
+        XCTAssertEqual(pair.client.send(route: 0, payload: [1]), .queued)
+        XCTAssertEqual(pair.client.send(route: 0, payload: [UInt8](repeating: 0, count: 150_000)), .queued)
+        // The server takes one frame a second, so 64 packets wait for it and the rest of the transfer stays queued.
+        XCTAssertGreaterThan(pair.client.connection.queuedSendBytes, 0)
+        // Once the queue is empty, up to 64 packets still wait for the server's frames.
+        for _ in 0..<300 { try pair.advance(by: 1_000_000) }
+        let (_, server) = try poll(pair)
+        XCTAssertEqual(pair.client.connection.queuedSendBytes, 0)
+        XCTAssertEqual(pair.client.connection.state, .connected)
+        XCTAssertEqual(server.events.filter { $0.hasPrefix("message 0 ") && $0.count == 10 + 300_000 }.count, 1)
+    }
+
     func testBulkSendsBeforeTheHandshakeAreBounded() throws {
         let network = try GesSchemaSet(parsing: "wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 60 }\nnetwork :Game as { client sends :Blob bulk }\n")
             .network("Game").bind()

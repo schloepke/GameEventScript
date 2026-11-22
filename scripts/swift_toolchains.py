@@ -40,12 +40,21 @@ def _version_key(version):
 
 
 def sdk_directories():
-    """The per-user Swift SDK directories SwiftPM uses by default."""
-    home = Path.home()
+    """The per-user Swift SDK directories SwiftPM uses by default.
+
+    SwiftPM takes the home directory from the user database, not from `HOME`; GitHub container jobs set `HOME` to
+    another directory, so both count.
+    """
+    homes = [Path.home()]
+    if sys.platform != "win32":
+        import pwd
+        user_home = Path(pwd.getpwuid(os.getuid()).pw_dir)
+        if user_home not in homes:
+            homes.append(user_home)
     if sys.platform == "darwin":
-        candidates = [home / "Library/org.swift.swiftpm/swift-sdks"]
+        candidates = [home / "Library/org.swift.swiftpm/swift-sdks" for home in homes]
     else:
-        candidates = [home / ".swiftpm/swift-sdks"]
+        candidates = [home / ".swiftpm/swift-sdks" for home in homes]
         if os.environ.get("XDG_CONFIG_HOME"):
             candidates.append(Path(os.environ["XDG_CONFIG_HOME"]) / "swiftpm/swift-sdks")
     return [directory for directory in candidates if directory.is_dir()]

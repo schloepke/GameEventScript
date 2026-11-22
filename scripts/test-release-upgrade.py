@@ -2,7 +2,7 @@
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
 
-"""Isolated 0.4.0 consumer upgrade smoke tests; never publishes packages or tags. Each version builds the consumer
+"""Isolated 0.5.0 consumer upgrade smoke tests; never publishes packages or tags. Each version builds the consumer
 source committed with it, so breaking pre-1.0 API changes are checked as the documented migration."""
 import argparse
 import base64
@@ -16,13 +16,15 @@ import subprocess
 from verification_workspace import verification_workspace
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE = '0.4.0'
-BASELINE_COMMIT = '3d5e6d31ae30f612d0b5ae3ba7ed5f1be26e24ce'
-CANDIDATE = '0.5.0-upgrade-test'
-FIXTURES = ROOT / 'conformance/fixtures/Release040'
-# The optional highlighter package became the Syntax package after the baseline release; the Generator is new.
-MODULES = {BASELINE: ('Runtime', 'Compiler', 'SwiftBridge', 'SyntaxHighlighter')}
-CANDIDATE_MODULES = ('Runtime', 'Compiler', 'SwiftBridge', 'Syntax', 'Generator')
+BASELINE = '0.5.0'
+BASELINE_COMMIT = 'ecf9e2c87030d469f228bc52be15d91ccfa6ecd3'
+CANDIDATE = '0.6.0-upgrade-test'
+FIXTURES = ROOT / 'conformance/fixtures/Release050'
+# The Network packages are new since the baseline release.
+MODULES = {BASELINE: ('Runtime', 'Compiler', 'SwiftBridge', 'Syntax', 'Generator')}
+CANDIDATE_MODULES = ('Runtime', 'Compiler', 'SwiftBridge', 'Syntax', 'Generator', 'Network', 'NetworkSockets')
+# NuGet package names of modules whose SwiftPM product name differs.
+CSHARP_PACKAGES = {'NetworkSockets': 'Network.Sockets'}
 
 
 def modules(version):
@@ -114,7 +116,7 @@ def csharp(workspace, candidate):
             versions = {key.split('/')[0]: key.split('/')[1] for key in assets['libraries']}
             names = ['GameEventScript.Runtime', 'GameEventScript.CSharpBridge']
             if name == 'PackageConsumer':
-                names += ['GameEventScript.Compiler', *('GameEventScript.' + module for module in modules(version)[3:])]
+                names += ['GameEventScript.Compiler', *('GameEventScript.' + CSHARP_PACKAGES.get(module, module) for module in modules(version)[3:])]
             require_versions(versions, version, names)
             fixture = baseline if version == BASELINE else workspace / 'candidate.gesb'
             if name == 'RuntimeConsumer':

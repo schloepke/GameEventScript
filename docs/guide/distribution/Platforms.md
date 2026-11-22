@@ -3,7 +3,7 @@
 
 # Platform support and release evidence
 
-For 0.5.0, support is scoped to the product and verification level below.
+For 0.6.0, support is scoped to the product and verification level below.
 The tables describe the configured checks, not a claim that an unreleased
 candidate has already passed them. A release must retain successful evidence
 for its exact source commit before claiming the corresponding support.
@@ -93,7 +93,7 @@ SDK, plus Node **24**. Pins live in
 `--download`, while local builds may use an installed toolchain with its matching SDK.
 This verifies the Card Lab's embedding and WASM execution, not every browser.
 
-> **Since: Unreleased** — WASI builds of the root package
+> **Since: 0.6.0** — WASI builds of the root package
 
 Every library product of the root SwiftPM package builds for WASI. Swift CI job
 `linux` installs the same pinned SDK into its `swift:6.4.0-jammy` container and

@@ -39,7 +39,7 @@ The CLI has a separate SwiftPM package. With a compatible Swift toolchain
 installed, clone the release and build/run the CLI:
 
 ```sh
-git clone --branch 0.5.0 --depth 1 https://github.com/schloepke/GameEventScript.git
+git clone --branch 0.6.0 --depth 1 https://github.com/schloepke/GameEventScript.git
 cd GameEventScript
 swift run --package-path implementation/swift/GameEventScriptTool --scratch-path artifacts/swift/cli --disable-build-manifest-caching --configuration release ges --help
 ```

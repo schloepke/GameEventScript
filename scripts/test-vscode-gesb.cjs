@@ -377,7 +377,7 @@ test('an unknown binding kind stays visible', () => {
 
 test('every checked-in binary is readable', () => {
     const root = path.join(__dirname, '..');
-    const directories = ['conformance/fixtures/GesbV1', 'conformance/fixtures/Release040', 'examples/cli-example', 'examples/compute-benchmark'];
+    const directories = ['conformance/fixtures/GesbV1', 'conformance/fixtures/Release050', 'examples/cli-example', 'examples/compute-benchmark'];
     let count = 0;
     for (const directory of directories) {
         for (const name of fs.readdirSync(path.join(root, directory)).filter(item => item.endsWith('.gesb'))) {

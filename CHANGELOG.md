@@ -10,6 +10,23 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+## [0.6.0] — 2026-11-22
+
+This release adds GES Network: a `network` declaration in `.gess` schemas, a portable session core with topics,
+datagrams, bulk transfers, encryption, ends and ticks, socket transports over TCP, WebSocket and UDP, and typed
+client and server ends generated for C# and Swift. It also adds ten physical units, tag alternatives in handler
+filters and WebAssembly (WASI) builds of every Swift library.
+
+### Breaking
+- The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the
+  Network Sockets package uses; CI builds every library with Swift 6.1.
+- A quotient of a mass by a time such as `6kg / 2s` is now `3kg/s` instead of nothing; other products and quotients
+  that now derive one of the new units change the same way (specs/Language.md#quantities).
+- Swift `GesQuantityUnit` has new cases `pascal`, `kilogramPerCubicMeter`, `joulePerKilogram`,
+  `joulePerKilogramKelvin`, `newtonMeter`, `kilogramSquareMeter`, `degreePerSecondSquared`, `kilogramPerSecond`, `ohm`
+  and `coulomb`, so an exhaustive `switch` over it must handle them (or add a `default`); C# `GesQuantityUnit` gains
+  the same members and existing values keep their numbers.
+
 ### Added
 - Every library product of the root Swift package builds for WebAssembly (WASI); Swift CI builds it with the pinned
   6.4.0 Wasm SDK (`scripts/build-swift-wasm.py`). There the Swift `GesBridgeHostRunner` is absent, because WASI has
@@ -109,18 +126,24 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   groups, and `undeliverable` filters work the same way. `|` inside `without` fails with `validate.invalidTagFilter`.
   Handlers without `|` compile unchanged; `.gesb` stores the groups behind binding flag `0x01` in the former reserved
   field (`RequiredTagAlternatives`, Swift `requiredTagAlternatives`; GESA `tagAlternatives=[...]`).
+- Guide: [GES Network](docs/guide/Network.md) walks from a `network` declaration to typed ends, including client and
+  server on two machines over TCP; the website shows its C# and Swift examples as language tabs.
 
 ### Changed
 - `ges schema generate -d <dir>` treats Godot's `.uid` files like Unity's `.meta` files: a run neither warns about
   them nor removes them, even when the manifest names them, and `--check` no longer fails on them in a Godot project.
-- The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the
-  Network Sockets package uses; CI builds every library with Swift 6.1.
-- A quotient of a mass by a time such as `6kg / 2s` is now `3kg/s` instead of nothing; other products and quotients
-  that now derive one of the new units change the same way (specs/Language.md#quantities).
-- Swift `GesQuantityUnit` has new cases `pascal`, `kilogramPerCubicMeter`, `joulePerKilogram`,
-  `joulePerKilogramKelvin`, `newtonMeter`, `kilogramSquareMeter`, `degreePerSecondSquared`, `kilogramPerSecond`, `ohm`
-  and `coulomb`, so an exhaustive `switch` over it must handle them (or add a `default`); C# `GesQuantityUnit` gains
-  the same members and existing values keep their numbers.
+
+### Migrating from 0.5.0
+
+- Upgrade the GES libraries together and recompile scripts with the matching
+  Compiler and Runtime. GESB remains V1; a Program with tag alternatives needs the
+  0.6.0 Runtime, and the tested 0.5.0 upgrade covers selected consumers and frozen
+  fixtures, not arbitrary old Programs.
+- Build Swift consumers with Swift 6.1 or newer and handle the new
+  `GesQuantityUnit` cases in exhaustive `switch` statements.
+- Review scripts that relied on a product or quotient yielding nothing where it now
+  derives one of the new units, such as `kg / s`.
+- Perform a clean rebuild of C# consumers after updating packages.
 
 ## [0.5.0] — 2026-11-16
 

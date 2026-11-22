@@ -461,7 +461,7 @@ test, not an exact-set comparison: additional message tags remain allowed.
 `without` rejects the message when it contains any listed tag. With neither
 clause, all tag sets are accepted.
 
-> **Since: Unreleased** — tag alternatives
+> **Since: 0.6.0** — tag alternatives
 
 An entry of a `matching` list may join tags with `|`; the message must then
 contain at least one of them. `|` binds tighter than `,`, so a filter is a
@@ -1574,7 +1574,7 @@ or intensity at a receiver, the decibel carries a level on a logarithmic
 scale, the watt per kelvin carries thermal conductance and the joule per kelvin
 heat capacity.
 
-> **Since: Unreleased** — pascal through coulomb
+> **Since: 0.6.0** — pascal through coulomb
 
 The pascal carries pressure, the kilogram per cubic meter density, the joule
 per kilogram specific energy, the joule per kilogram kelvin specific heat

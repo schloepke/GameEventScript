@@ -3,7 +3,7 @@
 
 # GES network
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 This document owns GES network sessions. A `network` declaration in a
 [schema source](Schemas.md) names which wire roots a client and a server exchange, and
@@ -240,7 +240,7 @@ after the base, which fit the limits all the more.
 
 ### Ticks
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 A tick is a set of latest topic states that one side publishes as one state of its world.
 The receiver reports a tick only when it holds every state the tick names, and then reports
@@ -403,7 +403,7 @@ encoder's output and accepted and rejected streams.
 Each connection has receive and send limits. The defaults are fixed values of this
 document; the host may change them per connection.
 
-> **Since: Unreleased** — derived limits
+> **Since: 0.6.0** — derived limits
 
 A limit the host leaves unset whose default below names a need takes the larger of its
 default and that need, at most 1073741824, so a bound network never exceeds a default
@@ -821,7 +821,7 @@ does not ask is `network.malformed`. Control frames count toward the frame limit
 
 ### Tick frames
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 Kind `2` is the frame of a [tick](#ticks):
 
@@ -896,7 +896,7 @@ A session reaches one of three levels:
 A connection's level is `none` until it is connected. A server reports `encrypted` for
 every encrypted session, because it cannot tell whether the client pinned its key.
 
-> **Since: Unreleased** — client and server security
+> **Since: 0.6.0** — client and server security
 
 The client's options hold its security; a client without one is a usage error. Its first
 `hello`, its answer to a `retry` with a key and the lowest level it reaches follow it:
@@ -1093,7 +1093,7 @@ address.
 
 ## API
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 The core is the package `GameEventScript.Network` (C#, `netstandard2.1`) and
 `GameEventScriptNetwork` (Swift, without Foundation). It depends only on Runtime.
@@ -1152,7 +1152,7 @@ the server's security and the insecure test seed for [ephemeral keys](#ephemeral
 The default options set no security; a connection or listener needs the security of its
 side, and the other side's is ignored. A connection reports the level it reached.
 
-> **Since: Unreleased** — presets
+> **Since: 0.6.0** — presets
 
 Presets create options with a transport and the security of one side; the other values
 keep their defaults:
@@ -1183,7 +1183,7 @@ A host drives a connection like this:
 
 ### Ends
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 An end owns connections and their transports and drives them from one call, so a host
 does not write the drive loop of [API](#api) itself. A client end holds one connection; a
@@ -1264,7 +1264,7 @@ handler works through the same interface.
 
 ### Waiting
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 The socket packages wait on an end until one of its sockets has input or its next
 deadline passes, whichever comes first, without polling: C# `WaitAsync` and a blocking
@@ -1272,7 +1272,7 @@ deadline passes, whichever comes first, without polling: C# `WaitAsync` and a bl
 
 ### Pairs
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 A pair is a client end and a server end connected in one process without sockets, by the
 message transport with the in-process options unless the host gives others. Its two

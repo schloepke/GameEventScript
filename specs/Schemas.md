@@ -240,7 +240,7 @@ A source is a sequence of declarations in any order; a reference may come before
 
 - **`network :Name as { ... }`** declares the routes between a client and a server: which side sends or publishes
   which wire root in which delivery class. [GES network](Network.md#declaration) owns its rules, errors, binding and
-  hash. A network is no type; only code generation takes it as a root. *Since: Unreleased.*
+  hash. A network is no type; only code generation takes it as a root. *Since: 0.6.0.*
 
 Schemas, messages, message sets, tag sets and networks share one namespace across all sources.
 
@@ -1696,7 +1696,7 @@ console and the highlighter know `.gess`, and the editor bundles have a grammar 
 `layout` prints the [generation layout](#generation-layout) of one or more roots. `--root` may be
 repeated; naming a root twice is a usage error. A `--root` may name a [network](Network.md#declaration): it follows the
 network with the roots of its routes in route order that are not roots yet, and generated code gets the
-[network constants and typed functions](#network-constants) beside their types. *Since: Unreleased.* `--all-roots` makes every declaration of the files
+[network constants and typed functions](#network-constants) beside their types. *Since: 0.6.0.* `--all-roots` makes every declaration of the files
 except networks a root, in declaration order. `--wire <group>` makes the [wire roots](#roles) of the group in the given files the roots,
 in declaration order, and `--model <group>` the model roots, which `layout` then prints as the [model layout](#model-layout)
 and `generate` writes as [model types](#model-types). Exactly one of `--root`, `--all-roots`, `--wire` and `--model` is
@@ -1730,7 +1730,7 @@ member and one record per message. After a failed read the values of the target 
 member's record: C# an abstract class with one sealed subclass per member and its record in `Value`, for pattern
 matching; Swift an enum with one associated value per case, `Sendable` when its records are. C# `ToCase()` (Swift
 `asCase`) returns the selected member as a case, and `Assign(case)` (Swift `assign(_:)`) selects the case's member and
-takes its record. — **Since: Unreleased**
+takes its record. — **Since: 0.6.0**
 A field named like its type, which C# does not allow, gets the suffix `Value` in every language.
 
 A schema with a [recursive List](#recursion) is a class whose List holds records of itself. Its internal methods take the
@@ -1868,7 +1868,7 @@ such data take it as a Record, and native code uses the conversion above.
 
 ### Network constants
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 A [network](Network.md) root generates one type named after the network: a C# `static class` and a Swift `enum` without
 cases. It holds the network hash with the given parameters, C# `const ulong Hash` and Swift `static let hash: UInt64`,
@@ -1931,7 +1931,7 @@ public enum Game {
 
 ### Typed ends
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 Beside its constants, a network root generates one typed end per side, nested in the network type: `Game.Client` and
 `Game.Server`, C# `sealed class` and Swift `final class`. Each wraps an [end](Network.md#ends) of its side, which it takes
@@ -1994,7 +1994,7 @@ try client.poll { event in
 
 ### Schema sets
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 `--schemas <Name>` (option `SchemaSet`) generates one public schema set type named `Name` in the generation's namespace,
 a C# `static class` and a Swift `enum` without cases, under `--access`. It embeds the schema sources under their file
@@ -2346,7 +2346,7 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
 - Networks are ordered as roots. A network has `name`, `hash` (its [network hash](Network.md#network-hash) with the
   given parameters) and `routes` in route order; a route has `index`, `side` (`client` or `server`), `verb` (`sends` or
   `publishes`), `root`, `class` (`reliable`, `latest` or `bulk`) and `rateMicroseconds`, the rounded `at most every`
-  interval or 0 without one. *Since: Unreleased.*
+  interval or 0 without one. *Since: 0.6.0.*
 - An encoding has `kind` and the members of its kind:
   - `boolean`: none.
   - `integer`, `quantized` and `float`: `type`, `unit`, `range`; `integer` and `quantized` add

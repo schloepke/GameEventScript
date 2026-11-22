@@ -24,9 +24,9 @@ versions retain their original package contents; icons are included starting wit
 
 | Distribution | Public products |
 | --- | --- |
-| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.Syntax`, `GameEventScript.Generator` (since 0.5.0) |
+| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.Syntax`, `GameEventScript.Generator` (since 0.5.0), `GameEventScript.Network`, `GameEventScript.Network.Sockets` (since 0.6.0) |
 | NuGet tools (since 0.3.0) | `GameEventScript.Tool`, `GameEventScript.Tool.Aot` (plus RID implementation packages) |
-| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntax`, `GameEventScriptGenerator` (since 0.5.0) |
+| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntax`, `GameEventScriptGenerator` (since 0.5.0), `GameEventScriptNetwork`, `GameEventScriptNetworkSockets` (since 0.6.0) |
 
 The root SwiftPM package exposes only libraries. The CLI uses its separate development package.
 
@@ -35,7 +35,9 @@ quantity unit table and depends on no other GES module. Compiler and each native
 Runtime with Syntax alone, also for documents, schemas and binary data. The Generator
 depends on Runtime and Syntax and writes typed schema code at build time, for build integrations
 such as an editor menu, an MSBuild target or a SwiftPM plugin; a game never ships it, and the code
-it generates needs Runtime only. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
+it generates needs Runtime only. Network depends on Runtime and holds the portable session core; Network Sockets
+adds the TCP, WebSocket and UDP transports (C# on .NET 8, outside the Unity DLL set; Swift over SwiftNIO, empty on
+WASI). Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
 Homebrew and local installers remain available. See [standalone CLI downloads](Tools.md) for
 installation and release verification. Deferred distribution work is tracked in
 [BACKLOG.md](../../../BACKLOG.md).
@@ -277,7 +279,7 @@ the qualified measurement host without extending ordinary Swift PR CI.
 
 Release preparation also requires the [release consumer upgrade checks](../../../conformance/cross-language/ReleaseUpgrade.md).
 The C# Release Candidate workflow runs the separate C#/Swift upgrade workflow
-before preparation; it does not extend normal Swift PR CI. The selected 0.4.0
+before preparation; it does not extend normal Swift PR CI. The selected 0.5.0
 baseline is tested against the checked-out candidate commit without publication.
 
 

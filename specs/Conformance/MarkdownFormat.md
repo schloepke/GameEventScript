@@ -927,11 +927,11 @@ contains any of `error` (`code` with optional `line` and `column`; it stands alo
 `hash`, `bindingHash`, `maxByteCount`, `encoded` (`bytes` or `error` with `code` and optional
 `path`), `decoded` (`value` and `byteCount`, or `error`), `deltaEncoded` (`bytes` or `error`), `deltaDecoded` (`record` and `deltaByteCount`, or `error`), `key`, `dump` (`text` and `valid`), `description`, `document` (`ok: true` or
 `error`) and `network` (`canonical` and `hash` of the bound network). The contract is [GES schemas](../Schemas.md);
-networks are owned by [GES network](../Network.md), *since Unreleased*.
+networks are owned by [GES network](../Network.md), *since 0.6.0*.
 
 ### `networkApi`
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 Requires `network-api` and no GES source. `networkApi.sources` lists schema source texts as in
 `schemaApi`, `clientSources` optionally different texts for the client, and `network` the

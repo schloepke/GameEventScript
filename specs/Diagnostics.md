@@ -49,7 +49,7 @@ Validation uses the following semantic codes:
   `validate.invalidTypeConstructor`, `validate.invalidTag` (the literal `nothing` or a
   constant with that value in a tag clause; **Since: 0.5.0**),
   `validate.invalidTagFilter` (a `|` alternative inside a `without` filter;
-  **Since: Unreleased**).
+  **Since: 0.6.0**).
 
 Compiler lowering/resource analysis uses `compile.unsupportedConstruct`,
 `compile.invalidArity`, `compile.unresolvedSymbol`,

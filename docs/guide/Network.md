@@ -3,7 +3,7 @@
 
 # Connect a client and a server
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 A `network` declaration in a [schema](Schemas.md) names which records a client and a server
 exchange and how each one is delivered. A session carries those records between the two sides over

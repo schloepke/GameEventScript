@@ -210,7 +210,7 @@ room for likely game-domain units:
 
 > **Since: 0.5.0** — UnitIds 4 to 18
 
-> **Since: Unreleased** — UnitIds 21 to 30
+> **Since: 0.6.0** — UnitIds 21 to 30
 
 | UnitId | Unit | Portable name | Intended use |
 | --- | --- | --- | --- |

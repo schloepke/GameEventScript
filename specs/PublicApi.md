@@ -302,7 +302,7 @@ The portable segment model contains these data records and operations:
   and per-handler resource requirements. Each entry also exposes its handler
   tag alternatives as ordered groups of tag string indices (C#
   `RequiredTagAlternatives`, Swift `requiredTagAlternatives`; empty without
-  alternatives; **Since: Unreleased**).
+  alternatives; **Since: 0.6.0**).
 - `CodeSegment`: ordered 16-byte logical instructions; `Count`/`Length` and
   indexed access do not expose mutable program storage.
 
@@ -342,7 +342,7 @@ predicate operations never use locale; formatting returns canonical GES text.
 
 > **Since: 0.5.0** — physical units
 
-> **Since: Unreleased** — `UnitPascal` through `UnitCoulomb`
+> **Since: 0.6.0** — `UnitPascal` through `UnitCoulomb`
 
 `QuantityUnit` has one member per defined UnitId: C# `UnitNone`, `UnitDegree`,
 `UnitMeter`, `UnitSecond`, `UnitMeterPerSecond`, `UnitMeterPerSecondSquared`,
@@ -816,7 +816,7 @@ nothing; the CLI owns the directory. `Split` stays `None` for `Generate` and `Ge
 
 ## Network
 
-> **Since: Unreleased**
+> **Since: 0.6.0**
 
 Runtime binds the `network` declarations of a schema set ([GES network](Network.md#declaration)). The Network
 package (C# `GameEventScript.Network`, netstandard2.1; Swift product `GameEventScriptNetwork`) holds the session
@@ -1679,7 +1679,7 @@ microsecond source. Host builders accept `WithClock` / `withClock`; absent an
 injected source, each host uses an independent origin on the system monotonic
 clock. A shared injected clock is read serially by its embedding.
 
-> **Since: Unreleased** — public clocks
+> **Since: 0.6.0** — public clocks
 
 C# `GesSystemClock` and Swift `GesSystemClock` measure the system monotonic clock from
 their creation without allocating; one instance can serve hosts and network ends that

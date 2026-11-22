@@ -15,7 +15,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 This release adds GES Network: a `network` declaration in `.gess` schemas, a portable session core with topics,
 datagrams, bulk transfers, encryption, ends and ticks, socket transports over TCP, WebSocket and UDP, and typed
 client and server ends generated for C# and Swift. It also adds ten physical units, tag alternatives in handler
-filters and WebAssembly (WASI) builds of every Swift library.
+filters and WebAssembly (WASI) and Android builds of every Swift library.
 
 ### Breaking
 - The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the
@@ -32,6 +32,9 @@ filters and WebAssembly (WASI) builds of every Swift library.
   6.4.0 Wasm SDK (`scripts/build-swift-wasm.py`). There the Swift `GesBridgeHostRunner` is absent, because WASI has
   no Dispatch, and `GameEventScriptNetworkSockets` is empty, because SwiftNIO SSL does not build for WASI. The Card
   Lab builds the repository packages without patching their sources.
+- Every library product of the root Swift package, Network Sockets included, builds for Android with the Swift SDK for
+  Android and an NDK r27 or newer (0.5.0 lacked the Android C library imports); Swift CI builds aarch64, x86_64 and
+  armv7 at API level 23 with the pinned 6.4.0 SDK and NDK r30 (`scripts/build-swift-android.py`).
 - GES network (specs/Network.md): a `network` declaration in `.gess` sources names the routes between a client and a
   server with their delivery class (`reliable`, `latest`, `bulk`) and an optional `at most every` rate; Runtime binds
   it and computes its hash (`GesSchemaSet.Network`, Swift `network(_:)`).

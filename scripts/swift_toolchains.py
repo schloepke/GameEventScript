@@ -5,7 +5,7 @@
 
 Swift SDKs installed with `swift sdk install` live in SwiftPM's per-user directory; Swift.org toolchains come from
 swiftly or the Swift.org installer. An SDK only works with the toolchain of exactly its version, so an SDK counts
-only together with that toolchain. Xcode's compiler supports neither the Wasm nor the Static Linux SDK.
+only together with that toolchain. Xcode's compiler supports none of the Wasm, Android and Static Linux SDKs.
 """
 
 from dataclasses import dataclass
@@ -14,7 +14,7 @@ from pathlib import Path
 import re
 import sys
 
-_BUNDLE = re.compile(r"^swift-(\d+\.\d+(?:\.\d+)?)-RELEASE_(wasm|static-linux-[0-9.]+)\.artifactbundle$")
+_BUNDLE = re.compile(r"^swift-(\d+\.\d+(?:\.\d+)?)-RELEASE_(wasm|android|static-linux-[0-9.]+)\.artifactbundle$")
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,10 @@ class SwiftSdk:
     @property
     def wasm_id(self):
         return f"swift-{self.version}-RELEASE_wasm"
+
+    @property
+    def android_id(self):
+        return f"swift-{self.version}-RELEASE_android"
 
 
 def _version_key(version):
@@ -59,7 +63,7 @@ def toolchain_swift(version):
 
 
 def installed_sdk(kind):
-    """The newest installed SDK of `kind` ("wasm" or "static-linux") whose toolchain is installed, or None."""
+    """The newest installed SDK of `kind` ("wasm", "android" or "static-linux") whose toolchain is installed, or None."""
     found = []
     for directory in sdk_directories():
         for bundle in directory.iterdir():

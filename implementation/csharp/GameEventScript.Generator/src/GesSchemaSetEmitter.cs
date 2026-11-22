@@ -126,8 +126,7 @@ internal sealed class GesSchemaSetReference(string? declared, string qualified)
         code.Line("/// <param name=\"root\">The schema, message or message set.</param>");
         code.Line("/// <param name=\"bindingHash\">The binding hash of the generated code.</param>");
         code.Line("/// <returns>The bound schema.</returns>");
-        code.Line("/// <exception cref=\"global::System.ArgumentException\">The root is not declared.</exception>");
-        code.Line("/// <exception cref=\"GesSchemaException\">The sources no longer parse or the root no longer binds.</exception>");
+        code.Line("/// <exception cref=\"GesSchemaException\">The sources no longer parse, or the root is not declared or no longer binds.</exception>");
         code.Line("/// <exception cref=\"global::System.InvalidOperationException\">The binding hash differs from <paramref name=\"bindingHash\"/>.</exception>");
         code.Line("public static GesBoundSchema Bind(string root, ulong bindingHash)");
         code.Open("{");
@@ -140,8 +139,7 @@ internal sealed class GesSchemaSetReference(string? declared, string qualified)
         code.Line("/// <param name=\"name\">The network.</param>");
         code.Line("/// <param name=\"hash\">The network hash of the generated code.</param>");
         code.Line("/// <returns>The bound network.</returns>");
-        code.Line("/// <exception cref=\"global::System.ArgumentException\">The network is not declared.</exception>");
-        code.Line("/// <exception cref=\"GesSchemaException\">The sources no longer parse or the network no longer binds.</exception>");
+        code.Line("/// <exception cref=\"GesSchemaException\">The sources no longer parse, or the network is not declared or no longer binds.</exception>");
         code.Line("/// <exception cref=\"global::System.InvalidOperationException\">The network hash differs from <paramref name=\"hash\"/>.</exception>");
         code.Line("public static GesBoundNetwork BindNetwork(string name, ulong hash)");
         code.Open("{");

@@ -96,7 +96,7 @@ public final class GesNetworkSimulator {
     }
 
     /// Runs the network up to `now`: both connections transmit, and each arrival and deadline is processed at its
-    /// time in order, the client's packets before the server's at equal times.
+    /// time in order; packets due at the same time arrive in the order sent.
     /// - Parameter now: The new time in microseconds, not earlier than `now`.
     /// - Throws: `GesApiError.invalidArgument` when the time goes back.
     public func advance(_ now: Int64) throws {

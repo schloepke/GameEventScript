@@ -102,7 +102,7 @@ public sealed class GesNetworkSimulator
 
     /// <summary>
     /// Runs the network up to <paramref name="now"/>: both connections transmit, and each arrival and deadline is
-    /// processed at its time in order, the client's packets before the server's at equal times.
+    /// processed at its time in order; packets due at the same time arrive in the order sent.
     /// </summary>
     /// <param name="now">The new time in microseconds, not earlier than <see cref="Now"/>.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="now"/> is earlier than <see cref="Now"/>.</exception>

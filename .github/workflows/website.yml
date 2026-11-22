@@ -82,7 +82,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Prepare pinned Wasm toolchain
-        run: python3 examples/card-game/scripts/setup-wasm.py
+        run: python3 examples/card-game/scripts/setup-wasm.py --download
       - name: Test native card mechanics
         run: python3 examples/card-game/scripts/build.py test
       - name: Build and test browser game

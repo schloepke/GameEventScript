@@ -89,7 +89,8 @@ run on every RID.
 The [Website workflow](../../../.github/workflows/website.yml), job `card-game`,
 builds and tests the Card Lab with pinned Swift **6.4.0** and its matching WASM
 SDK, plus Node **24**. Pins live in
-[setup-wasm.py](../../../examples/card-game/scripts/setup-wasm.py).
+[setup-wasm.py](../../../examples/card-game/scripts/setup-wasm.py); CI passes
+`--download`, while local builds may use an installed toolchain with its matching SDK.
 This verifies the Card Lab's embedding and WASM execution, not every root
 SwiftPM product or every browser. Safari/Chrome UI checks performed locally are
 not an automated browser support matrix. There is no distributed WASM CLI.

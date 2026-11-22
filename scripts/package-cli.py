@@ -17,6 +17,9 @@ import zipfile
 
 sys.dont_write_bytecode = True
 from cli_distribution import ROOT, TARGETS, archive_name, identity, sha256, version
+from swift_toolchains import installed_sdk
+
+PINNED_SWIFT = "6.4.0"
 
 
 def run(arguments, **kwargs):
@@ -60,22 +63,34 @@ def swift(work, output, release, target, sdks):
     info.write_text(info.read_text().replace('"development"', json.dumps(release)))
     options = ["--package-path", package, "--scratch-path", work / "build",
                "--disable-build-manifest-caching", "--configuration", "release", "--product", "ges"]
+    compiler = "swift"
     if target.startswith("linux-"):
-        if sdks is None:
-            raise ValueError("Linux Swift downloads require --swift-sdks-path with the matching Static Linux SDK.")
+        # An explicit SDK directory holds the pinned release SDK, built with the swift on PATH. Without one, a local
+        # build uses an installed Swift.org toolchain with its matching Static Linux SDK; Xcode's compiler cannot.
+        if sdks is not None:
+            bundle, expected = sdks, PINNED_SWIFT
+        else:
+            installed = installed_sdk("static-linux")
+            if installed is None:
+                raise ValueError("Linux Swift downloads require --swift-sdks-path with the pinned Static Linux SDK, "
+                                 "or an installed Swift.org toolchain with its matching Static Linux SDK.")
+            sdks, bundle, expected, compiler = installed.directory, installed.bundle, installed.version, installed.swift
+            if expected != PINNED_SWIFT:
+                print(f"Local archive with Swift {expected}; release archives use the pinned Swift {PINNED_SWIFT} "
+                      "Static Linux SDK of the CLI Distribution workflow.", flush=True)
         architecture = "aarch64" if target.endswith("arm64") else "x86_64"
         options += ["--swift-sdks-path", sdks, "--swift-sdk", f"{architecture}-swift-linux-musl"]
-        sboms = list(sdks.rglob("sbom.spdx.json"))
-        if len(sboms) != 1 or not any(p.get("name") == "swift" and p.get("versionInfo") == "6.4.0-RELEASE"
+        sboms = list(bundle.rglob("sbom.spdx.json"))
+        if len(sboms) != 1 or not any(p.get("name") == "swift" and p.get("versionInfo") == f"{expected}-RELEASE"
                                       for p in json.loads(sboms[0].read_text())["packages"]):
-            raise RuntimeError("Use only the pinned Swift 6.4.0 Static Linux SDK; update dependency notices with SDK upgrades.")
+            raise RuntimeError(f"Use only the Swift {expected} Static Linux SDK; update dependency notices with SDK upgrades.")
         license_source = ROOT / "tools/distribution/licenses"
         sources = json.loads((license_source / "sources.json").read_text())
         if any(not (license_source / name).is_file() for name in sources):
             raise RuntimeError("Missing Static Linux SDK dependency notices.")
         shutil.copytree(license_source, output / "licenses/components")
         # Preserve all license/notice files and SBOMs shipped with the SDK.
-        notices = [p for p in sdks.rglob("*") if p.is_file() and
+        notices = [p for p in bundle.rglob("*") if p.is_file() and
                    (any(word in p.name.lower() for word in ("license", "copyright", "notice")) or p.name.endswith(".spdx.json"))]
         if not notices or not any(p.name.endswith(".spdx.json") for p in notices):
             raise RuntimeError("The Static Linux SDK must provide license files and its SPDX bill of materials.")
@@ -88,8 +103,8 @@ def swift(work, output, release, target, sdks):
         # A stated release baseline avoids accidental dependencies on the build
         # machine's newer OS. Local source builds retain their existing minimum.
         options += ["--triple", f"{architecture}-apple-macosx15.0"]
-    run(["swift", "build", *options])
-    binary_path = subprocess.check_output(["swift", "build", *map(str, options), "--show-bin-path"], cwd=ROOT, text=True).strip()
+    run([compiler, "build", *options])
+    binary_path = subprocess.check_output([compiler, "build", *map(str, options), "--show-bin-path"], cwd=ROOT, text=True).strip()
     (output / "bin").mkdir()
     shutil.copy2(Path(binary_path) / "ges", output / "bin/ges")
 

@@ -82,13 +82,18 @@ python3 examples/card-game/scripts/build.py wasm
 python3 examples/card-game/scripts/serve.py
 ```
 
-Setup downloads the official Swift 6.4.0 Wasm SDK and matching Swift.org macOS
-toolchain, checks pinned SHA-256 hashes, checks the toolchain installer signature
-before first extraction, and expands it locally without running its installer.
-It installs the pinned `@bjorn3/browser_wasi_shim` 0.4.2 package into artifacts
-with npm scripts disabled. Python 3.11+, npm, curl, tar, and pkgutil are needed.
-The toolchain download is about 1.5 GB; subsequent runs reuse it. System Swift,
-Xcode selection, and global SDK installations are not changed.
+Setup installs the pinned `@bjorn3/browser_wasi_shim` 0.4.2 package into artifacts
+with npm scripts disabled. If a Swift.org toolchain with its matching Wasm SDK is
+installed, for example with `swiftly install` and `swift sdk install`, setup and
+build use it and download nothing; the SDK must have exactly the toolchain's version.
+Otherwise, or with `setup-wasm.py --download`, setup downloads the official Swift
+6.4.0 Wasm SDK and matching Swift.org macOS toolchain, checks pinned SHA-256 hashes,
+checks the toolchain installer signature before first extraction, and expands it
+locally without running its installer; the build then prefers these pinned tools.
+Python 3.11+ and npm are needed, and curl, tar and pkgutil for the download. The
+toolchain download is about 1.5 GB; subsequent runs reuse it. System Swift, Xcode
+selection, and global SDK installations are not changed. Website CI always uses
+the pinned tools.
 
 Xcode's bundled Swift lacks some Wasm linker tools. See the official [Swift Wasm setup](https://www.swift.org/documentation/articles/wasm-getting-started.html).
 The browser uses a small [WASI reactor interface](https://book.swiftwasm.org/examples/exporting-function.html),

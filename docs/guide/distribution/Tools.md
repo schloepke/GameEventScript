@@ -163,8 +163,12 @@ python3 scripts/verify-cli-archive.py swift 0.3.0 osx-arm64 --directory artifact
 ```
 
 For Linux Swift builds, install the pinned Static Linux SDK from the workflow
-and pass `--swift-sdks-path <directory>` to the packager. The open-source Swift
-compiler and Static SDK must match; Xcode's compiler does not support that SDK.
+and pass `--swift-sdks-path <directory>` to the packager, which then builds with
+the `swift` on `PATH`. Without that option, the packager uses an installed Swift.org
+toolchain with its matching Static Linux SDK (`swiftly install` and `swift sdk install`)
+for a local archive; release archives keep the pinned SDK of the workflow. The
+open-source Swift compiler and Static SDK must match; Xcode's compiler does not
+support that SDK.
 All generated sources, temporary workspaces, archives and receipts stay under
 `artifacts/cli`. Each archive contains the selected release version, Git revision,
 installation instructions, project license and applicable dependency notices.

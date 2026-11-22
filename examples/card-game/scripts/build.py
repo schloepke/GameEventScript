@@ -7,31 +7,48 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 from site_assets import identity, record, version_browser_assets
 
 EXAMPLE = Path(__file__).resolve().parents[1]
 ROOT = EXAMPLE.parents[1]
 ARTIFACTS = ROOT / 'artifacts/card-game'
+PINNED_SDK = 'swift-6.4.0-RELEASE_wasm'
+sys.path.insert(0, str(ROOT / 'scripts'))
+from swift_toolchains import installed_sdk  # noqa: E402
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=['test', 'wasm'])
     parser.add_argument('--swift', help='Path to a Swift.org swift executable for Wasm builds')
-    parser.add_argument('--sdk', default='swift-6.4.0-RELEASE_wasm')
+    parser.add_argument('--sdk', help='Swift SDK ID; defaults to the pinned or the installed Wasm SDK')
     args = parser.parse_args()
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, CLANG_MODULE_CACHE_PATH=str(ARTIFACTS / 'clang-cache'))
     package = EXAMPLE / 'swift'
     command = ['swift', 'test' if args.mode == 'test' else 'build']
     if args.mode == 'wasm':
-        if args.swift:
-            command[0] = args.swift
+        # The pinned tools of setup-wasm.py --download come first, then an installed Swift.org toolchain with its
+        # matching Wasm SDK. An explicit --swift uses the pinned SDK directory if present, else the installed SDKs.
+        pinned = list((ARTIFACTS / 'toolchain').glob('**/usr/bin/swift'))
+        system = installed_sdk('wasm')
+        sdks_path, sdk = None, args.sdk
+        if args.swift or len(pinned) == 1:
+            command[0] = args.swift or str(pinned[0])
+            if (ARTIFACTS / 'sdk').is_dir():
+                sdks_path, sdk = ARTIFACTS / 'sdk', sdk or PINNED_SDK
+            elif system:
+                sdk = sdk or system.wasm_id
+        elif system:
+            command[0] = str(system.swift)
+            sdk = sdk or system.wasm_id
         else:
-            installed = list((ARTIFACTS / 'toolchain').glob('**/usr/bin/swift'))
-            if len(installed) != 1:
-                raise RuntimeError('Run scripts/setup-wasm.py or pass --swift with a Swift.org 6.4 toolchain')
-            command[0] = str(installed[0])
+            raise RuntimeError('Install a Swift.org toolchain with its matching Wasm SDK, run scripts/setup-wasm.py --download, '
+                               'or pass --swift with a Swift.org toolchain')
+        if not sdk:
+            raise RuntimeError('No Wasm SDK found; pass --sdk')
+        print(f'Wasm toolchain: {command[0]}, SDK {sdk}', flush=True)
         # Temporary compatibility experiment: never alter the main branch's Runtime.
         stage = ARTIFACTS / 'wasm-source'
         for source in [package, ROOT / 'implementation/swift/GameEventScriptRuntime', ROOT / 'implementation/swift/GameEventScriptCompiler', ROOT / 'implementation/swift/GameEventScriptSyntax']:
@@ -71,7 +88,9 @@ def main():
         clock.write_text(clock_text.replace(body, '        let value = card_game_monotonic_microseconds()\n        precondition(value >= 0, "WASI monotonic clock unavailable")\n        return value'))
         package = stage / package.relative_to(ROOT)
         # Nested declarative setup maps need more compiler stack than WASI's 64 KiB default.
-        command += ['--swift-sdks-path', str(ARTIFACTS / 'sdk'), '--swift-sdk', args.sdk,
+        if sdks_path:
+            command += ['--swift-sdks-path', str(sdks_path)]
+        command += ['--swift-sdk', sdk,
                     '--product', 'card-game-wasm', '-c', 'release',
                     '-Xswiftc', '-Xclang-linker', '-Xswiftc', '-mexec-model=reactor',
                     '-Xlinker', '-z', '-Xlinker', 'stack-size=1048576']

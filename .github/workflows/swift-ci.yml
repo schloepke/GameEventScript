@@ -91,12 +91,12 @@ jobs:
       - name: Verify the public SwiftPM distribution and shared root tests
         run: python3 scripts/test-swift-package.py
 
-  native:
+  native-packages:
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: macos-15
-    # A run without a restored build cache takes about 45 minutes, most of it compiling and the two-port comparisons.
-    timeout-minutes: 60
+    # Debug package and CLI tests, the cross-port checks of both CLIs and the API gate; about 30 minutes.
+    timeout-minutes: 50
     steps:
       - if: needs.changes.outputs.swift == 'true'
         name: Check out repository
@@ -127,13 +127,15 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
-            artifacts/swift/swiftbridge
-            artifacts/swift/conformance
-            artifacts/swift/tool
             artifacts/swift/syntax
-          key: swift-build-v3-default-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}-${{ github.sha }}
+            artifacts/swift/swiftbridge
+            artifacts/swift/generator
+            artifacts/swift/network
+            artifacts/swift/networksockets
+            artifacts/swift/tool
+          key: swift-build-v4-packages-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}-${{ github.sha }}
           restore-keys: |
-            swift-build-v3-default-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}-
+            swift-build-v4-packages-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}-
 
       - if: needs.changes.outputs.swift == 'true'
         name: Verify Swift declaration spacing controls
@@ -168,13 +170,8 @@ jobs:
         run: python3 scripts/test-swift-incremental.py
 
       - if: needs.changes.outputs.swift == 'true'
-        name: Build packages and verify shared conformance
-        id: conformance
-        run: ./scripts/test-swift.sh
-
-      - if: needs.changes.outputs.swift == 'true'
-        name: Verify the Swift guide examples
-        run: python3 scripts/test-guide-examples.py --language swift
+        name: Build packages and run the cross-port checks of both CLIs
+        run: ./scripts/test-swift.sh packages
 
       - if: needs.changes.outputs.swift == 'true'
         name: Verify Swift documentation gate controls
@@ -183,6 +180,53 @@ jobs:
       - if: needs.changes.outputs.swift == 'true'
         name: Verify Swift API surface and documentation
         run: python3 scripts/verify-swift-api.py --reuse-local-builds
+
+  native-conformance:
+    needs: changes
+    if: needs.changes.outputs.swift == 'true'
+    runs-on: macos-15
+    # The Release Conformance adapter, the shared corpus and the adapter-based cross-port checks; about 25 minutes.
+    timeout-minutes: 50
+    steps:
+      - if: needs.changes.outputs.swift == 'true'
+        name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - if: needs.changes.outputs.swift == 'true'
+        name: Install reference compiler SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.404
+
+      - if: needs.changes.outputs.swift == 'true'
+        name: Record Swift toolchain
+        id: toolchain
+        run: |
+          swift --version
+          identity=$( { swift --version; xcodebuild -version; xcrun --show-sdk-path; } | shasum -a 256 | cut -d ' ' -f 1)
+          echo "identity=$identity" >> "$GITHUB_OUTPUT"
+
+      # Cache stable local package builds, never test reports or the isolated
+      # tagged-consumer scratch directories. Every check still executes.
+      - if: needs.changes.outputs.swift == 'true'
+        name: Restore incremental Swift builds
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            artifacts/swift/conformance
+            artifacts/swift/tool
+          key: swift-build-v4-conformance-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}-${{ github.sha }}
+          restore-keys: |
+            swift-build-v4-conformance-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}-
+
+      - if: needs.changes.outputs.swift == 'true'
+        name: Build the Conformance adapter and verify shared conformance
+        id: conformance
+        run: ./scripts/test-swift.sh conformance
+
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify the Swift guide examples
+        run: python3 scripts/test-guide-examples.py --language swift
 
       - name: Upload conformance and runtime interoperability results
         if: ${{ always() && needs.changes.outputs.swift == 'true' && (steps.conformance.outcome == 'success' || hashFiles('artifacts/swift/conformance-results/**', 'artifacts/swift/number-text-roundtrip/**', 'artifacts/swift/message-json-roundtrip/**', 'artifacts/swift/document-roundtrip/**', 'artifacts/swift/binary-reader-fuzz/**', 'artifacts/swift/binary-roundtrip-properties/**') != '') }}
@@ -200,7 +244,7 @@ jobs:
           retention-days: 14
 
   verify:
-    needs: [changes, native, distribution, linux-minimum, linux]
+    needs: [changes, native-packages, native-conformance, distribution, linux-minimum, linux]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -212,7 +256,8 @@ jobs:
         env:
           SCOPE_RESULT: ${{ needs.changes.result }}
           RUN_SWIFT: ${{ needs.changes.outputs.swift }}
-          NATIVE_RESULT: ${{ needs.native.result }}
+          PACKAGES_RESULT: ${{ needs.native-packages.result }}
+          CONFORMANCE_RESULT: ${{ needs.native-conformance.result }}
           DISTRIBUTION_RESULT: ${{ needs.distribution.result }}
           MINIMUM_RESULT: ${{ needs.linux-minimum.result }}
           LINUX_RESULT: ${{ needs.linux.result }}

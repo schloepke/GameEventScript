@@ -619,7 +619,10 @@ native Swift compilation, checks the performance scenarios for correctness witho
 measuring them, and runs the native Conformance, SwiftBridge and CLI tests. The
 Syntax, SwiftBridge, Generator and CLI packages build and test in Debug, which
 compiles several times faster; the Conformance package and its adapter stay in
-Release, and the comparison scripts use the Debug `ges`. Runtime
+Release, and the comparison scripts use the Debug `ges`. Its `packages` part (Debug
+packages, CLI and the cross-port checks of both CLIs) and `conformance` part (Release
+adapter, corpus and adapter-based cross-port checks) run as the parallel Swift CI jobs
+`native-packages` and `native-conformance`; without an argument both run. Runtime
 verification with C#-compiled Programs is a separate report; calibrated performance
 measurement is opt-in.
 

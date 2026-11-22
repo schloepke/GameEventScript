@@ -8,7 +8,7 @@ import sys
 
 
 # The jobs whose results the aggregate check requires, by the environment variable that carries each result.
-JOBS = ("NATIVE_RESULT", "DISTRIBUTION_RESULT", "MINIMUM_RESULT", "LINUX_RESULT")
+JOBS = ("PACKAGES_RESULT", "CONFORMANCE_RESULT", "DISTRIBUTION_RESULT", "MINIMUM_RESULT", "LINUX_RESULT")
 
 
 def accepted(scope_result, run_swift, results):

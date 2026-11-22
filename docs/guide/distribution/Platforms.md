@@ -18,7 +18,7 @@ successful library build is not full Conformance on that platform.
 | Product | Declared package contract | CI host and toolchain | Verification |
 | --- | --- | --- | --- |
 | C# Runtime, Compiler, CSharpBridge, Syntax | .NET Standard 2.1 | Linux x64, `ubuntu-latest`; SDK **10.0.404**, .NET **8.0.x** runtime | Full C# Conformance and native tests, allocation gate, .NET 8 package consumers, reproducibility: [C# CI](../../../.github/workflows/csharp-ci.yml), job `verify` |
-| Swift Runtime, Compiler, SwiftBridge, Syntax | Swift tools **6.1**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), job `native`; fresh tagged package consumers and root tests: job `distribution` |
+| Swift Runtime, Compiler, SwiftBridge, Syntax | Swift tools **6.1**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), parallel jobs `native-packages` and `native-conformance`; fresh tagged package consumers and root tests: job `distribution` |
 | Swift Runtime, Compiler, Generator, Syntax, SwiftBridge, CLI on Linux | Swift tools **6.1** | Linux x64, digest-pinned `swift:6.4.0-jammy` container, the image of the static Linux CLI | Native Swift Conformance of the supported corpus, Syntax, Generator and SwiftBridge tests, CLI process and terminal checks, WASI and Android builds of the root package: Swift CI job `linux` |
 | Swift libraries at the minimum toolchain | Swift tools **6.1** | Linux x64, digest-pinned `swift:6.1` container | Syntax tests and builds of Runtime, Compiler, Generator, Network and Network Sockets: Swift CI job `linux-minimum` |
 
@@ -126,7 +126,7 @@ toolchain versions and any limitations in the release validation evidence:
 
 1. Require successful **C# CI / verify** and a full **Swift CI / verify** run on main for the release commit
    (the publication jobs check this themselves through `scripts/require-verified-release.py`),
-   including `native`, `distribution`, `linux` and `linux-minimum`. A documentation-only
+   including `native-packages`, `native-conformance`, `distribution`, `linux` and `linux-minimum`. A documentation-only
    skipped native run does not qualify a release; dispatch Swift CI manually to
    force the full checks.
 2. Run **C# Release Candidate** with publication disabled. Its package and

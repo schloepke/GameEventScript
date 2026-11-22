@@ -96,16 +96,16 @@ class SwiftDocumentationTests(unittest.TestCase):
                     (export / (package + "@Old.symbols.json")).write_text('{"stale": true}')
                     self.assertEqual([{"fresh": True}], API.dump_graphs("swift", package, True, builds))
                 build_commands = [c for c in commands if "build" in c]
-                # One build each for Syntax, SwiftBridge, Generator, Network and NetworkSockets, and one conformance
-                # build for Runtime and Compiler.
+                # One build each for Syntax, SwiftBridge, Generator, Network and NetworkSockets, and one CLI build
+                # for Runtime and Compiler.
                 self.assertEqual(6, len(build_commands))
                 self.assertTrue(all("--build-tests" not in c for c in build_commands))
                 self.assertTrue(all("--disable-build-manifest-caching" in c for c in build_commands))
-                # test-swift.sh builds the unit-test packages in Debug and only the Conformance package in Release.
+                # The packages part of test-swift.sh builds all of them in Debug, so CI extracts in that job.
                 configurations = {c[c.index("--package-path") + 1].rsplit("/", 1)[-1]: c[c.index("--configuration") + 1] for c in build_commands}
                 self.assertEqual({"GameEventScriptSyntax": "debug", "GameEventScriptSwiftBridge": "debug", "GameEventScriptGenerator": "debug",
                                   "GameEventScriptNetwork": "debug", "GameEventScriptNetworkSockets": "debug",
-                                  "GameEventScriptConformance": "release"}, configurations)
+                                  "GameEventScriptTool": "debug"}, configurations)
                 self.assertEqual(len(API.PACKAGES), sum("-output-dir" in c for c in commands))
                 self.assertNotIn("GameEventScriptConformance", API.PACKAGES)
 

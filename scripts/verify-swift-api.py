@@ -81,14 +81,14 @@ def build_options(package, reuse_local_builds):
     """Refresh the products test-swift.sh built, in their configuration, or retain the independent default build."""
     configuration = "debug"
     if reuse_local_builds:
-        # test-swift.sh tests these packages in Debug and builds the Conformance package in Release.
+        # test-swift.sh tests these packages in Debug; its Debug CLI build holds Runtime and Compiler.
         owner, directory, configuration = {
             "GameEventScriptSwiftBridge": ("GameEventScriptSwiftBridge", "swiftbridge", "debug"),
             "GameEventScriptSyntax": ("GameEventScriptSyntax", "syntax", "debug"),
             "GameEventScriptGenerator": ("GameEventScriptGenerator", "generator", "debug"),
             "GameEventScriptNetwork": ("GameEventScriptNetwork", "network", "debug"),
             "GameEventScriptNetworkSockets": ("GameEventScriptNetworkSockets", "networksockets", "debug"),
-        }.get(package, ("GameEventScriptConformance", "conformance", "release"))
+        }.get(package, ("GameEventScriptTool", "tool", "debug"))
         scratch = ROOT / "artifacts/swift" / directory
     else:
         owner, scratch = package, ARTIFACTS / package

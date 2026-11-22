@@ -46,7 +46,6 @@ export default defineConfig({
         { label: 'Embed in C#', slug: 'docs/learn/csharp' },
         { label: 'Embed in Swift', slug: 'docs/learn/swift' },
         { label: 'Schemas', slug: 'docs/learn/schemas' },
-        { label: 'Network', slug: 'docs/learn/network' },
       ] },
       { label: 'Tools', items: [
         'docs/tools/downloads', 'docs/tools/csharp-cli', 'docs/tools/swift-cli',
@@ -69,7 +68,11 @@ export default defineConfig({
         'docs/reference/syntax-highlighting',
       ] },
       { label: 'Data formats', collapsed: true, items: [
-        'docs/reference/documents', 'docs/reference/schemas', 'docs/reference/network',
+        'docs/reference/documents', 'docs/reference/schemas',
+      ] },
+      { label: 'Network', collapsed: true, items: [
+        { label: 'Connect a client and a server', slug: 'docs/learn/network' },
+        'docs/reference/network',
       ] },
       { label: 'Program formats', collapsed: true, items: [
         'docs/reference/program-model', 'docs/reference/bytecode',

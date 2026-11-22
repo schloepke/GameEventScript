@@ -6,9 +6,11 @@
 > **Since: 0.5.0**
 
 A schema (`.gess`) describes what your data looks like: which fields exist, in which range and
-how precise they are. From that one description you get two things:
+how precise they are. From that one description you get three things:
 
 - a very compact binary encoding, for example to send game state from a server to its clients;
+- typed [models](#14-mark-roots-and-generate-models) for C# and Swift, the data your program keeps,
+  for example a client's view of the world;
 - a check of [GES documents](../../specs/Documents.md) (`.gesd`), for example your configuration files.
 
 This guide builds a schema step by step. [Schemas](../../specs/Schemas.md) defines the exact rules.
@@ -430,6 +432,9 @@ There is no compatibility between different hashes: if they differ, the two side
 The hash detects mistakes and is no security measure. Data from a peer stays untrusted, and the
 decoder rejects anything outside the schema.
 
+A [GES network](Network.md) session frames the records and compares the network's hash in its
+handshake for you.
+
 ## 10. Check documents with the same schema
 
 A schema can also check a `.gesd` file, which names it in its header. This one allows either a name
@@ -682,5 +687,6 @@ See [Packed schemas](../../specs/Schemas.md#packed-schemas) and
 
 ## What schemas leave to you
 
-Transport, channels, deciding which objects a client receives and splitting large data all belong
-to your game. [Extension points](../../specs/Schemas.md#extension-points) names where they attach.
+Deciding which objects a client receives belongs to your game. Transport, channels and splitting
+large data are the job of [GES network](Network.md), which carries schema records between a client
+and a server. [Extension points](../../specs/Schemas.md#extension-points) names where each layer attaches.

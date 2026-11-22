@@ -254,5 +254,6 @@ runner takes exclusive ownership of the host; use its API instead of accessing
 the raw host concurrently.
 
 Next: [learn the language](Language.md), explore the
-[Swift implementation](../../implementation/swift/README.md), and consult
-[host runtime](../../specs/HostRuntime.md) for ordering and failure guarantees.
+[Swift implementation](../../implementation/swift/README.md), consult
+[host runtime](../../specs/HostRuntime.md) for ordering and failure guarantees, or
+[connect a client and a server](Network.md) with schema records.

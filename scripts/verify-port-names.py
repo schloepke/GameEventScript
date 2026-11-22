@@ -168,10 +168,21 @@ def csharp_types(text):
 
 
 def swift_types(text):
+    """Top-level Swift type names; swift-format indents each enclosing `#if` by four spaces."""
     names = []
+    depth = 0
     for line in strip_comments(text).splitlines():
-        if line[:1].isspace():
+        directive = line.strip()
+        if directive.startswith("#if"):
+            depth += 1
             continue
+        if directive.startswith("#endif"):
+            depth = max(depth - 1, 0)
+            continue
+        indent = " " * (4 * depth)
+        if not line.startswith(indent) or line[len(indent):len(indent) + 1].isspace():
+            continue
+        line = line[len(indent):]
         match = SWIFT_TYPE.match(line)
         if match and not re.search(r"\b(private|fileprivate)\b", match["mods"]):
             names.append(match["name"])

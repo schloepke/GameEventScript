@@ -24,6 +24,9 @@ internal static class GesNetworkSocketTimeouts
     // OperationCanceledException.
     internal static async Task<bool> WithinAsync(Func<CancellationToken, Task> operation, TimeSpan limit, CancellationToken cancellationToken)
     {
+        // A limit that has run out ends the operation before it starts, even one that would complete at once.
+        cancellationToken.ThrowIfCancellationRequested();
+        if (limit <= TimeSpan.Zero) return false;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(limit);
         try

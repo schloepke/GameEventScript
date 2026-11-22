@@ -7,6 +7,10 @@
     import Glibc
 #elseif canImport(Musl)
     import Musl
+#elseif canImport(Android)
+    import Android
+#elseif canImport(WASILibc)
+    import WASILibc
 #endif
 
 /// Monotonic time source borrowed by a serial host or a network end. Values must be nonnegative and never decrease.
@@ -35,11 +39,22 @@ public struct GesSystemClock: GesClock, Sendable {
     /// The whole microseconds elapsed since the clock was created.
     public var elapsedMicroseconds: Int64 { Self.read() - origin }
 
-    static func read() -> Int64 {
-        var value = timespec()
-        clock_gettime(CLOCK_MONOTONIC, &value)
-        return Int64(value.tv_sec) * 1_000_000 + Int64(value.tv_nsec) / 1_000
-    }
+    #if os(WASI)
+        // WASILibc's CLOCK_MONOTONIC is the address of a C object, which Swift does not import; the standard library's
+        // monotonic clock reads the same WASI clock. The origin is the first read in the process.
+        private static let processOrigin = ContinuousClock.now
+
+        static func read() -> Int64 {
+            let elapsed = processOrigin.duration(to: .now).components
+            return elapsed.seconds * 1_000_000 + elapsed.attoseconds / 1_000_000_000_000
+        }
+    #else
+        static func read() -> Int64 {
+            var value = timespec()
+            clock_gettime(CLOCK_MONOTONIC, &value)
+            return Int64(value.tv_sec) * 1_000_000 + Int64(value.tv_nsec) / 1_000
+        }
+    #endif
 }
 
 /// A virtual clock for deterministic simulation and tests: its time changes only through `advance(by:)`. Not `Sendable`;

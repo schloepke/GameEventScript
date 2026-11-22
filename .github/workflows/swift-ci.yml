@@ -63,6 +63,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Verify the Swift port, the shared corpus and the CLI on Linux
         run: ./scripts/test-swift-linux.sh
+      # The Wasm SDK matches this image's toolchain; the card game example pins the same bundle.
+      - name: Build the public libraries for WebAssembly (WASI)
+        run: |
+          swift sdk install https://download.swift.org/swift-6.4.0-release/wasm-sdk/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE_wasm.artifactbundle.tar.gz \
+            --checksum f07b7be3c586d92d7a07051fc6d303b87ebea67eadc40640ba59d5a8b79aa86d
+          python3 scripts/build-swift-wasm.py --swift swift --sdk swift-6.4.0-RELEASE_wasm
 
   distribution:
     needs: changes

@@ -49,44 +49,6 @@ def main():
         if not sdk:
             raise RuntimeError('No Wasm SDK found; pass --sdk')
         print(f'Wasm toolchain: {command[0]}, SDK {sdk}', flush=True)
-        # Temporary compatibility experiment: never alter the main branch's Runtime.
-        stage = ARTIFACTS / 'wasm-source'
-        for source in [package, ROOT / 'implementation/swift/GameEventScriptRuntime', ROOT / 'implementation/swift/GameEventScriptCompiler', ROOT / 'implementation/swift/GameEventScriptSyntax']:
-            target = stage / source.relative_to(ROOT)
-            target.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source / 'Package.swift', target / 'Package.swift')
-            for subtree in ['Sources', 'Tests']:
-                if (source / subtree).exists():
-                    if (target / subtree).exists():
-                        shutil.rmtree(target / subtree)
-                    shutil.copytree(source / subtree, target / subtree)
-        runtime_sources = stage / 'implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime'
-        for path in runtime_sources.rglob('*.swift'):
-            original = path.read_text()
-            anchor = '#elseif canImport(Musl)\n    import Musl\n#endif'
-            if anchor not in original:
-                continue
-            path.write_text(original.replace(anchor, '#elseif canImport(Musl)\n    import Musl\n#elseif canImport(WASILibc)\n    import WASILibc\n#endif', 1))
-        # WASI's CLOCK_MONOTONIC macro takes an address and is not imported into Swift.
-        runtime = stage / 'implementation/swift/GameEventScriptRuntime'
-        shim = runtime / 'Sources/CardGameWasiClock'
-        (shim / 'include').mkdir(parents=True, exist_ok=True)
-        notice = '// Copyright 2026 Stephan Schlöpke\n// SPDX-License-Identifier: Apache-2.0\n'
-        (shim / 'include/CardGameWasiClock.h').write_text(notice + '#include <stdint.h>\nint64_t card_game_monotonic_microseconds(void);\n')
-        (shim / 'clock.c').write_text(notice + '#include "CardGameWasiClock.h"\n#include <time.h>\nint64_t card_game_monotonic_microseconds(void) { struct timespec t; if (clock_gettime(CLOCK_MONOTONIC, &t) != 0) return -1; return (int64_t)t.tv_sec * 1000000 + t.tv_nsec / 1000; }\n')
-        manifest = runtime / 'Package.swift'
-        runtime_manifest = manifest.read_text()
-        target_anchor = 'targets: [.target(name: "GameEventScriptRuntime", dependencies: ['
-        if target_anchor not in runtime_manifest:
-            raise RuntimeError('Runtime manifest changed; review the isolated Wasm patch')
-        manifest.write_text(runtime_manifest.replace(target_anchor, 'targets: [.target(name: "CardGameWasiClock"), .target(name: "GameEventScriptRuntime", dependencies: ["CardGameWasiClock", '))
-        clock = runtime / 'Sources/GameEventScriptRuntime/Api/Clock.swift'
-        clock_text = clock.read_text().replace('    import WASILibc', '    import WASILibc\n    import CardGameWasiClock')
-        body = '        var value = timespec()\n        clock_gettime(CLOCK_MONOTONIC, &value)\n        return Int64(value.tv_sec) * 1_000_000 + Int64(value.tv_nsec) / 1_000'
-        if body not in clock_text:
-            raise RuntimeError('Clock body changed; review the isolated Wasm patch')
-        clock.write_text(clock_text.replace(body, '        let value = card_game_monotonic_microseconds()\n        precondition(value >= 0, "WASI monotonic clock unavailable")\n        return value'))
-        package = stage / package.relative_to(ROOT)
         # Nested declarative setup maps need more compiler stack than WASI's 64 KiB default.
         if sdks_path:
             command += ['--swift-sdks-path', str(sdks_path)]

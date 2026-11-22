@@ -1600,6 +1600,7 @@ parameters; a longer one fails at registration, while Swift has no such limit. A
 [source generator](../BACKLOG.md#language) would remove both limits.
 
 `GesBridgeHostRunner` is an optional synchronized embedding adapter.
+The Swift runner exists only where Dispatch is available; on WASI an embedding pumps the Host itself.
 It takes exclusive ownership through Swift 6 sending parameters and serializes
 Host access and lifecycle operations with one recursive lock. Transferred Host,
 callback and external-value state must not be accessed outside that ownership

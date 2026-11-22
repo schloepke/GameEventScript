@@ -11,6 +11,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Added
+- Every library product of the root Swift package builds for WebAssembly (WASI); Swift CI builds it with the pinned
+  6.4.0 Wasm SDK (`scripts/build-swift-wasm.py`). There the Swift `GesBridgeHostRunner` is absent, because WASI has
+  no Dispatch, and `GameEventScriptNetworkSockets` is empty, because SwiftNIO SSL does not build for WASI. The Card
+  Lab builds the repository packages without patching their sources.
 - GES network (specs/Network.md): a `network` declaration in `.gess` sources names the routes between a client and a
   server with their delivery class (`reliable`, `latest`, `bulk`) and an optional `at most every` rate; Runtime binds
   it and computes its hash (`GesSchemaSet.Network`, Swift `network(_:)`).

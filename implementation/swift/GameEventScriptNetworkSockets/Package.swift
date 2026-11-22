@@ -4,6 +4,9 @@
 
 import PackageDescription
 
+// SwiftNIO SSL does not build for WASI, so the socket transports exist on every other platform only.
+let socketPlatforms: [Platform] = [.macOS, .macCatalyst, .iOS, .tvOS, .watchOS, .visionOS, .linux, .windows, .android, .openbsd]
+
 let package = Package(
     name: "GameEventScriptNetworkSockets",
     platforms: [.macOS(.v10_15)],
@@ -20,11 +23,11 @@ let package = Package(
             dependencies: [
                 .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
                 .product(name: "GameEventScriptNetwork", package: "GameEventScriptNetwork"),
-                .product(name: "NIOCore", package: "swift-nio"),
-                .product(name: "NIOPosix", package: "swift-nio"),
-                .product(name: "NIOWebSocket", package: "swift-nio"),
-                .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
-                .product(name: "NIOSSL", package: "swift-nio-ssl"),
+                .product(name: "NIOCore", package: "swift-nio", condition: .when(platforms: socketPlatforms)),
+                .product(name: "NIOPosix", package: "swift-nio", condition: .when(platforms: socketPlatforms)),
+                .product(name: "NIOWebSocket", package: "swift-nio", condition: .when(platforms: socketPlatforms)),
+                .product(name: "NIOConcurrencyHelpers", package: "swift-nio", condition: .when(platforms: socketPlatforms)),
+                .product(name: "NIOSSL", package: "swift-nio-ssl", condition: .when(platforms: socketPlatforms)),
             ]
         ),
         .testTarget(

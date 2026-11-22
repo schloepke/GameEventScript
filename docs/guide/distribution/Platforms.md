@@ -19,7 +19,7 @@ successful library build is not full Conformance on that platform.
 | --- | --- | --- | --- |
 | C# Runtime, Compiler, CSharpBridge, Syntax | .NET Standard 2.1 | Linux x64, `ubuntu-latest`; SDK **10.0.404**, .NET **8.0.x** runtime | Full C# Conformance and native tests, allocation gate, .NET 8 package consumers, reproducibility: [C# CI](../../../.github/workflows/csharp-ci.yml), job `verify` |
 | Swift Runtime, Compiler, SwiftBridge, Syntax | Swift tools **6.1**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), job `native`; fresh tagged package consumers and root tests: job `distribution` |
-| Swift Runtime, Compiler, Generator, Syntax, SwiftBridge, CLI on Linux | Swift tools **6.1** | Linux x64, digest-pinned `swift:6.4.0-jammy` container, the image of the static Linux CLI | Native Swift Conformance of the supported corpus, Syntax, Generator and SwiftBridge tests, CLI process and terminal checks: Swift CI job `linux` |
+| Swift Runtime, Compiler, Generator, Syntax, SwiftBridge, CLI on Linux | Swift tools **6.1** | Linux x64, digest-pinned `swift:6.4.0-jammy` container, the image of the static Linux CLI | Native Swift Conformance of the supported corpus, Syntax, Generator and SwiftBridge tests, CLI process and terminal checks, a WASI build of the root package: Swift CI job `linux` |
 | Swift libraries at the minimum toolchain | Swift tools **6.1** | Linux x64, digest-pinned `swift:6.1` container | Syntax tests and builds of Runtime, Compiler, Generator, Network and Network Sockets: Swift CI job `linux-minimum` |
 
 The pinned .NET SDK is defined in [global.json](../../../global.json).
@@ -91,8 +91,18 @@ builds and tests the Card Lab with pinned Swift **6.4.0** and its matching WASM
 SDK, plus Node **24**. Pins live in
 [setup-wasm.py](../../../examples/card-game/scripts/setup-wasm.py); CI passes
 `--download`, while local builds may use an installed toolchain with its matching SDK.
-This verifies the Card Lab's embedding and WASM execution, not every root
-SwiftPM product or every browser. Safari/Chrome UI checks performed locally are
+This verifies the Card Lab's embedding and WASM execution, not every browser.
+
+> **Since: Unreleased** — WASI builds of the root package
+
+Every library product of the root SwiftPM package builds for WASI. Swift CI job
+`linux` installs the same pinned SDK into its `swift:6.4.0-jammy` container and
+builds the root package with [build-swift-wasm.py](../../../scripts/build-swift-wasm.py);
+locally the script uses an installed Swift.org toolchain with its matching Wasm SDK.
+It is a build check: only the Card Lab executes GES under Wasm. WASI has no threads
+or Dispatch, so `GesBridgeHostRunner` is absent there and an embedding pumps the
+Host itself. SwiftNIO SSL does not build for WASI, so `GameEventScriptNetworkSockets`
+is empty there; the Network session core and its simulator are available. Safari/Chrome UI checks performed locally are
 not an automated browser support matrix. There is no distributed WASM CLI.
 
 ## Release qualification

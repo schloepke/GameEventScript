@@ -35,9 +35,6 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
     // A datagram is dropped rather than waited for when this many are not yet taken.
     internal const int ReceivedDatagrams = 256;
 
-    // A disposed session of a closed connection writes its last packets for at most this long.
-    private static readonly TimeSpan OrderlyEnd = TimeSpan.FromSeconds(10);
-
     // Set once the transport is open, before the background tasks start; the host thread never reads them.
     private Stream? _stream;
     private WebSocket? _webSocket;
@@ -102,7 +99,7 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
         var client = new TcpClient { NoDelay = true };
         try
         {
-            await ConnectTcpAsync(client, host, port, cancellationToken).ConfigureAwait(false);
+            await ConnectTcpAsync(client, host, port, GesNetworkSocketTimeouts.Connect, cancellationToken).ConfigureAwait(false);
             return FromStream(connection, client.GetStream(), client);
         }
         catch
@@ -126,7 +123,7 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
         socket.Options.KeepAliveInterval = TimeSpan.Zero;
         try
         {
-            await ConnectWebSocketAsync(socket, uri, cancellationToken).ConfigureAwait(false);
+            await ConnectWebSocketAsync(socket, uri, GesNetworkSocketTimeouts.Upgrade, cancellationToken).ConfigureAwait(false);
             return FromWebSocket(connection, socket, socket);
         }
         catch
@@ -136,36 +133,20 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
         }
     }
 
-    // Connects within the time limit of an upgrade, so a server whose packets vanish fails as soon as on SwiftNIO instead of
-    // after the system's retries.
-    internal static async Task ConnectTcpAsync(TcpClient client, string host, int port, CancellationToken cancellationToken)
+    // Connects within the time limit, so a server whose packets vanish fails as soon as on SwiftNIO instead of after the
+    // system's retries.
+    internal static async Task ConnectTcpAsync(TcpClient client, string host, int port, TimeSpan limit, CancellationToken cancellationToken)
     {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(GesNetworkSocketListener.UpgradeTimeout);
-        try
-        {
-            await client.ConnectAsync(host, port, timeout.Token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
+        if (!await GesNetworkSocketTimeouts.WithinAsync(token => client.ConnectAsync(host, port, token).AsTask(), limit, cancellationToken).ConfigureAwait(false))
             throw new SocketException((int)SocketError.TimedOut);
-        }
     }
 
-    // Connects within the time limit of an upgrade, so a server that accepts the connection but never completes TLS or the
-    // upgrade does not hold it open.
-    internal static async Task ConnectWebSocketAsync(ClientWebSocket socket, Uri uri, CancellationToken cancellationToken)
+    // Connects within the time limit, so a server that accepts the connection but never completes TLS or the upgrade does
+    // not hold it open.
+    internal static async Task ConnectWebSocketAsync(ClientWebSocket socket, Uri uri, TimeSpan limit, CancellationToken cancellationToken)
     {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(GesNetworkSocketListener.UpgradeTimeout);
-        try
-        {
-            await socket.ConnectAsync(uri, timeout.Token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
+        if (!await GesNetworkSocketTimeouts.WithinAsync(token => socket.ConnectAsync(uri, token), limit, cancellationToken).ConfigureAwait(false))
             throw new WebSocketException("The server did not complete the WebSocket upgrade in time.");
-        }
     }
 
     /// <summary>Opens a UDP socket for a client connection of the datagram transport.</summary>
@@ -428,15 +409,15 @@ public sealed class GesNetworkSocketSession : IGesNetworkLink
             // The last packets wait for the transport that still opens; starting it writes them. The time limit covers the
             // opening too, and is set before a started transport can release the cancellation.
             _orderlyOpening = _outgoingCompleted && _opening;
-            if (_orderlyOpening) _cancel.CancelAfter(OrderlyEnd);
+            if (_orderlyOpening) _cancel.CancelAfter(GesNetworkSocketTimeouts.OrderlyEnd);
         }
 
         _outgoing.Writer.TryComplete();
         if (_orderlyOpening) return;
 
-        if (_outgoingCompleted && writer is { IsCompleted: false })
+        if (_outgoingCompleted && writer != null)
         {
-            _cancel.CancelAfter(OrderlyEnd);
+            _cancel.CancelAfter(GesNetworkSocketTimeouts.OrderlyEnd);
             _ = ReleaseInOrderAsync(writer, reader, owner);
             return;
         }

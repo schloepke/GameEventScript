@@ -43,7 +43,7 @@ public sealed class GesNetworkSocketConnector : IGesNetworkConnector
             var client = new TcpClient { NoDelay = true };
             try
             {
-                await GesNetworkSocketSession.ConnectTcpAsync(client, host, port, cancellationToken).ConfigureAwait(false);
+                await GesNetworkSocketSession.ConnectTcpAsync(client, host, port, GesNetworkSocketTimeouts.Connect, cancellationToken).ConfigureAwait(false);
                 return new(client.GetStream(), null, null, client);
             }
             catch
@@ -69,7 +69,7 @@ public sealed class GesNetworkSocketConnector : IGesNetworkConnector
             socket.Options.KeepAliveInterval = TimeSpan.Zero;
             try
             {
-                await GesNetworkSocketSession.ConnectWebSocketAsync(socket, uri, cancellationToken).ConfigureAwait(false);
+                await GesNetworkSocketSession.ConnectWebSocketAsync(socket, uri, GesNetworkSocketTimeouts.Upgrade, cancellationToken).ConfigureAwait(false);
                 return new(null, socket, null, socket);
             }
             catch

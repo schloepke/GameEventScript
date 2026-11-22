@@ -442,6 +442,66 @@ public sealed class GesNetworkSocketTests
     }
 
     [TestMethod]
+    public async Task AnOversizedDatagramIsTooLarge()
+    {
+        var network = Game();
+        using var listener = GesNetworkSocketListener.ListenUdp(Loopback, network, Options(GesNetworkTransport.Datagram));
+        using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        socket.Bind(Loopback);
+        await socket.ConnectAsync(listener.LocalEndPoint);
+        var connection = GesNetworkConnection.CreateClient(network, "tok"u8, Now, Options(GesNetworkTransport.Datagram));
+        using var server = await Handshake(socket, connection, listener);
+        await socket.SendAsync(new byte[server.Connection.MaxPacketBytes + 100], SocketFlags.None);
+        Assert.AreEqual("closed network.packetTooLarge local", Await(server));
+    }
+
+    [TestMethod]
+    public async Task AWebSocketUpgradeWithoutAnAnswerTimesOut()
+    {
+        // The server accepts the connection but never answers the upgrade.
+        var silent = new TcpListener(IPAddress.Loopback, 0);
+        silent.Start();
+        try
+        {
+            var port = ((IPEndPoint)silent.LocalEndpoint).Port;
+            using var socket = new ClientWebSocket();
+            var connect = GesNetworkSocketSession.ConnectWebSocketAsync(socket, new Uri($"ws://127.0.0.1:{port}/game"), TimeSpan.FromMilliseconds(200), CancellationToken.None);
+            using var accepted = await silent.AcceptTcpClientAsync();
+            await Assert.ThrowsExactlyAsync<WebSocketException>(() => connect);
+        }
+        finally
+        {
+            silent.Stop();
+        }
+    }
+
+    [TestMethod]
+    public async Task ATcpConnectOutOfTimeTimesOut()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        try
+        {
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+            // A limit that has run out ends connecting as a timeout.
+            using var late = new TcpClient();
+            var error = await Assert.ThrowsExactlyAsync<SocketException>(() => GesNetworkSocketSession.ConnectTcpAsync(late, "127.0.0.1", port, TimeSpan.Zero, CancellationToken.None));
+            Assert.AreEqual(SocketError.TimedOut, error.SocketErrorCode);
+
+            // A cancellation by the caller stays one.
+            using var cancelled = new TcpClient();
+            using var cancel = new CancellationTokenSource();
+            await cancel.CancelAsync();
+            await Assert.ThrowsAsync<OperationCanceledException>(() => GesNetworkSocketSession.ConnectTcpAsync(cancelled, "127.0.0.1", port, Limit, cancel.Token));
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
+
+    [TestMethod]
     public async Task AnotherPathIsNotFound()
     {
         using var listener = GesNetworkSocketListener.ListenWebSocket(Loopback, "/game", Game(), Options(GesNetworkTransport.Message));

@@ -437,6 +437,19 @@ final class SocketTests: XCTestCase {
         listener.close()
     }
 
+    func testAWebSocketUpgradeWithoutAnAnswerTimesOut() async throws {
+        // The server accepts the connection but never answers the upgrade.
+        let silent = try await ServerBootstrap(group: MultiThreadedEventLoopGroup.singleton).bind(host: "127.0.0.1", port: 0).get()
+        let endpoint = try GesNetworkSocketEndpoint("ws://127.0.0.1:\(silent.localAddress!.port!)/game")
+        do {
+            _ = try await GesNetworkSocketSession.openWebSocket(endpoint: endpoint, limit: 1200, inbox: GesNetworkSocketInbox(), timeout: .milliseconds(200))
+            XCTFail("The upgrade did not time out.")
+        } catch let error as GesNetworkSocketError {
+            XCTAssertEqual(error.message, GesNetworkSocketSession.upgradeTimedOut)
+        }
+        try await silent.close()
+    }
+
     func testASlowPeerFillsTheSendQueue() async throws {
         let network = try Self.game()
         let listener = try await GesNetworkSocketListener.listenTcp(host: "127.0.0.1", port: 0, network: network, options: Self.options(.stream))

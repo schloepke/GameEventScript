@@ -18,6 +18,11 @@ public sealed partial class GesNetworkConnection
     private const int SendTimeWindow = 256;
     private const int MaxPendingEvents = 65536;
 
+    // While a receiving connection of the pair or the simulator takes no bytes and this many packets wait for it, the
+    // sending connection keeps its further packets, as with a socket whose peer stops reading; only the close packet of a
+    // closed connection still leaves.
+    internal const int HeldPackets = 64;
+
     private readonly bool _client;
     private readonly GesNetworkTransport _transport;
     private readonly int _maxPacket;

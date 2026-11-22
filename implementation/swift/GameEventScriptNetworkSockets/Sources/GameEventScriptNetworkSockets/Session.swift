@@ -96,9 +96,9 @@ public final class GesNetworkSocketSession {
         return GesNetworkSocketSession(connection: connection, channel: channel, inbox: inbox, framing: .stream)
     }
 
-    static func openTcp(host: String, port: Int, inbox: GesNetworkSocketInbox) async throws -> Channel {
+    static func openTcp(host: String, port: Int, inbox: GesNetworkSocketInbox, timeout: TimeAmount = GesNetworkSocketTimeouts.connect) async throws -> Channel {
         try await ClientBootstrap(group: MultiThreadedEventLoopGroup.singleton)
-            .connectTimeout(GesNetworkSocketUpgrade.timeout)
+            .connectTimeout(timeout)
             .channelOption(.tcpOption(.tcp_nodelay), value: 1)
             .channelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: GesNetworkSocketInbox.readBytes))
             .channelInitializer { channel in
@@ -125,17 +125,22 @@ public final class GesNetworkSocketSession {
 
     static let upgradeTimedOut = "The server did not complete the WebSocket upgrade in time."
 
-    static func openWebSocket(endpoint: GesNetworkSocketEndpoint, limit: Int, inbox: GesNetworkSocketInbox) async throws -> Channel {
+    static func openWebSocket(
+        endpoint: GesNetworkSocketEndpoint,
+        limit: Int,
+        inbox: GesNetworkSocketInbox,
+        timeout: TimeAmount = GesNetworkSocketTimeouts.upgrade
+    ) async throws -> Channel {
         let tls = try endpoint.secure ? NIOSSLContext(configuration: .makeClientConfiguration()) : nil
         let loop = MultiThreadedEventLoopGroup.singleton.next()
         let upgraded = loop.makePromise(of: Void.self)
         // A server that accepts the connection but never completes TLS or the upgrade must not hold it open: connecting,
         // TLS and the upgrade together have the same time limit as an upgrade on a listener.
-        let deadline = NIODeadline.now() + GesNetworkSocketUpgrade.timeout
+        let deadline = NIODeadline.now() + timeout
         let channel: Channel
         do {
             channel = try await ClientBootstrap(group: loop)
-                .connectTimeout(GesNetworkSocketUpgrade.timeout)
+                .connectTimeout(timeout)
                 .channelOption(.tcpOption(.tcp_nodelay), value: 1)
                 .channelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: GesNetworkSocketInbox.readBytes))
                 .channelInitializer { channel in
@@ -154,14 +159,14 @@ public final class GesNetworkSocketSession {
             throw error
         }
 
-        let timeout = channel.eventLoop.scheduleTask(deadline: deadline) {
+        let expiry = channel.eventLoop.scheduleTask(deadline: deadline) {
             upgraded.fail(GesNetworkSocketError(Self.upgradeTimedOut))
         }
         do {
             try await upgraded.futureResult.get()
-            timeout.cancel()
+            expiry.cancel()
         } catch {
-            timeout.cancel()
+            expiry.cancel()
             channel.close(promise: nil)
             throw error
         }
@@ -277,9 +282,6 @@ public final class GesNetworkSocketSession {
         }
     }
 
-    // A disposed session of a closed connection writes its last packets for at most this long.
-    static let orderlyEnd = TimeAmount.seconds(10)
-
     static func release(_ channel: Channel, _ peer: GesNetworkDatagramPeer?) {
         if let peer {
             peer.release()
@@ -299,7 +301,7 @@ public final class GesNetworkSocketSession {
         }
         inbox.discard()
         channel.read()
-        let limit = channel.eventLoop.scheduleTask(in: orderlyEnd) { channel.close(promise: nil) }
+        let limit = channel.eventLoop.scheduleTask(in: GesNetworkSocketTimeouts.orderlyEnd) { channel.close(promise: nil) }
         channel.closeFuture.whenComplete { _ in limit.cancel() }
     }
 }

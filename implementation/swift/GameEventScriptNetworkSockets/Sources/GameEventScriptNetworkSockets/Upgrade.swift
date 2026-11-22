@@ -8,7 +8,6 @@ import NIOWebSocket
 // The HTTP upgrade of RFC 6455 on both sides, without Foundation.
 enum GesNetworkSocketUpgrade {
     static let maxRequestBytes = 8192
-    static let timeout = TimeAmount.seconds(10)
     static let guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
     // The answer of a server listening on `path` to the request head, which ends with an empty line.
@@ -355,7 +354,7 @@ final class GesNetworkSocketServerUpgradeHandler: ChannelInboundHandler, Removab
 
     func handlerAdded(context: ChannelHandlerContext) {
         let loopBound = NIOLoopBound(context, eventLoop: context.eventLoop)
-        timeout = context.eventLoop.assumeIsolated().scheduleTask(in: GesNetworkSocketUpgrade.timeout) { [self] in
+        timeout = context.eventLoop.assumeIsolated().scheduleTask(in: GesNetworkSocketTimeouts.upgrade) { [self] in
             if done { return }
             stop(loopBound.value)
             loopBound.value.close(promise: nil)

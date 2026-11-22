@@ -166,12 +166,9 @@ public sealed class GesNetworkSimulator
         Send(Server, Client, _toClient, ref _lastToClient);
     }
 
-    // While the receiver takes no bytes and this many packets wait for it, the sender holds its packets, as a socket
-    // whose peer stops reading does; only the close packet of a closed connection still leaves.
-    private const int HeldPackets = 64;
-
+    // The sender holds its packets while the receiver takes none of the waiting ones.
     private static bool Held(GesNetworkConnection sender, GesNetworkConnection receiver, FlightQueue queue) =>
-        queue.Count >= HeldPackets && !receiver.CanReceive && sender.State != GesNetworkState.Closed;
+        queue.Count >= GesNetworkConnection.HeldPackets && !receiver.CanReceive && sender.State != GesNetworkState.Closed;
 
     private void Send(GesNetworkConnection sender, GesNetworkConnection receiver, FlightQueue queue, ref long last)
     {

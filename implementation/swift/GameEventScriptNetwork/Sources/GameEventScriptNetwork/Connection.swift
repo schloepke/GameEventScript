@@ -13,6 +13,11 @@ public final class GesNetworkConnection {
     static let sendTimeWindow = 256
     static let maxPendingEvents = 65536
 
+    // While a receiving connection of the pair or the simulator takes no bytes and this many packets wait for it, the
+    // sending connection keeps its further packets, as with a socket whose peer stops reading; only the close packet of a
+    // closed connection still leaves.
+    static let heldPackets = 64
+
     /// The bound network both sides must share.
     public let network: GesBoundNetwork
     /// Whether this side is the client.

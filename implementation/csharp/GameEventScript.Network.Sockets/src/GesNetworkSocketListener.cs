@@ -29,7 +29,6 @@ public sealed partial class GesNetworkSocketListener : IGesNetworkAcceptor
     private const int MaxRequestBytes = 8192;
     private const int PendingClients = 64;
     private const int PendingPerAddress = 8;
-    internal static readonly TimeSpan UpgradeTimeout = TimeSpan.FromSeconds(10);
     private const string WebSocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     private readonly TcpListener? _listener;
@@ -221,7 +220,7 @@ public sealed partial class GesNetworkSocketListener : IGesNetworkAcceptor
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_cancel.Token);
-            timeout.CancelAfter(UpgradeTimeout);
+            timeout.CancelAfter(GesNetworkSocketTimeouts.Upgrade);
             var stream = client.GetStream();
             var request = await ReadRequestAsync(stream, timeout.Token).ConfigureAwait(false);
             var response = request == null ? Status(400, "Bad Request") : Answer(request, _path!);

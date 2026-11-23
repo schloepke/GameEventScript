@@ -16,7 +16,7 @@ import sys
 REQUIRED_WORKFLOWS = ("C# CI", "Swift CI")
 # Jobs that must have run and succeeded, not only been skipped: Swift CI skips its native jobs for documentation-only
 # changes and still concludes with success, which does not verify the Swift port.
-REQUIRED_JOBS = {"Swift CI": ("native", "distribution", "linux", "linux-minimum")}
+REQUIRED_JOBS = {"Swift CI": ("native-packages", "native-conformance", "distribution", "linux", "linux-minimum")}
 
 
 def missing_workflows(runs, required=REQUIRED_WORKFLOWS, jobs=lambda run: []):

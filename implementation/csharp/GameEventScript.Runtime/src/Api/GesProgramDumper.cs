@@ -185,6 +185,19 @@ internal static class GesProgramDumper
                 builder.Append(']');
             }
 
+            if (entry.RequiredTagAlternatives.Count > 0)
+            {
+                builder.Append(" tagAlternatives=[");
+                for (var group = 0; group < entry.RequiredTagAlternatives.Count; group++)
+                {
+                    builder.Append(group > 0 ? ", [" : "[");
+                    AppendTextLabels(builder, context, entry.RequiredTagAlternatives[group]);
+                    builder.Append(']');
+                }
+
+                builder.Append(']');
+            }
+
             if (entry.ExcludedTags.Count > 0)
             {
                 builder
@@ -756,16 +769,26 @@ internal static class GesProgramDumper
             signature = signatureBuilder.Append(")\"").ToString();
         }
 
-        if (entry.RequiredTags.Count == 0 && entry.ExcludedTags.Count == 0)
+        if (entry.RequiredTags.Count == 0 && entry.RequiredTagAlternatives.Count == 0 && entry.ExcludedTags.Count == 0)
         {
             return signature;
         }
 
         var builder = new StringBuilder(signature[..^1]);
-        if (entry.RequiredTags.Count > 0)
+        if (entry.RequiredTags.Count > 0 || entry.RequiredTagAlternatives.Count > 0)
         {
             builder.Append(" matching ");
             AppendEscapedTags(builder, context, entry.RequiredTags);
+            for (var group = 0; group < entry.RequiredTagAlternatives.Count; group++)
+            {
+                if (group > 0 || entry.RequiredTags.Count > 0) builder.Append(", ");
+                var tags = entry.RequiredTagAlternatives[group];
+                for (var tag = 0; tag < tags.Count; tag++)
+                {
+                    if (tag > 0) builder.Append(" | ");
+                    builder.Append('#').Append(Escape(context.ResolveText(tags[tag])));
+                }
+            }
         }
 
         if (entry.ExcludedTags.Count > 0)

@@ -1,9 +1,13 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.1
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
 import CompilerPluginSupport
 import PackageDescription
+
+// SwiftNIO SSL does not build for WASI, so the socket transports need these platforms. Their sources check
+// `canImport(NIOSSL)`, so the module stays empty, not broken, on any platform outside this list.
+let socketPlatforms: [Platform] = [.macOS, .macCatalyst, .iOS, .tvOS, .watchOS, .visionOS, .linux, .windows, .android, .openbsd]
 
 // One versioned distribution; the local packages remain independent development entry points.
 let package = Package(
@@ -15,8 +19,14 @@ let package = Package(
         .library(name: "GameEventScriptCompiler", targets: ["GameEventScriptCompiler"]),
         .library(name: "GameEventScriptSwiftBridge", targets: ["GameEventScriptSwiftBridge"]),
         .library(name: "GameEventScriptGenerator", targets: ["GameEventScriptGenerator"]),
+        .library(name: "GameEventScriptNetwork", targets: ["GameEventScriptNetwork"]),
+        .library(name: "GameEventScriptNetworkSockets", targets: ["GameEventScriptNetworkSockets"]),
     ],
-    dependencies: [.package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "600.0.1")],
+    dependencies: [
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "600.0.1"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.81.0"),
+        .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.29.0"),
+    ],
     targets: [
         .macro(
             name: "GameEventScriptSwiftBridgeMacros",
@@ -33,6 +43,20 @@ let package = Package(
         .target(name: "GameEventScriptCompiler", dependencies: ["GameEventScriptRuntime", "GameEventScriptSyntax"], path: "implementation/swift/GameEventScriptCompiler/Sources/GameEventScriptCompiler"),
         .target(name: "GameEventScriptSwiftBridge", dependencies: ["GameEventScriptRuntime", "GameEventScriptSwiftBridgeMacros"], path: "implementation/swift/GameEventScriptSwiftBridge/Sources/GameEventScriptSwiftBridge"),
         .target(name: "GameEventScriptGenerator", dependencies: ["GameEventScriptRuntime", "GameEventScriptSyntax"], path: "implementation/swift/GameEventScriptGenerator/Sources/GameEventScriptGenerator"),
+        .target(name: "GameEventScriptNetwork", dependencies: ["GameEventScriptRuntime"], path: "implementation/swift/GameEventScriptNetwork/Sources/GameEventScriptNetwork"),
+        .target(
+            name: "GameEventScriptNetworkSockets",
+            dependencies: [
+                "GameEventScriptRuntime",
+                "GameEventScriptNetwork",
+                .product(name: "NIOCore", package: "swift-nio", condition: .when(platforms: socketPlatforms)),
+                .product(name: "NIOPosix", package: "swift-nio", condition: .when(platforms: socketPlatforms)),
+                .product(name: "NIOWebSocket", package: "swift-nio", condition: .when(platforms: socketPlatforms)),
+                .product(name: "NIOConcurrencyHelpers", package: "swift-nio", condition: .when(platforms: socketPlatforms)),
+                .product(name: "NIOSSL", package: "swift-nio-ssl", condition: .when(platforms: socketPlatforms)),
+            ],
+            path: "implementation/swift/GameEventScriptNetworkSockets/Sources/GameEventScriptNetworkSockets"
+        ),
         .testTarget(
             name: "GameEventScriptSwiftBridgeTests",
             dependencies: ["GameEventScriptSwiftBridge", "GameEventScriptRuntime", "GameEventScriptSyntax"],

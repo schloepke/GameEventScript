@@ -29,10 +29,11 @@ internal sealed class GesLinkedProgram
         internal string SignatureId { get; }
     }
 
-    internal readonly struct Handler(GesMessageSignature signature, string[] requiredTags, string[] excludedTags, bool matchArguments, ushort entryAddress, ushort requiredRegisterCount, ushort requiredCallStackDepth)
+    internal readonly struct Handler(GesMessageSignature signature, string[] requiredTags, string[][]? requiredTagAlternatives, string[] excludedTags, bool matchArguments, ushort entryAddress, ushort requiredRegisterCount, ushort requiredCallStackDepth)
     {
         internal GesMessageSignature Signature { get; } = signature;
         internal string[] RequiredTags { get; } = requiredTags;
+        internal string[][]? RequiredTagAlternatives { get; } = requiredTagAlternatives;
         internal string[] ExcludedTags { get; } = excludedTags;
         internal bool MatchArguments { get; } = matchArguments;
         internal ushort EntryAddress { get; } = entryAddress;
@@ -114,6 +115,7 @@ internal sealed class GesLinkedProgram
         if (count == 0) return [];
         var handlers = new Handler[count];
         var handlerIndex = 0;
+        Dictionary<object, string[][]>? alternatives = null;
         foreach (var bind in program.Bindings.Entries)
         {
             if (bind.Kind is not (MessageHandler or MessageNameHandler)) continue;
@@ -122,6 +124,7 @@ internal sealed class GesLinkedProgram
             handlers[handlerIndex++] = new Handler(
                 GesMessageSignature.Create(name, arguments),
                 ReadStrings(bind.RequiredTags),
+                ReadTagAlternatives(bind.RequiredTagAlternatives, ref alternatives),
                 ReadStrings(bind.ExcludedTags),
                 bind.Kind == MessageHandler,
                 bind.EntryAddress,
@@ -130,6 +133,19 @@ internal sealed class GesLinkedProgram
         }
 
         return handlers;
+    }
+
+    // Handlers whose entries share one group set (as the Program reader produces) share one resolved copy.
+    private string[][]? ReadTagAlternatives(GesReadOnlyArray<GesReadOnlyArray<ushort>> groups, ref Dictionary<object, string[][]>? resolved)
+    {
+        if (groups.Count == 0) return null;
+        var storage = groups.Storage!;
+        resolved ??= new Dictionary<object, string[][]>(); // Arrays compare by reference.
+        if (resolved.TryGetValue(storage, out var shared)) return shared;
+        var values = new string[groups.Count][];
+        for (var group = 0; group < values.Length; group++) values[group] = ReadStrings(groups[group]);
+        resolved.Add(storage, values);
+        return values;
     }
 
     private string[] ReadStrings(System.Collections.Generic.IReadOnlyList<ushort> pointers)

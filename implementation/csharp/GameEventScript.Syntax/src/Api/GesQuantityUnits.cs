@@ -34,6 +34,30 @@ public static class GesQuantityUnits
     // symbol precedes its ASCII spelling, which document formatting relies on.
     internal static readonly Suffix[] Suffixes =
     [
+        new("kJ/(kg·K)", UnitJoulePerKilogramKelvin, 3),
+        new("kJ/(kg*K)", UnitJoulePerKilogramKelvin, 3),
+        new("J/(kg·K)", UnitJoulePerKilogramKelvin),
+        new("J/(kg*K)", UnitJoulePerKilogramKelvin),
+        new("MJ/kg", UnitJoulePerKilogram, 6),
+        new("kJ/kg", UnitJoulePerKilogram, 3),
+        new("J/kg", UnitJoulePerKilogram),
+        new("kg/m³", UnitKilogramPerCubicMeter),
+        new("kg/m^3", UnitKilogramPerCubicMeter),
+        new("kg·m²", UnitKilogramSquareMeter),
+        new("kg*m²", UnitKilogramSquareMeter),
+        new("kg·m^2", UnitKilogramSquareMeter),
+        new("kg*m^2", UnitKilogramSquareMeter),
+        new("kg/s", UnitKilogramPerSecond),
+        new("kN·m", UnitNewtonMeter, 3),
+        new("kN*m", UnitNewtonMeter, 3),
+        new("kNm", UnitNewtonMeter, 3),
+        new("N·m", UnitNewtonMeter),
+        new("N*m", UnitNewtonMeter),
+        new("Nm", UnitNewtonMeter),
+        new("deg/s²", UnitDegreePerSecondSquared),
+        new("deg/s^2", UnitDegreePerSecondSquared),
+        new("°/s²", UnitDegreePerSecondSquared),
+        new("°/s^2", UnitDegreePerSecondSquared),
         new("mW/m²", UnitWattPerSquareMeter, -3),
         new("mW/m^2", UnitWattPerSquareMeter, -3),
         new("kW/m²", UnitWattPerSquareMeter, 3),
@@ -66,7 +90,20 @@ public static class GesQuantityUnits
         new("Wh", UnitJoule, 2, 36),
         new("Hz", UnitHertz),
         new("/s", UnitHertz),
+        new("MPa", UnitPascal, 6),
+        new("kPa", UnitPascal, 3),
+        new("hPa", UnitPascal, 2),
+        new("Pa", UnitPascal),
+        new("mAh", UnitCoulomb, -1, 36),
+        new("Ah", UnitCoulomb, 2, 36),
+        new("ohm", UnitOhm),
         new("dB", UnitDecibel),
+        new("mΩ", UnitOhm, -3),
+        new("kΩ", UnitOhm, 3),
+        new("MΩ", UnitOhm, 6),
+        new("mΩ", UnitOhm, -3),
+        new("kΩ", UnitOhm, 3),
+        new("MΩ", UnitOhm, 6),
         new("km", UnitMeter, 3),
         new("ms", UnitSecond, -3),
         new("mm", UnitMeter, -3),
@@ -81,6 +118,8 @@ public static class GesQuantityUnits
         new("MW", UnitWatt, 6),
         new("kV", UnitVolt, 3),
         new("°", UnitDegree),
+        new("Ω", UnitOhm),
+        new("Ω", UnitOhm),
         new("m", UnitMeter),
         new("s", UnitSecond),
         new("t", UnitKilogram, 3),
@@ -90,6 +129,7 @@ public static class GesQuantityUnits
         new("V", UnitVolt),
         new("A", UnitAmpere),
         new("K", UnitKelvin),
+        new("C", UnitCoulomb),
     ];
 
     // The distinct units of the spelling table in table order, so the root search tests each unit once.
@@ -109,7 +149,7 @@ public static class GesQuantityUnits
     /// <param name="unit">The unit value.</param>
     /// <returns><see langword="true"/> for a defined unit other than <see cref="GesQuantityUnit.UnitNone"/>.</returns>
     public static bool IsNumericUnit(this GesQuantityUnit unit)
-        => (uint)unit - 1 <= (uint)UnitJoulePerKelvin - 1; // UnitIds 1 to 20
+        => (uint)unit - 1 <= (uint)UnitCoulomb - 1; // UnitIds 1 to 30
 
     internal static GesQuantityUnit ToStoredUnit(this GesQuantityUnit? unit)
         => unit is { } value && value.IsNumericUnit() ? value : UnitNone;
@@ -153,6 +193,16 @@ public static class GesQuantityUnits
             UnitDecibel => "decibel",
             UnitWattPerKelvin => "wattPerKelvin",
             UnitJoulePerKelvin => "joulePerKelvin",
+            UnitPascal => "pascal",
+            UnitKilogramPerCubicMeter => "kilogramPerCubicMeter",
+            UnitJoulePerKilogram => "joulePerKilogram",
+            UnitJoulePerKilogramKelvin => "joulePerKilogramKelvin",
+            UnitNewtonMeter => "newtonMeter",
+            UnitKilogramSquareMeter => "kilogramSquareMeter",
+            UnitDegreePerSecondSquared => "degreePerSecondSquared",
+            UnitKilogramPerSecond => "kilogramPerSecond",
+            UnitOhm => "ohm",
+            UnitCoulomb => "coulomb",
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
@@ -184,6 +234,16 @@ public static class GesQuantityUnits
             UnitDecibel => "dB",
             UnitWattPerKelvin => "W/K",
             UnitJoulePerKelvin => "J/K",
+            UnitPascal => "Pa",
+            UnitKilogramPerCubicMeter => "kg/m³",
+            UnitJoulePerKilogram => "J/kg",
+            UnitJoulePerKilogramKelvin => "J/(kg·K)",
+            UnitNewtonMeter => "N·m",
+            UnitKilogramSquareMeter => "kg·m²",
+            UnitDegreePerSecondSquared => "°/s²",
+            UnitKilogramPerSecond => "kg/s",
+            UnitOhm => "Ω",
+            UnitCoulomb => "C",
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
@@ -215,6 +275,16 @@ public static class GesQuantityUnits
             "decibel" => UnitDecibel,
             "wattPerKelvin" => UnitWattPerKelvin,
             "joulePerKelvin" => UnitJoulePerKelvin,
+            "pascal" => UnitPascal,
+            "kilogramPerCubicMeter" => UnitKilogramPerCubicMeter,
+            "joulePerKilogram" => UnitJoulePerKilogram,
+            "joulePerKilogramKelvin" => UnitJoulePerKilogramKelvin,
+            "newtonMeter" => UnitNewtonMeter,
+            "kilogramSquareMeter" => UnitKilogramSquareMeter,
+            "degreePerSecondSquared" => UnitDegreePerSecondSquared,
+            "kilogramPerSecond" => UnitKilogramPerSecond,
+            "ohm" => UnitOhm,
+            "coulomb" => UnitCoulomb,
             _ => null
         };
 
@@ -259,6 +329,16 @@ public static class GesQuantityUnits
             "dB" => UnitDecibel,
             "W/K" => UnitWattPerKelvin,
             "J/K" => UnitJoulePerKelvin,
+            "Pa" => UnitPascal,
+            "kg/m³" or "kg/m^3" => UnitKilogramPerCubicMeter,
+            "J/kg" => UnitJoulePerKilogram,
+            "J/(kg·K)" or "J/(kg*K)" => UnitJoulePerKilogramKelvin,
+            "N·m" or "N*m" or "Nm" => UnitNewtonMeter,
+            "kg·m²" or "kg*m²" or "kg·m^2" or "kg*m^2" => UnitKilogramSquareMeter,
+            "°/s²" or "°/s^2" or "degree/s²" or "degree/s^2" or "deg/s²" or "deg/s^2" => UnitDegreePerSecondSquared,
+            "kg/s" => UnitKilogramPerSecond,
+            "Ω" or "Ω" or "ohm" => UnitOhm,
+            "C" => UnitCoulomb,
             _ => null
         };
 
@@ -342,6 +422,38 @@ public static class GesQuantityUnits
             (UnitJoulePerKelvin, UnitWattPerKelvin) => UnitSecond,
             (UnitWattPerKelvin, UnitHertz) => UnitJoulePerKelvin,
             (UnitWattPerKelvin, UnitJoulePerKelvin) => UnitHertz,
+            (UnitNewton, UnitSquareMeter) => UnitPascal,
+            (UnitNewton, UnitPascal) => UnitSquareMeter,
+            (UnitJoule, UnitCubicMeter) => UnitPascal,
+            (UnitJoule, UnitPascal) => UnitCubicMeter,
+            (UnitPascal, UnitJoulePerKilogram) => UnitKilogramPerCubicMeter,
+            (UnitPascal, UnitKilogramPerCubicMeter) => UnitJoulePerKilogram,
+            (UnitKilogram, UnitCubicMeter) => UnitKilogramPerCubicMeter,
+            (UnitKilogram, UnitKilogramPerCubicMeter) => UnitCubicMeter,
+            (UnitJoule, UnitKilogram) => UnitJoulePerKilogram,
+            (UnitJoule, UnitJoulePerKilogram) => UnitKilogram,
+            (UnitJoulePerKilogram, UnitKelvin) => UnitJoulePerKilogramKelvin,
+            (UnitJoulePerKilogram, UnitJoulePerKilogramKelvin) => UnitKelvin,
+            (UnitJoulePerKelvin, UnitKilogram) => UnitJoulePerKilogramKelvin,
+            (UnitJoulePerKelvin, UnitJoulePerKilogramKelvin) => UnitKilogram,
+            (UnitKilogramSquareMeter, UnitKilogram) => UnitSquareMeter,
+            (UnitKilogramSquareMeter, UnitSquareMeter) => UnitKilogram,
+            (UnitDegreePerSecond, UnitSecond) => UnitDegreePerSecondSquared,
+            (UnitDegreePerSecond, UnitDegreePerSecondSquared) => UnitSecond,
+            (UnitDegreePerSecondSquared, UnitHertz) => UnitDegreePerSecond,
+            (UnitDegreePerSecondSquared, UnitDegreePerSecond) => UnitHertz,
+            (UnitKilogram, UnitSecond) => UnitKilogramPerSecond,
+            (UnitKilogram, UnitKilogramPerSecond) => UnitSecond,
+            (UnitKilogramPerSecond, UnitHertz) => UnitKilogram,
+            (UnitKilogramPerSecond, UnitKilogram) => UnitHertz,
+            (UnitVolt, UnitAmpere) => UnitOhm,
+            (UnitVolt, UnitOhm) => UnitAmpere,
+            (UnitCoulomb, UnitSecond) => UnitAmpere,
+            (UnitCoulomb, UnitAmpere) => UnitSecond,
+            (UnitAmpere, UnitHertz) => UnitCoulomb,
+            (UnitAmpere, UnitCoulomb) => UnitHertz,
+            (UnitJoule, UnitVolt) => UnitCoulomb,
+            (UnitJoule, UnitCoulomb) => UnitVolt,
             _ => null
         };
     }
@@ -388,6 +500,22 @@ public static class GesQuantityUnits
             (UnitJoulePerKelvin, UnitKelvin) => UnitJoule,
             (UnitWattPerKelvin, UnitSecond) => UnitJoulePerKelvin,
             (UnitJoulePerKelvin, UnitHertz) => UnitWattPerKelvin,
+            (UnitPascal, UnitSquareMeter) => UnitNewton,
+            (UnitPascal, UnitCubicMeter) => UnitJoule,
+            (UnitKilogramPerCubicMeter, UnitJoulePerKilogram) => UnitPascal,
+            (UnitKilogramPerCubicMeter, UnitCubicMeter) => UnitKilogram,
+            (UnitJoulePerKilogram, UnitKilogram) => UnitJoule,
+            (UnitJoulePerKilogramKelvin, UnitKelvin) => UnitJoulePerKilogram,
+            (UnitJoulePerKilogramKelvin, UnitKilogram) => UnitJoulePerKelvin,
+            (UnitKilogram, UnitSquareMeter) => UnitKilogramSquareMeter,
+            (UnitDegreePerSecondSquared, UnitSecond) => UnitDegreePerSecond,
+            (UnitDegreePerSecond, UnitHertz) => UnitDegreePerSecondSquared,
+            (UnitKilogramPerSecond, UnitSecond) => UnitKilogram,
+            (UnitKilogram, UnitHertz) => UnitKilogramPerSecond,
+            (UnitOhm, UnitAmpere) => UnitVolt,
+            (UnitAmpere, UnitSecond) => UnitCoulomb,
+            (UnitCoulomb, UnitHertz) => UnitAmpere,
+            (UnitVolt, UnitCoulomb) => UnitJoule,
             _ => null
         };
 }

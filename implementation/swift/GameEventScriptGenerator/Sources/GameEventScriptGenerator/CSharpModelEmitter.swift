@@ -20,7 +20,10 @@ enum GesCSharpModelEmitter {
     ]
 
     static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> GesCodeDocument {
-        try GesSchemaPlanner.checkTopLevel(GesModelPlanner.topLevel(layout, swift: false), swift: false)
+        let schemaSet = try GesSchemaSetReference.from(options)
+        var topLevel = GesModelPlanner.topLevel(layout, swift: false)
+        try schemaSet?.reserve(&topLevel)
+        try GesSchemaPlanner.checkTopLevel(topLevel, swift: false)
         let access = options.access == .public ? "public" : "internal"
         let space = try GesSchemaPlanner.namespace(options.namespace, GesCSharpEmitter.keywords)
         var prologue = Code()
@@ -40,7 +43,8 @@ enum GesCSharpModelEmitter {
         try GesModelPlanner.checkProtocols(layout, swift: false)
         var document = GesCodeDocument(header: header, prologue: prologue.text, space: space)
         let computed = GesModelPlanner.computed(layout, GesComputedEmitter.helper(options.namespace, suffix), swift: false)
-        let documents = options.documents ? "__GesModelDocuments" + suffix : nil
+        // The callee that reads a document: the schema set's, or that of the helper holding the sources of this file.
+        let documents = !options.documents ? nil : schemaSet.map { $0.qualified + ".ReadDocument" } ?? "__GesModelDocuments" + suffix + ".Read"
         let documentType = options.documents ? try GesModelPlanner.documentType(layout, space) : ""
         // The document type holds a class per root with a property Value beside its static FromDocument, which a C# class of
         // either name cannot hold.
@@ -72,7 +76,10 @@ enum GesCSharpModelEmitter {
         if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, qualifier, support, computed) }) }
         if let documents {
             document.units.append(GesCodeUnit(owner: "") { code in documentTypeDeclaration(&code, layout, documentType, documents, access, qualifier) })
-            document.units.append(GesCodeUnit(owner: "") { code in documentsHolder(&code, layout, documents) })
+            if schemaSet == nil { document.units.append(GesCodeUnit(owner: "") { code in documentsHolder(&code, layout, "__GesModelDocuments" + suffix) }) }
+        }
+        if let setName = schemaSet?.declared {
+            document.units.append(GesCodeUnit(owner: "") { code in GesSchemaSetReference.writeCSharp(&code, setName, access, layout.sources, [], networks: false) })
         }
         let conversions = options.bindings || options.values
         let geometry = GesModelPlanner.usesGeometry(layout)
@@ -118,7 +125,7 @@ enum GesCSharpModelEmitter {
         code.line("/// breaks its schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>")
         code.line("public static \(name) FromDocument(string text)")
         code.open("{")
-        code.line("var document = \(documents).Read(text\(layout.roots.map { ", " + GesSchemaPlanner.literal($0, swift: false) }.joined()));")
+        code.line("var document = \(documents)(text\(layout.roots.map { ", " + GesSchemaPlanner.literal($0, swift: false) }.joined()));")
         code.line("try")
         code.open("{")
         code.line("switch (document.Schema)")
@@ -341,7 +348,7 @@ enum GesCSharpModelEmitter {
             code.line("/// the schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>")
             code.line("public static \(type.name) FromDocument(string text)")
             code.open("{")
-            code.line("var document = \(documents).Read(text, \(GesSchemaPlanner.literal(type.name, swift: false)));")
+            code.line("var document = \(documents)(text, \(GesSchemaPlanner.literal(type.name, swift: false)));")
             code.line("try")
             code.open("{")
             code.line("return FromValue(document.Value);")
@@ -550,7 +557,7 @@ enum GesCSharpModelEmitter {
             code.line("/// <exception cref=\"GesDocumentException\">The text is no document, names another schema or breaks the schema.</exception>")
             code.line("public static \(type.name) FromDocument(string text)")
             code.open("{")
-            code.line("var document = \(documents).Read(text, \(GesSchemaPlanner.literal(type.name, swift: false)));")
+            code.line("var document = \(documents)(text, \(GesSchemaPlanner.literal(type.name, swift: false)));")
             code.line("try")
             code.open("{")
             code.line("return FromValue(document.Value);")

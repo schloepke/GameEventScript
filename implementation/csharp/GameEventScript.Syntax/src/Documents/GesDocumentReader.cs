@@ -178,7 +178,7 @@ internal sealed class GesDocumentReader
         }
 
         var start = _position;
-        while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ']' or '[' or ')')) _position++;
+        _position = GesNumberLiteral.TokenEnd(_text, _position, brackets: true);
         EndTokenAtComment(start);
         if (_position == start) return Fail(Code.UnexpectedToken, _position);
         var token = _text.AsSpan(start, _position - start);
@@ -368,7 +368,7 @@ internal sealed class GesDocumentReader
             if (index > 2 || index <= previousIndex || previousIndex >= 0 && index != previousIndex + 1) return Fail(Code.InvalidLiteral, formStart);
             previousIndex = index;
             var start = _position;
-            while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ')')) _position++;
+            _position = GesNumberLiteral.TokenEnd(_text, _position, brackets: false);
             EndTokenAtComment(start);
             if (_position == start) return Fail(Code.UnexpectedToken, _position);
             var component = GesNumberLiteral.Read(_text, start, _position - start, percentage: _text[_position - 1] == '%', allowGrouping: false);

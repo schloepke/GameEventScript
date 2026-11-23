@@ -5,73 +5,79 @@
 import argparse
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
+import sys
 from site_assets import identity, record, version_browser_assets
 
 EXAMPLE = Path(__file__).resolve().parents[1]
 ROOT = EXAMPLE.parents[1]
 ARTIFACTS = ROOT / 'artifacts/card-game'
+PINNED_VERSION = '6.4.0'
+PINNED_SDK = f'swift-{PINNED_VERSION}-RELEASE_wasm'
+sys.path.insert(0, str(ROOT / 'scripts'))
+from swift_toolchains import installed_sdk, sdk_directories  # noqa: E402
+
+
+def toolchain_version(swift):
+    """The release version of a swift executable, such as 6.4.0, or None."""
+    output = subprocess.run([swift, '--version'], capture_output=True, text=True, check=False).stdout
+    match = re.search(r'Swift version (\d+)\.(\d+)(?:\.(\d+))?', output)
+    return f'{match[1]}.{match[2]}.{match[3] or 0}' if match else None
+
+
+def explicit_sdk(swift):
+    """The SDKs path and ID of the Wasm SDK that matches an explicit swift: the pinned one, else an installed one."""
+    version = toolchain_version(swift)
+    if version == PINNED_VERSION and (ARTIFACTS / 'sdk' / f'{PINNED_SDK}.artifactbundle').is_dir():
+        return ARTIFACTS / 'sdk', PINNED_SDK
+    sdk = f'swift-{version}-RELEASE_wasm'
+    if version and any((directory / f'{sdk}.artifactbundle').is_dir() for directory in sdk_directories()):
+        return None, sdk
+    return None, None
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=['test', 'wasm'])
     parser.add_argument('--swift', help='Path to a Swift.org swift executable for Wasm builds')
-    parser.add_argument('--sdk', default='swift-6.4.0-RELEASE_wasm')
+    parser.add_argument('--sdk', help='Swift SDK ID; defaults to the pinned or the installed Wasm SDK')
     args = parser.parse_args()
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, CLANG_MODULE_CACHE_PATH=str(ARTIFACTS / 'clang-cache'))
     package = EXAMPLE / 'swift'
     command = ['swift', 'test' if args.mode == 'test' else 'build']
     if args.mode == 'wasm':
+        # The pinned tools of setup-wasm.py --download come first, then an installed Swift.org toolchain with its
+        # matching Wasm SDK. An explicit --swift uses the Wasm SDK of its own version, the pinned one or an installed one.
+        pinned = list((ARTIFACTS / 'toolchain').glob('**/usr/bin/swift'))
+        system = installed_sdk('wasm')
+        sdks_path, sdk = None, args.sdk
         if args.swift:
+            # An SDK works only with the toolchain of exactly its version.
             command[0] = args.swift
+            if not sdk:
+                sdks_path, sdk = explicit_sdk(args.swift)
+        elif len(pinned) == 1:
+            command[0] = str(pinned[0])
+            if (ARTIFACTS / 'sdk').is_dir():
+                sdks_path, sdk = ARTIFACTS / 'sdk', sdk or PINNED_SDK
+            elif system:
+                sdk = sdk or system.wasm_id
+        elif system:
+            command[0] = str(system.swift)
+            sdk = sdk or system.wasm_id
         else:
-            installed = list((ARTIFACTS / 'toolchain').glob('**/usr/bin/swift'))
-            if len(installed) != 1:
-                raise RuntimeError('Run scripts/setup-wasm.py or pass --swift with a Swift.org 6.4 toolchain')
-            command[0] = str(installed[0])
-        # Temporary compatibility experiment: never alter the main branch's Runtime.
-        stage = ARTIFACTS / 'wasm-source'
-        for source in [package, ROOT / 'implementation/swift/GameEventScriptRuntime', ROOT / 'implementation/swift/GameEventScriptCompiler', ROOT / 'implementation/swift/GameEventScriptSyntax']:
-            target = stage / source.relative_to(ROOT)
-            target.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source / 'Package.swift', target / 'Package.swift')
-            for subtree in ['Sources', 'Tests']:
-                if (source / subtree).exists():
-                    if (target / subtree).exists():
-                        shutil.rmtree(target / subtree)
-                    shutil.copytree(source / subtree, target / subtree)
-        runtime_sources = stage / 'implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime'
-        for path in runtime_sources.rglob('*.swift'):
-            original = path.read_text()
-            anchor = '#elseif canImport(Musl)\n    import Musl\n#endif'
-            if anchor not in original:
-                continue
-            path.write_text(original.replace(anchor, '#elseif canImport(Musl)\n    import Musl\n#elseif canImport(WASILibc)\n    import WASILibc\n#endif', 1))
-        # WASI's CLOCK_MONOTONIC macro takes an address and is not imported into Swift.
-        runtime = stage / 'implementation/swift/GameEventScriptRuntime'
-        shim = runtime / 'Sources/CardGameWasiClock'
-        (shim / 'include').mkdir(parents=True, exist_ok=True)
-        notice = '// Copyright 2026 Stephan Schlöpke\n// SPDX-License-Identifier: Apache-2.0\n'
-        (shim / 'include/CardGameWasiClock.h').write_text(notice + '#include <stdint.h>\nint64_t card_game_monotonic_microseconds(void);\n')
-        (shim / 'clock.c').write_text(notice + '#include "CardGameWasiClock.h"\n#include <time.h>\nint64_t card_game_monotonic_microseconds(void) { struct timespec t; if (clock_gettime(CLOCK_MONOTONIC, &t) != 0) return -1; return (int64_t)t.tv_sec * 1000000 + t.tv_nsec / 1000; }\n')
-        manifest = runtime / 'Package.swift'
-        runtime_manifest = manifest.read_text()
-        target_anchor = 'targets: [.target(name: "GameEventScriptRuntime", dependencies: ['
-        if target_anchor not in runtime_manifest:
-            raise RuntimeError('Runtime manifest changed; review the isolated Wasm patch')
-        manifest.write_text(runtime_manifest.replace(target_anchor, 'targets: [.target(name: "CardGameWasiClock"), .target(name: "GameEventScriptRuntime", dependencies: ["CardGameWasiClock", '))
-        clock = runtime / 'Sources/GameEventScriptRuntime/Api/Clock.swift'
-        clock_text = clock.read_text().replace('    import WASILibc', '    import WASILibc\n    import CardGameWasiClock')
-        body = '        var value = timespec()\n        clock_gettime(CLOCK_MONOTONIC, &value)\n        return Int64(value.tv_sec) * 1_000_000 + Int64(value.tv_nsec) / 1_000'
-        if body not in clock_text:
-            raise RuntimeError('Clock body changed; review the isolated Wasm patch')
-        clock.write_text(clock_text.replace(body, '        let value = card_game_monotonic_microseconds()\n        precondition(value >= 0, "WASI monotonic clock unavailable")\n        return value'))
-        package = stage / package.relative_to(ROOT)
+            raise RuntimeError('Install a Swift.org toolchain with its matching Wasm SDK, run scripts/setup-wasm.py --download, '
+                               'or pass --swift with a Swift.org toolchain')
+        if not sdk:
+            raise RuntimeError('No Wasm SDK of the toolchain\'s version found; pass --sdk')
+        print(f'Wasm toolchain: {command[0]}, SDK {sdk}', flush=True)
         # Nested declarative setup maps need more compiler stack than WASI's 64 KiB default.
-        command += ['--swift-sdks-path', str(ARTIFACTS / 'sdk'), '--swift-sdk', args.sdk,
+        if sdks_path:
+            command += ['--swift-sdks-path', str(sdks_path)]
+        command += ['--swift-sdk', sdk,
                     '--product', 'card-game-wasm', '-c', 'release',
                     '-Xswiftc', '-Xclang-linker', '-Xswiftc', '-mexec-model=reactor',
                     '-Xlinker', '-z', '-Xlinker', 'stack-size=1048576']

@@ -262,6 +262,8 @@ public readonly struct GesBindingSegment
     /// <param name="excludedTags">The string-constant indices of tags a delivery must not carry; <see langword="null"/> means none.</param>
     /// <param name="requiredRegisterCount">The declared register requirement of a message handler.</param>
     /// <param name="requiredCallStackDepth">The declared nested call depth of a message handler.</param>
+    /// <param name="requiredTagAlternatives">The groups of string-constant indices of which a delivery must carry at least one
+    /// tag each; <see langword="null"/> means none.</param>
     public readonly struct Entry(
         GesBinaryBindKind kind,
         ushort name,
@@ -271,11 +273,13 @@ public readonly struct GesBindingSegment
         IReadOnlyList<ushort>? requiredTags = null,
         IReadOnlyList<ushort>? excludedTags = null,
         ushort requiredRegisterCount = 0,
-        ushort requiredCallStackDepth = 0)
+        ushort requiredCallStackDepth = 0,
+        IReadOnlyList<IReadOnlyList<ushort>>? requiredTagAlternatives = null)
     {
         private readonly GesReadOnlyArray<ushort> _argumentNames = new(argumentNames);
         private readonly GesReadOnlyArray<ushort> _requiredTags = new(requiredTags);
         private readonly GesReadOnlyArray<ushort> _excludedTags = new(excludedTags);
+        private readonly GesReadOnlyArray<GesReadOnlyArray<ushort>> _requiredTagAlternatives = CopyGroups(requiredTagAlternatives);
 
         /// <summary>
         /// Gets the binding ID, unique per kind except for handlers, whose ID is an overload ordinal scoped to their message
@@ -313,6 +317,13 @@ public readonly struct GesBindingSegment
         public GesReadOnlyArray<ushort> ExcludedTags => _excludedTags;
 
         /// <summary>
+        /// Gets the alternative groups of a handler's <c>matching</c> clauses written with <c>|</c>: a message must carry at
+        /// least one tag of every group, each holding the string-constant indices of two or more distinct tags; empty means
+        /// none. A single-tag alternative belongs to <see cref="RequiredTags"/>.
+        /// </summary>
+        public GesReadOnlyArray<GesReadOnlyArray<ushort>> RequiredTagAlternatives => _requiredTagAlternatives;
+
+        /// <summary>
         /// Gets the zero-based code address (instruction index) of an executable binding's <c>RegisterLocals</c> prolog;
         /// non-executable bindings such as imports use the sentinel <c>0xFFFF</c>.
         /// </summary>
@@ -330,6 +341,14 @@ public readonly struct GesBindingSegment
         /// </summary>
         public ushort RequiredCallStackDepth { get; } = requiredCallStackDepth;
 
+        private static GesReadOnlyArray<GesReadOnlyArray<ushort>> CopyGroups(IReadOnlyList<IReadOnlyList<ushort>>? groups)
+        {
+            if (groups is SharedTagGroups shared) return shared.Groups;
+            if (groups is null || groups.Count == 0) return default;
+            var copies = new GesReadOnlyArray<ushort>[groups.Count];
+            for (var index = 0; index < copies.Length; index++) copies[index] = new GesReadOnlyArray<ushort>(groups[index]);
+            return GesReadOnlyArray<GesReadOnlyArray<ushort>>.FromOwnedArray(copies);
+        }
     }
 
     private readonly GesReadOnlyArray<GesBindingSegment.Entry> _entries;
@@ -358,6 +377,48 @@ public readonly struct GesBindingSegment
 
     private static ushort ToEntryCount(int count) => count > ushort.MaxValue ? throw new ArgumentOutOfRangeException(nameof(count), "GameEventScriptProgram tables cannot exceed 65535 entries.") : checked((ushort)count);
 
+    /// <summary>The binding Flags bit stating that the TagAlternativesList field names the entry's alternative groups.</summary>
+    internal const byte TagAlternativesFlag = 0x01;
+
+    /// <summary>
+    /// Already immutable alternative groups that the Program reader passes to several entries; <see cref="Entry"/> adopts
+    /// them without copying.
+    /// </summary>
+    internal sealed class SharedTagGroups(GesReadOnlyArray<GesReadOnlyArray<ushort>> groups) : IReadOnlyList<IReadOnlyList<ushort>>
+    {
+        internal GesReadOnlyArray<GesReadOnlyArray<ushort>> Groups { get; } = groups;
+
+        public int Count => Groups.Count;
+
+        public IReadOnlyList<ushort> this[int index] => Groups[index];
+
+        public IEnumerator<IReadOnlyList<ushort>> GetEnumerator()
+        {
+            for (var index = 0; index < Groups.Count; index++) yield return Groups[index];
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    /// <summary>
+    /// Returns the encoded TagAlternativesList of <paramref name="groups"/>: per group its tag count followed by its tag
+    /// string-constant indices.
+    /// </summary>
+    internal static GesReadOnlyArray<ushort> FlattenTagAlternatives(GesReadOnlyArray<GesReadOnlyArray<ushort>> groups)
+    {
+        var length = 0;
+        for (var group = 0; group < groups.Count; group++) length += 1 + groups[group].Count;
+        var flat = new ushort[length];
+        var used = 0;
+        for (var group = 0; group < groups.Count; group++)
+        {
+            var tags = groups[group];
+            flat[used++] = checked((ushort)tags.Count);
+            for (var tag = 0; tag < tags.Count; tag++) flat[used++] = tags[tag];
+        }
+
+        return GesReadOnlyArray<ushort>.FromOwnedArray(flat);
+    }
 }
 
 /// <summary>

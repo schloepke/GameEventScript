@@ -106,3 +106,13 @@ mobile-starlight-toc .dropdown { max-height: calc(85dvh - var(--ges-docs-top) - 
   line-height: 1.5;
 }
 .sl-markdown-content .ges-since strong { font-weight: 500; }
+
+/* Tabbed C#/Swift examples (src/scripts/code-tabs.ts). Without JavaScript, each panel shows its label. */
+.sl-markdown-content .ges-tabs { margin-block: 1.25rem; }
+.sl-markdown-content .ges-tabs:not(.ges-tabs-ready) > .ges-tab-panel::before { content: attr(data-ges-label); display: block; margin-bottom: .25rem; font-size: .8rem; font-weight: 600; color: var(--sl-color-gray-3); }
+.sl-markdown-content .ges-tabs [role="tablist"] { display: flex; gap: .25rem; margin: 0; border-bottom: 1px solid var(--sl-color-hairline); }
+.sl-markdown-content .ges-tabs [role="tab"] { margin: 0; padding: .35rem .9rem; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--sl-color-gray-3); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; }
+.sl-markdown-content .ges-tabs [role="tab"]:hover { color: var(--sl-color-white); }
+.sl-markdown-content .ges-tabs [role="tab"][aria-selected="true"] { color: var(--sl-color-accent-high); border-bottom-color: var(--sl-color-accent); }
+.sl-markdown-content .ges-tabs > .ges-tab-panel { margin-top: .5rem; }
+.sl-markdown-content .ges-tabs > .ges-tab-panel[hidden] { display: none; }

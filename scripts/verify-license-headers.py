@@ -53,7 +53,7 @@ def self_test():
         root = Path(directory)
         files = {
             "good.swift": f"// {COPYRIGHT}\n// {SPDX}\n",
-            "Package.swift": f"// swift-tools-version: 6.0\n// {COPYRIGHT}\n// {SPDX}\n",
+            "Package.swift": f"// swift-tools-version: 6.1\n// {COPYRIGHT}\n// {SPDX}\n",
             "tool.py": f"#!/usr/bin/env python3\n# {COPYRIGHT}\n# {SPDX}\n",
             "missing.swift": "import Foundation\n",
             "half.py": f"# {COPYRIGHT}\nprint(1)\n",

@@ -1,0 +1,286 @@
+# Copyright 2026 Stephan Schlöpke
+# SPDX-License-Identifier: Apache-2.0
+# Swift declared public API snapshot v1
+# Module: GameEventScriptNetwork
+# Update explicitly with: python3 scripts/verify-swift-api.py --update
+
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkClientSecurity :: struct GesNetworkClientSecurity","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkClientSecurity :: struct GesNetworkClientSecurity","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkCookieResult :: enum GesNetworkCookieResult","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkCookieResult :: enum GesNetworkCookieResult","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkCookieResult :: enum GesNetworkCookieResult","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkEndEventKind :: enum GesNetworkEndEventKind","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkEndEventKind :: enum GesNetworkEndEventKind","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkEndEventKind :: enum GesNetworkEndEventKind","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkEventKind :: enum GesNetworkEventKind","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkEventKind :: enum GesNetworkEventKind","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkEventKind :: enum GesNetworkEventKind","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkKey :: struct GesNetworkKey","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkKey :: struct GesNetworkKey","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkOptions :: struct GesNetworkOptions","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkOptions :: struct GesNetworkOptions","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkSecurity :: enum GesNetworkSecurity","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkSecurity :: enum GesNetworkSecurity","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkSecurity :: enum GesNetworkSecurity","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkSendStatus :: enum GesNetworkSendStatus","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkSendStatus :: enum GesNetworkSendStatus","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkSendStatus :: enum GesNetworkSendStatus","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkServerSecurity :: struct GesNetworkServerSecurity","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkServerSecurity :: struct GesNetworkServerSecurity","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkState :: enum GesNetworkState","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkState :: enum GesNetworkState","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkState :: enum GesNetworkState","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkTransport :: enum GesNetworkTransport","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkTransport :: enum GesNetworkTransport","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptNetwork.GesNetworkTransport :: enum GesNetworkTransport","target":"Swift.Sendable"}
+relationship {"kind":"requirementOf","source":"GameEventScriptNetwork.GesNetworkAcceptor.Accepted :: associatedtype Accepted : GesNetworkLink","target":"GameEventScriptNetwork.GesNetworkAcceptor :: protocol GesNetworkAcceptor : AnyObject"}
+relationship {"kind":"requirementOf","source":"GameEventScriptNetwork.GesNetworkAcceptor.accept(now:) :: func accept(now: Int64) throws -> Self.Accepted?","target":"GameEventScriptNetwork.GesNetworkAcceptor :: protocol GesNetworkAcceptor : AnyObject"}
+relationship {"kind":"requirementOf","source":"GameEventScriptNetwork.GesNetworkAcceptor.close() :: func close()","target":"GameEventScriptNetwork.GesNetworkAcceptor :: protocol GesNetworkAcceptor : AnyObject"}
+relationship {"kind":"requirementOf","source":"GameEventScriptNetwork.GesNetworkConnector.connect(_:) :: func connect(_ connection: GesNetworkConnection) throws -> any GesNetworkLink","target":"GameEventScriptNetwork.GesNetworkConnector :: protocol GesNetworkConnector : AnyObject"}
+relationship {"kind":"requirementOf","source":"GameEventScriptNetwork.GesNetworkConnector.transport :: var transport: GesNetworkTransport { get }","target":"GameEventScriptNetwork.GesNetworkConnector :: protocol GesNetworkConnector : AnyObject"}
+relationship {"kind":"requirementOf","source":"GameEventScriptNetwork.GesNetworkLink.close() :: func close()","target":"GameEventScriptNetwork.GesNetworkLink :: protocol GesNetworkLink : AnyObject"}
+relationship {"kind":"requirementOf","source":"GameEventScriptNetwork.GesNetworkLink.connection :: var connection: GesNetworkConnection { get }","target":"GameEventScriptNetwork.GesNetworkLink :: protocol GesNetworkLink : AnyObject"}
+relationship {"kind":"requirementOf","source":"GameEventScriptNetwork.GesNetworkLink.receive(now:) :: func receive(now: Int64) throws","target":"GameEventScriptNetwork.GesNetworkLink :: protocol GesNetworkLink : AnyObject"}
+relationship {"kind":"requirementOf","source":"GameEventScriptNetwork.GesNetworkLink.transmit() :: func transmit() throws","target":"GameEventScriptNetwork.GesNetworkLink :: protocol GesNetworkLink : AnyObject"}
+symbol {"access":"public","declaration":"@discardableResult func cancel(route: Int, transferId: Int, code: String? = nil) throws -> Bool","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.cancel(route:transferId:code:)","swiftExtension":{"extendedModule":"GameEventScriptNetwork","typeKind":"swift.class"}}
+symbol {"access":"public","declaration":"@discardableResult func endTick() throws -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkClientEnd.endTick()"}
+symbol {"access":"public","declaration":"@discardableResult func endTick() throws -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.endTick()","swiftExtension":{"extendedModule":"GameEventScriptNetwork","typeKind":"swift.class"}}
+symbol {"access":"public","declaration":"@discardableResult func endTick() throws -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.endTick()"}
+symbol {"access":"public","declaration":"associatedtype Accepted : GesNetworkLink","kind":"swift.associatedtype","path":"GameEventScriptNetwork.GesNetworkAcceptor.Accepted"}
+symbol {"access":"public","declaration":"case accept","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkCookieResult.accept"}
+symbol {"access":"public","declaration":"case awaitAccept","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkState.awaitAccept"}
+symbol {"access":"public","declaration":"case awaitHello","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkState.awaitHello"}
+symbol {"access":"public","declaration":"case clientConnected","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEndEventKind.clientConnected"}
+symbol {"access":"public","declaration":"case clientDisconnected","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEndEventKind.clientDisconnected"}
+symbol {"access":"public","declaration":"case closed","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEventKind.closed"}
+symbol {"access":"public","declaration":"case closed","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkState.closed"}
+symbol {"access":"public","declaration":"case connected","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEndEventKind.connected"}
+symbol {"access":"public","declaration":"case connected","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEventKind.connected"}
+symbol {"access":"public","declaration":"case connected","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkState.connected"}
+symbol {"access":"public","declaration":"case connecting","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEndEventKind.connecting"}
+symbol {"access":"public","declaration":"case connecting","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEventKind.connecting"}
+symbol {"access":"public","declaration":"case datagram","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkTransport.datagram"}
+symbol {"access":"public","declaration":"case disconnected","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEndEventKind.disconnected"}
+symbol {"access":"public","declaration":"case drop","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkCookieResult.drop"}
+symbol {"access":"public","declaration":"case encrypted","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkSecurity.encrypted"}
+symbol {"access":"public","declaration":"case hello","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkState.hello"}
+symbol {"access":"public","declaration":"case invalidRoute","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkSendStatus.invalidRoute"}
+symbol {"access":"public","declaration":"case message","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEndEventKind.message"}
+symbol {"access":"public","declaration":"case message","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEventKind.message"}
+symbol {"access":"public","declaration":"case message","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkTransport.message"}
+symbol {"access":"public","declaration":"case messageTooLarge","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkSendStatus.messageTooLarge"}
+symbol {"access":"public","declaration":"case none","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEventKind.none"}
+symbol {"access":"public","declaration":"case none","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkSecurity.none"}
+symbol {"access":"public","declaration":"case notConnected","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkSendStatus.notConnected"}
+symbol {"access":"public","declaration":"case notSubscribed","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkSendStatus.notSubscribed"}
+symbol {"access":"public","declaration":"case queueFull","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkSendStatus.queueFull"}
+symbol {"access":"public","declaration":"case queued","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkSendStatus.queued"}
+symbol {"access":"public","declaration":"case received","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEndEventKind.received"}
+symbol {"access":"public","declaration":"case retry","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkCookieResult.retry"}
+symbol {"access":"public","declaration":"case stream","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkTransport.stream"}
+symbol {"access":"public","declaration":"case tick","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEndEventKind.tick"}
+symbol {"access":"public","declaration":"case tick","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEventKind.tick"}
+symbol {"access":"public","declaration":"case transferCancelled","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEndEventKind.transferCancelled"}
+symbol {"access":"public","declaration":"case transferCancelled","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEventKind.transferCancelled"}
+symbol {"access":"public","declaration":"case transferProgress","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEndEventKind.transferProgress"}
+symbol {"access":"public","declaration":"case transferProgress","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkEventKind.transferProgress"}
+symbol {"access":"public","declaration":"case verified","kind":"swift.enum.case","path":"GameEventScriptNetwork.GesNetworkSecurity.verified"}
+symbol {"access":"public","declaration":"convenience init(key: [UInt8], windowMicroseconds: Int64) throws","kind":"swift.init","path":"GameEventScriptNetwork.GesNetworkCookies.init(key:windowMicroseconds:)"}
+symbol {"access":"public","declaration":"enum GesNetworkCodes","kind":"swift.enum","path":"GameEventScriptNetwork.GesNetworkCodes"}
+symbol {"access":"public","declaration":"enum GesNetworkCookieResult","kind":"swift.enum","path":"GameEventScriptNetwork.GesNetworkCookieResult"}
+symbol {"access":"public","declaration":"enum GesNetworkEndEventKind","kind":"swift.enum","path":"GameEventScriptNetwork.GesNetworkEndEventKind"}
+symbol {"access":"public","declaration":"enum GesNetworkEventKind","kind":"swift.enum","path":"GameEventScriptNetwork.GesNetworkEventKind"}
+symbol {"access":"public","declaration":"enum GesNetworkSecurity","kind":"swift.enum","path":"GameEventScriptNetwork.GesNetworkSecurity"}
+symbol {"access":"public","declaration":"enum GesNetworkSendStatus","kind":"swift.enum","path":"GameEventScriptNetwork.GesNetworkSendStatus"}
+symbol {"access":"public","declaration":"enum GesNetworkState","kind":"swift.enum","path":"GameEventScriptNetwork.GesNetworkState"}
+symbol {"access":"public","declaration":"enum GesNetworkTransport","kind":"swift.enum","path":"GameEventScriptNetwork.GesNetworkTransport"}
+symbol {"access":"public","declaration":"final class GesNetworkClientEnd","kind":"swift.class","path":"GameEventScriptNetwork.GesNetworkClientEnd"}
+symbol {"access":"public","declaration":"final class GesNetworkConnection","kind":"swift.class","path":"GameEventScriptNetwork.GesNetworkConnection"}
+symbol {"access":"public","declaration":"final class GesNetworkCookies","kind":"swift.class","path":"GameEventScriptNetwork.GesNetworkCookies"}
+symbol {"access":"public","declaration":"final class GesNetworkPair","kind":"swift.class","path":"GameEventScriptNetwork.GesNetworkPair"}
+symbol {"access":"public","declaration":"final class GesNetworkServerEnd","kind":"swift.class","path":"GameEventScriptNetwork.GesNetworkServerEnd"}
+symbol {"access":"public","declaration":"final class GesNetworkSimulator","kind":"swift.class","path":"GameEventScriptNetwork.GesNetworkSimulator"}
+symbol {"access":"public","declaration":"func accept() throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.accept()"}
+symbol {"access":"public","declaration":"func accept(now: Int64) throws -> Self.Accepted?","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkAcceptor.accept(now:)"}
+symbol {"access":"public","declaration":"func advance(_ now: Int64) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.advance(_:)"}
+symbol {"access":"public","declaration":"func advance(_ now: Int64) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkSimulator.advance(_:)"}
+symbol {"access":"public","declaration":"func advance(by microseconds: Int64) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkPair.advance(by:)"}
+symbol {"access":"public","declaration":"func beginTick() throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkClientEnd.beginTick()"}
+symbol {"access":"public","declaration":"func beginTick() throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.beginTick()","swiftExtension":{"extendedModule":"GameEventScriptNetwork","typeKind":"swift.class"}}
+symbol {"access":"public","declaration":"func beginTick() throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.beginTick()"}
+symbol {"access":"public","declaration":"func check(packet: UnsafeRawBufferPointer, address: UnsafeRawBufferPointer, now: Int64, retry: UnsafeMutableRawBufferPointer) throws -> GesNetworkCookieResult","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkCookies.check(packet:address:now:retry:)"}
+symbol {"access":"public","declaration":"func check(packet: [UInt8], address: [UInt8], now: Int64, retry: inout [UInt8]) throws -> GesNetworkCookieResult","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkCookies.check(packet:address:now:retry:)"}
+symbol {"access":"public","declaration":"func close()","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkAcceptor.close()"}
+symbol {"access":"public","declaration":"func close()","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkLink.close()"}
+symbol {"access":"public","declaration":"func close(_ detail: String)","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkClientEnd.close(_:)"}
+symbol {"access":"public","declaration":"func close(_ detail: String)","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.close(_:)"}
+symbol {"access":"public","declaration":"func close(_ detail: String)","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.close(_:)"}
+symbol {"access":"public","declaration":"func close(client: Int, detail: String) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.close(client:detail:)"}
+symbol {"access":"public","declaration":"func connect(_ connection: GesNetworkConnection) throws -> any GesNetworkLink","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnector.connect(_:)"}
+symbol {"access":"public","declaration":"func connection(client: Int) throws -> GesNetworkConnection","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.connection(client:)"}
+symbol {"access":"public","declaration":"func copyPrivateKey(into destination: UnsafeMutableRawBufferPointer) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkKey.copyPrivateKey(into:)"}
+symbol {"access":"public","declaration":"func include(route: Int) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkClientEnd.include(route:)"}
+symbol {"access":"public","declaration":"func include(route: Int) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.include(route:)","swiftExtension":{"extendedModule":"GameEventScriptNetwork","typeKind":"swift.class"}}
+symbol {"access":"public","declaration":"func include(route: Int) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.include(route:)"}
+symbol {"access":"public","declaration":"func nextEvent() -> GesNetworkEvent","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.nextEvent()"}
+symbol {"access":"public","declaration":"func poll(_ handler: (GesNetworkEndEvent) throws -> Void) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkClientEnd.poll(_:)"}
+symbol {"access":"public","declaration":"func poll(_ handler: (GesNetworkEndEvent) throws -> Void) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.poll(_:)"}
+symbol {"access":"public","declaration":"func publish(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkClientEnd.publish(route:payload:)"}
+symbol {"access":"public","declaration":"func publish(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.publish(route:payload:)"}
+symbol {"access":"public","declaration":"func publish(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.publish(route:payload:)"}
+symbol {"access":"public","declaration":"func publish(route: Int, payload: [UInt8]) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkClientEnd.publish(route:payload:)"}
+symbol {"access":"public","declaration":"func publish(route: Int, payload: [UInt8]) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.publish(route:payload:)"}
+symbol {"access":"public","declaration":"func publish(route: Int, payload: [UInt8]) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.publish(route:payload:)"}
+symbol {"access":"public","declaration":"func receive(_ data: UnsafeRawBufferPointer, now: Int64) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.receive(_:now:)","swiftExtension":{"extendedModule":"GameEventScriptNetwork","typeKind":"swift.class"}}
+symbol {"access":"public","declaration":"func receive(_ data: [UInt8], now: Int64) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.receive(_:now:)","swiftExtension":{"extendedModule":"GameEventScriptNetwork","typeKind":"swift.class"}}
+symbol {"access":"public","declaration":"func receive(now: Int64) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkLink.receive(now:)"}
+symbol {"access":"public","declaration":"func refuse(_ detail: String) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.refuse(_:)"}
+symbol {"access":"public","declaration":"func refuse(client: Int, detail: String) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.refuse(client:detail:)"}
+symbol {"access":"public","declaration":"func release()","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkClientEnd.release()"}
+symbol {"access":"public","declaration":"func release()","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkPair.release()"}
+symbol {"access":"public","declaration":"func release()","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.release()"}
+symbol {"access":"public","declaration":"func send(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkClientEnd.send(route:payload:)"}
+symbol {"access":"public","declaration":"func send(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.send(route:payload:)"}
+symbol {"access":"public","declaration":"func send(route: Int, payload: UnsafeRawBufferPointer) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.send(route:payload:)"}
+symbol {"access":"public","declaration":"func send(route: Int, payload: UnsafeRawBufferPointer, client: Int) throws -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.send(route:payload:client:)"}
+symbol {"access":"public","declaration":"func send(route: Int, payload: [UInt8]) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkClientEnd.send(route:payload:)"}
+symbol {"access":"public","declaration":"func send(route: Int, payload: [UInt8]) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.send(route:payload:)"}
+symbol {"access":"public","declaration":"func send(route: Int, payload: [UInt8]) -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.send(route:payload:)"}
+symbol {"access":"public","declaration":"func send(route: Int, payload: [UInt8], client: Int) throws -> GesNetworkSendStatus","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.send(route:payload:client:)"}
+symbol {"access":"public","declaration":"func setSendBudgetBytesPerSecond(_ value: Int64) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.setSendBudgetBytesPerSecond(_:)"}
+symbol {"access":"public","declaration":"func subscribe(client: Int, route: Int) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.subscribe(client:route:)"}
+symbol {"access":"public","declaration":"func subscribe(route: Int) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.subscribe(route:)"}
+symbol {"access":"public","declaration":"func transmit() throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkLink.transmit()"}
+symbol {"access":"public","declaration":"func transmit(into buffer: UnsafeMutableRawBufferPointer) throws -> Int","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.transmit(into:)","swiftExtension":{"extendedModule":"GameEventScriptNetwork","typeKind":"swift.class"}}
+symbol {"access":"public","declaration":"func transmit(into buffer: inout [UInt8]) throws -> Int","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.transmit(into:)","swiftExtension":{"extendedModule":"GameEventScriptNetwork","typeKind":"swift.class"}}
+symbol {"access":"public","declaration":"func transportClosed()","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.transportClosed()"}
+symbol {"access":"public","declaration":"func unsubscribe(client: Int, route: Int) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkServerEnd.unsubscribe(client:route:)"}
+symbol {"access":"public","declaration":"func unsubscribe(route: Int) throws","kind":"swift.method","path":"GameEventScriptNetwork.GesNetworkConnection.unsubscribe(route:)"}
+symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptNetwork.GesNetworkOptions.init()"}
+symbol {"access":"public","declaration":"init(client: GesNetworkConnection, server: GesNetworkConnection, seed: Int64, latencyMicroseconds: Int64, jitterMicroseconds: Int64, lossPerMille: Int = 0, duplicatePerMille: Int = 0, reorder: Bool = false) throws","kind":"swift.init","path":"GameEventScriptNetwork.GesNetworkSimulator.init(client:server:seed:latencyMicroseconds:jitterMicroseconds:lossPerMille:duplicatePerMille:reorder:)"}
+symbol {"access":"public","declaration":"init(key: UnsafeRawBufferPointer, windowMicroseconds: Int64) throws","kind":"swift.init","path":"GameEventScriptNetwork.GesNetworkCookies.init(key:windowMicroseconds:)"}
+symbol {"access":"public","declaration":"init(network: GesBoundNetwork, acceptor: any GesNetworkAcceptor, clock: any GesClock, subscribeAll: Bool = true) throws","kind":"swift.init","path":"GameEventScriptNetwork.GesNetworkServerEnd.init(network:acceptor:clock:subscribeAll:)"}
+symbol {"access":"public","declaration":"init(network: GesBoundNetwork, connector: any GesNetworkConnector, options: GesNetworkOptions, token: [UInt8] = [], clock: any GesClock) throws","kind":"swift.init","path":"GameEventScriptNetwork.GesNetworkClientEnd.init(network:connector:options:token:clock:)"}
+symbol {"access":"public","declaration":"init(privateKey: [UInt8]) throws","kind":"swift.init","path":"GameEventScriptNetwork.GesNetworkKey.init(privateKey:)"}
+symbol {"access":"public","declaration":"let acceptor: any GesNetworkAcceptor","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkServerEnd.acceptor"}
+symbol {"access":"public","declaration":"let byPeer: Bool","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.byPeer"}
+symbol {"access":"public","declaration":"let byPeer: Bool","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEvent.byPeer"}
+symbol {"access":"public","declaration":"let bytes: Int64","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.bytes"}
+symbol {"access":"public","declaration":"let bytes: Int64","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEvent.bytes"}
+symbol {"access":"public","declaration":"let client: GesNetworkClientEnd","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkPair.client"}
+symbol {"access":"public","declaration":"let client: GesNetworkConnection","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkSimulator.client"}
+symbol {"access":"public","declaration":"let client: Int","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.client"}
+symbol {"access":"public","declaration":"let clock: any GesClock","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkClientEnd.clock"}
+symbol {"access":"public","declaration":"let clock: any GesClock","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkServerEnd.clock"}
+symbol {"access":"public","declaration":"let code: String","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.code"}
+symbol {"access":"public","declaration":"let code: String","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEvent.code"}
+symbol {"access":"public","declaration":"let connection: GesNetworkConnection","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkClientEnd.connection"}
+symbol {"access":"public","declaration":"let connector: any GesNetworkConnector","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkClientEnd.connector"}
+symbol {"access":"public","declaration":"let detail: String","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.detail"}
+symbol {"access":"public","declaration":"let detail: String","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEvent.detail"}
+symbol {"access":"public","declaration":"let isClient: Bool","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.isClient"}
+symbol {"access":"public","declaration":"let kind: GesNetworkEndEventKind","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.kind"}
+symbol {"access":"public","declaration":"let kind: GesNetworkEventKind","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEvent.kind"}
+symbol {"access":"public","declaration":"let level: GesNetworkSecurity","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkClientSecurity.level"}
+symbol {"access":"public","declaration":"let maxPacketBytes: Int","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.maxPacketBytes"}
+symbol {"access":"public","declaration":"let network: GesBoundNetwork","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.network"}
+symbol {"access":"public","declaration":"let network: GesBoundNetwork","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkServerEnd.network"}
+symbol {"access":"public","declaration":"let payload: UnsafeRawBufferPointer","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.payload"}
+symbol {"access":"public","declaration":"let payload: UnsafeRawBufferPointer","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEvent.payload"}
+symbol {"access":"public","declaration":"let publicKey: [UInt8]","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkKey.publicKey"}
+symbol {"access":"public","declaration":"let route: Int","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.route"}
+symbol {"access":"public","declaration":"let route: Int","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEvent.route"}
+symbol {"access":"public","declaration":"let security: GesNetworkSecurity","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.security"}
+symbol {"access":"public","declaration":"let server: GesNetworkConnection","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkSimulator.server"}
+symbol {"access":"public","declaration":"let server: GesNetworkServerEnd","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkPair.server"}
+symbol {"access":"public","declaration":"let serverKey: GesNetworkKey?","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkServerSecurity.serverKey"}
+symbol {"access":"public","declaration":"let serverPublicKey: [UInt8]","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkClientSecurity.serverPublicKey"}
+symbol {"access":"public","declaration":"let tickNumber: Int","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.tickNumber"}
+symbol {"access":"public","declaration":"let tickNumber: Int","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEvent.tickNumber"}
+symbol {"access":"public","declaration":"let total: Int64","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.total"}
+symbol {"access":"public","declaration":"let total: Int64","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEvent.total"}
+symbol {"access":"public","declaration":"let transferId: Int","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEndEvent.transferId"}
+symbol {"access":"public","declaration":"let transferId: Int","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkEvent.transferId"}
+symbol {"access":"public","declaration":"let transport: GesNetworkTransport","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.transport"}
+symbol {"access":"public","declaration":"protocol GesNetworkAcceptor : AnyObject","kind":"swift.protocol","path":"GameEventScriptNetwork.GesNetworkAcceptor"}
+symbol {"access":"public","declaration":"protocol GesNetworkConnector : AnyObject","kind":"swift.protocol","path":"GameEventScriptNetwork.GesNetworkConnector"}
+symbol {"access":"public","declaration":"protocol GesNetworkLink : AnyObject","kind":"swift.protocol","path":"GameEventScriptNetwork.GesNetworkLink"}
+symbol {"access":"public","declaration":"static func == (lhs: GesNetworkKey, rhs: GesNetworkKey) -> Bool","kind":"swift.func.op","path":"GameEventScriptNetwork.GesNetworkKey.==(_:_:)"}
+symbol {"access":"public","declaration":"static func datagram(client: GesNetworkClientSecurity) -> GesNetworkOptions","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkOptions.datagram(client:)"}
+symbol {"access":"public","declaration":"static func datagram(server: GesNetworkServerSecurity) -> GesNetworkOptions","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkOptions.datagram(server:)"}
+symbol {"access":"public","declaration":"static func generate() -> GesNetworkKey","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkKey.generate()"}
+symbol {"access":"public","declaration":"static func inProcess() -> GesNetworkOptions","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkOptions.inProcess()"}
+symbol {"access":"public","declaration":"static func key(_ key: GesNetworkKey) -> GesNetworkServerSecurity","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkServerSecurity.key(_:)"}
+symbol {"access":"public","declaration":"static func makeClient(network: GesBoundNetwork, token: [UInt8] = [], now: Int64, options: GesNetworkOptions) throws -> GesNetworkConnection","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkConnection.makeClient(network:token:now:options:)"}
+symbol {"access":"public","declaration":"static func makeServer(network: GesBoundNetwork, now: Int64, options: GesNetworkOptions) throws -> GesNetworkConnection","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkConnection.makeServer(network:now:options:)"}
+symbol {"access":"public","declaration":"static func message(client: GesNetworkClientSecurity) -> GesNetworkOptions","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkOptions.message(client:)"}
+symbol {"access":"public","declaration":"static func message(server: GesNetworkServerSecurity) -> GesNetworkOptions","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkOptions.message(server:)"}
+symbol {"access":"public","declaration":"static func pinned(_ serverPublicKey: [UInt8]) throws -> GesNetworkClientSecurity","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkClientSecurity.pinned(_:)"}
+symbol {"access":"public","declaration":"static func realtime(network: GesBoundNetwork, token: [UInt8] = [], options: GesNetworkOptions = .inProcess()) throws -> GesNetworkPair","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkPair.realtime(network:token:options:)"}
+symbol {"access":"public","declaration":"static func stream(client: GesNetworkClientSecurity) -> GesNetworkOptions","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkOptions.stream(client:)"}
+symbol {"access":"public","declaration":"static func stream(server: GesNetworkServerSecurity) -> GesNetworkOptions","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkOptions.stream(server:)"}
+symbol {"access":"public","declaration":"static func synchronous(network: GesBoundNetwork, token: [UInt8] = [], options: GesNetworkOptions = .inProcess()) throws -> GesNetworkPair","kind":"swift.type.method","path":"GameEventScriptNetwork.GesNetworkPair.synchronous(network:token:options:)"}
+symbol {"access":"public","declaration":"static let authenticationFailed: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.authenticationFailed"}
+symbol {"access":"public","declaration":"static let closed: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.closed"}
+symbol {"access":"public","declaration":"static let development: GesNetworkClientSecurity","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkClientSecurity.development"}
+symbol {"access":"public","declaration":"static let insecure: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.insecure"}
+symbol {"access":"public","declaration":"static let malformed: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.malformed"}
+symbol {"access":"public","declaration":"static let messageTooLarge: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.messageTooLarge"}
+symbol {"access":"public","declaration":"static let packetTooLarge: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.packetTooLarge"}
+symbol {"access":"public","declaration":"static let protocolMismatch: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.protocolMismatch"}
+symbol {"access":"public","declaration":"static let queueFull: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.queueFull"}
+symbol {"access":"public","declaration":"static let rateExceeded: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.rateExceeded"}
+symbol {"access":"public","declaration":"static let refused: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.refused"}
+symbol {"access":"public","declaration":"static let retryBytes: Int","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCookies.retryBytes"}
+symbol {"access":"public","declaration":"static let schemaMismatch: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.schemaMismatch"}
+symbol {"access":"public","declaration":"static let timeout: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.timeout"}
+symbol {"access":"public","declaration":"static let transferCancelled: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.transferCancelled"}
+symbol {"access":"public","declaration":"static let transferCorrupt: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.transferCorrupt"}
+symbol {"access":"public","declaration":"static let transferTooLarge: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.transferTooLarge"}
+symbol {"access":"public","declaration":"static let transportClosed: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.transportClosed"}
+symbol {"access":"public","declaration":"static let unencrypted: GesNetworkClientSecurity","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkClientSecurity.unencrypted"}
+symbol {"access":"public","declaration":"static let unencrypted: GesNetworkServerSecurity","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkServerSecurity.unencrypted"}
+symbol {"access":"public","declaration":"static let unexpectedRoute: String","kind":"swift.type.property","path":"GameEventScriptNetwork.GesNetworkCodes.unexpectedRoute"}
+symbol {"access":"public","declaration":"struct GesNetworkClientSecurity","kind":"swift.struct","path":"GameEventScriptNetwork.GesNetworkClientSecurity"}
+symbol {"access":"public","declaration":"struct GesNetworkEndEvent","kind":"swift.struct","path":"GameEventScriptNetwork.GesNetworkEndEvent"}
+symbol {"access":"public","declaration":"struct GesNetworkEvent","kind":"swift.struct","path":"GameEventScriptNetwork.GesNetworkEvent"}
+symbol {"access":"public","declaration":"struct GesNetworkKey","kind":"swift.struct","path":"GameEventScriptNetwork.GesNetworkKey"}
+symbol {"access":"public","declaration":"struct GesNetworkOptions","kind":"swift.struct","path":"GameEventScriptNetwork.GesNetworkOptions"}
+symbol {"access":"public","declaration":"struct GesNetworkServerSecurity","kind":"swift.struct","path":"GameEventScriptNetwork.GesNetworkServerSecurity"}
+symbol {"access":"public","declaration":"var ackDelayMicroseconds: Int64","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.ackDelayMicroseconds"}
+symbol {"access":"public","declaration":"var canReceive: Bool { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.canReceive"}
+symbol {"access":"public","declaration":"var clientCount: Int { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkServerEnd.clientCount"}
+symbol {"access":"public","declaration":"var clientSecurity: GesNetworkClientSecurity?","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.clientSecurity"}
+symbol {"access":"public","declaration":"var connection: GesNetworkConnection { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkLink.connection"}
+symbol {"access":"public","declaration":"var deflateTransfers: Bool","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.deflateTransfers"}
+symbol {"access":"public","declaration":"var insecureTestKeySeed: UInt64?","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.insecureTestKeySeed"}
+symbol {"access":"public","declaration":"var isSynchronous: Bool { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkPair.isSynchronous"}
+symbol {"access":"public","declaration":"var keepaliveMicroseconds: Int64","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.keepaliveMicroseconds"}
+symbol {"access":"public","declaration":"var lastTransferId: Int { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.lastTransferId"}
+symbol {"access":"public","declaration":"var maxBaselineBytes: Int64?","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.maxBaselineBytes"}
+symbol {"access":"public","declaration":"var maxFramesPerSecond: Int","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.maxFramesPerSecond"}
+symbol {"access":"public","declaration":"var maxPacketBytes: Int","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.maxPacketBytes"}
+symbol {"access":"public","declaration":"var maxPendingReceiveBytes: Int64?","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.maxPendingReceiveBytes"}
+symbol {"access":"public","declaration":"var maxSendQueueBytes: Int64?","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.maxSendQueueBytes"}
+symbol {"access":"public","declaration":"var maxTransferBytes: Int64?","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.maxTransferBytes"}
+symbol {"access":"public","declaration":"var network: GesBoundNetwork { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkClientEnd.network"}
+symbol {"access":"public","declaration":"var nextDeadline: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkClientEnd.nextDeadline"}
+symbol {"access":"public","declaration":"var nextDeadline: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.nextDeadline"}
+symbol {"access":"public","declaration":"var nextDeadline: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkServerEnd.nextDeadline"}
+symbol {"access":"public","declaration":"var nextDeadline: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkSimulator.nextDeadline"}
+symbol {"access":"public","declaration":"var now: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.now"}
+symbol {"access":"public","declaration":"var now: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkPair.now"}
+symbol {"access":"public","declaration":"var now: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkSimulator.now"}
+symbol {"access":"public","declaration":"var packetsInFlight: Int { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkSimulator.packetsInFlight"}
+symbol {"access":"public","declaration":"var pendingReceiveBytes: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.pendingReceiveBytes"}
+symbol {"access":"public","declaration":"var queuedSendBytes: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.queuedSendBytes"}
+symbol {"access":"public","declaration":"var roundTripMicroseconds: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.roundTripMicroseconds"}
+symbol {"access":"public","declaration":"var security: GesNetworkSecurity { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.security"}
+symbol {"access":"public","declaration":"var sendBudgetBytesPerSecond: Int64 { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.sendBudgetBytesPerSecond"}
+symbol {"access":"public","declaration":"var sendBudgetBytesPerSecond: Int64","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.sendBudgetBytesPerSecond"}
+symbol {"access":"public","declaration":"var serverSecurity: GesNetworkServerSecurity?","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.serverSecurity"}
+symbol {"access":"public","declaration":"var state: GesNetworkState { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.state"}
+symbol {"access":"public","declaration":"var timeoutMicroseconds: Int64","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.timeoutMicroseconds"}
+symbol {"access":"public","declaration":"var transport: GesNetworkTransport { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnector.transport"}
+symbol {"access":"public","declaration":"var transport: GesNetworkTransport","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkOptions.transport"}
+symbol {"access":"public","declaration":"var usesInsecureTestKeys: Bool { get }","kind":"swift.property","path":"GameEventScriptNetwork.GesNetworkConnection.usesInsecureTestKeys"}

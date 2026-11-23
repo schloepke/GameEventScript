@@ -282,10 +282,11 @@ Printed text must satisfy these rules so that every implementation can read it:
   Records and Message arguments. With prefixed units enabled, choose among the
   base symbol and the decimal prefixes accepted for that unit, `km`/`mm`, `ms`,
   `t`, `kN`, `kJ`/`MJ`, `mW`/`kW`/`MW`, `kV`, `kHz`, `cm²`/`km²`,
-  `mW/m²`/`kW/m²`, `mW/K`/`kW/K`/`MW/K` and `kJ/K`/`MJ/K`, the spelling whose magnitude lies in [1, 1000), or otherwise
-  the one closest to that interval on a logarithmic scale. `cm` is read but
-  never chosen, because `mm` covers its magnitudes. Prefixes keep the
-  unit symbol rather than its ASCII spelling. `Wh`, `kWh` and `/s` are never
+  `mW/m²`/`kW/m²`, `mW/K`/`kW/K`/`MW/K`, `kJ/K`/`MJ/K`, `kPa`/`MPa`,
+  `kJ/kg`/`MJ/kg`, `kJ/(kg·K)`, `kN·m` and `mΩ`/`kΩ`/`MΩ`, the spelling whose magnitude lies in [1, 1000), or otherwise
+  the one closest to that interval on a logarithmic scale. `cm` and `hPa` are read but
+  never chosen, because `mm` and the base symbol or `kPa` cover their magnitudes. Prefixes keep the
+  unit symbol rather than its ASCII spelling. `Wh`, `kWh`, `Ah`, `mAh` and `/s` are never
   chosen. Zero, infinities, units without prefixes such as `m/s`, `m³`, `dB` or
   `°/s`, and Vector, Point, Range and Series components use the base symbol.
 - Printing options: indentation (default 2 spaces, at most 100), maximum line

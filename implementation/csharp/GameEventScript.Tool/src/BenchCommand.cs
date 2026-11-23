@@ -239,7 +239,7 @@ Options:
         bool withArgs = false, withoutArgs = false;
         foreach (var binding in program.Bindings.Entries)
         {
-            if (binding.RequiredTags.Count > 0 || program.StringConstants.Resolve(binding.Name) != entry) continue;
+            if (binding.RequiredTags.Count > 0 || binding.RequiredTagAlternatives.Count > 0 || program.StringConstants.Resolve(binding.Name) != entry) continue;
             if (binding.Kind == GesBinaryBindKind.MessageNameHandler) withoutArgs = true;
             if (binding.Kind != GesBinaryBindKind.MessageHandler) continue;
             if (binding.ArgumentNames.Count == 0) withoutArgs = true;

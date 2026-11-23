@@ -238,5 +238,6 @@ the read-only data your scripts consult.
 
 Next: [learn the language](Language.md), explore the
 [C# implementation and embedding examples](../../implementation/csharp/README.md),
-or consult the [host lifecycle](../../specs/HostRuntime.md) and
-[external type contract](../../specs/PublicApi.md).
+consult the [host lifecycle](../../specs/HostRuntime.md) and
+[external type contract](../../specs/PublicApi.md), or
+[connect a client and a server](Network.md) with schema records.

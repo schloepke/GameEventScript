@@ -7,6 +7,10 @@
     import Glibc
 #elseif canImport(Musl)
     import Musl
+#elseif canImport(Android)
+    import Android
+#elseif canImport(WASILibc)
+    import WASILibc
 #endif
 
 /// Explicit signed-64 and binary64 conversion rules shared by runtime values.

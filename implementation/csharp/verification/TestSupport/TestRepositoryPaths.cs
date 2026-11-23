@@ -19,7 +19,11 @@ internal static class TestRepositoryPaths
 
     internal static string GeneratorProjectDirectory { get; } = Path.Combine(CSharpDirectory, "GameEventScript.Generator", "src");
 
-    internal static IReadOnlyList<string> ProductProjectDirectories { get; } = [LibraryProjectDirectory, CompilerProjectDirectory, CSharpBridgeProjectDirectory, SyntaxProjectDirectory, GeneratorProjectDirectory];
+    internal static string NetworkProjectDirectory { get; } = Path.Combine(CSharpDirectory, "GameEventScript.Network", "src");
+
+    internal static string NetworkSocketsProjectDirectory { get; } = Path.Combine(CSharpDirectory, "GameEventScript.Network.Sockets", "src");
+
+    internal static IReadOnlyList<string> ProductProjectDirectories { get; } = [LibraryProjectDirectory, CompilerProjectDirectory, CSharpBridgeProjectDirectory, SyntaxProjectDirectory, GeneratorProjectDirectory, NetworkProjectDirectory, NetworkSocketsProjectDirectory];
 
     internal static string RepositoryTestDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "verification", "GameEventScript.Repository.Tests");
 

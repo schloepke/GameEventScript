@@ -13,7 +13,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGES = ("GameEventScript.Syntax", "GameEventScript.Runtime", "GameEventScript.Compiler", "GameEventScript.CSharpBridge",
-            "GameEventScript.Generator")
+            "GameEventScript.Generator", "GameEventScript.Network", "GameEventScript.Network.Sockets")
 VERSION = "0.1.0-test.1"
 
 

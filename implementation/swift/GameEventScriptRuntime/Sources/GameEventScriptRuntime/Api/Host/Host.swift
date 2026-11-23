@@ -134,6 +134,7 @@ public final class GameEventScriptHost {
             let entry = GesSubscriptionEntry(
                 signature: handler.signature,
                 requiredTags: handler.requiredTags,
+                requiredTagAlternatives: handler.requiredTagAlternatives,
                 excludedTags: handler.excludedTags,
                 matchArguments: handler.binding.kind == .messageHandler,
                 priority: priority,

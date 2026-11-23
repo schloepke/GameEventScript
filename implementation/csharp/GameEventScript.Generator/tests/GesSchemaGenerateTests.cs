@@ -70,6 +70,51 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
+    public void NetworkTypesHideNoTopLevelType()
+    {
+        // A network nests its typed ends, their handler or event types and, in an end that publishes, Topic and Tick; each
+        // would hide a root, a tag set or the network of its name for the code inside.
+        static string Network(string root, string network, string verb = "publishes")
+            => $"wire schema :{root} as {{\n  x: :Number integer between 0 and 255\n}}\nnetwork :{network} as {{\n  server {verb} :{root} reliable\n}}\n";
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            foreach (var (root, network) in new[] { ("Client", "Game"), ("Server", "Game"), ("Topic", "Game"), ("Tick", "Game"), ("Chunk", "Client"), ("Chunk", "Server") })
+                Assert.AreEqual("generate.nameCollision", Code(() => Generate(Network(root, network), network, language)), $"{root} in {network}");
+            StringAssert.Contains(Generate(Network("Topic", "Game", "sends"), "Game", language), "Game");
+            Assert.AreEqual("generate.nameCollision", Code(() => Generate(Network("Chunk", language == GesSchemaLanguage.Swift ? "ServerEvent" : "IServerHandler"), language == GesSchemaLanguage.Swift ? "ServerEvent" : "IServerHandler", language)));
+        }
+
+        StringAssert.Contains(Generate(Network("ClientEvent", "Game"), "Game", GesSchemaLanguage.CSharp), "ClientEvent");
+        StringAssert.Contains(Generate(Network("IClientHandler", "Game"), "Game", GesSchemaLanguage.Swift), "IClientHandler");
+
+        // C# forbids a member named like the network class: its hash, bound network, route constants and functions.
+        foreach (var network in new[] { "Hash", "Bound", "ServerPublishesChunk", "ServerPublishChunk" })
+        {
+            Assert.AreEqual("generate.nameCollision", Code(() => Generate(Network("Chunk", network), network, GesSchemaLanguage.CSharp)), network);
+            StringAssert.Contains(Generate(Network("Chunk", network), network, GesSchemaLanguage.Swift), network);
+        }
+
+        // The members of the network type must also differ from one another: a rate constant may not repeat a route constant.
+        const string rates = "wire schema :X as {\n  a: :Number integer between 0 and 255\n}\nwire schema :XEveryMicroseconds as {\n  a: :Number integer between 0 and 255\n}\nnetwork :Net as {\n  server publishes :X latest at most every 50ms\n  server publishes :XEveryMicroseconds latest\n}\n";
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+            Assert.AreEqual("generate.nameCollision", Code(() => Generate(rates, "Net", language)), language.ToString());
+
+        // Swift reserves Void, which the closures of the typed ends name.
+        Assert.AreEqual("generate.nameCollision", Code(() => Generate(Network("Void", "Game"), "Game", GesSchemaLanguage.Swift)));
+        StringAssert.Contains(Generate(Network("Void", "Game"), "Game", GesSchemaLanguage.CSharp), "Void");
+    }
+
+    [TestMethod]
+    public void CaseFieldsOfTypedEndsStayDistinct()
+    {
+        // Message-set roots Foo_Bar with Baz and Foo with Bar_Baz would share one case field if its parts joined with one `_`.
+        const string source = "wire messages :Foo_Bar as (Baz, Qux)\nwire messages :Foo as (Bar_Baz, Qux)\nmessage Baz()\nmessage Qux()\nmessage Bar_Baz()\n\nnetwork :Net as {\n  client sends :Foo_Bar reliable\n  client sends :Foo reliable\n}\n";
+        var code = Generate(source, "Net", GesSchemaLanguage.CSharp);
+        StringAssert.Contains(code, "__case_foo_Bar__Baz");
+        StringAssert.Contains(code, "__case_foo__Bar_Baz");
+    }
+
+    [TestMethod]
     public void PackedRootsReserveTheirWireMembers()
     {
         // Wire code that declares a packed root extends its type with the wire members, which its fields must not take.

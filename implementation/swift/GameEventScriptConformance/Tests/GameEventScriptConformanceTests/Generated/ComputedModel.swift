@@ -12,6 +12,10 @@ import GameEventScriptRuntime
     import Glibc
 #elseif canImport(Musl)
     import Musl
+#elseif canImport(Android)
+    import Android
+#elseif canImport(WASILibc)
+    import WASILibc
 #elseif canImport(ucrt)
     import ucrt
 #endif

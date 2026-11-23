@@ -66,6 +66,14 @@ def terminal_test(color):
 
     def submit(text):
         os.write(master, text)
+        # A busy editor (the JIT at the first keys) would read the text and Enter together, which PrettyPrompt's paste
+        # detection takes as a pasted line break; wait until it has echoed plain text before the quiet interval.
+        if text and b'\x1b' not in text:
+            echo = visible().rfind(b'ges> ') + len(b'ges> ')
+            deadline = time.monotonic() + 10
+            while visible().find(text, echo) < 0:
+                assert time.monotonic() < deadline, (text, bytes(transcript[-3000:]))
+                read(0.02)
         # Distinguish typed input from PrettyPrompt's multi-key paste detection.
         deadline = time.monotonic() + 0.2
         while time.monotonic() < deadline:

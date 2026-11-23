@@ -656,3 +656,261 @@ steps:
               type: ":Text"
               value: "Damage(amount)"
 ```
+
+---
+
+## Test: handler tag alternatives require one tag of each group
+
+Each `|` group of a `matching` filter needs one of its tags; groups combine with the plain tags, `without`, repeated clauses and both handler forms, and absorbed or repeated groups change nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0008
+kind: scriptApi
+level: scenario
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "handler tag alternatives require one tag of each group.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Probe(value: 1) with #lidar
+  emit Probe(value: 2) with #ultrasonic, #front
+  emit Probe(value: 3) with #front
+  emit Probe(value: 4) with #lidar, #stale
+  emit Probe(value: 5) with #rear, #ultrasonic
+}
+
+on Probe(value) matching #lidar | #ultrasonic {
+  emit Seen(value: value)
+}
+
+on Probe(value) matching #lidar | #ultrasonic, #front | #rear without #stale {
+  emit Seen(value: value + 10)
+}
+
+on Probe as probe matching #front matching #lidar |
+    #ultrasonic {
+  emit Seen(value: probe.arguments.value + 100)
+}
+
+on Probe(value) matching #front, #front | #lidar, #ultrasonic | #ultrasonic {
+  emit Seen(value: value + 1000)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Probe"
+        tags:
+          - "lidar"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "1"
+      - name: "Probe"
+        tags:
+          - "ultrasonic"
+          - "front"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "2"
+      - name: "Probe"
+        tags:
+          - "front"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "3"
+      - name: "Probe"
+        tags:
+          - "lidar"
+          - "stale"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "4"
+      - name: "Probe"
+        tags:
+          - "rear"
+          - "ultrasonic"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "5"
+      - name: "Seen"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "1"
+      - name: "Seen"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "2"
+      - name: "Seen"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "12"
+      - name: "Seen"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "102"
+      - name: "Seen"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "1002"
+      - name: "Seen"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "4"
+      - name: "Seen"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "5"
+      - name: "Seen"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "15"
+```
+
+---
+
+## Test: undeliverable filters accept tag alternatives
+
+An `undeliverable` handler with a `|` group receives only rejected messages that carry one of the group tags and no excluded tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0009
+kind: scriptApi
+level: scenario
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "undeliverable filters accept tag alternatives.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Unknown(value: 1) with #radio
+  emit Unknown(value: 2) with #wire, #muted
+  emit Unknown(value: 3) with #paper
+  emit Unknown(value: 4) with #wire
+}
+
+on undeliverable as rejected matching #radio | #wire without #muted {
+  emit Heard(value: rejected.arguments.value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Unknown"
+        tags:
+          - "radio"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "1"
+      - name: "Unknown"
+        tags:
+          - "wire"
+          - "muted"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "2"
+      - name: "Unknown"
+        tags:
+          - "paper"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "3"
+      - name: "Unknown"
+        tags:
+          - "wire"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "4"
+      - name: "Heard"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "1"
+      - name: "Heard"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "4"
+```

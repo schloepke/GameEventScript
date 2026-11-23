@@ -24,6 +24,30 @@ extension GesQuantityUnit {
     // Each spelling precedes every shorter one it starts or ends with, so a match is always the longest one; the
     // symbol precedes its ASCII spelling, which document formatting relies on.
     @_spi(Syntax) public static let suffixes: [Suffix] = [
+        .init(text: "kJ/(kg·K)", unit: .joulePerKilogramKelvin, exponent: 3),
+        .init(text: "kJ/(kg*K)", unit: .joulePerKilogramKelvin, exponent: 3),
+        .init(text: "J/(kg·K)", unit: .joulePerKilogramKelvin),
+        .init(text: "J/(kg*K)", unit: .joulePerKilogramKelvin),
+        .init(text: "MJ/kg", unit: .joulePerKilogram, exponent: 6),
+        .init(text: "kJ/kg", unit: .joulePerKilogram, exponent: 3),
+        .init(text: "J/kg", unit: .joulePerKilogram),
+        .init(text: "kg/m³", unit: .kilogramPerCubicMeter),
+        .init(text: "kg/m^3", unit: .kilogramPerCubicMeter),
+        .init(text: "kg·m²", unit: .kilogramSquareMeter),
+        .init(text: "kg*m²", unit: .kilogramSquareMeter),
+        .init(text: "kg·m^2", unit: .kilogramSquareMeter),
+        .init(text: "kg*m^2", unit: .kilogramSquareMeter),
+        .init(text: "kg/s", unit: .kilogramPerSecond),
+        .init(text: "kN·m", unit: .newtonMeter, exponent: 3),
+        .init(text: "kN*m", unit: .newtonMeter, exponent: 3),
+        .init(text: "kNm", unit: .newtonMeter, exponent: 3),
+        .init(text: "N·m", unit: .newtonMeter),
+        .init(text: "N*m", unit: .newtonMeter),
+        .init(text: "Nm", unit: .newtonMeter),
+        .init(text: "deg/s²", unit: .degreePerSecondSquared),
+        .init(text: "deg/s^2", unit: .degreePerSecondSquared),
+        .init(text: "°/s²", unit: .degreePerSecondSquared),
+        .init(text: "°/s^2", unit: .degreePerSecondSquared),
         .init(text: "mW/m²", unit: .wattPerSquareMeter, exponent: -3),
         .init(text: "mW/m^2", unit: .wattPerSquareMeter, exponent: -3),
         .init(text: "kW/m²", unit: .wattPerSquareMeter, exponent: 3),
@@ -56,7 +80,20 @@ extension GesQuantityUnit {
         .init(text: "Wh", unit: .joule, exponent: 2, factor: 36),
         .init(text: "Hz", unit: .hertz),
         .init(text: "/s", unit: .hertz),
+        .init(text: "MPa", unit: .pascal, exponent: 6),
+        .init(text: "kPa", unit: .pascal, exponent: 3),
+        .init(text: "hPa", unit: .pascal, exponent: 2),
+        .init(text: "Pa", unit: .pascal),
+        .init(text: "mAh", unit: .coulomb, exponent: -1, factor: 36),
+        .init(text: "Ah", unit: .coulomb, exponent: 2, factor: 36),
+        .init(text: "ohm", unit: .ohm),
         .init(text: "dB", unit: .decibel),
+        .init(text: "mΩ", unit: .ohm, exponent: -3),
+        .init(text: "kΩ", unit: .ohm, exponent: 3),
+        .init(text: "MΩ", unit: .ohm, exponent: 6),
+        .init(text: "mΩ", unit: .ohm, exponent: -3),
+        .init(text: "kΩ", unit: .ohm, exponent: 3),
+        .init(text: "MΩ", unit: .ohm, exponent: 6),
         .init(text: "km", unit: .meter, exponent: 3),
         .init(text: "ms", unit: .second, exponent: -3),
         .init(text: "mm", unit: .meter, exponent: -3),
@@ -71,6 +108,8 @@ extension GesQuantityUnit {
         .init(text: "MW", unit: .watt, exponent: 6),
         .init(text: "kV", unit: .volt, exponent: 3),
         .init(text: "°", unit: .degree),
+        .init(text: "Ω", unit: .ohm),
+        .init(text: "Ω", unit: .ohm),
         .init(text: "m", unit: .meter),
         .init(text: "s", unit: .second),
         .init(text: "t", unit: .kilogram, exponent: 3),
@@ -80,6 +119,7 @@ extension GesQuantityUnit {
         .init(text: "V", unit: .volt),
         .init(text: "A", unit: .ampere),
         .init(text: "K", unit: .kelvin),
+        .init(text: "C", unit: .coulomb),
     ]
 
     // The distinct units of the spelling table in table order, so the root search tests each unit once.
@@ -124,6 +164,16 @@ extension GesQuantityUnit {
         case .decibel: 18
         case .wattPerKelvin: 19
         case .joulePerKelvin: 20
+        case .pascal: 21
+        case .kilogramPerCubicMeter: 22
+        case .joulePerKilogram: 23
+        case .joulePerKilogramKelvin: 24
+        case .newtonMeter: 25
+        case .kilogramSquareMeter: 26
+        case .degreePerSecondSquared: 27
+        case .kilogramPerSecond: 28
+        case .ohm: 29
+        case .coulomb: 30
         }
     }
 
@@ -151,6 +201,16 @@ extension GesQuantityUnit {
         case 18: self = .decibel
         case 19: self = .wattPerKelvin
         case 20: self = .joulePerKelvin
+        case 21: self = .pascal
+        case 22: self = .kilogramPerCubicMeter
+        case 23: self = .joulePerKilogram
+        case 24: self = .joulePerKilogramKelvin
+        case 25: self = .newtonMeter
+        case 26: self = .kilogramSquareMeter
+        case 27: self = .degreePerSecondSquared
+        case 28: self = .kilogramPerSecond
+        case 29: self = .ohm
+        case 30: self = .coulomb
         default: return nil
         }
     }
@@ -191,6 +251,16 @@ extension GesQuantityUnit {
         case "dB": self = .decibel
         case "W/K": self = .wattPerKelvin
         case "J/K": self = .joulePerKelvin
+        case "Pa": self = .pascal
+        case "kg/m³", "kg/m^3": self = .kilogramPerCubicMeter
+        case "J/kg": self = .joulePerKilogram
+        case "J/(kg·K)", "J/(kg*K)": self = .joulePerKilogramKelvin
+        case "N·m", "N*m", "Nm": self = .newtonMeter
+        case "kg·m²", "kg*m²", "kg·m^2", "kg*m^2": self = .kilogramSquareMeter
+        case "°/s²", "°/s^2", "degree/s²", "degree/s^2", "deg/s²", "deg/s^2": self = .degreePerSecondSquared
+        case "kg/s": self = .kilogramPerSecond
+        case "Ω", "Ω", "ohm": self = .ohm
+        case "C": self = .coulomb
         default: return nil
         }
     }
@@ -256,6 +326,38 @@ extension GesQuantityUnit {
         case (.joulePerKelvin, .wattPerKelvin): return .second
         case (.wattPerKelvin, .hertz): return .joulePerKelvin
         case (.wattPerKelvin, .joulePerKelvin): return .hertz
+        case (.newton, .squareMeter): return .pascal
+        case (.newton, .pascal): return .squareMeter
+        case (.joule, .cubicMeter): return .pascal
+        case (.joule, .pascal): return .cubicMeter
+        case (.pascal, .joulePerKilogram): return .kilogramPerCubicMeter
+        case (.pascal, .kilogramPerCubicMeter): return .joulePerKilogram
+        case (.kilogram, .cubicMeter): return .kilogramPerCubicMeter
+        case (.kilogram, .kilogramPerCubicMeter): return .cubicMeter
+        case (.joule, .kilogram): return .joulePerKilogram
+        case (.joule, .joulePerKilogram): return .kilogram
+        case (.joulePerKilogram, .kelvin): return .joulePerKilogramKelvin
+        case (.joulePerKilogram, .joulePerKilogramKelvin): return .kelvin
+        case (.joulePerKelvin, .kilogram): return .joulePerKilogramKelvin
+        case (.joulePerKelvin, .joulePerKilogramKelvin): return .kilogram
+        case (.kilogramSquareMeter, .kilogram): return .squareMeter
+        case (.kilogramSquareMeter, .squareMeter): return .kilogram
+        case (.degreePerSecond, .second): return .degreePerSecondSquared
+        case (.degreePerSecond, .degreePerSecondSquared): return .second
+        case (.degreePerSecondSquared, .hertz): return .degreePerSecond
+        case (.degreePerSecondSquared, .degreePerSecond): return .hertz
+        case (.kilogram, .second): return .kilogramPerSecond
+        case (.kilogram, .kilogramPerSecond): return .second
+        case (.kilogramPerSecond, .hertz): return .kilogram
+        case (.kilogramPerSecond, .kilogram): return .hertz
+        case (.volt, .ampere): return .ohm
+        case (.volt, .ohm): return .ampere
+        case (.coulomb, .second): return .ampere
+        case (.coulomb, .ampere): return .second
+        case (.ampere, .hertz): return .coulomb
+        case (.ampere, .coulomb): return .hertz
+        case (.joule, .volt): return .coulomb
+        case (.joule, .coulomb): return .volt
         default: return nil
         }
     }
@@ -298,6 +400,22 @@ extension GesQuantityUnit {
         case (.joulePerKelvin, .kelvin): .joule
         case (.wattPerKelvin, .second): .joulePerKelvin
         case (.joulePerKelvin, .hertz): .wattPerKelvin
+        case (.pascal, .squareMeter): .newton
+        case (.pascal, .cubicMeter): .joule
+        case (.kilogramPerCubicMeter, .joulePerKilogram): .pascal
+        case (.kilogramPerCubicMeter, .cubicMeter): .kilogram
+        case (.joulePerKilogram, .kilogram): .joule
+        case (.joulePerKilogramKelvin, .kelvin): .joulePerKilogram
+        case (.joulePerKilogramKelvin, .kilogram): .joulePerKelvin
+        case (.kilogram, .squareMeter): .kilogramSquareMeter
+        case (.degreePerSecondSquared, .second): .degreePerSecond
+        case (.degreePerSecond, .hertz): .degreePerSecondSquared
+        case (.kilogramPerSecond, .second): .kilogram
+        case (.kilogram, .hertz): .kilogramPerSecond
+        case (.ohm, .ampere): .volt
+        case (.ampere, .second): .coulomb
+        case (.coulomb, .hertz): .ampere
+        case (.volt, .coulomb): .joule
         default: nil
         }
     }

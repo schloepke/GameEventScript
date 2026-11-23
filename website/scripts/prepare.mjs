@@ -23,6 +23,7 @@ const documents = new Map([
   ['docs/guide/CSharp.md', 'docs/learn/csharp'],
   ['docs/guide/Swift.md', 'docs/learn/swift'],
   ['docs/guide/Schemas.md', 'docs/learn/schemas'],
+  ['docs/guide/Network.md', 'docs/learn/network'],
   ['docs/guide/api/CSharp.md', 'api/csharp'],
   ['docs/guide/api/Swift.md', 'api/swift'],
   ['docs/guide/distribution/Packages.md', 'docs/distribution/packages'],
@@ -75,6 +76,33 @@ execFileSync('python3', [path.join(root, 'scripts/package-editor-bundles.py')], 
 execFileSync('python3', [path.join(root, 'scripts/package-brand.py'), '--site'], { stdio: 'inherit' });
 // Pagefind writes assets outside Vite's client bundle; retain its MIT notice too.
 copyAssets(path.join(root, 'node_modules/pagefind/LICENSE'), path.join(publicOutput, 'pagefind-licenses/'));
+// Adjacent C# and Swift examples of the same step become one tabbed group on the site; the canonical
+// Markdown keeps both blocks readable on GitHub. Without JavaScript both panels stay visible.
+const tabLanguages = new Map([['csharp', 'C#'], ['swift', 'Swift']]);
+function groupLanguageTabs(parent) {
+  if (!parent.children) return;
+  for (const child of parent.children) groupLanguageTabs(child);
+  const children = [];
+  for (let index = 0; index < parent.children.length; index++) {
+    const first = parent.children[index];
+    const second = parent.children[index + 1];
+    if (first.type !== 'code' || second?.type !== 'code' || !tabLanguages.has(first.lang)
+        || !tabLanguages.has(second.lang) || first.lang === second.lang) {
+      children.push(first);
+      continue;
+    }
+    const ordered = [first, second].sort((a, b) => [...tabLanguages.keys()].indexOf(a.lang) - [...tabLanguages.keys()].indexOf(b.lang));
+    children.push({ type: 'html', value: '<div class="ges-tabs" data-ges-tabs>' });
+    for (const code of ordered) {
+      children.push({ type: 'html', value: `<div class="ges-tab-panel" data-ges-language="${code.lang}" data-ges-label="${tabLanguages.get(code.lang)}">` });
+      children.push(code);
+      children.push({ type: 'html', value: '</div>' });
+    }
+    children.push({ type: 'html', value: '</div>' });
+    index++;
+  }
+  parent.children = children;
+}
 const markdown = unified().use(remarkParse).use(remarkGfm).use(remarkStringify, { fences: true });
 for (const [source, destination] of documents) {
   const input = await readFile(path.join(repository, source), 'utf8');
@@ -121,6 +149,7 @@ for (const [source, destination] of documents) {
       ? `/${mapped.replace(/\/index$/, '')}/${fragment ? `#${fragment}` : ''}`
       : `${github}/blob/main/${resolved.split('/').map(encodeURIComponent).join('/')}${fragment ? `#${fragment}` : ''}`;
   });
+  groupLanguageTabs(tree);
   const frontmatter = {
     title: titleMatch[1],
     description: `${titleMatch[1]} — Game Event Script documentation.`,

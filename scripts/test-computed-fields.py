@@ -34,7 +34,9 @@ TIMEOUT_SECONDS = 120
 SYMBOLS = {"degree": "°", "meter": "m", "second": "s", "meterPerSecond": "m/s", "meterPerSecondSquared": "m/s²", "kilogram": "kg",
            "newton": "N", "joule": "J", "watt": "W", "volt": "V", "ampere": "A", "hertz": "Hz", "squareMeter": "m²", "cubicMeter": "m³",
            "wattPerSquareMeter": "W/m²", "kelvin": "K", "degreePerSecond": "°/s", "decibel": "dB", "wattPerKelvin": "W/K",
-           "joulePerKelvin": "J/K"}
+           "joulePerKelvin": "J/K", "pascal": "Pa", "kilogramPerCubicMeter": "kg/m³", "joulePerKilogram": "J/kg",
+           "joulePerKilogramKelvin": "J/(kg·K)", "newtonMeter": "N·m", "kilogramSquareMeter": "kg·m²", "degreePerSecondSquared": "°/s²",
+           "kilogramPerSecond": "kg/s", "ohm": "Ω", "coulomb": "C"}
 
 
 def schemas(formatted):

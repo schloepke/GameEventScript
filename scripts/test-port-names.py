@@ -81,6 +81,11 @@ class PortNameTests(unittest.TestCase):
         self.assertIn(("prefix", "csharp", "Runtime", "Helper"), findings)
         self.assertIn(("only", "csharp", "Runtime", "Helper"), findings)
 
+    def test_swift_types_inside_conditional_compilation_are_top_level(self):
+        self.workspace.csharp("Runtime", "Value.cs", "namespace GameEventScript.Runtime;\n\ninternal struct GesValue { }\n")
+        self.workspace.swift("Runtime", "Value.swift", "#if !os(WASI)\n\n    struct GesValue {\n        struct Nested {}\n    }\n\n#endif\n")
+        self.assertEqual(set(), self.workspace.findings())
+
     def test_comments_do_not_declare_types(self):
         self.workspace.csharp("Runtime", "Doc.cs", "/*\nclass Hidden\n*/\n// class AlsoHidden\n")
         self.workspace.swift("Runtime", "Doc.swift", "/// struct Hidden\n/* class AlsoHidden */\n")

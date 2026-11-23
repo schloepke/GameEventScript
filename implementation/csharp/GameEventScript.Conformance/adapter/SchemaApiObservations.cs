@@ -10,7 +10,7 @@ internal static class SchemaApiObservations
 {
     internal static void Validate(JsonElement input)
     {
-        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument");
+        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument", "network");
         if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("encode"));
         if (input.GetProperty("baseline").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("baseline"));
     }
@@ -43,6 +43,12 @@ internal static class SchemaApiObservations
                 result["canonical"] = schema.CanonicalForm;
                 result["hash"] = schema.Hash.ToString("x16");
                 if (input.GetProperty("describe").GetBoolean()) result["description"] = Describe(schema);
+            }
+
+            if (input.GetProperty("network").GetString() is { } networkName)
+            {
+                var network = set.Network(networkName).Bind(parameters);
+                result["network"] = new { canonical = network.CanonicalForm, hash = network.Hash.ToString("x16") };
             }
 
             if (input.GetProperty("document").GetString() is { } document) result["document"] = Check(set, document, root, parameters);

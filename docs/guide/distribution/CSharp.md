@@ -100,6 +100,10 @@ artifacts/csharp/
     GameEventScript.Syntax.<version>.snupkg
     GameEventScript.Generator.<version>.nupkg
     GameEventScript.Generator.<version>.snupkg
+    GameEventScript.Network.<version>.nupkg
+    GameEventScript.Network.<version>.snupkg
+    GameEventScript.Network.Sockets.<version>.nupkg
+    GameEventScript.Network.Sockets.<version>.snupkg
   dll/<version>/
     syntax/ # Standalone Syntax DLL, PDB and XML
     runtime/
@@ -109,7 +113,7 @@ artifacts/csharp/
 ```
 
 The `runtime` set contains Syntax and Runtime; `compiler` contains Syntax,
-Runtime and Compiler; `unity` contains Syntax, Runtime and CSharpBridge;
+Runtime and Compiler; `unity` contains Syntax, Runtime, CSharpBridge and Network;
 `generator` contains Syntax, Runtime and Generator for build tools. Runtime
 depends on Syntax for the shared lexical rules. All sets include matching XML
 and PDB files.
@@ -117,14 +121,17 @@ and PDB files.
 ## Unity DLL use
 
 The initial Unity integration is the `dll/<version>/unity` set. It contains
-`GameEventScript.Runtime` and `GameEventScript.CSharpBridge`; their DLLs are
+`GameEventScript.Runtime`, `GameEventScript.CSharpBridge` and
+`GameEventScript.Network`; their DLLs are
 the runtime inputs, while matching XML and portable PDB files improve editor and
 debugger behavior. A consuming Unity project must support `netstandard2.1` and
 must import both assemblies together when using the Bridge. Precompiled
 execution needs no Compiler DLL; source compilation additionally uses the
 Compiler DLL from the `compiler` set. A Unity editor tool that generates schema
 code imports the `generator` set into an `Editor` folder, so that player builds
-never include the Generator.
+never include the Generator. `GameEventScript.Network` is portable and carries no
+transport; `GameEventScript.Network.Sockets` targets `net8.0` and ships only as a
+NuGet package.
 
 The repository verifies the exact staged pair through an external project with
 ordinary assembly references. This proves that the staged dependency set loads

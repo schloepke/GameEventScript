@@ -82,13 +82,18 @@ python3 examples/card-game/scripts/build.py wasm
 python3 examples/card-game/scripts/serve.py
 ```
 
-Setup downloads the official Swift 6.4.0 Wasm SDK and matching Swift.org macOS
-toolchain, checks pinned SHA-256 hashes, checks the toolchain installer signature
-before first extraction, and expands it locally without running its installer.
-It installs the pinned `@bjorn3/browser_wasi_shim` 0.4.2 package into artifacts
-with npm scripts disabled. Python 3.11+, npm, curl, tar, and pkgutil are needed.
-The toolchain download is about 1.5 GB; subsequent runs reuse it. System Swift,
-Xcode selection, and global SDK installations are not changed.
+Setup installs the pinned `@bjorn3/browser_wasi_shim` 0.4.2 package into artifacts
+with npm scripts disabled. If a Swift.org toolchain with its matching Wasm SDK is
+installed, for example with `swiftly install` and `swift sdk install`, setup and
+build use it and download nothing; the SDK must have exactly the toolchain's version.
+Otherwise, or with `setup-wasm.py --download`, setup downloads the official Swift
+6.4.0 Wasm SDK and matching Swift.org macOS toolchain, checks pinned SHA-256 hashes,
+checks the toolchain installer signature before first extraction, and expands it
+locally without running its installer; the build then prefers these pinned tools.
+Python 3.11+ and npm are needed, and curl, tar and pkgutil for the download. The
+toolchain download is about 1.5 GB; subsequent runs reuse it. System Swift, Xcode
+selection, and global SDK installations are not changed. Website CI always uses
+the pinned tools.
 
 Xcode's bundled Swift lacks some Wasm linker tools. See the official [Swift Wasm setup](https://www.swift.org/documentation/articles/wasm-getting-started.html).
 The browser uses a small [WASI reactor interface](https://book.swiftwasm.org/examples/exporting-function.html),
@@ -96,11 +101,8 @@ without a JavaScriptKit or SwiftSyntax dependency. The uncompressed prototype
 Wasm is about 20 MB: Runtime, Compiler and Syntax use no Foundation, so it
 ships no Foundation or ICU. Download/startup optimization is not part of this first pass.
 
-The Wasm build stages Runtime, Compiler, and Syntax sources under
-`artifacts/card-game/wasm-source`. It adds WASILibc imports and a tiny monotonic
-clock C shim **only to that staged Runtime copy**. No tracked repository source
-is patched. Patch anchors deliberately fail if the source changes incompatibly.
-This proves this game's browser path, not full Runtime Wasm conformance.
+The Wasm build compiles the repository's Runtime, Compiler and Syntax packages
+unchanged; they build for WASI themselves.
 
 The generated web directory contains local JS, CSS, GES, Wasm, and the browser
 shim's license files. The demo makes no external network calls and needs no game

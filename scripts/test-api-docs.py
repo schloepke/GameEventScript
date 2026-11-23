@@ -44,7 +44,9 @@ class StagingTests(unittest.TestCase):
                      'api/GameEventScript.Api.GesProgramBuilder',
                      'api/GameEventScript.CSharpBridge.GesBridgeHostRunner',
                      'api/GameEventScript.Syntax.GesSyntaxHighlighter',
-                     'api/GameEventScript.Generator.GesSchemaGenerator']:
+                     'api/GameEventScript.Generator.GesSchemaGenerator',
+                     'api/GameEventScript.Network.GesNetworkConnection',
+                     'api/GameEventScript.Network.Sockets.GesNetworkSocketListener']:
             path = self.root / f'api/csharp/reference/{name}.html'
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('<html>Generated API</html>')

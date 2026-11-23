@@ -229,6 +229,8 @@ struct GesDefinition {
     let statements: [GesStatement]
     let required: [String]
     let excluded: [String]
+    /// The `|` groups of a handler's `matching` clauses after absorption, in source order.
+    var alternatives: [[String]] = []
     let location: GesSourceLocation
     var signature: String { name + "(" + parameters.map(\.label).joined(separator: ",") + ")" }
 

@@ -25,6 +25,28 @@ enum GesSchemaLayoutJson {
         json.beginArray("types")
         for type in layout.types { self.type(&json, type) }
         json.endArray()
+        if !layout.networks.isEmpty {
+            json.beginArray("networks")
+            for network in layout.networks {
+                json.beginObject()
+                json.string("name", network.name)
+                json.string("hash", hex(network.hash))
+                json.beginArray("routes")
+                for route in network.routes {
+                    json.beginObject()
+                    json.number("index", Int64(route.index))
+                    json.string("side", route.side)
+                    json.string("verb", route.verb)
+                    json.string("root", route.root)
+                    json.string("class", route.deliveryClass)
+                    json.number("rateMicroseconds", route.rateMicroseconds)
+                    json.endObject()
+                }
+                json.endArray()
+                json.endObject()
+            }
+            json.endArray()
+        }
         json.endObject()
         return json.text + "\n"
     }

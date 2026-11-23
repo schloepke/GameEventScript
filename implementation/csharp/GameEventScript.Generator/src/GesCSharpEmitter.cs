@@ -44,9 +44,11 @@ internal static partial class GesCSharpEmitter
         prologue.Line("using System;");
         prologue.Line("using System.Collections.Generic;");
         prologue.Line("using GameEventScript.Api;");
+        if (layout.Networks.Count > 0) prologue.Line("using GameEventScript.Network;");
         prologue.Blank();
         var header = GesSchemaPlanner.Header(layout);
-        var holder = "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
+        var schemaSet = GesSchemaSetReference.From(options);
+        var holder = schemaSet?.Qualified ?? "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
         var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder)
         {
             Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(options.Namespace, GesSchemaPlanner.Suffix(header, options)), swift: false)
@@ -86,10 +88,21 @@ internal static partial class GesCSharpEmitter
         }
         var sets = GesSchemaPlanner.TagSets(types, context.Global);
         foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
-        context.TopLevel = GesSchemaPlanner.TopLevel(types, sets);
+        foreach (var network in layout.Networks) document.Units.Add(new GesCodeUnit(network.Name, code => Network(code, network, access, schemaSet?.Qualified, root =>
+        {
+            // A packed root that the models declare is their struct; its wire members extend it.
+            var type = types.Find(candidate => candidate.Name == root)!;
+            var shared = type.Layout.PackedWidth > 0 && packed is null;
+            return new NetworkRoot((shared ? models : context.Global) + root, context.Global + root + (shared ? "Wire" : ""), type);
+        })));
+        context.TopLevel = GesSchemaPlanner.TopLevel(types, sets, layout.Networks);
         if (options.Models is not null) GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
+        schemaSet?.Reserve(context.TopLevel);
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: false);
-        if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));
+        foreach (var network in layout.Networks) GesNetworkEndPlan.CheckNested(network, context.TopLevel, swift: false);
+        if (schemaSet?.Declared is { } setName)
+            document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteCSharp(code, setName, access, layout.Sources, layout.Parameters, layout.Networks.Count > 0)));
+        else if (options.Values && schemaSet is null) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: false, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))), GesComputedEmitter.UsesMath(types.ConvertAll(type => type.Layout.Computed)), GesComputedEmitter.UsesSpatial(types.ConvertAll(type => type.Layout.Computed)))));
         return document;
@@ -508,7 +521,12 @@ internal static partial class GesCSharpEmitter
 
     private static void MessageSet(GesSchemaPlanner.Code code, GesPlanType type, string access, Context context)
     {
-        var names = new List<(string, string)> { (type.Name, "the type itself"), ("Selected", "the selected member"), ("Member", GesSchemaPlanner.NestedTypeOrigin + "of the members") };
+        var names = new List<(string, string)>
+        {
+            (type.Name, "the type itself"), ("Selected", "the selected member"), ("Member", GesSchemaPlanner.NestedTypeOrigin + "of the members"),
+            ("Case", GesSchemaPlanner.NestedTypeOrigin + "of the cases"), ("ToCase", "the generated member ToCase"), ("Assign", "the generated member Assign"),
+            ("Value", "the value of a case")
+        };
         foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
         if (context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
@@ -546,6 +564,8 @@ internal static partial class GesCSharpEmitter
         PublicMethods(code, type.MembersAreClasses ? "" : "readonly ", write, read, "message");
         if (context.Values) ValueMembers(code, type, context.Holder);
         code.Blank();
+        MessageCases(code, type, context);
+        code.Blank();
         code.Line("/// <summary>The messages of the set, in declared order.</summary>");
         code.Line($"public enum Member : {Underlying(type.Members.Count)}");
         code.Open("{");
@@ -556,6 +576,78 @@ internal static partial class GesCSharpEmitter
         }
 
         code.Close();
+        code.Close();
+    }
+
+    // The cases of a message set, an abstract class with one sealed subclass per message for pattern matching, and the
+    // conversions between them and the record. A typed end hands its cached cases, so receiving allocates nothing.
+    private static void MessageCases(GesSchemaPlanner.Code code, GesPlanType type, Context context)
+    {
+        var self = type.MembersAreClasses ? "" : "readonly ";
+        code.Blank();
+        code.Line("/// <summary>Returns the selected message as a new case that holds the member record.</summary>");
+        code.Line("/// <returns>The case.</returns>");
+        code.Line("/// <exception cref=\"GesWireException\"><see cref=\"Selected\"/> names no message of the set.</exception>");
+        code.Line($"public {self}Case ToCase() => Selected switch");
+        code.Open("{");
+        foreach (var member in type.Members) code.Line($"Member.{member} => new Case.{member}({member}),");
+        code.Line("_ => throw new GesWireException(GesWireException.OutOfRange, \"\"),");
+        code.Close("};");
+        code.Blank();
+        code.Line("/// <summary>Selects the message of a case and takes its member record.</summary>");
+        code.Line("/// <param name=\"value\">The case.</param>");
+        code.Line("/// <exception cref=\"global::System.ArgumentNullException\"><paramref name=\"value\"/> is null.</exception>");
+        code.Line("public void Assign(Case value)");
+        code.Open("{");
+        code.Line("switch (value)");
+        code.Open("{");
+        foreach (var member in type.Members)
+        {
+            var local = GesSchemaPlanner.Camel(member);
+            code.Line($"case Case.{member} @{local}:");
+            code.Line($"    Selected = Member.{member};");
+            code.Line($"    {member} = @{local}.Value;");
+            code.Line("    break;");
+        }
+
+        code.Line("default:");
+        code.Line("    throw new global::System.ArgumentNullException(nameof(value));");
+        code.Close();
+        code.Close();
+        code.Blank();
+        code.Line($"/// <summary>One message of the set as a case: match <c>case {type.Name}.Case.{type.Members[0]} value</c>.</summary>");
+        code.Line("public abstract class Case");
+        code.Open("{");
+        code.Line("private protected Case()");
+        code.Open("{");
+        code.Close();
+        code.Blank();
+        code.Line("/// <summary>Gets the message of the case.</summary>");
+        code.Line("public abstract Member Selected { get; }");
+        foreach (var member in type.Members)
+        {
+            var record = context.Global + member;
+            code.Blank();
+            code.Line($"/// <summary>The message <c>{member}</c>.</summary>");
+            code.Line($"public sealed class {member} : Case");
+            code.Open("{");
+            code.Line("/// <summary>Creates the case with an empty record.</summary>");
+            code.Line($"public {member}()");
+            code.Open("{");
+            code.Close();
+            code.Blank();
+            code.Line("/// <summary>Creates the case with a record.</summary>");
+            code.Line("/// <param name=\"value\">The record.</param>");
+            code.Line($"public {member}({record} value) => Value = value;");
+            code.Blank();
+            code.Line("/// <summary>The record of the message.</summary>");
+            code.Line($"public {record} Value{(type.MembersAreClasses ? $" = new {record}();" : ";")}");
+            code.Blank();
+            code.Line("/// <inheritdoc/>");
+            code.Line($"public override Member Selected => Member.{member};");
+            code.Close();
+        }
+
         code.Close();
     }
 
@@ -883,6 +975,462 @@ internal static partial class GesCSharpEmitter
     }
 
     private static string Underlying(int count) => count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint";
+
+    // A route root as a network sees it: its type, the type that holds its MaxByteCount and its plan.
+    private sealed class NetworkRoot(string type, string owner, GesPlanType plan)
+    {
+        internal string Type { get; } = type;
+
+        internal string Owner { get; } = owner;
+
+        internal GesPlanType Plan { get; } = plan;
+
+        internal bool IsSet => Plan.Kind == GesSchemaKind.Messages;
+    }
+
+    // The constants of a network, its hash, the index of each route and the rate of each topic that has one, a function
+    // per route that encodes its root and sends or publishes it, and the typed ends with their handler interfaces.
+    private static void Network(GesSchemaPlanner.Code code, GesLayoutNetwork network, string access, string? schemaSet, Func<string, NetworkRoot> roots)
+    {
+        var client = GesNetworkEndPlan.Plan(network, client: true);
+        var server = GesNetworkEndPlan.Plan(network, client: false);
+        code.Line($"/// <summary>The network <c>:{network.Name}</c>: its hash, the index of each route, the rate of each topic that has one, a typed function per route and the typed ends.</summary>");
+        code.Line($"{access} static class {network.Name}");
+        code.Open("{");
+        code.Line("/// <summary>The network hash over the routes and their bound roots, which the handshake compares.</summary>");
+        code.Line($"public const ulong Hash = 0x{GesSchemaLayoutJson.Hex(network.Hash)}UL;");
+        if (schemaSet is not null)
+        {
+            code.Blank();
+            code.Line("private static GesBoundNetwork? __bound;");
+            code.Blank();
+            code.Line($"/// <summary>Gets the network bound with the parameters of the schema set, checked against <see cref=\"Hash\"/> on first access.</summary>");
+            code.Line("/// <exception cref=\"GesSchemaException\">The sources no longer parse or the network no longer binds.</exception>");
+            code.Line("/// <exception cref=\"global::System.InvalidOperationException\">The bound network hash differs from <see cref=\"Hash\"/>.</exception>");
+            code.Line($"public static GesBoundNetwork Bound => __bound ??= {schemaSet}.BindNetwork({GesSchemaPlanner.Literal(network.Name, false)}, Hash);");
+        }
+
+        foreach (var route in network.Routes)
+        {
+            code.Blank();
+            code.Line($"/// <summary>The index of the route <c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>.</summary>");
+            code.Line($"public const int {route.Name} = {route.Index};");
+            if (route.RateMicroseconds == 0) continue;
+            code.Blank();
+            code.Line($"/// <summary>The shortest interval between two updates of the topic <c>:{route.Root}</c> in microseconds.</summary>");
+            code.Line($"public const long {route.Name}EveryMicroseconds = {route.RateMicroseconds};");
+        }
+
+        foreach (var route in network.Routes)
+        {
+            var publishes = route.Verb == "publishes";
+            var verb = publishes ? "Publish" : "Send";
+            code.Blank();
+            code.Line($"/// <summary>Encodes <paramref name=\"value\"/> into <paramref name=\"buffer\"/> and {(publishes ? "publishes" : "sends")} it on the route <c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>.</summary>");
+            code.Line($"/// <param name=\"connection\">The {route.Side}'s connection.</param>");
+            code.Line($"/// <param name=\"value\">The record.</param>");
+            code.Line($"/// <param name=\"buffer\">The buffer the record is encoded into; its <c>MaxByteCount</c> bytes always suffice.</param>");
+            code.Line($"/// <returns>The status of <see cref=\"GesNetworkConnection.{verb}(int, ReadOnlySpan{{byte}})\"/>.</returns>");
+            code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the buffer is too small.</exception>");
+            code.Line($"public static GesNetworkSendStatus {GesSchemaPlanner.Pascal(route.Side)}{verb}{route.Root}(GesNetworkConnection connection, in {roots(route.Root).Type} value, Span<byte> buffer)");
+            code.Line($"    => connection.{verb}({route.Name}, buffer.Slice(0, value.Write(buffer)));");
+        }
+
+        foreach (var end in new[] { client, server })
+        {
+            TypedEnd(code, network, end, roots);
+            EndHandler(code, network, end, roots);
+        }
+
+        code.Close();
+    }
+
+    // The receiving of a route: the type its handler method takes.
+    private static string EventParameter(NetworkRoot root) => root.IsSet ? root.Type + ".Case" : "in " + root.Type;
+
+    // A typed end: it encodes the roots of its side into one buffer, reads the roots it receives into one record per route
+    // and calls the handler's typed methods.
+    private static void TypedEnd(GesSchemaPlanner.Code code, GesLayoutNetwork network, GesNetworkEndPlan end, Func<string, NetworkRoot> roots)
+    {
+        var isClient = end.Client;
+        var endType = isClient ? "GesNetworkClientEnd" : "GesNetworkServerEnd";
+        var handler = $"I{end.Name}Handler";
+        var side = isClient ? "client" : "server";
+        // Distinct prefixes keep the scratch record of an outgoing message set, the cached cases and the internal fields
+        // (__send_buffer, __tick_count, __tick_open: an underscore before a lowercase letter, which no root name has)
+        // apart from the record of each received route, whatever its root is called.
+        string Field(string name) => "__" + GesSchemaPlanner.Camel(name);
+        string Outgoing(GesLayoutRoute route) => "__out_" + GesSchemaPlanner.Camel((route.Verb == "sends" ? "Send" : "Publish") + route.Root);
+        string CaseField(string name, string member) => "__case_" + GesSchemaPlanner.Camel(name) + "__" + member;
+        code.Blank();
+        code.Line($"/// <summary>");
+        code.Line($"/// The typed {side} end of <c>:{network.Name}</c>: it encodes the records the {side} sends and publishes and hands the records it");
+        code.Line($"/// receives to an <see cref=\"{handler}\"/>. Received records are borrowed: they stay valid until the handler method returns.");
+        code.Line($"/// </summary>");
+        code.Line($"public sealed class {end.Name}");
+        code.Open("{");
+        code.Line("private readonly byte[] __send_buffer;");
+        foreach (var route in end.Outgoing)
+        {
+            var root = roots(route.Root);
+            if (!root.IsSet) continue;
+            code.Line($"private {root.Type} {Outgoing(route)}{(root.Plan.MembersAreClasses ? " = new();" : ";")}");
+        }
+
+        foreach (var (route, name) in end.Incoming)
+        {
+            var root = roots(route.Root);
+            code.Line($"private {root.Type} {Field(name)}{(root.Plan.IsClass || root.Plan.MembersAreClasses ? " = new();" : ";")}");
+            if (!root.IsSet) continue;
+            foreach (var member in root.Plan.Members) code.Line($"private readonly {root.Type}.Case.{member} {CaseField(name, member)} = new();");
+        }
+
+        code.Blank();
+        code.Line($"/// <summary>Wraps an end of the network.</summary>");
+        code.Line($"/// <param name=\"end\">The end; its bound network must have the hash <see cref=\"Hash\"/>.</param>");
+        code.Line("/// <exception cref=\"global::System.ArgumentNullException\"><paramref name=\"end\"/> is null.</exception>");
+        code.Line("/// <exception cref=\"global::System.ArgumentException\">The end's network has another hash.</exception>");
+        code.Line($"public {end.Name}({endType} end)");
+        code.Open("{");
+        code.Line("End = end ?? throw new global::System.ArgumentNullException(nameof(end));");
+        code.Line($"if (end.Network.Hash != Hash) throw new global::System.ArgumentException(\"The end's network is no :{network.Name}.\", nameof(end));");
+        var sizes = new List<string>();
+        foreach (var route in end.Outgoing)
+        {
+            var owner = roots(route.Root).Owner + ".MaxByteCount";
+            if (!sizes.Contains(owner)) sizes.Add(owner);
+        }
+
+        var size = sizes.Count == 0 ? "0" : sizes[0];
+        for (var index = 1; index < sizes.Count; index++) size = $"global::System.Math.Max({size}, {sizes[index]})";
+        code.Line($"__send_buffer = new byte[{size}];");
+        code.Close();
+        code.Blank();
+        code.Line("/// <summary>Gets the wrapped end.</summary>");
+        code.Line($"public {endType} End {{ get; }}");
+        if (isClient)
+        {
+            code.Blank();
+            code.Line("/// <summary>Gets the end's connection.</summary>");
+            code.Line("public GesNetworkConnection Connection => End.Connection;");
+        }
+        else
+        {
+            code.Blank();
+            code.Line("/// <summary>Gets the number of connecting and connected clients.</summary>");
+            code.Line("public int ClientCount => End.ClientCount;");
+            code.Blank();
+            code.Line("/// <summary>Gets the connection of a client.</summary>");
+            code.Line("/// <param name=\"client\">The client.</param>");
+            code.Line("/// <returns>The connection.</returns>");
+            code.Line("/// <exception cref=\"global::System.ArgumentException\">The client is not connected to the end.</exception>");
+            code.Line("public GesNetworkConnection Connection(int client) => End.Connection(client);");
+        }
+
+        foreach (var route in end.Outgoing)
+        {
+            var root = roots(route.Root);
+            var publishes = route.Verb == "publishes";
+            var verb = publishes ? "Publish" : "Send";
+            var what = $"<c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>";
+            var targets = new List<(string Parameters, string Arguments, string Doc)> { ("", "", publishes ? "to the subscribed clients" : isClient ? "to the server" : "to every client") };
+            if (!isClient && !publishes) targets.Add((", int client", ", client", "to one client"));
+            foreach (var (parameters, arguments, doc) in targets)
+            {
+                code.Blank();
+                code.Line($"/// <summary>Encodes a record and {(publishes ? "publishes" : "sends")} it on the route {what}{(isClient ? "" : ", " + doc)}.</summary>");
+                code.Line("/// <param name=\"value\">The record.</param>");
+                if (arguments.Length > 0) code.Line("/// <param name=\"client\">The client.</param>");
+                code.Line($"/// <returns>The status of <see cref=\"{endType}.{verb}(int, ReadOnlySpan{{byte}}{(arguments.Length > 0 ? ", int" : "")})\"/>.</returns>");
+                code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>");
+                code.Line($"public GesNetworkSendStatus {verb}(in {root.Type} value{parameters}) => End.{verb}({route.Name}, __send_buffer.AsSpan(0, value.Write(__send_buffer)){arguments});");
+                if (!root.IsSet) continue;
+                var scratch = Outgoing(route);
+                code.Blank();
+                code.Line($"/// <summary>Encodes a message and {(publishes ? "publishes" : "sends")} it on the route {what}{(isClient ? "" : ", " + doc)}.</summary>");
+                code.Line("/// <param name=\"value\">The message.</param>");
+                if (arguments.Length > 0) code.Line("/// <param name=\"client\">The client.</param>");
+                code.Line($"/// <returns>The status of <see cref=\"{endType}.{verb}(int, ReadOnlySpan{{byte}}{(arguments.Length > 0 ? ", int" : "")})\"/>.</returns>");
+                code.Line("/// <exception cref=\"global::System.ArgumentNullException\"><paramref name=\"value\"/> is null.</exception>");
+                code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>");
+                code.Line($"public GesNetworkSendStatus {verb}({root.Type}.Case value{parameters})");
+                code.Open("{");
+                code.Line($"{scratch}.Assign(value);");
+                code.Line($"return {verb}(in {scratch}{arguments});");
+                code.Close();
+            }
+        }
+
+        if (!isClient)
+        {
+            code.Blank();
+            code.Line("/// <summary>Refuses a connecting client; call it while the handler handles its <c>OnConnecting</c>.</summary>");
+            code.Line("/// <param name=\"client\">The client.</param>");
+            code.Line("/// <param name=\"detail\">The detail sent to the client.</param>");
+            code.Line("public void Refuse(int client, string detail) => End.Refuse(client, detail);");
+            code.Blank();
+            code.Line("/// <summary>Closes the connection of one client with a detail.</summary>");
+            code.Line("/// <param name=\"client\">The client.</param>");
+            code.Line("/// <param name=\"detail\">The detail sent to the client.</param>");
+            code.Line("public void Close(int client, string detail) => End.Close(client, detail);");
+        }
+
+        code.Blank();
+        code.Line(isClient ? "/// <summary>Closes the connection with a detail.</summary>" : "/// <summary>Closes every current connection with a detail; the end still accepts new clients.</summary>");
+        code.Line($"/// <param name=\"detail\">The detail sent to the {(isClient ? "server" : "clients")}.</param>");
+        code.Line("public void Close(string detail) => End.Close(detail);");
+        if (end.HasTopics)
+        {
+            if (!isClient)
+            {
+                code.Blank();
+                code.Line("/// <summary>Subscribes a client to a topic.</summary>");
+                code.Line("/// <param name=\"client\">The client.</param>");
+                code.Line("/// <param name=\"topic\">The topic.</param>");
+                code.Line("public void Subscribe(int client, Topic topic) => End.Subscribe(client, (int)topic);");
+                code.Blank();
+                code.Line("/// <summary>Unsubscribes a client from a topic.</summary>");
+                code.Line("/// <param name=\"client\">The client.</param>");
+                code.Line("/// <param name=\"topic\">The topic.</param>");
+                code.Line("public void Unsubscribe(int client, Topic topic) => End.Unsubscribe(client, (int)topic);");
+            }
+
+            code.Blank();
+            code.Line("private int __tick_count;");
+            code.Line("private bool __tick_open;");
+            code.Blank();
+            code.Line("/// <summary>Opens a tick; disposing the returned tick closes it.</summary>");
+            code.Line("/// <returns>The open tick.</returns>");
+            code.Line("/// <exception cref=\"global::System.InvalidOperationException\">A tick is open already.</exception>");
+            code.Line("public Tick BeginTick()");
+            code.Open("{");
+            code.Line("End.BeginTick();");
+            code.Line("__tick_open = true;");
+            code.Line("return new Tick(this, unchecked(++__tick_count));");
+            code.Close();
+            code.Blank();
+            code.Line($"/// <summary>The topics the {side} publishes.</summary>");
+            code.Line("public enum Topic");
+            code.Open("{");
+            foreach (var route in end.Topics)
+            {
+                code.Line($"/// <summary>The topic <c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>.</summary>");
+                code.Line($"{route.Root} = {route.Name},");
+            }
+
+            code.Close();
+            code.Blank();
+            code.Line("/// <summary>An open tick: its publications arrive together. <see cref=\"Dispose\"/> closes it.</summary>");
+            code.Line("public readonly struct Tick : global::System.IDisposable");
+            code.Open("{");
+            code.Line($"private readonly {end.Name} __end;");
+            code.Line("private readonly int __number;");
+            code.Blank();
+            code.Line($"internal Tick({end.Name} end, int number)");
+            code.Open("{");
+            code.Line("__end = end;");
+            code.Line("__number = number;");
+            code.Close();
+            foreach (var route in end.Topics)
+            {
+                var root = roots(route.Root);
+                foreach (var parameter in root.IsSet ? new[] { "in " + root.Type, root.Type + ".Case" } : new[] { "in " + root.Type })
+                {
+                    code.Blank();
+                    code.Line($"/// <summary>Publishes a {(parameter.StartsWith("in ", StringComparison.Ordinal) ? "record" : "message")} on the topic <c>:{route.Root}</c> as a member of the tick.</summary>");
+                    code.Line("/// <param name=\"value\">The value.</param>");
+                    code.Line("/// <returns>The status of the publication.</returns>");
+                    code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>");
+                    code.Line($"public GesNetworkSendStatus Publish({parameter} value) => __end.Publish({(parameter.StartsWith("in ", StringComparison.Ordinal) ? "in " : "")}value);");
+                }
+            }
+
+            code.Blank();
+            code.Line("/// <summary>Makes a latest topic a member of the tick with its last published state.</summary>");
+            code.Line("/// <param name=\"topic\">The topic.</param>");
+            code.Line("/// <exception cref=\"global::System.InvalidOperationException\">The topic has no published state.</exception>");
+            code.Line("/// <exception cref=\"global::System.ArgumentException\">The topic is no latest topic.</exception>");
+            code.Line("public void Include(Topic topic) => __end.End.Include((int)topic);");
+            code.Blank();
+            code.Line("/// <summary>Closes the tick. A further call, also on a copy, does nothing.</summary>");
+            code.Line("public void Dispose()");
+            code.Open("{");
+            code.Line("if (__end is null || !__end.__tick_open || __end.__tick_count != __number) return;");
+            code.Line("__end.__tick_open = false;");
+            code.Line("__end.End.EndTick();");
+            code.Close();
+            code.Close();
+        }
+
+        code.Blank();
+        code.Line("/// <summary>Polls the end and hands every event to the handler's typed methods. Never blocks.</summary>");
+        code.Line("/// <typeparam name=\"THandler\">The handler type; a struct that implements every method is called without allocating.</typeparam>");
+        code.Line("/// <param name=\"handler\">The handler.</param>");
+        code.Line($"/// <exception cref=\"global::System.ObjectDisposedException\">The end is disposed.</exception>");
+        code.Line($"public void Poll<THandler>(ref THandler handler) where THandler : {handler}");
+        code.Open("{");
+        code.Line("var adapter = new __Adapter<THandler>(this, handler);");
+        code.Line("try");
+        code.Open("{");
+        code.Line("End.Poll(ref adapter);");
+        code.Close();
+        code.Line("finally");
+        code.Open("{");
+        code.Line("handler = adapter.Handler;");
+        code.Close();
+        code.Close();
+        code.Blank();
+        code.Line($"private void __Handle<THandler>(ref THandler handler, GesNetworkEndEvent networkEvent) where THandler : {handler}");
+        code.Open("{");
+        var client = isClient ? "" : "networkEvent.Client, ";
+        code.Line("switch (networkEvent.Kind)");
+        code.Open("{");
+        if (isClient)
+        {
+            code.Line("case GesNetworkEndEventKind.Connected:");
+            code.Line("    handler.OnConnected(networkEvent.Security);");
+            code.Line("    break;");
+            code.Line("case GesNetworkEndEventKind.Disconnected:");
+            code.Line("    handler.OnDisconnected(networkEvent.Code, networkEvent.Detail, networkEvent.ByPeer);");
+            code.Line("    break;");
+        }
+        else
+        {
+            code.Line("case GesNetworkEndEventKind.Connecting:");
+            code.Line("    handler.OnConnecting(networkEvent.Client, networkEvent.Payload);");
+            code.Line("    break;");
+            code.Line("case GesNetworkEndEventKind.ClientConnected:");
+            code.Line("    handler.OnClientConnected(networkEvent.Client, networkEvent.Security);");
+            code.Line("    break;");
+            code.Line("case GesNetworkEndEventKind.ClientDisconnected:");
+            code.Line("    handler.OnClientDisconnected(networkEvent.Client, networkEvent.Code, networkEvent.Detail, networkEvent.ByPeer);");
+            code.Line("    break;");
+        }
+
+        if (end.Incoming.Count > 0)
+        {
+            code.Line("case GesNetworkEndEventKind.Message:");
+            code.Line("    switch (networkEvent.Route)");
+            code.Line("    {");
+            foreach (var (route, name) in end.Incoming)
+            {
+                var root = roots(route.Root);
+                var field = Field(name);
+                code.Line($"        case {route.Name}:");
+                code.Line("            try");
+                code.Line("            {");
+                code.Line($"                {field}.Read(networkEvent.Payload);");
+                code.Line("            }");
+                code.Line("            catch (GesWireException)");
+                code.Line("            {");
+                code.Line($"                End.Close({client}\"undecodable :{route.Root}\");");
+                code.Line("                break;");
+                code.Line("            }");
+                code.Line("");
+                if (!root.IsSet) code.Line($"            handler.On{name}({client}in {field});");
+                else
+                {
+                    code.Line($"            switch ({field}.Selected)");
+                    code.Line("            {");
+                    foreach (var member in root.Plan.Members)
+                    {
+                        code.Line($"                case {root.Type}.Member.{member}:");
+                        code.Line($"                    {CaseField(name, member)}.Value = {field}.{member};");
+                        code.Line($"                    handler.On{name}({client}{CaseField(name, member)});");
+                        code.Line("                    break;");
+                    }
+
+                    code.Line("            }");
+                    code.Line("");
+                }
+
+                code.Line("            break;");
+            }
+
+            code.Line("    }");
+            code.Line("");
+            code.Line("    break;");
+        }
+
+        code.Line("case GesNetworkEndEventKind.Tick:");
+        code.Line($"    handler.OnTick({client}networkEvent.TickNumber);");
+        code.Line("    break;");
+        code.Line("case GesNetworkEndEventKind.TransferProgress:");
+        code.Line($"    handler.OnTransferProgress({client}networkEvent.Route, networkEvent.TransferId, networkEvent.Bytes, networkEvent.Total);");
+        code.Line("    break;");
+        code.Line("case GesNetworkEndEventKind.TransferCancelled:");
+        code.Line($"    handler.OnTransferCancelled({client}networkEvent.Route, networkEvent.TransferId, networkEvent.Code);");
+        code.Line("    break;");
+        code.Line("case GesNetworkEndEventKind.Received:");
+        code.Line("    handler.OnReceived();");
+        code.Line("    break;");
+        code.Close();
+        code.Close();
+        code.Blank();
+        code.Line($"private struct __Adapter<THandler> : IGesNetworkEndHandler where THandler : {handler}");
+        code.Open("{");
+        code.Line($"private readonly {end.Name} __end;");
+        code.Line("internal THandler Handler;");
+        code.Blank();
+        code.Line($"internal __Adapter({end.Name} end, THandler handler)");
+        code.Open("{");
+        code.Line("__end = end;");
+        code.Line("Handler = handler;");
+        code.Close();
+        code.Blank();
+        code.Line("public void Handle(GesNetworkEndEvent networkEvent) => __end.__Handle(ref Handler, networkEvent);");
+        code.Close();
+        code.Close();
+    }
+
+    // The handler interface of a typed end: one method per event, each empty by default.
+    private static void EndHandler(GesSchemaPlanner.Code code, GesLayoutNetwork network, GesNetworkEndPlan end, Func<string, NetworkRoot> roots)
+    {
+        var isClient = end.Client;
+        var client = isClient ? "" : "int client, ";
+        var clientDoc = "/// <param name=\"client\">The client.</param>";
+        void Method(string summary, string signature, params string[] parameters)
+        {
+            code.Blank();
+            code.Line($"/// <summary>{summary}</summary>");
+            if (!isClient && signature.Contains("int client", StringComparison.Ordinal)) code.Line(clientDoc);
+            foreach (var parameter in parameters) code.Line(parameter);
+            code.Line($"void {signature}");
+            code.Open("{");
+            code.Close();
+        }
+
+        code.Blank();
+        code.Line("/// <summary>");
+        code.Line($"/// The events of the typed {(isClient ? "client" : "server")} end <see cref=\"{end.Name}\"/>; every method does nothing by default. A struct handler that");
+        code.Line("/// leaves a method to its default is boxed when that method is called.");
+        code.Line("/// </summary>");
+        code.Line($"public interface I{end.Name}Handler");
+        code.Open("{");
+        if (isClient)
+        {
+            Method("The session is established.", "OnConnected(GesNetworkSecurity security)", "/// <param name=\"security\">The reached security.</param>");
+            Method("The connection closed.", "OnDisconnected(string code, string detail, bool byPeer)", "/// <param name=\"code\">The close code.</param>", "/// <param name=\"detail\">The detail.</param>", "/// <param name=\"byPeer\">Whether the server closed it.</param>");
+        }
+        else
+        {
+            Method("A client asks to connect; refuse it with <see cref=\"Server.Refuse\"/> before the method returns, or it is accepted.", "OnConnecting(int client, ReadOnlySpan<byte> token)", "/// <param name=\"token\">The client's token, valid until the method returns.</param>");
+            Method("A client is connected.", "OnClientConnected(int client, GesNetworkSecurity security)", "/// <param name=\"security\">The reached security.</param>");
+            Method("A client's connection closed; the client leaves the end.", "OnClientDisconnected(int client, string code, string detail, bool byPeer)", "/// <param name=\"code\">The close code.</param>", "/// <param name=\"detail\">The detail.</param>", "/// <param name=\"byPeer\">Whether the client closed it.</param>");
+        }
+
+        foreach (var (route, name) in end.Incoming)
+        {
+            var root = roots(route.Root);
+            Method($"A {(root.IsSet ? "message" : "record")} arrived on the route <c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>.", $"On{name}({client}{EventParameter(root)} value)", $"/// <param name=\"value\">The {(root.IsSet ? "message, whose record" : "record, which")} is valid until the method returns.</param>");
+        }
+
+        Method("A tick is complete; the events of its changed members precede it.", $"OnTick({client}int number)", "/// <param name=\"number\">The tick number.</param>");
+        Method("A transfer on a bulk route advanced.", $"OnTransferProgress({client}int route, int transferId, long bytes, long total)", "/// <param name=\"route\">The route index.</param>", "/// <param name=\"transferId\">The transfer.</param>", "/// <param name=\"bytes\">The bytes received so far.</param>", "/// <param name=\"total\">The total bytes.</param>");
+        Method("A transfer was cancelled; the session continues.", $"OnTransferCancelled({client}int route, int transferId, string code)", "/// <param name=\"route\">The route index.</param>", "/// <param name=\"transferId\">The transfer.</param>", "/// <param name=\"code\">The cancel code.</param>");
+        Method("The last event of a poll that reported at least one message or tick.", "OnReceived()");
+        code.Close();
+    }
 
     // A named tag set, declared once beside the records that use it.
     internal static void TagSetDeclaration(GesSchemaPlanner.Code code, string name, List<string> tags, string access)

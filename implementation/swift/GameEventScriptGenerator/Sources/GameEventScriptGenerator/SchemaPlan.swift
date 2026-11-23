@@ -133,6 +133,15 @@ final class GesPlanValue {
 
 extension GesSchemaLayout {
     func type(_ name: String) -> GesLayoutType { types.first { $0.name == name }! }
+
+    func network(_ name: String) -> GesLayoutNetwork? { networks.first { $0.name == name } }
+
+    // The hashes a root reports in headers and manifests: a network has its network hash and no binding hash.
+    func rootHashes(_ root: String) -> (hash: UInt64, bindingHash: UInt64?) {
+        if let network = network(root) { return (network.hash, nil) }
+        let type = type(root)
+        return (type.hash, type.bindingHash)
+    }
 }
 
 enum GesSchemaPlanner {
@@ -553,9 +562,10 @@ enum GesSchemaPlanner {
     // every reference inside the record, so that name fails like any other collision; their origins carry this prefix.
     static let nestedTypeOrigin = "the nested type "
 
-    static func topLevel(_ types: [GesPlanType], _ sets: [(name: String, tags: [String])]) -> Set<String> {
+    static func topLevel(_ types: [GesPlanType], _ sets: [(name: String, tags: [String])], _ networks: [GesLayoutNetwork] = []) -> Set<String> {
         var names = Set(types.filter { !$0.isItem }.map(\.name))
         for set in sets { names.insert(set.name) }
+        for network in networks { names.insert(network.name) }
         return names
     }
 
@@ -586,7 +596,7 @@ enum GesSchemaPlanner {
     private static let swiftReserved: Set<String> = [
         "Any", "AnyObject", "Array", "Bool", "CaseIterable", "Codable", "Double", "Equatable", "Error", "GameEventScriptRuntime", "Hashable",
         "Identifiable", "Int", "Int32", "Int64", "OptionSet", "Protocol", "Result", "Self", "Sendable", "String", "Swift", "Type", "UInt64",
-        "UInt8", "UTF8", "UnsafeMutableRawBufferPointer", "UnsafeRawBufferPointer",
+        "UInt8", "UTF8", "UnsafeMutableRawBufferPointer", "UnsafeRawBufferPointer", "Void",
     ]
 
     // Names of the form Ges and a capital letter belong to the runtime types that generated code names without qualification.
@@ -681,8 +691,12 @@ enum GesSchemaPlanner {
             text += "//     Parameter \(parameter.name) = \(parameter.value)\(parameter.unit == "none" ? "" : " " + parameter.unit).\n"
         }
         for root in layout.roots {
-            let type = layout.type(root)
-            text += "//     \(root): schema hash \(GesSchemaLayoutJson.hex(type.hash)), binding hash \(GesSchemaLayoutJson.hex(type.bindingHash)).\n"
+            let (hash, binding) = layout.rootHashes(root)
+            if let binding {
+                text += "//     \(root): schema hash \(GesSchemaLayoutJson.hex(hash)), binding hash \(GesSchemaLayoutJson.hex(binding)).\n"
+            } else {
+                text += "//     \(root): network hash \(GesSchemaLayoutJson.hex(hash)).\n"
+            }
         }
         text += "// </auto-generated>\n"
         return text

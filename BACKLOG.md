@@ -39,6 +39,12 @@ here.
 - Specify signatures, certificates or keys, trust policy and rollback behavior
   separately; V1 only reserves the security section range and provides no
   authenticity guarantee.
+- Replace the closed UnitId list with dimension-vector units (exponents of the
+  SI base dimensions plus angle) at the next `.gesb` format change, once the
+  one-byte UnitId space is full. Only UnitId 31 remains free; the vector form
+  would also allow combinations the list rejects, such as `J/(kg·m²)`, and keep
+  torque distinct from energy without special rules. Update Bytecode, Language,
+  both unit tables, the schema wire format and the Swift macro mirror together.
 
 ## Language
 
@@ -70,9 +76,18 @@ here.
   layout; every other constant stays a literal. The `depends` lists of the generation layout
   (specs/Schemas.md#generation-layout) already name those constants. Measure the price against
   the interpreted writer and reader before adopting it; build it only on real demand.
-- Provide a base for publish/subscribe transport of messages and data, outside Runtime, in a
-  `GesNetwork` module or in `GesBridge`; decide which. It frames records, maps channels to message
-  sets or schemas and carries the hash at connection setup (specs/Schemas.md#extension-points).
+- Continue GES network (specs/Network.md) after the session milestone, each step with spec, Conformance and both
+  ports green:
+  - path MTU discovery for datagrams: probe larger packets than the default 1200 bytes and fall back on loss, as in
+    RFC 8899 (DPLPMTUD);
+  - resume a transfer after a dropped connection, using its hash as the transfer's identity;
+  - a second cipher suite with P-256 ECDH and AES-256-GCM for platforms with hardware AES and certified P-256, chosen
+    in the handshake; test `AesGcm` and `ECDiffieHellman` on .NET for iOS first;
+  - signed server keys, so a client trusts a signing key instead of pinning each server's key, with rotation;
+  - an observation hook for sent and received packets and events, and replay of a recorded session;
+  - benchmarks with 64 subscribers, a World of about 33 KB and deltas of about 100 bytes.
+  - models for network routes whose root is a message or message set: `--models` generates typed ends over wire
+    types only; a model end would convert each event's wire value into the model.
 - Extend packed schemas (specs/Schemas.md#packed-schemas): `optional` fields as a presence bit, spatial fields with
   fixed axes, computed fields over the word, and a block copy of a List of packed records between the bit reader or
   writer and an array of words when the bit position is byte-aligned, which needs new public bit-primitive API. Also a
@@ -156,11 +171,6 @@ here.
   such library; follow its pattern of overlays in front of the host's own registries.
 
 ## Developer tooling
-
-- Design a single implementation-independent Conformance orchestrator with thin
-  language adapters, so corpus parsing, assertions and reporting do not need to
-  be ported for each runtime. Keep native allocation and platform integration
-  checks in their implementation-specific harnesses.
 
 - Configure Developer ID signing/notarization and Windows Authenticode signing before
   promising platform-verified publisher identity.
@@ -254,9 +264,3 @@ here.
   generated `GesDiagnosticCodes`. Measure per-module size contributions in both
   ports first; for context, the Lua runtime peaks at about 1.9 MiB on the same
   benchmark versus 7.8 MiB for Swift `ges`.
-- After the compiler convergence, compact the C# compiler toward the Swift
-  implementation at unchanged function and byte-identical output. Measured in
-  characters without whitespace and comments (2026-10-16), C# is about 2.4x the
-  size of Swift for rule-for-rule identical code (GesAstOptimizer) and 6–7x for
-  the lexer, validation and API. Check first whether C# implements extra
-  behavior there, for example collecting several validation diagnostics.

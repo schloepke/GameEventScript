@@ -223,7 +223,7 @@ enum GesSourceHighlighting {
     // Categories that depend on the owning node: module names, extension names, two-word intrinsics, the units of a
     // quantity type and the directive dot of inline assembly.
     private static func refine(_ node: GesSyntaxNode, _ tokens: [GesToken], _ kinds: inout [GesSyntaxKind]) {
-        var unit = false
+        var unit = 0
         var position = node.firstToken
         for child in node.children {
             while position < child.firstToken {
@@ -239,15 +239,22 @@ enum GesSourceHighlighting {
         }
     }
 
-    // `unit` holds while the node's own tokens are inside the parentheses of a quantity type, such as `:Quantity(m/s)`.
-    private static func own(_ node: GesSyntaxNode, _ tokens: [GesToken], _ index: Int, _ kinds: inout [GesSyntaxKind], _ unit: inout Bool) {
+    // `unit` counts the open parentheses while the node's own tokens are inside a quantity type, such as `:Quantity(m/s)`
+    // or `:Quantity(J/(kg·K))`; all but the outer pair belong to the unit.
+    private static func own(_ node: GesSyntaxNode, _ tokens: [GesToken], _ index: Int, _ kinds: inout [GesSyntaxKind], _ unit: inout Int) {
         let token = tokens[index]
         if token.kind == .leftParen && index > 0 && tokens[index - 1].kind == .typeName && tokens[index - 1].text == ":Quantity" {
-            unit = true
+            unit = 1
             return
         }
-        if unit {
-            if token.kind == .rightParen { unit = false } else if token.kind != .newLine { kinds[index] = .builtin }
+        if unit > 0 {
+            if token.kind == .leftParen {
+                unit += 1
+            } else if token.kind == .rightParen {
+                unit -= 1
+                if unit == 0 { return }
+            }
+            if token.kind != .newLine { kinds[index] = .builtin }
             return
         }
 

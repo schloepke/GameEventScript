@@ -21,6 +21,51 @@ final class GenerateTests: XCTestCase {
         }
     }
 
+    func testNetworkTypesHideNoTopLevelType() throws {
+        // A network nests its typed ends, their handler or event types and, in an end that publishes, Topic and Tick; each
+        // would hide a root, a tag set or the network of its name for the code inside.
+        func network(_ root: String, _ network: String, _ verb: String = "publishes") -> String {
+            "wire schema :\(root) as {\n  x: :Number integer between 0 and 255\n}\nnetwork :\(network) as {\n  server \(verb) :\(root) reliable\n}\n"
+        }
+
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            for (root, name) in [("Client", "Game"), ("Server", "Game"), ("Topic", "Game"), ("Tick", "Game"), ("Chunk", "Client"), ("Chunk", "Server")] {
+                XCTAssertEqual(code { _ = try generate(network(root, name), name, language) }, "generate.nameCollision", "\(root) in \(name)")
+            }
+            XCTAssertTrue(try generate(network("Topic", "Game", "sends"), "Game", language).contains("Game"))
+            let handler = language == .swift ? "ServerEvent" : "IServerHandler"
+            XCTAssertEqual(code { _ = try generate(network("Chunk", handler), handler, language) }, "generate.nameCollision")
+        }
+        XCTAssertTrue(try generate(network("ClientEvent", "Game"), "Game", .csharp).contains("ClientEvent"))
+        XCTAssertTrue(try generate(network("IClientHandler", "Game"), "Game", .swift).contains("IClientHandler"))
+
+        // C# forbids a member named like the network class: its hash, bound network, route constants and functions.
+        for name in ["Hash", "Bound", "ServerPublishesChunk", "ServerPublishChunk"] {
+            XCTAssertEqual(code { _ = try generate(network("Chunk", name), name, .csharp) }, "generate.nameCollision", name)
+            XCTAssertTrue(try generate(network("Chunk", name), name, .swift).contains(name))
+        }
+
+        // The members of the network type must also differ from one another: a rate constant may not repeat a route constant.
+        let rates =
+            "wire schema :X as {\n  a: :Number integer between 0 and 255\n}\nwire schema :XEveryMicroseconds as {\n  a: :Number integer between 0 and 255\n}\n"
+            + "network :Net as {\n  server publishes :X latest at most every 50ms\n  server publishes :XEveryMicroseconds latest\n}\n"
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            XCTAssertEqual(code { _ = try generate(rates, "Net", language) }, "generate.nameCollision", "\(language)")
+        }
+
+        // Swift reserves Void, which the closures of the typed ends name.
+        XCTAssertEqual(code { _ = try generate(network("Void", "Game"), "Game", .swift) }, "generate.nameCollision")
+        XCTAssertTrue(try generate(network("Void", "Game"), "Game", .csharp).contains("Void"))
+    }
+
+    func testCaseFieldsOfTypedEndsStayDistinct() throws {
+        // Message-set roots Foo_Bar with Baz and Foo with Bar_Baz would share one case field if its parts joined with one `_`.
+        let source = "wire messages :Foo_Bar as (Baz, Qux)\nwire messages :Foo as (Bar_Baz, Qux)\nmessage Baz()\nmessage Qux()\nmessage Bar_Baz()\n\nnetwork :Net as {\n  client sends :Foo_Bar reliable\n  client sends :Foo reliable\n}\n"
+        let code = try generate(source, "Net", .csharp)
+        XCTAssertTrue(code.contains("__case_foo_Bar__Baz"))
+        XCTAssertTrue(code.contains("__case_foo__Bar_Baz"))
+    }
+
     func testModelsNeedTheirOwnNamespaceAndWireName() throws {
         let set = try GesSchemaSet(parsing: "wire model packed schema :Cell as { a: :Boolean }\nwire schema :CellWire as { b: :Boolean }\nwire model schema :Grid as { c: :List(:Cell) max 4 }\n")
         let roots = ["Cell", "Grid"]

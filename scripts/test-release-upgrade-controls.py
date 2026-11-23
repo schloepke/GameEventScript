@@ -18,10 +18,10 @@ spec.loader.exec_module(upgrade)
 class UpgradeControls(unittest.TestCase):
     def test_all_requested_packages_must_resolve_exact_version(self):
         names = ['Runtime', 'Compiler']
-        upgrade.require_versions(dict.fromkeys(names, '0.5.0-test'), '0.5.0-test', names)
-        for actual in ({}, {'Runtime': '0.5.0-test'}, {'Runtime': '0.4.0', 'Compiler': '0.5.0-test'}):
+        upgrade.require_versions(dict.fromkeys(names, '0.6.0-test'), '0.6.0-test', names)
+        for actual in ({}, {'Runtime': '0.6.0-test'}, {'Runtime': '0.5.0', 'Compiler': '0.6.0-test'}):
             with self.assertRaises(AssertionError):
-                upgrade.require_versions(actual, '0.5.0-test', names)
+                upgrade.require_versions(actual, '0.6.0-test', names)
 
     def test_frozen_release_fixture_detects_drift(self):
         for language in ('csharp', 'swift'):

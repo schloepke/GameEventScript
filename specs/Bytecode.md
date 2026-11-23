@@ -210,6 +210,8 @@ room for likely game-domain units:
 
 > **Since: 0.5.0** — UnitIds 4 to 18
 
+> **Since: 0.6.0** — UnitIds 21 to 30
+
 | UnitId | Unit | Portable name | Intended use |
 | --- | --- | --- | --- |
 | `0` | none | | Unitless scalar. |
@@ -233,9 +235,19 @@ room for likely game-domain units:
 | `18` | decibel | `decibel` | Levels on a logarithmic scale: gains, attenuation, signal-to-noise. |
 | `19` | watt per kelvin | `wattPerKelvin` | Thermal conductance: radiators, hull coupling, cooling. |
 | `20` | joule per kelvin | `joulePerKelvin` | Heat capacity: hulls, tanks, heat sinks. |
-| `21..31` | reserved | | Additional built-in or domain units. |
+| `21` | pascal | `pascal` | Pressure: tanks, atmospheres, hull stress. |
+| `22` | kilogram per cubic meter | `kilogramPerCubicMeter` | Density: materials, fluids, atmospheres. |
+| `23` | joule per kilogram | `joulePerKilogram` | Specific energy: fuels, latent heat. |
+| `24` | joule per kilogram kelvin | `joulePerKilogramKelvin` | Specific heat capacity of materials. |
+| `25` | newton meter | `newtonMeter` | Torque: motors, joints, reaction wheels. |
+| `26` | kilogram square meter | `kilogramSquareMeter` | Moment of inertia. |
+| `27` | degree per second squared | `degreePerSecondSquared` | Angular acceleration. |
+| `28` | kilogram per second | `kilogramPerSecond` | Mass flow: fuel consumption, pumps, mining. |
+| `29` | ohm | `ohm` | Electrical resistance. |
+| `30` | coulomb | `coulomb` | Electrical charge, battery capacity. |
+| `31` | reserved | | Additional built-in or domain units. |
 
-Programs may encode only the defined UnitIds 0 to 20; validation rejects
+Programs may encode only the defined UnitIds 0 to 30; validation rejects
 reserved ids. Unit arithmetic, symbols and literal spellings are
 defined in [Language quantities](Language.md#quantities). The extended map keeps
 additional unit IDs representable without reshaping the instruction word.
@@ -494,6 +506,7 @@ HandlerEntry
   Parameters: ParameterEntry[]
   SignatureLabels
   RequiredTags[]
+  RequiredTagAlternatives[][]
   ExcludedTags[]
   EntryAddress
   DeclarationOrder
@@ -1174,6 +1187,8 @@ evaluate to a single tag or to a list of tags.
 Handlers may declare static tag filters:
 
 - `matching #a, #b`: all required tags must be present.
+- `matching #a | #b, #c | #d`: each alternative group needs at least one of
+  its tags present, in addition to all required tags.
 - `without #x, #y`: none of the excluded tags may be present.
 - no filter: any tag list matches as long as the message signature matches, or
   the message name matches for `MessageNameHandler` entries.

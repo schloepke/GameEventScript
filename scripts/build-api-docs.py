@@ -7,19 +7,25 @@
 import argparse
 import hashlib
 import html
+import importlib.util
 import json
 import os
 from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.dont_write_bytecode = True
+_spec = importlib.util.spec_from_file_location('verify_swift_api', ROOT / 'scripts/verify-swift-api.py')
+swift_api = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(swift_api)
 ARTIFACTS = ROOT / 'artifacts/website'
 CSHARP = ['GameEventScript.Runtime', 'GameEventScript.Compiler', 'GameEventScript.CSharpBridge', 'GameEventScript.Syntax',
-          'GameEventScript.Generator']
+          'GameEventScript.Generator', 'GameEventScript.Network', 'GameEventScript.Network.Sockets']
 SWIFT = ['GameEventScriptRuntime', 'GameEventScriptCompiler', 'GameEventScriptSwiftBridge', 'GameEventScriptSyntax',
-         'GameEventScriptGenerator']
+         'GameEventScriptGenerator', 'GameEventScriptNetwork', 'GameEventScriptNetworkSockets']
 DOCFX_VERSION = '2.78.5'
 
 
@@ -130,18 +136,27 @@ def swift(output, version):
         path.unlink()
     options = ['--package-path', ROOT, '--scratch-path', scratch,
                '--disable-build-manifest-caching']
-    # SwiftPM also extracts synthesized test-runner modules when tests exist in
-    # the root package. Build them first; only public library graphs are copied.
-    run(['swift', 'build', *options, '--build-tests'])
-    run(['swift', 'package', *options, 'dump-symbol-graph', '--skip-synthesized-members',
-         '--minimum-access-level', 'public', '--emit-extension-block-symbols'])
+    run(['swift', 'build', *options])
+    binary_path = subprocess.check_output(['swift', 'build', *options, '--show-bin-path'], text=True).strip()
+    # dump-symbol-graph would also extract every C dependency, such as SwiftNIO SSL's
+    # BoringSSL headers, which Clang cannot extract on its own. Run the official
+    # extractor for each public module, as the API snapshot gate does.
+    extractor = (shutil.which('swift-symbolgraph-extract')
+                 or subprocess.check_output(['xcrun', '--find', 'swift-symbolgraph-extract'], text=True).strip())
+    target = json.loads(subprocess.check_output(['swift', '-print-target-info'], text=True))['target']['triple']
+    search = swift_api.module_search_arguments(binary_path, scratch)
+    sdk = (['-sdk', subprocess.check_output(['xcrun', '--show-sdk-path'], text=True).strip()]
+           if shutil.which('xcrun') else [])
     docc = shutil.which('docc') or subprocess.check_output(['xcrun', '--find', 'docc'], text=True).strip()
     for module in SWIFT:
         graphs = work / 'graphs' / module
         reset(graphs)
-        for path in scratch.rglob('*.symbols.json'):
-            if path.parent.name == "symbolgraph" and (path.name == module + '.symbols.json' or path.name.startswith(module + '@')):
-                shutil.copy2(path, graphs)
+        run([extractor, '-module-name', module, *search, '-target', target, *sdk, '-output-dir', graphs,
+             '-skip-synthesized-members', '-minimum-access-level', 'public', '-emit-extension-block-symbols'])
+        # Graphs of extended foreign modules (Module@Other) stay; graphs of other modules are not ours.
+        for path in graphs.glob('*.symbols.json'):
+            if not (path.name == module + '.symbols.json' or path.name.startswith(module + '@')):
+                path.unlink()
         if not (graphs / (module + '.symbols.json')).is_file():
             raise RuntimeError(f'Missing public symbol graph for {module}')
         catalog = work / (module + '.docc')

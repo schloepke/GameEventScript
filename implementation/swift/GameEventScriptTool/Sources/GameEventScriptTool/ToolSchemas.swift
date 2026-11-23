@@ -20,6 +20,7 @@ extension ToolHelp {
                               [--param <name>=<literal> ...]
                               --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
                               [--checked-exclusivity] [--bindings] [--documents] [--models <namespace>] [--extend-namespace <A>]
+                              [--schemas <Name> | --use-schemas <A.Name>] [--import <Module> ...]
                               [-o <file> | -d <dir> [--split schema|file]] [--check]
 
         Commands:
@@ -32,7 +33,7 @@ extension ToolHelp {
           generate   Generate C# or Swift code that writes and reads the records of the roots and every type they reach.
 
         Options:
-          --root <Name>             The schema, message or message set; layout and generate accept several.
+          --root <Name>             The schema, message or message set; layout and generate accept several and a network.
           --all-roots               Make every declaration of the files a root of layout or generate.
           --wire <group>            Make the wire roots of the group the roots, in declaration order; wire alone is the group default.
           --model <group>           Generate plain model types of the model roots of the group instead of wire code.
@@ -43,6 +44,10 @@ extension ToolHelp {
           --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
           --extend-namespace <A>    Extend this leading part of the Swift namespace, which another generation of the module
                                     declares, instead of declaring it; wire code with --models does so for the part it shares.
+          --schemas <Name>          Declare the schema set type <Name>, which holds the embedded sources and parameter values
+                                    and binds conversions, networks and documents for this and other generations.
+          --use-schemas <A.Name>    Use the schema set type that another generation declares, instead of embedding the sources.
+          --import <Module>         Import this Swift module in every generated file, such as the module of --use-schemas.
           --bindings                Also offer generated model types to scripts as external types; only with --model.
           --documents               Also read model roots from GES document text; includes --values, only with --model.
           --models <namespace>      Share the packed types of the model code in that namespace ("" for the global one) and
@@ -81,6 +86,9 @@ extension Tool {
         var bindings = false
         var documents = false
         var models: String?
+        var schemaSet: String?
+        var useSchemaSet: String?
+        var imports: [String] = []
         var language: String?
         var space: String?
         var access: String?
@@ -112,14 +120,16 @@ extension Tool {
                 bindings = true
             } else if argument == "--documents" && command == "generate" {
                 documents = true
-            } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model", "-d", "--out-dir", "--split", "--models", "--extend-namespace"].contains(argument) {
+            } else if [
+                "--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model", "-d", "--out-dir", "--split", "--models", "--extend-namespace", "--schemas", "--use-schemas", "--import",
+            ].contains(argument) {
                 let applies: Bool
                 switch argument {
                 case "--root": applies = ["hash", "canonical", "dump", "layout", "generate"].contains(command)
                 case "--wire", "--model": applies = command == "layout" || command == "generate"
                 case "--param": applies = ["hash", "dump", "layout", "generate"].contains(command)
                 case "--data", "--baseline": applies = command == "dump"
-                case "--language", "--namespace", "--access", "-d", "--out-dir", "--split", "--models", "--extend-namespace": applies = command == "generate"
+                case "--language", "--namespace", "--access", "-d", "--out-dir", "--split", "--models", "--extend-namespace", "--schemas", "--use-schemas", "--import": applies = command == "generate"
                 default: applies = ["format", "layout", "generate"].contains(command)
                 }
                 guard applies else { throw ToolError.usage("Unknown schema \(command) option '\(argument)'.") }
@@ -144,6 +154,11 @@ extension Tool {
                 case "--split": split = next
                 case "--models": models = next
                 case "--extend-namespace": extendNamespace = next
+                case "--schemas": schemaSet = next
+                case "--use-schemas": useSchemaSet = next
+                case "--import":
+                    if imports.contains(next) { throw ToolError.usage("The module '\(next)' is given twice.") }
+                    imports.append(next)
                 default:
                     guard let separator = next.firstIndex(of: "="), separator != next.startIndex else { throw ToolError.usage("A parameter is written name=literal.") }
                     let name = String(next[..<separator])
@@ -172,6 +187,10 @@ extension Tool {
         if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
         if extendNamespace != nil && language != "swift" {
             throw ToolError.usage("--extend-namespace concerns Swift, whose namespaces are enums; C# merges namespaces.")
+        }
+        if schemaSet != nil && useSchemaSet != nil { throw ToolError.usage("--schemas declares a schema set and --use-schemas uses another one; give one of them.") }
+        if !imports.isEmpty && language != "swift" {
+            throw ToolError.usage("--import concerns Swift, whose generated files import modules; C# names types with qualified names.")
         }
         if let access, access != "public" && access != "internal" { throw ToolError.usage("--access is public or internal.") }
         if output != nil && outDir != nil { return generateUsage("-o writes one file and --out-dir a directory; give one of them.") }
@@ -216,7 +235,10 @@ extension Tool {
                         documents: documents,
                         split: outDir == nil ? .none : split == "file" ? .file : .schema,
                         models: models,
-                        extendNamespace: extendNamespace
+                        extendNamespace: extendNamespace,
+                        schemaSet: schemaSet,
+                        useSchemaSet: useSchemaSet,
+                        imports: imports
                     )
                 if let group = wireGroup ?? modelGroup {
                     roots = wireGroup != nil ? GesSchemaGenerator.wireRoots(set, group: group) : GesSchemaGenerator.modelRoots(set, group: group)
@@ -258,6 +280,14 @@ extension Tool {
         }
     }
 
+    // Whether a root reaches a parameter; a network reaches the parameters of its route roots.
+    private static func reaches(_ set: GesSchemaSet, _ root: String, _ name: String) throws -> Bool {
+        if let network = set.networks.first(where: { $0.name == root }) {
+            return network.routes.contains { route in route.root.parameters.contains { $0.name == name } }
+        }
+        return try set.schema(root).parameters.contains { $0.name == name }
+    }
+
     // Prints the layout, or with options the generated code; with check it compares the code with the output file.
     private func layout(
         _ set: GesSchemaSet,
@@ -271,7 +301,7 @@ extension Tool {
     ) throws -> Int {
         let values = GesSchemaParameters()
         for (name, literal) in parameters {
-            if try model || !roots.contains(where: { try set.schema($0).parameters.contains { $0.name == name } }) {
+            if try model || !roots.contains(where: { try Self.reaches(set, $0, name) }) {
                 io.line("schema: error schema.unknownName: No root reaches the parameter '\(name)'.", toError: true)
                 return 1
             }

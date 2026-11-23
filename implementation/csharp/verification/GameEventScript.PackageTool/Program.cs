@@ -14,6 +14,7 @@ internal static class Program
 {
     private const string RuntimePackage = "GameEventScript.Runtime";
     private const string SyntaxPackage = "GameEventScript.Syntax";
+    private const string NetworkPackage = "GameEventScript.Network";
     // Every entry takes one timestamp: the commit time that the caller passes, or 2000-01-01 without one. A newer commit gives
     // newer files, so that a build copying a package's DLL by date and size replaces the old one; one commit packs alike.
     // A ZIP time has no time zone: the UTC clock time is written, and extraction reads it as local clock time, which shifts
@@ -26,7 +27,9 @@ internal static class Program
         new(RuntimePackage, [SyntaxPackage]),
         new("GameEventScript.Compiler", [RuntimePackage, SyntaxPackage]),
         new("GameEventScript.CSharpBridge", [RuntimePackage, SyntaxPackage]),
-        new("GameEventScript.Generator", [RuntimePackage, SyntaxPackage])
+        new("GameEventScript.Generator", [RuntimePackage, SyntaxPackage]),
+        new(NetworkPackage, [RuntimePackage]),
+        new("GameEventScript.Network.Sockets", [NetworkPackage, RuntimePackage], "net8.0")
     ];
 
     private static int Main(string[] arguments)
@@ -155,10 +158,11 @@ internal static class Program
         AssertBytesEqual(File.ReadAllBytes(Path.Combine(repositoryRoot, "README.md")), RequiredEntry(normalEntries, "README.md").Content, $"{package.Id} README");
         AssertBytesEqual(File.ReadAllBytes(Path.Combine(repositoryRoot, "website/brand/pixel-duo/nuget-icon.png")), RequiredEntry(normalEntries, "icon.png").Content, $"{package.Id} icon");
 
-        var libraryPrefix = "lib/netstandard2.1/" + package.Id;
+        var libraryDirectory = $"lib/{package.Framework}/";
+        var libraryPrefix = libraryDirectory + package.Id;
         var assembly = RequiredEntry(normalEntries, libraryPrefix + ".dll").Content;
         _ = RequiredEntry(normalEntries, libraryPrefix + ".xml");
-        var packagedAssemblies = normalEntries.Where(entry => entry.Name.StartsWith("lib/netstandard2.1/", StringComparison.Ordinal) && entry.Name.EndsWith(".dll", StringComparison.Ordinal)).ToArray();
+        var packagedAssemblies = normalEntries.Where(entry => entry.Name.StartsWith("lib/", StringComparison.Ordinal) && entry.Name.EndsWith(".dll", StringComparison.Ordinal)).ToArray();
         if (packagedAssemblies.Length != 1 || packagedAssemblies[0].Name != libraryPrefix + ".dll")
             throw new InvalidDataException($"Package '{package.Id}' must contain only its own runtime assembly.");
         VerifyAssemblyReferences(package, assembly);
@@ -260,6 +264,7 @@ internal static class Program
         if (!expected.AsSpan().SequenceEqual(actual)) throw new InvalidDataException($"Packaged {name} differs from the repository file.");
     }
 
-    private sealed record PackageDefinition(string Id, string[] Dependencies);
+    // Framework is the package's only lib folder: the portable libraries target netstandard2.1, socket transports net8.0.
+    private sealed record PackageDefinition(string Id, string[] Dependencies, string Framework = "netstandard2.1");
     private sealed record PackageEntry(string Name, byte[] Content, DateTimeOffset Timestamp);
 }

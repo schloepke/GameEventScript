@@ -10,6 +10,10 @@
     import Glibc
 #elseif canImport(Musl)
     import Musl
+#elseif canImport(Android)
+    import Android
+#elseif canImport(WASILibc)
+    import WASILibc
 #endif
 
 /// What binding knows about a node: its range, whether it may give nothing (NaN or an absent field), a negative zero, or

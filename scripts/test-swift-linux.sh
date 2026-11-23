@@ -14,6 +14,10 @@ swift test --package-path "$ges_root/implementation/swift/GameEventScriptSyntax"
     --scratch-path "$ges_root/artifacts/swift/linux/syntax" "${build[@]}" --configuration debug
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptGenerator" \
     --scratch-path "$ges_root/artifacts/swift/linux/generator" "${build[@]}" --configuration debug
+swift test --package-path "$ges_root/implementation/swift/GameEventScriptNetwork" \
+    --scratch-path "$ges_root/artifacts/swift/linux/network" "${build[@]}" --configuration debug
+swift test --package-path "$ges_root/implementation/swift/GameEventScriptNetworkSockets" \
+    --scratch-path "$ges_root/artifacts/swift/linux/networksockets" "${build[@]}" --configuration debug
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBridge" \
     --scratch-path "$ges_root/artifacts/swift/linux/swiftbridge" "${build[@]}" --configuration debug
 

@@ -75,6 +75,11 @@ public static class GesDiagnosticCodes
     /// A tag clause contains the literal <c>nothing</c>.
     /// </summary>
     public const string ValidateInvalidTag = "validate.invalidTag";
+
+    /// <summary>
+    /// A <c>without</c> tag filter uses <c>|</c> alternatives, which only <c>matching</c> filters allow.
+    /// </summary>
+    public const string ValidateInvalidTagFilter = "validate.invalidTagFilter";
     /// <summary>The compiler cannot lower a construct to bytecode.</summary>
     public const string CompileUnsupportedConstruct = "compile.unsupportedConstruct";
     /// <summary>A lowered intrinsic or handler form has the wrong number of arguments or parameters.</summary>

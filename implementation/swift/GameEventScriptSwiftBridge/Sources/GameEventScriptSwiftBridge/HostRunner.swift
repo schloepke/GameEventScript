@@ -1,191 +1,196 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import Dispatch
-import Foundation
-import GameEventScriptRuntime
+// The runner needs threads and Dispatch; single-threaded targets such as WASI pump the Host directly.
+#if canImport(Dispatch)
 
-/// A runner-owned registration. All lifecycle access uses the same serialization gate as execution.
-public struct GesBridgeHostRunnerRegistration: Sendable {
-    /// Stable identifier within the runner's owning host.
-    public let registrationID: Int64
-    private let owner: GesBridgeHostRunner
+    import Dispatch
+    import Foundation
+    import GameEventScriptRuntime
 
-    fileprivate init(_ id: Int64, owner: GesBridgeHostRunner) {
-        registrationID = id
-        self.owner = owner
+    /// A runner-owned registration. All lifecycle access uses the same serialization gate as execution.
+    public struct GesBridgeHostRunnerRegistration: Sendable {
+        /// Stable identifier within the runner's owning host.
+        public let registrationID: Int64
+        private let owner: GesBridgeHostRunner
+
+        fileprivate init(_ id: Int64, owner: GesBridgeHostRunner) {
+            registrationID = id
+            self.owner = owner
+        }
+
+        /// Reads whether the instance or subscription is still attached under the runner's gate.
+        public var isAttached: Bool { owner.isAttached(registrationID) }
+        /// Initialization result for a tracked Program, or nil while pending, detached, or for native subscriptions.
+        public var startResult: GesStartResult? { owner.startResult(registrationID) }
+
+        /// Idempotently detaches a registration under the serialization gate. Returns true only when this call removes it.
+        @discardableResult public func detach() -> Bool { owner.detach(registrationID) }
     }
 
-    /// Reads whether the instance or subscription is still attached under the runner's gate.
-    public var isAttached: Bool { owner.isAttached(registrationID) }
-    /// Initialization result for a tracked Program, or nil while pending, detached, or for native subscriptions.
-    public var startResult: GesStartResult? { owner.startResult(registrationID) }
+    /// Owns a transferred Host and serializes all access. Ready hosts pump on a shared serial dispatcher.
+    /// Start is explicit for a host still in its initial loading phase; recursive receives only enqueue.
+    /// Callbacks, external objects and the Host must not be accessed outside the runner after transfer.
+    public final class GesBridgeHostRunner: @unchecked Sendable {
+        private let gate = NSRecursiveLock()
+        private var host: GameEventScriptHost?
+        private var instances: [Int64: GesProgramInstance] = [:]
+        private var subscriptions: [Int64: GesSubscription] = [:]
+        private var pumping = false
+        private var result: GesExecutionResult?
+        private var wakeup: DispatchWorkItem?
+        private var scheduled = false
+        private static let dispatcher = DispatchQueue(label: "GameEventScript shared dispatch pump")
 
-    /// Idempotently detaches a registration under the serialization gate. Returns true only when this call removes it.
-    @discardableResult public func detach() -> Bool { owner.detach(registrationID) }
-}
-
-/// Owns a transferred Host and serializes all access. Ready hosts pump on a shared serial dispatcher.
-/// Start is explicit for a host still in its initial loading phase; recursive receives only enqueue.
-/// Callbacks, external objects and the Host must not be accessed outside the runner after transfer.
-public final class GesBridgeHostRunner: @unchecked Sendable {
-    private let gate = NSRecursiveLock()
-    private var host: GameEventScriptHost?
-    private var instances: [Int64: GesProgramInstance] = [:]
-    private var subscriptions: [Int64: GesSubscription] = [:]
-    private var pumping = false
-    private var result: GesExecutionResult?
-    private var wakeup: DispatchWorkItem?
-    private var scheduled = false
-    private static let dispatcher = DispatchQueue(label: "GameEventScript shared dispatch pump")
-
-    /// Transfers exclusive ownership. An already ready host schedules pending work; a loading host waits for start.
-    public init(_ host: sending GameEventScriptHost) {
-        self.host = host
-        gate.lock()
-        if host.isReady && !host.isIdle { schedule() }
-        gate.unlock()
-    }
-
-    /// Last completed pump result, read under the serialization gate; nil before the first pump.
-    public var lastResult: GesExecutionResult? { locked { result } }
-    /// Whether the owned host has no active or queued work; true after close.
-    public var isIdle: Bool { locked { host?.isIdle ?? true } }
-    /// Whether the owned host successfully started; false after close.
-    public var isReady: Bool { locked { host?.isReady ?? false } }
-
-    /// The owned host's idle duration in whole microseconds, read under the runner gate; nil when not idle or closed.
-    /// Reading never schedules work.
-    public var idleDurationMicroseconds: Int64? { locked { host?.idleDurationMicroseconds } }
-
-    /// Starts the initial Program group under the gate, then schedules ordinary queued work on success.
-    ///
-    /// - Throws: An API error if the runner is closed or host startup preconditions fail.
-    public func start() throws -> GesStartResult {
-        try locked {
-            let host = try activeHost()
-            let result = try host.start()
+        /// Transfers exclusive ownership. An already ready host schedules pending work; a loading host waits for start.
+        public init(_ host: sending GameEventScriptHost) {
+            self.host = host
+            gate.lock()
             if host.isReady && !host.isIdle { schedule() }
-            return result
+            gate.unlock()
         }
-    }
 
-    fileprivate func startResult(_ id: Int64) -> GesStartResult? { locked { instances[id]?.startResult } }
+        /// Last completed pump result, read under the serialization gate; nil before the first pump.
+        public var lastResult: GesExecutionResult? { locked { result } }
+        /// Whether the owned host has no active or queued work; true after close.
+        public var isIdle: Bool { locked { host?.isIdle ?? true } }
+        /// Whether the owned host successfully started; false after close.
+        public var isReady: Bool { locked { host?.isReady ?? false } }
 
-    /// Transfers and enqueues a message under the gate, scheduling a pump when accepted.
-    ///
-    /// - Returns: Whether local delivery was accepted.
-    /// - Throws: An API error if the runner is closed.
-    @discardableResult public func receive(_ message: sending GameEventScriptMessage) throws -> Bool {
-        try locked {
-            let host = try activeHost()
-            let accepted = host.receive(message)
-            if accepted { schedule() }
-            return accepted
+        /// The owned host's idle duration in whole microseconds, read under the runner gate; nil when not idle or closed.
+        /// Reading never schedules work.
+        public var idleDurationMicroseconds: Int64? { locked { host?.idleDurationMicroseconds } }
+
+        /// Starts the initial Program group under the gate, then schedules ordinary queued work on success.
+        ///
+        /// - Throws: An API error if the runner is closed or host startup preconditions fail.
+        public func start() throws -> GesStartResult {
+            try locked {
+                let host = try activeHost()
+                let result = try host.start()
+                if host.isReady && !host.isIdle { schedule() }
+                return result
+            }
         }
-    }
 
-    /// Programs contain immutable transport data and remain reusable across independent runners.
-    public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GesBridgeHostRunnerRegistration {
-        try locked {
-            let host = try activeHost()
-            let instance = try host.load(program, priority: priority)
-            instances[instance.registrationID] = instance
-            if host.isReady && !host.isIdle { schedule() }
-            return .init(instance.registrationID, owner: self)
+        fileprivate func startResult(_ id: Int64) -> GesStartResult? { locked { instances[id]?.startResult } }
+
+        /// Transfers and enqueues a message under the gate, scheduling a pump when accepted.
+        ///
+        /// - Returns: Whether local delivery was accepted.
+        /// - Throws: An API error if the runner is closed.
+        @discardableResult public func receive(_ message: sending GameEventScriptMessage) throws -> Bool {
+            try locked {
+                let host = try activeHost()
+                let accepted = host.receive(message)
+                if accepted { schedule() }
+                return accepted
+            }
         }
-    }
 
-    /// Transfers a native closure into the runner and registers an exact signature with optional tag filters.
-    ///
-    /// - Returns: A registration whose lifecycle uses the same gate as execution.
-    /// - Throws: An API error if closed, or a registration validation error.
-    public func subscribe(_ signature: GesMessageSignature, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0, handler: sending @escaping (GameEventScriptMessage, GesContext) throws -> Void) throws
-        -> GesBridgeHostRunnerRegistration
-    {
-        try locked {
-            let subscription = try activeHost().subscribe(signature, matchingTags: matchingTags, withoutTags: withoutTags, priority: priority, handler: handler)
-            subscriptions[subscription.registrationID] = subscription
-            return .init(subscription.registrationID, owner: self)
+        /// Programs contain immutable transport data and remain reusable across independent runners.
+        public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GesBridgeHostRunnerRegistration {
+            try locked {
+                let host = try activeHost()
+                let instance = try host.load(program, priority: priority)
+                instances[instance.registrationID] = instance
+                if host.isReady && !host.isIdle { schedule() }
+                return .init(instance.registrationID, owner: self)
+            }
         }
-    }
 
-    /// Drains existing work; recursive pump requests are rejected before altering host state.
-    @discardableResult public func runToCompletion() throws -> GesExecutionResult {
-        try locked {
-            guard !pumping else { throw GesApiError.invalidOperation("A runner cannot be pumped recursively") }
-            try pump(activeHost())
-            return result!
+        /// Transfers a native closure into the runner and registers an exact signature with optional tag filters.
+        ///
+        /// - Returns: A registration whose lifecycle uses the same gate as execution.
+        /// - Throws: An API error if closed, or a registration validation error.
+        public func subscribe(_ signature: GesMessageSignature, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0, handler: sending @escaping (GameEventScriptMessage, GesContext) throws -> Void) throws
+            -> GesBridgeHostRunnerRegistration
+        {
+            try locked {
+                let subscription = try activeHost().subscribe(signature, matchingTags: matchingTags, withoutTags: withoutTags, priority: priority, handler: handler)
+                subscriptions[subscription.registrationID] = subscription
+                return .init(subscription.registrationID, owner: self)
+            }
         }
-    }
 
-    /// Stops accepting work and releases the owned Host. A synchronous pump already running may finish.
-    public func close() {
-        locked {
-            for instance in instances.values { instance.detach() }
-            for subscription in subscriptions.values { subscription.unsubscribe() }
-            instances.removeAll()
-            subscriptions.removeAll()
+        /// Drains existing work; recursive pump requests are rejected before altering host state.
+        @discardableResult public func runToCompletion() throws -> GesExecutionResult {
+            try locked {
+                guard !pumping else { throw GesApiError.invalidOperation("A runner cannot be pumped recursively") }
+                try pump(activeHost())
+                return result!
+            }
+        }
+
+        /// Stops accepting work and releases the owned Host. A synchronous pump already running may finish.
+        public func close() {
+            locked {
+                for instance in instances.values { instance.detach() }
+                for subscription in subscriptions.values { subscription.unsubscribe() }
+                instances.removeAll()
+                subscriptions.removeAll()
+                wakeup?.cancel()
+                wakeup = nil
+                host = nil
+            }
+        }
+
+        fileprivate func isAttached(_ id: Int64) -> Bool { locked { instances[id]?.isAttached ?? subscriptions[id]?.isSubscribed ?? false } }
+
+        fileprivate func detach(_ id: Int64) -> Bool {
+            locked {
+                if let instance = instances.removeValue(forKey: id) { return instance.detach() }
+                return subscriptions.removeValue(forKey: id)?.unsubscribe() ?? false
+            }
+        }
+
+        private func schedule() {
             wakeup?.cancel()
             wakeup = nil
-            host = nil
+            guard !scheduled else { return }
+            scheduled = true
+            Self.dispatcher.async { self.automaticPump() }
         }
-    }
 
-    fileprivate func isAttached(_ id: Int64) -> Bool { locked { instances[id]?.isAttached ?? subscriptions[id]?.isSubscribed ?? false } }
-
-    fileprivate func detach(_ id: Int64) -> Bool {
-        locked {
-            if let instance = instances.removeValue(forKey: id) { return instance.detach() }
-            return subscriptions.removeValue(forKey: id)?.unsubscribe() ?? false
-        }
-    }
-
-    private func schedule() {
-        wakeup?.cancel()
-        wakeup = nil
-        guard !scheduled else { return }
-        scheduled = true
-        Self.dispatcher.async { self.automaticPump() }
-    }
-
-    private func automaticPump() {
-        locked {
-            defer {
-                scheduled = false
-                if let host, host.isReady && !host.isIdle {
-                    if result?.state == .waiting, let delay = host.nextMessageDelay {
-                        // The wake-up retains the runner, as immediate work and the C# timer do, so delayed work is not dropped
-                        // with the last outside reference; close() cancels it.
-                        let work = DispatchWorkItem { self.locked { self.schedule() } }
-                        wakeup = work
-                        Self.dispatcher.asyncAfter(deadline: .now() + .microseconds(Int(min(delay, 86_400_000_000))), execute: work)
-                    } else {
-                        schedule()
+        private func automaticPump() {
+            locked {
+                defer {
+                    scheduled = false
+                    if let host, host.isReady && !host.isIdle {
+                        if result?.state == .waiting, let delay = host.nextMessageDelay {
+                            // The wake-up retains the runner, as immediate work and the C# timer do, so delayed work is not dropped
+                            // with the last outside reference; close() cancels it.
+                            let work = DispatchWorkItem { self.locked { self.schedule() } }
+                            wakeup = work
+                            Self.dispatcher.asyncAfter(deadline: .now() + .microseconds(Int(min(delay, 86_400_000_000))), execute: work)
+                        } else {
+                            schedule()
+                        }
                     }
                 }
+                guard let host, host.isReady, !host.isIdle else { return }
+                // A valid ready host cannot fail the pump API preconditions under this gate.
+                do { try pump(host) } catch { return }
             }
-            guard let host, host.isReady, !host.isIdle else { return }
-            // A valid ready host cannot fail the pump API preconditions under this gate.
-            do { try pump(host) } catch { return }
+        }
+
+        private func pump(_ host: GameEventScriptHost) throws {
+            guard !pumping else { return }
+            pumping = true
+            defer { pumping = false }
+            result = try host.runToCompletion()
+        }
+
+        private func activeHost() throws -> GameEventScriptHost {
+            guard let host else { throw GesApiError.invalidOperation("The runner is closed") }
+            return host
+        }
+
+        private func locked<T>(_ body: () throws -> T) rethrows -> T {
+            gate.lock()
+            defer { gate.unlock() }
+            return try body()
         }
     }
 
-    private func pump(_ host: GameEventScriptHost) throws {
-        guard !pumping else { return }
-        pumping = true
-        defer { pumping = false }
-        result = try host.runToCompletion()
-    }
-
-    private func activeHost() throws -> GameEventScriptHost {
-        guard let host else { throw GesApiError.invalidOperation("The runner is closed") }
-        return host
-    }
-
-    private func locked<T>(_ body: () throws -> T) rethrows -> T {
-        gate.lock()
-        defer { gate.unlock() }
-        return try body()
-    }
-}
+#endif

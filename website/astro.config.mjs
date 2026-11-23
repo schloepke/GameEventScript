@@ -70,6 +70,10 @@ export default defineConfig({
       { label: 'Data formats', collapsed: true, items: [
         'docs/reference/documents', 'docs/reference/schemas',
       ] },
+      { label: 'Network', collapsed: true, items: [
+        { label: 'Connect a client and a server', slug: 'docs/learn/network' },
+        'docs/reference/network',
+      ] },
       { label: 'Program formats', collapsed: true, items: [
         'docs/reference/program-model', 'docs/reference/bytecode',
         'docs/reference/binary-format', 'docs/reference/assembler-format',

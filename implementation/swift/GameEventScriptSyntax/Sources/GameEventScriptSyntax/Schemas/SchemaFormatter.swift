@@ -70,6 +70,19 @@
                 output += "tags :\(declaration.name) as "
                 tags(declaration.tags, &output)
                 output += "\n"
+            case .network:
+                output += "network :\(declaration.name) as {\n"
+                for route in declaration.routes {
+                    output += "  \(route.server ? "server" : "client") \(route.publishes ? "publishes" : "sends") :\(route.root) "
+                    switch route.routeClass {
+                    case .reliable: output += "reliable"
+                    case .latest: output += "latest"
+                    case .bulk: output += "bulk"
+                    }
+                    if let rate = route.rate { output += " at most every \(value(rate))" }
+                    output += "\n"
+                }
+                output += "}\n"
             }
         }
         return output

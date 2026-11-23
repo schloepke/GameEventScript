@@ -10,6 +10,144 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+## [0.6.0] — 2026-11-23
+
+This release adds GES Network: a `network` declaration in `.gess` schemas, a portable session core with topics,
+datagrams, bulk transfers, encryption, ends and ticks, socket transports over TCP, WebSocket and UDP, and typed
+client and server ends generated for C# and Swift. It also adds ten physical units, tag alternatives in handler
+filters and WebAssembly (WASI) and Android builds of every Swift library.
+
+### Breaking
+- The Swift packages require Swift 6.1 or newer (`swift-tools-version: 6.1`), the minimum of the SwiftNIO versions the
+  Network Sockets package uses; CI builds every library with Swift 6.1.
+- A quotient of a mass by a time such as `6kg / 2s` is now `3kg/s` instead of nothing; other products and quotients
+  that now derive one of the new units change the same way (specs/Language.md#quantities).
+- Swift `GesQuantityUnit` has new cases `pascal`, `kilogramPerCubicMeter`, `joulePerKilogram`,
+  `joulePerKilogramKelvin`, `newtonMeter`, `kilogramSquareMeter`, `degreePerSecondSquared`, `kilogramPerSecond`, `ohm`
+  and `coulomb`, so an exhaustive `switch` over it must handle them (or add a `default`); C# `GesQuantityUnit` gains
+  the same members and existing values keep their numbers.
+
+### Added
+- Every library product of the root Swift package builds for WebAssembly (WASI); Swift CI builds it with the pinned
+  6.4.0 Wasm SDK (`scripts/build-swift-wasm.py`). There the Swift `GesBridgeHostRunner` is absent, because WASI has
+  no Dispatch, and `GameEventScriptNetworkSockets` is empty, because SwiftNIO SSL does not build for WASI. The Card
+  Lab builds the repository packages without patching their sources.
+- Every library product of the root Swift package, Network Sockets included, builds for Android with the Swift SDK for
+  Android and an NDK r27 or newer (0.5.0 lacked the Android C library imports); Swift CI builds aarch64, x86_64 and
+  armv7 at API level 23 with the pinned 6.4.0 SDK and NDK r30 (`scripts/build-swift-android.py`).
+- GES network (specs/Network.md): a `network` declaration in `.gess` sources names the routes between a client and a
+  server with their delivery class (`reliable`, `latest`, `bulk`) and an optional `at most every` rate; Runtime binds
+  it and computes its hash (`GesSchemaSet.Network`, Swift `network(_:)`).
+- The Network package (C# `GameEventScript.Network`, netstandard2.1; Swift `GameEventScriptNetwork`) holds a
+  synchronous session state machine with a handshake over version and network hash, sequence numbers, acknowledgements,
+  keepalive, timeout, a send budget, bounded options, at most 65536 untaken events and 65536 waiting reliable
+  messages, and `network.*` codes, plus a seeded simulator.
+- The Network Sockets package (C# `GameEventScript.Network.Sockets` on .NET 8; Swift `GameEventScriptNetworkSockets`
+  over SwiftNIO) carries a session over TCP or WebSocket, including `wss` clients. Its listeners hold at most 64
+  waiting clients, at most 8 per IP address. A session hands its socket about 256 KiB of unwritten packets, so a peer
+  that reads slowly fills the send queue and `Send` reports `QueueFull`; the close packet still leaves.
+- A stream or message connection takes no packet while its frame bucket holds less than one frame, and no packet may
+  carry more frames than its frame limit (`network.rateExceeded`). `CanReceive` (Swift `canReceive`) reports this; the
+  socket sessions, pairs and the simulator hold the bytes back until the bucket refills instead of closing a peer whose
+  backlog arrives at once.
+- `ges schema generate --root <Network>` writes the wire types of a network's routes and one type with the network
+  hash, a route index per route, the rate of each `at most every` route and a typed function per route that encodes
+  its root into a buffer and sends or publishes it (`ServerPublishWorld`, Swift `serverPublishWorld`;
+  specs/Schemas.md#network-constants).
+- `ges schema generate --schemas <Name>` writes one public schema set type (C# `static class`, Swift `enum`) with the
+  embedded sources parsed once, the parameter values, a hash, `Bind`, `BindNetwork` and `ReadDocument` and, per
+  network, the bound network as `Bound` (Swift `bound`); `--use-schemas <Qualified.Name>` lets another generation
+  share it, and `--import <Module>` adds Swift import lines (specs/Schemas.md#schema-sets). A C# set may not take the
+  name of one of its members, such as `Set` or `Hash` (`generate.nameCollision`).
+- Public monotonic clocks in Runtime: `GesSystemClock` and the virtual test clock `GesVirtualClock` behind the existing
+  `IGesClock` (Swift `GesClock`), for hosts and network ends.
+- Network byte limits are optional (`long?`, Swift `Int64?`): an unset `MaxPendingReceiveBytes`, `MaxSendQueueBytes`,
+  `MaxBaselineBytes` or `MaxTransferBytes` grows from its default to the largest message the bound network needs there,
+  a topic state with its mode byte, up to its maximum; an explicit value stays as set (specs/Network.md#limits).
+- Editor grammars highlight the `network` declaration's keywords in `.gess` sources.
+- Network topics: `Publish` sends a `publishes` route's state as a full record or as a delta against the last
+  acknowledged state held in a ring of up to 32 states per subscriber, bounded by `MaxBaselineBytes` (default 65536,
+  agreed in the handshake); the server decides subscriptions with `Subscribe`/`Unsubscribe`, and publishing an
+  unsubscribed topic reports `NotSubscribed`.
+- Network datagrams: the `datagram` transport carries a session over UDP with datagrams of at most 1200 bytes by
+  default, selective resends after loss detection by packet threshold, time threshold and probe timeout, fragmentation,
+  receive windows that restore the order, confirmation frames for the delta bases of `latest` topics and a `hello`
+  padded to 1200 bytes. A stateless address validation gate (`GesNetworkCookies`) answers unknown addresses with an
+  HMAC-SHA256 cookie in a `retry`. `ListenUdp`/`ConnectUdpAsync` (Swift `listenUdp`/`connectUdp`) open UDP sockets over
+  IPv4 and IPv6, and `GesNetworkSimulator` can lose, duplicate and reorder packets with a seed.
+- Network transfers: a message on a `bulk` route carries a header with its compression, size and SHA-256 hash and is
+  compressed with a portable Deflate encoder, byte-identical in both ports, when both sides allow it
+  (`DeflateTransfers`) and the result is shorter. Both sides agree a transfer limit (`MaxTransferBytes`, default
+  64 MiB) that the receiver checks before it allocates. `LastTransferId` reports a sent transfer's id and `Cancel`
+  (Swift `cancel(route:transferId:code:)`) cancels it with an optional code without closing the session; the events
+  `transferProgress` and `transferCancelled` and the codes `network.transferTooLarge`, `network.transferCorrupt` and
+  `network.transferCancelled` report progress and failures.
+- Network encryption: a server with a key (`GesNetworkKey`) encrypts its sessions with X25519, ChaCha20-Poly1305 and
+  HKDF-SHA256, implemented in constant time in both ports, with a key change every 2^24 packets. Each side states its
+  security: a client pins the server's public key (`GesNetworkClientSecurity.Pinned`) and reaches
+  `GesNetworkSecurity.Verified`, takes the key from a `retry` in development mode (`Development`) and reaches
+  `Encrypted`, or stays unencrypted (`None`, Swift `.unencrypted`); a server has a key
+  (`GesNetworkServerSecurity.Key`) or none. `Security` reports the level reached, and the codes `network.insecure`
+  and `network.authenticationFailed` report failures. A changed
+  sealed datagram is dropped; on a stream or message transport it closes the session. `InsecureTestKeySeed` makes
+  handshakes reproducible for tests. The default options set no security, so a
+  connection or listener without the security of its side is a usage error.
+- Network option presets: `GesNetworkOptions.InProcess()` (message transport, 65535-byte packets, no acknowledgement
+  delay, timeout or keepalive, unencrypted) and `Message`, `Stream` and `Datagram` with a client or server security
+  (Swift `inProcess()`, `message(client:)`, `stream(server:)` and so on). A timeout or keepalive of 0 means none.
+- Ten physical units (UnitIds 21 to 30): `Pa` (with `kPa`, `hPa`, `MPa`), `kg/m³`, `J/kg` (`kJ/kg`, `MJ/kg`),
+  `J/(kg·K)` (`kJ/(kg·K)`), `N·m` (also `N*m`, `Nm`; `kN·m`), `kg·m²`, `°/s²`, `kg/s`, `Ω` (also `ohm`; `mΩ`, `kΩ`,
+  `MΩ`) and `C` (with `Ah` and `mAh`), with their `:Quantity(...)` types and derivations such as `N / m² → Pa`,
+  `kg / m³`, `J / kg`, `A × s → C` and `V / A → Ω`. Newton times meter stays `J`; `N·m` arises only from a literal or a
+  cast. Literals such as `5N*m` and `4J/(kg*K)` are read as one unit literal; in `.gess` computed expressions a shorter
+  literal is read where the longer one would not complete a unit, as in `5m*x` (specs/Language.md#quantities).
+- Network ends (specs/Network.md#ends): `GesNetworkClientEnd` and `GesNetworkServerEnd` drive their connections over a
+  plug-in transport (`IGesNetworkConnector`, `IGesNetworkAcceptor`, `IGesNetworkLink`; Swift protocols) and an
+  injectable clock, accept sends before the handshake within the connection's limits (a kept transfer beyond the
+  peer's transfer limit is cancelled with `network.transferTooLarge`), report `MessageTooLarge` for a server broadcast
+  beyond some client's limit, accept clients unless the
+  handler refuses them, skip a connection's remaining events of a poll after the handler closes it and report
+  everything as end events through `Poll`. `GesNetworkPair.Synchronous` and `Realtime` connect two ends in one process
+  and replace the loopback; `GesNetworkSocketConnector` opens TCP, WebSocket and UDP ends, and `Wait`/`WaitAsync`
+  (Swift `wait()`) sleep until the next socket packet or deadline. The send budget counts an encrypted packet's type
+  byte and tag, and a synchronous pair acknowledges at once whatever acknowledgement delay its options set. Socket ends
+  close in order: they write their last packets, end the stream or send the WebSocket close frame, and read until the
+  peer's end for at most 10 s; a client's WebSocket upgrade also ends after 10 s.
+- Network ticks (specs/Network.md#ticks): `BeginTick`, `Include` and `EndTick` publish several `latest` topics as one
+  numbered tick, which the receiver reports with a `tick` event after the messages of its changed members. A newer tick
+  replaces a waiting one, whose states become latest states; the generated C# tick closes once, however often it is
+  disposed.
+- Typed ends (specs/Schemas.md#typed-ends): `ges schema generate --root <Network>` adds `Game.Client` and `Game.Server`
+  with typed `Send`/`Publish`, server ticks, a handler interface (Swift an event enum) with one method per received
+  route; an undecodable payload closes the connection, whose later events the handler no longer sees. A root, tag set or
+  network named like a type nested in the network (`Client`, `Topic`, ...), members of the network type that coincide in
+  a language's spelling and, in C#, a member named like the network fail with `generate.nameCollision`; internal fields
+  stay apart from received roots of any name. Message sets gain a `Case` type with `ToCase()` and `Assign`
+  (Swift `enum Case`, `asCase`, `assign(_:)`).
+- Tag alternatives in handler filters (specs/Language.md#messages-and-dispatch): `matching #lidar | #ultrasonic, #front`
+  requires at least one tag of each `|` group besides every plain tag; `|` binds tighter than `,`, repeated clauses add
+  groups, and `undeliverable` filters work the same way. `|` inside `without` fails with `validate.invalidTagFilter`.
+  Handlers without `|` compile unchanged; `.gesb` stores the groups behind binding flag `0x01` in the former reserved
+  field (`RequiredTagAlternatives`, Swift `requiredTagAlternatives`; GESA `tagAlternatives=[...]`).
+- Guide: [GES Network](docs/guide/Network.md) walks from a `network` declaration to typed ends, including client and
+  server on two machines over TCP; the website shows its C# and Swift examples as language tabs.
+
+### Changed
+- `ges schema generate -d <dir>` treats Godot's `.uid` files like Unity's `.meta` files: a run neither warns about
+  them nor removes them, even when the manifest names them, and `--check` no longer fails on them in a Godot project.
+
+### Migrating from 0.5.0
+
+- Upgrade the GES libraries together and recompile scripts with the matching
+  Compiler and Runtime. GESB remains V1; a Program with tag alternatives needs the
+  0.6.0 Runtime, and the tested 0.5.0 upgrade covers selected consumers and frozen
+  fixtures, not arbitrary old Programs.
+- Build Swift consumers with Swift 6.1 or newer and handle the new
+  `GesQuantityUnit` cases in exhaustive `switch` statements.
+- Review scripts that relied on a product or quotient yielding nothing where it now
+  derives one of the new units, such as `kg / s`.
+- Perform a clean rebuild of C# consumers after updating packages.
+
 ## [0.5.0] — 2026-11-16
 
 This release adds GES schemas (`.gess`) with exact bit-level encoding, deltas and

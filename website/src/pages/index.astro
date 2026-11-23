@@ -19,6 +19,18 @@ const schemaExample = `schema :Player as {
   health: :Number integer between 0 and 100
   shielded: :Boolean
 }`;
+
+const networkExample = `wire schema :World as {
+  tick: :Number integer between 0 and 65535
+}
+wire messages :Commands as (Move, Fire)
+message Move(x: :Number between 0 and 100 step 0.5)
+message Fire()
+
+network :Game as {
+  client sends :Commands reliable
+  server publishes :World latest at most every 50ms
+}`;
 ---
 <!doctype html>
 <html lang="en">
@@ -77,7 +89,7 @@ const schemaExample = `schema :Player as {
         </div>
       </section>
       <section class="data wrap" aria-labelledby="data-title">
-        <div class="section-intro"><p class="eyebrow">Schemas, documents and generated code</p><h2 id="data-title">Data that fits the wire.</h2><p>Describe your data once. Get exact bit-level encoding for the network, checked data files for your content and typed code for C# and Swift.</p></div>
+        <div class="section-intro"><p class="eyebrow">Schemas, models, documents and generated code</p><h2 id="data-title">Describe your data once.</h2><p>One schema gives you exact bit-level encoding for the network, typed models your program keeps, checked data files for your content and typed code for C# and Swift.</p></div>
         <div class="data-grid">
           <div class="example">
             <div class="example-head"><span class="file">game.gess</span><span>02 / Describe once. Encode exactly.</span></div>
@@ -91,8 +103,30 @@ const schemaExample = `schema :Player as {
           </div>
           <div class="data-points">
             <article><span class="index">01</span><h3>Schemas <code>.gess</code></h3><p>Ranges, steps and units decide the bits of every field. Packed records fit in one machine word, and deltas send only what changed since the last full record.</p><a class="text-link" href="/docs/learn/schemas/">Describe data with schemas <span aria-hidden="true">→</span></a></article>
-            <article><span class="index">02</span><h3>Documents <code>.gesd</code></h3><p>Write configuration and content with GES literals and comments. A schema checks every file and reports each error with its line and column.</p><a class="text-link" href="/docs/reference/documents/">Read the document format <span aria-hidden="true">→</span></a></article>
-            <article><span class="index">03</span><h3>Generated code</h3><p><code>ges schema generate</code> writes typed wire records and models for C# and Swift. Both produce the same bytes, without allocations on the hot path.</p><a class="text-link" href="/docs/tools/csharp-generator/">Generate schema code <span aria-hidden="true">→</span></a></article>
+            <article><span class="index">02</span><h3>Models</h3><p>Mark a schema as a model and get the data your program keeps: a Swift struct that is <code>Hashable</code>, <code>Sendable</code> and <code>Codable</code>, a C# class that compares by value. Server, client, tools and scripts share one definition of each view.</p><a class="text-link" href="/docs/learn/schemas/#14-mark-roots-and-generate-models">Generate models <span aria-hidden="true">→</span></a></article>
+            <article><span class="index">03</span><h3>Documents <code>.gesd</code></h3><p>Write configuration and content with GES literals and comments. A schema checks every file and reports each error with its line and column.</p><a class="text-link" href="/docs/reference/documents/">Read the document format <span aria-hidden="true">→</span></a></article>
+            <article><span class="index">04</span><h3>Generated code</h3><p><code>ges schema generate</code> writes typed wire records and models for C# and Swift. Both produce the same bytes, without allocations on the hot path.</p><a class="text-link" href="/docs/tools/csharp-generator/">Generate schema code <span aria-hidden="true">→</span></a></article>
+          </div>
+        </div>
+      </section>
+      <section class="data network wrap" aria-labelledby="network-title">
+        <div class="section-intro"><p class="eyebrow">Client and server sessions <span class="badge">New in 0.6.0</span></p><h2 id="network-title">From schema to session.</h2><p>Declare which records client and server exchange. GES Network sends them in as few bits as their schema allows, and states only as far as they changed, over TCP, WebSocket or UDP, encrypted, in C# and Swift.</p></div>
+        <div class="data-grid">
+          <div class="data-points">
+            <article><span class="index">01</span><h3>Routes with a delivery class</h3><p>Each route is <code>reliable</code>, <code>latest</code> or <code>bulk</code>: every command in order, only the newest state, or large transfers behind all other traffic. The handshake compares the schema hash, so an outdated client never misreads the server.</p><a class="text-link" href="/docs/learn/network/">Connect a client and a server <span aria-hidden="true">→</span></a></article>
+            <article><span class="index">02</span><h3>Only what changed</h3><p>A published state travels as a delta against the last state the client confirmed, or as the full record when that is shorter. Records carry no names or tags, small messages share packets, and the server decides which client receives which topic.</p><a class="text-link" href="/docs/learn/network/#4-send-publish-and-receive">Publish states <span aria-hidden="true">→</span></a></article>
+            <article><span class="index">03</span><h3>Sockets and encryption</h3><p>Socket packages run sessions over TCP, WebSocket and UDP. UDP resends what was lost and keeps the order of reliable routes. A server key encrypts every session with X25519 and ChaCha20-Poly1305.</p><a class="text-link" href="/docs/learn/network/#6-connect-two-machines-over-tcp">Connect over TCP <span aria-hidden="true">→</span></a></article>
+            <article><span class="index">04</span><h3>Your loop, your clock</h3><p>The session core opens no socket, starts no thread and reads no clock. Pairs connect both sides in one process for tests and single player, and a seeded simulator reproduces latency and packet loss.</p><a class="text-link" href="/docs/reference/network/">Read the network contract <span aria-hidden="true">→</span></a></article>
+          </div>
+          <div class="example">
+            <div class="example-head"><span class="file">game.gess</span><span>03 / Declare routes. Connect.</span></div>
+            <Code code={networkExample} lang="gess" />
+            <div class="message-trace" aria-label="Generated network ends">
+              <div><span class="trace-label">Generated code adds typed ends</span><code>Game.Client · Game.Server</code></div>
+              <span class="trace-arrow" aria-hidden="true">↓</span>
+              <div><span class="trace-label">One handler method per route</span><code class="result">OnWorld(in World)</code></div>
+            </div>
+            <p class="example-caption">Both sides bind the same declaration. Its hash tells them they do.</p>
           </div>
         </div>
       </section>
@@ -174,6 +208,8 @@ const schemaExample = `schema :Player as {
   .principle-grid p { color: var(--ges-muted); font-size: .96rem; }
   .data { padding-block: 1rem 5rem; }
   .data .section-intro > p:last-child { max-width: 44rem; }
+  .network .data-grid { grid-template-columns: 1fr 1.08fr; }
+  .network .badge { margin-left: .5rem; }
   .data-grid { display: grid; grid-template-columns: 1.08fr 1fr; gap: 4rem; align-items: start; margin-top: 2.7rem; }
   .data-points { display: grid; gap: 1.6rem; }
   .data-points article { border-top: 1px solid #ccd6e6; padding-top: 1.3rem; }
@@ -181,6 +217,7 @@ const schemaExample = `schema :Player as {
   .data-points h3 code { font-size: .95em; color: var(--ges-action-blue); }
   .data-points p { color: var(--ges-muted); font-size: .96rem; margin: 0 0 .8rem; }
   .data-points p code { font-size: .88em; }
+  .badge { display: inline-block; vertical-align: middle; margin-left: .4rem; padding: .1rem .5rem; border-radius: 999px; background: #e5f4f1; color: var(--ges-ink); font-size: .7rem; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
   .embedding { background: #eaf0f7; padding-block: 4.5rem; border-block: 1px solid #dce2ec; }
   .platforms { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2.3rem; }
   .platform { display: block; padding: 2rem; background: white; border: 1px solid #cbd6e7; border-radius: var(--ges-radius-card); text-decoration: none; }

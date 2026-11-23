@@ -59,17 +59,33 @@ enum GesProgramWriter {
             for value in list { try out.u16(value) }
         }
 
+        var listIndexes: [[UInt16]: UInt16] = [:]
+        listIndexes.reserveCapacity(p.uint16IndexLists.count)
+        for (index, list) in p.uint16IndexLists.lists.enumerated() where listIndexes[list] == nil { listIndexes[list] = UInt16(index) }
+
         func findList(_ values: [UInt16]) throws -> UInt16 {
-            if let index = p.uint16IndexLists.lists.firstIndex(of: values) { return UInt16(index) }
+            if let index = listIndexes[values] { return index }
             if values.isEmpty { return .max }
             throw GesProgramValidator.failure(.invalidListIndex)
+        }
+
+        // Handlers that share one alternatives list share its storage, so the list index is found once per storage.
+        var alternativeLists: [UnsafeRawPointer: UInt16] = [:]
+
+        func findAlternativesList(_ binding: GesBindingSegment.Entry) throws -> UInt16 {
+            guard let identity = binding.tagAlternativesIdentity else { return 0 }
+            if let index = alternativeLists[identity] { return index }
+            let index = try findList(GesBindingSegment.flattenTagAlternatives(binding.requiredTagAlternatives))
+            alternativeLists[identity] = index
+            return index
         }
 
         try out.section(4, flags: 1, size: 4 + 20 * p.bindings.count)
         try out.length(p.bindings.count)
         for binding in p.bindings {
+            let alternatives = !binding.requiredTagAlternatives.isEmpty
             try out.u8(binding.kind.rawValue)
-            try out.u8(0)
+            try out.u8(alternatives ? GesBindingSegment.tagAlternativesFlag : 0)
             try out.u16(binding.id)
             try out.u16(binding.name)
             try out.u16(findList(binding.argumentNames))
@@ -78,7 +94,7 @@ enum GesProgramWriter {
             try out.u16(binding.entryAddress)
             try out.u16(binding.requiredRegisterCount)
             try out.u16(binding.requiredCallStackDepth)
-            try out.u16(0)
+            try out.u16(alternatives ? findAlternativesList(binding) : 0)
         }
         try out.section(16, flags: 1, size: 4 + 16 * p.code.count)
         try out.length(p.code.count)

@@ -20,7 +20,10 @@ enum GesComputedLibrary {
 
     /// The C library that holds the math functions of Swift on each platform, which the helpers of a generation call.
     static func mathImport(_ code: inout GesSchemaPlanner.Code) {
-        for line in ["#if canImport(Darwin)", "    import Darwin", "#elseif canImport(Glibc)", "    import Glibc", "#elseif canImport(Musl)", "    import Musl", "#elseif canImport(ucrt)", "    import ucrt", "#endif"] {
+        for line in [
+            "#if canImport(Darwin)", "    import Darwin", "#elseif canImport(Glibc)", "    import Glibc", "#elseif canImport(Musl)", "    import Musl", "#elseif canImport(Android)", "    import Android", "#elseif canImport(WASILibc)",
+            "    import WASILibc", "#elseif canImport(ucrt)", "    import ucrt", "#endif",
+        ] {
             code.line(line)
         }
     }

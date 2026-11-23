@@ -3,7 +3,7 @@
 
 # Platform support and release evidence
 
-For 0.5.0, support is scoped to the product and verification level below.
+For 0.6.0, support is scoped to the product and verification level below.
 The tables describe the configured checks, not a claim that an unreleased
 candidate has already passed them. A release must retain successful evidence
 for its exact source commit before claiming the corresponding support.
@@ -18,13 +18,13 @@ successful library build is not full Conformance on that platform.
 | Product | Declared package contract | CI host and toolchain | Verification |
 | --- | --- | --- | --- |
 | C# Runtime, Compiler, CSharpBridge, Syntax | .NET Standard 2.1 | Linux x64, `ubuntu-latest`; SDK **10.0.404**, .NET **8.0.x** runtime | Full C# Conformance and native tests, allocation gate, .NET 8 package consumers, reproducibility: [C# CI](../../../.github/workflows/csharp-ci.yml), job `verify` |
-| Swift Runtime, Compiler, SwiftBridge, Syntax | Swift tools **6.0**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), job `native`; fresh tagged package consumers and root tests: job `distribution` |
-| Swift Runtime, Compiler, Generator, Syntax, SwiftBridge, CLI on Linux | Swift tools **6.0** | Linux x64, digest-pinned `swift:6.4.0-jammy` container, the image of the static Linux CLI | Native Swift Conformance of the supported corpus, Syntax, Generator and SwiftBridge tests, CLI process and terminal checks: Swift CI job `linux` |
-| Swift libraries at the minimum toolchain | Swift tools **6.0** | Linux x64, digest-pinned `swift:6.0` container | Syntax tests and builds of Runtime, Compiler and Generator: Swift CI job `linux-minimum` |
+| Swift Runtime, Compiler, SwiftBridge, Syntax | Swift tools **6.1**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), parallel jobs `native-packages` and `native-conformance`; fresh tagged package consumers and root tests: job `distribution` |
+| Swift Runtime, Compiler, Generator, Syntax, SwiftBridge, CLI on Linux | Swift tools **6.1** | Linux x64, digest-pinned `swift:6.4.0-jammy` container, the image of the static Linux CLI | Native Swift Conformance of the supported corpus, Syntax, Generator and SwiftBridge tests, CLI process and terminal checks, WASI and Android builds of the root package: Swift CI job `linux` |
+| Swift libraries at the minimum toolchain | Swift tools **6.1** | Linux x64, digest-pinned `swift:6.1` container | Syntax tests and builds of Runtime, Compiler, Generator, Network and Network Sockets: Swift CI job `linux-minimum` |
 
 The pinned .NET SDK is defined in [global.json](../../../global.json).
 Swift's package tools version is a manifest requirement, not a claim that every
-product is tested with every Swift compiler from 6.0 onward. The macOS deployment
+product is tested with every Swift compiler from 6.1 onward. The macOS deployment
 target likewise does not mean that tests run on macOS 10.15.4. The local Runtime,
 Compiler and Syntax packages have no explicit Apple platform floor;
 the public root package contains the Bridge, while the CLI is a separate package. See
@@ -89,10 +89,35 @@ run on every RID.
 The [Website workflow](../../../.github/workflows/website.yml), job `card-game`,
 builds and tests the Card Lab with pinned Swift **6.4.0** and its matching WASM
 SDK, plus Node **24**. Pins live in
-[setup-wasm.py](../../../examples/card-game/scripts/setup-wasm.py).
-This verifies the Card Lab's embedding and WASM execution, not every root
-SwiftPM product or every browser. Safari/Chrome UI checks performed locally are
+[setup-wasm.py](../../../examples/card-game/scripts/setup-wasm.py); CI passes
+`--download`, while local builds may use an installed toolchain with its matching SDK.
+This verifies the Card Lab's embedding and WASM execution, not every browser.
+
+> **Since: 0.6.0** — WASI builds of the root package
+
+Every library product of the root SwiftPM package builds for WASI. Swift CI job
+`linux` installs the same pinned SDK into its `swift:6.4.0-jammy` container and
+builds the root package with [build-swift-wasm.py](../../../scripts/build-swift-wasm.py);
+locally the script uses an installed Swift.org toolchain with its matching Wasm SDK.
+It is a build check: only the Card Lab executes GES under Wasm. WASI has no threads
+or Dispatch, so `GesBridgeHostRunner` is absent there and an embedding pumps the
+Host itself. SwiftNIO SSL does not build for WASI, so `GameEventScriptNetworkSockets`
+is empty there; the Network session core and its simulator are available. Safari/Chrome UI checks performed locally are
 not an automated browser support matrix. There is no distributed WASM CLI.
+
+## Android
+
+> **Since: 0.6.0** — Android builds of the root package
+
+Every library product of the root SwiftPM package, including `GameEventScriptNetworkSockets`,
+builds for Android with the Swift SDK for Android of the exact toolchain version and an
+Android NDK r27 or newer. Swift CI job `linux` installs the pinned 6.4.0 SDK and NDK
+**r30** into its `swift:6.4.0-jammy` container and builds the root package for
+`aarch64`, `x86_64` and `armv7` at API level 23 with
+[build-swift-android.py](../../../scripts/build-swift-android.py). Locally the script uses
+an installed Swift.org toolchain with its matching SDK and, when the SDK is not set up yet,
+links `ANDROID_NDK_HOME` or the newest NDK of the Android SDK (for example Android
+Studio's). It is a build check: no test runs on an Android device or emulator.
 
 ## Release qualification
 
@@ -101,7 +126,7 @@ toolchain versions and any limitations in the release validation evidence:
 
 1. Require successful **C# CI / verify** and a full **Swift CI / verify** run on main for the release commit
    (the publication jobs check this themselves through `scripts/require-verified-release.py`),
-   including `native`, `distribution`, `linux` and `linux-minimum`. A documentation-only
+   including `native-packages`, `native-conformance`, `distribution`, `linux` and `linux-minimum`. A documentation-only
    skipped native run does not qualify a release; dispatch Swift CI manually to
    force the full checks.
 2. Run **C# Release Candidate** with publication disabled. Its package and

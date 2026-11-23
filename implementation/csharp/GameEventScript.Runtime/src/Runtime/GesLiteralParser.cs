@@ -118,7 +118,7 @@ internal struct GesLiteralParser
         }
 
         var start = _position;
-        while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ']' or '[' or ')')) _position++;
+        _position = GesNumberLiteral.TokenEnd(_text, _position, brackets: true);
         if (_position == start) return null;
         var token = _text.AsSpan(start, _position - start);
         if (token.SequenceEqual("true".AsSpan())) return GesValue.GesBoolean(true);
@@ -327,7 +327,7 @@ internal struct GesLiteralParser
                 if (index > 2 || index <= previousIndex || previousIndex >= 0 && index != previousIndex + 1) return null;
                 previousIndex = index;
                 var start = _position;
-                while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ')')) _position++;
+                _position = GesNumberLiteral.TokenEnd(_text, _position, brackets: false);
                 if (_position == start) return null;
                 var value = GesTextNumberCast.Read(_text, start, _position - start, percentage: _text[_position - 1] == '%', allowGrouping: false);
                 if (value is not { } component) return null;

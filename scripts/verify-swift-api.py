@@ -23,7 +23,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntax",
-            "GameEventScriptGenerator")
+            "GameEventScriptGenerator", "GameEventScriptNetwork", "GameEventScriptNetworkSockets")
 SNAPSHOTS = ROOT / "implementation" / "swift" / "api"
 ARTIFACTS = ROOT / "artifacts" / "swift-api"
 RELATIONSHIPS = {
@@ -46,14 +46,29 @@ def ordered_metadata(value):
     return value
 
 
-def module_search_arguments(binary_path):
+def module_search_arguments(binary_path, scratch=None):
     """Support Swift Build products and the Modules directory of older SwiftPM."""
     directory = Path(binary_path)
     modules = directory / "Modules"
     # Never expose the legacy build root to Clang's module discovery: it
     # contains both Foo.build and Foo-tool.build with duplicate module maps.
     # Swift Build instead places its Swift modules directly in Products/Debug.
-    return ["-I", str(modules if modules.is_dir() else directory)]
+    return ["-I", str(modules if modules.is_dir() else directory), *c_module_arguments(directory, scratch)]
+
+
+def c_module_arguments(directory, scratch=None):
+    """Name the module maps of C dependencies such as SwiftNIO's, which Clang cannot discover on its own."""
+    generated = directory.parent.parent / "Intermediates.noindex" / "GeneratedModuleMaps"
+    # Swift Build collects generated maps in one directory; legacy SwiftPM keeps each beside its target's objects.
+    # Older legacy SwiftPM (Swift 6.1) also writes maps for Swift targets, which their .swiftmodule already loads,
+    # and a second copy of each in Foo-tool.build; naming those redefines the module, so keep only C targets' maps.
+    maps = (sorted(generated.glob("*.modulemap")) if generated.is_dir() else
+            [path for path in sorted(directory.glob("*.build/module.modulemap")) if not path.parent.name.endswith("-tool.build")
+             and "-Swift.h" not in path.read_text(encoding="utf-8", errors="replace")])
+    # C targets that ship their own map, such as swift-atomics' _AtomicsShims, keep it in their checkout.
+    if scratch is not None:
+        maps += sorted((Path(scratch) / "checkouts").glob("*/Sources/*/include/module.modulemap"))
+    return [argument for path in maps for argument in ("-Xcc", f"-fmodule-map-file={path}")]
 
 
 def command_failure(message, log, output):
@@ -66,12 +81,14 @@ def build_options(package, reuse_local_builds):
     """Refresh the products test-swift.sh built, in their configuration, or retain the independent default build."""
     configuration = "debug"
     if reuse_local_builds:
-        # test-swift.sh tests these packages in Debug and builds the Conformance package in Release.
+        # test-swift.sh tests these packages in Debug; its Debug CLI build holds Runtime and Compiler.
         owner, directory, configuration = {
             "GameEventScriptSwiftBridge": ("GameEventScriptSwiftBridge", "swiftbridge", "debug"),
             "GameEventScriptSyntax": ("GameEventScriptSyntax", "syntax", "debug"),
             "GameEventScriptGenerator": ("GameEventScriptGenerator", "generator", "debug"),
-        }.get(package, ("GameEventScriptConformance", "conformance", "release"))
+            "GameEventScriptNetwork": ("GameEventScriptNetwork", "network", "debug"),
+            "GameEventScriptNetworkSockets": ("GameEventScriptNetworkSockets", "networksockets", "debug"),
+        }.get(package, ("GameEventScriptTool", "tool", "debug"))
         scratch = ROOT / "artifacts/swift" / directory
     else:
         owner, scratch = package, ARTIFACTS / package
@@ -112,7 +129,7 @@ def dump_graphs(swift, package, reuse_local_builds=False, built_paths=None):
                      if sys.platform == "darwin" else shutil.which("swift-symbolgraph-extract"))
         if not extractor:
             raise RuntimeError("swift-symbolgraph-extract must be available on PATH")
-        command = [extractor, "-module-name", package, *module_search_arguments(binary_path), "-target", target,
+        command = [extractor, "-module-name", package, *module_search_arguments(binary_path, options[options.index("--scratch-path") + 1]), "-target", target,
                    "-output-dir", str(export), "-skip-synthesized-members", "-minimum-access-level", "public"]
         if sys.platform == "darwin":
             sdk = subprocess.check_output(["xcrun", "--show-sdk-path"], text=True).strip()
@@ -170,7 +187,7 @@ def snapshot(package, graphs):
                 continue
             # Swift 6.2+ adds this transitive conformance to every Sendable type.
             # Sendable already captures the declared contract; the extra edge
-            # would otherwise create toolchain-only drift against Swift 6.0.
+            # would otherwise create toolchain-only drift against Swift 6.1.
             if (kind == "conformsTo" and relation.get("targetFallback") == "Swift.SendableMetatype"
                     and relation["source"] in sendable_sources):
                 continue

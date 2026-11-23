@@ -47,7 +47,9 @@ Validation uses the following semantic codes:
   a visible binding, see [Syntax](Syntax.md#validation));
 - `validate.invalidIdentifierCase`, `validate.invalidMessageCase`,
   `validate.invalidTypeConstructor`, `validate.invalidTag` (the literal `nothing` or a
-  constant with that value in a tag clause; **Since: 0.5.0**).
+  constant with that value in a tag clause; **Since: 0.5.0**),
+  `validate.invalidTagFilter` (a `|` alternative inside a `without` filter;
+  **Since: 0.6.0**).
 
 Compiler lowering/resource analysis uses `compile.unsupportedConstruct`,
 `compile.invalidArity`, `compile.unresolvedSymbol`,

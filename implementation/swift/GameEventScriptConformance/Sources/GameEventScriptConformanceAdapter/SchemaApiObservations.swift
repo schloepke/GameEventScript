@@ -32,6 +32,10 @@ enum SchemaApiObservations {
                 result["hash"] = hex(schema.hash)
                 if input["describe"]?.boolValue == true { result["description"] = describe(schema) }
             }
+            if let name = input["network"]?.stringValue {
+                let network = try set.network(name).bind(parameters: parameters)
+                result["network"] = ["canonical": network.canonicalForm, "hash": hex(network.hash)]
+            }
             if let document = input["document"]?.stringValue { result["document"] = check(set, document, root, parameters) }
             if let read = input["readDocument"], read != .null { result["readDocument"] = try readDocument(set, read) }
             if input["bind"]?.boolValue == true, let root {

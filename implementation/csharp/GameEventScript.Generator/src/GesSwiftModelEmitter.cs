@@ -14,7 +14,10 @@ internal static class GesSwiftModelEmitter
 {
     internal static GesCodeDocument Emit(GesModelLayout layout, GesSchemaGenerateOptions options, int extended)
     {
-        GesSchemaPlanner.CheckTopLevel(GesModelPlanner.TopLevel(layout, swift: true), swift: true);
+        var schemaSet = GesSchemaSetReference.From(options);
+        var topLevel = GesModelPlanner.TopLevel(layout, swift: true);
+        schemaSet?.Reserve(topLevel);
+        GesSchemaPlanner.CheckTopLevel(topLevel, swift: true);
         var access = options.Access == GesSchemaAccess.Public ? "public " : "";
         var header = GesModelPlanner.Header(layout);
         var suffix = GesSchemaPlanner.Suffix(header, options);
@@ -24,6 +27,7 @@ internal static class GesSwiftModelEmitter
         prologue.Line("// swift-format-ignore-file");
         prologue.Blank();
         prologue.Line("import GameEventScriptRuntime");
+        foreach (var module in options.Imports) prologue.Line("import " + module);
         if (GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed))) GesComputedLibrary.MathImport(prologue);
         prologue.Blank();
         GesModelPlanner.CheckProtocols(layout, swift: true);
@@ -38,7 +42,8 @@ internal static class GesSwiftModelEmitter
         };
         document.Extended = extended;
         var computed = GesModelPlanner.Computed(layout, GesComputedEmitter.Helper(options.Namespace, suffix), swift: true);
-        var documents = options.Documents ? "__GesModelDocuments" + suffix : null;
+        // The call that reads a document up to its roots: the schema set's, or that of the helper holding the sources of this file.
+        var documents = !options.Documents ? null : schemaSet is not null ? schemaSet.Qualified + ".readDocument(text, roots: [" : "__GesModelDocuments" + suffix + ".read(text, [";
         var documentType = options.Documents ? GesModelPlanner.DocumentType(layout, document.Space) : "";
         foreach (var type in layout.Types)
             document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, options.Bindings, options.Values ? values : null, computed, layout.Roots.Contains(type.Name) ? documents : null)));
@@ -50,9 +55,11 @@ internal static class GesSwiftModelEmitter
         if (documents is not null)
         {
             document.Units.Add(new GesCodeUnit("", code => DocumentType(code, layout, documentType, documents, access)));
-            document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, documents)));
+            if (schemaSet is null) document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, "__GesModelDocuments" + suffix)));
         }
 
+        if (schemaSet?.Declared is { } setName)
+            document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteSwift(code, setName, access, layout.Sources, [], networks: false)));
         if (options.Bindings || options.Values) document.Units.Add(new GesCodeUnit("", code => Support(code, support)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: true, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)), GesComputedEmitter.UsesSpatial(layout.Types.ConvertAll(type => type.Computed)))));
@@ -77,7 +84,7 @@ internal static class GesSwiftModelEmitter
         code.Line("/// - Throws: `GesDocumentError` when the text is no document, names no root of this file (`document.schemaMismatch`), or");
         code.Line("///   breaks its schema, with the `document.*` or `wire.*` code, the line, the column and the field path.");
         code.Open($"{access}init(document text: String) throws(GesDocumentError) {{");
-        code.Line($"let document = try {documents}.read(text, [{string.Join(", ", layout.Roots.ConvertAll(root => GesSchemaPlanner.Literal(root, true)))}])");
+        code.Line($"let document = try {documents}{string.Join(", ", layout.Roots.ConvertAll(root => GesSchemaPlanner.Literal(root, true)))}])");
         code.Open("do {");
         code.Line("switch document.schema {");
         for (var index = 0; index < layout.Roots.Count; index++)
@@ -254,7 +261,7 @@ internal static class GesSwiftModelEmitter
             code.Line("/// - Throws: `GesDocumentError` when the text is no document, names another schema (`document.schemaMismatch`), or breaks the");
             code.Line("///   schema, with the `document.*` or `wire.*` code, the line, the column and the field path.");
             code.Open($"{access}init(document text: String) throws(GesDocumentError) {{");
-            code.Line($"let document = try {documents}.read(text, [{GesSchemaPlanner.Literal(type.Name, true)}])");
+            code.Line($"let document = try {documents}{GesSchemaPlanner.Literal(type.Name, true)}])");
             code.Open("do {");
             code.Line("self = try Self(value: document.value)");
             code.Close("} catch {");
@@ -438,7 +445,7 @@ internal static class GesSwiftModelEmitter
             code.Line($"/// Reads a record from GES document text with the header `:Schema(:{type.Name})`, as the records of this file do.");
             code.Line("/// - Throws: `GesDocumentError` when the text is no document, names another schema or breaks the schema.");
             code.Open($"{access}init(document text: String) throws(GesDocumentError) {{");
-            code.Line($"let document = try {documents}.read(text, [{GesSchemaPlanner.Literal(type.Name, true)}])");
+            code.Line($"let document = try {documents}{GesSchemaPlanner.Literal(type.Name, true)}])");
             code.Open("do {");
             code.Line("self = try Self(value: document.value)");
             code.Close("} catch {");

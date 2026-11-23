@@ -240,7 +240,8 @@ python3 examples/card-game/scripts/setup-wasm.py
 python3 examples/card-game/scripts/build.py wasm
 ```
 
-This currently requires macOS for the pinned Swift.org toolchain bootstrap.
+This uses an installed Swift.org toolchain with its matching Wasm SDK, or else
+downloads the pinned one, which requires macOS (see the card-game README).
 Website CI builds and tests the example in a separate macOS job. Website
 preparation rejects missing, modified or stale game output using source and
 asset hashes. The landing page itself never downloads the 19 MB Wasm module.

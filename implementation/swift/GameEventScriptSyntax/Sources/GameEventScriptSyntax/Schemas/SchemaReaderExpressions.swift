@@ -339,18 +339,18 @@ extension GesSchemaSourceReader {
     }
 
     /// A number with its suffix. Besides the ends of other literals it stops at an operator; a minus continues only an exponent.
-    /// A power sign continues the literal only where it belongs to its unit, as in `16m²` or `16m^2`; otherwise, as in `2²` or
-    /// `2s²`, the longest literal before it is the base of a power.
+    /// A power sign, a `*` or a parenthesized part continues the literal only where it belongs to its unit, as in `16m²`,
+    /// `5N*m` or `3J/(kg·K)`; otherwise, as in `2²` or `2s²`, the longest literal before it is the base of a power.
     private mutating func readExpressionLiteral() throws -> GesSchemaValueSyntax {
         let offset = position
-        var end = position
-        while end < bytes.count && !isExpressionLiteralEnd(end) { end += 1 }
+        var end = literalEnd(from: offset, expression: true)
         var found = GesSchemaLiterals.read(Array(bytes[offset..<end]))
         var cut = end - 1
         while found == nil && cut > offset {
             // `^` is one byte; `²` and `³` are C2 B2 and C2 B3.
             let power = bytes[cut] == 94 || bytes[cut] == 0xC2 && cut + 1 < end && (bytes[cut + 1] == 0xB2 || bytes[cut + 1] == 0xB3)
-            if power, let shorter = GesSchemaLiterals.read(Array(bytes[offset..<cut])) {
+            let unitPart = bytes[cut] == 42 || bytes[cut] == 47 && cut + 1 < end && bytes[cut + 1] == 40
+            if power || unitPart, let shorter = GesSchemaLiterals.read(Array(bytes[offset..<cut])) {
                 found = shorter
                 end = cut
             }
@@ -369,7 +369,7 @@ extension GesSchemaSourceReader {
         return result
     }
 
-    private func isExpressionLiteralEnd(_ index: Int) -> Bool {
+    func isExpressionLiteralEnd(_ index: Int) -> Bool {
         let byte = bytes[index]
         if byte == 45 { return !(index > 1 && (bytes[index - 1] == 101 || bytes[index - 1] == 69) && bytes[index - 2] >= 48 && bytes[index - 2] <= 57) }
         return isLiteralEnd(index) || byte == 91 || byte == 93 || byte == 43 || byte == 42 || byte == 60 || byte == 62 || byte == 61

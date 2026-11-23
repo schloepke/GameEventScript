@@ -20,7 +20,7 @@ esac
 
 # Check the entire release before the first upload. Never glob a directory that
 # may contain internal Conformance packages, tools or a different release.
-for package_id in GameEventScript.Syntax GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.Generator; do
+for package_id in GameEventScript.Syntax GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.Generator GameEventScript.Network GameEventScript.Network.Sockets; do
     for extension in nupkg snupkg; do
         if [ ! -f "$package_directory/$package_id.$release_version.$extension" ]; then
             echo "Missing release artifact: $package_id.$release_version.$extension" >&2
@@ -28,7 +28,7 @@ for package_id in GameEventScript.Syntax GameEventScript.Runtime GameEventScript
         fi
     done
 done
-for package_id in GameEventScript.Syntax GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.Generator; do
+for package_id in GameEventScript.Syntax GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.Generator GameEventScript.Network GameEventScript.Network.Sockets; do
     # dotnet also submits the matching .snupkg to NuGet's symbol server. A package that an earlier, interrupted run
     # already published with identical contents is skipped, so the release can be run again.
     python3 "$repository_root/scripts/nuget_publication.py" "$package_directory/$package_id.$release_version.nupkg" "$package_id" "$release_version"

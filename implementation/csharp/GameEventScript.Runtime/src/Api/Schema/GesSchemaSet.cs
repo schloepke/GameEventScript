@@ -44,6 +44,8 @@ public sealed class GesSchemaSet
     private readonly Dictionary<string, GesResolvedDeclaration> _declarations = new(StringComparer.Ordinal);
     private readonly List<GesResolvedDeclaration> _ordered = [];
     private readonly Dictionary<string, string> _tagSetSources = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, GesNetwork> _networks = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _networkSources = new(StringComparer.Ordinal);
 
     private GesSchemaSet(List<GesSchemaSource> sources) => _sources = sources;
 
@@ -78,6 +80,21 @@ public sealed class GesSchemaSet
     /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null"/>.</exception>
     /// <exception cref="GesSchemaException">The name is not declared (<c>schema.unknownName</c>).</exception>
     public GesSchema Schema(string name) => Declaration(name).Public;
+
+    /// <summary>Gets the networks, in source order.</summary>
+    public GesReadOnlyArray<GesNetwork> Networks { get; private set; }
+
+    /// <summary>Gets a network by its exact name, compared ordinally.</summary>
+    /// <param name="name">The network's name, without the leading <c>:</c>.</param>
+    /// <returns>Its description.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GesSchemaException">No network has that name (<c>schema.unknownName</c>).</exception>
+    public GesNetwork Network(string name)
+    {
+        if (name is null) throw new ArgumentNullException(nameof(name));
+        return _networks.TryGetValue(name, out var network) ? network
+            : throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"Network '{name}' is not declared.");
+    }
 
     /// <summary>
     /// Checks a GES document against the schema of its header: a type name, or for a file name the one schema of the source
@@ -155,10 +172,11 @@ public sealed class GesSchemaSet
             : throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"'{root}' is not declared.");
     }
 
-    // The name of the source that declares a schema, message, message set or tag set, which places its generated code in
-    // split output.
+    // The name of the source that declares a schema, message, message set, tag set or network, which places its generated
+    // code in split output.
     internal string SourceName(string name)
-        => _declarations.TryGetValue(name, out var declaration) ? declaration.Scope.SourceName : _tagSetSources[name];
+        => _declarations.TryGetValue(name, out var declaration) ? declaration.Scope.SourceName
+            : _networkSources.TryGetValue(name, out var network) ? network : _tagSetSources[name];
 
     internal GesResolvedDeclaration? FindSchema(string name)
         => _declarations.TryGetValue(name, out var declaration) && declaration.Kind == GesSchemaKind.Schema ? declaration : null;
@@ -174,9 +192,10 @@ public sealed class GesSchemaSet
         }
 
         var tagSets = new Dictionary<string, GesSchemaDeclarationSyntax>(StringComparer.Ordinal);
+        var networkNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in files)
         {
-            file.DeclareNames(_declarations, _ordered, tagSets);
+            file.DeclareNames(_declarations, _ordered, tagSets, networkNames);
             foreach (var name in tagSets.Keys) _tagSetSources.TryAdd(name, file.SourceName);
         }
         foreach (var file in files) file.Resolve(_declarations);
@@ -199,6 +218,16 @@ public sealed class GesSchemaSet
 
         foreach (var schema in schemas) schema.Complete();
         Schemas = new GesReadOnlyArray<GesSchema>(schemas);
+        var networks = new List<GesNetwork>();
+        foreach (var file in files)
+        {
+            var start = networks.Count;
+            file.ResolveNetworks(_declarations, networks);
+            for (var index = start; index < networks.Count; index++) _networkSources.Add(networks[index].Name, file.SourceName);
+        }
+
+        foreach (var network in networks) _networks.Add(network.Name, network);
+        Networks = new GesReadOnlyArray<GesNetwork>(networks);
     }
 
     // Composes the schemas a schema takes before it, so that it copies their complete fields; `with` must not form a cycle.
@@ -431,6 +460,7 @@ internal sealed partial class GesFileScope
     private readonly Dictionary<string, GesSchemaValueSyntax> _constants = new(StringComparer.Ordinal);
     private readonly List<GesResolvedDeclaration> _own = [];
     private Dictionary<string, GesSchemaDeclarationSyntax> _tagSets = new(StringComparer.Ordinal);
+    private readonly List<GesSchemaDeclarationSyntax> _networks = [];
 
     // The lets of the schema being resolved, which its fields can name.
     private readonly Dictionary<string, GesResolvedLet> _lets = new(StringComparer.Ordinal);
@@ -454,7 +484,7 @@ internal sealed partial class GesFileScope
         return new GesSchemaException(code, _source.Name, line, column, message);
     }
 
-    internal void DeclareNames(Dictionary<string, GesResolvedDeclaration> all, List<GesResolvedDeclaration> ordered, Dictionary<string, GesSchemaDeclarationSyntax> tagSets)
+    internal void DeclareNames(Dictionary<string, GesResolvedDeclaration> all, List<GesResolvedDeclaration> ordered, Dictionary<string, GesSchemaDeclarationSyntax> tagSets, HashSet<string> networks)
     {
         _tagSets = tagSets;
         foreach (var declaration in _syntax.Declarations)
@@ -465,13 +495,20 @@ internal sealed partial class GesFileScope
                 {
                     if (GesSchemaTypeNames.IsBuiltIn(declaration.Name))
                         throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is a built-in type.");
-                    if (all.ContainsKey(declaration.Name) || !tagSets.TryAdd(declaration.Name, declaration))
+                    if (all.ContainsKey(declaration.Name) || networks.Contains(declaration.Name) || !tagSets.TryAdd(declaration.Name, declaration))
                         throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is declared twice.");
                     var members = new HashSet<string>(StringComparer.Ordinal);
                     foreach (var tag in declaration.Tags)
                         if (!members.Add(tag)) throw Error(Code.DuplicateName, declaration.Offset, $"Tag '#{tag}' is listed twice.");
                     break;
                 }
+                case GesSchemaDeclarationKind.Network:
+                    if (GesSchemaTypeNames.IsBuiltIn(declaration.Name))
+                        throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is a built-in type.");
+                    if (all.ContainsKey(declaration.Name) || tagSets.ContainsKey(declaration.Name) || !networks.Add(declaration.Name))
+                        throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is declared twice.");
+                    _networks.Add(declaration);
+                    break;
                 case GesSchemaDeclarationKind.Constant:
                     if (!_constants.TryAdd(declaration.Name, declaration.Value!)) throw Error(Code.DuplicateName, declaration.Offset, $"Constant '{declaration.Name}' is declared twice.");
                     break;
@@ -495,7 +532,7 @@ internal sealed partial class GesFileScope
                     };
                     if (GesSchemaTypeNames.IsBuiltIn(declaration.Name))
                         throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is a built-in type.");
-                    if (tagSets.ContainsKey(declaration.Name) || !all.TryAdd(declaration.Name, resolved))
+                    if (tagSets.ContainsKey(declaration.Name) || networks.Contains(declaration.Name) || !all.TryAdd(declaration.Name, resolved))
                         throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is declared twice.");
                     ordered.Add(resolved);
                     _own.Add(resolved);

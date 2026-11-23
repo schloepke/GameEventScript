@@ -195,6 +195,19 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--namespace", "Game.View", "--extend-namespace", "Game", "-d", extendedDirectory]).code, 0)
         let manifest = try String(contentsOfFile: extendedDirectory + "/.ges-generated.json", encoding: .utf8)
         XCTAssertTrue(manifest.contains("\"extendNamespace\": \"Game\""))
+        // Schema sets: declaring and using one exclude each other, imports concern Swift alone, and the manifest names them.
+        XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--schemas", "ViewSchemas"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--schemas", "ViewSchemas", "--use-schemas", "Game.ViewSchemas"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "csharp", "--import", "Shared"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--schemas", "View"]).code, 1)
+        let schemas = run(["schema", "generate", view, "--model", "view", "--language", "csharp", "--namespace", "Game", "--documents", "--schemas", "ViewSchemas"])
+        XCTAssertEqual(schemas.code, 0, schemas.error)
+        XCTAssertTrue(schemas.output.contains("public static class ViewSchemas"))
+        let usedDirectory = directory.appendingPathComponent("UsedSchemas").path
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--use-schemas", "Shared.ViewSchemas", "--import", "Shared", "-d", usedDirectory]).code, 0)
+        let used = try String(contentsOfFile: usedDirectory + "/.ges-generated.json", encoding: .utf8)
+        XCTAssertTrue(used.contains("\"useSchemaSet\": \"Shared.ViewSchemas\""), used)
+        XCTAssertTrue(used.contains("\"imports\": ["), used)
         // A missing language is reported as such, not as an option that concerns Swift.
         let noLanguage = run(["schema", "generate", view, "--model", "view", "--extend-namespace", "Game"])
         XCTAssertEqual(noLanguage.code, 2)
@@ -291,6 +304,28 @@ final class ToolTests: XCTestCase {
         XCTAssertTrue(lone.error.contains("error generate.usage"))
         XCTAssertEqual(run(["schema", "generate", source, "--model", "default", "--language", "swift", "-d", output, "--split", "type"]).code, 2)
         XCTAssertEqual(run(["schema", "layout", source, "--model", "default", "-d", output]).code, 2)
+    }
+
+    func testSchemaGenerateLeavesEngineMetadataAlone() throws {
+        // Godot's .uid and Unity's .meta files beside generated code are neither reported nor removed, even when a manifest names them.
+        let source = try file("s.gess", "model schema :Alpha as { a: :Number }\n")
+        let output = directory.appendingPathComponent("out").path
+        let write = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", output, "--split", "file"])
+        XCTAssertEqual(write.code, 0, write.error)
+        try "uid://b0qk2b3v8x1y\n".write(toFile: output + "/X.cs.uid", atomically: true, encoding: .utf8)
+        try "unity\n".write(toFile: output + "/X.cs.meta", atomically: true, encoding: .utf8)
+        let manifestPath = output + "/.ges-generated.json"
+        var manifest = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: manifestPath))) as? [String: Any])
+        manifest["files"] = try XCTUnwrap(manifest["files"] as? [Any]) + ["X.cs.uid", "X.cs.meta"]
+        try JSONSerialization.data(withJSONObject: manifest).write(to: URL(fileURLWithPath: manifestPath))
+        let rewrite = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", output, "--split", "file"])
+        XCTAssertEqual(rewrite.code, 0, rewrite.error)
+        XCTAssertFalse(rewrite.error.contains("warning"), rewrite.error)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: output + "/X.cs.uid"))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: output + "/X.cs.meta"))
+        let check = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", output, "--split", "file", "--check"])
+        XCTAssertEqual(check.code, 0, check.error)
+        XCTAssertEqual(check.error, "")
     }
 
     func testSchemaCommandsCheckHashFormatAndDump() throws {

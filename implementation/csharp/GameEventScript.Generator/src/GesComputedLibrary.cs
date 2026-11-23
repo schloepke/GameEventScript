@@ -27,7 +27,7 @@ internal static class GesComputedLibrary
     // The C library that holds the math functions of Swift on each platform, which the helpers of a generation call.
     internal static void MathImport(GesSchemaPlanner.Code code)
     {
-        foreach (var line in "#if canImport(Darwin)\n    import Darwin\n#elseif canImport(Glibc)\n    import Glibc\n#elseif canImport(Musl)\n    import Musl\n#elseif canImport(ucrt)\n    import ucrt\n#endif".Split('\n'))
+        foreach (var line in "#if canImport(Darwin)\n    import Darwin\n#elseif canImport(Glibc)\n    import Glibc\n#elseif canImport(Musl)\n    import Musl\n#elseif canImport(Android)\n    import Android\n#elseif canImport(WASILibc)\n    import WASILibc\n#elseif canImport(ucrt)\n    import ucrt\n#endif".Split('\n'))
             code.Line(line);
     }
 

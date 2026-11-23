@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import { WASI, File, OpenFile, ConsoleStdout } from './vendor/index.js?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84';
+import { WASI, File, OpenFile, ConsoleStdout } from './vendor/index.js?v=f23769f9c321b0c5e7406213df624610d656f94052153e10e974142f5083e818';
 
 /** Instantiate one isolated, serial Swift rule host. The caller owns worker lifetime. */
 export async function createEngine(binary) {

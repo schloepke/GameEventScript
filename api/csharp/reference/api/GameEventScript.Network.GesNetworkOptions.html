@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GesNetworkOptions | Game Event Script C# API — Unreleased (47afc43b2fc1) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GesNetworkOptions | Game Event Script C# API — Unreleased (47afc43b2fc1) ">
+      
+      <meta name="description" content="The limits and transport of one connection. Values are checked when a connection is created.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Network.GesNetworkOptions">
+
+
+
+  <h1 id="GameEventScript_Network_GesNetworkOptions" data-uid="GameEventScript.Network.GesNetworkOptions" class="text-break">
+Class GesNetworkOptions  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Network.html">Network</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Network.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>The limits and transport of one connection. Values are checked when a connection is created.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class GesNetworkOptions</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GesNetworkOptions</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions__ctor_" data-uid="GameEventScript.Network.GesNetworkOptions.#ctor*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions__ctor" data-uid="GameEventScript.Network.GesNetworkOptions.#ctor">
+  GesNetworkOptions()
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkOptions()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_AckDelayMicroseconds_" data-uid="GameEventScript.Network.GesNetworkOptions.AckDelayMicroseconds*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_AckDelayMicroseconds" data-uid="GameEventScript.Network.GesNetworkOptions.AckDelayMicroseconds">
+  AckDelayMicroseconds
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the delay of an acknowledgement in microseconds, 0 to 3600000000. The default is 10 milliseconds.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long AckDelayMicroseconds { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_ClientSecurity_" data-uid="GameEventScript.Network.GesNetworkOptions.ClientSecurity*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_ClientSecurity" data-uid="GameEventScript.Network.GesNetworkOptions.ClientSecurity">
+  ClientSecurity
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets how a client protects its session; required to create a client. The default is none set.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkClientSecurity? ClientSecurity { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkClientSecurity.html">GesNetworkClientSecurity</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_DeflateTransfers_" data-uid="GameEventScript.Network.GesNetworkOptions.DeflateTransfers*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_DeflateTransfers" data-uid="GameEventScript.Network.GesNetworkOptions.DeflateTransfers">
+  DeflateTransfers
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets whether this side accepts and sends deflate-compressed transfers. The default is true.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool DeflateTransfers { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_InsecureTestKeySeed_" data-uid="GameEventScript.Network.GesNetworkOptions.InsecureTestKeySeed*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_InsecureTestKeySeed" data-uid="GameEventScript.Network.GesNetworkOptions.InsecureTestKeySeed">
+  InsecureTestKeySeed
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets a seed that derives the connection's ephemeral keys instead of the system's random generator.
+INSECURE: anyone who knows the seed reads the session. For tests and golden bytes only: the socket transports
+refuse such options and connections. The default is none.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ulong? InsecureTestKeySeed { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_KeepaliveMicroseconds_" data-uid="GameEventScript.Network.GesNetworkOptions.KeepaliveMicroseconds*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_KeepaliveMicroseconds" data-uid="GameEventScript.Network.GesNetworkOptions.KeepaliveMicroseconds">
+  KeepaliveMicroseconds
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the keepalive interval after the last sent packet in microseconds, 1 to 3600000000, or 0 for none. The
+default is 1 second.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long KeepaliveMicroseconds { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_MaxBaselineBytes_" data-uid="GameEventScript.Network.GesNetworkOptions.MaxBaselineBytes*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_MaxBaselineBytes" data-uid="GameEventScript.Network.GesNetworkOptions.MaxBaselineBytes">
+  MaxBaselineBytes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the baseline limit this side announces, 0 to 1073741824: the full record bytes a topic's ring of recent
+states holds. The smaller limit of both sides applies. Unset, the default, it is the larger of 65536 and the largest
+full record of a topic of the network, at most 1073741824.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long? MaxBaselineBytes { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_MaxFramesPerSecond_" data-uid="GameEventScript.Network.GesNetworkOptions.MaxFramesPerSecond*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_MaxFramesPerSecond" data-uid="GameEventScript.Network.GesNetworkOptions.MaxFramesPerSecond">
+  MaxFramesPerSecond
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the frames received per second, 1 to 1000000, a token bucket of one second. The default is 4096.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int MaxFramesPerSecond { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_MaxPacketBytes_" data-uid="GameEventScript.Network.GesNetworkOptions.MaxPacketBytes*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_MaxPacketBytes" data-uid="GameEventScript.Network.GesNetworkOptions.MaxPacketBytes">
+  MaxPacketBytes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the largest packet received and sent, 1200 to 65535 bytes, or 0 for the transport's default: 1200 on
+the datagram transport, else 16384. The default is 0.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int MaxPacketBytes { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_MaxPendingReceiveBytes_" data-uid="GameEventScript.Network.GesNetworkOptions.MaxPendingReceiveBytes*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_MaxPendingReceiveBytes" data-uid="GameEventScript.Network.GesNetworkOptions.MaxPendingReceiveBytes">
+  MaxPendingReceiveBytes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the limit of pending received bytes, 1 to 1073741824: incomplete messages and undelivered events. Unset,
+the default, it is the larger of 4194304 and the largest message this side receives outside bulk routes, topic mode
+byte included, at most 1073741824.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long? MaxPendingReceiveBytes { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_MaxSendQueueBytes_" data-uid="GameEventScript.Network.GesNetworkOptions.MaxSendQueueBytes*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_MaxSendQueueBytes" data-uid="GameEventScript.Network.GesNetworkOptions.MaxSendQueueBytes">
+  MaxSendQueueBytes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the limit of queued reliable bytes to send, 1 to 1073741824. Unset, the default, it is the larger of
+1048576 and the largest reliable payload this side sends, at most 1073741824.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long? MaxSendQueueBytes { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_MaxTransferBytes_" data-uid="GameEventScript.Network.GesNetworkOptions.MaxTransferBytes*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_MaxTransferBytes" data-uid="GameEventScript.Network.GesNetworkOptions.MaxTransferBytes">
+  MaxTransferBytes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the transfer limit this side announces, 0 to 1073741824: the largest uncompressed data of one bulk
+message it sends or receives. It also bounds the bulk send queue. Unset, the default, it is the larger of 67108864
+and the largest record of a bulk route of the network, at most 1073741824.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long? MaxTransferBytes { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_SendBudgetBytesPerSecond_" data-uid="GameEventScript.Network.GesNetworkOptions.SendBudgetBytesPerSecond*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_SendBudgetBytesPerSecond" data-uid="GameEventScript.Network.GesNetworkOptions.SendBudgetBytesPerSecond">
+  SendBudgetBytesPerSecond
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the initial send budget in bytes per second, 0 to 1073741824; 0 for none. The default is 0.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long SendBudgetBytesPerSecond { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_ServerSecurity_" data-uid="GameEventScript.Network.GesNetworkOptions.ServerSecurity*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_ServerSecurity" data-uid="GameEventScript.Network.GesNetworkOptions.ServerSecurity">
+  ServerSecurity
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets how a server protects its sessions; required to create a server. The default is none set.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkServerSecurity? ServerSecurity { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkServerSecurity.html">GesNetworkServerSecurity</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_TimeoutMicroseconds_" data-uid="GameEventScript.Network.GesNetworkOptions.TimeoutMicroseconds*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_TimeoutMicroseconds" data-uid="GameEventScript.Network.GesNetworkOptions.TimeoutMicroseconds">
+  TimeoutMicroseconds
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the timeout without a received packet in microseconds, 1 to 3600000000, or 0 for none. The default is 10
+seconds.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long TimeoutMicroseconds { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_Transport_" data-uid="GameEventScript.Network.GesNetworkOptions.Transport*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_Transport" data-uid="GameEventScript.Network.GesNetworkOptions.Transport">
+  Transport
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the transport kind. The default is <a class="xref" href="GameEventScript.Network.GesNetworkTransport.html#GameEventScript_Network_GesNetworkTransport_Message">Message</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkTransport Transport { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkTransport.html">GesNetworkTransport</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_Datagram_" data-uid="GameEventScript.Network.GesNetworkOptions.Datagram*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_Datagram_GameEventScript_Network_GesNetworkClientSecurity_" data-uid="GameEventScript.Network.GesNetworkOptions.Datagram(GameEventScript.Network.GesNetworkClientSecurity)">
+  Datagram(GesNetworkClientSecurity)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the options of a client on the datagram transport, such as UDP.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkOptions Datagram(GesNetworkClientSecurity security)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>security</code> <a class="xref" href="GameEventScript.Network.GesNetworkClientSecurity.html">GesNetworkClientSecurity</a></dt>
+    <dd><p>How the client protects its session.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>New options; change them freely.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_Datagram_" data-uid="GameEventScript.Network.GesNetworkOptions.Datagram*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_Datagram_GameEventScript_Network_GesNetworkServerSecurity_" data-uid="GameEventScript.Network.GesNetworkOptions.Datagram(GameEventScript.Network.GesNetworkServerSecurity)">
+  Datagram(GesNetworkServerSecurity)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the options of a server on the datagram transport, such as UDP.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkOptions Datagram(GesNetworkServerSecurity security)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>security</code> <a class="xref" href="GameEventScript.Network.GesNetworkServerSecurity.html">GesNetworkServerSecurity</a></dt>
+    <dd><p>How the server protects its sessions.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>New options; change them freely.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_InProcess_" data-uid="GameEventScript.Network.GesNetworkOptions.InProcess*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_InProcess" data-uid="GameEventScript.Network.GesNetworkOptions.InProcess">
+  InProcess()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the options of a connection within one process, such as a loopback: the message transport, packets of 65535
+bytes, no acknowledgement delay, no timeout or keepalive and no encryption on either side.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkOptions InProcess()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>New options; change them freely.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_Message_" data-uid="GameEventScript.Network.GesNetworkOptions.Message*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_Message_GameEventScript_Network_GesNetworkClientSecurity_" data-uid="GameEventScript.Network.GesNetworkOptions.Message(GameEventScript.Network.GesNetworkClientSecurity)">
+  Message(GesNetworkClientSecurity)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the options of a client on the message transport, such as a WebSocket.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkOptions Message(GesNetworkClientSecurity security)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>security</code> <a class="xref" href="GameEventScript.Network.GesNetworkClientSecurity.html">GesNetworkClientSecurity</a></dt>
+    <dd><p>How the client protects its session.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>New options; change them freely.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_Message_" data-uid="GameEventScript.Network.GesNetworkOptions.Message*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_Message_GameEventScript_Network_GesNetworkServerSecurity_" data-uid="GameEventScript.Network.GesNetworkOptions.Message(GameEventScript.Network.GesNetworkServerSecurity)">
+  Message(GesNetworkServerSecurity)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the options of a server on the message transport, such as a WebSocket.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkOptions Message(GesNetworkServerSecurity security)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>security</code> <a class="xref" href="GameEventScript.Network.GesNetworkServerSecurity.html">GesNetworkServerSecurity</a></dt>
+    <dd><p>How the server protects its sessions.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>New options; change them freely.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_Stream_" data-uid="GameEventScript.Network.GesNetworkOptions.Stream*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_Stream_GameEventScript_Network_GesNetworkClientSecurity_" data-uid="GameEventScript.Network.GesNetworkOptions.Stream(GameEventScript.Network.GesNetworkClientSecurity)">
+  Stream(GesNetworkClientSecurity)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the options of a client on the stream transport, such as TCP.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkOptions Stream(GesNetworkClientSecurity security)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>security</code> <a class="xref" href="GameEventScript.Network.GesNetworkClientSecurity.html">GesNetworkClientSecurity</a></dt>
+    <dd><p>How the client protects its session.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>New options; change them freely.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkOptions_Stream_" data-uid="GameEventScript.Network.GesNetworkOptions.Stream*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkOptions_Stream_GameEventScript_Network_GesNetworkServerSecurity_" data-uid="GameEventScript.Network.GesNetworkOptions.Stream(GameEventScript.Network.GesNetworkServerSecurity)">
+  Stream(GesNetworkServerSecurity)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the options of a server on the stream transport, such as TCP.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkOptions Stream(GesNetworkServerSecurity security)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>security</code> <a class="xref" href="GameEventScript.Network.GesNetworkServerSecurity.html">GesNetworkServerSecurity</a></dt>
+    <dd><p>How the server protects its sessions.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>New options; change them freely.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (47afc43b2fc1)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

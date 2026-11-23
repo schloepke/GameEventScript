@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GesNetworkSocketSession | Game Event Script C# API — Unreleased (47afc43b2fc1) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GesNetworkSocketSession | Game Event Script C# API — Unreleased (47afc43b2fc1) ">
+      
+      <meta name="description" content="Carries one  over a TCP stream, a WebSocket or UDP. Background tasks only move bytes: the host calls  and , or  for both, on its own thread, which feed received bytes into the connection, advance it and hand its packets to the sender. The connection is touched only by the host thread. As an  it is the transport of an end.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession">
+
+
+
+  <h1 id="GameEventScript_Network_Sockets_GesNetworkSocketSession" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession" class="text-break">
+Class GesNetworkSocketSession  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Network.html">Network</a>.<a class="xref" href="GameEventScript.Network.Sockets.html">Sockets</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Network.Sockets.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Carries one <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html">GesNetworkConnection</a> over a TCP stream, a WebSocket or UDP. Background tasks only move bytes:
+the host calls <a class="xref" href="GameEventScript.Network.Sockets.GesNetworkSocketSession.html#GameEventScript_Network_Sockets_GesNetworkSocketSession_Receive_System_Int64_">Receive(long)</a> and <a class="xref" href="GameEventScript.Network.Sockets.GesNetworkSocketSession.html#GameEventScript_Network_Sockets_GesNetworkSocketSession_Transmit">Transmit()</a>, or <a class="xref" href="GameEventScript.Network.Sockets.GesNetworkSocketSession.html#GameEventScript_Network_Sockets_GesNetworkSocketSession_Update_System_Int64_">Update(long)</a> for both, on its own thread,
+which feed received bytes into the connection, advance it and hand its packets to the sender. The connection is
+touched only by the host thread. As an <a class="xref" href="GameEventScript.Network.IGesNetworkLink.html">IGesNetworkLink</a> it is the transport of an end.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class GesNetworkSocketSession : IGesNetworkLink, IDisposable</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GesNetworkSocketSession</span></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="GameEventScript.Network.IGesNetworkLink.html">IGesNetworkLink</a></div>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.idisposable">IDisposable</a></div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Network_Sockets_GesNetworkSocketSession_Connection_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.Connection*"></a>
+
+  <h3 id="GameEventScript_Network_Sockets_GesNetworkSocketSession_Connection" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.Connection">
+  Connection
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the connection this session carries. Use it only on the thread that calls <a class="xref" href="GameEventScript.Network.Sockets.GesNetworkSocketSession.html#GameEventScript_Network_Sockets_GesNetworkSocketSession_Receive_System_Int64_">Receive(long)</a> and <a class="xref" href="GameEventScript.Network.Sockets.GesNetworkSocketSession.html#GameEventScript_Network_Sockets_GesNetworkSocketSession_Transmit">Transmit()</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkConnection Connection { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkConnection.html">GesNetworkConnection</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Network_Sockets_GesNetworkSocketSession_ConnectTcpAsync_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.ConnectTcpAsync*"></a>
+
+  <h3 id="GameEventScript_Network_Sockets_GesNetworkSocketSession_ConnectTcpAsync_System_String_System_Int32_GameEventScript_Network_GesNetworkConnection_System_Threading_CancellationToken_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.ConnectTcpAsync(System.String,System.Int32,GameEventScript.Network.GesNetworkConnection,System.Threading.CancellationToken)">
+  ConnectTcpAsync(string, int, GesNetworkConnection, CancellationToken)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Opens a TCP connection for a client connection of the stream transport.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Task&lt;GesNetworkSocketSession&gt; ConnectTcpAsync(string host, int port, GesNetworkConnection connection, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>host</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The server's host name or address.</p>
+</dd>
+    <dt><code>port</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The server's port.</p>
+</dd>
+    <dt><code>connection</code> <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html">GesNetworkConnection</a></dt>
+    <dd><p>A client connection created with <a class="xref" href="GameEventScript.Network.GesNetworkTransport.html#GameEventScript_Network_GesNetworkTransport_Stream">Stream</a>; its timeout runs from its creation.</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancels connecting.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;<a class="xref" href="GameEventScript.Network.Sockets.GesNetworkSocketSession.html">GesNetworkSocketSession</a>&gt;</dt>
+    <dd><p>The session.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The connection is no client of the stream transport or uses insecure test keys.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.net.sockets.socketexception">SocketException</a></dt>
+    <dd><p>The connection could not be opened or was not opened within 10 s.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_Sockets_GesNetworkSocketSession_ConnectUdpAsync_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.ConnectUdpAsync*"></a>
+
+  <h3 id="GameEventScript_Network_Sockets_GesNetworkSocketSession_ConnectUdpAsync_System_String_System_Int32_GameEventScript_Network_GesNetworkConnection_System_Threading_CancellationToken_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.ConnectUdpAsync(System.String,System.Int32,GameEventScript.Network.GesNetworkConnection,System.Threading.CancellationToken)">
+  ConnectUdpAsync(string, int, GesNetworkConnection, CancellationToken)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Opens a UDP socket for a client connection of the datagram transport.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Task&lt;GesNetworkSocketSession&gt; ConnectUdpAsync(string host, int port, GesNetworkConnection connection, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>host</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The server's host name or address; the first address it resolves to is used.</p>
+</dd>
+    <dt><code>port</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The server's port.</p>
+</dd>
+    <dt><code>connection</code> <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html">GesNetworkConnection</a></dt>
+    <dd><p>A client connection created with <a class="xref" href="GameEventScript.Network.GesNetworkTransport.html#GameEventScript_Network_GesNetworkTransport_Datagram">Datagram</a>; its timeout runs from its creation.</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancels resolving the host.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;<a class="xref" href="GameEventScript.Network.Sockets.GesNetworkSocketSession.html">GesNetworkSocketSession</a>&gt;</dt>
+    <dd><p>The session. UDP has no connection setup, so a missing server shows only as the connection's timeout.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The connection is no client of the datagram transport or uses insecure test keys.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.net.sockets.socketexception">SocketException</a></dt>
+    <dd><p>The host cannot be resolved or the socket cannot be opened.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_Sockets_GesNetworkSocketSession_ConnectWebSocketAsync_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.ConnectWebSocketAsync*"></a>
+
+  <h3 id="GameEventScript_Network_Sockets_GesNetworkSocketSession_ConnectWebSocketAsync_System_Uri_GameEventScript_Network_GesNetworkConnection_System_Threading_CancellationToken_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.ConnectWebSocketAsync(System.Uri,GameEventScript.Network.GesNetworkConnection,System.Threading.CancellationToken)">
+  ConnectWebSocketAsync(Uri, GesNetworkConnection, CancellationToken)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Opens a WebSocket for a client connection of the message transport.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Task&lt;GesNetworkSocketSession&gt; ConnectWebSocketAsync(Uri uri, GesNetworkConnection connection, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>uri</code> <span class="xref">Uri</span></dt>
+    <dd><p>The <code>ws</code> or <code>wss</code> endpoint.</p>
+</dd>
+    <dt><code>connection</code> <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html">GesNetworkConnection</a></dt>
+    <dd><p>A client connection created with <a class="xref" href="GameEventScript.Network.GesNetworkTransport.html#GameEventScript_Network_GesNetworkTransport_Message">Message</a>; its timeout runs from its creation.</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancels connecting.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;<a class="xref" href="GameEventScript.Network.Sockets.GesNetworkSocketSession.html">GesNetworkSocketSession</a>&gt;</dt>
+    <dd><p>The session.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The connection is no client of the message transport or uses insecure test keys.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.net.websockets.websocketexception">WebSocketException</a></dt>
+    <dd><p>The WebSocket could not be opened.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_Sockets_GesNetworkSocketSession_Dispose_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.Dispose*"></a>
+
+  <h3 id="GameEventScript_Network_Sockets_GesNetworkSocketSession_Dispose" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.Dispose">
+  Dispose()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Releases the socket. When the connection is closed and its last packets are handed to the sender, they are
+still written, once the transport opened if it still opens, and the transport ends in order, within the
+connection's timeout; otherwise both background tasks stop at once without sending anything more.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_Sockets_GesNetworkSocketSession_Receive_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.Receive*"></a>
+
+  <h3 id="GameEventScript_Network_Sockets_GesNetworkSocketSession_Receive_System_Int64_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.Receive(System.Int64)">
+  Receive(long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Feeds the received bytes into the connection, advances it to <code class="paramref">now</code> and reports the end of the
+transport. Call it on the host thread. While <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_CanReceive">CanReceive</a> is false the bytes
+wait, and once the queue of received chunks is full the socket stops reading, so the peer's sending slows down.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Receive(long now)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>now</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The current time in microseconds, not earlier than the connection's time.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.objectdisposedexception">ObjectDisposedException</a></dt>
+    <dd><p>The session is disposed.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_Sockets_GesNetworkSocketSession_Transmit_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.Transmit*"></a>
+
+  <h3 id="GameEventScript_Network_Sockets_GesNetworkSocketSession_Transmit" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.Transmit">
+  Transmit()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Hands every packet the connection has due to the sender. While the transport still opens the packets wait for
+it. Call it on the host thread.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Transmit()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.objectdisposedexception">ObjectDisposedException</a></dt>
+    <dd><p>The session is disposed.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_Sockets_GesNetworkSocketSession_Update_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.Update*"></a>
+
+  <h3 id="GameEventScript_Network_Sockets_GesNetworkSocketSession_Update_System_Int64_" data-uid="GameEventScript.Network.Sockets.GesNetworkSocketSession.Update(System.Int64)">
+  Update(long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Feeds the received bytes into the connection, advances it to <code class="paramref">now</code>, reports the end of the
+transport and sends every due packet: <a class="xref" href="GameEventScript.Network.Sockets.GesNetworkSocketSession.html#GameEventScript_Network_Sockets_GesNetworkSocketSession_Receive_System_Int64_">Receive(long)</a> followed by <a class="xref" href="GameEventScript.Network.Sockets.GesNetworkSocketSession.html#GameEventScript_Network_Sockets_GesNetworkSocketSession_Transmit">Transmit()</a>. Call it on the
+host thread, then take the connection's events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Update(long now)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>now</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The current time in microseconds, not earlier than the connection's time.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.objectdisposedexception">ObjectDisposedException</a></dt>
+    <dd><p>The session is disposed.</p>
+</dd>
+  </dl>
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (47afc43b2fc1)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

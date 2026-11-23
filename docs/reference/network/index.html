@@ -1,0 +1,1850 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>GES network | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/reference/network/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="GES network"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/reference/network/"/><meta property="og:locale" content="en"/><meta property="og:description" content="GES network — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="GES network — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.C_48xT6o.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="0x090pg" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/schemas/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Schemas</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/downloads/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">CLI installation and downloads</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-syntax/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# Syntax module</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-syntax/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift Syntax module</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-generator/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# Generator module</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-generator/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift Generator module</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Editor packages and syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax module</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/inline-assembly/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Inline assembly specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Data formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/documents/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">GES documents</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/schemas/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">GES schemas and wire format</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Network</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/learn/network/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Connect a client and a server</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/network/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">GES network</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="7"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/python-runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Independent Python runner and internal adapters</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="8"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/platforms/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Platform support and release evidence</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/performance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Performance and allocation release checks</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#principles" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Principles</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#declaration" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Declaration</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#binding" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Binding</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#network-hash" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Network hash</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#sessions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Sessions</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#delivery-classes" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Delivery classes</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#sending" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Sending</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#topics" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Topics</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#ticks" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Ticks</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#transfers" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Transfers</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#limits" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Limits</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#acknowledgement-and-keepalive" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Acknowledgement and keepalive</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#datagram-delivery" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Datagram delivery</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#latest-messages-on-datagrams" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Latest messages on datagrams</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#confirmation-frames" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Confirmation frames</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#datagram-handshake" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Datagram handshake</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#address-validation" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Address validation</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#timeout-and-closing" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Timeout and closing</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#events" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Events</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#wire-format" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Wire format</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#values" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Values</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#packets" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Packets</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#frames" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Frames</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#control-frames" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Control frames</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#tick-frames" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Tick frames</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#topic-messages" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Topic messages</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#transports" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Transports</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#encryption" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Encryption</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#security-levels" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Security levels</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#ephemeral-keys" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Ephemeral keys</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#handshake-keys" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Handshake keys</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#sealed-packets" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Sealed packets</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#replayed-hellos" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Replayed hellos</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#cipher-suite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Cipher suite</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#codes" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Codes</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#security" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Security</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">API</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#ends" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Ends</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#waiting" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Waiting</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#pairs" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Pairs</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#simulated-network" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Simulated network</span></a></li></ul></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#principles" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Principles</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#declaration" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Declaration</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#binding" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Binding</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#network-hash" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Network hash</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#sessions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Sessions</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#delivery-classes" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Delivery classes</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#sending" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Sending</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#topics" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Topics</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#ticks" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Ticks</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#transfers" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Transfers</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#limits" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Limits</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#acknowledgement-and-keepalive" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Acknowledgement and keepalive</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#datagram-delivery" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Datagram delivery</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#latest-messages-on-datagrams" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Latest messages on datagrams</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#confirmation-frames" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Confirmation frames</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#datagram-handshake" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Datagram handshake</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#address-validation" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Address validation</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#timeout-and-closing" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Timeout and closing</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#events" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Events</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#wire-format" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Wire format</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#values" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Values</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#packets" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Packets</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#frames" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Frames</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#control-frames" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Control frames</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#tick-frames" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Tick frames</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#topic-messages" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Topic messages</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#transports" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Transports</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#encryption" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Encryption</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#security-levels" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Security levels</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#ephemeral-keys" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Ephemeral keys</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#handshake-keys" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Handshake keys</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#sealed-packets" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Sealed packets</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#replayed-hellos" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Replayed hellos</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#cipher-suite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Cipher suite</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#codes" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Codes</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#security" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Security</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">API</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#ends" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Ends</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#waiting" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Waiting</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#pairs" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Pairs</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#simulated-network" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Simulated network</span></a></li></ul></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">GES network</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p class="ges-since"><strong>Since: 0.6.0</strong></p>
+<p>This document owns GES network sessions. A <code>network</code> declaration in a
+<a href="/docs/reference/schemas/">schema source</a> names which wire roots a client and a server exchange, and
+in which delivery class. A session carries the encoded records of those roots between
+the two sides over a transport: a TCP stream, WebSocket messages, UDP datagrams or the
+in-process <a href="#pairs">pair</a>. A server with a key of its own <a href="#encryption">encrypts</a> its sessions.
+The <a href="/docs/learn/network/">network guide</a> introduces it step by step.</p>
+<p>The session core is a synchronous state machine without threads, sockets, clocks or
+allocation of its own resources at run time: bytes and the current time go in, bytes
+and events come out. Transports are plug-ins around it. Equal inputs at equal times give
+equal bytes and events in every port. Only the ephemeral keys of an encrypted session are
+drawn at random; a <a href="#ephemeral-keys">test seed</a> makes them deterministic as well.</p>
+<h2 id="principles">Principles</h2>
+<ul>
+<li>A payload is the encoding of one record or message of a route’s root, produced and
+read by the <a href="/docs/reference/schemas/#writer-and-reader">schema writer and reader</a>. The session
+decodes no payload; it only converts the states of a <a href="#topics">topic</a> between full
+records and <a href="/docs/reference/schemas/#deltas">deltas</a>.</li>
+<li>Both sides hold the same network declaration bound with the same parameter values.
+The handshake compares hashes and closes the session on any difference.</li>
+<li>Data from the peer is untrusted. Every limit is known before a packet is read; a
+violation closes the session with a <a href="#codes">code</a>, never with a crash.</li>
+<li>Time is a monotonic Int64 count of microseconds, the unit of the
+<a href="/docs/reference/host-runtime/">host clock</a>. The core never reads a clock.</li>
+</ul>
+<h2 id="declaration">Declaration</h2>
+<p>A network declares the routes of one client–server pair:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="gess"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">wire</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">schema</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:World</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> { tick: </span><span style="--0:#C5E478;--1:#3B61B0">:Number</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">integer</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">between</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">0</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">and</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">65535</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">wire</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">schema</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:World_Cards</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> { count: </span><span style="--0:#C5E478;--1:#3B61B0">:Number</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">integer</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">between</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">0</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">and</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">255</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">wire</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">messages</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:GameCommands</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> (Move, Fire)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">wire</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">schema</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:GameArena</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> { width: </span><span style="--0:#C5E478;--1:#3B61B0">:Number</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">integer</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">between</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">0</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">and</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">4096</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">network</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Game</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> {</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#C792EA;--1:#8844AE">client</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">sends</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:GameCommands</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">reliable</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#C792EA;--1:#8844AE">server</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">sends</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:GameArena</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">bulk</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#C792EA;--1:#8844AE">server</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">publishes</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:World</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">latest</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#C792EA;--1:#8844AE">server</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">publishes</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:World_Cards</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">latest</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">at</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">most</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">every</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">200ms</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="wire schema :World as { tick: :Number integer between 0 and 65535 }wire schema :World_Cards as { count: :Number integer between 0 and 255 }wire messages :GameCommands as (Move, Fire)wire schema :GameArena as { width: :Number integer between 0 and 4096 }network :Game as {  client sends :GameCommands reliable  server sends :GameArena bulk  server publishes :World latest  server publishes :World_Cards latest at most every 200ms}"><div></div></button></div></figure></div>
+<p>The <a href="/docs/reference/schemas/#grammar">schema grammar</a> reads it:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">network = "network" ":" TypeName "as" "{" route { route } "}"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">route   = ( "client" | "server" ) ( "sends" | "publishes" ) ":" TypeName</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">          </span></span><span style="--0:#d6deeb;--1:#403f53">( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ]</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="network = &quot;network&quot; &quot;:&quot; TypeName &quot;as&quot; &quot;{&quot; route { route } &quot;}&quot;route   = ( &quot;client&quot; | &quot;server&quot; ) ( &quot;sends&quot; | &quot;publishes&quot; ) &quot;:&quot; TypeName          ( &quot;reliable&quot; | &quot;latest&quot; | &quot;bulk&quot; ) [ &quot;at&quot; &quot;most&quot; &quot;every&quot; value ]"><div></div></button></div></figure></div>
+<p>Routes are separated by commas or line breaks; repeated and trailing separators are
+allowed. Each route stays on one line.</p>
+<ul>
+<li><strong>Side.</strong> <code>client</code> routes go from the client to the server, <code>server</code> routes the other
+way.</li>
+<li><strong><code>sends</code></strong> names a schema, a message or a message set with a <code>wire</code>
+<a href="/docs/reference/schemas/#roles">role</a>. Its class is <code>reliable</code> or <code>bulk</code>.</li>
+<li><strong><code>publishes</code></strong> names a schema with a <code>wire</code> role, a topic. Its class is <code>latest</code> or
+<code>reliable</code>.</li>
+<li><strong><code>at most every</code></strong> stands only on <code>publishes</code> and states the shortest interval
+between two updates of the topic. Its value is a time quantity, written as a literal
+or a constant, greater than zero and at most <code>3600s</code>. It is rounded up to whole
+microseconds. The session itself does not enforce it; generated code exposes it as a
+<a href="/docs/reference/schemas/#network-constants">constant</a>.</li>
+<li>A side names a root at most once per verb.</li>
+<li>A network holds 1 to 64 routes. The position of a route, counting from 0, is its
+route index; its channel on the wire is the index plus 1.</li>
+</ul>
+<p>A network shares the namespace of schemas, messages, message sets and tag sets. It is no
+type: a field or another route cannot name it. Code generation alone accepts it as a root and
+writes its <a href="/docs/reference/schemas/#network-constants">constants and typed functions</a>. A root may be abstract
+nowhere in a network.</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schema.unknownName</code></td>
+<td>a route names no declared schema, message or message set, or a rate names no constant of its file</td>
+</tr>
+<tr>
+<td><code>schema.invalidRoute</code></td>
+<td>a route names a declaration of the wrong kind or without a <code>wire</code> role, an abstract schema, a class its verb does not take, a rate on <code>sends</code>, or a rate that is no time, not positive or above <code>3600s</code></td>
+</tr>
+<tr>
+<td><code>schema.duplicateRoute</code></td>
+<td>a side names the same root twice with the same verb</td>
+</tr>
+<tr>
+<td><code>schema.tooLarge</code></td>
+<td>a network has more than 64 routes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="binding">Binding</h3>
+<p>Binding a network binds every route root with the same
+<a href="/docs/reference/schemas/#binding">parameter values</a>; the parameters of all roots must be given. A
+bound network holds, per route, the bound root and its largest encoding, and the network
+hash.</p>
+<h3 id="network-hash">Network hash</h3>
+<p>The network hash is FNV-1a 64, as for the <a href="/docs/reference/schemas/#schema-hash">schema hash</a>, over
+this canonical form: UTF-8 lines, each ending with one line feed, tokens separated by
+one space.</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">gesn1</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">network &lt;TypeName&gt;</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">route &lt;client|server&gt; &lt;sends|publishes&gt; &lt;RootName&gt; &lt;class&gt; &lt;rate&gt; &lt;binding hash&gt;</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="gesn1network <TypeName>route <client|server> <sends|publishes> <RootName> <class> <rate> <binding hash>"><div></div></button></div></figure></div>
+<p>One <code>route</code> line follows per route in route order. <code>&lt;class&gt;</code> is <code>reliable</code>, <code>latest</code> or
+<code>bulk</code>; <code>&lt;rate&gt;</code> is the interval in microseconds as a decimal integer, <code>0</code> without a
+rate; <code>&lt;binding hash&gt;</code> is the root’s <a href="/docs/reference/schemas/#binding-hash">binding hash</a> as 16
+lowercase hexadecimal digits. Classes, rates, order, names and parameter values thus all
+change the network hash.</p>
+<h2 id="sessions">Sessions</h2>
+<p>A session connects one client and one server. Each side runs one connection, the state
+machine of this document. A server runs one connection per client.</p>
+<figure class="ges-diagram"><div class="ges-diagram-image" hidden></div><details open class="ges-diagram-source"><summary>Diagram source (Mermaid)</summary><pre><code>---
+title: Connection states
+accTitle: Connection states
+accDescr: A client sends hello and waits for welcome; a server waits for hello, asks the host and sends welcome; both then exchange data until closed.
+---
+stateDiagram-v2
+    [*] --&gt; Hello: client created
+    [*] --&gt; AwaitHello: server created
+    Hello --&gt; Connected: welcome received
+    AwaitHello --&gt; AwaitAccept: valid hello
+    AwaitHello --&gt; AwaitHello: retry with key sent
+    Hello --&gt; Hello: retry received
+    AwaitAccept --&gt; Connected: host accepts
+    AwaitAccept --&gt; Closed: host refuses
+    Connected --&gt; Closed: close, error, timeout
+    Hello --&gt; Closed: close, error, timeout
+    AwaitHello --&gt; Closed: close, error, timeout</code></pre></details></figure>
+<ol>
+<li>The client sends <code>hello</code> with its network hash, the binding hash of every route, its
+limits, the compressions it accepts and the host’s token, sealed when the session is
+<a href="#encryption">encrypted</a>.</li>
+<li>The server checks the protocol and the hashes. On a difference it closes the session
+with <code>network.protocolMismatch</code> or <code>network.schemaMismatch</code>. Otherwise it reports the
+event <code>connecting</code> with the token, and the host accepts or refuses the client.</li>
+<li>On acceptance the server sends <code>welcome</code> and reports <code>connected</code>; the client reports
+<code>connected</code> when it receives <code>welcome</code>. Refusal closes with <code>network.refused</code> and the
+host’s detail.</li>
+<li>Both sides then exchange <code>data</code> packets until one side sends <code>close</code>, the transport
+ends, an error closes the session or the peer stays silent for the timeout.</li>
+</ol>
+<p>A client sends nothing but <code>hello</code> and <code>close</code> before <code>welcome</code>; a server sends nothing but
+<code>retry</code>, <code>welcome</code> and <code>close</code> before acceptance. Either receiving anything else is
+<code>network.malformed</code>. On a datagram transport the handshake repeats lost packets and the
+server validates the client’s address first; the
+<a href="#datagram-handshake">datagram handshake</a> adds those rules. A server with a key answers a
+<code>hello</code> that is not sealed with a <code>retry</code> that carries its public key; <a href="#encryption">encryption</a>
+adds those rules.</p>
+<h3 id="delivery-classes">Delivery classes</h3>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Delivery</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reliable</code></td>
+<td>every message, complete, in the order sent across all reliable routes of the direction</td>
+</tr>
+<tr>
+<td><code>latest</code></td>
+<td>the newest message per route; a message not yet started is replaced by a newer one</td>
+</tr>
+<tr>
+<td><code>bulk</code></td>
+<td>every message, complete, in the order sent across all bulk routes of the direction, after all other traffic; each message is a <a href="#transfers">transfer</a></td>
+</tr>
+</tbody>
+</table>
+<p>Transmission order within a packet is: reliable, then latest, then the <a href="#tick-frames">tick frame</a>,
+then bulk; <a href="#control-frames">cancel frames</a> precede them all. A reliable or
+bulk message is sent completely before the next one of its class starts; messages of
+different classes interleave in fragments. On a stream or message transport a latest
+message, once started, is completed; a newer message of the same route then waits in its
+place and is itself replaceable. On a datagram transport a newer message starts once the
+current one is sent, and the receiver drops an older incomplete one
+(<a href="#latest-messages-on-datagrams">latest messages on datagrams</a>).</p>
+<h3 id="sending">Sending</h3>
+<p>A side sends a payload on its <code>sends</code> routes and publishes one on its <code>publishes</code> routes,
+the <a href="#topics">topics</a>. Both return a status and never throw; the checks apply in table
+order:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>invalidRoute</code></td>
+<td>the route index is out of range, or the route is not sent by this side with this verb</td>
+</tr>
+<tr>
+<td><code>notConnected</code></td>
+<td>the connection is not <code>Connected</code></td>
+</tr>
+<tr>
+<td><code>notSubscribed</code></td>
+<td>a published topic of the server is not subscribed</td>
+</tr>
+<tr>
+<td><code>messageTooLarge</code></td>
+<td>the payload is longer than the route root’s largest encoding; on a bulk route also longer than the transfer limit of either side</td>
+</tr>
+<tr>
+<td><code>queueFull</code></td>
+<td>the reliable queue would exceed its byte limit; on a bulk route, 8192 transfers are queued, the new transfer id would be 8192 ahead of the oldest one whose cancel the peer has not confirmed on a datagram transport, or the queued bulk bytes plus the payload would exceed the transfer limit of either side</td>
+</tr>
+<tr>
+<td><code>queued</code></td>
+<td>the message is queued</td>
+</tr>
+</tbody>
+</table>
+<p>A latest message never makes the queue full; it replaces the waiting one.</p>
+<h3 id="topics">Topics</h3>
+<p>A topic is a <code>publishes</code> route. Its messages are states: each one is a full record of the
+topic’s schema, and the receiver gets the full record. On the wire a state travels as a
+full record or as a <a href="/docs/reference/schemas/#deltas">delta</a> against an earlier state the receiver has
+confirmed, whichever is shorter.</p>
+<p><strong>Subscriptions.</strong> The server decides which client receives which of its topics. A server
+connection starts with none of them subscribed; the host subscribes and unsubscribes a
+topic per connection, and publishing on a topic that is not subscribed reports
+<code>notSubscribed</code>. Both are usage errors on a client connection and for a route that is no
+topic the server publishes, and do nothing when the state does not change. Subscribing
+sends nothing by itself; the host publishes the current state when it wants the client to
+start with it. Unsubscribing drops the waiting latest state of the topic and the
+sender’s ring; a latest state already started is completed and reliable states already
+queued are sent. The topics a client publishes are always subscribed.</p>
+<p><strong>Numbering.</strong> Every state has a number modulo 65536. A latest state’s number is its
+<a href="#frames">message id</a>, taken when its first fragment is sent; a latest state replaced
+before it started gets no number. Reliable states are numbered from 0 per topic in the
+order they are published. The receiver takes the same numbers: the message id of a latest
+state and its own count of the reliable states of the topic.</p>
+<p><strong>Rings.</strong> Each side holds a ring of states with their numbers per topic and direction.
+When a state enters
+it, the oldest states leave while the ring holds more than 32 states or more than the
+baseline limit of full record bytes, but the newest state always stays. The baseline
+limit is the smaller of the limits both sides announce in the handshake.</p>
+<p><strong>Sending a state.</strong> Its base is the newest state of the sender’s ring that is
+confirmed. On a stream or message transport a state is confirmed when the packet
+carrying its last fragment is acknowledged, and an acknowledgement confirms every packet
+up to the sequence it names. On a datagram transport a reliable state is confirmed when
+every byte of its message is acknowledged, and a latest state when a
+<a href="#confirmation-frames">confirmation frame</a> of the receiver names it. The
+sender writes a delta against the base when there is one, the
+<a href="/docs/reference/schemas/#deltas-between-records">delta encoding</a> succeeds, and the delta is shorter
+than the full record; otherwise the full record. Then the state enters the ring.</p>
+<p><strong>Receiving a state.</strong> The receiver takes the base from its ring, decodes the delta
+against it and reports the full record; a full record is reported as received. The state
+then enters the receiver’s ring. The receiver’s ring always still holds the base: it
+received the base and, after it, only states that also entered the sender’s ring since,
+so the states from the base on fit the same limits. On a datagram transport the receiver
+of a latest topic skips states that were lost or overtaken; it then holds fewer states
+after the base, which fit the limits all the more.</p>
+<h3 id="ticks">Ticks</h3>
+<p class="ges-since"><strong>Since: 0.6.0</strong></p>
+<p>A tick is a set of latest topic states that one side publishes as one state of its world.
+The receiver reports a tick only when it holds every state the tick names, and then reports
+them together, so it never sees a new <code>World</code> beside an old <code>World_Cards</code>.</p>
+<p><strong>Publishing.</strong> A side opens a tick, publishes the states of its members and closes it.
+While a tick is open, a publish on a latest topic the side publishes makes the state a
+member of the tick; <code>include</code> makes the topic a member with its last published state
+without publishing it again, and does nothing when the topic is a member already.
+Reliable topics, sends and transfers are never members and pass unchanged while a tick is
+open. A second publish of a member in one tick replaces its first state. Closing a tick
+reports <code>notConnected</code> on a connection that is not connected, which drops the tick, and
+otherwise <code>queued</code>; an empty tick sends nothing. Opening a tick while one is open,
+closing or including without an open tick, including a topic that has no published state
+and including a route that is no latest topic the side publishes are usage errors. On a
+server a topic that the connection has not subscribed is no member there.</p>
+<p><strong>Numbering.</strong> One tick is in transmission at a time; a closed tick waits behind it. A
+waiting tick is replaced by a newer one: each of its members becomes a latest state that
+the newer tick’s state of the same topic replaces, and the newer tick names the states of
+its own members. Ticks are numbered per direction from 0 modulo 65536 when their
+<a href="#tick-frames">tick frame</a> is first written; a replaced tick gets no number.</p>
+<p><strong>Sending.</strong> A tick starts when no earlier tick is in transmission. A published member
+then becomes the topic’s waiting latest state. An included member names the topic’s newest
+state when the receiver holds it and no newer state of the topic waits: on a stream or
+message transport the newest completely sent state, on a datagram transport a
+<a href="#confirmation-frames">confirmed</a> one. Otherwise the tick publishes the topic’s last
+published state again, as a delta against the confirmed base or as the full record. With
+no confirmed state at all every member therefore travels as a full record, and a tick
+never depends on a state lost earlier. A member state that is dropped before it starts
+leaves the tick; a tick left without members ends. The sender writes the tick frame after
+the last fragment of every state it names. A tick whose members are all held by the
+receiver sends only the tick frame, and the receiver reports only the <code>tick</code> event; a host
+uses it to move its timeline on while the world rests.</p>
+<p><strong>Receiving.</strong> A state whose <a href="#topic-messages">mode byte</a> marks it as a tick member enters
+the receiver’s ring as usual but is not reported on arrival. The receiver holds it until
+its tick is reported or a newer member state of the route replaces it; held states count
+toward the pending received bytes. The receiver holds at most one incomplete tick. A tick
+frame whose number is 1 to 32767 ahead of the held tick, or of the last reported tick when
+none is held, replaces the held one; any other is ignored. When the receiver holds every
+state that the held tick names — held, last reported or in the ring — it reports, in route
+order, a <code>message</code> event for each member whose named state is newer than the last state
+it reported on that topic, followed by one <code>tick</code> event with the tick number.</p>
+<p><strong>Datagram delivery.</strong> A packet with a tick frame asks for acknowledgement. A lost tick
+frame is sent again while its tick is the newest one in transmission and no newer tick
+started.</p>
+<p><strong>Rates.</strong> A tick is published as often as the host closes ticks. <code>at most every</code> of a
+member stays advice to the host, as for single states.</p>
+<p><strong>Mixing.</strong> A topic may be published alone and as a member of ticks on the same
+connection. A state published alone is reported on arrival; the receiver then counts it
+as the last reported state of that topic.</p>
+<h3 id="transfers">Transfers</h3>
+<p>A message on a bulk route is a transfer: data of up to the transfer limit, sent with its
+size and hash, compressed when that is shorter, and cancellable without closing the
+session.</p>
+<p><strong>Sending.</strong> A transfer gets its id when it is queued: the next number of the bulk
+numbering, which the host reads from the connection right after <code>send</code>. The sender
+computes the SHA-256 hash of the data and, when both sides accept Deflate and the data
+is not empty, compresses it with the <a href="#deflate">reference encoder</a>. The compressed form
+is sent when it is shorter than the data, otherwise the data itself. The message is:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Encoding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>compression</td>
+<td>1 byte: <code>0</code> none, <code>1</code> Deflate</td>
+</tr>
+<tr>
+<td>size</td>
+<td>varint of up to 64 bits, the length of the data</td>
+</tr>
+<tr>
+<td>hash</td>
+<td>32 bytes, SHA-256 of the data</td>
+</tr>
+<tr>
+<td>data</td>
+<td>the data, or its raw Deflate stream (<a href="https://www.rfc-editor.org/rfc/rfc1951">RFC 1951</a>)</td>
+</tr>
+</tbody>
+</table>
+<p>The size varint follows the <a href="#values">varint rules</a> with up to ten bytes; a value above
+64 bits is not canonical.</p>
+<p><strong>Receiving.</strong> The receiver checks a complete transfer in this order and cancels it with
+the code, without reporting it, when a check fails:</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the message is empty or its size varint cannot be read</td>
+<td><code>network.transferCorrupt</code></td>
+</tr>
+<tr>
+<td>the size exceeds the receiver’s transfer limit or the route root’s largest encoding</td>
+<td><code>network.transferTooLarge</code></td>
+</tr>
+<tr>
+<td>the compression is unknown, or Deflate while the receiver does not accept it</td>
+<td><code>network.transferCorrupt</code></td>
+</tr>
+<tr>
+<td>fewer than 32 bytes follow the size</td>
+<td><code>network.transferCorrupt</code></td>
+</tr>
+<tr>
+<td>uncompressed data whose length differs from the size, or compressed data at least as long as the size</td>
+<td><code>network.transferCorrupt</code></td>
+</tr>
+<tr>
+<td>the Deflate stream is invalid or does not yield exactly the size</td>
+<td><code>network.transferCorrupt</code></td>
+</tr>
+<tr>
+<td>the hash of the data differs</td>
+<td><code>network.transferCorrupt</code></td>
+</tr>
+</tbody>
+</table>
+<p>A transfer that passes is reported as <code>message</code> with the data and the transfer’s id. A
+message frame of a bulk route whose total exceeds the receiver’s transfer limit, limited
+by the route root’s largest encoding, plus 43 header bytes is <code>network.messageTooLarge</code>.
+Bulk bytes pending at the receiver count toward their own limit of twice the transfer
+limit plus 86 instead of the pending received bytes; exceeding it is
+<code>network.queueFull</code>.</p>
+<p><strong>Progress.</strong> Both sides report <code>transferProgress</code> with the route, the id, the bytes
+and the total of the transfer’s message, header included. The receiver reports the
+bytes it holds whenever a frame adds bytes; the sender reports the bytes the peer
+acknowledged: on a stream or message transport the written bytes up to the end of
+each acknowledged packet that is one of the last 256 data packets it sent, on a datagram transport the acknowledged bytes of the
+transfer. A progress event replaces the newest pending event when that reports the same
+transfer, so a host that takes events late sees one event with the latest count. The
+receiver’s <code>message</code> follows its last progress event.</p>
+<p><strong>Cancelling.</strong> The sender’s host cancels a queued transfer by its id with an optional
+code, <code>network.transferCancelled</code> when it gives none, as long as not every byte was sent
+once; afterwards, for an id no queued transfer of the route carries and on a connection
+that is not connected the cancel reports false and changes nothing. A route this side
+does not send as bulk or an invalid code is <code>invalidArgument</code>. Cancelling sends a
+<a href="#control-frames">cancel frame</a> to the receiver, also for a transfer not yet started, and
+reports <code>transferCancelled</code> locally. The receiver cancels a transfer that fails a check
+the same way. A cancelled transfer sends no further bytes, keeps its id, and reports
+neither progress nor <code>message</code>; the session continues.</p>
+<p>On a stream or message transport the sender writes the cancel frame in queue order: in
+place of a transfer not yet started, and before the rest of a started one. The receiver
+then accepts a cancel only for the transfer in progress or, when none is, for the next
+id; any other is <code>network.malformed</code>. On a datagram transport cancel frames are sent at
+once and resent until acknowledged. The receiver takes the id as a frame of the bulk
+class of <a href="#datagram-delivery">datagram delivery</a>: it ignores a cancel for an id it
+already reported, skipped or cancelled, an id outside that window is
+<code>network.malformed</code>, and it marks a transfer ahead of it cancelled, so the next transfers
+are reported without it. A received cancel reports <code>transferCancelled</code> with the peer’s
+code once per transfer and stops the sender’s transfer when it is still queued.</p>
+<h4 id="deflate">Deflate</h4>
+<p>The reference encoder writes one final block with the fixed Huffman code (<code>BFINAL</code> 1,
+<code>BTYPE</code> 01) and greedy matches; the end-of-block symbol follows the last symbol and the
+last byte is padded with zero bits. Both ports produce the same bytes for the same data.</p>
+<ol>
+<li>Two tables of 32768 entries hold chain heads and links. Every head starts at none;
+links are written before they are read. The hash of position <code>p</code> is
+<code>((d[p] &lt;&lt; 10) xor (d[p+1] &lt;&lt; 5) xor d[p+2]) and 32767</code>. Inserting <code>p</code> with at least
+three bytes from <code>p</code> on stores the head of its hash as the link at <code>p and 32767</code> and
+makes <code>p</code> the head; a position with fewer bytes is not inserted.</li>
+<li>At position <code>p</code> with at least three bytes left the encoder walks the chain from the
+head of <code>p</code>’s hash, at most 32 candidates, stopping before a candidate more than
+32768 bytes back. It compares each candidate with <code>p</code> up to the smaller of 258 and
+the bytes left; a longer match replaces the best one, the first of equal length
+stays, and a match of the full length ends the walk. The next candidate is the link
+stored at the current candidate’s slot.</li>
+<li>A best match of at least 3 bytes is written as length and distance and every
+position it covers is inserted; otherwise the byte at <code>p</code> is written as a literal
+and inserted. The encoder continues after the written bytes.</li>
+</ol>
+<p>Every Deflate stream (<a href="https://www.rfc-editor.org/rfc/rfc1951">RFC 1951</a>) of any block
+types is accepted when it ends with its final block, yields exactly the size and leaves
+no byte after the final block’s last byte. Code tables that zlib rejects are invalid:
+over-subscribed lengths, and incomplete ones except a single literal or distance code of
+length 1. The fixture <code>conformance/fixtures/Network/deflate.json</code> holds the reference
+encoder’s output and accepted and rejected streams.</p>
+<h3 id="limits">Limits</h3>
+<p>Each connection has receive and send limits. The defaults are fixed values of this
+document; the host may change them per connection.</p>
+<blockquote>
+<p><strong>Since: 0.6.0</strong> — derived limits</p>
+</blockquote>
+<p>A limit the host leaves unset whose default below names a need takes the larger of its
+default and that need, at most 1073741824, so a bound network never exceeds a default
+limit by its own largest message. A value the host sets applies unchanged. The needs are
+the largest encodings of the roots of the bound network:</p>
+<ul>
+<li>pending received bytes: the largest message this side receives on a route that is not
+<code>bulk</code>, with the mode byte of a topic message;</li>
+<li>queued reliable bytes to send: the largest root of a <code>reliable</code> route this side sends,
+with the mode byte of a topic message;</li>
+<li>baseline limit: the largest root of a topic;</li>
+<li>transfer limit: the largest root of a <code>bulk</code> route.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Limit</th>
+<th>Default</th>
+<th>Exceeded</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>largest packet received and sent, 1200 to 65535 bytes; 0 selects the default</td>
+<td>16384; 1200 on a datagram transport</td>
+<td><code>network.packetTooLarge</code></td>
+</tr>
+<tr>
+<td>baseline limit: full record bytes of a topic’s ring, 0 to 1073741824</td>
+<td>65536, or the need</td>
+<td>older states leave the ring</td>
+</tr>
+<tr>
+<td>pending received bytes: incomplete messages and undelivered events, without bulk, 1 to 1073741824</td>
+<td>4194304, or the need</td>
+<td><code>network.queueFull</code></td>
+</tr>
+<tr>
+<td>transfer limit: data of one transfer sent and received, 0 to 1073741824</td>
+<td>67108864, or the need</td>
+<td>status <code>messageTooLarge</code>; <code>network.transferTooLarge</code></td>
+</tr>
+<tr>
+<td>frames received per second, token bucket of one second, 1 to 1000000</td>
+<td>4096</td>
+<td><code>network.rateExceeded</code></td>
+</tr>
+<tr>
+<td>queued reliable bytes to send, 1 to 1073741824</td>
+<td>1048576, or the need</td>
+<td>status <code>queueFull</code></td>
+</tr>
+<tr>
+<td>timeout without a received packet, 0 to 1 h, 0 for none</td>
+<td>10 s</td>
+<td><code>network.timeout</code></td>
+</tr>
+<tr>
+<td>keepalive after the last sent packet, 0 to 1 h, 0 for none</td>
+<td>1 s</td>
+<td></td>
+</tr>
+<tr>
+<td>delay of an acknowledgement, 0 to 1 h</td>
+<td>10 ms</td>
+<td></td>
+</tr>
+<tr>
+<td>send budget in bytes per second, 0 to 1073741824, 0 for none</td>
+<td>0</td>
+<td>sending waits</td>
+</tr>
+</tbody>
+</table>
+<p>A message is longer than its route allows when its total length exceeds the
+<a href="/docs/reference/schemas/#largest-encoding">largest encoding</a> of the route’s bound root, plus the mode
+byte of a <a href="#topic-messages">topic message</a>: <code>network.messageTooLarge</code>. A side sends packets no larger than the smaller of its own
+packet limit and the peer’s announced one, and transfers no larger than the smaller transfer
+limit. Deflate is used only when both sides accept it. A value outside its range is
+<code>invalidArgument</code>.</p>
+<p>At most 65536 events wait untaken; any further event other than <code>closed</code> closes the
+connection with <code>network.queueFull</code>. Taken events free their place.</p>
+<p>At most 65536 reliable messages wait to be sent, also before the handshake, whatever their
+length; a further send or publish on a <code>reliable</code> route reports <code>queueFull</code>. A message frees
+its place once it is sent, on a datagram transport once it is acknowledged.</p>
+<p>The frame bucket starts full with as many frames as the limit and refills with the limit
+per second, counted in exact integer steps of one microsecond. On a datagram transport a
+frame is accepted only while the bucket holds one. On a stream or message transport the
+bucket limits what the receiver takes in instead: received bytes are accepted while it
+holds at least one frame, and every frame of a packet they complete draws one frame, also
+below zero. A packet with more frames than the limit closes the connection, and so do bytes
+passed while the bucket holds less than one frame. The connection reports whether it takes
+further bytes, and its next deadline includes the time at which the bucket holds a frame
+again. A host leaves the received bytes unread until then, so the transport’s flow control
+slows the sender. The send budget is a
+bucket of at most the send packet size that starts full, also when a budget replaces none,
+and refills with the budget per second; a data
+packet with frames is sent only while the bucket is not negative and is then subtracted
+in full, an encrypted packet with its type byte and tag. <code>hello</code>, <code>welcome</code>, <code>close</code> and data packets without frames ignore the budget.
+The host may change the budget at any time, for example from the measured round-trip
+time; this is the congestion hook.</p>
+<h3 id="acknowledgement-and-keepalive">Acknowledgement and keepalive</h3>
+<p>Every data packet carries a sequence number, 0 for the first and then one higher per
+packet modulo 65536, and from the first received data packet on an acknowledgement: the
+newest received sequence and a bit for each of the 32 sequences before it, bit 0 for the
+sequence one older, set when that sequence was received. A data packet with at least one
+message, cancel or tick frame, a keepalive and a <a href="#datagram-delivery">probe</a> ask for acknowledgement and
+set flag bit 1; a packet that only acknowledges or <a href="#confirmation-frames">confirms</a> does
+not, so acknowledgements never answer each other. A message, cancel or tick frame in a
+packet that does not ask is <code>network.malformed</code>. An asking packet is acknowledged by the next
+data packet, which a side sends at the latest after the acknowledgement delay. A side
+that has sent nothing for the keepalive interval sends a data packet without frames, the
+keepalive.</p>
+<p>The round-trip time is measured when an acknowledgement names a newer sequence than
+before and that packet asked for acknowledgement and is one of the last 256 data packets
+the side sent: the sample is the time since that packet was sent. It includes the peer’s acknowledgement delay. The first sample sets the
+estimate; each later one moves it by an eighth of the difference, in integer arithmetic
+that truncates toward zero.</p>
+<p>On a stream or message transport packets arrive complete and in order, so nothing is
+resent, a data packet must carry exactly the next sequence, and an acknowledgement must
+name a sequence the receiver has sent and not be older than the previous one. A datagram
+transport follows <a href="#datagram-delivery">datagram delivery</a> instead.</p>
+<h3 id="datagram-delivery">Datagram delivery</h3>
+<p>On a datagram transport each packet travels alone and may be lost, duplicated, delayed
+or reordered. The sender keeps what is not acknowledged and resends what is lost; the
+receiver ignores what it has already and restores the order of each class. Loss
+detection follows QUIC (<a href="https://www.rfc-editor.org/rfc/rfc9002">RFC 9002</a>) in integer
+microseconds; every division truncates toward zero.</p>
+<p><strong>Receiving data packets.</strong> A data packet whose flags and sequence are valid is placed
+by its distance to the newest received sequence modulo 65536: 1 to 32767 ahead makes it
+the newest; up to 32 behind is received when its bit is not yet set. The first data
+packet is received with any sequence. A packet with the newest sequence, a set bit or a
+sequence more than 32 behind is a duplicate or too old and is ignored without reading
+further; it still counts as a received packet for the timeout.</p>
+<p><strong>Acknowledging.</strong> An asking packet makes an acknowledgement due after the
+acknowledgement delay, as on other transports, and at once when 16 asking packets have
+arrived since the last data packet this side sent.</p>
+<p><strong>Sent packets.</strong> The sender records its last 1024 data packets: the send time, whether
+the packet asked, and the fragments of messages it carried. A fragment names its message
+and the range of bytes it carried. A packet that does not ask is settled when sent; an
+asking packet stays outstanding until it is acknowledged or lost. Only an outstanding
+packet needs its fragments again, so the recorded fragments are those from the oldest
+outstanding packet among the last 1023 sent on, at most 16384. While the packet 1024
+before the next one is still outstanding, the send window is full: no frame is due, and
+a data packet is written only for an acknowledgement, the keepalive or a probe. Before
+such a packet is written, that outstanding packet is declared lost, so its fragments are
+due again. A packet ends before a message frame whose fragment would exceed 16384
+recorded fragments.</p>
+<p><strong>Acknowledgements received.</strong> The newest sequence of an acknowledgement names the
+newest packet sent with that sequence: with <code>n</code> packets sent, the packet
+<code>n − 1 − ((n − 1 − sequence) mod 65536)</code>, counted from 0. Naming a packet before the
+first, or any packet before one was sent, is <code>network.malformed</code>. The named packet and
+each packet a set bit names, counting back from it, are acknowledged when they are
+recorded and outstanding; acknowledging a packet acknowledges its fragments. A packet
+already acknowledged or declared lost stays as it is, so every range of bytes is
+outstanding in at most one packet.</p>
+<p>The round trip is sampled as on other transports when the named packet is newer than
+every packet acknowledged before and asked for acknowledgement. Besides the estimate a
+side keeps the variation and the newest sample. The first sample sets the variation to
+half the sample; each later one moves it by a quarter of the difference between the
+absolute difference of estimate and sample and the variation, computed before the
+estimate moves. Until the first sample, loss detection uses an estimate and a newest
+sample of 333000 µs and a variation of 166500 µs.</p>
+<p><strong>Loss detection.</strong> The largest is the newest packet acknowledged. An outstanding packet
+older than the largest is lost when it is at least 3 packets older, or when its loss
+delay has passed since it was sent: nine eighths of the larger of estimate and newest
+sample, at least 1000 µs. Detection runs after every acknowledgement received and when
+the earliest loss delay of an outstanding packet older than the largest ends. Lost
+packets are handled in packet order; their fragments are queued to be resent in that
+order.</p>
+<p><strong>Probe timeout.</strong> While a packet is outstanding and no outstanding packet older than the
+largest awaits its loss delay, the probe timeout counts from the last asking packet sent:
+the estimate, plus the larger of four times the variation and 1000 µs, plus the local
+acknowledgement delay, doubled for each expiry since an acknowledgement last
+acknowledged an outstanding packet, at most 10 times. On expiry the side sends a probe:
+a data packet that asks even when no frame is due.</p>
+<p><strong>Reliable and bulk messages.</strong> Each class sends its messages in order as on other
+transports; a message keeps its place in the send queue and counts toward the queue limit
+until every byte of it is acknowledged, and the queue head leaves then. At most 8192
+messages per class are started and still queued; the next one waits. A cancelled
+transfer leaves the queue at once; its lost fragments are not resent. Until the peer
+confirms its cancel frame, its id stays open: a new transfer whose id would be 8192 or
+more ahead of the oldest open id, queued or cancelled, is <code>queueFull</code>. In a packet each
+class first resends the ranges of its lost fragments in the order they were lost, then
+continues with new fragments. A range that does not fit the packet is split; its rest
+waits. A message of total 0 is acknowledged when its one frame is.</p>
+<p>The receiver accepts a frame of a class whose id is 0 to 8191 ahead of the next message
+of the class to report, modulo 65536; an id up to 8192 behind is a duplicate and
+ignored, and any other id is <code>network.malformed</code>. The frames of one id arrive in any
+order; they must name the same channel and total, else <code>network.malformed</code>. Bytes of a
+range received already keep their first value. A message counts its total toward the
+pending received bytes from its first frame, before the receiver reserves memory for it,
+and a cancelled transfer frees its memory at once, so the pending limits bound the memory
+of incomplete messages; memory kept for reuse stays within the same limits. Complete
+messages are reported in id order: a message complete before an earlier one waits for it.</p>
+<p><strong>Packet order.</strong> A data packet carries owed confirmation frames first, then lost and new
+cancel frames, then reliable resends and new reliable fragments, then per latest route its resends, its current
+message and a newer one, then the tick frame, then bulk resends and new bulk fragments.</p>
+<h3 id="latest-messages-on-datagrams">Latest messages on datagrams</h3>
+<p>A newer message of a latest route starts as soon as every fragment of the current one is
+sent once; the current one is then no longer sent. A lost fragment of a latest message is
+resent only while that message is still the route’s current one and no newer message
+waits; otherwise it is dropped.</p>
+<p>The receiver holds at most one incomplete message per latest route. A frame of the
+message in progress continues it. A frame whose id is 1 to 32767 ahead of the message in
+progress, or ahead of the last reported message of the route when none is in progress,
+drops the message in progress and starts a new one; before the first message every id
+is ahead. A frame of the message in progress with another total is <code>network.malformed</code>.
+Any other frame is ignored. A latest message counts its total toward the
+pending received bytes from its first frame and is reported when complete.</p>
+<h3 id="confirmation-frames">Confirmation frames</h3>
+<p>On a datagram transport the receiver of a latest topic confirms states for the sender’s
+base. When a state of a latest topic enters the receiver’s ring, the receiver owes the
+sender one confirmation frame for it; a newer state of the same route replaces a
+confirmation not yet sent. A data packet carries all owed confirmations first, in route
+order. They are never resent, do not ask for acknowledgement, so a data packet with only
+confirmations does not ask, and ignore the send budget;
+an owed confirmation makes a data packet due like a received asking packet.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Encoding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>channel</td>
+<td>varint <code>0</code></td>
+</tr>
+<tr>
+<td>kind</td>
+<td>1 byte <code>0</code></td>
+</tr>
+<tr>
+<td>topic</td>
+<td>varint, the channel of the topic’s route</td>
+</tr>
+<tr>
+<td>number</td>
+<td>2 bytes, the state’s number</td>
+</tr>
+</tbody>
+</table>
+<p>A confirmation counts toward the frame limit. One whose topic is not a latest topic the
+receiving side publishes is <code>network.malformed</code>; one that names a state no longer in the
+ring is ignored.</p>
+<h3 id="datagram-handshake">Datagram handshake</h3>
+<ul>
+<li>The client sends <code>hello</code> and repeats it while no <code>welcome</code> arrives: after 1 s, then
+after twice the previous interval each time. Without <code>welcome</code> it closes with
+<code>network.timeout</code> like any connection, so loss can fail the handshake.</li>
+<li>A <code>retry</code> received in the state <code>Hello</code> after the first <code>hello</code> was sent stores its
+cookie when the cookie is not empty, takes its key as <a href="#security-levels">encryption</a>
+allows, and the client sends <code>hello</code> at once; the interval starts again at 1 s. Any
+other <code>retry</code> is ignored.</li>
+<li>A server in <code>AwaitAccept</code> ignores <code>hello</code>; a server in <code>Connected</code> answers each <code>hello</code>
+with the same <code>welcome</code> bytes it sent first. In both states it does not read the <code>hello</code>.</li>
+<li>The client accepts the first <code>welcome</code> it can read in the state <code>Hello</code> and ignores data
+packets before it and every <code>welcome</code> after it. Its <code>hello</code> repetitions are identical,
+so any <code>welcome</code> answers the <code>hello</code> it holds. An encrypted <code>welcome</code> answers only the
+<code>hello</code> that holds the same ephemeral key: when a late <code>retry</code> changes the cookie after
+the server accepted the earlier <code>hello</code>, the client cannot read its <code>welcome</code> and the
+handshake ends on the timeout.</li>
+<li>A side sends <code>close</code> once; when it is lost, the peer closes on its timeout.</li>
+</ul>
+<h3 id="address-validation">Address validation</h3>
+<p>A server answers a client it does not know without keeping state, so a forged source
+address gains no connection and at most as many bytes as it sent. A gate holds a secret
+key of 32 bytes and a window length, and checks each datagram of an unknown address:</p>
+<table>
+<thead>
+<tr>
+<th>Result</th>
+<th>Condition</th>
+<th>Server action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>drop</td>
+<td>the datagram is not a <code>hello</code>, is shorter than 1200 bytes, has a wrong magic, or its fields up to the cookie cannot be read within the bounds of a <code>hello</code></td>
+<td>ignore it</td>
+</tr>
+<tr>
+<td>retry</td>
+<td>the cookie is empty or not valid</td>
+<td>send the gate’s 27-byte <code>retry</code></td>
+</tr>
+<tr>
+<td>accept</td>
+<td>the cookie is valid</td>
+<td>create a server connection and pass it the datagram</td>
+</tr>
+</tbody>
+</table>
+<p>Reading the fields within the bounds means: the version varint, the 8 bytes of the
+network hash, a route count from 1 to 64 with its hashes, the four limit varints and a
+cookie of at most 64 bytes. The connection checks the version and the rest.</p>
+<p>A cookie is 24 bytes: the window number as 8 bytes, signed, the current time divided by
+the window length rounded toward negative infinity, followed by the first 16 bytes of
+HMAC-SHA256 with the key over the four bytes <code>GESC</code> (<code>47 45 53 43</code>), the window number’s 8
+bytes and the address. A cookie is valid when its window number is the current or the
+previous one and its HMAC bytes match, compared in constant time. The address is the
+client’s address as the transport gives it; the socket transports use the 4 or 16 bytes
+of the IP address followed by the port as 2 bytes, most significant first. The <code>retry</code>
+holds type 2, the varint <code>24</code>, a fresh cookie for the current window and the varint <code>0</code>,
+no key; the gate holds no server key.</p>
+<h3 id="timeout-and-closing">Timeout and closing</h3>
+<p>A connection closes with <code>network.timeout</code> when no packet has arrived for the timeout,
+counted from its creation, also during the handshake.</p>
+<p>The host closes a connection with a detail text; the code is <code>network.closed</code>. Closing
+drops all queued messages and queues one <code>close</code> packet; the connection reports
+<code>closed</code> at once. An error found in received data closes the same way with its code and
+sends it to the peer. A received <code>close</code> reports <code>closed</code> with the peer’s code and
+detail. When the host reports the end of the transport, the connection reports <code>closed</code>
+with <code>network.transportClosed</code> unless it has closed already. After <code>closed</code> a
+connection ignores received data and sends nothing beyond its <code>close</code> packet.</p>
+<h3 id="events">Events</h3>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>connecting</code></td>
+<td>the client’s token; server only</td>
+</tr>
+<tr>
+<td><code>connected</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>route index and payload; for a topic, the full record; for a transfer, its data and id</td>
+</tr>
+<tr>
+<td><code>tick</code></td>
+<td>tick number; after the <code>message</code> events of the tick’s changed members</td>
+</tr>
+<tr>
+<td><code>closed</code></td>
+<td>code, detail and whether the peer sent it</td>
+</tr>
+<tr>
+<td><code>transferProgress</code></td>
+<td>route index, transfer id, bytes and total of the transfer’s message</td>
+</tr>
+<tr>
+<td><code>transferCancelled</code></td>
+<td>route index, transfer id, code and whether the peer cancelled it</td>
+</tr>
+</tbody>
+</table>
+<p>A connection reports events in the order they arise. A <code>message</code> event’s payload is valid
+until the next event is taken.</p>
+<h2 id="wire-format">Wire format</h2>
+<h3 id="values">Values</h3>
+<p>Integers of fixed width are little-endian. A varint is unsigned LEB128 of a value that
+fits 32 bits: seven bits per byte, least significant group first, the high bit set on
+every byte but the last. It takes at most five bytes and is canonical: a last byte of
+zero is allowed only as the single byte of the value 0. Anything else is
+<code>network.malformed</code>. Text is a varint length and that many bytes.</p>
+<h3 id="packets">Packets</h3>
+<p>A packet’s first byte is its type. A packet is read completely; bytes left over after
+its last field are <code>network.malformed</code>, and so is an unknown type.</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Packet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>hello</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>retry</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>welcome</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>close</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>data</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>sealed</code>, a <a href="#sealed-packets">sealed packet</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>hello</code></strong> (client to server):</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Encoding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>magic</td>
+<td>the four bytes <code>GESN</code> (<code>47 45 53 4e</code>)</td>
+</tr>
+<tr>
+<td>version</td>
+<td>varint, <code>1</code></td>
+</tr>
+<tr>
+<td>network hash</td>
+<td>8 bytes</td>
+</tr>
+<tr>
+<td>route count</td>
+<td>varint, 1 to 64</td>
+</tr>
+<tr>
+<td>binding hashes</td>
+<td>8 bytes per route, in route order</td>
+</tr>
+<tr>
+<td>packet limit</td>
+<td>varint, 1200 to 65535</td>
+</tr>
+<tr>
+<td>baseline limit</td>
+<td>varint, 0 to 1073741824</td>
+</tr>
+<tr>
+<td>transfer limit</td>
+<td>varint, 0 to 1073741824</td>
+</tr>
+<tr>
+<td>compressions</td>
+<td>varint, bit 0 for Deflate; another bit set is <code>network.malformed</code></td>
+</tr>
+<tr>
+<td>cookie</td>
+<td>varint length up to 64, then the bytes; length <code>0</code> on a stream or message transport</td>
+</tr>
+<tr>
+<td>security</td>
+<td>1 byte: <code>0</code> plain, <code>1</code> key request, <code>2</code> sealed; another value is <code>network.malformed</code></td>
+</tr>
+<tr>
+<td>ephemeral key</td>
+<td>32 bytes, the client’s ephemeral public key; only when sealed</td>
+</tr>
+<tr>
+<td>token</td>
+<td>varint length, then the bytes: up to 512 bytes when plain, <code>0</code> for a key request, 16 to 528 bytes when sealed, the <a href="#handshake-keys">sealed token</a></td>
+</tr>
+</tbody>
+</table>
+<p>On a datagram transport zero bytes follow the token up to at least 1200 bytes in all; a
+shorter datagram <code>hello</code> or another byte after the token is <code>network.malformed</code>. A
+connection does not check the cookie; the <a href="#address-validation">gate</a> does.</p>
+<p>A wrong magic or version is <code>network.protocolMismatch</code>, checked before anything else.
+A different route count or network hash is <code>network.schemaMismatch</code>. Its detail names
+the root of each route of the server whose binding hash differs or which the client
+lacks, in route order and separated by <code>, </code>; it names the network when no root differs.
+Both are checked before the security byte, so they close without encryption.</p>
+<p><strong><code>welcome</code></strong> (server to client): version varint <code>1</code>, then the server’s packet limit as a
+varint, 1200 to 65535, its baseline limit and its transfer limit as varints, 0 to
+1073741824 each, and its compressions as in <code>hello</code>. On an encrypted session the server’s
+ephemeral public key of 32 bytes follows the type, then these fields sealed with the
+<a href="#handshake-keys">welcome key</a>.</p>
+<p><strong><code>retry</code></strong> (server to client): the cookie as varint length 0 to 64, then the bytes, and
+the server’s public key as varint length <code>0</code> or <code>32</code>, then the bytes. A <code>retry</code> with
+neither a cookie nor a key, with a cookie on a stream or message transport, or received
+by a server is <code>network.malformed</code>; so is a <code>retry</code> on a stream or message transport
+beyond the <a href="#security-levels">one a client accepts</a>.</p>
+<p><strong><code>close</code></strong>: the code as text of 1 to 64 bytes from <code>!</code> to <code>~</code>, then the detail as
+UTF-8 text of at most 512 bytes. A longer detail is shortened to whole scalars before it
+is sent.</p>
+<p><strong><code>data</code></strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Encoding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>flags</td>
+<td>1 byte; bit 0 is set when an acknowledgement follows, bit 1 when the packet asks for acknowledgement; the other bits are zero, and a packet with message, cancel or tick frames sets bit 1</td>
+</tr>
+<tr>
+<td>sequence</td>
+<td>2 bytes</td>
+</tr>
+<tr>
+<td>acknowledgement</td>
+<td>2 bytes newest received sequence, 4 bytes earlier sequences, when flagged</td>
+</tr>
+<tr>
+<td>frames</td>
+<td>until the end of the packet</td>
+</tr>
+</tbody>
+</table>
+<h3 id="frames">Frames</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Encoding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>channel</td>
+<td>varint, route index plus 1</td>
+</tr>
+<tr>
+<td>message id</td>
+<td>2 bytes</td>
+</tr>
+<tr>
+<td>offset</td>
+<td>varint, the position of the chunk in the message</td>
+</tr>
+<tr>
+<td>total</td>
+<td>varint, the length of the message</td>
+</tr>
+<tr>
+<td>chunk length</td>
+<td>varint</td>
+</tr>
+<tr>
+<td>chunk</td>
+<td>the bytes</td>
+</tr>
+</tbody>
+</table>
+<p>A message is sent in one frame or, when it does not fit, in fragments of consecutive
+offsets. The sender fills each packet: a fragment takes the largest chunk that fits the
+remaining space. Channel 0 is a <a href="#control-frames">control frame</a>.</p>
+<p>Reliable messages are numbered from 0 per direction across all reliable routes, bulk
+messages likewise across bulk routes, and latest messages per route; the number wraps
+from 65535 to 0. A reliable or latest message takes its number when its first fragment
+is sent; a bulk message, a <a href="#transfers">transfer</a>, when it is queued.</p>
+<p>The receiver checks each message frame. The first three checks apply on every
+transport; on a datagram transport <a href="#datagram-delivery">datagram delivery</a> replaces the
+others:</p>
+<ul>
+<li>a channel beyond the route count is <code>network.malformed</code>; a route the peer does
+not send is <code>network.unexpectedRoute</code>;</li>
+<li>a total beyond the route’s largest encoding is <code>network.messageTooLarge</code>;</li>
+<li>a chunk of length 0 in a message of nonzero total, or a chunk ending beyond the total, is
+<code>network.malformed</code>;</li>
+<li>a frame at offset 0 starts a message; its id must be the next of its numbering, and no
+message of its class may be in progress (for latest: of its route);</li>
+<li>a frame at a later offset continues the message in progress of its class (for latest:
+of its route) with the same channel, id and total, at the offset where the previous
+chunk ended;</li>
+<li>anything else is <code>network.malformed</code>.</li>
+</ul>
+<p>A message is complete and reported when its chunks reach its total.</p>
+<h3 id="control-frames">Control frames</h3>
+<p>A frame on channel 0 is a control frame; a kind byte follows the channel. Kind <code>0</code> is a
+<a href="#confirmation-frames">confirmation frame</a>, valid only on a datagram transport. Kind <code>2</code>
+is a <a href="#tick-frames">tick frame</a>. Kind <code>1</code> is a cancel frame of a <a href="#transfers">transfer</a>:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Encoding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>channel</td>
+<td>varint <code>0</code></td>
+</tr>
+<tr>
+<td>kind</td>
+<td>1 byte <code>1</code></td>
+</tr>
+<tr>
+<td>route</td>
+<td>varint, the channel of the transfer’s bulk route</td>
+</tr>
+<tr>
+<td>transfer id</td>
+<td>2 bytes</td>
+</tr>
+<tr>
+<td>code</td>
+<td>text of 1 to 64 bytes from <code>!</code> to <code>~</code></td>
+</tr>
+</tbody>
+</table>
+<p>A cancel names a route the sender of the transfer sends; the receiver of the transfer
+sends one back for a transfer that failed a check. A cancel sent back for an id the sender has not
+given a transfer yet, while its ids have not wrapped around, is <code>network.malformed</code>. Another kind, a route that is not a
+bulk route, or a malformed field is <code>network.malformed</code>. On a datagram transport a
+packet with a cancel frame asks for acknowledgement, and a cancel frame in a packet that
+does not ask is <code>network.malformed</code>. Control frames count toward the frame limit.</p>
+<h3 id="tick-frames">Tick frames</h3>
+<p class="ges-since"><strong>Since: 0.6.0</strong></p>
+<p>Kind <code>2</code> is the frame of a <a href="#ticks">tick</a>:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Encoding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>channel</td>
+<td>varint <code>0</code></td>
+</tr>
+<tr>
+<td>kind</td>
+<td>1 byte <code>2</code></td>
+</tr>
+<tr>
+<td>tick</td>
+<td>2 bytes, the tick number</td>
+</tr>
+<tr>
+<td>count</td>
+<td>varint, 1 to the route count</td>
+</tr>
+<tr>
+<td>per member, in route order</td>
+<td>varint, the channel of the topic’s route; 2 bytes, the number of the state it names</td>
+</tr>
+</tbody>
+</table>
+<p>A count of 0 or above the route count, a member that is not a latest topic the sending
+side publishes, and a repeated or unordered member are <code>network.malformed</code>.</p>
+<h3 id="topic-messages">Topic messages</h3>
+<p>A message of a <a href="#topics">topic</a> starts with a mode byte:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Rest of the message</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>the full record</td>
+</tr>
+<tr>
+<td>1 to 32</td>
+<td>a delta against the state that many states before this one in the topic’s numbering</td>
+</tr>
+</tbody>
+</table>
+<p>Bit <code>0x80</code> of the mode byte marks a state of a latest topic as a <a href="#ticks">tick</a> member;
+the low seven bits keep the modes above.</p>
+<p>The receiver closes with <code>network.malformed</code> when a topic message is empty, its mode
+without the tick bit is above 32, the tick bit is set on a reliable topic, its base is not in the ring, or the delta does not decode against the base or
+leaves bytes over.</p>
+<h3 id="transports">Transports</h3>
+<ul>
+<li><strong>Stream</strong> (TCP): each packet is preceded by its length as a canonical varint. A
+length of 0 is <code>network.malformed</code>, a length above the packet limit
+<code>network.packetTooLarge</code>.</li>
+<li><strong>Message</strong> (WebSocket, in-process): one binary message per packet. A packet above the
+packet limit is <code>network.packetTooLarge</code>.</li>
+<li><strong>Datagram</strong> (UDP over IPv4 or IPv6): one datagram per packet. A packet above the
+packet limit is <code>network.packetTooLarge</code>, an empty one <code>network.malformed</code>. The server
+passes the datagrams of an unknown address through
+<a href="#address-validation">address validation</a> and those of a known address to its
+connection. A socket transport may drop datagrams when its receive queues are full, as
+the network could.</li>
+</ul>
+<p>The client of a stream or WebSocket transport opens the connection; the WebSocket
+endpoint path is chosen by the host. A text WebSocket message closes with
+<code>network.malformed</code>.</p>
+<h2 id="encryption">Encryption</h2>
+<p>A server with a key of its own encrypts its sessions with the <a href="#cipher-suite">cipher suite</a>.
+The server’s key is a static X25519 key pair; each session adds an ephemeral key pair
+on each side. The client learns that only the holder of the server’s key can read the
+session; the server learns nothing about the client but its token. The data of a
+session is secret and authentic and stays secret when the server’s key is disclosed
+later; the token stays secret only as long as the server’s key does.</p>
+<p>GesNetwork assumes that the client receives the server’s public key from outside the
+protocol, for example with its build or its configuration. It neither signs nor
+distributes keys.</p>
+<h3 id="security-levels">Security levels</h3>
+<p>A session reaches one of three levels:</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>none</code></td>
+<td>not encrypted</td>
+</tr>
+<tr>
+<td><code>encrypted</code></td>
+<td>encrypted with a server key that the client received in a <code>retry</code>; protects only against attackers who read but do not change packets, for development and local networks</td>
+</tr>
+<tr>
+<td><code>verified</code></td>
+<td>encrypted with the server key that the client was given in advance, its pinned key</td>
+</tr>
+</tbody>
+</table>
+<p>A connection’s level is <code>none</code> until it is connected. A server reports <code>encrypted</code> for
+every encrypted session, because it cannot tell whether the client pinned its key.</p>
+<blockquote>
+<p><strong>Since: 0.6.0</strong> — client and server security</p>
+</blockquote>
+<p>The client’s options hold its security; a client without one is a usage error. Its first
+<code>hello</code>, its answer to a <code>retry</code> with a key and the lowest level it reaches follow it:</p>
+<table>
+<thead>
+<tr>
+<th>Client security</th>
+<th>First <code>hello</code></th>
+<th><code>retry</code> with a key</th>
+<th>Lowest level</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pinned, with the server public key of 32 bytes</td>
+<td>sealed with the pinned key</td>
+<td>its key is ignored</td>
+<td><code>verified</code></td>
+</tr>
+<tr>
+<td>development</td>
+<td>key request</td>
+<td>the client takes the key and sends a sealed <code>hello</code></td>
+<td><code>encrypted</code></td>
+</tr>
+<tr>
+<td>none</td>
+<td>plain, with the token</td>
+<td>the client takes the key and sends a sealed <code>hello</code></td>
+<td><code>none</code></td>
+</tr>
+</tbody>
+</table>
+<p>A client without a pinned key takes the key of each <code>retry</code> that carries one, so a key
+from a later <code>retry</code> replaces an earlier one: until a <code>welcome</code> authenticates, any of them
+may be forged. On a stream or message transport a client accepts one <code>retry</code>, only in
+answer to a <code>hello</code> that is not sealed, and only with an empty cookie and a key; any other
+<code>retry</code> there is <code>network.malformed</code>. On a datagram transport the
+<a href="#datagram-handshake">datagram handshake</a> processes a <code>retry</code> in the state <code>Hello</code> after
+the client sent its first <code>hello</code> and ignores it otherwise.</p>
+<p>The server’s options hold its security, a key of its own or none; a server without a
+security is a usage error. A server
+checks the protocol and the hashes of every <code>hello</code> first and closes a difference
+without encryption. Then:</p>
+<ul>
+<li>A server with a key answers a plain <code>hello</code> and a key request with a <code>retry</code> that holds
+an empty cookie and its public key and stays in <code>AwaitHello</code>. It never accepts a plain
+<code>hello</code>.</li>
+<li>A server without a key closes on a key request or a sealed <code>hello</code> with
+<code>network.insecure</code>.</li>
+<li>A server with a key opens the token of a sealed <code>hello</code>; when the token does not
+authenticate, it closes with <code>network.authenticationFailed</code>.</li>
+</ul>
+<p>A client reads <code>welcome</code> in the form its <code>hello</code> asks for, plain or sealed. A sealed
+<code>welcome</code> that does not authenticate is ignored on a datagram transport and closes the
+session with <code>network.authenticationFailed</code> on the others.</p>
+<h3 id="ephemeral-keys">Ephemeral keys</h3>
+<p>A client draws an ephemeral private key for each sealed <code>hello</code> whose bytes differ from
+the previous one; repeating a <code>hello</code> sends the same bytes again. A server draws one when
+it reads a sealed <code>hello</code> whose token authenticates. A private key is 32 bytes from the
+system’s cryptographic random generator; X25519 clamps it.</p>
+<p>For tests and golden bytes only, a connection may instead derive its ephemeral keys from
+a test seed: the <code>n</code>-th key of the connection, counted from 0, is
+<code>SHA-256("GESK" ‖ side ‖ seed ‖ n)</code>, with side the byte <code>0</code> for a client and <code>1</code> for a
+server and the seed and <code>n</code> as 8 bytes each. Such keys are known to everyone who knows
+the seed; the API marks the option as insecure.</p>
+<h3 id="handshake-keys">Handshake keys</h3>
+<p><code>Extract(salt, ikm)</code> and <code>Expand(prk, info, length)</code> are the two steps of HKDF with
+SHA-256. Labels are ASCII bytes without a terminator. <code>S</code> is the server’s public key, the
+pinned one or the one the client took, <code>s</code> its private key; <code>ce</code> and <code>CE</code> are the
+client’s ephemeral private and public key, <code>se</code> and <code>SE</code> the server’s.</p>
+<ol>
+<li>The client computes <code>es = X25519(ce, S)</code> and the server <code>es = X25519(s, CE)</code>.</li>
+<li>Both derive <code>hello_key = Expand(Extract(S, es), "ges hello", 32)</code>. The token is sealed
+with ChaCha20-Poly1305 under <code>hello_key</code> with a nonce of 12 zero bytes. Its additional
+data is the <code>hello</code> from the type byte through the token’s length varint, so it covers
+the cookie; the token’s length is the plaintext’s length plus 16.</li>
+<li>On acceptance the server computes <code>ee = X25519(se, CE)</code> and the client, on <code>welcome</code>,
+<code>ee = X25519(ce, SE)</code>. Both compute the transcript <code>T</code>, SHA-256 of the <code>hello</code> from
+its type byte through the token’s last byte, without padding, followed by <code>SE</code>, and
+<code>prk = Extract(T, es ‖ ee)</code>.</li>
+<li><code>welcome_key = Expand(prk, "ges welcome", 32)</code> seals the <code>welcome</code> fields with a nonce
+of 12 zero bytes. A sealed <code>welcome</code> is the type byte <code>3</code>, <code>SE</code>, the sealed fields and
+the tag; its additional data is the type byte and <code>SE</code>.</li>
+<li>The client’s secret is <code>Expand(prk, "ges client", 32)</code>, the server’s
+<code>Expand(prk, "ges server", 32)</code>. Each side seals with its own secret and opens with
+the peer’s.</li>
+</ol>
+<p>An X25519 result of 32 zero bytes closes the session with <code>network.authenticationFailed</code>.
+Each key seals one plaintext only: a <code>hello</code> with other bytes has a fresh <code>CE</code>.</p>
+<h3 id="sealed-packets">Sealed packets</h3>
+<p>From <code>Connected</code> on, each side of an encrypted session sends only sealed packets, both
+<code>data</code> and <code>close</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Encoding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>type</td>
+<td>1 byte, <code>6</code></td>
+</tr>
+<tr>
+<td>sequence</td>
+<td>2 bytes, the packet number modulo 65536</td>
+</tr>
+<tr>
+<td>sealed packet</td>
+<td>the inner packet sealed, then the tag of 16 bytes</td>
+</tr>
+</tbody>
+</table>
+<p>The inner packet is a <code>data</code> packet without its sequence, type byte <code>5</code> included, or a
+<code>close</code> packet. Another inner type is <code>network.malformed</code>. The additional data is the
+3 bytes of type and sequence. A sealed <code>data</code> packet is 17 bytes longer than its plain
+form; the packet limit applies to the sealed packet.</p>
+<p>Each side numbers its sealed packets from 0 per direction; a <code>close</code> takes the next
+number, and a <code>data</code> packet’s sequence is the low 16 bits of its number. A sender does
+not check the number against 2^62: even a million packets per second take more than
+100000 years to reach it. A direction’s key changes every 2^24 packets without a signal:</p>
+<ul>
+<li><code>iv = Expand(secret, "ges iv", 12)</code></li>
+<li><code>key = Expand(secret, "ges key" ‖ epoch, 32)</code>, with <code>epoch = number &gt;&gt; 24</code> as 8 bytes</li>
+<li><code>nonce = iv XOR (number as 8 bytes ‖ 4 zero bytes)</code></li>
+</ul>
+<p>The receiver reconstructs the number. On a stream or message transport it is the count
+of sealed packets received before. On a datagram transport it is the number closest to
+the expected number with the same low 16 bits, with the expected number one above the
+largest authenticated number, 0 before the first, as RFC 9000 appendix A.3 decodes it;
+a candidate at or above 2^62 is not chosen. The receiver keeps the keys of the epochs
+next to that of the largest authenticated number, so a forged packet never causes a key
+derivation.</p>
+<p>A packet is authenticated before it changes any state. One that does not authenticate is
+dropped on a datagram transport, without counting as received for the timeout; on the
+other transports it closes the session with <code>network.authenticationFailed</code>.</p>
+<p>Before <code>welcome</code> the server closes without encryption, refusals included, so their
+detail is not protected. A client accepts a plain <code>close</code> until it has read a sealed
+<code>welcome</code>; a server accepts one until it has authenticated a sealed <code>data</code> packet, because the
+client closes without encryption until it reads the <code>welcome</code>. After that a plain packet
+is dropped on a datagram transport, without counting as received for the timeout, and is
+<code>network.malformed</code> on the others. A plain <code>data</code> packet on an encrypted session and a
+sealed packet on a session that is not encrypted are never valid.</p>
+<h3 id="replayed-hellos">Replayed hellos</h3>
+<p>The server cannot tell a replayed sealed <code>hello</code> from a new one; it reports <code>connecting</code>
+with the token again. Whoever replays it lacks <code>ce</code> and can neither read nor send in the
+resulting session. On a datagram transport a replay must come from the client’s address
+while its cookie is valid; on the other transports it may come from anywhere. Hosts
+should therefore use single-use or short-lived tokens, tokens bound to a time, and grant
+rights only at the client’s first message, which proves the client holds <code>ce</code>.</p>
+<h3 id="cipher-suite">Cipher suite</h3>
+<p>The suite is X25519, ChaCha20-Poly1305 and HKDF-SHA256. Every port produces the same
+bytes; a port may use a platform implementation of a primitive, such as CryptoKit,
+swift-crypto, .NET or libsodium, and keeps its own implementation for platforms without
+one. <code>conformance/fixtures/Network/crypto.json</code> holds the vectors both ports and every
+platform implementation must reproduce; <code>scripts/test-network-crypto.py</code> checks them
+against an independent oracle.</p>
+<ul>
+<li><strong>X25519</strong> follows RFC 7748, section 5: the scalar is clamped, bit 255 of the
+u-coordinate is masked, the Montgomery ladder runs 255 steps with conditional swaps
+and the result is encoded canonically. A public key is the scalar multiplied with
+u = 9.</li>
+<li><strong>ChaCha20-Poly1305</strong> follows RFC 8439, section 2.8, with a 32-byte key, a 12-byte nonce
+and the 16-byte tag after the ciphertext.</li>
+<li><strong>HKDF</strong> follows RFC 5869 with HMAC-SHA-256 (RFC 2104, FIPS 180-4); SHA-256 also
+computes the transcript and test-seed keys.</li>
+</ul>
+<p>Implementations run in constant time with respect to secrets. X25519 uses no branch and
+no memory index that depends on the scalar or the result, and fixed iteration counts
+for field arithmetic and inversion. Poly1305 compares the tag over all 16 bytes without
+an early exit; opening releases no plaintext and changes no buffer when the tag does not
+match. Checking a shared secret for zero combines all 32 bytes before branching. Test
+vectors do not establish these properties; reviews of the code do.</p>
+<h2 id="codes">Codes</h2>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>network.protocolMismatch</code></td>
+<td>a <code>hello</code> has a wrong magic or version</td>
+</tr>
+<tr>
+<td><code>network.schemaMismatch</code></td>
+<td>the network hash or route count differs</td>
+</tr>
+<tr>
+<td><code>network.malformed</code></td>
+<td>a packet or frame breaks this format or the session order</td>
+</tr>
+<tr>
+<td><code>network.packetTooLarge</code></td>
+<td>a packet exceeds the packet limit</td>
+</tr>
+<tr>
+<td><code>network.messageTooLarge</code></td>
+<td>a message exceeds its route’s largest encoding, or a bulk message the transfer limit plus 43 header bytes</td>
+</tr>
+<tr>
+<td><code>network.queueFull</code></td>
+<td>pending received bytes, pending bulk bytes or untaken events exceed their limit</td>
+</tr>
+<tr>
+<td><code>network.rateExceeded</code></td>
+<td>more frames arrive than the frame limit allows; on a stream or message transport a packet with more frames than the limit or bytes passed while the connection takes none</td>
+</tr>
+<tr>
+<td><code>network.timeout</code></td>
+<td>no packet arrived within the timeout</td>
+</tr>
+<tr>
+<td><code>network.refused</code></td>
+<td>the server’s host refused the client</td>
+</tr>
+<tr>
+<td><code>network.unexpectedRoute</code></td>
+<td>a frame uses a route the peer does not send</td>
+</tr>
+<tr>
+<td><code>network.closed</code></td>
+<td>the host closed the connection</td>
+</tr>
+<tr>
+<td><code>network.transportClosed</code></td>
+<td>the transport ended without a <code>close</code> packet</td>
+</tr>
+<tr>
+<td><code>network.transferTooLarge</code></td>
+<td>a transfer’s size exceeds the receiver’s transfer limit; cancels the transfer</td>
+</tr>
+<tr>
+<td><code>network.transferCorrupt</code></td>
+<td>a transfer’s header, compressed data or hash is invalid; cancels the transfer</td>
+</tr>
+<tr>
+<td><code>network.transferCancelled</code></td>
+<td>the host cancelled a transfer without its own code</td>
+</tr>
+<tr>
+<td><code>network.insecure</code></td>
+<td>a server without a key receives a key request or a sealed <code>hello</code></td>
+</tr>
+<tr>
+<td><code>network.authenticationFailed</code></td>
+<td>a sealed <code>hello</code> does not authenticate, an X25519 result is 32 zero bytes, or a sealed <code>welcome</code> or packet does not authenticate on a stream or message transport</td>
+</tr>
+</tbody>
+</table>
+<h2 id="security">Security</h2>
+<p>A session that is not encrypted neither hides nor authenticates anything: the token is
+shown to whoever can read the transport and the peer’s identity is not proven. Such a
+session belongs on a transport that protects both, such as TLS; a browser client uses
+WebSocket only over <code>wss</code>. The in-process transport and TLS need no encryption of their
+own; their hosts give both sides the security none.</p>
+<p>An <a href="#encryption">encrypted</a> session hides and authenticates every packet after
+<code>welcome</code> and the token. It does not hide the <code>hello</code> and <code>retry</code> fields, a plain
+<code>welcome</code>, a <code>close</code> before <code>welcome</code>, or the size and timing of packets. At the level
+<code>encrypted</code> an attacker who can change packets can read the session; only <code>verified</code>
+proves the server. The protocol never proves the client; the token does.</p>
+<p>An attacker who can drop or forge packets can always prevent a session or end it early:
+on a datagram transport through lost packets, forged <code>retry</code> packets or a forged plain
+<code>close</code> during the handshake. Address validation proves only that the client receives at its
+address.</p>
+<h2 id="api">API</h2>
+<p class="ges-since"><strong>Since: 0.6.0</strong></p>
+<p>The core is the package <code>GameEventScript.Network</code> (C#, <code>netstandard2.1</code>) and
+<code>GameEventScriptNetwork</code> (Swift, without Foundation). It depends only on Runtime.
+The socket transports are the separate packages <code>GameEventScript.Network.Sockets</code>
+(C#, .NET 8, <code>TcpListener</code>, <code>WebSocket.CreateFromStream</code> and <code>Socket</code> for UDP) and
+<code>GameEventScriptNetworkSockets</code> (Swift, SwiftNIO). The <a href="/docs/reference/public-api/#network">public API</a>
+owns the member names per port.</p>
+<p>A socket listener holds at most 64 clients that wait for the host or still run their
+WebSocket upgrade. Accepting pauses while it holds them all; a validated UDP <code>hello</code>
+beyond them is dropped, and the client sends it again. One IP address holds at most 8 of
+these clients: the listener closes its further TCP and WebSocket sockets and drops its
+further UDP <code>hello</code> packets. A client the host takes frees its place.</p>
+<p>A socket session hands its socket about 256 KiB of packets that are not yet written and
+then stops. Further packets wait in the connection, so a peer that reads slowly fills the
+connection’s send queue and <code>send</code> reports <code>queueFull</code>. The close packet of a closed
+connection passes that bound, so closing always reaches the socket.</p>
+<p>A TCP or WebSocket session passes received bytes only while its connection takes them.
+The rest waits in about 64 read chunks, and then the session stops reading, so the
+peer’s sending slows down; a session reports the end of its transport after the last
+chunk. A UDP session passes every datagram; one longer than its receive buffer closes a
+known client’s connection with <code>network.packetTooLarge</code> and is dropped otherwise.</p>
+<p>A TCP or WebSocket session that closes in order first writes its last packets, then ends
+its sending: TCP by closing its sending half, WebSocket with a close frame, which also
+answers the peer’s close frame. It then reads and drops received bytes until the peer’s
+end, for at most 10 s, before it closes the socket, so the peer reads the last packets
+instead of a reset. A TCP connect fails after 10 s, and so does a WebSocket upgrade, on
+the listener as on the client and there with the TLS handshake of <code>wss</code>.</p>
+<p>An insecure test key seed derives a connection’s ephemeral keys from a known value, so
+anyone who knows it reads the session; it exists only for tests and golden bytes. The
+socket listeners and connects refuse options and connections that use it.</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>C#</th>
+<th>Swift</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>declaration</td>
+<td><code>GesNetwork</code> from <code>GesSchemaSet.Network(name)</code></td>
+<td><code>GesNetwork</code> from <code>GesSchemaSet.network(_:)</code></td>
+</tr>
+<tr>
+<td>bound declaration</td>
+<td><code>GesBoundNetwork</code></td>
+<td><code>GesBoundNetwork</code></td>
+</tr>
+<tr>
+<td>connection</td>
+<td><code>GesNetworkConnection</code></td>
+<td><code>GesNetworkConnection</code></td>
+</tr>
+<tr>
+<td>options</td>
+<td><code>GesNetworkOptions</code></td>
+<td><code>GesNetworkOptions</code></td>
+</tr>
+<tr>
+<td>event</td>
+<td><code>GesNetworkEvent</code>, a <code>ref struct</code> with a borrowed payload</td>
+<td><code>GesNetworkEvent</code>, a struct with a borrowed payload</td>
+</tr>
+<tr>
+<td>send and publish status</td>
+<td><code>GesNetworkSendStatus</code></td>
+<td><code>GesNetworkSendStatus</code></td>
+</tr>
+<tr>
+<td>codes</td>
+<td><code>GesNetworkCodes</code></td>
+<td><code>GesNetworkCodes</code></td>
+</tr>
+<tr>
+<td>client and server end</td>
+<td><code>GesNetworkClientEnd</code>, <code>GesNetworkServerEnd</code></td>
+<td><code>GesNetworkClientEnd</code>, <code>GesNetworkServerEnd</code></td>
+</tr>
+<tr>
+<td>end event</td>
+<td><code>GesNetworkEndEvent</code>, a <code>ref struct</code> with a borrowed payload</td>
+<td><code>GesNetworkEndEvent</code>, a struct with a borrowed payload</td>
+</tr>
+<tr>
+<td>in-process pair</td>
+<td><code>GesNetworkPair</code></td>
+<td><code>GesNetworkPair</code></td>
+</tr>
+<tr>
+<td>simulated network</td>
+<td><code>GesNetworkSimulator</code></td>
+<td><code>GesNetworkSimulator</code></td>
+</tr>
+<tr>
+<td>address validation</td>
+<td><code>GesNetworkCookies</code></td>
+<td><code>GesNetworkCookies</code></td>
+</tr>
+<tr>
+<td>server key</td>
+<td><code>GesNetworkKey</code></td>
+<td><code>GesNetworkKey</code></td>
+</tr>
+<tr>
+<td>security level</td>
+<td><code>GesNetworkSecurity</code></td>
+<td><code>GesNetworkSecurity</code></td>
+</tr>
+</tbody>
+</table>
+<p>The options hold the <a href="#security-levels">encryption</a> settings: the client’s security,
+the server’s security and the insecure test seed for <a href="#ephemeral-keys">ephemeral keys</a>.
+The default options set no security; a connection or listener needs the security of its
+side, and the other side’s is ignored. A connection reports the level it reached.</p>
+<blockquote>
+<p><strong>Since: 0.6.0</strong> — presets</p>
+</blockquote>
+<p>Presets create options with a transport and the security of one side; the other values
+keep their defaults:</p>
+<table>
+<thead>
+<tr>
+<th>Preset</th>
+<th>Transport</th>
+<th>Security</th>
+<th>Other values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>in process</td>
+<td>message</td>
+<td>none on both sides</td>
+<td>packets of 65535 bytes, no acknowledgement delay, no timeout, no keepalive</td>
+</tr>
+<tr>
+<td>message, for example WebSocket</td>
+<td>message</td>
+<td>the given client or server security</td>
+<td></td>
+</tr>
+<tr>
+<td>stream, for example TCP</td>
+<td>stream</td>
+<td>the given client or server security</td>
+<td></td>
+</tr>
+<tr>
+<td>datagram, for example UDP</td>
+<td>datagram</td>
+<td>the given client or server security</td>
+<td></td>
+</tr>
+<tr>
+<td>A server key</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>is generated from the system’s random generator or created from a private key of 32</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>bytes; it exposes its public key.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>A host drives a connection like this:</p>
+<ol>
+<li>Create a client connection with the bound network, the token and the current time, or
+a server connection with the bound network and the current time.</li>
+<li>Pass every received packet or stream chunk with the current time; on a stream or message
+transport leave them unread while the connection takes no further bytes.</li>
+<li>Take events until none is left; accept or refuse a <code>connecting</code> client.</li>
+<li>Send and publish, directly or through the <a href="/docs/reference/schemas/#network-constants">typed functions</a>
+of generated code, and on the server subscribe and unsubscribe topics.</li>
+<li>Take packets to transmit into a buffer until none is left. The buffer holds at least
+1200 bytes; a smaller one is a usage error.</li>
+<li>Call <code>advance</code> with the current time no later than the connection’s next deadline,
+then take packets again.</li>
+</ol>
+<h3 id="ends">Ends</h3>
+<p class="ges-since"><strong>Since: 0.6.0</strong></p>
+<p>An end owns connections and their transports and drives them from one call, so a host
+does not write the drive loop of <a href="#api">API</a> itself. A client end holds one connection; a
+server end holds an acceptor and every accepted connection. Ends are synchronous and
+threadless in the core; the socket packages add connectors, acceptors and a
+<a href="#waiting">wait</a>.</p>
+<p><strong>Creating.</strong> A client end takes the bound network, a connector, the options and a token;
+a server end takes the bound network and an acceptor. Both take a
+<a href="/docs/reference/host-runtime/">clock</a>. A connector opens a client transport: in-process as one side of a
+<a href="#pairs">pair</a> or, in the socket packages, TCP, WebSocket or UDP with host and port. An
+acceptor hands over the transports of new clients. Creating starts no I/O; the first
+<code>poll</code> connects or accepts.</p>
+<p><strong>Polling.</strong> <code>poll</code> reads the current time from the end’s clock and then, in this order,
+accepts waiting clients, passes every received packet to its connection, takes events
+until none is left and hands each to the caller’s handler, and transmits every due
+packet. A handler may send, publish, open and close ticks and close connections; the
+packets this produces leave in the same <code>poll</code>. A handler that polls its own end again is
+a usage error. When the handler closes the connection whose event it handles, or refuses
+the client, the end skips that connection’s remaining events of the <code>poll</code> up to its
+disconnect event. <code>poll</code> never blocks and never calls the handler outside its own call.
+The next deadline of an end is the earliest time at which a <code>poll</code> has work without new
+input: the current time before the first <code>poll</code> and after a send, publish, tick close or
+close outside a <code>poll</code>, else the earliest deadline of its connections.</p>
+<p><strong>Sending before the handshake.</strong> A client end keeps sends, publishes and ticks made
+before <code>connected</code> and passes them to the connection when it connects: reliable and bulk
+messages in order, the newest state of each latest route and the newest closed tick. The
+kept reliable bytes obey the connection’s send queue limit, and the kept transfers its
+limits for queued transfers against this side’s transfer limit, each counted uncompressed
+with its header; a send that does not fit reports <code>queueFull</code>. A kept transfer beyond the
+transfer limit the server announces keeps its place in the transfer ids and is cancelled
+at once with <code>network.transferTooLarge</code>. Closing drops what is kept.</p>
+<p><strong>Server.</strong> The server end accepts a <code>connecting</code> client after its event unless the
+handler accepted or refused it, also when the handler throws. Each client gets a stable end-local id, which events carry and
+per-client calls take; an unknown id is a usage error. By default the server end
+subscribes every connected client to every topic it publishes; the host can turn that
+off when it creates the end and subscribes and unsubscribes topics per client at any
+time. <code>publish</code> and ticks reach every connected, subscribed client; <code>send</code> without a
+client reaches every connected client. Both report <code>messageTooLarge</code> when the payload
+exceeds the limits of some client, and then no client receives it, else <code>queueFull</code> when the queue of some client is full, and then the others received it. The server end keeps the last published state of each latest topic: a
+tick that includes a topic gives a client that has not received that state the state
+itself, so a client that joined later holds the complete world after its first tick. A
+client that connects while a tick is open joins it. A closed client leaves the end after
+its <code>clientDisconnected</code> event.</p>
+<p><strong>Events.</strong> An end reports the events of its connections, named by side, and adds
+<code>received</code>:</p>
+<table>
+<thead>
+<tr>
+<th>End event</th>
+<th>Data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>connecting</code></td>
+<td>server: client id and token</td>
+</tr>
+<tr>
+<td><code>connected</code></td>
+<td>client: the reached security level</td>
+</tr>
+<tr>
+<td><code>clientConnected</code></td>
+<td>server: client id and the reached security level</td>
+</tr>
+<tr>
+<td><code>disconnected</code></td>
+<td>client: code, detail and whether the peer closed</td>
+</tr>
+<tr>
+<td><code>clientDisconnected</code></td>
+<td>server: client id, code, detail and whether the peer closed</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>client id on the server; route index and payload, borrowed until the handler returns</td>
+</tr>
+<tr>
+<td><code>tick</code></td>
+<td>client id on the server; tick number</td>
+</tr>
+<tr>
+<td><code>transferProgress</code>, <code>transferCancelled</code></td>
+<td>client id on the server; as the connection’s events</td>
+</tr>
+<tr>
+<td><code>received</code></td>
+<td>the last event of every <code>poll</code> that reported at least one <code>message</code> or <code>tick</code></td>
+</tr>
+</tbody>
+</table>
+<p>After <code>received</code> every state of the latest complete tick and every message of the <code>poll</code>
+has been reported, so a host commits its view there.</p>
+<p><strong>Closing.</strong> <code>close</code> closes the client’s connection, one client’s or every client’s with
+a detail; the <code>close</code> packets leave with the next <code>poll</code>. Releasing an end releases its
+transports once the packets already handed to them have left; a released end cannot be
+polled.</p>
+<p><strong>Isolation.</strong> An end belongs to one caller at a time, like a Host, and is not
+thread-affine. Swift ends are not <code>Sendable</code>; <code>poll</code> takes a non-escaping closure, which
+inherits the caller’s isolation, so an end lives inside a <code>@MainActor</code> type or any actor
+and its handler reads that actor’s state directly. C#
+<code>Poll&lt;THandler&gt;(ref THandler handler)</code> calls a struct handler without allocating; a class
+handler works through the same interface.</p>
+<h3 id="waiting">Waiting</h3>
+<p class="ges-since"><strong>Since: 0.6.0</strong></p>
+<p>The socket packages wait on an end until one of its sockets has input or its next
+deadline passes, whichever comes first, without polling: C# <code>WaitAsync</code> and a blocking
+<code>Wait</code>, Swift <code>wait() async</code>. The core has no wait.</p>
+<h3 id="pairs">Pairs</h3>
+<p class="ges-since"><strong>Since: 0.6.0</strong></p>
+<p>A pair is a client end and a server end connected in one process without sockets, by the
+message transport with the in-process options unless the host gives others. Its two
+modes:</p>
+<ul>
+<li><strong>realtime</strong> uses the system clock; packets reach the other end at its next <code>poll</code>, and
+the ends connect while they poll.</li>
+<li><strong>synchronous</strong> uses one virtual clock starting at 0 that only the pair moves. Creating
+the pair runs the handshake; the server accepts the client without a <code>connecting</code>
+event, and both ends report their connected events on their first <code>poll</code>. Every send,
+publish, tick close, close and <code>poll</code> on either end runs both connections until no
+packet moves, so what one end sends is reported by the other end’s next <code>poll</code>.
+Acknowledgements are not delayed: the pair runs with an acknowledgement delay of 0. Timers — keepalive, timeout and resending — fire only
+when the host advances the pair’s clock; the handshake, sending and delivery never need
+it. Advancing a realtime pair, or a pair while one of its ends is polled, is a usage
+error.</li>
+</ul>
+<p>In both modes a packet waits in the pair while the receiving connection takes no further
+bytes, in a synchronous pair until the host advances the clock far enough to refill the
+<a href="#limits">frame bucket</a>. While 64 packets wait for it, the sending connection keeps its
+further packets, as with a socket whose peer stops reading; only the close packet of a
+closed connection still leaves.</p>
+<h3 id="simulated-network">Simulated network</h3>
+<p>The simulated network connects a client and a server connection in one process with
+seeded latency, deterministic in every port. It draws from the
+<a href="/docs/reference/semantics/determinism/">random generator</a> created from its seed. Each packet is
+delayed by the base latency plus a draw from 0 to the jitter inclusive, but never
+arrives before a packet sent earlier in the same direction, so order is preserved. Equal
+seeds, options and inputs give equal packets, events and times. A packet for a stream or
+message connection that takes no further bytes arrives at the time its frame bucket holds
+a frame again, whatever other deadlines the connection has, and the packets behind it
+wait too. While 64 packets are
+under way to such a connection, the sender keeps its further packets as in a
+<a href="#pairs">pair</a>; a deadline it has reached that needs a packet, such as a keepalive, waits
+with them until the connection takes bytes again.</p>
+<p>Between datagram connections the simulated network may also lose, duplicate and reorder
+packets, with a loss and a duplicate rate in per mille, 0 to 1000, and reordering on or
+off. For each packet it draws the delay; with a loss rate above 0 a number from 0 to 999
+that loses the packet when below the rate; then, for a packet not lost and a duplicate
+rate above 0, a number from 0 to 999 that adds a copy when below the rate, and the copy’s
+delay. With reordering a packet or copy arrives after its own delay, not held behind
+packets sent earlier; packets due at the same time arrive in the order sent, a packet
+before its copy. Loss, duplicates and reordering require both connections to use the
+datagram transport.</p>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/Network.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/learn/network/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Connect a client and a server</span></span></a><a href="/docs/reference/program-model/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Portable program model specification</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.BnfRB8VC.js"></script></div></div></main></div></div></div></div></body></html>

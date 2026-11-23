@@ -1,13 +1,13 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import { createWorkerClient } from './worker-client.mjs?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84';
-import { attachSearch } from './search.mjs?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84';
-import { attachDump } from './dump.mjs?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84';
-import { attachEditor } from './editor.mjs?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84';
-import { attachGameLibrary } from './games.mjs?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84';
-import { showLoading } from './loading.mjs?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84';
-import { createCardActionPicker } from './card-actions.mjs?v=d4897fdfbcea9939c7412eeceb1af1c6f0fb51ac4a6820821ecea5e387615a84';
+import { createWorkerClient } from './worker-client.mjs?v=f23769f9c321b0c5e7406213df624610d656f94052153e10e974142f5083e818';
+import { attachSearch } from './search.mjs?v=f23769f9c321b0c5e7406213df624610d656f94052153e10e974142f5083e818';
+import { attachDump } from './dump.mjs?v=f23769f9c321b0c5e7406213df624610d656f94052153e10e974142f5083e818';
+import { attachEditor } from './editor.mjs?v=f23769f9c321b0c5e7406213df624610d656f94052153e10e974142f5083e818';
+import { attachGameLibrary } from './games.mjs?v=f23769f9c321b0c5e7406213df624610d656f94052153e10e974142f5083e818';
+import { showLoading } from './loading.mjs?v=f23769f9c321b0c5e7406213df624610d656f94052153e10e974142f5083e818';
+import { createCardActionPicker } from './card-actions.mjs?v=f23769f9c321b0c5e7406213df624610d656f94052153e10e974142f5083e818';
 
 const byId = (id) => document.getElementById(id);
 const cardActions = createCardActionPicker(act);

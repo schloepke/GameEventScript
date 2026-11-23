@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct GesNetworkEndEvent | Game Event Script C# API — Unreleased (47afc43b2fc1) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct GesNetworkEndEvent | Game Event Script C# API — Unreleased (47afc43b2fc1) ">
+      
+      <meta name="description" content="One end event. The payload is borrowed and valid until the handler returns.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Network.GesNetworkEndEvent">
+
+
+
+  <h1 id="GameEventScript_Network_GesNetworkEndEvent" data-uid="GameEventScript.Network.GesNetworkEndEvent" class="text-break">
+Struct GesNetworkEndEvent  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Network.html">Network</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Network.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>One end event. The payload is borrowed and valid until the handler returns.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly ref struct GesNetworkEndEvent</code></pre>
+  </div>
+
+
+
+
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_ByPeer_" data-uid="GameEventScript.Network.GesNetworkEndEvent.ByPeer*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_ByPeer" data-uid="GameEventScript.Network.GesNetworkEndEvent.ByPeer">
+  ByPeer
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the peer closed the connection of a disconnect or cancelled the transfer of a cancelled event.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool ByPeer { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_Bytes_" data-uid="GameEventScript.Network.GesNetworkEndEvent.Bytes*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_Bytes" data-uid="GameEventScript.Network.GesNetworkEndEvent.Bytes">
+  Bytes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the bytes of a progress event; 0 for other events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long Bytes { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_Client_" data-uid="GameEventScript.Network.GesNetworkEndEvent.Client*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_Client" data-uid="GameEventScript.Network.GesNetworkEndEvent.Client">
+  Client
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the end-local id of the client on a server end; -1 on a client end and for <a class="xref" href="GameEventScript.Network.GesNetworkEndEventKind.html#GameEventScript_Network_GesNetworkEndEventKind_Received">Received</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Client { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_Code_" data-uid="GameEventScript.Network.GesNetworkEndEvent.Code*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_Code" data-uid="GameEventScript.Network.GesNetworkEndEvent.Code">
+  Code
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the close code of a disconnect or the code of a cancelled transfer; empty for other events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Code { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_Detail_" data-uid="GameEventScript.Network.GesNetworkEndEvent.Detail*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_Detail" data-uid="GameEventScript.Network.GesNetworkEndEvent.Detail">
+  Detail
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the close detail of a disconnect; empty for other events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Detail { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_Kind_" data-uid="GameEventScript.Network.GesNetworkEndEvent.Kind*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_Kind" data-uid="GameEventScript.Network.GesNetworkEndEvent.Kind">
+  Kind
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the event kind.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkEndEventKind Kind { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkEndEventKind.html">GesNetworkEndEventKind</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_Payload_" data-uid="GameEventScript.Network.GesNetworkEndEvent.Payload*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_Payload" data-uid="GameEventScript.Network.GesNetworkEndEvent.Payload">
+  Payload
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the message payload or the client's token; empty for other events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ReadOnlySpan&lt;byte&gt; Payload { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_Route_" data-uid="GameEventScript.Network.GesNetworkEndEvent.Route*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_Route" data-uid="GameEventScript.Network.GesNetworkEndEvent.Route">
+  Route
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the route index of a message or transfer event; -1 for other events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Route { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_Security_" data-uid="GameEventScript.Network.GesNetworkEndEvent.Security*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_Security" data-uid="GameEventScript.Network.GesNetworkEndEvent.Security">
+  Security
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the reached security of a connect event; <a class="xref" href="GameEventScript.Network.GesNetworkSecurity.html#GameEventScript_Network_GesNetworkSecurity_None">None</a> for other events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkSecurity Security { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkSecurity.html">GesNetworkSecurity</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_TickNumber_" data-uid="GameEventScript.Network.GesNetworkEndEvent.TickNumber*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_TickNumber" data-uid="GameEventScript.Network.GesNetworkEndEvent.TickNumber">
+  TickNumber
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the number, 0 to 65535, of a tick event; -1 for other events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int TickNumber { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_Total_" data-uid="GameEventScript.Network.GesNetworkEndEvent.Total*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_Total" data-uid="GameEventScript.Network.GesNetworkEndEvent.Total">
+  Total
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the encoded length of a progress event's transfer; 0 for other events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long Total { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkEndEvent_TransferId_" data-uid="GameEventScript.Network.GesNetworkEndEvent.TransferId*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkEndEvent_TransferId" data-uid="GameEventScript.Network.GesNetworkEndEvent.TransferId">
+  TransferId
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the transfer id of a transfer event or of a message on a bulk route; -1 for other events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int TransferId { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (47afc43b2fc1)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

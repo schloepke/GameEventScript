@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
+      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (47afc43b2fc1) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
+      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (47afc43b2fc1) ">
       
       
       <link rel="icon" href="../assets/logo.svg">
@@ -102,6 +102,11 @@ event-driven execution between components, scripts, and handlers.</p>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBinaryFormat.html">GesBinaryFormat</a></dt>
       <dd><p>Fixed constants of the canonical little-endian <code>.gesb</code> V1 container framing.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesBoundNetwork.html">GesBoundNetwork</a></dt>
+      <dd><p>A network bound to parameter values. Immutable; it can be shared between threads and connections.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -289,6 +294,16 @@ and therefore preserve source order.</p>
       <dd><p>Represents a message signature used in GameEventScript to uniquely define the structure
 of a message, including its name and ordered parameter list. This class provides utilities
 to normalize, validate, and match message signatures accurately.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesNetwork.html">GesNetwork</a></dt>
+      <dd><p>A network declaration: the routes of one client–server pair. Immutable; it can be bound any number of times.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesNetworkRoute.html">GesNetworkRoute</a></dt>
+      <dd><p>One route of a network. Immutable.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -488,6 +503,19 @@ logical UTF-8 source, not UTF-16 code units.</p>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSubscription.html">GesSubscription</a></dt>
       <dd><p>Represents one host-local native message subscription.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSystemClock.html">GesSystemClock</a></dt>
+      <dd><p>The system monotonic clock, measured from the moment the instance was created. Reading allocates nothing and is
+unaffected by changes of the wall-clock time. An instance may be shared between hosts and network ends that use one
+timeline.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesVirtualClock.html">GesVirtualClock</a></dt>
+      <dd><p>A virtual clock for deterministic simulation and tests: its time changes only through <a class="xref" href="GameEventScript.Api.GesVirtualClock.html#GameEventScript_Api_GesVirtualClock_Advance_System_Int64_">Advance(long)</a>. Not
+thread-safe; one caller at a time, like the host or end that reads it.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -693,7 +721,7 @@ Interfaces
 </h3>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.IGesClock.html">IGesClock</a></dt>
-      <dd><p>Supplies monotonic elapsed time to a serial host. Implementations must never move backwards.</p>
+      <dd><p>Supplies monotonic elapsed time to a serial host or a network end. Implementations must never move backwards.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -826,6 +854,21 @@ size-sensitive builds opt out with <a class="xref" href="GameEventScript.Api.Ges
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesNetworkClass.html">GesNetworkClass</a></dt>
+      <dd><p>The delivery class of a network route.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesNetworkSide.html">GesNetworkSide</a></dt>
+      <dd><p>The side a network route starts from.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesNetworkVerb.html">GesNetworkVerb</a></dt>
+      <dd><p>How a network route carries its root.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesProfilePhase.html">GesProfilePhase</a></dt>
       <dd><p>Non-overlapping regions of an instrumented VM loop; timing policies belong to the embedding.</p>
 </dd>
@@ -897,7 +940,7 @@ are invalid; <code>0x8000</code>–<code>0xFFFD</code> are free for private or e
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (ecf9e2c87030)
+          Game Event Script C# API — Unreleased (47afc43b2fc1)
         </div>
       </div>
     </footer>

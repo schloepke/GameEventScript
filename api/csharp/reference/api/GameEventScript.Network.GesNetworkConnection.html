@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GesNetworkConnection | Game Event Script C# API — Unreleased (47afc43b2fc1) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GesNetworkConnection | Game Event Script C# API — Unreleased (47afc43b2fc1) ">
+      
+      <meta name="description" content="One side of a network session: a synchronous state machine without threads, sockets or clocks. The host passes received bytes and the current time, takes events and takes packets to transmit. Times are microseconds of a monotonic clock chosen by the host. Not thread-safe; one caller at a time.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Network.GesNetworkConnection">
+
+
+
+  <h1 id="GameEventScript_Network_GesNetworkConnection" data-uid="GameEventScript.Network.GesNetworkConnection" class="text-break">
+Class GesNetworkConnection  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Network.html">Network</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Network.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>One side of a network session: a synchronous state machine without threads, sockets or clocks. The host passes
+received bytes and the current time, takes events and takes packets to transmit. Times are microseconds of a
+monotonic clock chosen by the host. Not thread-safe; one caller at a time.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class GesNetworkConnection</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GesNetworkConnection</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_CanReceive_" data-uid="GameEventScript.Network.GesNetworkConnection.CanReceive*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_CanReceive" data-uid="GameEventScript.Network.GesNetworkConnection.CanReceive">
+  CanReceive
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_Receive_System_ReadOnlySpan_System_Byte__System_Int64_">Receive(ReadOnlySpan&lt;byte&gt;, long)</a> takes further bytes. On a stream or message transport it is false while the
+frame bucket holds less than one frame, after the frames received drew it down; leave the bytes unread until
+<a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_Advance_System_Int64_">Advance(long)</a> refilled the bucket, which <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_NextDeadline">NextDeadline</a> includes. Always true on a datagram
+transport.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool CanReceive { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_IsClient_" data-uid="GameEventScript.Network.GesNetworkConnection.IsClient*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_IsClient" data-uid="GameEventScript.Network.GesNetworkConnection.IsClient">
+  IsClient
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether this is the client side.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsClient { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_LastTransferId_" data-uid="GameEventScript.Network.GesNetworkConnection.LastTransferId*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_LastTransferId" data-uid="GameEventScript.Network.GesNetworkConnection.LastTransferId">
+  LastTransferId
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the id of the transfer the latest successful <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_Send_System_Int32_System_ReadOnlySpan_System_Byte__">Send(int, ReadOnlySpan&lt;byte&gt;)</a> on a bulk route queued; -1 before the first.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int LastTransferId { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_MaxPacketBytes_" data-uid="GameEventScript.Network.GesNetworkConnection.MaxPacketBytes*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_MaxPacketBytes" data-uid="GameEventScript.Network.GesNetworkConnection.MaxPacketBytes">
+  MaxPacketBytes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the largest packet this side receives and sends in bytes.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int MaxPacketBytes { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Network_" data-uid="GameEventScript.Network.GesNetworkConnection.Network*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Network" data-uid="GameEventScript.Network.GesNetworkConnection.Network">
+  Network
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the bound network of the session.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesBoundNetwork Network { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesBoundNetwork.html">GesBoundNetwork</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_NextDeadline_" data-uid="GameEventScript.Network.GesNetworkConnection.NextDeadline*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_NextDeadline" data-uid="GameEventScript.Network.GesNetworkConnection.NextDeadline">
+  NextDeadline
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the latest time at which <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_Advance_System_Int64_">Advance(long)</a> must be called: the timeout, keepalive, acknowledgement,
+budget refill or, while <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_CanReceive">CanReceive</a> is false, the frame refill, and on a datagram transport also the repetition of <code>hello</code>, loss detection or probe timeout;
+<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64.maxvalue">MaxValue</a> once closed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long NextDeadline { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Now_" data-uid="GameEventScript.Network.GesNetworkConnection.Now*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Now" data-uid="GameEventScript.Network.GesNetworkConnection.Now">
+  Now
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the latest time passed to the connection in microseconds.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long Now { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_PendingReceiveBytes_" data-uid="GameEventScript.Network.GesNetworkConnection.PendingReceiveBytes*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_PendingReceiveBytes" data-uid="GameEventScript.Network.GesNetworkConnection.PendingReceiveBytes">
+  PendingReceiveBytes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the received bytes of incomplete messages and transfers and of undelivered events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long PendingReceiveBytes { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_QueuedSendBytes_" data-uid="GameEventScript.Network.GesNetworkConnection.QueuedSendBytes*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_QueuedSendBytes" data-uid="GameEventScript.Network.GesNetworkConnection.QueuedSendBytes">
+  QueuedSendBytes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the queued reliable and bulk bytes not yet completely sent, on a datagram transport not yet completely
+acknowledged.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long QueuedSendBytes { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_RoundTripMicroseconds_" data-uid="GameEventScript.Network.GesNetworkConnection.RoundTripMicroseconds*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_RoundTripMicroseconds" data-uid="GameEventScript.Network.GesNetworkConnection.RoundTripMicroseconds">
+  RoundTripMicroseconds
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the smoothed round-trip time in microseconds, or -1 before the first sample.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long RoundTripMicroseconds { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Security_" data-uid="GameEventScript.Network.GesNetworkConnection.Security*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Security" data-uid="GameEventScript.Network.GesNetworkConnection.Security">
+  Security
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the security level the session reached: <a class="xref" href="GameEventScript.Network.GesNetworkSecurity.html#GameEventScript_Network_GesNetworkSecurity_None">None</a> until it is connected; a
+server reports <a class="xref" href="GameEventScript.Network.GesNetworkSecurity.html#GameEventScript_Network_GesNetworkSecurity_Encrypted">Encrypted</a> for every encrypted session.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkSecurity Security { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkSecurity.html">GesNetworkSecurity</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_SendBudgetBytesPerSecond_" data-uid="GameEventScript.Network.GesNetworkConnection.SendBudgetBytesPerSecond*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_SendBudgetBytesPerSecond" data-uid="GameEventScript.Network.GesNetworkConnection.SendBudgetBytesPerSecond">
+  SendBudgetBytesPerSecond
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the send budget in bytes per second; 0 for none. The host may change it at any time, for example
+from <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_RoundTripMicroseconds">RoundTripMicroseconds</a>; this is the congestion hook.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long SendBudgetBytesPerSecond { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentoutofrangeexception">ArgumentOutOfRangeException</a></dt>
+    <dd><p>The value is negative or above 1073741824.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_State_" data-uid="GameEventScript.Network.GesNetworkConnection.State*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_State" data-uid="GameEventScript.Network.GesNetworkConnection.State">
+  State
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the connection state.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkState State { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkState.html">GesNetworkState</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Transport_" data-uid="GameEventScript.Network.GesNetworkConnection.Transport*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Transport" data-uid="GameEventScript.Network.GesNetworkConnection.Transport">
+  Transport
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the transport the packets of <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_Transmit_System_Span_System_Byte__">Transmit(Span&lt;byte&gt;)</a> and <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_Receive_System_ReadOnlySpan_System_Byte__System_Int64_">Receive(ReadOnlySpan&lt;byte&gt;, long)</a> are framed for.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkTransport Transport { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkTransport.html">GesNetworkTransport</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_UsesInsecureTestKeys_" data-uid="GameEventScript.Network.GesNetworkConnection.UsesInsecureTestKeys*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_UsesInsecureTestKeys" data-uid="GameEventScript.Network.GesNetworkConnection.UsesInsecureTestKeys">
+  UsesInsecureTestKeys
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the connection derives its ephemeral keys from <a class="xref" href="GameEventScript.Network.GesNetworkOptions.html#GameEventScript_Network_GesNetworkOptions_InsecureTestKeySeed">InsecureTestKeySeed</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool UsesInsecureTestKeys { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Accept_" data-uid="GameEventScript.Network.GesNetworkConnection.Accept*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Accept" data-uid="GameEventScript.Network.GesNetworkConnection.Accept">
+  Accept()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Accepts the client of a <code>connecting</code> event: the server sends <code>welcome</code> and reports <code>connected</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Accept()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>The connection is not in state <a class="xref" href="GameEventScript.Network.GesNetworkState.html#GameEventScript_Network_GesNetworkState_AwaitAccept">AwaitAccept</a>.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Advance_" data-uid="GameEventScript.Network.GesNetworkConnection.Advance*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Advance_System_Int64_" data-uid="GameEventScript.Network.GesNetworkConnection.Advance(System.Int64)">
+  Advance(long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Moves the connection to the current time and closes it with <code>network.timeout</code> when the peer stayed silent.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Advance(long now)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>now</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The current time in microseconds, not earlier than <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_Now">Now</a>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentoutofrangeexception">ArgumentOutOfRangeException</a></dt>
+    <dd><p><code class="paramref">now</code> is earlier than <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_Now">Now</a>.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_BeginTick_" data-uid="GameEventScript.Network.GesNetworkConnection.BeginTick*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_BeginTick" data-uid="GameEventScript.Network.GesNetworkConnection.BeginTick">
+  BeginTick()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Opens a tick: until <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_EndTick">EndTick()</a>, every publish on a latest topic this side publishes makes the state a
+member of the tick instead of sending it alone. Reliable topics, sends and transfers are never members.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void BeginTick()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>A tick is open already.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Cancel_" data-uid="GameEventScript.Network.GesNetworkConnection.Cancel*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Cancel_System_Int32_System_Int32_System_String_" data-uid="GameEventScript.Network.GesNetworkConnection.Cancel(System.Int32,System.Int32,System.String)">
+  Cancel(int, int, string?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Cancels a transfer this side sends, as long as not all of its bytes were sent once. The peer is told with a
+cancel frame, also when the transfer was not started, and the connection reports
+<a class="xref" href="GameEventScript.Network.GesNetworkEventKind.html#GameEventScript_Network_GesNetworkEventKind_TransferCancelled">TransferCancelled</a>; the session continues.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Cancel(int route, int transferId, string? code = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>route</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The route index of a bulk <code>sends</code> route of this side.</p>
+</dd>
+    <dt><code>transferId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The id <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_LastTransferId">LastTransferId</a> gave the transfer.</p>
+</dd>
+    <dt><code>code</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The code the peer receives, 1 to 64 characters from <code>!</code> to <code>~</code>; <code>network.transferCancelled</code> when omitted.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True when the transfer was cancelled; false when the connection is not connected or the transfer is unknown or sent completely.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The route is no bulk route this side sends, or the code is invalid.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Close_" data-uid="GameEventScript.Network.GesNetworkConnection.Close*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Close_System_String_" data-uid="GameEventScript.Network.GesNetworkConnection.Close(System.String)">
+  Close(string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Closes the connection with <code>network.closed</code>, drops queued messages and queues a <code>close</code> packet. Does nothing once closed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Close(string detail)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>detail</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The detail sent to the peer, shortened to 512 UTF-8 bytes.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_CreateClient_" data-uid="GameEventScript.Network.GesNetworkConnection.CreateClient*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_CreateClient_GameEventScript_Api_GesBoundNetwork_System_ReadOnlySpan_System_Byte__System_Int64_GameEventScript_Network_GesNetworkOptions_" data-uid="GameEventScript.Network.GesNetworkConnection.CreateClient(GameEventScript.Api.GesBoundNetwork,System.ReadOnlySpan{System.Byte},System.Int64,GameEventScript.Network.GesNetworkOptions)">
+  CreateClient(GesBoundNetwork, ReadOnlySpan&lt;byte&gt;, long, GesNetworkOptions)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the client side of a session, which sends <code>hello</code> on its first transmission.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkConnection CreateClient(GesBoundNetwork network, ReadOnlySpan&lt;byte&gt; token, long now, GesNetworkOptions options)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>network</code> <a class="xref" href="GameEventScript.Api.GesBoundNetwork.html">GesBoundNetwork</a></dt>
+    <dd><p>The bound network both sides share.</p>
+</dd>
+    <dt><code>token</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The token the server's host receives with <code>connecting</code>, at most 512 bytes.</p>
+</dd>
+    <dt><code>now</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The current time in microseconds.</p>
+</dd>
+    <dt><code>options</code> <a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>The limits, transport and <a class="xref" href="GameEventScript.Network.GesNetworkOptions.html#GameEventScript_Network_GesNetworkOptions_ClientSecurity">ClientSecurity</a>.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkConnection.html">GesNetworkConnection</a></dt>
+    <dd><p>The new connection in state <a class="xref" href="GameEventScript.Network.GesNetworkState.html#GameEventScript_Network_GesNetworkState_Hello">Hello</a>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">network</code> or <code class="paramref">options</code> is null.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The token or an option is out of range, or the client security is unset.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_CreateServer_" data-uid="GameEventScript.Network.GesNetworkConnection.CreateServer*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_CreateServer_GameEventScript_Api_GesBoundNetwork_System_Int64_GameEventScript_Network_GesNetworkOptions_" data-uid="GameEventScript.Network.GesNetworkConnection.CreateServer(GameEventScript.Api.GesBoundNetwork,System.Int64,GameEventScript.Network.GesNetworkOptions)">
+  CreateServer(GesBoundNetwork, long, GesNetworkOptions)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates the server side of a session for one client.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkConnection CreateServer(GesBoundNetwork network, long now, GesNetworkOptions options)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>network</code> <a class="xref" href="GameEventScript.Api.GesBoundNetwork.html">GesBoundNetwork</a></dt>
+    <dd><p>The bound network both sides share.</p>
+</dd>
+    <dt><code>now</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The current time in microseconds.</p>
+</dd>
+    <dt><code>options</code> <a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>The limits, transport and <a class="xref" href="GameEventScript.Network.GesNetworkOptions.html#GameEventScript_Network_GesNetworkOptions_ServerSecurity">ServerSecurity</a>.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkConnection.html">GesNetworkConnection</a></dt>
+    <dd><p>The new connection in state <a class="xref" href="GameEventScript.Network.GesNetworkState.html#GameEventScript_Network_GesNetworkState_AwaitHello">AwaitHello</a>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">network</code> or <code class="paramref">options</code> is null.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>An option is out of range, or the server security is unset.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_EndTick_" data-uid="GameEventScript.Network.GesNetworkConnection.EndTick*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_EndTick" data-uid="GameEventScript.Network.GesNetworkConnection.EndTick">
+  EndTick()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Closes the open tick. Its members are sent once no earlier tick is in transmission; an empty tick sends nothing.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkSendStatus EndTick()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkSendStatus.html">GesNetworkSendStatus</a></dt>
+    <dd><p><a class="xref" href="GameEventScript.Network.GesNetworkSendStatus.html#GameEventScript_Network_GesNetworkSendStatus_NotConnected">NotConnected</a> when the connection is not connected, which drops the tick; otherwise <a class="xref" href="GameEventScript.Network.GesNetworkSendStatus.html#GameEventScript_Network_GesNetworkSendStatus_Queued">Queued</a>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>No tick is open.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Include_" data-uid="GameEventScript.Network.GesNetworkConnection.Include*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Include_System_Int32_" data-uid="GameEventScript.Network.GesNetworkConnection.Include(System.Int32)">
+  Include(int)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Makes a latest topic a member of the open tick with its last published state, without publishing it again. Does
+nothing when the topic is a member already, and on a server when the client is not subscribed to it.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Include(int route)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>route</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The route index of a latest topic this side publishes.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>No tick is open, or the topic has no published state.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The route is no latest topic this side publishes.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_NextEvent_" data-uid="GameEventScript.Network.GesNetworkConnection.NextEvent*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_NextEvent" data-uid="GameEventScript.Network.GesNetworkConnection.NextEvent">
+  NextEvent()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Takes the next event. Its payload is valid until the next event is taken.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkEvent NextEvent()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkEvent.html">GesNetworkEvent</a></dt>
+    <dd><p>The event, or one of kind <a class="xref" href="GameEventScript.Network.GesNetworkEventKind.html#GameEventScript_Network_GesNetworkEventKind_None">None</a> when none is pending.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Publish_" data-uid="GameEventScript.Network.GesNetworkConnection.Publish*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Publish_System_Int32_System_ReadOnlySpan_System_Byte__" data-uid="GameEventScript.Network.GesNetworkConnection.Publish(System.Int32,System.ReadOnlySpan{System.Byte})">
+  Publish(int, ReadOnlySpan&lt;byte&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Publishes a state on a topic this side publishes. The receiver gets the full record; on the wire it travels as a
+delta against a confirmed earlier state when that is shorter. Never throws; the status tells the result.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkSendStatus Publish(int route, ReadOnlySpan&lt;byte&gt; payload)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>route</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The route index of a <code>publishes</code> route of this side.</p>
+</dd>
+    <dt><code>payload</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The full record of the topic's schema; it is copied and not validated.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkSendStatus.html">GesNetworkSendStatus</a></dt>
+    <dd><p>The send status; <a class="xref" href="GameEventScript.Network.GesNetworkSendStatus.html#GameEventScript_Network_GesNetworkSendStatus_NotSubscribed">NotSubscribed</a> for a server topic the client is not subscribed to.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Receive_" data-uid="GameEventScript.Network.GesNetworkConnection.Receive*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Receive_System_ReadOnlySpan_System_Byte__System_Int64_" data-uid="GameEventScript.Network.GesNetworkConnection.Receive(System.ReadOnlySpan{System.Byte},System.Int64)">
+  Receive(ReadOnlySpan&lt;byte&gt;, long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Passes received bytes: one packet on a message transport, any chunk of the byte stream on a stream transport.
+The connection first advances to <code class="paramref">now</code>. Errors close the connection with their code; once
+closed, received bytes are ignored. On a stream or message transport, bytes passed while <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_CanReceive">CanReceive</a>
+is false close the connection with <code>network.rateExceeded</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Receive(ReadOnlySpan&lt;byte&gt; data, long now)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>data</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The received bytes; they are not retained.</p>
+</dd>
+    <dt><code>now</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The current time in microseconds, not earlier than <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_Now">Now</a>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentoutofrangeexception">ArgumentOutOfRangeException</a></dt>
+    <dd><p><code class="paramref">now</code> is earlier than <a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_Now">Now</a>.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Refuse_" data-uid="GameEventScript.Network.GesNetworkConnection.Refuse*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Refuse_System_String_" data-uid="GameEventScript.Network.GesNetworkConnection.Refuse(System.String)">
+  Refuse(string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Refuses the client of a <code>connecting</code> event; the connection closes with <code>network.refused</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Refuse(string detail)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>detail</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The detail sent to the client, shortened to 512 UTF-8 bytes.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>The connection is not in state <a class="xref" href="GameEventScript.Network.GesNetworkState.html#GameEventScript_Network_GesNetworkState_AwaitAccept">AwaitAccept</a>.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Send_" data-uid="GameEventScript.Network.GesNetworkConnection.Send*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Send_System_Int32_System_ReadOnlySpan_System_Byte__" data-uid="GameEventScript.Network.GesNetworkConnection.Send(System.Int32,System.ReadOnlySpan{System.Byte})">
+  Send(int, ReadOnlySpan&lt;byte&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Sends a payload on a route this side sends. On a bulk route the payload is a transfer: it is hashed, compressed
+when that is shorter and both sides allow it, and gets its id at once (<a class="xref" href="GameEventScript.Network.GesNetworkConnection.html#GameEventScript_Network_GesNetworkConnection_LastTransferId">LastTransferId</a>). Never
+throws; the status tells the result.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkSendStatus Send(int route, ReadOnlySpan&lt;byte&gt; payload)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>route</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The route index of a <code>sends</code> route of this side.</p>
+</dd>
+    <dt><code>payload</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The encoded root value; it is copied.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkSendStatus.html">GesNetworkSendStatus</a></dt>
+    <dd><p>The send status.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Subscribe_" data-uid="GameEventScript.Network.GesNetworkConnection.Subscribe*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Subscribe_System_Int32_" data-uid="GameEventScript.Network.GesNetworkConnection.Subscribe(System.Int32)">
+  Subscribe(int)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Subscribes the client to a topic the server publishes. Sends nothing by itself; does nothing when subscribed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Subscribe(int route)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>route</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The route index of a topic the server publishes.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>This is a client connection.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The route is no topic the server publishes.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Transmit_" data-uid="GameEventScript.Network.GesNetworkConnection.Transmit*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Transmit_System_Span_System_Byte__" data-uid="GameEventScript.Network.GesNetworkConnection.Transmit(System.Span{System.Byte})">
+  Transmit(Span&lt;byte&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Writes the next packet to transmit into the buffer: on a stream transport with its length prefix. Call it
+until it returns 0.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Transmit(Span&lt;byte&gt; buffer)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>buffer</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The target, at least 1200 bytes.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The number of bytes written; 0 when nothing is due.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The buffer holds fewer than 1200 bytes.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_TransportClosed_" data-uid="GameEventScript.Network.GesNetworkConnection.TransportClosed*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_TransportClosed" data-uid="GameEventScript.Network.GesNetworkConnection.TransportClosed">
+  TransportClosed()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reports the end of the transport: the connection closes with <code>network.transportClosed</code> unless it has closed already, and sends nothing more.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void TransportClosed()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkConnection_Unsubscribe_" data-uid="GameEventScript.Network.GesNetworkConnection.Unsubscribe*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkConnection_Unsubscribe_System_Int32_" data-uid="GameEventScript.Network.GesNetworkConnection.Unsubscribe(System.Int32)">
+  Unsubscribe(int)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Unsubscribes the client from a topic the server publishes: drops its waiting latest state and the ring of sent
+states. A latest state already started and queued reliable states are still sent. Does nothing when not subscribed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Unsubscribe(int route)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>route</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The route index of a topic the server publishes.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>This is a client connection.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The route is no topic the server publishes.</p>
+</dd>
+  </dl>
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (47afc43b2fc1)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

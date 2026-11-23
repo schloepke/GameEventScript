@@ -138,6 +138,20 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesBoundNetwork.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesBoundNetwork.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesBoundNetwork",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesBoundNetwork.yml\" sourcestartlinenumber=\"1\">A network bound to parameter values. Immutable; it can be shared between threads and connections.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/GameEventScript.Api.GesBoundSchema.yml",
       "output": {
         ".html": {
@@ -821,6 +835,76 @@
       "IsMRef": true,
       "Title": "GameEventScript.Api.GesMessageSignature",
       "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesMessageSignature.yml\" sourcestartlinenumber=\"1\">Represents a message signature used in GameEventScript to uniquely define the structure\nof a message, including its name and ordered parameter list. This class provides utilities\nto normalize, validate, and match message signatures accurately.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesNetwork.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesNetwork.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesNetwork",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesNetwork.yml\" sourcestartlinenumber=\"1\">A network declaration: the routes of one client–server pair. Immutable; it can be bound any number of times.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesNetworkClass.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesNetworkClass.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesNetworkClass",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesNetworkClass.yml\" sourcestartlinenumber=\"1\">The delivery class of a network route.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesNetworkRoute.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesNetworkRoute.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesNetworkRoute",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesNetworkRoute.yml\" sourcestartlinenumber=\"1\">One route of a network. Immutable.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesNetworkSide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesNetworkSide.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesNetworkSide",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesNetworkSide.yml\" sourcestartlinenumber=\"1\">The side a network route starts from.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesNetworkVerb.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesNetworkVerb.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesNetworkVerb",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesNetworkVerb.yml\" sourcestartlinenumber=\"1\">How a network route carries its root.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1664,6 +1748,20 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSystemClock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSystemClock.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSystemClock",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSystemClock.yml\" sourcestartlinenumber=\"1\">The system monotonic clock, measured from the moment the instance was created. Reading allocates nothing and is\nunaffected by changes of the wall-clock time. An instance may be shared between hosts and network ends that use one\ntimeline.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/GameEventScript.Api.GesUInt16IndexList.yml",
       "output": {
         ".html": {
@@ -1720,6 +1818,20 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesVirtualClock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesVirtualClock.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesVirtualClock",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesVirtualClock.yml\" sourcestartlinenumber=\"1\">A virtual clock for deterministic simulation and tests: its time changes only through <xref href=\"GameEventScript.Api.GesVirtualClock.Advance(System.Int64)\" data-throw-if-not-resolved=\"false\"></xref>. Not\nthread-safe; one caller at a time, like the host or end that reads it.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/GameEventScript.Api.GesWireException.yml",
       "output": {
         ".html": {
@@ -1758,7 +1870,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "GameEventScript.Api.IGesClock",
-      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGesClock.yml\" sourcestartlinenumber=\"1\">Supplies monotonic elapsed time to a serial host. Implementations must never move backwards.</p>\n"
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGesClock.yml\" sourcestartlinenumber=\"1\">Supplies monotonic elapsed time to a serial host or a network end. Implementations must never move backwards.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -2308,6 +2420,426 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkClientEnd.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkClientEnd.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkClientEnd",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkClientEnd.yml\" sourcestartlinenumber=\"1\">The client end of a session: it owns one client connection and its transport and drives both from\n<xref href=\"GameEventScript.Network.GesNetworkClientEnd.Poll%60%601(%60%600%40)\" data-throw-if-not-resolved=\"false\"></xref>. Sends, publishes and ticks made before the session is established wait in the end and\nreach the connection when it connects. One caller at a time; not thread-affine.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkClientSecurity.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkClientSecurity.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkClientSecurity",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkClientSecurity.yml\" sourcestartlinenumber=\"1\">How a client protects its session: with the server's pinned public key, encrypted with a key the server sends during\nthe handshake, or not at all. Immutable; safe to share between connections.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkCodes.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkCodes.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkCodes",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkCodes.yml\" sourcestartlinenumber=\"1\">The codes a connection closes or cancels a transfer with. Each is stable and language-neutral.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkConnection.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkConnection.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkConnection",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkConnection.yml\" sourcestartlinenumber=\"1\">One side of a network session: a synchronous state machine without threads, sockets or clocks. The host passes\nreceived bytes and the current time, takes events and takes packets to transmit. Times are microseconds of a\nmonotonic clock chosen by the host. Not thread-safe; one caller at a time.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkCookieResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkCookieResult.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkCookieResult",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkCookieResult.yml\" sourcestartlinenumber=\"1\">What a server does with a datagram from an address it does not know.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkCookies.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkCookies.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkCookies",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkCookies.yml\" sourcestartlinenumber=\"1\">The address validation gate of a datagram server: it answers a client it does not know without keeping state, so a\nforged source address gains no connection. A cookie is the time window number and an HMAC-SHA256 of it and the\naddress with a secret key; the current and the previous window are valid. Not thread-safe; one caller at a time.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkEndEvent.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkEndEvent.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkEndEvent",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkEndEvent.yml\" sourcestartlinenumber=\"1\">One end event. The payload is borrowed and valid until the handler returns.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkEndEventKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkEndEventKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkEndEventKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkEndEventKind.yml\" sourcestartlinenumber=\"1\">The kind of an end event.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkEvent.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkEvent.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkEvent",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkEvent.yml\" sourcestartlinenumber=\"1\">One connection event. The payload is borrowed from the connection and valid until the next event is taken.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkEventKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkEventKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkEventKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkEventKind.yml\" sourcestartlinenumber=\"1\">The kind of a connection event.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkKey.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkKey.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkKey",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkKey.yml\" sourcestartlinenumber=\"1\">A server's static X25519 key pair, which encrypts its sessions. The client receives the public key from outside the\nprotocol and pins it. Immutable; safe to share between connections.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkOptions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkOptions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkOptions",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkOptions.yml\" sourcestartlinenumber=\"1\">The limits and transport of one connection. Values are checked when a connection is created.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkPair.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkPair.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkPair",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkPair.yml\" sourcestartlinenumber=\"1\">A client end and a server end connected within one process, without sockets. A realtime pair runs on the system\nclock and moves packets when the ends poll. A synchronous pair runs on a virtual clock, is connected when created and\nmoves every packet before a send, publish, tick, close or poll returns: what one end sends is reported by the other\nend's next poll. In both modes a packet waits while the receiving connection takes no further bytes, in a synchronous\npair until the host advances the clock far enough to refill its frame bucket; while 64 packets wait, the sending\nconnection keeps its further packets. Both ends of a pair belong to one caller at a time.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkSecurity.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkSecurity.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkSecurity",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkSecurity.yml\" sourcestartlinenumber=\"1\">The security level of a session.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkSendStatus.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkSendStatus.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkSendStatus",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkSendStatus.yml\" sourcestartlinenumber=\"1\">The result of sending a payload on a route.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkServerEnd.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkServerEnd.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkServerEnd",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkServerEnd.yml\" sourcestartlinenumber=\"1\">The server end of a session: it accepts clients from an acceptor, owns one server connection per client and\ndrives all of them from <xref href=\"GameEventScript.Network.GesNetworkServerEnd.Poll%60%601(%60%600%40)\" data-throw-if-not-resolved=\"false\"></xref>. Clients have stable end-local ids. Publishes and ticks reach\nevery client. One caller at a time; not thread-affine.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkServerSecurity.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkServerSecurity.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkServerSecurity",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkServerSecurity.yml\" sourcestartlinenumber=\"1\">How a server protects its sessions: with its static key, or not at all. Immutable; safe to share between connections.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkSimulator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkSimulator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkSimulator",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkSimulator.yml\" sourcestartlinenumber=\"1\">Connects a client and a server connection in one process with seeded latency. Each packet is delayed by the\nlatency plus a draw from 0 to the jitter inclusive, but never arrives before a packet sent earlier in the same\ndirection. Between datagram connections it may also lose, duplicate and reorder packets. Equal seeds, options and\ninputs give equal packets, events and times. The host takes the events of both connections between calls of\n<xref href=\"GameEventScript.Network.GesNetworkSimulator.Advance(System.Int64)\" data-throw-if-not-resolved=\"false\"></xref>. Not thread-safe.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkState.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkState.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkState",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkState.yml\" sourcestartlinenumber=\"1\">The state of a connection.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.GesNetworkTransport.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.GesNetworkTransport.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.GesNetworkTransport",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.GesNetworkTransport.yml\" sourcestartlinenumber=\"1\">How a transport carries packets.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.IGesNetworkAcceptor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.IGesNetworkAcceptor.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.IGesNetworkAcceptor",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.IGesNetworkAcceptor.yml\" sourcestartlinenumber=\"1\">Accepts the transports of a server end's clients.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.IGesNetworkConnector.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.IGesNetworkConnector.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.IGesNetworkConnector",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.IGesNetworkConnector.yml\" sourcestartlinenumber=\"1\">Opens the transport of a client end.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.IGesNetworkEndHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.IGesNetworkEndHandler.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.IGesNetworkEndHandler",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.IGesNetworkEndHandler.yml\" sourcestartlinenumber=\"1\">Receives the events of an end during its poll.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.IGesNetworkLink.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.IGesNetworkLink.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.IGesNetworkLink",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.IGesNetworkLink.yml\" sourcestartlinenumber=\"1\">One connection's transport as an end drives it: it passes received packets to the connection and hands the\nconnection's packets to the transport. Implementations come from a connector or an acceptor.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.Sockets.GesNetworkSocketConnector.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.Sockets.GesNetworkSocketConnector.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.Sockets.GesNetworkSocketConnector",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.Sockets.GesNetworkSocketConnector.yml\" sourcestartlinenumber=\"1\">Opens the TCP, WebSocket or UDP transport of a client end. Opening runs in the background: the end's first poll\nstarts it, packets wait for it, and a failure to open ends the transport, so the connection closes with\n<code>network.transportClosed</code>. One connector serves one client end.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.Sockets.GesNetworkSocketListener.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.Sockets.GesNetworkSocketListener.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.Sockets.GesNetworkSocketListener",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.Sockets.GesNetworkSocketListener.yml\" sourcestartlinenumber=\"1\">Accepts TCP, WebSocket or UDP clients for a server. A background task accepts sockets and, for WebSocket, answers\nthe HTTP upgrade, or for UDP reads the shared socket, validates unknown addresses and routes each datagram to its\nclient; the host takes each ready client with <xref href=\"GameEventScript.Network.Sockets.GesNetworkSocketListener.Accept(System.Int64)\" data-throw-if-not-resolved=\"false\"></xref> on its own thread. At most 64 clients wait or\nupgrade at once, accepting pauses while they do, and one IP address holds at most 8 of them; its further sockets\nare closed. As an <xref href=\"GameEventScript.Network.IGesNetworkAcceptor\" data-throw-if-not-resolved=\"false\"></xref> it accepts the clients of a server end.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.Sockets.GesNetworkSocketSession.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.Sockets.GesNetworkSocketSession.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.Sockets.GesNetworkSocketSession",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.Sockets.GesNetworkSocketSession.yml\" sourcestartlinenumber=\"1\">Carries one <xref href=\"GameEventScript.Network.GesNetworkConnection\" data-throw-if-not-resolved=\"false\"></xref> over a TCP stream, a WebSocket or UDP. Background tasks only move bytes:\nthe host calls <xref href=\"GameEventScript.Network.Sockets.GesNetworkSocketSession.Receive(System.Int64)\" data-throw-if-not-resolved=\"false\"></xref> and <xref href=\"GameEventScript.Network.Sockets.GesNetworkSocketSession.Transmit\" data-throw-if-not-resolved=\"false\"></xref>, or <xref href=\"GameEventScript.Network.Sockets.GesNetworkSocketSession.Update(System.Int64)\" data-throw-if-not-resolved=\"false\"></xref> for both, on its own thread,\nwhich feed received bytes into the connection, advance it and hand its packets to the sender. The connection is\ntouched only by the host thread. As an <xref href=\"GameEventScript.Network.IGesNetworkLink\" data-throw-if-not-resolved=\"false\"></xref> it is the transport of an end.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.Sockets.GesNetworkSocketWaits.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.Sockets.GesNetworkSocketWaits.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.Sockets.GesNetworkSocketWaits",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Network.Sockets.GesNetworkSocketWaits.yml\" sourcestartlinenumber=\"1\">Waits for the work of an end whose transport is a socket: until one of its sockets received bytes, opened or ended,\na client became ready, or the end's <code>NextDeadline</code> passes, whichever is first. The caller polls after each\nwait. A wait may end early; it never ends after the work arrived.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.Sockets.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.Sockets.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network.Sockets",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Network.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Network.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Network",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/GameEventScript.Runtime.Values.GesValue.yml",
       "output": {
         ".html": {
@@ -2534,11 +3066,11 @@
       "type": "Toc",
       "source_relative_path": "api/toc.yml",
       "output": {
-        ".json": {
-          "relative_path": "api/toc.json"
-        },
         ".html": {
           "relative_path": "api/toc.html"
+        },
+        ".json": {
+          "relative_path": "api/toc.json"
         }
       },
       "version": ""
@@ -2567,11 +3099,11 @@
       "type": "Toc",
       "source_relative_path": "toc.yml",
       "output": {
-        ".json": {
-          "relative_path": "toc.json"
-        },
         ".html": {
           "relative_path": "toc.html"
+        },
+        ".json": {
+          "relative_path": "toc.json"
         }
       },
       "version": ""

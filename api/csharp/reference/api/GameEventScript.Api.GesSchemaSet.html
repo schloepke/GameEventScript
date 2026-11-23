@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesSchemaSet | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
+      <title>Class GesSchemaSet | Game Event Script C# API — Unreleased (47afc43b2fc1) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesSchemaSet | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
+      <meta name="title" content="Class GesSchemaSet | Game Event Script C# API — Unreleased (47afc43b2fc1) ">
       
       <meta name="description" content="Validated schema sources. A set is immutable and can be bound any number of times, also with different parameter values within one session.">
       <link rel="icon" href="../assets/logo.svg">
@@ -137,6 +137,38 @@ values within one session.</p>
 </h2>
 
 
+  <a id="GameEventScript_Api_GesSchemaSet_Networks_" data-uid="GameEventScript.Api.GesSchemaSet.Networks*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaSet_Networks" data-uid="GameEventScript.Api.GesSchemaSet.Networks">
+  Networks
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the networks, in source order.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesReadOnlyArray&lt;GesNetwork&gt; Networks { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesReadOnlyArray-1.html">GesReadOnlyArray</a>&lt;<a class="xref" href="GameEventScript.Api.GesNetwork.html">GesNetwork</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Api_GesSchemaSet_Schemas_" data-uid="GameEventScript.Api.GesSchemaSet.Schemas*"></a>
 
   <h3 id="GameEventScript_Api_GesSchemaSet_Schemas" data-uid="GameEventScript.Api.GesSchemaSet.Schemas">
@@ -212,6 +244,54 @@ with that name that no other schema of it refers to. <a class="xref" href="GameE
     <dt><a class="xref" href="GameEventScript.Api.GesSchemaException.html">GesSchemaException</a></dt>
     <dd><p>The document is unreadable or breaks its schema; the code is a <code>document.<em></em></code>
 code with its position, or a <code>schema.</code> code when no schema is determined.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GesSchemaSet_Network_" data-uid="GameEventScript.Api.GesSchemaSet.Network*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaSet_Network_System_String_" data-uid="GameEventScript.Api.GesSchemaSet.Network(System.String)">
+  Network(string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a network by its exact name, compared ordinally.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetwork Network(string name)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The network's name, without the leading <code>:</code>.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesNetwork.html">GesNetwork</a></dt>
+    <dd><p>Its description.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">name</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="GameEventScript.Api.GesSchemaException.html">GesSchemaException</a></dt>
+    <dd><p>No network has that name (<code>schema.unknownName</code>).</p>
 </dd>
   </dl>
 
@@ -375,7 +455,7 @@ code with its position, or a <code>schema.</code> code when no schema is determi
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (ecf9e2c87030)
+          Game Event Script C# API — Unreleased (47afc43b2fc1)
         </div>
       </div>
     </footer>

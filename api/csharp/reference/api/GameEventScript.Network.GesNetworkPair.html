@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GesNetworkPair | Game Event Script C# API — Unreleased (47afc43b2fc1) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GesNetworkPair | Game Event Script C# API — Unreleased (47afc43b2fc1) ">
+      
+      <meta name="description" content="A client end and a server end connected within one process, without sockets. A realtime pair runs on the system clock and moves packets when the ends poll. A synchronous pair runs on a virtual clock, is connected when created and moves every packet before a send, publish, tick, close or poll returns: what one end sends is reported by the other end&#39;s next poll. In both modes a packet waits while the receiving connection takes no further bytes, in a synchronous pair until the host advances the clock far enough to refill its frame bucket; while 64 packets wait, the sending connection keeps its further packets. Both ends of a pair belong to one caller at a time.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Network.GesNetworkPair">
+
+
+
+  <h1 id="GameEventScript_Network_GesNetworkPair" data-uid="GameEventScript.Network.GesNetworkPair" class="text-break">
+Class GesNetworkPair  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Network.html">Network</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Network.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>A client end and a server end connected within one process, without sockets. A realtime pair runs on the system
+clock and moves packets when the ends poll. A synchronous pair runs on a virtual clock, is connected when created and
+moves every packet before a send, publish, tick, close or poll returns: what one end sends is reported by the other
+end's next poll. In both modes a packet waits while the receiving connection takes no further bytes, in a synchronous
+pair until the host advances the clock far enough to refill its frame bucket; while 64 packets wait, the sending
+connection keeps its further packets. Both ends of a pair belong to one caller at a time.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class GesNetworkPair : IDisposable</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GesNetworkPair</span></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.idisposable">IDisposable</a></div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Network_GesNetworkPair_Client_" data-uid="GameEventScript.Network.GesNetworkPair.Client*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkPair_Client" data-uid="GameEventScript.Network.GesNetworkPair.Client">
+  Client
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the client end.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkClientEnd Client { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkClientEnd.html">GesNetworkClientEnd</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkPair_IsSynchronous_" data-uid="GameEventScript.Network.GesNetworkPair.IsSynchronous*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkPair_IsSynchronous" data-uid="GameEventScript.Network.GesNetworkPair.IsSynchronous">
+  IsSynchronous
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the pair runs on a virtual clock.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsSynchronous { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkPair_Now_" data-uid="GameEventScript.Network.GesNetworkPair.Now*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkPair_Now" data-uid="GameEventScript.Network.GesNetworkPair.Now">
+  Now
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the time of the pair's clock in microseconds.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long Now { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkPair_Server_" data-uid="GameEventScript.Network.GesNetworkPair.Server*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkPair_Server" data-uid="GameEventScript.Network.GesNetworkPair.Server">
+  Server
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the server end.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesNetworkServerEnd Server { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkServerEnd.html">GesNetworkServerEnd</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Network_GesNetworkPair_Advance_" data-uid="GameEventScript.Network.GesNetworkPair.Advance*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkPair_Advance_System_Int64_" data-uid="GameEventScript.Network.GesNetworkPair.Advance(System.Int64)">
+  Advance(long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Moves the virtual clock of a synchronous pair forward, runs the deadlines of both ends and moves the packets they
+produce. Events wait for the next polls.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Advance(long microseconds)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>microseconds</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The whole microseconds to add.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></dt>
+    <dd><p>The pair is realtime, or an end is being polled.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentoutofrangeexception">ArgumentOutOfRangeException</a></dt>
+    <dd><p><code class="paramref">microseconds</code> is negative.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkPair_Dispose_" data-uid="GameEventScript.Network.GesNetworkPair.Dispose*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkPair_Dispose" data-uid="GameEventScript.Network.GesNetworkPair.Dispose">
+  Dispose()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Disposes both ends.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Network_GesNetworkPair_Realtime_" data-uid="GameEventScript.Network.GesNetworkPair.Realtime*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkPair_Realtime_GameEventScript_Api_GesBoundNetwork_System_ReadOnlySpan_System_Byte__GameEventScript_Network_GesNetworkOptions_" data-uid="GameEventScript.Network.GesNetworkPair.Realtime(GameEventScript.Api.GesBoundNetwork,System.ReadOnlySpan{System.Byte},GameEventScript.Network.GesNetworkOptions)">
+  Realtime(GesBoundNetwork, ReadOnlySpan&lt;byte&gt;, GesNetworkOptions?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a realtime pair on the system clock. The ends connect while they poll.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkPair Realtime(GesBoundNetwork network, ReadOnlySpan&lt;byte&gt; token, GesNetworkOptions? options = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>network</code> <a class="xref" href="GameEventScript.Api.GesBoundNetwork.html">GesBoundNetwork</a></dt>
+    <dd><p>The bound network both ends share.</p>
+</dd>
+    <dt><code>token</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The token the server end reports with the client's <code>connecting</code> event.</p>
+</dd>
+    <dt><code>options</code> <a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>The options of both connections; <a class="xref" href="GameEventScript.Network.GesNetworkOptions.html#GameEventScript_Network_GesNetworkOptions_InProcess">InProcess()</a> when null.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkPair.html">GesNetworkPair</a></dt>
+    <dd><p>The pair.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">network</code> is null.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The options are invalid.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Network_GesNetworkPair_Synchronous_" data-uid="GameEventScript.Network.GesNetworkPair.Synchronous*"></a>
+
+  <h3 id="GameEventScript_Network_GesNetworkPair_Synchronous_GameEventScript_Api_GesBoundNetwork_System_ReadOnlySpan_System_Byte__GameEventScript_Network_GesNetworkOptions_" data-uid="GameEventScript.Network.GesNetworkPair.Synchronous(GameEventScript.Api.GesBoundNetwork,System.ReadOnlySpan{System.Byte},GameEventScript.Network.GesNetworkOptions)">
+  Synchronous(GesBoundNetwork, ReadOnlySpan&lt;byte&gt;, GesNetworkOptions?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a synchronous pair on a virtual clock that starts at 0. It is connected when this returns, and both
+ends report their connected events on their first polls. The server accepts the client without a
+<code>connecting</code> event. Both connections acknowledge at once: the pair uses the options with
+<a class="xref" href="GameEventScript.Network.GesNetworkOptions.html#GameEventScript_Network_GesNetworkOptions_AckDelayMicroseconds">AckDelayMicroseconds</a> 0.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesNetworkPair Synchronous(GesBoundNetwork network, ReadOnlySpan&lt;byte&gt; token, GesNetworkOptions? options = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>network</code> <a class="xref" href="GameEventScript.Api.GesBoundNetwork.html">GesBoundNetwork</a></dt>
+    <dd><p>The bound network both ends share.</p>
+</dd>
+    <dt><code>token</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The client's token.</p>
+</dd>
+    <dt><code>options</code> <a class="xref" href="GameEventScript.Network.GesNetworkOptions.html">GesNetworkOptions</a></dt>
+    <dd><p>The options of both connections; <a class="xref" href="GameEventScript.Network.GesNetworkOptions.html#GameEventScript_Network_GesNetworkOptions_InProcess">InProcess()</a> when null.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Network.GesNetworkPair.html">GesNetworkPair</a></dt>
+    <dd><p>The connected pair.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">network</code> is null.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The options are invalid.</p>
+</dd>
+  </dl>
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (47afc43b2fc1)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesSchemaGenerateOptions | Game Event Script C# API — Unreleased (ecf9e2c87030) </title>
+      <title>Class GesSchemaGenerateOptions | Game Event Script C# API — Unreleased (47afc43b2fc1) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesSchemaGenerateOptions | Game Event Script C# API — Unreleased (ecf9e2c87030) ">
+      <meta name="title" content="Class GesSchemaGenerateOptions | Game Event Script C# API — Unreleased (47afc43b2fc1) ">
       
       <meta name="description" content="How schema code is generated.">
       <link rel="icon" href="../assets/logo.svg">
@@ -340,6 +340,40 @@ namespaces, so C# generation rejects it with <code>generate.usage</code>.</p>
 
 
 
+  <a id="GameEventScript_Generator_GesSchemaGenerateOptions_Imports_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Imports*"></a>
+
+  <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_Imports" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Imports">
+  Imports
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the Swift modules that the generated files import beside the runtime, such as the module that declares the
+<a class="xref" href="GameEventScript.Generator.GesSchemaGenerateOptions.html#GameEventScript_Generator_GesSchemaGenerateOptions_UseSchemaSet">UseSchemaSet</a> type. C# names types with qualified names, so C# generation rejects it with
+<code>generate.usage</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IReadOnlyList&lt;string&gt; Imports { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Generator_GesSchemaGenerateOptions_Language_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Language*"></a>
 
   <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_Language" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Language">
@@ -440,6 +474,42 @@ namespace and Swift as nested enums, so that generated names cannot collide with
 
 
 
+  <a id="GameEventScript_Generator_GesSchemaGenerateOptions_SchemaSet_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.SchemaSet*"></a>
+
+  <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_SchemaSet" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.SchemaSet">
+  SchemaSet
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the name of a schema set type to declare in the namespace, or null for none, the default: a C# static class
+or Swift enum that holds the embedded schema sources parsed once, the parameter values of this generation, a hash over
+both and the binding of schemas, networks and documents against them. The generated conversions, network bindings and
+document readers then use it instead of a private helper, and other generations share it through
+<a class="xref" href="GameEventScript.Generator.GesSchemaGenerateOptions.html#GameEventScript_Generator_GesSchemaGenerateOptions_UseSchemaSet">UseSchemaSet</a>. It must be an identifier; it excludes <a class="xref" href="GameEventScript.Generator.GesSchemaGenerateOptions.html#GameEventScript_Generator_GesSchemaGenerateOptions_UseSchemaSet">UseSchemaSet</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? SchemaSet { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Generator_GesSchemaGenerateOptions_Split_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Split*"></a>
 
   <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_Split" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.Split">
@@ -464,6 +534,41 @@ namespace and Swift as nested enums, so that generated names cannot collide with
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Generator.GesSchemaSplit.html">GesSchemaSplit</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Generator_GesSchemaGenerateOptions_UseSchemaSet_" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.UseSchemaSet*"></a>
+
+  <h3 id="GameEventScript_Generator_GesSchemaGenerateOptions_UseSchemaSet" data-uid="GameEventScript.Generator.GesSchemaGenerateOptions.UseSchemaSet">
+  UseSchemaSet
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the qualified name of a schema set type that another generation declares with <a class="xref" href="GameEventScript.Generator.GesSchemaGenerateOptions.html#GameEventScript_Generator_GesSchemaGenerateOptions_SchemaSet">SchemaSet</a>,
+or null for none, the default. The generated conversions, network bindings and document readers use that type, which
+may live in another namespace, assembly or module, and this generation declares no sources of its own. The bindings
+still compare the generated hashes on first use.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? UseSchemaSet { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
     <dd></dd>
   </dl>
 
@@ -525,7 +630,7 @@ allocates and is meant for values from scripts and for converting between models
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (ecf9e2c87030)
+          Game Event Script C# API — Unreleased (47afc43b2fc1)
         </div>
       </div>
     </footer>

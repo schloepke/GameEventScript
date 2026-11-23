@@ -74,7 +74,12 @@ def swift(work, output, release, target, sdks):
             if installed is None:
                 raise ValueError("Linux Swift downloads require --swift-sdks-path with the pinned Static Linux SDK, "
                                  "or an installed Swift.org toolchain with its matching Static Linux SDK.")
-            sdks, bundle, expected, compiler = installed.directory, installed.bundle, installed.version, installed.swift
+            expected, compiler = installed.version, installed.swift
+            # Every Static Linux bundle registers the same unversioned SDK ID, so SwiftPM sees only the chosen one.
+            sdks = work / "swift-sdks"
+            sdks.mkdir()
+            bundle = sdks / installed.bundle.name
+            bundle.symlink_to(installed.bundle, target_is_directory=True)
             if expected != PINNED_SWIFT:
                 print(f"Local archive with Swift {expected}; release archives use the pinned Swift {PINNED_SWIFT} "
                       "Static Linux SDK of the CLI Distribution workflow.", flush=True)

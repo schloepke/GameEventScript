@@ -1,8 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-// SwiftNIO SSL does not build for WASI; there the module is empty (see Package.swift).
-#if !os(WASI)
+// The module is empty where the manifest leaves out SwiftNIO, such as on WASI (see Package.swift).
+#if canImport(NIOSSL)
 
     import NIOConcurrencyHelpers
     import NIOCore

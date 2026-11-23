@@ -26,9 +26,12 @@ TRIPLES = ("aarch64-unknown-linux-android23", "x86_64-unknown-linux-android23", 
 
 
 def find_ndk():
-    """ANDROID_NDK_HOME, else the newest NDK of the Android SDK, or None."""
+    """ANDROID_NDK_HOME if it holds an NDK, else the newest NDK of the Android SDK, or None."""
     if os.environ.get("ANDROID_NDK_HOME"):
-        return Path(os.environ["ANDROID_NDK_HOME"])
+        ndk = Path(os.environ["ANDROID_NDK_HOME"])
+        if (ndk / "source.properties").is_file():
+            return ndk
+        print(f"ANDROID_NDK_HOME={ndk} holds no NDK; looking in the Android SDK instead", file=sys.stderr, flush=True)
     roots = [Path(os.environ[name]) for name in ("ANDROID_HOME", "ANDROID_SDK_ROOT") if os.environ.get(name)]
     roots.append(Path.home() / ("Library/Android/sdk" if sys.platform == "darwin" else "Android/Sdk"))
     for root in roots:

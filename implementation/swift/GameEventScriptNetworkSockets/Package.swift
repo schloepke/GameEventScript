@@ -4,7 +4,8 @@
 
 import PackageDescription
 
-// SwiftNIO SSL does not build for WASI, so the socket transports exist on every other platform only.
+// SwiftNIO SSL does not build for WASI, so the socket transports need these platforms. Their sources check
+// `canImport(NIOSSL)`, so the module stays empty, not broken, on any platform outside this list.
 let socketPlatforms: [Platform] = [.macOS, .macCatalyst, .iOS, .tvOS, .watchOS, .visionOS, .linux, .windows, .android, .openbsd]
 
 let package = Package(

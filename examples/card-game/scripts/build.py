@@ -5,6 +5,7 @@
 import argparse
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -13,9 +14,28 @@ from site_assets import identity, record, version_browser_assets
 EXAMPLE = Path(__file__).resolve().parents[1]
 ROOT = EXAMPLE.parents[1]
 ARTIFACTS = ROOT / 'artifacts/card-game'
-PINNED_SDK = 'swift-6.4.0-RELEASE_wasm'
+PINNED_VERSION = '6.4.0'
+PINNED_SDK = f'swift-{PINNED_VERSION}-RELEASE_wasm'
 sys.path.insert(0, str(ROOT / 'scripts'))
-from swift_toolchains import installed_sdk  # noqa: E402
+from swift_toolchains import installed_sdk, sdk_directories  # noqa: E402
+
+
+def toolchain_version(swift):
+    """The release version of a swift executable, such as 6.4.0, or None."""
+    output = subprocess.run([swift, '--version'], capture_output=True, text=True, check=False).stdout
+    match = re.search(r'Swift version (\d+)\.(\d+)(?:\.(\d+))?', output)
+    return f'{match[1]}.{match[2]}.{match[3] or 0}' if match else None
+
+
+def explicit_sdk(swift):
+    """The SDKs path and ID of the Wasm SDK that matches an explicit swift: the pinned one, else an installed one."""
+    version = toolchain_version(swift)
+    if version == PINNED_VERSION and (ARTIFACTS / 'sdk' / f'{PINNED_SDK}.artifactbundle').is_dir():
+        return ARTIFACTS / 'sdk', PINNED_SDK
+    sdk = f'swift-{version}-RELEASE_wasm'
+    if version and any((directory / f'{sdk}.artifactbundle').is_dir() for directory in sdk_directories()):
+        return None, sdk
+    return None, None
 
 
 def main():
@@ -30,12 +50,17 @@ def main():
     command = ['swift', 'test' if args.mode == 'test' else 'build']
     if args.mode == 'wasm':
         # The pinned tools of setup-wasm.py --download come first, then an installed Swift.org toolchain with its
-        # matching Wasm SDK. An explicit --swift uses the pinned SDK directory if present, else the installed SDKs.
+        # matching Wasm SDK. An explicit --swift uses the Wasm SDK of its own version, the pinned one or an installed one.
         pinned = list((ARTIFACTS / 'toolchain').glob('**/usr/bin/swift'))
         system = installed_sdk('wasm')
         sdks_path, sdk = None, args.sdk
-        if args.swift or len(pinned) == 1:
-            command[0] = args.swift or str(pinned[0])
+        if args.swift:
+            # An SDK works only with the toolchain of exactly its version.
+            command[0] = args.swift
+            if not sdk:
+                sdks_path, sdk = explicit_sdk(args.swift)
+        elif len(pinned) == 1:
+            command[0] = str(pinned[0])
             if (ARTIFACTS / 'sdk').is_dir():
                 sdks_path, sdk = ARTIFACTS / 'sdk', sdk or PINNED_SDK
             elif system:
@@ -47,7 +72,7 @@ def main():
             raise RuntimeError('Install a Swift.org toolchain with its matching Wasm SDK, run scripts/setup-wasm.py --download, '
                                'or pass --swift with a Swift.org toolchain')
         if not sdk:
-            raise RuntimeError('No Wasm SDK found; pass --sdk')
+            raise RuntimeError('No Wasm SDK of the toolchain\'s version found; pass --sdk')
         print(f'Wasm toolchain: {command[0]}, SDK {sdk}', flush=True)
         # Nested declarative setup maps need more compiler stack than WASI's 64 KiB default.
         if sdks_path:

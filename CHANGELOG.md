@@ -10,7 +10,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
-## [0.6.0] — 2026-11-22
+## [0.6.0] — 2026-11-23
 
 This release adds GES Network: a `network` declaration in `.gess` schemas, a portable session core with topics,
 datagrams, bulk transfers, encryption, ends and ticks, socket transports over TCP, WebSocket and UDP, and typed

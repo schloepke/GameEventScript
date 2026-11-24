@@ -27958,6 +27958,29 @@ schema: {"error": {"code": "schema.ambiguousName", "line": 0, "column": 0}}
 
 ---
 
+## Test: a root name shared by a network and a message
+
+A network shares the namespace of schemas and message sets, so a message of the same name makes the plain name ambiguous.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-root-network-ambiguous
+schemaApi:
+  sources: ["wire message Lobby(level: :Number integer between 0 and 10)\nnetwork :Lobby as {\n  client sends Lobby reliable\n}\n"]
+  root: "Lobby"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.ambiguousName", "line": 0, "column": 0}}
+```
+
+---
+
 ## Test: a message root in call form
 
 `Shield()` selects the message.

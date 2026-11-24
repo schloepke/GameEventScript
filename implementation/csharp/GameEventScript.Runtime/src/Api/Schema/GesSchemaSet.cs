@@ -84,7 +84,7 @@ public sealed class GesSchemaSet
     /// <returns>Its description.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null"/>.</exception>
     /// <exception cref="GesSchemaException">The name is not declared (<c>schema.unknownName</c>), or a plain name declares
-    /// both a schema or message set and a message (<c>schema.ambiguousName</c>).</exception>
+    /// both a schema, message set or network and a message (<c>schema.ambiguousName</c>).</exception>
     public GesSchema Schema(string name) => Declaration(name).Public;
 
     /// <summary>Gets the networks, in source order.</summary>
@@ -186,7 +186,12 @@ public sealed class GesSchemaSet
 
         var found = _declarations.TryGetValue(root, out var declaration);
         if (_messages.TryGetValue(root, out var other))
-            return found ? throw new GesSchemaException(Code.AmbiguousName, "", 0, 0, $"'{root}' names a {(declaration!.Kind == GesSchemaKind.Schema ? "schema" : "message set")} and a message; write ':{root}' or '{root}()'.") : other;
+        {
+            // A network shares the namespace of schemas and message sets, so it makes the plain name ambiguous too.
+            var what = found ? declaration!.Kind == GesSchemaKind.Schema ? "schema" : "message set" : _networks.ContainsKey(root) ? "network" : null;
+            return what is null ? other : throw new GesSchemaException(Code.AmbiguousName, "", 0, 0, $"'{root}' names a {what} and a message; write ':{root}' or '{root}()'.");
+        }
+
         return found ? declaration! : throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"'{root}' is not declared.");
     }
 

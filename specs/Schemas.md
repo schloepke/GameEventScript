@@ -1641,7 +1641,7 @@ Success allocates nothing.
 
 `GesSchemaSet.Schemas` lists every declaration in source order and `Schema(name)` finds one, written `Name`, `:Name`
 or `Name()` as for [roots](#declarations); an unknown name is `schema.unknownName`, a plain name that a message and a
-schema or message set share `schema.ambiguousName`. A `GesSchema` describes what a source declares,
+schema, message set or network share `schema.ambiguousName`. A `GesSchema` describes what a source declares,
 independent of parameter values, so it holds no widths or indices, and writer and reader do
 not use it:
 

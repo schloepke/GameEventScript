@@ -113,4 +113,31 @@ final class SchemaSetTests: XCTestCase {
         XCTAssertTrue(plain.contains("SchemaHash = 0x03181e32445ba5acUL"))
         XCTAssertEqual(plain, suffixed.replacing("ShieldMessage", with: "Shield"))
     }
+
+    func testANetworkAndAMessageOfOneNameNeedAQualifiedRoot() throws {
+        let set = try GesSchemaSet(parsing: "wire message Lobby(level: :Number integer between 0 and 10)\nnetwork :Lobby as {\n  client sends Lobby reliable\n}\n")
+
+        func schemaCode(_ action: () throws -> Void) -> String {
+            do {
+                try action()
+                return ""
+            } catch let error as GesSchemaError {
+                return error.code
+            } catch {
+                return "\(error)"
+            }
+        }
+
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            func lobby(_ root: String) throws -> String {
+                try GesSchemaGenerator.generate(set, roots: [root], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: language, messageSuffix: "Message"))
+            }
+
+            XCTAssertEqual(schemaCode { _ = try lobby("Lobby") }, "schema.ambiguousName")
+            XCTAssertTrue(try lobby(":Lobby").contains("LobbyMessage"))
+            XCTAssertNotEqual(try lobby(":Lobby"), try lobby("Lobby()"))
+        }
+        XCTAssertEqual(schemaCode { _ = try set.schema("Lobby") }, "schema.ambiguousName")
+        XCTAssertEqual(try set.schema("Lobby()").kind, .message)
+    }
 }

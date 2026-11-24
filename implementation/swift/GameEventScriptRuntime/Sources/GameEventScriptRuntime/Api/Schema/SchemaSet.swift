@@ -115,7 +115,7 @@ public final class GesSchemaSet: @unchecked Sendable {
     /// schema or message set, `Name()` a message, and a plain `Name` whichever of the two declares it.
     /// - Parameter name: The name of a schema, message or message set, written `Name`, `:Name` or `Name()`.
     /// - Throws: `GesSchemaError` with `schema.unknownName` when the name is not declared, or with `schema.ambiguousName`
-    ///   when a plain name declares both a schema or message set and a message.
+    ///   when a plain name declares both a schema, message set or network and a message.
     public func schema(_ name: String) throws -> GesSchema { try declaration(name).schema! }
 
     /// The networks, in source order.
@@ -220,13 +220,15 @@ public final class GesSchemaSet: @unchecked Sendable {
         }
         let found = declarations[root]
         if let other = messages[root] {
-            guard let found else { return other }
+            // A network shares the namespace of schemas and message sets, so it makes the plain name ambiguous too.
+            let what = found.map { $0.kind == .schema ? "schema" : "message set" } ?? (networksByName[root] != nil ? "network" : nil)
+            guard let what else { return other }
             throw GesSchemaError(
                 code: Code.ambiguousName,
                 sourceName: "",
                 line: 0,
                 column: 0,
-                message: "'\(root)' names a \(found.kind == .schema ? "schema" : "message set") and a message; write ':\(root)' or '\(root)()'."
+                message: "'\(root)' names a \(what) and a message; write ':\(root)' or '\(root)()'."
             )
         }
         guard let found else { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "'\(root)' is not declared.") }

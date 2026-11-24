@@ -105,4 +105,20 @@ public sealed class GesSchemaSetGenerateTests
         Assert.AreEqual(SchemaHash(plain), SchemaHash(suffixed));
         Assert.AreEqual(plain, suffixed.Replace("ShieldMessage", "Shield"));
     }
+
+    [TestMethod]
+    public void ANetworkAndAMessageOfOneNameNeedAQualifiedRoot()
+    {
+        var set = GesSchemaSet.Parse("wire message Lobby(level: :Number integer between 0 and 10)\nnetwork :Lobby as {\n  client sends Lobby reliable\n}\n");
+        foreach (var language in Languages)
+        {
+            string Lobby(string root) => GesSchemaGenerator.Generate(set, [root], new GesSchemaParameters(), new() { Language = language, MessageSuffix = "Message" });
+            Assert.AreEqual("schema.ambiguousName", Assert.ThrowsExactly<GesSchemaException>(() => Lobby("Lobby")).Code);
+            StringAssert.Contains(Lobby(":Lobby"), "LobbyMessage");
+            Assert.AreNotEqual(Lobby(":Lobby"), Lobby("Lobby()"));
+        }
+
+        Assert.AreEqual("schema.ambiguousName", Assert.ThrowsExactly<GesSchemaException>(() => set.Schema("Lobby")).Code);
+        Assert.AreEqual(GesSchemaKind.Message, set.Schema("Lobby()").Kind);
+    }
 }

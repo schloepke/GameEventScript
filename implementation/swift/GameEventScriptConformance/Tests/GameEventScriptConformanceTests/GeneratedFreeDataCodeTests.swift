@@ -118,6 +118,33 @@ final class GeneratedFreeDataCodeTests: XCTestCase {
         XCTAssertEqual(try GesDataList([.integer(1)]).description, "[1]")
     }
 
+    func testDeeplyNestedDataIsCheckedWithoutRecursion() {
+        // Deeper than a recursive check could descend on a 512 KB thread stack, the stack of Swift concurrency threads;
+        // the bottom decides. The values are built and released on the test thread, whose stack their release needs.
+        final class Outcome: @unchecked Sendable {
+            var values: [GesValue] = []
+            var accepted: [Bool] = []
+        }
+
+        func nested(_ bottom: GesValue) -> GesValue {
+            var value = bottom
+            for _ in 0..<20_000 { value = .list([value]) }
+            return value
+        }
+
+        let outcome = Outcome()
+        outcome.values = [nested(.integer(1)), nested(FreeDataModel.Scene(name: "stage").gesValue())]
+        let done = DispatchSemaphore(value: 0)
+        let thread = Thread {
+            outcome.accepted = outcome.values.map { (try? GesDataList([$0])) != nil }
+            done.signal()
+        }
+        thread.stackSize = 512 * 1024
+        thread.start()
+        done.wait()
+        XCTAssertEqual(outcome.accepted, [true, false])
+    }
+
     private let programDocument = """
         :Schema(:Program)
         script: "run"

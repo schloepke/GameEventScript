@@ -2,12 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Data holds no external value, whose fields may change between handlers, anywhere inside: not in List items, Map
-// entries, Record fields or Message arguments.
+// entries, Record fields or Message arguments. The walk keeps its own stack, so that no nesting depth exhausts the thread's.
 func gesIsData(_ value: GesValue) -> Bool {
-    if value.externalValue != nil { return false }
-    if let items = value.listValue { return items.allSatisfy(gesIsData) }
-    if let fields = value.asMap { return fields.valueStorage.allSatisfy(gesIsData) }
-    if let message = value.messageValue { return message.arguments.values.allSatisfy(gesIsData) }
+    var pending = [value]
+    while let next = pending.popLast() {
+        if next.externalValue != nil { return false }
+        if let items = next.listValue {
+            pending.append(contentsOf: items)
+        } else if let fields = next.asMap {
+            pending.append(contentsOf: fields.valueStorage)
+        } else if let message = next.messageValue {
+            pending.append(contentsOf: message.arguments.values)
+        }
+    }
     return true
 }
 

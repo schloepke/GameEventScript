@@ -155,30 +155,27 @@ public readonly struct GesDataMap : IEquatable<GesDataMap>, IEnumerable<KeyValue
     public static bool operator !=(GesDataMap left, GesDataMap right) => !left.Equals(right);
 
     // Data holds no external value, whose fields may change between handlers, anywhere inside: not in List items, Map
-    // entries, Record fields or Message arguments.
+    // entries, Record fields or Message arguments. The walk keeps its own stack, so that no nesting depth exhausts the thread's.
     internal static bool IsData(in GesValue value)
     {
-        if (value.ExternalValue is not null) return false;
-        if (value.ValueKind == GesBytecodeTypeKind.List)
+        var pending = new Stack<GesValue>();
+        pending.Push(value);
+        while (pending.Count > 0)
         {
-            var items = value.AsList();
-            for (var index = 0; index < items.Length; index++)
+            var next = pending.Pop();
+            if (next.ExternalValue is not null) return false;
+            if (next.ValueKind == GesBytecodeTypeKind.List)
             {
-                if (!IsData(items[index])) return false;
+                var items = next.AsList();
+                for (var index = 0; index < items.Length; index++) pending.Push(items[index]);
             }
-        }
-        else if (value.AsMap() is { } map)
-        {
-            for (var index = 0; index < map.Length; index++)
+            else if (next.AsMap() is { } map)
             {
-                if (!IsData(map.ValueAt(index))) return false;
+                for (var index = 0; index < map.Length; index++) pending.Push(map.ValueAt(index));
             }
-        }
-        else if (value.Message is { } message)
-        {
-            for (var index = 0; index < message.Arguments.Count; index++)
+            else if (next.Message is { } message)
             {
-                if (!IsData(message.Arguments.ValueAt(index))) return false;
+                for (var index = 0; index < message.Arguments.Count; index++) pending.Push(message.Arguments.ValueAt(index));
             }
         }
 

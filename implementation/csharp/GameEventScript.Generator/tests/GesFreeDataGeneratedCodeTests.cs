@@ -159,6 +159,21 @@ public sealed class GesFreeDataGeneratedCodeTests
         Assert.AreEqual("[1]", list.ToString());
     }
 
+    [TestMethod]
+    public void DeeplyNestedDataIsCheckedWithoutRecursion()
+    {
+        // Deeper than a recursive check could descend on a test thread; the bottom decides.
+        static GesValue Nested(GesValue bottom)
+        {
+            var value = bottom;
+            for (var level = 0; level < 1_000_000; level++) value = GesValue.GesList([value]);
+            return value;
+        }
+
+        Assert.AreEqual(1, new GesDataList([Nested(GesValue.GesInteger(1))]).Length);
+        Assert.IsNull(GesDataList.FromValue(Nested(new Model.Scene("stage", null).ToGesValue())));
+    }
+
     private const string ProgramDocument = """
         :Schema(:Program)
         script: "run"

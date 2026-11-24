@@ -175,6 +175,8 @@ SPATIAL_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/spatial.gess"
 GEOMETRY_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/geometry.gess"
 PACKED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/packed.gess"
 NETWORK_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/network.gess"
+# A schema and a message of one name, which generate side by side only with a message suffix.
+MESSAGES_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/messages.gess"
 ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
 CSHARP_GENERATED = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
 SWIFT_GENERATED = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
@@ -260,7 +262,7 @@ def role_splits(csharp, swift, work):
     return differences
 
 
-# Named schema sets: (directory, files, selection, language, namespace), each generated as one file by both CLIs.
+# Named schema sets and suffixed message types: (directory, files, selection, language, namespace), each generated as one file by both CLIs.
 SET_OUTPUTS = tuple((directory, files, selection, language, space)
                     for directory, files, selection, space in (
                         (ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m", "--values", "--schemas", "RoleSchemas"], "RoleSet.Wire"),
@@ -269,7 +271,8 @@ SET_OUTPUTS = tuple((directory, files, selection, language, space)
                         (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--all-roots", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas"], "SetGame"),
                         (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=64m", "--use-schemas", "SetGame.GameSchemas"], "SetGameUse"))
                     for language in ("csharp", "swift")) \
-    + ((NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas", "--import", "Foundation", "--import", "Shared"], "swift", "SetImports"),)
+    + ((NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas", "--import", "Foundation", "--import", "Shared"], "swift", "SetImports"),) \
+    + tuple((MESSAGES_FIXTURE.parent, [MESSAGES_FIXTURE.name], ["--root", ":Game", "--values", "--message-suffix", "Message"], language, "Suffixed") for language in ("csharp", "swift"))
 
 
 def set_outputs(csharp, swift, work):

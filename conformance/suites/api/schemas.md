@@ -27724,3 +27724,185 @@ schema:
       entries: []
     byteCount: 0
 ```
+
+---
+
+## Test: a schema and a message of the same name
+
+Messages have their own namespace.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-schema-same-name
+schemaApi:
+  sources: ["wire schema :Shield as { strength: :Number integer between 0 and 100 }\nwire message Shield(level: :Number integer between 0 and 10)\n"]
+  root: ":Shield"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"canonical": "gess1\nschema Shield\nfield strength Number integer between 0e0 1e2\n", "hash": "78027c31b0e8a773"}
+```
+
+---
+
+## Test: a root name declared in both namespaces
+
+A plain name must name one declaration.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-root-ambiguous
+schemaApi:
+  sources: ["wire schema :Shield as { strength: :Number integer between 0 and 100 }\nwire message Shield(level: :Number integer between 0 and 10)\n"]
+  root: "Shield"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.ambiguousName", "line": 0, "column": 0}}
+```
+
+---
+
+## Test: a message root in call form
+
+`Shield()` selects the message.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-root-call-form
+schemaApi:
+  sources: ["wire schema :Shield as { strength: :Number integer between 0 and 100 }\nwire message Shield(level: :Number integer between 0 and 10)\n"]
+  root: "Shield()"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"canonical": "gess1\nmessage Shield\nargument level Number integer between 0e0 1e1\n", "hash": "03181e32445ba5ac"}
+```
+
+---
+
+## Test: a unique message root
+
+A plain name selects a message while it is unique.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-root-plain
+schemaApi:
+  sources: ["wire message Move(x: :Number integer between 0 and 255)\n"]
+  root: "Move"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"canonical": "gess1\nmessage Move\nargument x Number integer between 0e0 255e0\n", "hash": "e15a10c23551870e"}
+```
+
+---
+
+## Test: a message root with a colon
+
+`:Name` names a schema or set, never a message.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-root-colon
+schemaApi:
+  sources: ["wire message Move(x: :Number integer between 0 and 255)\n"]
+  root: ":Move"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.unknownName", "line": 0, "column": 0}}
+```
+
+---
+
+## Test: a message declared twice
+
+Messages are unique among messages.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-message-duplicate
+schemaApi:
+  sources: ["message Move()\nmessage Move()\n"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.duplicateName", "line": 2, "column": 1}}
+```
+
+---
+
+## Test: a message set named like a schema
+
+Message sets share the namespace of schemas.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-message-set-name-taken
+schemaApi:
+  sources: ["schema :Actions as { x: :Boolean }\nmessages :Actions as (Move)\nmessage Move()\n"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.duplicateName", "line": 2, "column": 1}}
+```
+
+---
+
+## Test: a message in two sets
+
+A message may belong to several sets.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-in-two-sets
+schemaApi:
+  sources: ["wire messages :Actions as (Shield, Move)\nwire messages :Defense as (Shield)\nwire message Shield(level: :Number integer between 0 and 10)\nwire message Move(x: :Number integer between 0 and 255)\n"]
+  root: "Defense"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"canonical": "gess1\nmessages Defense\nmember Shield\nmessage Shield\nargument level Number integer between 0e0 1e1\n", "hash": "3848fd4f58e0214b"}
+```

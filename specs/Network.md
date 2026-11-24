@@ -53,7 +53,7 @@ The [schema grammar](Schemas.md#grammar) reads it:
 
 ```text
 network = "network" ":" TypeName "as" "{" route { route } "}"
-route   = ( "client" | "server" ) ( "sends" | "publishes" ) ":" TypeName
+route   = ( "client" | "server" ) ( "sends" | "publishes" ) ( ":" TypeName | MessageName )
           ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ]
 ```
 
@@ -63,7 +63,10 @@ allowed. Each route stays on one line.
 - **Side.** `client` routes go from the client to the server, `server` routes the other
   way.
 - **`sends`** names a schema, a message or a message set with a `wire`
-  [role](Schemas.md#roles). Its class is `reliable` or `bulk`.
+  [role](Schemas.md#roles). Its class is `reliable` or `bulk`. A message is named without
+  `:` (`client sends Move reliable`), a schema or message set with it, since messages
+  have a [namespace of their own](Schemas.md#declarations). *Since: Unreleased — message
+  routes without `:`.*
 - **`publishes`** names a schema with a `wire` role, a topic. Its class is `latest` or
   `reliable`.
 - **`at most every`** stands only on `publishes` and states the shortest interval
@@ -75,14 +78,14 @@ allowed. Each route stays on one line.
 - A network holds 1 to 64 routes. The position of a route, counting from 0, is its
   route index; its channel on the wire is the index plus 1.
 
-A network shares the namespace of schemas, messages, message sets and tag sets. It is no
+A network shares the namespace of schemas, message sets and tag sets. It is no
 type: a field or another route cannot name it. Code generation alone accepts it as a root and
 writes its [constants and typed functions](Schemas.md#network-constants). A root may be abstract
 nowhere in a network.
 
 | Code | Condition |
 | --- | --- |
-| `schema.unknownName` | a route names no declared schema, message or message set, or a rate names no constant of its file |
+| `schema.unknownName` | a route names no declared message without `:`, no declared schema or message set with it, or a rate names no constant of its file |
 | `schema.invalidRoute` | a route names a declaration of the wrong kind or without a `wire` role, an abstract schema, a class its verb does not take, a rate on `sends`, or a rate that is no time, not positive or above `3600s` |
 | `schema.duplicateRoute` | a side names the same root twice with the same verb |
 | `schema.tooLarge` | a network has more than 64 routes |

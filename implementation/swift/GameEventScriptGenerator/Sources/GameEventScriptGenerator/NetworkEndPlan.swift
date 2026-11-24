@@ -32,7 +32,7 @@ struct GesNetworkEndPlan {
         }
         let plan = GesNetworkEndPlan(client: client, outgoing: outgoing, incoming: incoming)
         var names: [(name: String, origin: String)] = plan.fixed.map { ($0, "the event " + $0) }
-        for (route, name) in incoming { names.append((name, "the event of the route '\(route.side) \(route.verb) :\(route.root)'")) }
+        for (route, name) in incoming { names.append((name, "the event of the route '\(route.side) \(route.verb) \(route.written)'")) }
         try GesSchemaPlanner.unique("\(network.name).\(plan.name)", names)
         return plan
     }
@@ -58,7 +58,7 @@ struct GesNetworkEndPlan {
         names.append((swift ? "hash" : "Hash", "the network hash constant"))
         names.append((swift ? "bound" : "Bound", "the bound network property"))
         for route in network.routes {
-            let label = "the route \(route.side) \(route.verb) :\(route.root)"
+            let label = "the route \(route.side) \(route.verb) \(route.written)"
             let constant = swift ? GesSchemaPlanner.camel(route.name) : route.name
             names.append((constant, "the index constant of \(label)"))
             if route.rateMicroseconds != 0 { names.append((constant + "EveryMicroseconds", "the rate constant of \(label)")) }

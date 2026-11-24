@@ -79,7 +79,10 @@ public static class GesSchemaGenerator
         if (parameters is null) throw new ArgumentNullException(nameof(parameters));
         if (options is null) throw new ArgumentNullException(nameof(options));
         var document = Wire(set, roots, parameters, options, out var layout);
-        return GesCodeFiles.Split(document, options.Split, set.SourceName, files => Manifest(options, model: false, layout.Roots, layout.RootHashes, layout.Parameters, files));
+        var types = layout.Types;
+        var keys = layout.Roots;
+        // A message type carries the message suffix, so the layout knows its source; tag sets and networks keep their names.
+        return GesCodeFiles.Split(document, options.Split, owner => types.Find(type => type.Name == owner)?.Source ?? set.SourceName(owner), files => Manifest(options, model: false, layout.RootNames, name => layout.RootHashes(keys[layout.RootNames.IndexOf(name)]), layout.Parameters, files));
     }
 
     private static GesCodeDocument Wire(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaParameters parameters, GesSchemaGenerateOptions options, out GesSchemaLayout layout)
@@ -100,16 +103,18 @@ public static class GesSchemaGenerator
         // Wire records and models of one schema share its name, so they need different namespaces.
         if (modelSpace is not null && string.Join(".", modelSpace) == string.Join(".", wireSpace))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The models live in the namespace of the wire code ('{options.Models}'), where a wire record and the model of its schema would share a name; generate them into different namespaces.");
-        layout = GesSchemaLayoutBuilder.Build(set, roots, parameters);
+        CheckMessageSuffix(options.MessageSuffix);
+        layout = GesSchemaLayoutBuilder.Build(set, roots, parameters, options.MessageSuffix);
         var types = GesSchemaPlanner.Plan(layout);
+        CheckMessageNames(layout, types);
         // Packed records are model types over one word, which wire code declares itself unless it shares those of models.
         var packed = layout.Types.FindAll(type => type.PackedWidth > 0).ConvertAll(type => type.Name);
-        var shared = packed.Count > 0 && options.Models is null ? GesModelLayoutBuilder.Build(set, packed) : null;
+        var shared = packed.Count > 0 && options.Models is null ? GesModelLayoutBuilder.Build(set, layout.Types.FindAll(type => type.PackedWidth > 0).ConvertAll(type => type.Lookup)) : null;
         // With models, wire records that a model root of any group reaches convert to their model directly.
         var modelRoots = new List<string>();
         if (options.Models is not null)
             foreach (var schema in set.Schemas)
-                if (schema.ModelGroup is not null) modelRoots.Add(schema.Name);
+                if (schema.ModelGroup is not null) modelRoots.Add(set.RootName(schema));
         var models = modelRoots.Count > 0 ? GesModelLayoutBuilder.Build(set, modelRoots) : null;
         // Where one namespace continues the other, its next component must not take the name of a type in the shorter one. The
         // models' namespace holds every type of every model group, since the wire code converts to the models of any of them;
@@ -237,6 +242,7 @@ public static class GesSchemaGenerator
     private static GesCodeDocument Models(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaGenerateOptions options, out GesModelLayout layout)
     {
         if (options.CheckedExclusivity) throw new GesGeneratorException(GesGeneratorException.Usage, "Checked exclusivity concerns wire code, not models.");
+        if (options.MessageSuffix.Length > 0) throw new GesGeneratorException(GesGeneratorException.Usage, "A message suffix concerns wire code; models hold no messages.");
         var extended = CheckExtendNamespace(options);
         if (options.Language == GesSchemaLanguage.Swift) GesSchemaPlanner.CheckSwiftNamespace(GesSchemaPlanner.Namespace(options.Namespace, GesSwiftEmitter.Keywords), options.Namespace, null);
         if (options.Models is not null) throw new GesGeneratorException(GesGeneratorException.Usage, "Models concern wire code, which shares their types; models do not name another namespace.");
@@ -248,6 +254,28 @@ public static class GesSchemaGenerator
 
     // The manifest of split output: the options, the roots with their hashes, the parameters and the files, so that a tool
     // knows which files of the directory it owns.
+    // The suffix continues a type name in C# and Swift: ASCII letters, digits and underscores.
+    private static void CheckMessageSuffix(string suffix)
+    {
+        if (suffix is null) throw new GesGeneratorException(GesGeneratorException.Usage, "The message suffix is null; leave it empty for none.");
+        foreach (var character in suffix)
+            if (!(character is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '_'))
+                throw new GesGeneratorException(GesGeneratorException.Usage, $"The message suffix '{suffix}' is no identifier part; use ASCII letters, digits and underscores.");
+    }
+
+    // A message type is named with the message suffix; it must not take the name of another type of the same generation.
+    private static void CheckMessageNames(GesSchemaLayout layout, List<GesPlanType> types)
+    {
+        var others = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var type in layout.Types)
+            if (type.Kind != GesSchemaKind.Message) others[type.Name] = (type.Kind == GesSchemaKind.Schema ? "the schema :" : "the message set :") + type.Name;
+        foreach (var (name, _) in GesSchemaPlanner.TagSets(types, "")) others.TryAdd(name, "the tag set :" + name);
+        foreach (var network in layout.Networks) others.TryAdd(network.Name, "the network :" + network.Name);
+        foreach (var type in layout.Types)
+            if (type.Kind == GesSchemaKind.Message && others.TryGetValue(type.Name, out var other))
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The message {type.Declared} is generated as the type '{type.Name}', which {other} is generated as too; give the message types a suffix with --message-suffix.");
+    }
+
     private static string Manifest(GesSchemaGenerateOptions options, bool model, List<string> roots, Func<string, (ulong Hash, ulong? BindingHash)> hashes, List<GesLayoutParameter> parameters, List<string> files)
     {
         var json = new GesSchemaLayoutJson.Writer();
@@ -302,7 +330,7 @@ public static class GesSchemaGenerator
         if (group is null) throw new ArgumentNullException(nameof(group));
         var roots = new List<string>();
         foreach (var schema in set.Schemas)
-            if ((wire ? schema.WireGroup : schema.ModelGroup) == group) roots.Add(schema.Name);
+            if ((wire ? schema.WireGroup : schema.ModelGroup) == group) roots.Add(set.RootName(schema));
         return roots;
     }
 }

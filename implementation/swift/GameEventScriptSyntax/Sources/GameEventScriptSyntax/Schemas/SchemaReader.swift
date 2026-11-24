@@ -250,7 +250,7 @@
         return result
     }
 
-    /// `client|server sends|publishes :Root reliable|latest|bulk [at most every value]` on one line.
+    /// `client|server sends|publishes :Root|Message reliable|latest|bulk [at most every value]` on one line.
     private mutating func route() throws -> GesSchemaRouteSyntax {
         var result = GesSchemaRouteSyntax()
         result.offset = position
@@ -262,7 +262,8 @@
         if verb != "sends" && verb != "publishes" { throw Failure(offset: verbOffset, message: "Expected 'sends' or 'publishes'.") }
         skipSpaces()
         result.rootOffset = position
-        result.root = try typeName()
+        result.isMessage = position < bytes.count && bytes[position] != 58
+        result.root = result.isMessage ? try name(GesNames.type, "type name or message name") : try typeName()
         skipSpaces()
         result.classOffset = position
         switch word() {

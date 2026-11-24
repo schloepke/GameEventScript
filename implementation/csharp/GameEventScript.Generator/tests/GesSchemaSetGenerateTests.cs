@@ -70,4 +70,39 @@ public sealed class GesSchemaSetGenerateTests
             Assert.DoesNotContain("GameSchemas\n", code);
         }
     }
+
+    [TestMethod]
+    public void AMessageSuffixNamesOnlyMessageTypes()
+    {
+        const string messages = "wire schema :Shield as { strength: :Number integer between 0 and 100 }\nwire schema :ShieldMessage as { x: :Boolean }\n"
+            + "wire messages :Actions as (Shield, Move)\nwire message Shield(level: :Number integer between 0 and 10)\nwire message Move(x: :Number integer between 0 and 255)\n";
+        var set = GesSchemaSet.Parse(messages);
+        string Messages(string[] roots, string suffix, GesSchemaLanguage language = GesSchemaLanguage.CSharp)
+            => GesSchemaGenerator.Generate(set, roots, new GesSchemaParameters(), new() { Language = language, MessageSuffix = suffix });
+        foreach (var language in Languages)
+        {
+            // Without a suffix the message and the schema both claim Shield; with one, ShieldMessage meets the schema of that name.
+            Assert.AreEqual("generate.nameCollision", Code(() => Messages([":Shield", "Shield()"], "", language)));
+            Assert.AreEqual("generate.nameCollision", Code(() => Messages([":ShieldMessage", "Shield()"], "Message", language)));
+            StringAssert.Contains(Messages([":Shield", "Shield()"], "Message", language), "ShieldMessage");
+            foreach (var suffix in new[] { "a-b", "Ä", " " })
+                Assert.AreEqual("generate.usage", Code(() => Messages(["Shield()"], suffix, language)));
+            StringAssert.Contains(Messages(["Move"], "1x", language), "Move1x");
+            Assert.AreEqual("generate.usage", Code(() => GesSchemaGenerator.GenerateModels(set, [":Shield"], new() { Language = language, MessageSuffix = "Message" })));
+        }
+
+        // Set members keep the declared names; only the message types they hold take the suffix.
+        var actions = Messages(["Actions"], "Message");
+        StringAssert.Contains(actions, "public MoveMessage Move");
+        StringAssert.Contains(actions, "case Member.Move:");
+        Assert.DoesNotContain("Member.MoveMessage", actions);
+
+        // The suffix exists only in code: hashes and paths keep the declared name.
+        string SchemaHash(string code) => Regex.Match(code, "SchemaHash = (0x[0-9a-f]{16})").Groups[1].Value;
+        var plain = Messages(["Shield()"], "");
+        var suffixed = Messages(["Shield()"], "Message");
+        Assert.AreNotEqual("", SchemaHash(plain));
+        Assert.AreEqual(SchemaHash(plain), SchemaHash(suffixed));
+        Assert.AreEqual(plain, suffixed.Replace("ShieldMessage", "Shield"));
+    }
 }

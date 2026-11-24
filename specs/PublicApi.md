@@ -736,7 +736,7 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 | --- | --- | --- |
 | source | `readonly struct GesSchemaSource(string name, string text)` | `struct GesSchemaSource` with `init(name:text:)` |
 | schema set | `sealed class GesSchemaSet` with `static Parse(params GesSchemaSource[])`, `static Parse(string)` | `final class GesSchemaSet` with `init(sources:) throws`, `init(parsing:) throws` |
-| declarations | `Schemas`, `Schema(name)` | `schemas`, `schema(_:)` |
+| declarations | `Schemas`, `Schema(name)` (a name written `Name`, `:Name` or `Name()`, [roots](Schemas.md#declarations)) | `schemas`, `schema(_:)` |
 | document check by header | `CheckDocument(text, parameters)` | `checkDocument(_:parameters:)` |
 | document read as a model reads it | `sealed class GesSchemaDocument` with `static Read(schemas, text, params expected)`, `Schema`, `Value`, `Locate(GesWireException)` and the constant `SchemaMismatch` | `struct GesSchemaDocument` with `init(_:schemas:expected:) throws(GesDocumentError)`, `schema`, `value`, `error(for:)` and the constant `schemaMismatch` |
 | description | `sealed class GesSchema` with `Name`, `Kind`, `WireGroup`, `ModelGroup`, `IsAbstract`, `PackedWidth`, `PackedBits`, `Takes`, `Hash`, `CanonicalForm`, `Parameters`, `Fields`, `ComputedFields`, `Constants`, `Tags`, `Members`, `Bind(parameters)`, `CheckDocument(text, parameters)` | `final class GesSchema` with `name`, `kind`, `wireGroup`, `modelGroup`, `isAbstract`, `packedWidth`, `packedBits`, `takes`, `hash`, `canonicalForm`, `parameters`, `fields`, `computedFields`, `constants`, `tags`, `members`, `bind(parameters:)`, `checkDocument(_:parameters:)` |
@@ -784,7 +784,7 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 | models | `ModelLayout(set, roots)`, `GenerateModels(set, roots, options)` | `modelLayout(_:roots:)`, `generateModels(_:roots:options:)` |
 | split files | `GenerateFiles(set, roots, parameters, options)`, `GenerateModelFiles(set, roots, options)`, returning `IReadOnlyList<GesGeneratedFile>` | `generateFiles(_:roots:parameters:options:)`, `generateModelFiles(_:roots:options:)`, returning `[GesGeneratedFile]` |
 | generated file | `sealed class GesGeneratedFile` with `Path`, `Text` | `struct GesGeneratedFile` with `path`, `text` |
-| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Split`, `Models`, `ExtendNamespace`, `SchemaSet`, `UseSchemaSet`, `Imports` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:extendNamespace:schemaSet:useSchemaSet:imports:)` and the same properties |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Split`, `Models`, `ExtendNamespace`, `SchemaSet`, `UseSchemaSet`, `Imports`, `MessageSuffix` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:extendNamespace:schemaSet:useSchemaSet:imports:messageSuffix:)` and the same properties |
 | split | `enum GesSchemaSplit` with `None`, `Schema`, `File` | `enum GesSchemaSplit` with `none`, `schema`, `file` |
 | target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
 | access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
@@ -802,7 +802,7 @@ port.
 `WireRoots` and `ModelRoots` list the [roots of a group](Schemas.md#roles) in declaration order, empty when it has none.
 `ModelLayout` and `GenerateModels` write the [model layout](Schemas.md#model-layout) and the
 [model types](Schemas.md#model-types) of schema roots, where `Values` adds their plain values; a root that is no schema
-fails with `generate.usage`, and so do the wire-only options `CheckedExclusivity` and `Models`; `Generate` rejects the model-only options
+fails with `generate.usage`, and so do the wire-only options `CheckedExclusivity`, `Models` and a non-empty `MessageSuffix` ([message type names](Schemas.md#message-type-names)); `Generate` rejects the model-only options
 `Bindings` and `Documents` with `generate.usage`. A reached type without a model type fails with `generate.unsupported`.
 
 > **Since: 0.5.0** — split files

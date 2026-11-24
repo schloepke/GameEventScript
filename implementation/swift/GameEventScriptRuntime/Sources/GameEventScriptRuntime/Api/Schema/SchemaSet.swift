@@ -29,7 +29,9 @@ public final class GesSchemaSet: @unchecked Sendable {
     // A Flags field holds its members in one 64-bit mask.
     static let maximumFlagCount = 64
 
+    // Schemas and message sets share one namespace; messages have their own.
     private var declarations: [String: GesResolvedDeclaration] = [:]
+    private var messages: [String: GesResolvedDeclaration] = [:]
     private var ordered: [GesResolvedDeclaration] = []
     private var tagSetSources: [String: String] = [:]
     private var networkSources: [String: String] = [:]
@@ -51,10 +53,10 @@ public final class GesSchemaSet: @unchecked Sendable {
         var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
         var networkNames: Set<String> = []
         for file in files {
-            try file.declareNames(&declarations, &ordered, &tagSets, &networkNames)
+            try file.declareNames(&declarations, &messages, &ordered, &tagSets, &networkNames)
             for name in tagSets.keys where tagSetSources[name] == nil { tagSetSources[name] = file.sourceName }
         }
-        for file in files { try file.resolve(declarations, tagSets) }
+        for file in files { try file.resolve(declarations, messages, tagSets) }
         var composed: Set<ObjectIdentifier> = []
         for declaration in ordered where declaration.kind == .schema {
             var path: [GesResolvedDeclaration] = []
@@ -77,7 +79,7 @@ public final class GesSchemaSet: @unchecked Sendable {
         var networks: [GesNetwork] = []
         for file in files {
             let start = networks.count
-            try file.resolveNetworks(declarations, &networks)
+            try file.resolveNetworks(declarations, messages, &networks)
             for network in networks[start...] { networkSources[network.name] = file.sourceName }
         }
         for network in networks { networksByName[network.name] = network }
@@ -109,8 +111,11 @@ public final class GesSchemaSet: @unchecked Sendable {
     /// The schemas, messages and message sets, in source order.
     public private(set) var schemas: [GesSchema] = []
 
-    /// A declaration by name.
-    /// - Throws: `GesSchemaError` when the name is not declared.
+    /// A declaration by its exact name, compared by Unicode scalars. Messages have their own namespace: `:Name` selects a
+    /// schema or message set, `Name()` a message, and a plain `Name` whichever of the two declares it.
+    /// - Parameter name: The name of a schema, message or message set, written `Name`, `:Name` or `Name()`.
+    /// - Throws: `GesSchemaError` with `schema.unknownName` when the name is not declared, or with `schema.ambiguousName`
+    ///   when a plain name declares both a schema or message set and a message.
     public func schema(_ name: String) throws -> GesSchema { try declaration(name).schema! }
 
     /// The networks, in source order.
@@ -137,7 +142,7 @@ public final class GesSchemaSet: @unchecked Sendable {
         let syntax = try Self.readDocument(text)
         let schema: GesResolvedDeclaration
         switch syntax.schema {
-        case .type(let name): schema = try declaration(name)
+        case .type(let name): schema = try typeDeclaration(name)
         case .file(let source): schema = try rootSchema(source)
         case .none: throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "The document names no schema.")
         }
@@ -185,14 +190,52 @@ public final class GesSchemaSet: @unchecked Sendable {
         for alternative in type.element ?? [] { collectReferences(alternative, owner, &referenced) }
     }
 
-    /// The name of the source that declares a schema, message, message set, tag set or network, which places its generated
-    /// code in split output. The name must be declared.
+    /// The name of the source that declares a schema, message set, tag set or network, which places its generated code in
+    /// split output. The name must be declared.
     @_spi(Generator) public func sourceName(of name: String) -> String {
         declarations[name]?.scope.sourceName ?? networkSources[name] ?? tagSetSources[name]!
     }
 
+    /// The name of the source that declares a message. The message must be declared.
+    @_spi(Generator) public func messageSourceName(of name: String) -> String { messages[name]!.scope.sourceName }
+
+    /// Whether a plain name declares both a message and a schema, message set or network, so that a root needs `:` or `()`.
+    @_spi(Generator) public func namesBoth(_ name: String) -> Bool {
+        messages[name] != nil && (declarations[name] != nil || networksByName[name] != nil)
+    }
+
+    /// A declaration as a root names it: plainly, unless the name is also declared in the other namespace.
+    @_spi(Generator) public func rootName(of schema: GesSchema) -> String {
+        !namesBoth(schema.name) ? schema.name : schema.kind == .message ? schema.name + "()" : ":" + schema.name
+    }
+
+    // A root as an API or tool names it: `:Name` is a schema or message set, `Name()` a message and a plain name either,
+    // when only one of the two namespaces declares it.
     func declaration(_ root: String) throws -> GesResolvedDeclaration {
-        guard let found = declarations[root] else { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "'\(root)' is not declared.") }
+        if root.hasPrefix(":") { return try typeDeclaration(String(root.dropFirst())) }
+        if root.hasSuffix("()") {
+            let name = String(root.dropLast(2))
+            guard let message = messages[name] else { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "Message '\(name)' is not declared.") }
+            return message
+        }
+        let found = declarations[root]
+        if let other = messages[root] {
+            guard let found else { return other }
+            throw GesSchemaError(
+                code: Code.ambiguousName,
+                sourceName: "",
+                line: 0,
+                column: 0,
+                message: "'\(root)' names a \(found.kind == .schema ? "schema" : "message set") and a message; write ':\(root)' or '\(root)()'."
+            )
+        }
+        guard let found else { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "'\(root)' is not declared.") }
+        return found
+    }
+
+    // A schema or message set, as a document header or a `:Name` names it.
+    func typeDeclaration(_ name: String) throws -> GesResolvedDeclaration {
+        guard let found = declarations[name] else { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "':\(name)' is not declared.") }
         return found
     }
 
@@ -399,7 +442,13 @@ final class GesFileScope {
         return GesSchemaError(code: code, sourceName: source.name, line: line, column: column, message: message)
     }
 
-    func declareNames(_ all: inout [String: GesResolvedDeclaration], _ ordered: inout [GesResolvedDeclaration], _ tagSets: inout [String: GesSchemaDeclarationSyntax], _ networks: inout Set<String>) throws {
+    func declareNames(
+        _ all: inout [String: GesResolvedDeclaration],
+        _ messages: inout [String: GesResolvedDeclaration],
+        _ ordered: inout [GesResolvedDeclaration],
+        _ tagSets: inout [String: GesSchemaDeclarationSyntax],
+        _ networks: inout Set<String>
+    ) throws {
         for declaration in syntax.declarations {
             switch declaration.kind {
             case .tagSet:
@@ -434,17 +483,23 @@ final class GesFileScope {
                 if GesSchemaTypeNames.isBuiltIn(declaration.name) {
                     throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
                 }
-                if all[declaration.name] != nil || tagSets[declaration.name] != nil || networks.contains(declaration.name) {
-                    throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.")
+                // Messages have their own namespace; schemas, message sets, tag sets and networks share one.
+                if kind == .message {
+                    if messages[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "Message '\(declaration.name)' is declared twice.") }
+                    messages[declaration.name] = resolved
+                } else {
+                    if all[declaration.name] != nil || tagSets[declaration.name] != nil || networks.contains(declaration.name) {
+                        throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.")
+                    }
+                    all[declaration.name] = resolved
                 }
-                all[declaration.name] = resolved
                 ordered.append(resolved)
                 own.append(resolved)
             }
         }
     }
 
-    func resolve(_ all: [String: GesResolvedDeclaration], _ tagSets: [String: GesSchemaDeclarationSyntax]) throws {
+    func resolve(_ all: [String: GesResolvedDeclaration], _ messages: [String: GesResolvedDeclaration], _ tagSets: [String: GesSchemaDeclarationSyntax]) throws {
         self.tagSets = tagSets
         for declaration in own {
             let syntax = declaration.syntax
@@ -452,7 +507,7 @@ final class GesFileScope {
                 var seen: Set<String> = []
                 for (index, name) in syntax.members.enumerated() {
                     if !seen.insert(name).inserted { throw error(Code.duplicateName, syntax.memberOffsets[index], "Message '\(name)' is listed twice.") }
-                    guard let member = all[name], member.kind == .message else { throw error(Code.unknownName, syntax.memberOffsets[index], "Message '\(name)' is not declared.") }
+                    guard let member = messages[name] else { throw error(Code.unknownName, syntax.memberOffsets[index], "Message '\(name)' is not declared.") }
                     declaration.members.append(member)
                 }
                 continue

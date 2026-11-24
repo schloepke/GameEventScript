@@ -135,11 +135,11 @@ internal static class GesModelLayoutBuilder
         var rootNames = new List<string>();
         foreach (var root in roots)
         {
-            if (rootNames.Contains(root)) continue;
             var schema = set.Schema(root);
+            if (rootNames.Contains(schema.Name)) continue;
             if (schema.Kind != GesSchemaKind.Schema) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is no schema.");
             if (schema.IsAbstract) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is abstract; only its protocol is generated, where a model takes it.");
-            rootNames.Add(root);
+            rootNames.Add(schema.Name);
             Reach(schema, reached);
         }
 
@@ -147,7 +147,7 @@ internal static class GesModelLayoutBuilder
         foreach (var schema in reached.Values)
         {
             var type = new GesModelType { Name = schema.Name, Hash = schema.Hash, Constants = GesLayoutConstant.Of(schema), Computed = schema.Declaration.Computed };
-            if (schema.PackedWidth > 0) type.Packed = GesSchemaLayoutBuilder.Build(set, [schema.Name], new GesSchemaParameters());
+            if (schema.PackedWidth > 0) type.Packed = GesSchemaLayoutBuilder.Build(set, [set.RootName(schema)], new GesSchemaParameters());
             foreach (var info in schema.Fields)
             {
                 var field = Field(info.Name, info.Name, info.Alternatives);

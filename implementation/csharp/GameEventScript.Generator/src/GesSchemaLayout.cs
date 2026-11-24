@@ -14,17 +14,23 @@ internal sealed class GesSchemaLayout
 {
     internal const int Version = 1;
 
-    internal GesSchemaLayout(List<string> roots, List<GesLayoutParameter> parameters, List<GesLayoutType> types, List<GesLayoutNetwork> networks, List<GesSchemaSource> sources)
+    internal GesSchemaLayout(List<string> roots, List<string> rootNames, List<GesLayoutParameter> parameters, List<GesLayoutType> types, List<GesLayoutNetwork> networks, List<GesSchemaSource> sources)
     {
         Roots = roots;
+        RootNames = rootNames;
         Parameters = parameters;
         Types = types;
         Networks = networks;
         Sources = sources;
     }
 
-    // The roots in order: the given ones, each network followed by the roots of its routes that are no root yet.
+    // The roots in order as generated type names: the given ones, each network followed by the roots of its routes that are
+    // no root yet.
     internal List<string> Roots { get; }
+
+    // The roots as a schema set looks them up, in the order of Roots: the declared name, written `:Name` or `Name()` where
+    // the set declares it in both namespaces. Generated code binds them, and the JSON, headers and manifests name them.
+    internal List<string> RootNames { get; }
 
     internal List<GesLayoutParameter> Parameters { get; }
 
@@ -37,6 +43,9 @@ internal sealed class GesSchemaLayout
     internal List<GesSchemaSource> Sources { get; }
 
     internal GesLayoutType Type(string name) => Types.Find(type => type.Name == name) ?? throw new InvalidOperationException($"Type '{name}' is not in the layout.");
+
+    // The name a schema set looks a root up by.
+    internal string RootName(string root) => RootNames[Roots.IndexOf(root)];
 
     internal GesLayoutNetwork? Network(string name) => Networks.Find(network => network.Name == name);
 
@@ -61,7 +70,7 @@ internal sealed class GesLayoutNetwork(string name, ulong hash, List<GesLayoutRo
 
 // One route: its side `client` or `server`, its verb `sends` or `publishes`, its root, its class `reliable`, `latest` or
 // `bulk` and its rate in microseconds, 0 without one.
-internal sealed class GesLayoutRoute(int index, string side, string verb, string root, string deliveryClass, long rateMicroseconds)
+internal sealed class GesLayoutRoute(int index, string side, string verb, string root, string type, string rootName, bool message, string deliveryClass, long rateMicroseconds)
 {
     internal int Index { get; } = index;
 
@@ -69,7 +78,20 @@ internal sealed class GesLayoutRoute(int index, string side, string verb, string
 
     internal string Verb { get; } = verb;
 
+    // The declared name of the root, which names the route's constants.
     internal string Root { get; } = root;
+
+    // The generated type of the root, the root's name with the message suffix for a message.
+    internal string Type { get; } = type;
+
+    // The root as a schema set looks it up, see GesSchemaLayout.RootNames.
+    internal string RootName { get; } = rootName;
+
+    // Whether the root is a message, which the source names without `:`.
+    internal bool IsMessage { get; } = message;
+
+    // The root as the route spells it in source: a message by its name, a schema or set with `:`.
+    internal string Written => IsMessage ? Root : ":" + Root;
 
     internal string Class { get; } = deliveryClass;
 
@@ -192,7 +214,18 @@ internal sealed class GesLayoutConstant
 
 internal sealed class GesLayoutType
 {
+    // The generated type name: the declared name, with the message suffix for a message.
     internal string Name = "";
+
+    // The declared name, which values, documents, diagnostics and the JSON use.
+    internal string Declared = "";
+
+    // The name a schema set looks the type up by: the declared name, `:Name` or `Name()` when a schema or set and a
+    // message share it.
+    internal string Lookup = "";
+
+    // The name of the source that declares it, which places it in split output.
+    internal string Source = "";
     internal GesSchemaKind Kind;
     internal ulong Hash;
     internal ulong BindingHash;
@@ -205,7 +238,9 @@ internal sealed class GesLayoutType
     // The fields written `computed by`, which are never encoded, with their checked expressions.
     internal GesResolvedComputed[] Computed = [];
     internal List<string> Tags = [];
+    // A message set's members as generated type names and as declared names, which name its cases.
     internal List<string> Members = [];
+    internal List<string> MemberNames = [];
     internal int MemberWidth;
 
     // A packed schema's word: its width of 8, 16, 32 or 64 bits and the bits its fields take; 0 for other types.
@@ -293,31 +328,39 @@ internal sealed class GesLayoutEncoding
 // as a reference, since parameters belong to files and a schema binds the same wherever it is reached.
 internal static class GesSchemaLayoutBuilder
 {
-    internal static GesSchemaLayout Build(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaParameters parameters)
+    // Messages have their own namespace, so a message is keyed `Name()`; `(` sorts below every name character, which keeps
+    // the order of names that differ.
+    internal static GesSchemaLayout Build(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaParameters parameters, string messageSuffix = "")
     {
         if (roots.Count == 0) throw new GesGeneratorException(GesGeneratorException.Usage, "Specify at least one root.");
         var reached = new SortedDictionary<string, GesSchema>(StringComparer.Ordinal);
+        var rootKeys = new List<string>();
+        var rootTypes = new List<string>();
         var rootNames = new List<string>();
         var parameterInfos = new SortedDictionary<string, GesSchemaParameterInfo>(StringComparer.Ordinal);
         var networks = new List<GesNetwork>();
         foreach (var root in roots)
         {
-            if (rootNames.Contains(root)) continue;
-            rootNames.Add(root);
             if (FindNetwork(set, root) is { } network)
             {
+                if (rootKeys.Contains(":" + network.Name)) continue;
+                rootKeys.Add(":" + network.Name);
+                rootTypes.Add(network.Name);
+                rootNames.Add(set.NamesBoth(network.Name) ? ":" + network.Name : network.Name);
                 // A network makes the roots of its routes roots of the generation.
                 networks.Add(network);
                 foreach (var route in network.Routes)
                 {
-                    if (!rootNames.Contains(route.Root.Name)) rootNames.Add(route.Root.Name);
+                    AddRoot(set, route.Root, rootKeys, rootTypes, rootNames, messageSuffix);
                     Root(route.Root, reached, parameterInfos);
                 }
 
                 continue;
             }
 
-            Root(set.Schema(root), reached, parameterInfos);
+            var schema = set.Schema(root);
+            AddRoot(set, schema, rootKeys, rootTypes, rootNames, messageSuffix);
+            Root(schema, reached, parameterInfos);
         }
 
         var layoutParameters = new List<GesLayoutParameter>();
@@ -328,19 +371,41 @@ internal static class GesSchemaLayoutBuilder
         }
 
         var types = new List<GesLayoutType>();
-        foreach (var schema in reached.Values) types.Add(Type(schema, parameters));
-        var layoutNetworks = networks.ConvertAll(network => Network(network, parameters));
+        foreach (var schema in reached.Values) types.Add(Type(set, schema, parameters, messageSuffix));
+        var layoutNetworks = networks.ConvertAll(network => Network(set, network, parameters, messageSuffix));
         var sources = new List<GesSchemaSource>();
         foreach (var source in set.Sources) sources.Add(new GesSchemaSource(source.Name.Substring(source.Name.LastIndexOfAny(['/', '\\']) + 1), source.Text));
-        return new GesSchemaLayout(rootNames, layoutParameters, types, layoutNetworks, sources);
+        return new GesSchemaLayout(rootTypes, rootNames, layoutParameters, types, layoutNetworks, sources);
     }
 
+    // A network named plainly or `:Name`; a plain name that a message shares is ambiguous.
     private static GesNetwork? FindNetwork(GesSchemaSet set, string name)
     {
+        var qualified = name.StartsWith(":", StringComparison.Ordinal);
+        var plain = qualified ? name.Substring(1) : name;
         foreach (var network in set.Networks)
-            if (network.Name == name) return network;
+        {
+            if (network.Name != plain) continue;
+            if (!qualified && set.NamesBoth(plain)) set.Schema(plain);
+            return network;
+        }
+
         return null;
     }
+
+    private static void AddRoot(GesSchemaSet set, GesSchema schema, List<string> keys, List<string> types, List<string> names, string messageSuffix)
+    {
+        var key = Key(schema);
+        if (keys.Contains(key)) return;
+        keys.Add(key);
+        types.Add(TypeName(schema, messageSuffix));
+        names.Add(set.RootName(schema));
+    }
+
+    private static string Key(GesSchema schema) => schema.Kind == GesSchemaKind.Message ? schema.Name + "()" : schema.Name;
+
+    // The generated type name: a message's name ends with the suffix.
+    internal static string TypeName(GesSchema schema, string messageSuffix) => schema.Kind == GesSchemaKind.Message ? schema.Name + messageSuffix : schema.Name;
 
     private static void Root(GesSchema schema, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesSchemaParameterInfo> parameterInfos)
     {
@@ -348,19 +413,20 @@ internal static class GesSchemaLayoutBuilder
         foreach (var parameter in schema.Parameters) parameterInfos[parameter.Name] = parameter;
     }
 
-    private static GesLayoutNetwork Network(GesNetwork network, GesSchemaParameters parameters)
+    private static GesLayoutNetwork Network(GesSchemaSet set, GesNetwork network, GesSchemaParameters parameters, string messageSuffix)
     {
         var routes = new List<GesLayoutRoute>();
         foreach (var route in network.Routes)
             routes.Add(new GesLayoutRoute(route.Index, route.Side == GesNetworkSide.Client ? "client" : "server", route.Verb == GesNetworkVerb.Sends ? "sends" : "publishes",
-                route.Root.Name, GesBoundNetwork.ClassName(route.DeliveryClass), route.RateMicroseconds));
+                route.Root.Name, TypeName(route.Root, messageSuffix), set.RootName(route.Root), route.Root.Kind == GesSchemaKind.Message, GesBoundNetwork.ClassName(route.DeliveryClass), route.RateMicroseconds));
         return new GesLayoutNetwork(network.Name, network.Bind(parameters).Hash, routes);
     }
 
     private static void Reach(GesSchema schema, SortedDictionary<string, GesSchema> reached)
     {
-        if (reached.ContainsKey(schema.Name)) return;
-        reached.Add(schema.Name, schema);
+        var key = Key(schema);
+        if (reached.ContainsKey(key)) return;
+        reached.Add(key, schema);
         foreach (var member in schema.Members) Reach(member, reached);
         foreach (var field in schema.Fields)
             foreach (var type in field.Alternatives) Reach(type, reached);
@@ -372,12 +438,15 @@ internal static class GesSchemaLayoutBuilder
         foreach (var element in type.Element) Reach(element, reached);
     }
 
-    private static GesLayoutType Type(GesSchema schema, GesSchemaParameters parameters)
+    private static GesLayoutType Type(GesSchemaSet set, GesSchema schema, GesSchemaParameters parameters, string messageSuffix)
     {
         var bound = schema.Bind(parameters);
         var type = new GesLayoutType
         {
-            Name = schema.Name,
+            Name = TypeName(schema, messageSuffix),
+            Declared = schema.Name,
+            Lookup = set.RootName(schema),
+            Source = schema.Declaration.Scope.SourceName,
             Kind = schema.Kind,
             Hash = bound.Hash,
             BindingHash = bound.BindingHash,
@@ -389,7 +458,12 @@ internal static class GesSchemaLayoutBuilder
         var depends = new SortedSet<string>(StringComparer.Ordinal);
         if (schema.Kind == GesSchemaKind.Messages)
         {
-            foreach (var member in schema.Members) type.Members.Add(member.Name);
+            foreach (var member in schema.Members)
+            {
+                type.Members.Add(TypeName(member, messageSuffix));
+                type.MemberNames.Add(member.Name);
+            }
+
             type.MemberWidth = bound.MemberWidth;
             foreach (var member in bound.Members)
                 foreach (var field in Fields(member.Schema, member)) Collect(field, depends);

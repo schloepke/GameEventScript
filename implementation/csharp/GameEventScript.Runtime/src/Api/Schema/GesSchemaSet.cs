@@ -41,7 +41,9 @@ public sealed class GesSchemaSet
     internal const int MaximumFlagCount = 64;
 
     private readonly List<GesSchemaSource> _sources;
+    // Schemas and message sets share one namespace; messages have their own.
     private readonly Dictionary<string, GesResolvedDeclaration> _declarations = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, GesResolvedDeclaration> _messages = new(StringComparer.Ordinal);
     private readonly List<GesResolvedDeclaration> _ordered = [];
     private readonly Dictionary<string, string> _tagSetSources = new(StringComparer.Ordinal);
     private readonly Dictionary<string, GesNetwork> _networks = new(StringComparer.Ordinal);
@@ -74,11 +76,15 @@ public sealed class GesSchemaSet
     /// <summary>Gets the schemas, messages and message sets, in source order.</summary>
     public GesReadOnlyArray<GesSchema> Schemas { get; private set; }
 
-    /// <summary>Gets a declaration by its exact name, compared ordinally.</summary>
-    /// <param name="name">The name of a schema, message or message set, without the leading <c>:</c>.</param>
+    /// <summary>
+    /// Gets a declaration by its exact name, compared ordinally. Messages have their own namespace: <c>:Name</c> selects a
+    /// schema or message set, <c>Name()</c> a message, and a plain <c>Name</c> whichever of the two declares it.
+    /// </summary>
+    /// <param name="name">The name of a schema, message or message set, written <c>Name</c>, <c>:Name</c> or <c>Name()</c>.</param>
     /// <returns>Its description.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null"/>.</exception>
-    /// <exception cref="GesSchemaException">The name is not declared (<c>schema.unknownName</c>).</exception>
+    /// <exception cref="GesSchemaException">The name is not declared (<c>schema.unknownName</c>), or a plain name declares
+    /// both a schema or message set and a message (<c>schema.ambiguousName</c>).</exception>
     public GesSchema Schema(string name) => Declaration(name).Public;
 
     /// <summary>Gets the networks, in source order.</summary>
@@ -107,7 +113,7 @@ public sealed class GesSchemaSet
     public void CheckDocument(string text, GesSchemaParameters? parameters = null)
     {
         var syntax = ReadDocument(text);
-        var schema = syntax.Schema == GesDocumentSchemaSyntax.Type ? Declaration(syntax.SchemaName)
+        var schema = syntax.Schema == GesDocumentSchemaSyntax.Type ? TypeDeclaration(syntax.SchemaName)
             : syntax.Schema == GesDocumentSchemaSyntax.File ? RootSchema(syntax.SchemaName)
             : throw new GesSchemaException(Code.UnknownName, "", 0, 0, "The document names no schema.");
         Check(text, syntax, schema, parameters);
@@ -165,18 +171,45 @@ public sealed class GesSchemaSet
             foreach (var alternative in element) CollectReferences(alternative, owner, referenced);
     }
 
+    // A root as an API or tool names it: `:Name` is a schema or message set, `Name()` a message and a plain name either,
+    // when only one of the two namespaces declares it.
     internal GesResolvedDeclaration Declaration(string root)
     {
         if (root is null) throw new ArgumentNullException(nameof(root));
-        return _declarations.TryGetValue(root, out var declaration) ? declaration
-            : throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"'{root}' is not declared.");
+        if (root.StartsWith(":", StringComparison.Ordinal)) return TypeDeclaration(root.Substring(1));
+        if (root.EndsWith("()", StringComparison.Ordinal))
+        {
+            var name = root.Substring(0, root.Length - 2);
+            return _messages.TryGetValue(name, out var message) ? message
+                : throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"Message '{name}' is not declared.");
+        }
+
+        var found = _declarations.TryGetValue(root, out var declaration);
+        if (_messages.TryGetValue(root, out var other))
+            return found ? throw new GesSchemaException(Code.AmbiguousName, "", 0, 0, $"'{root}' names a {(declaration!.Kind == GesSchemaKind.Schema ? "schema" : "message set")} and a message; write ':{root}' or '{root}()'.") : other;
+        return found ? declaration! : throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"'{root}' is not declared.");
     }
 
-    // The name of the source that declares a schema, message, message set, tag set or network, which places its generated
-    // code in split output.
+    // A schema or message set, as a document header or a `:Name` names it.
+    internal GesResolvedDeclaration TypeDeclaration(string name)
+        => _declarations.TryGetValue(name, out var declaration) ? declaration
+            : throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"':{name}' is not declared.");
+
+    // The name of the source that declares a schema, message set, tag set or network, which places its generated code in
+    // split output.
     internal string SourceName(string name)
         => _declarations.TryGetValue(name, out var declaration) ? declaration.Scope.SourceName
             : _networkSources.TryGetValue(name, out var network) ? network : _tagSetSources[name];
+
+    // The name of the source that declares a message.
+    internal string MessageSourceName(string name) => _messages[name].Scope.SourceName;
+
+    // Whether a plain name declares both a message and a schema, message set or network, so that a root needs `:` or `()`.
+    internal bool NamesBoth(string name) => _messages.ContainsKey(name) && (_declarations.ContainsKey(name) || _networks.ContainsKey(name));
+
+    // A declaration as a root names it: plainly, unless the name is also declared in the other namespace.
+    internal string RootName(GesSchema schema)
+        => !NamesBoth(schema.Name) ? schema.Name : schema.Kind == GesSchemaKind.Message ? schema.Name + "()" : ":" + schema.Name;
 
     internal GesResolvedDeclaration? FindSchema(string name)
         => _declarations.TryGetValue(name, out var declaration) && declaration.Kind == GesSchemaKind.Schema ? declaration : null;
@@ -195,10 +228,10 @@ public sealed class GesSchemaSet
         var networkNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in files)
         {
-            file.DeclareNames(_declarations, _ordered, tagSets, networkNames);
+            file.DeclareNames(_declarations, _messages, _ordered, tagSets, networkNames);
             foreach (var name in tagSets.Keys) _tagSetSources.TryAdd(name, file.SourceName);
         }
-        foreach (var file in files) file.Resolve(_declarations);
+        foreach (var file in files) file.Resolve(_declarations, _messages);
         var composed = new HashSet<GesResolvedDeclaration>();
         foreach (var declaration in _ordered)
             if (declaration.Kind == GesSchemaKind.Schema) Compose(declaration, [], composed);
@@ -222,7 +255,7 @@ public sealed class GesSchemaSet
         foreach (var file in files)
         {
             var start = networks.Count;
-            file.ResolveNetworks(_declarations, networks);
+            file.ResolveNetworks(_declarations, _messages, networks);
             for (var index = start; index < networks.Count; index++) _networkSources.Add(networks[index].Name, file.SourceName);
         }
 
@@ -484,7 +517,7 @@ internal sealed partial class GesFileScope
         return new GesSchemaException(code, _source.Name, line, column, message);
     }
 
-    internal void DeclareNames(Dictionary<string, GesResolvedDeclaration> all, List<GesResolvedDeclaration> ordered, Dictionary<string, GesSchemaDeclarationSyntax> tagSets, HashSet<string> networks)
+    internal void DeclareNames(Dictionary<string, GesResolvedDeclaration> all, Dictionary<string, GesResolvedDeclaration> messages, List<GesResolvedDeclaration> ordered, Dictionary<string, GesSchemaDeclarationSyntax> tagSets, HashSet<string> networks)
     {
         _tagSets = tagSets;
         foreach (var declaration in _syntax.Declarations)
@@ -532,8 +565,11 @@ internal sealed partial class GesFileScope
                     };
                     if (GesSchemaTypeNames.IsBuiltIn(declaration.Name))
                         throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is a built-in type.");
-                    if (tagSets.ContainsKey(declaration.Name) || networks.Contains(declaration.Name) || !all.TryAdd(declaration.Name, resolved))
-                        throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is declared twice.");
+                    // Messages have their own namespace; schemas, message sets, tag sets and networks share one.
+                    if (resolved.Kind == GesSchemaKind.Message
+                            ? !messages.TryAdd(declaration.Name, resolved)
+                            : tagSets.ContainsKey(declaration.Name) || networks.Contains(declaration.Name) || !all.TryAdd(declaration.Name, resolved))
+                        throw Error(Code.DuplicateName, declaration.Offset, resolved.Kind == GesSchemaKind.Message ? $"Message '{declaration.Name}' is declared twice." : $"'{declaration.Name}' is declared twice.");
                     ordered.Add(resolved);
                     _own.Add(resolved);
                     break;
@@ -541,7 +577,7 @@ internal sealed partial class GesFileScope
         }
     }
 
-    internal void Resolve(Dictionary<string, GesResolvedDeclaration> all)
+    internal void Resolve(Dictionary<string, GesResolvedDeclaration> all, Dictionary<string, GesResolvedDeclaration> messages)
     {
         foreach (var declaration in _own)
         {
@@ -554,7 +590,7 @@ internal sealed partial class GesFileScope
                 {
                     var name = syntax.Members[index];
                     if (!seen.Add(name)) throw Error(Code.DuplicateName, syntax.MemberOffsets[index], $"Message '{name}' is listed twice.");
-                    if (!all.TryGetValue(name, out var member) || member.Kind != GesSchemaKind.Message) throw Error(Code.UnknownName, syntax.MemberOffsets[index], $"Message '{name}' is not declared.");
+                    if (!messages.TryGetValue(name, out var member)) throw Error(Code.UnknownName, syntax.MemberOffsets[index], $"Message '{name}' is not declared.");
                     members[index] = member;
                 }
 

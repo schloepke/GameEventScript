@@ -71,7 +71,7 @@ internal static partial class GesCSharpEmitter
                     document.Units.Add(new GesCodeUnit(type.Name, code =>
                     {
                         // A root shared with models gets its wire members as extension methods of the model's struct.
-                        code.Line($"/// <summary>The wire members of the packed record <c>:{type.Name}</c>, a wire root whose type the models declare: its bytes are its word, little-endian.</summary>");
+                        code.Line($"/// <summary>The wire members of the packed record <c>:{type.Layout.Declared}</c>, a wire root whose type the models declare: its bytes are its word, little-endian.</summary>");
                         code.Line($"{access} static class {type.Name}Wire");
                         code.Open("{");
                         PackedRoot(code, type, context, models + type.Name);
@@ -159,7 +159,7 @@ internal static partial class GesCSharpEmitter
         GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
 
         var visibility = type.IsItem ? "public" : access;
-        code.Line(type.IsItem ? "/// <summary>An element of the list.</summary>" : $"/// <summary>The {Kind(type)} <c>:{type.Name}</c>, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.</summary>");
+        code.Line(type.IsItem ? "/// <summary>An element of the list.</summary>" : $"/// <summary>The {Kind(type)} <c>:{type.Layout.Declared}</c>, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.</summary>");
         code.Line(type.IsClass ? $"{visibility} sealed partial class {type.Name}" : $"{visibility} partial struct {type.Name}");
         code.Open("{");
         if (!type.IsItem)
@@ -530,32 +530,35 @@ internal static partial class GesCSharpEmitter
         foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
         if (context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
-        foreach (var member in type.Members) names.Add((member, "the member " + member));
+        foreach (var member in type.MemberNames) names.Add((member, "the member " + member));
         GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
         var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);
         var last = Unsigned((ulong)type.Members.Count - 1);
-        code.Line($"/// <summary>The message set <c>:{type.Name}</c>: one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.</summary>");
+        code.Line($"/// <summary>The message set <c>:{type.Layout.Declared}</c>: one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.</summary>");
         code.Line(type.MembersAreClasses ? $"{access} sealed partial class {type.Name}" : $"{access} partial struct {type.Name}");
         code.Open("{");
         Constants(code, type.Layout);
         code.Blank();
         code.Line("/// <summary>The message this record holds.</summary>");
         code.Line("public Member Selected;");
-        foreach (var member in type.Members)
+        for (var index = 0; index < type.Members.Count; index++)
         {
+            var (member, record) = (type.MemberNames[index], type.Members[index]);
             code.Blank();
             code.Line($"/// <summary>The message when <see cref=\"Selected\"/> is <c>{member}</c>.</summary>");
-            code.Line($"public {member} {member}{(type.MembersAreClasses ? $" = new {member}();" : ";")}");
+            code.Line($"public {record} {member}{(type.MembersAreClasses ? $" = new {record}();" : ";")}");
         }
 
         var write = new List<string> { $"if ((ulong)Selected > {last}) throw new GesWireException(GesWireException.OutOfRange, \"\");", $"writer.Write((ulong)Selected, {width});", "switch (Selected)", "{" };
         var read = new List<string> { $"var index = reader.Read({width}, \"\");" };
         if ((ulong)type.Members.Count - 1 < Full(type.Layout.MemberWidth)) read.Add($"if (index > {last}) throw new GesWireException(GesWireException.InvalidIndex, \"\");");
         read.AddRange(["Selected = (Member)index;", "switch (Selected)", "{"]);
-        foreach (var member in type.Members)
+        // The paths are static members of the message type, whose name differs from the member's with a message suffix.
+        for (var index = 0; index < type.Members.Count; index++)
         {
-            write.AddRange([$"    case Member.{member}:", $"        {member}.__WriteFields(ref writer, {member}.__paths, 0);", "        break;"]);
-            read.AddRange([$"    case Member.{member}:", $"        {member}.__ReadFields(ref reader, {member}.__paths, 0);", "        break;"]);
+            var (member, record) = (type.MemberNames[index], type.Members[index]);
+            write.AddRange([$"    case Member.{member}:", $"        {member}.__WriteFields(ref writer, {record}.__paths, 0);", "        break;"]);
+            read.AddRange([$"    case Member.{member}:", $"        {member}.__ReadFields(ref reader, {record}.__paths, 0);", "        break;"]);
         }
 
         write.Add("}");
@@ -569,7 +572,7 @@ internal static partial class GesCSharpEmitter
         code.Line("/// <summary>The messages of the set, in declared order.</summary>");
         code.Line($"public enum Member : {Underlying(type.Members.Count)}");
         code.Open("{");
-        foreach (var member in type.Members)
+        foreach (var member in type.MemberNames)
         {
             code.Line($"/// <summary>The message <c>{member}</c>.</summary>");
             code.Line(member + ",");
@@ -590,7 +593,7 @@ internal static partial class GesCSharpEmitter
         code.Line("/// <exception cref=\"GesWireException\"><see cref=\"Selected\"/> names no message of the set.</exception>");
         code.Line($"public {self}Case ToCase() => Selected switch");
         code.Open("{");
-        foreach (var member in type.Members) code.Line($"Member.{member} => new Case.{member}({member}),");
+        foreach (var member in type.MemberNames) code.Line($"Member.{member} => new Case.{member}({member}),");
         code.Line("_ => throw new GesWireException(GesWireException.OutOfRange, \"\"),");
         code.Close("};");
         code.Blank();
@@ -601,7 +604,7 @@ internal static partial class GesCSharpEmitter
         code.Open("{");
         code.Line("switch (value)");
         code.Open("{");
-        foreach (var member in type.Members)
+        foreach (var member in type.MemberNames)
         {
             var local = GesSchemaPlanner.Camel(member);
             code.Line($"case Case.{member} @{local}:");
@@ -615,7 +618,7 @@ internal static partial class GesCSharpEmitter
         code.Close();
         code.Close();
         code.Blank();
-        code.Line($"/// <summary>One message of the set as a case: match <c>case {type.Name}.Case.{type.Members[0]} value</c>.</summary>");
+        code.Line($"/// <summary>One message of the set as a case: match <c>case {type.Name}.Case.{type.MemberNames[0]} value</c>.</summary>");
         code.Line("public abstract class Case");
         code.Open("{");
         code.Line("private protected Case()");
@@ -624,9 +627,9 @@ internal static partial class GesCSharpEmitter
         code.Blank();
         code.Line("/// <summary>Gets the message of the case.</summary>");
         code.Line("public abstract Member Selected { get; }");
-        foreach (var member in type.Members)
+        for (var index = 0; index < type.Members.Count; index++)
         {
-            var record = context.Global + member;
+            var (member, record) = (type.MemberNames[index], context.Global + type.Members[index]);
             code.Blank();
             code.Line($"/// <summary>The message <c>{member}</c>.</summary>");
             code.Line($"public sealed class {member} : Case");
@@ -1013,11 +1016,11 @@ internal static partial class GesCSharpEmitter
         foreach (var route in network.Routes)
         {
             code.Blank();
-            code.Line($"/// <summary>The index of the route <c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>.</summary>");
+            code.Line($"/// <summary>The index of the route <c>{route.Side} {route.Verb} {route.Written} {route.Class}</c>.</summary>");
             code.Line($"public const int {route.Name} = {route.Index};");
             if (route.RateMicroseconds == 0) continue;
             code.Blank();
-            code.Line($"/// <summary>The shortest interval between two updates of the topic <c>:{route.Root}</c> in microseconds.</summary>");
+            code.Line($"/// <summary>The shortest interval between two updates of the topic <c>{route.Written}</c> in microseconds.</summary>");
             code.Line($"public const long {route.Name}EveryMicroseconds = {route.RateMicroseconds};");
         }
 
@@ -1026,13 +1029,13 @@ internal static partial class GesCSharpEmitter
             var publishes = route.Verb == "publishes";
             var verb = publishes ? "Publish" : "Send";
             code.Blank();
-            code.Line($"/// <summary>Encodes <paramref name=\"value\"/> into <paramref name=\"buffer\"/> and {(publishes ? "publishes" : "sends")} it on the route <c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>.</summary>");
+            code.Line($"/// <summary>Encodes <paramref name=\"value\"/> into <paramref name=\"buffer\"/> and {(publishes ? "publishes" : "sends")} it on the route <c>{route.Side} {route.Verb} {route.Written} {route.Class}</c>.</summary>");
             code.Line($"/// <param name=\"connection\">The {route.Side}'s connection.</param>");
             code.Line($"/// <param name=\"value\">The record.</param>");
             code.Line($"/// <param name=\"buffer\">The buffer the record is encoded into; its <c>MaxByteCount</c> bytes always suffice.</param>");
             code.Line($"/// <returns>The status of <see cref=\"GesNetworkConnection.{verb}(int, ReadOnlySpan{{byte}})\"/>.</returns>");
             code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the buffer is too small.</exception>");
-            code.Line($"public static GesNetworkSendStatus {GesSchemaPlanner.Pascal(route.Side)}{verb}{route.Root}(GesNetworkConnection connection, in {roots(route.Root).Type} value, Span<byte> buffer)");
+            code.Line($"public static GesNetworkSendStatus {GesSchemaPlanner.Pascal(route.Side)}{verb}{route.Root}(GesNetworkConnection connection, in {roots(route.Type).Type} value, Span<byte> buffer)");
             code.Line($"    => connection.{verb}({route.Name}, buffer.Slice(0, value.Write(buffer)));");
         }
 
@@ -1072,17 +1075,17 @@ internal static partial class GesCSharpEmitter
         code.Line("private readonly byte[] __send_buffer;");
         foreach (var route in end.Outgoing)
         {
-            var root = roots(route.Root);
+            var root = roots(route.Type);
             if (!root.IsSet) continue;
             code.Line($"private {root.Type} {Outgoing(route)}{(root.Plan.MembersAreClasses ? " = new();" : ";")}");
         }
 
         foreach (var (route, name) in end.Incoming)
         {
-            var root = roots(route.Root);
+            var root = roots(route.Type);
             code.Line($"private {root.Type} {Field(name)}{(root.Plan.IsClass || root.Plan.MembersAreClasses ? " = new();" : ";")}");
             if (!root.IsSet) continue;
-            foreach (var member in root.Plan.Members) code.Line($"private readonly {root.Type}.Case.{member} {CaseField(name, member)} = new();");
+            foreach (var member in root.Plan.MemberNames) code.Line($"private readonly {root.Type}.Case.{member} {CaseField(name, member)} = new();");
         }
 
         code.Blank();
@@ -1097,7 +1100,7 @@ internal static partial class GesCSharpEmitter
         var sizes = new List<string>();
         foreach (var route in end.Outgoing)
         {
-            var owner = roots(route.Root).Owner + ".MaxByteCount";
+            var owner = roots(route.Type).Owner + ".MaxByteCount";
             if (!sizes.Contains(owner)) sizes.Add(owner);
         }
 
@@ -1129,10 +1132,10 @@ internal static partial class GesCSharpEmitter
 
         foreach (var route in end.Outgoing)
         {
-            var root = roots(route.Root);
+            var root = roots(route.Type);
             var publishes = route.Verb == "publishes";
             var verb = publishes ? "Publish" : "Send";
-            var what = $"<c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>";
+            var what = $"<c>{route.Side} {route.Verb} {route.Written} {route.Class}</c>";
             var targets = new List<(string Parameters, string Arguments, string Doc)> { ("", "", publishes ? "to the subscribed clients" : isClient ? "to the server" : "to every client") };
             if (!isClient && !publishes) targets.Add((", int client", ", client", "to one client"));
             foreach (var (parameters, arguments, doc) in targets)
@@ -1214,7 +1217,7 @@ internal static partial class GesCSharpEmitter
             code.Open("{");
             foreach (var route in end.Topics)
             {
-                code.Line($"/// <summary>The topic <c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>.</summary>");
+                code.Line($"/// <summary>The topic <c>{route.Side} {route.Verb} {route.Written} {route.Class}</c>.</summary>");
                 code.Line($"{route.Root} = {route.Name},");
             }
 
@@ -1233,11 +1236,11 @@ internal static partial class GesCSharpEmitter
             code.Close();
             foreach (var route in end.Topics)
             {
-                var root = roots(route.Root);
+                var root = roots(route.Type);
                 foreach (var parameter in root.IsSet ? new[] { "in " + root.Type, root.Type + ".Case" } : new[] { "in " + root.Type })
                 {
                     code.Blank();
-                    code.Line($"/// <summary>Publishes a {(parameter.StartsWith("in ", StringComparison.Ordinal) ? "record" : "message")} on the topic <c>:{route.Root}</c> as a member of the tick.</summary>");
+                    code.Line($"/// <summary>Publishes a {(parameter.StartsWith("in ", StringComparison.Ordinal) ? "record" : "message")} on the topic <c>{route.Written}</c> as a member of the tick.</summary>");
                     code.Line("/// <param name=\"value\">The value.</param>");
                     code.Line("/// <returns>The status of the publication.</returns>");
                     code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>");
@@ -1314,7 +1317,7 @@ internal static partial class GesCSharpEmitter
             code.Line("    {");
             foreach (var (route, name) in end.Incoming)
             {
-                var root = roots(route.Root);
+                var root = roots(route.Type);
                 var field = Field(name);
                 code.Line($"        case {route.Name}:");
                 code.Line("            try");
@@ -1323,7 +1326,7 @@ internal static partial class GesCSharpEmitter
                 code.Line("            }");
                 code.Line("            catch (GesWireException)");
                 code.Line("            {");
-                code.Line($"                End.Close({client}\"undecodable :{route.Root}\");");
+                code.Line($"                End.Close({client}\"undecodable {route.Written}\");");
                 code.Line("                break;");
                 code.Line("            }");
                 code.Line("");
@@ -1332,7 +1335,7 @@ internal static partial class GesCSharpEmitter
                 {
                     code.Line($"            switch ({field}.Selected)");
                     code.Line("            {");
-                    foreach (var member in root.Plan.Members)
+                    foreach (var member in root.Plan.MemberNames)
                     {
                         code.Line($"                case {root.Type}.Member.{member}:");
                         code.Line($"                    {CaseField(name, member)}.Value = {field}.{member};");
@@ -1421,8 +1424,8 @@ internal static partial class GesCSharpEmitter
 
         foreach (var (route, name) in end.Incoming)
         {
-            var root = roots(route.Root);
-            Method($"A {(root.IsSet ? "message" : "record")} arrived on the route <c>{route.Side} {route.Verb} :{route.Root} {route.Class}</c>.", $"On{name}({client}{EventParameter(root)} value)", $"/// <param name=\"value\">The {(root.IsSet ? "message, whose record" : "record, which")} is valid until the method returns.</param>");
+            var root = roots(route.Type);
+            Method($"A {(root.IsSet ? "message" : "record")} arrived on the route <c>{route.Side} {route.Verb} {route.Written} {route.Class}</c>.", $"On{name}({client}{EventParameter(root)} value)", $"/// <param name=\"value\">The {(root.IsSet ? "message, whose record" : "record, which")} is valid until the method returns.</param>");
         }
 
         Method("A tick is complete; the events of its changed members precede it.", $"OnTick({client}int number)", "/// <param name=\"number\">The tick number.</param>");

@@ -96,6 +96,12 @@ public struct GesSchemaGenerateOptions: Sendable {
     /// The Swift modules that the generated files import beside the runtime, such as the module that declares the
     /// `useSchemaSet` type. C# names types with qualified names, so C# generation rejects it with `generate.usage`.
     public var imports: [String]
+    /// The text appended to the name of every generated message type, empty for none, the default: with `Message`, the
+    /// message `Move` generates the type `MoveMessage`. It consists of ASCII letters, digits and underscores, else generation
+    /// fails with `generate.usage`. It changes only generated type names: the cases and fields of message sets, route
+    /// members, hashes, documents and wire bytes keep the declared name, so generations with different suffixes
+    /// interoperate. Model generation, which holds no messages, rejects a suffix with `generate.usage`.
+    public var messageSuffix: String
 
     /// Creates options.
     /// - Parameters:
@@ -112,6 +118,7 @@ public struct GesSchemaGenerateOptions: Sendable {
     ///   - schemaSet: The name of a schema set type to declare, or nil for none.
     ///   - useSchemaSet: The qualified name of a schema set type that another generation declares, or nil for none.
     ///   - imports: The Swift modules that the generated files import beside the runtime.
+    ///   - messageSuffix: The text appended to the name of every generated message type, empty for none.
     public init(
         language: GesSchemaLanguage = .csharp,
         namespace: String = "",
@@ -125,7 +132,8 @@ public struct GesSchemaGenerateOptions: Sendable {
         extendNamespace: String? = nil,
         schemaSet: String? = nil,
         useSchemaSet: String? = nil,
-        imports: [String] = []
+        imports: [String] = [],
+        messageSuffix: String = ""
     ) {
         self.language = language
         self.namespace = namespace
@@ -140,6 +148,7 @@ public struct GesSchemaGenerateOptions: Sendable {
         self.schemaSet = schemaSet
         self.useSchemaSet = useSchemaSet
         self.imports = imports
+        self.messageSuffix = messageSuffix
     }
 }
 

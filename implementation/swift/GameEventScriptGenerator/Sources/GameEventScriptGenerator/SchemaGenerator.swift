@@ -51,8 +51,10 @@ public enum GesSchemaGenerator {
     ///   collide, or a reached type cannot be generated yet.
     public static func generateFiles(_ set: GesSchemaSet, roots: [String], parameters: GesSchemaParameters, options: GesSchemaGenerateOptions) throws -> [GesGeneratedFile] {
         let (document, layout) = try wire(set, roots, parameters, options)
-        return try GesCodeFiles.split(document, options.split, sourceOf: set.sourceName(of:)) { files in
-            manifest(options, model: false, layout.roots, { root in layout.rootHashes(root) }, layout.parameters, files)
+        // A message type carries the message suffix, so the layout knows its source; tag sets and networks keep their names.
+        let sourceOf = { (owner: String) in layout.types.first { $0.name == owner }?.source ?? set.sourceName(of: owner) }
+        return try GesCodeFiles.split(document, options.split, sourceOf: sourceOf) { files in
+            manifest(options, model: false, layout.rootNames, { name in layout.rootHashes(layout.roots[layout.rootNames.firstIndex(of: name)!]) }, layout.parameters, files)
         }
     }
 
@@ -76,15 +78,17 @@ public enum GesSchemaGenerator {
                 "The models live in the namespace of the wire code ('\(models)'), where a wire record and the model of its schema would share a name; generate them into different namespaces."
             )
         }
-        let layout = try GesSchemaLayoutBuilder.build(set, roots: roots, parameters: parameters)
+        try checkMessageSuffix(options.messageSuffix)
+        let layout = try GesSchemaLayoutBuilder.build(set, roots: roots, parameters: parameters, messageSuffix: options.messageSuffix)
         let types = try GesSchemaPlanner.plan(layout)
+        try checkMessageNames(layout, types)
         // Packed records are model types over one word, which wire code declares itself unless it shares those of models.
         let packed = layout.types.filter { $0.packedWidth > 0 }.map(\.name)
-        let shared = !packed.isEmpty && options.models == nil ? try GesModelLayoutBuilder.build(set, roots: packed) : nil
+        let shared = !packed.isEmpty && options.models == nil ? try GesModelLayoutBuilder.build(set, roots: layout.types.filter { $0.packedWidth > 0 }.map(\.lookup)) : nil
         // With models, wire records that a model root of any group reaches convert to their model directly.
         var modelRoots: [String] = []
         if options.models != nil {
-            for schema in set.schemas where schema.modelGroup != nil { modelRoots.append(schema.name) }
+            for schema in set.schemas where schema.modelGroup != nil { modelRoots.append(set.rootName(of: schema)) }
         }
         let models = !modelRoots.isEmpty ? try GesModelLayoutBuilder.build(set, roots: modelRoots) : nil
         // Where one namespace continues the other, its next component must not take the name of a type in the shorter one. The
@@ -126,13 +130,13 @@ public enum GesSchemaGenerator {
     /// Lists the wire roots of a group: the declarations marked `wire(group)`, or `wire` for the group `default`, in
     /// declaration order; empty when the group has no root.
     public static func wireRoots(_ set: GesSchemaSet, group: String) -> [String] {
-        set.schemas.filter { $0.wireGroup == group }.map(\.name)
+        set.schemas.filter { $0.wireGroup == group }.map(set.rootName(of:))
     }
 
     /// Lists the model roots of a group: the schemas marked `model(group)`, or `model` for the group `default`, in
     /// declaration order; empty when the group has no root.
     public static func modelRoots(_ set: GesSchemaSet, group: String) -> [String] {
-        set.schemas.filter { $0.modelGroup == group }.map(\.name)
+        set.schemas.filter { $0.modelGroup == group }.map(set.rootName(of:))
     }
 
     /// Writes the language-neutral model layout of the roots as canonical JSON: every schema they reach, described without
@@ -185,6 +189,7 @@ public enum GesSchemaGenerator {
 
     private static func models(_ set: GesSchemaSet, _ roots: [String], _ options: GesSchemaGenerateOptions) throws -> (document: GesCodeDocument, layout: GesModelLayout) {
         if options.checkedExclusivity { throw GesGeneratorError(GesGeneratorError.usage, "Checked exclusivity concerns wire code, not models.") }
+        if !options.messageSuffix.isEmpty { throw GesGeneratorError(GesGeneratorError.usage, "A message suffix concerns wire code; models hold no messages.") }
         let extended = try checkExtendNamespace(options)
         if options.language == .swift { try GesSchemaPlanner.checkSwiftNamespace(try GesSchemaPlanner.namespace(options.namespace, GesSwiftEmitter.keywords), options.namespace, role: nil) }
         if options.models != nil {
@@ -196,6 +201,29 @@ public enum GesSchemaGenerator {
         if options.documents { effective.values = true }
         let document = effective.language == .csharp ? try GesCSharpModelEmitter.emit(layout, effective) : try GesSwiftModelEmitter.emit(layout, effective, extended: extended)
         return (document, layout)
+    }
+
+    // The suffix continues a type name in C# and Swift: ASCII letters, digits and underscores.
+    private static func checkMessageSuffix(_ suffix: String) throws(GesGeneratorError) {
+        for character in suffix.unicodeScalars where !(("A"..."Z").contains(character) || ("a"..."z").contains(character) || ("0"..."9").contains(character) || character == "_") {
+            throw GesGeneratorError(GesGeneratorError.usage, "The message suffix '\(suffix)' is no identifier part; use ASCII letters, digits and underscores.")
+        }
+    }
+
+    // A message type is named with the message suffix; it must not take the name of another type of the same generation.
+    private static func checkMessageNames(_ layout: GesSchemaLayout, _ types: [GesPlanType]) throws(GesGeneratorError) {
+        var others: [String: String] = [:]
+        for type in layout.types where type.kind != .message { others[type.name] = (type.kind == .schema ? "the schema :" : "the message set :") + type.name }
+        for (name, _) in GesSchemaPlanner.tagSets(types, "") where others[name] == nil { others[name] = "the tag set :" + name }
+        for network in layout.networks where others[network.name] == nil { others[network.name] = "the network :" + network.name }
+        for type in layout.types where type.kind == .message {
+            if let other = others[type.name] {
+                throw GesGeneratorError(
+                    GesGeneratorError.nameCollision,
+                    "The message \(type.declared) is generated as the type '\(type.name)', which \(other) is generated as too; give the message types a suffix with --message-suffix."
+                )
+            }
+        }
     }
 
     /// The manifest of split output: the options, the roots with their hashes, the parameters and the files, so that a tool

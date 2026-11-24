@@ -701,7 +701,8 @@ dotnet ges schema generate map.gess --wire map --language csharp --namespace Gam
 
 `generate` writes C# or Swift types that write and read the records of the roots without allocating;
 `--values` adds the conversion to and from GES values and messages, `--checked-exclusivity` keeps the
-dynamic exclusivity checks of generated Swift classes, and `--check` fails when the file of `-o` differs
+dynamic exclusivity checks of generated Swift classes, `--message-suffix <text>` names every generated message type
+`<Name><text>` (such as `MoveMessage`) so that a message may share its name with a schema, and `--check` fails when the file of `-o` differs
 from the generated code. `-d <dir>` (`--out-dir`) writes one file per declaration, or per schema file with
 `--split file`, into a directory that `generate` owns: a manifest `.ges-generated.json` lists the files, a later run
 removes the ones no longer generated and leaves other files alone with a warning, and `--check` fails for every

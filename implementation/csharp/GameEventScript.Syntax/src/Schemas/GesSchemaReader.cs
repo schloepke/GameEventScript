@@ -298,7 +298,7 @@ internal sealed partial class GesSchemaSourceReader
         }
     }
 
-    // `client|server sends|publishes :Root reliable|latest|bulk [at most every value]` on one line.
+    // `client|server sends|publishes :Root|Message reliable|latest|bulk [at most every value]` on one line.
     private GesSchemaRouteSyntax ReadRoute()
     {
         var offset = _position;
@@ -310,7 +310,8 @@ internal sealed partial class GesSchemaSourceReader
         if (verb is not ("sends" or "publishes")) throw new SyntaxFailure(verbOffset, "Expected 'sends' or 'publishes'.");
         SkipSpaces();
         var rootOffset = _position;
-        var root = ReadTypeName();
+        var isMessage = _position < _text.Length && _text[_position] != ':';
+        var root = isMessage ? ReadName(GesText.IsMessageName, "type name or message name") : ReadTypeName();
         SkipSpaces();
         var classOffset = _position;
         var routeClass = ReadWord() switch
@@ -334,7 +335,7 @@ internal sealed partial class GesSchemaSourceReader
             rate = ReadValue();
         }
 
-        return new GesSchemaRouteSyntax { Server = side == "server", Publishes = verb == "publishes", Root = root, RootOffset = rootOffset, Class = routeClass, ClassOffset = classOffset, Rate = rate, Offset = offset };
+        return new GesSchemaRouteSyntax { Server = side == "server", Publishes = verb == "publishes", Root = root, IsMessage = isMessage, RootOffset = rootOffset, Class = routeClass, ClassOffset = classOffset, Rate = rate, Offset = offset };
     }
 
     // `let name be value`; a field named let is followed by its colon instead of a name.

@@ -104,11 +104,14 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case bulk
 }
 
-/// One route of a network: `client sends :Root reliable` or `server publishes :Root latest at most every 200ms`.
+/// One route of a network: `client sends :Root reliable`, `client sends Move reliable` or
+/// `server publishes :Root latest at most every 200ms`.
 @_spi(Syntax) public struct GesSchemaRouteSyntax: Sendable {
     @_spi(Syntax) public var server = false
     @_spi(Syntax) public var publishes = false
     @_spi(Syntax) public var root = ""
+    /// The root is a message, written without a colon; otherwise a schema or message set.
+    @_spi(Syntax) public var isMessage = false
     @_spi(Syntax) public var rootOffset = 0
     @_spi(Syntax) public var routeClass = GesSchemaRouteClass.reliable
     @_spi(Syntax) public var classOffset = 0
@@ -392,6 +395,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public static let syntax = "schema.syntax"
     @_spi(Syntax) public static let duplicateName = "schema.duplicateName"
     @_spi(Syntax) public static let unknownName = "schema.unknownName"
+    @_spi(Syntax) public static let ambiguousName = "schema.ambiguousName"
     @_spi(Syntax) public static let cycle = "schema.cycle"
     @_spi(Syntax) public static let unitMismatch = "schema.unitMismatch"
     @_spi(Syntax) public static let invalidRange = "schema.invalidRange"

@@ -63,7 +63,7 @@ public sealed class GesSchemaDocument
         GesResolvedDeclaration declaration;
         try
         {
-            declaration = schemas.Declaration(named);
+            declaration = schemas.TypeDeclaration(named);
         }
         catch (GesSchemaException)
         {

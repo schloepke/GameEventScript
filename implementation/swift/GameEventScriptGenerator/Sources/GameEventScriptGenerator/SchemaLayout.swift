@@ -8,8 +8,12 @@
 // read only this model, and its JSON form is compared between the ports.
 struct GesSchemaLayout {
     static let version = 1
-    // The roots in order: the given ones, each network followed by the roots of its routes that are no root yet.
+    // The roots in order as generated type names: the given ones, each network followed by the roots of its routes that are
+    // no root yet.
     var roots: [String]
+    // The roots as a schema set looks them up, in the order of roots: the declared name, written `:Name` or `Name()` where
+    // the set declares it in both namespaces. Generated code binds them, and the JSON, headers and manifests name them.
+    var rootNames: [String]
     var parameters: [GesLayoutParameter]
     var types: [GesLayoutType]
     // The networks among the roots, in root order.
@@ -31,9 +35,19 @@ struct GesLayoutRoute {
     var index: Int
     var side: String
     var verb: String
+    // The declared name of the root, which names the route's constants.
     var root: String
+    // The generated type of the root, the root's name with the message suffix for a message.
+    var type: String
+    // The root as a schema set looks it up, see GesSchemaLayout.rootNames.
+    var rootName: String
+    // Whether the root is a message, which the source names without `:`.
+    var isMessage: Bool
     var deliveryClass: String
     var rateMicroseconds: Int64
+
+    // The root as the route spells it in source: a message by its name, a schema or set with `:`.
+    var written: String { isMessage ? root : ":" + root }
 
     // The name of the route's constants: side, verb and root, which identify a route within its network.
     var name: String { (side == "client" ? "Client" : "Server") + (verb == "sends" ? "Sends" : "Publishes") + root }
@@ -133,7 +147,15 @@ struct GesLayoutConstant {
 }
 
 struct GesLayoutType {
+    // The generated type name: the declared name, with the message suffix for a message.
     var name = ""
+    // The declared name, which values, documents, diagnostics and the JSON use.
+    var declared = ""
+    // The name a schema set looks the type up by: the declared name, `:Name` or `Name()` when a schema or set and a message
+    // share it.
+    var lookup = ""
+    // The name of the source that declares it, which places it in split output.
+    var source = ""
     var kind = GesSchemaKind.schema
     var hash: UInt64 = 0
     var bindingHash: UInt64 = 0
@@ -145,7 +167,9 @@ struct GesLayoutType {
     /// The fields written `computed by`, which are never encoded, with their checked expressions.
     var computed: [GesSchemaComputedFieldInfo] = []
     var tags: [String] = []
+    // A message set's members as generated type names and as declared names, which name its cases.
     var members: [String] = []
+    var memberNames: [String] = []
     var memberWidth = 0
 
     // A packed schema's word: its width of 8, 16, 32 or 64 bits and the bits its fields take; 0 for other types.
@@ -230,24 +254,33 @@ final class GesLayoutEncoding {
 // Builds the layout from bound schemas. Each reached schema is bound on its own, and a nested schema appears in its parent
 // as a reference, since parameters belong to files and a schema binds the same wherever it is reached.
 enum GesSchemaLayoutBuilder {
-    static func build(_ set: GesSchemaSet, roots: [String], parameters: GesSchemaParameters) throws -> GesSchemaLayout {
+    // Messages have their own namespace, so a message is keyed `Name()`; `(` sorts below every name character, which keeps
+    // the order of names that differ.
+    static func build(_ set: GesSchemaSet, roots: [String], parameters: GesSchemaParameters, messageSuffix: String = "") throws -> GesSchemaLayout {
         guard !roots.isEmpty else { throw GesGeneratorError(GesGeneratorError.usage, "Specify at least one root.") }
         var reached: [String: GesSchema] = [:]
+        var rootKeys: [String] = []
+        var rootTypes: [String] = []
         var rootNames: [String] = []
         var parameterInfos: [String: GesSchemaParameterInfo] = [:]
         var networks: [GesNetwork] = []
-        for root in roots where !rootNames.contains(root) {
-            rootNames.append(root)
-            if let network = set.networks.first(where: { $0.name == root }) {
+        for root in roots {
+            if let network = try findNetwork(set, root) {
+                if rootKeys.contains(":" + network.name) { continue }
+                rootKeys.append(":" + network.name)
+                rootTypes.append(network.name)
+                rootNames.append(set.namesBoth(network.name) ? ":" + network.name : network.name)
                 // A network makes the roots of its routes roots of the generation.
                 networks.append(network)
                 for route in network.routes {
-                    if !rootNames.contains(route.root.name) { rootNames.append(route.root.name) }
+                    addRoot(set, route.root, &rootKeys, &rootTypes, &rootNames, messageSuffix)
                     self.root(route.root, &reached, &parameterInfos)
                 }
                 continue
             }
-            self.root(try set.schema(root), &reached, &parameterInfos)
+            let schema = try set.schema(root)
+            addRoot(set, schema, &rootKeys, &rootTypes, &rootNames, messageSuffix)
+            self.root(schema, &reached, &parameterInfos)
         }
         var layoutParameters: [GesLayoutParameter] = []
         for name in parameterInfos.keys.sorted(by: ordinal) {
@@ -258,28 +291,53 @@ enum GesSchemaLayoutBuilder {
             )
         }
         var types: [GesLayoutType] = []
-        for name in reached.keys.sorted(by: ordinal) { types.append(try type(reached[name]!, parameters)) }
-        let layoutNetworks = try networks.map { try network($0, parameters) }
+        for name in reached.keys.sorted(by: ordinal) { types.append(try type(set, reached[name]!, parameters, messageSuffix)) }
+        let layoutNetworks = try networks.map { try network(set, $0, parameters, messageSuffix) }
         let sources = set.sources.map { source in
             let scalars = source.name.unicodeScalars
             let start = scalars.lastIndex { $0 == "/" || $0 == "\\" }.map { scalars.index(after: $0) } ?? scalars.startIndex
             return GesSchemaSource(name: String(scalars[start...]), text: source.text)
         }
-        return GesSchemaLayout(roots: rootNames, parameters: layoutParameters, types: types, networks: layoutNetworks, sources: sources)
+        return GesSchemaLayout(roots: rootTypes, rootNames: rootNames, parameters: layoutParameters, types: types, networks: layoutNetworks, sources: sources)
     }
+
+    // A network named plainly or `:Name`; a plain name that a message shares is ambiguous.
+    private static func findNetwork(_ set: GesSchemaSet, _ name: String) throws -> GesNetwork? {
+        let qualified = name.hasPrefix(":")
+        let plain = qualified ? String(name.dropFirst()) : name
+        guard let network = set.networks.first(where: { $0.name == plain }) else { return nil }
+        if !qualified && set.namesBoth(plain) { _ = try set.schema(plain) }
+        return network
+    }
+
+    private static func addRoot(_ set: GesSchemaSet, _ schema: GesSchema, _ keys: inout [String], _ types: inout [String], _ names: inout [String], _ messageSuffix: String) {
+        let key = key(schema)
+        if keys.contains(key) { return }
+        keys.append(key)
+        types.append(typeName(schema, messageSuffix))
+        names.append(set.rootName(of: schema))
+    }
+
+    private static func key(_ schema: GesSchema) -> String { schema.kind == .message ? schema.name + "()" : schema.name }
+
+    // The generated type name: a message's name ends with the suffix.
+    static func typeName(_ schema: GesSchema, _ messageSuffix: String) -> String { schema.kind == .message ? schema.name + messageSuffix : schema.name }
 
     private static func root(_ schema: GesSchema, _ reached: inout [String: GesSchema], _ parameterInfos: inout [String: GesSchemaParameterInfo]) {
         reach(schema, &reached)
         for parameter in schema.parameters { parameterInfos[parameter.name] = parameter }
     }
 
-    private static func network(_ network: GesNetwork, _ parameters: GesSchemaParameters) throws -> GesLayoutNetwork {
+    private static func network(_ set: GesSchemaSet, _ network: GesNetwork, _ parameters: GesSchemaParameters, _ messageSuffix: String) throws -> GesLayoutNetwork {
         let routes = network.routes.map { route in
             GesLayoutRoute(
                 index: route.index,
                 side: route.side == .client ? "client" : "server",
                 verb: route.verb == .sends ? "sends" : "publishes",
                 root: route.root.name,
+                type: typeName(route.root, messageSuffix),
+                rootName: set.rootName(of: route.root),
+                isMessage: route.root.kind == .message,
                 deliveryClass: GesBoundNetwork.className(route.deliveryClass),
                 rateMicroseconds: route.rateMicroseconds
             )
@@ -291,8 +349,9 @@ enum GesSchemaLayoutBuilder {
     static func ordinal(_ left: String, _ right: String) -> Bool { left.utf16.lexicographicallyPrecedes(right.utf16) }
 
     private static func reach(_ schema: GesSchema, _ reached: inout [String: GesSchema]) {
-        if reached[schema.name] != nil { return }
-        reached[schema.name] = schema
+        let key = key(schema)
+        if reached[key] != nil { return }
+        reached[key] = schema
         for member in schema.members { reach(member, &reached) }
         for field in schema.fields {
             for type in field.alternatives { reach(type, &reached) }
@@ -304,10 +363,13 @@ enum GesSchemaLayoutBuilder {
         for element in type.element { reach(element, &reached) }
     }
 
-    private static func type(_ schema: GesSchema, _ parameters: GesSchemaParameters) throws -> GesLayoutType {
+    private static func type(_ set: GesSchemaSet, _ schema: GesSchema, _ parameters: GesSchemaParameters, _ messageSuffix: String) throws -> GesLayoutType {
         let bound = try schema.bind(parameters: parameters)
         var type = GesLayoutType()
-        type.name = schema.name
+        type.name = typeName(schema, messageSuffix)
+        type.declared = schema.name
+        type.lookup = set.rootName(of: schema)
+        type.source = schema.kind == .message ? set.messageSourceName(of: schema.name) : set.sourceName(of: schema.name)
         type.kind = schema.kind
         type.hash = bound.hash
         type.bindingHash = bound.bindingHash
@@ -317,7 +379,8 @@ enum GesSchemaLayoutBuilder {
         type.bindingHashDepends = schema.parameters.map(\.name)
         var depends = Set<String>()
         if schema.kind == .messages {
-            type.members = schema.members.map(\.name)
+            type.members = schema.members.map { typeName($0, messageSuffix) }
+            type.memberNames = schema.members.map(\.name)
             type.memberWidth = bound.memberWidth
             for member in bound.members {
                 for field in fields(member.schema, member) { collect(field, &depends) }

@@ -18,7 +18,7 @@ internal static class GesSchemaLayoutJson
         var json = new Writer();
         json.BeginObject();
         json.Number("layout", GesSchemaLayout.Version);
-        json.Strings("roots", layout.Roots);
+        json.Strings("roots", layout.RootNames);
         json.BeginArray("parameters");
         foreach (var parameter in layout.Parameters)
         {
@@ -50,7 +50,7 @@ internal static class GesSchemaLayoutJson
                     json.Number("index", route.Index);
                     json.String("side", route.Side);
                     json.String("verb", route.Verb);
-                    json.String("root", route.Root);
+                    json.String("root", route.RootName);
                     json.String("class", route.Class);
                     json.Number("rateMicroseconds", route.RateMicroseconds);
                     json.EndObject();
@@ -70,7 +70,7 @@ internal static class GesSchemaLayoutJson
     private static void Type(Writer json, GesLayoutType type)
     {
         json.BeginObject();
-        json.String("name", type.Name);
+        json.String("name", type.Declared);
         json.String("kind", type.Kind switch { GesSchemaKind.Schema => "schema", GesSchemaKind.Message => "message", _ => "messages" });
         json.String("hash", Hex(type.Hash));
         json.String("bindingHash", Hex(type.BindingHash));
@@ -85,7 +85,7 @@ internal static class GesSchemaLayoutJson
 
         if (type.Kind == GesSchemaKind.Messages)
         {
-            json.Strings("members", type.Members);
+            json.Strings("members", type.MemberNames);
             json.Number("memberWidth", type.MemberWidth);
         }
         else

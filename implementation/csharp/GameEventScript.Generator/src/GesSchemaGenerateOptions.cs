@@ -150,6 +150,15 @@ public sealed class GesSchemaGenerateOptions
     /// <c>generate.usage</c>.
     /// </summary>
     public IReadOnlyList<string> Imports { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the text appended to the name of every generated message type, empty for none, the default: with
+    /// <c>Message</c>, the message <c>Move</c> generates the type <c>MoveMessage</c>. It consists of ASCII letters, digits and
+    /// underscores, else generation fails with <c>generate.usage</c>. It changes only generated type names: the cases and fields
+    /// of message sets, route members, hashes, documents and wire bytes keep the declared name, so generations with different
+    /// suffixes interoperate. Model generation, which holds no messages, rejects a suffix with <c>generate.usage</c>.
+    /// </summary>
+    public string MessageSuffix { get; set; } = "";
 }
 
 /// <summary>

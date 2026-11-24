@@ -31,7 +31,8 @@ internal enum GesSchemaRouteClass : byte
     Bulk
 }
 
-// One route of a network: `client sends :Root reliable` or `server publishes :Root latest at most every 200ms`.
+// One route of a network: `client sends :Root reliable`, `client sends Move reliable` or
+// `server publishes :Root latest at most every 200ms`.
 internal sealed class GesSchemaRouteSyntax
 {
     internal bool Server { get; init; }
@@ -39,6 +40,9 @@ internal sealed class GesSchemaRouteSyntax
     internal bool Publishes { get; init; }
 
     internal string Root { get; init; } = "";
+
+    // The root is a message, written without a colon; otherwise a schema or message set.
+    internal bool IsMessage { get; init; }
 
     internal int RootOffset { get; init; }
 
@@ -365,6 +369,7 @@ internal sealed class GesSchemaDiagnostic
     internal const string Syntax = "schema.syntax";
     internal const string DuplicateName = "schema.duplicateName";
     internal const string UnknownName = "schema.unknownName";
+    internal const string AmbiguousName = "schema.ambiguousName";
     internal const string Cycle = "schema.cycle";
     internal const string UnitMismatch = "schema.unitMismatch";
     internal const string InvalidRange = "schema.invalidRange";

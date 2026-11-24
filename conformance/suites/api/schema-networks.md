@@ -578,3 +578,71 @@ gesBlock: expect
 schema: {"error": {"code": "schema.unknownName", "line": 0, "column": 0}}
 ```
 
+---
+
+## Test: a route that names a message
+
+`client sends Name` names a message.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-message-route
+schemaApi:
+  sources: ["wire schema :Shield as { strength: :Number integer between 0 and 100 }\nwire message Shield(level: :Number integer between 0 and 10)\nnetwork :Game as {\n  client sends Shield reliable\n  server sends :Shield reliable\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute client sends Shield reliable 0 9521a6a2e5eb94fb\nroute server sends Shield reliable 0 d40bdebbb3de923b\n", "hash": "1cb688722ef75d4f"}}
+```
+
+---
+
+## Test: a route with a colon that names only a message
+
+`:Name` routes a schema or set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-colon-message-route
+schemaApi:
+  sources: ["wire message Move(x: :Number integer between 0 and 255)\nnetwork :Game as {\n  client sends :Move reliable\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.unknownName", "line": 3, "column": 16}}
+```
+
+---
+
+## Test: a route that names an unknown message
+
+The message must be declared.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-unknown-message-route
+schemaApi:
+  sources: ["wire message Move(x: :Number integer between 0 and 255)\nnetwork :Game as {\n  client sends Missing reliable\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.unknownName", "line": 3, "column": 16}}
+```

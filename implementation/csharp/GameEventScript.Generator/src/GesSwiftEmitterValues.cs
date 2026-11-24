@@ -10,7 +10,7 @@ internal static partial class GesSwiftEmitter
 {
     private static void ValueMembers(GesSchemaPlanner.Code code, GesPlanType type, string access, string holder, bool schemaSet)
     {
-        var name = GesSchemaPlanner.Literal(type.Layout.Name, true);
+        var name = GesSchemaPlanner.Literal(type.Layout.Lookup, true);
         var mutating = (type.Kind == GesSchemaKind.Messages ? type.MembersAreClasses : type.IsClass) ? "" : "mutating ";
         code.Blank();
         code.Line(schemaSet ? $"private static let __valueSchema = Result<GesBoundSchema, any Error> {{ try {holder}.bind({name}, bindingHash: bindingHash) }}" : $"private static let __valueSchema = {holder}.bind({name}, bindingHash)");

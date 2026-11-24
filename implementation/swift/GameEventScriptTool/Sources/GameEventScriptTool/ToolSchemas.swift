@@ -19,7 +19,7 @@ extension ToolHelp {
           ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                               [--param <name>=<literal> ...]
                               --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                              [--checked-exclusivity] [--bindings] [--documents] [--models <namespace>] [--extend-namespace <A>]
+                              [--checked-exclusivity] [--message-suffix <text>] [--bindings] [--documents] [--models <namespace>] [--extend-namespace <A>]
                               [--schemas <Name> | --use-schemas <A.Name>] [--import <Module> ...]
                               [-o <file> | -d <dir> [--split schema|file]] [--check]
 
@@ -42,6 +42,8 @@ extension ToolHelp {
           --access <level>          The visibility of the generated types: public (default) or internal.
           --values                  Also convert generated records and models to and from GES values and messages.
           --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
+          --message-suffix <text>   Append the text to every generated message type name, such as Message for MoveMessage;
+                                    only wire code. Hashes, documents and wire bytes keep the declared names.
           --extend-namespace <A>    Extend this leading part of the Swift namespace, which another generation of the module
                                     declares, instead of declaring it; wire code with --models does so for the part it shares.
           --schemas <Name>          Declare the schema set type <Name>, which holds the embedded sources and parameter values
@@ -88,6 +90,7 @@ extension Tool {
         var models: String?
         var schemaSet: String?
         var useSchemaSet: String?
+        var messageSuffix: String?
         var imports: [String] = []
         var language: String?
         var space: String?
@@ -122,6 +125,7 @@ extension Tool {
                 documents = true
             } else if [
                 "--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model", "-d", "--out-dir", "--split", "--models", "--extend-namespace", "--schemas", "--use-schemas", "--import",
+                "--message-suffix",
             ].contains(argument) {
                 let applies: Bool
                 switch argument {
@@ -129,7 +133,7 @@ extension Tool {
                 case "--wire", "--model": applies = command == "layout" || command == "generate"
                 case "--param": applies = ["hash", "dump", "layout", "generate"].contains(command)
                 case "--data", "--baseline": applies = command == "dump"
-                case "--language", "--namespace", "--access", "-d", "--out-dir", "--split", "--models", "--extend-namespace", "--schemas", "--use-schemas", "--import": applies = command == "generate"
+                case "--language", "--namespace", "--access", "-d", "--out-dir", "--split", "--models", "--extend-namespace", "--schemas", "--use-schemas", "--import", "--message-suffix": applies = command == "generate"
                 default: applies = ["format", "layout", "generate"].contains(command)
                 }
                 guard applies else { throw ToolError.usage("Unknown schema \(command) option '\(argument)'.") }
@@ -156,6 +160,7 @@ extension Tool {
                 case "--extend-namespace": extendNamespace = next
                 case "--schemas": schemaSet = next
                 case "--use-schemas": useSchemaSet = next
+                case "--message-suffix": messageSuffix = next
                 case "--import":
                     if imports.contains(next) { throw ToolError.usage("The module '\(next)' is given twice.") }
                     imports.append(next)
@@ -181,6 +186,7 @@ extension Tool {
             throw ToolError.usage("\(command) requires one of --root, --all-roots, --wire and --model.")
         }
         if modelGroup != nil && checkedExclusivity { throw ToolError.usage("--checked-exclusivity concerns wire code, not --model.") }
+        if modelGroup != nil && messageSuffix != nil { throw ToolError.usage("--message-suffix concerns wire code, not --model.") }
         if bindings && modelGroup == nil { throw ToolError.usage("--bindings concerns model code and requires --model.") }
         if documents && modelGroup == nil { throw ToolError.usage("--documents concerns model code and requires --model.") }
         if models != nil && modelGroup != nil { throw ToolError.usage("--models concerns wire code, not --model.") }
@@ -238,7 +244,8 @@ extension Tool {
                         extendNamespace: extendNamespace,
                         schemaSet: schemaSet,
                         useSchemaSet: useSchemaSet,
-                        imports: imports
+                        imports: imports,
+                        messageSuffix: messageSuffix ?? ""
                     )
                 if let group = wireGroup ?? modelGroup {
                     roots = wireGroup != nil ? GesSchemaGenerator.wireRoots(set, group: group) : GesSchemaGenerator.modelRoots(set, group: group)
@@ -247,7 +254,7 @@ extension Tool {
                         return 1
                     }
                 }
-                return try layout(set, allRoots ? set.schemas.map(\.name) : roots, parameters, output, outDir, options, check, model: modelGroup != nil)
+                return try layout(set, allRoots ? Self.allRoots(set) : roots, parameters, output, outDir, options, check, model: modelGroup != nil)
             default: break
             }
             let schema = try set.schema(root!)
@@ -282,10 +289,20 @@ extension Tool {
 
     // Whether a root reaches a parameter; a network reaches the parameters of its route roots.
     private static func reaches(_ set: GesSchemaSet, _ root: String, _ name: String) throws -> Bool {
-        if let network = set.networks.first(where: { $0.name == root }) {
+        let plain = root.hasPrefix(":") ? String(root.dropFirst()) : root
+        if let network = set.networks.first(where: { $0.name == plain }) {
             return network.routes.contains { route in route.root.parameters.contains { $0.name == name } }
         }
         return try set.schema(root).parameters.contains { $0.name == name }
+    }
+
+    // Every declaration as a root: by its plain name, unless a message and a schema, set or network share it.
+    private static func allRoots(_ set: GesSchemaSet) -> [String] {
+        let messages = Set(set.schemas.filter { $0.kind == .message }.map(\.name))
+        let others = Set(set.schemas.filter { $0.kind != .message }.map(\.name) + set.networks.map(\.name))
+        return set.schemas.map { schema in
+            !messages.contains(schema.name) || !others.contains(schema.name) ? schema.name : schema.kind == .message ? schema.name + "()" : ":" + schema.name
+        }
     }
 
     // Prints the layout, or with options the generated code; with check it compares the code with the output file.

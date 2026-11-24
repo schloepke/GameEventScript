@@ -236,7 +236,7 @@ enum GesSwiftEmitter {
         if model != nil { names.append(("toModel", "the generated member toModel")) }
         try GesSchemaPlanner.unique(type.name, names, context.topLevel, hidden: model != nil ? context.converted : context.inside)
 
-        code.line(type.isItem ? "/// An element of the list." : "/// The \(kind(type)) `:\(type.name)`, read and written without allocation\(type.isClass ? " once its storage has grown" : "").")
+        code.line(type.isItem ? "/// An element of the list." : "/// The \(kind(type)) `:\(type.layout.declared)`, read and written without allocation\(type.isClass ? " once its storage has grown" : "").")
         code.open(type.isClass ? "\(access)final class \(type.name) {" : "\(access)struct \(type.name): Sendable {")
         if !type.isItem {
             constants(&code, type.layout, access)
@@ -571,19 +571,19 @@ enum GesSwiftEmitter {
         if context.values {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
-        for member in type.members { names.append((GesSchemaPlanner.camel(member), "the member " + member)) }
+        for member in type.memberNames { names.append((GesSchemaPlanner.camel(member), "the member " + member)) }
         try GesSchemaPlanner.unique(type.name, names, context.topLevel)
         let width = String(type.layout.memberWidth)
         let last = String(UInt64(type.members.count) - 1)
-        code.line("/// The message set `:\(type.name)`: one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "").")
+        code.line("/// The message set `:\(type.layout.declared)`: one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "").")
         code.open(type.membersAreClasses ? "\(access)final class \(type.name) {" : "\(access)struct \(type.name): Sendable {")
         constants(&code, type.layout, access)
         code.line("/// The message this record holds.")
         let stored = context.stored(type.membersAreClasses)
-        code.line("\(stored)\(access)var selected: Member = .\(member(type.members[0]))")
-        for name in type.members {
+        code.line("\(stored)\(access)var selected: Member = .\(member(type.memberNames[0]))")
+        for (name, record) in type.memberPairs {
             code.line("/// The message when `selected` is `\(GesSchemaPlanner.camel(name))`.")
-            code.line("\(stored)\(access)var \(member(name)) = \(name)()")
+            code.line("\(stored)\(access)var \(member(name)) = \(record)()")
         }
         code.blank()
         code.line("/// Creates a record that holds the first message, with every field at its zero value.")
@@ -592,9 +592,9 @@ enum GesSwiftEmitter {
         var read = ["let index = try reader.read(\(width), path: \"\")"]
         if UInt64(type.members.count) - 1 < full(type.layout.memberWidth) { read.append("if index > \(last) { throw GesWireError(code: GesWireError.invalidIndex, path: \"\") }") }
         read += ["self.selected = Member(rawValue: \(underlying(type.members.count))(index))!", "switch self.selected {"]
-        for name in type.members {
-            write += ["case .\(member(name)):", "    try self.\(member(name)).__writeFields(&writer, \(name).__paths, 0)"]
-            read += ["case .\(member(name)):", "    try self.\(member(name)).__readFields(&reader, \(name).__paths, 0)"]
+        for (name, record) in type.memberPairs {
+            write += ["case .\(member(name)):", "    try self.\(member(name)).__writeFields(&writer, \(record).__paths, 0)"]
+            read += ["case .\(member(name)):", "    try self.\(member(name)).__readFields(&reader, \(record).__paths, 0)"]
         }
         write.append("}")
         read.append("}")
@@ -605,7 +605,7 @@ enum GesSwiftEmitter {
         code.blank()
         code.line("/// The messages of the set, in declared order.")
         code.open("\(access)enum Member: \(underlying(type.members.count)), Sendable {")
-        for name in type.members {
+        for name in type.memberNames {
             code.line("/// The message `\(name)`.")
             code.line("case \(member(name))")
         }
@@ -619,7 +619,7 @@ enum GesSwiftEmitter {
         code.line("/// The selected message as a case.")
         code.open("\(access)var asCase: Case {")
         code.line("switch selected {")
-        for name in type.members { code.line("case .\(member(name)): .\(member(name))(self.\(member(name)))") }
+        for name in type.memberNames { code.line("case .\(member(name)): .\(member(name))(self.\(member(name)))") }
         code.line("}")
         code.close()
         code.blank()
@@ -627,7 +627,7 @@ enum GesSwiftEmitter {
         code.line("/// - Parameter value: The message.")
         code.open("\(access)\(type.membersAreClasses ? "" : "mutating ")func assign(_ value: Case) {")
         code.line("switch value {")
-        for name in type.members {
+        for name in type.memberNames {
             code.line("case .\(member(name))(let value):")
             code.line("    selected = .\(member(name))")
             code.line("    self.\(member(name)) = value")
@@ -637,9 +637,9 @@ enum GesSwiftEmitter {
         code.blank()
         code.line("/// A message of the set as a value: one case per message, holding its record.")
         code.open("\(access)enum Case\(type.membersAreClasses ? "" : ": Sendable") {")
-        for name in type.members {
+        for (name, record) in type.memberPairs {
             code.line("/// The message `\(name)`.")
-            code.line("case \(member(name))(\(name))")
+            code.line("case \(member(name))(\(record))")
         }
         code.close()
     }
@@ -958,21 +958,21 @@ enum GesSwiftEmitter {
         for route in network.routes {
             let name = GesSchemaPlanner.camel(route.name)
             code.blank()
-            code.line("/// The index of the route `\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`.")
+            code.line("/// The index of the route `\(route.side) \(route.verb) \(route.written) \(route.deliveryClass)`.")
             code.line("\(access)static let \(name) = \(route.index)")
             if route.rateMicroseconds == 0 { continue }
             code.blank()
-            code.line("/// The shortest interval between two updates of the topic `:\(route.root)` in microseconds.")
+            code.line("/// The shortest interval between two updates of the topic `\(route.written)` in microseconds.")
             code.line("\(access)static let \(name)EveryMicroseconds: Int64 = \(route.rateMicroseconds)")
         }
         for route in network.routes {
             let publishes = route.verb == "publishes"
             let verb = publishes ? "publish" : "send"
-            let root = roots(route.root)
+            let root = roots(route.type)
             let type = root.type
             let write = root.write("value", "buffer")
             code.blank()
-            code.line("/// Encodes a record into a buffer and \(publishes ? "publishes" : "sends") it on the route `\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`.")
+            code.line("/// Encodes a record into a buffer and \(publishes ? "publishes" : "sends") it on the route `\(route.side) \(route.verb) \(route.written) \(route.deliveryClass)`.")
             code.line("/// - Parameters:")
             code.line("///   - value: The record.")
             code.line("///   - connection: The \(route.side)'s connection.")
@@ -1020,10 +1020,10 @@ enum GesSwiftEmitter {
         code.line("\(access)let end: \(endType)")
         code.line("private let __send_buffer: UnsafeMutableRawBufferPointer")
         for route in end.outgoing {
-            let root = roots(route.root)
+            let root = roots(route.type)
             if root.isSet { code.line("private var \(outgoing(route)) = \(root.initial)") }
         }
-        for (route, name) in end.incoming { code.line("private var \(field(name)) = \(roots(route.root).initial)") }
+        for (route, name) in end.incoming { code.line("private var \(field(name)) = \(roots(route.type).initial)") }
         code.blank()
         code.line("/// Wraps an end of the network.")
         code.line("/// - Parameter end: The end; its bound network must have the hash `\(net).hash`.")
@@ -1033,7 +1033,7 @@ enum GesSwiftEmitter {
         code.line("self.end = end")
         var sizes: [String] = []
         for route in end.outgoing {
-            let owner = roots(route.root).owner + ".maxByteCount"
+            let owner = roots(route.type).owner + ".maxByteCount"
             if !sizes.contains(owner) { sizes.append(owner) }
         }
         let size = sizes.count == 0 ? "0" : sizes.count == 1 ? sizes[0] : "max(\(sizes.joined(separator: ", ")))"
@@ -1056,10 +1056,10 @@ enum GesSwiftEmitter {
             code.line("\(access)func connection(client: Int) throws -> GesNetworkConnection { try end.connection(client: client) }")
         }
         for route in end.outgoing {
-            let root = roots(route.root)
+            let root = roots(route.type)
             let publishes = route.verb == "publishes"
             let verb = publishes ? "publish" : "send"
-            let what = "`\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`"
+            let what = "`\(route.side) \(route.verb) \(route.written) \(route.deliveryClass)`"
             var targets: [(parameters: String, arguments: String, doc: String)] = [("", "", publishes ? "to the subscribed clients" : isClient ? "to the server" : "to every client")]
             if !isClient && !publishes { targets.append((", client: Int", ", client: client", "to one client")) }
             for (parameters, arguments, doc) in targets {
@@ -1139,13 +1139,13 @@ enum GesSwiftEmitter {
             code.line("case .message:")
             code.line("    switch event.route {")
             for (route, name) in end.incoming {
-                let root = roots(route.root)
+                let root = roots(route.type)
                 let record = field(name)
                 code.line("    case \(routeName(route)):")
                 code.line("        do {")
                 code.line("            _ = try \(root.read(record, "event.payload"))")
                 code.line("        } catch {")
-                code.line("            \(isClient ? "" : "try ")end.close(\(isClient ? "" : "client: event.client, detail: ")\"undecodable :\(route.root)\")")
+                code.line("            \(isClient ? "" : "try ")end.close(\(isClient ? "" : "client: event.client, detail: ")\"undecodable \(route.written)\")")
                 code.line("            return")
                 code.line("        }")
                 code.line("        try handler(.\(caseName(name))(\(client)\(record)\(root.isSet ? ".asCase" : "")))")
@@ -1203,7 +1203,7 @@ enum GesSwiftEmitter {
         code.line("/// The topics the \(end.client ? "client" : "server") publishes.")
         code.open("\(access)enum Topic: Int, Sendable {")
         for route in end.topics {
-            code.line("/// The topic `\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`.")
+            code.line("/// The topic `\(route.side) \(route.verb) \(route.written) \(route.deliveryClass)`.")
             code.line("case \(name(GesSchemaPlanner.camel(route.root))) = \(route.index)")
         }
         code.close()
@@ -1214,10 +1214,10 @@ enum GesSwiftEmitter {
         code.blank()
         code.line("fileprivate init(_ end: \(end.name)) { __end = end }")
         for route in end.topics {
-            let root = roots(route.root)
+            let root = roots(route.type)
             for (type, what) in root.isSet ? [(root.type, "record"), (root.type + ".Case", "message")] : [(root.type, "record")] {
                 code.blank()
-                code.line("/// Publishes a \(what) on the topic `:\(route.root)` as a member of the tick.")
+                code.line("/// Publishes a \(what) on the topic `\(route.written)` as a member of the tick.")
                 code.line("/// - Parameter value: The value.")
                 code.line("/// - Returns: The status of the publication.")
                 code.line("/// - Throws: `GesWireError` when a value does not fit its field.")
@@ -1271,9 +1271,9 @@ enum GesSwiftEmitter {
             )
         }
         for (route, name) in end.incoming {
-            let root = roots(route.root)
+            let root = roots(route.type)
             event(
-                "A \(root.isSet ? "message" : "record") arrived on the route `\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)`.",
+                "A \(root.isSet ? "message" : "record") arrived on the route `\(route.side) \(route.verb) \(route.written) \(route.deliveryClass)`.",
                 "\(self.name(GesSchemaPlanner.camel(name)))(\(client)\(root.isSet ? root.type + ".Case" : root.type))"
             )
         }

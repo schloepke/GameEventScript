@@ -73,7 +73,7 @@
             case .network:
                 output += "network :\(declaration.name) as {\n"
                 for route in declaration.routes {
-                    output += "  \(route.server ? "server" : "client") \(route.publishes ? "publishes" : "sends") :\(route.root) "
+                    output += "  \(route.server ? "server" : "client") \(route.publishes ? "publishes" : "sends") \(route.isMessage ? "" : ":")\(route.root) "
                     switch route.routeClass {
                     case .reliable: output += "reliable"
                     case .latest: output += "latest"

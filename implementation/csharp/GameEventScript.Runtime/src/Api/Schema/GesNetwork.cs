@@ -162,17 +162,18 @@ internal sealed partial class GesFileScope
     private const long MaximumRateMicroseconds = 3_600_000_000;
 
     // Resolves the networks of this source once every declaration has its public description.
-    internal void ResolveNetworks(Dictionary<string, GesResolvedDeclaration> all, List<GesNetwork> networks)
+    internal void ResolveNetworks(Dictionary<string, GesResolvedDeclaration> all, Dictionary<string, GesResolvedDeclaration> messages, List<GesNetwork> networks)
     {
         foreach (var syntax in _networks)
         {
             var routes = new GesNetworkRoute[syntax.Routes.Length];
-            var seen = new HashSet<(bool, bool, string)>();
+            var seen = new HashSet<(bool, bool, GesResolvedDeclaration)>();
             for (var index = 0; index < routes.Length; index++)
             {
                 var route = syntax.Routes[index];
-                if (!all.TryGetValue(route.Root, out var root))
-                    throw Error(Code.UnknownName, route.RootOffset, $"'{route.Root}' is no declared schema, message or message set.");
+                // A route names a message without a colon and a schema or message set with one.
+                if (!(route.IsMessage ? messages : all).TryGetValue(route.Root, out var root))
+                    throw Error(Code.UnknownName, route.RootOffset, route.IsMessage ? $"Message '{route.Root}' is not declared." : $"':{route.Root}' is no declared schema or message set.");
                 if (root.Syntax.WireGroup is null)
                     throw Error(Code.InvalidRoute, route.RootOffset, $"'{route.Root}' has no wire role.");
                 if (root.Abstract) throw Error(Code.InvalidRoute, route.RootOffset, $"'{route.Root}' is abstract.");
@@ -193,7 +194,7 @@ internal sealed partial class GesFileScope
                     rate = RateMicroseconds(value);
                 }
 
-                if (!seen.Add((route.Server, route.Publishes, route.Root)))
+                if (!seen.Add((route.Server, route.Publishes, root)))
                     throw Error(Code.DuplicateRoute, route.Offset, $"The {(route.Server ? "server" : "client")} {(route.Publishes ? "publishes" : "sends")} '{route.Root}' twice.");
                 routes[index] = new GesNetworkRoute(index, route.Server ? GesNetworkSide.Server : GesNetworkSide.Client,
                     route.Publishes ? GesNetworkVerb.Publishes : GesNetworkVerb.Sends, root.Public, deliveryClass, rate);

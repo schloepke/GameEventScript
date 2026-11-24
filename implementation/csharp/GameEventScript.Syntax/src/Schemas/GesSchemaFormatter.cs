@@ -84,7 +84,7 @@ internal static class GesSchemaFormatter
                     builder.Append("network :").Append(declaration.Name).Append(" as {\n");
                     foreach (var route in declaration.Routes)
                     {
-                        builder.Append("  ").Append(route.Server ? "server " : "client ").Append(route.Publishes ? "publishes :" : "sends :").Append(route.Root).Append(' ');
+                        builder.Append("  ").Append(route.Server ? "server " : "client ").Append(route.Publishes ? "publishes " : "sends ").Append(route.IsMessage ? "" : ":").Append(route.Root).Append(' ');
                         builder.Append(route.Class switch { GesSchemaRouteClass.Reliable => "reliable", GesSchemaRouteClass.Latest => "latest", _ => "bulk" });
                         if (route.Rate is { } rate) builder.Append(" at most every ").Append(Value(rate));
                         builder.Append('\n');

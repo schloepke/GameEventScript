@@ -12,7 +12,7 @@ internal static partial class GesCSharpEmitter
     private static void ValueMembers(GesSchemaPlanner.Code code, GesPlanType type, string holder)
     {
         var self = (type.Kind == GesSchemaKind.Messages ? type.MembersAreClasses : type.IsClass) ? "" : "readonly ";
-        var bind = $"__valueSchema ??= {holder}.Bind({GesSchemaPlanner.Literal(type.Layout.Name, false)}, BindingHash)";
+        var bind = $"__valueSchema ??= {holder}.Bind({GesSchemaPlanner.Literal(type.Layout.Lookup, false)}, BindingHash)";
         code.Blank();
         code.Line("private static GesBoundSchema? __valueSchema;");
         code.Blank();

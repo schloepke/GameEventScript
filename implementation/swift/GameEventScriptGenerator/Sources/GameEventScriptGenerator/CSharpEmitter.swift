@@ -83,7 +83,7 @@ enum GesCSharpEmitter {
                     document.units.append(
                         GesCodeUnit(owner: type.name) { code in
                             // A root shared with models gets its wire members as extension methods of the model's struct.
-                            code.line("/// <summary>The wire members of the packed record <c>:\(type.name)</c>, a wire root whose type the models declare: its bytes are its word, little-endian.</summary>")
+                            code.line("/// <summary>The wire members of the packed record <c>:\(type.layout.declared)</c>, a wire root whose type the models declare: its bytes are its word, little-endian.</summary>")
                             code.line("\(access) static class \(type.name)Wire")
                             code.open("{")
                             packedRoot(&code, type, context, models + type.name)
@@ -180,7 +180,7 @@ enum GesCSharpEmitter {
         code.line(
             type.isItem
                 ? "/// <summary>An element of the list.</summary>"
-                : "/// <summary>The \(kind(type)) <c>:\(type.name)</c>, read and written without allocation\(type.isClass ? " once its storage has grown" : "").</summary>"
+                : "/// <summary>The \(kind(type)) <c>:\(type.layout.declared)</c>, read and written without allocation\(type.isClass ? " once its storage has grown" : "").</summary>"
         )
         code.line(type.isClass ? "\(visibility) sealed partial class \(type.name)" : "\(visibility) partial struct \(type.name)")
         code.open("{")
@@ -555,12 +555,12 @@ enum GesCSharpEmitter {
         if context.values {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
-        for member in type.members { names.append((member, "the member " + member)) }
+        for member in type.memberNames { names.append((member, "the member " + member)) }
         try GesSchemaPlanner.unique(type.name, names, context.topLevel)
         let width = String(type.layout.memberWidth)
         let last = unsigned(UInt64(type.members.count) - 1)
         code.line(
-            "/// <summary>The message set <c>:\(type.name)</c>: one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "").</summary>"
+            "/// <summary>The message set <c>:\(type.layout.declared)</c>: one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "").</summary>"
         )
         code.line(type.membersAreClasses ? "\(access) sealed partial class \(type.name)" : "\(access) partial struct \(type.name)")
         code.open("{")
@@ -568,10 +568,10 @@ enum GesCSharpEmitter {
         code.blank()
         code.line("/// <summary>The message this record holds.</summary>")
         code.line("public Member Selected;")
-        for member in type.members {
+        for (member, record) in type.memberPairs {
             code.blank()
             code.line("/// <summary>The message when <see cref=\"Selected\"/> is <c>\(member)</c>.</summary>")
-            code.line("public \(member) \(member)\(type.membersAreClasses ? " = new \(member)();" : ";")")
+            code.line("public \(record) \(member)\(type.membersAreClasses ? " = new \(record)();" : ";")")
         }
         var write = [
             "if ((ulong)Selected > \(last)) throw new GesWireException(GesWireException.OutOfRange, \"\");", "writer.Write((ulong)Selected, \(width));", "switch (Selected)", "{",
@@ -579,9 +579,10 @@ enum GesCSharpEmitter {
         var read = ["var index = reader.Read(\(width), \"\");"]
         if UInt64(type.members.count) - 1 < full(type.layout.memberWidth) { read.append("if (index > \(last)) throw new GesWireException(GesWireException.InvalidIndex, \"\");") }
         read += ["Selected = (Member)index;", "switch (Selected)", "{"]
-        for member in type.members {
-            write += ["    case Member.\(member):", "        \(member).__WriteFields(ref writer, \(member).__paths, 0);", "        break;"]
-            read += ["    case Member.\(member):", "        \(member).__ReadFields(ref reader, \(member).__paths, 0);", "        break;"]
+        // The paths are static members of the message type, whose name differs from the member's with a message suffix.
+        for (member, record) in type.memberPairs {
+            write += ["    case Member.\(member):", "        \(member).__WriteFields(ref writer, \(record).__paths, 0);", "        break;"]
+            read += ["    case Member.\(member):", "        \(member).__ReadFields(ref reader, \(record).__paths, 0);", "        break;"]
         }
         write.append("}")
         read.append("}")
@@ -594,7 +595,7 @@ enum GesCSharpEmitter {
         code.line("/// <summary>The messages of the set, in declared order.</summary>")
         code.line("public enum Member : \(underlying(type.members.count))")
         code.open("{")
-        for member in type.members {
+        for member in type.memberNames {
             code.line("/// <summary>The message <c>\(member)</c>.</summary>")
             code.line(member + ",")
         }
@@ -612,7 +613,7 @@ enum GesCSharpEmitter {
         code.line("/// <exception cref=\"GesWireException\"><see cref=\"Selected\"/> names no message of the set.</exception>")
         code.line("public \(selfModifier)Case ToCase() => Selected switch")
         code.open("{")
-        for member in type.members { code.line("Member.\(member) => new Case.\(member)(\(member)),") }
+        for member in type.memberNames { code.line("Member.\(member) => new Case.\(member)(\(member)),") }
         code.line("_ => throw new GesWireException(GesWireException.OutOfRange, \"\"),")
         code.close("};")
         code.blank()
@@ -623,7 +624,7 @@ enum GesCSharpEmitter {
         code.open("{")
         code.line("switch (value)")
         code.open("{")
-        for member in type.members {
+        for member in type.memberNames {
             let local = GesSchemaPlanner.camel(member)
             code.line("case Case.\(member) @\(local):")
             code.line("    Selected = Member.\(member);")
@@ -635,7 +636,7 @@ enum GesCSharpEmitter {
         code.close()
         code.close()
         code.blank()
-        code.line("/// <summary>One message of the set as a case: match <c>case \(type.name).Case.\(type.members[0]) value</c>.</summary>")
+        code.line("/// <summary>One message of the set as a case: match <c>case \(type.name).Case.\(type.memberNames[0]) value</c>.</summary>")
         code.line("public abstract class Case")
         code.open("{")
         code.line("private protected Case()")
@@ -644,8 +645,8 @@ enum GesCSharpEmitter {
         code.blank()
         code.line("/// <summary>Gets the message of the case.</summary>")
         code.line("public abstract Member Selected { get; }")
-        for member in type.members {
-            let record = context.global + member
+        for (member, generated) in type.memberPairs {
+            let record = context.global + generated
             code.blank()
             code.line("/// <summary>The message <c>\(member)</c>.</summary>")
             code.line("public sealed class \(member) : Case")
@@ -983,24 +984,24 @@ enum GesCSharpEmitter {
         }
         for route in network.routes {
             code.blank()
-            code.line("/// <summary>The index of the route <c>\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)</c>.</summary>")
+            code.line("/// <summary>The index of the route <c>\(route.side) \(route.verb) \(route.written) \(route.deliveryClass)</c>.</summary>")
             code.line("public const int \(route.name) = \(route.index);")
             if route.rateMicroseconds == 0 { continue }
             code.blank()
-            code.line("/// <summary>The shortest interval between two updates of the topic <c>:\(route.root)</c> in microseconds.</summary>")
+            code.line("/// <summary>The shortest interval between two updates of the topic <c>\(route.written)</c> in microseconds.</summary>")
             code.line("public const long \(route.name)EveryMicroseconds = \(route.rateMicroseconds);")
         }
         for route in network.routes {
             let publishes = route.verb == "publishes"
             let verb = publishes ? "Publish" : "Send"
             code.blank()
-            code.line("/// <summary>Encodes <paramref name=\"value\"/> into <paramref name=\"buffer\"/> and \(publishes ? "publishes" : "sends") it on the route <c>\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)</c>.</summary>")
+            code.line("/// <summary>Encodes <paramref name=\"value\"/> into <paramref name=\"buffer\"/> and \(publishes ? "publishes" : "sends") it on the route <c>\(route.side) \(route.verb) \(route.written) \(route.deliveryClass)</c>.</summary>")
             code.line("/// <param name=\"connection\">The \(route.side)'s connection.</param>")
             code.line("/// <param name=\"value\">The record.</param>")
             code.line("/// <param name=\"buffer\">The buffer the record is encoded into; its <c>MaxByteCount</c> bytes always suffice.</param>")
             code.line("/// <returns>The status of <see cref=\"GesNetworkConnection.\(verb)(int, ReadOnlySpan{byte})\"/>.</returns>")
             code.line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the buffer is too small.</exception>")
-            code.line("public static GesNetworkSendStatus \(GesSchemaPlanner.pascal(route.side))\(verb)\(route.root)(GesNetworkConnection connection, in \(roots(route.root).type) value, Span<byte> buffer)")
+            code.line("public static GesNetworkSendStatus \(GesSchemaPlanner.pascal(route.side))\(verb)\(route.root)(GesNetworkConnection connection, in \(roots(route.type).type) value, Span<byte> buffer)")
             code.line("    => connection.\(verb)(\(route.name), buffer.Slice(0, value.Write(buffer)));")
         }
         for end in [client, server] {
@@ -1039,15 +1040,15 @@ enum GesCSharpEmitter {
         code.open("{")
         code.line("private readonly byte[] __send_buffer;")
         for route in end.outgoing {
-            let root = roots(route.root)
+            let root = roots(route.type)
             if !root.isSet { continue }
             code.line("private \(root.type) \(outgoing(route))\(root.plan.membersAreClasses ? " = new();" : ";")")
         }
         for (route, name) in end.incoming {
-            let root = roots(route.root)
+            let root = roots(route.type)
             code.line("private \(root.type) \(field(name))\(root.plan.isClass || root.plan.membersAreClasses ? " = new();" : ";")")
             if !root.isSet { continue }
-            for member in root.plan.members { code.line("private readonly \(root.type).Case.\(member) \(caseField(name, member)) = new();") }
+            for member in root.plan.memberNames { code.line("private readonly \(root.type).Case.\(member) \(caseField(name, member)) = new();") }
         }
         code.blank()
         code.line("/// <summary>Wraps an end of the network.</summary>")
@@ -1060,7 +1061,7 @@ enum GesCSharpEmitter {
         code.line("if (end.Network.Hash != Hash) throw new global::System.ArgumentException(\"The end's network is no :\(network.name).\", nameof(end));")
         var sizes: [String] = []
         for route in end.outgoing {
-            let owner = roots(route.root).owner + ".MaxByteCount"
+            let owner = roots(route.type).owner + ".MaxByteCount"
             if !sizes.contains(owner) { sizes.append(owner) }
         }
         var size = sizes.first ?? "0"
@@ -1086,10 +1087,10 @@ enum GesCSharpEmitter {
             code.line("public GesNetworkConnection Connection(int client) => End.Connection(client);")
         }
         for route in end.outgoing {
-            let root = roots(route.root)
+            let root = roots(route.type)
             let publishes = route.verb == "publishes"
             let verb = publishes ? "Publish" : "Send"
-            let what = "<c>\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)</c>"
+            let what = "<c>\(route.side) \(route.verb) \(route.written) \(route.deliveryClass)</c>"
             var targets: [(parameters: String, arguments: String, doc: String)] = [("", "", publishes ? "to the subscribed clients" : isClient ? "to the server" : "to every client")]
             if !isClient && !publishes { targets.append((", int client", ", client", "to one client")) }
             for (parameters, arguments, doc) in targets {
@@ -1179,7 +1180,7 @@ enum GesCSharpEmitter {
             code.line("    switch (networkEvent.Route)")
             code.line("    {")
             for (route, name) in end.incoming {
-                let root = roots(route.root)
+                let root = roots(route.type)
                 let record = field(name)
                 code.line("        case \(route.name):")
                 code.line("            try")
@@ -1188,7 +1189,7 @@ enum GesCSharpEmitter {
                 code.line("            }")
                 code.line("            catch (GesWireException)")
                 code.line("            {")
-                code.line("                End.Close(\(client)\"undecodable :\(route.root)\");")
+                code.line("                End.Close(\(client)\"undecodable \(route.written)\");")
                 code.line("                break;")
                 code.line("            }")
                 code.line("")
@@ -1197,7 +1198,7 @@ enum GesCSharpEmitter {
                 } else {
                     code.line("            switch (\(record).Selected)")
                     code.line("            {")
-                    for member in root.plan.members {
+                    for member in root.plan.memberNames {
                         code.line("                case \(root.type).Member.\(member):")
                         code.line("                    \(caseField(name, member)).Value = \(record).\(member);")
                         code.line("                    handler.On\(name)(\(client)\(caseField(name, member)));")
@@ -1276,7 +1277,7 @@ enum GesCSharpEmitter {
         code.line("public enum Topic")
         code.open("{")
         for route in end.topics {
-            code.line("/// <summary>The topic <c>\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)</c>.</summary>")
+            code.line("/// <summary>The topic <c>\(route.side) \(route.verb) \(route.written) \(route.deliveryClass)</c>.</summary>")
             code.line("\(route.root) = \(route.name),")
         }
         code.close()
@@ -1293,11 +1294,11 @@ enum GesCSharpEmitter {
         code.line("__number = number;")
         code.close()
         for route in end.topics {
-            let root = roots(route.root)
+            let root = roots(route.type)
             for parameter in root.isSet ? ["in " + root.type, root.type + ".Case"] : ["in " + root.type] {
                 let record = parameter.hasPrefix("in ")
                 code.blank()
-                code.line("/// <summary>Publishes a \(record ? "record" : "message") on the topic <c>:\(route.root)</c> as a member of the tick.</summary>")
+                code.line("/// <summary>Publishes a \(record ? "record" : "message") on the topic <c>\(route.written)</c> as a member of the tick.</summary>")
                 code.line("/// <param name=\"value\">The value.</param>")
                 code.line("/// <returns>The status of the publication.</returns>")
                 code.line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>")
@@ -1369,9 +1370,9 @@ enum GesCSharpEmitter {
             )
         }
         for (route, name) in end.incoming {
-            let root = roots(route.root)
+            let root = roots(route.type)
             method(
-                "A \(root.isSet ? "message" : "record") arrived on the route <c>\(route.side) \(route.verb) :\(route.root) \(route.deliveryClass)</c>.",
+                "A \(root.isSet ? "message" : "record") arrived on the route <c>\(route.side) \(route.verb) \(route.written) \(route.deliveryClass)</c>.",
                 "On\(name)(\(client)\(eventParameter(root)) value)",
                 "/// <param name=\"value\">The \(root.isSet ? "message, whose record" : "record, which") is valid until the method returns.</param>"
             )

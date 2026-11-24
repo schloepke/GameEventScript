@@ -1568,6 +1568,7 @@ sealed class GameEventScript.Generator.GesSchemaGenerateOptions
   property System.Boolean Values { get set }
   property System.Collections.Generic.IReadOnlyList<System.String> Imports { get set }
   property System.String ExtendNamespace { get set }
+  property System.String MessageSuffix { get set }
   property System.String Models { get set }
   property System.String Namespace { get set }
   property System.String SchemaSet { get set }

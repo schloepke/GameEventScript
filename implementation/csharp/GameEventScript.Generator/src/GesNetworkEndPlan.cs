@@ -63,7 +63,7 @@ internal sealed class GesNetworkEndPlan
         var plan = new GesNetworkEndPlan(client, outgoing, incoming);
         var names = new List<(string, string)>();
         foreach (var name in plan.Fixed) names.Add((name, "the event " + name));
-        foreach (var (route, name) in incoming) names.Add((name, $"the event of the route '{route.Side} {route.Verb} :{route.Root}'"));
+        foreach (var (route, name) in incoming) names.Add((name, $"the event of the route '{route.Side} {route.Verb} {route.Written}'"));
         GesSchemaPlanner.Unique($"{network.Name}.{plan.Name}", names);
         return plan;
     }
@@ -89,7 +89,7 @@ internal sealed class GesNetworkEndPlan
         names.Add((swift ? "bound" : "Bound", "the bound network property"));
         foreach (var route in network.Routes)
         {
-            var label = $"the route {route.Side} {route.Verb} :{route.Root}";
+            var label = $"the route {route.Side} {route.Verb} {route.Written}";
             var constant = swift ? GesSchemaPlanner.Camel(route.Name) : route.Name;
             names.Add((constant, $"the index constant of {label}"));
             if (route.RateMicroseconds != 0) names.Add((constant + "EveryMicroseconds", $"the rate constant of {label}"));

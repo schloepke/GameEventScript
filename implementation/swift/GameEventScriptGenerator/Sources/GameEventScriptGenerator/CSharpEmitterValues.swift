@@ -6,7 +6,7 @@
 extension GesCSharpEmitter {
     static func valueMembers(_ code: inout Code, _ type: GesPlanType, _ holder: String) {
         let selfModifier = (type.kind == .messages ? type.membersAreClasses : type.isClass) ? "" : "readonly "
-        let bind = "__valueSchema ??= \(holder).Bind(\(GesSchemaPlanner.literal(type.layout.name, swift: false)), BindingHash)"
+        let bind = "__valueSchema ??= \(holder).Bind(\(GesSchemaPlanner.literal(type.layout.lookup, swift: false)), BindingHash)"
         code.blank()
         code.line("private static GesBoundSchema? __valueSchema;")
         code.blank()

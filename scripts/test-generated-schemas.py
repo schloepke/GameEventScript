@@ -70,6 +70,10 @@ SETS = ((ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m", "
         (ROLES, ROLE_FILES, ["--model", "view", "--values", "--use-schemas", "RoleSet.Wire.RoleSchemas"], "RoleModels", "SetRolesModel", "schema"),
         (ROOT / "conformance/fixtures/SchemaGeneration", ["network.gess"], ["--all-roots", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas"], "SetGame", "SetGame", None))
 GENERATED_SWIFT = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
+# A schema and a message of one name, told apart in generated code by a message suffix: two generations with different
+# suffixes are the same code apart from the message type names, and each reads the other's bytes.
+MESSAGES = ROOT / "conformance/fixtures/SchemaGeneration/messages.gess"
+SUFFIXES = (("Message", "SuffixA"), ("Msg", "SuffixB"))
 UNCHECKED_PROGRAM = """using System;
 using Unchecked;
 
@@ -331,7 +335,17 @@ def csharp_program(entries):
     lines += ["            default: return \"none\";", "        }", "    }", "",
               "    private static byte[] Bytes(string text) => Convert.FromHexString(text == \".\" ? \"\" : text);", "",
               "    private static bool Same(GameEventScript.Runtime.Values.GesValue a, GameEventScript.Runtime.Values.GesValue b) => a.Equals(b) || a.ToJson() == b.ToJson();", "",
-              "    private static void Main()", "    {", "        string? line;", "        while ((line = Console.ReadLine()) != null)", "        {",
+              "    // Generations with different message suffixes read each other's bytes.",
+              "    private static string Suffixes()", "    {",
+              "        var shield = new SuffixA.ShieldMessage { Level = 7 };", "        var other = new SuffixB.ShieldMsg();", "        other.Read(shield.ToBytes());",
+              "        if (other.Level != 7) return \"message mismatch\";",
+              "        var actions = new SuffixB.Actions { Selected = SuffixB.Actions.Member.Move, Move = new SuffixB.MoveMsg { X = 200 } };",
+              "        var read = new SuffixA.Actions();", "        read.Read(actions.ToBytes());",
+              "        if (read.Selected != SuffixA.Actions.Member.Move || read.Move.X != 200) return \"message set mismatch\";",
+              "        var schema = new SuffixA.Shield { Strength = 42 };", "        var copy = new SuffixB.Shield();", "        copy.Read(schema.ToBytes());",
+              "        return copy.Strength == 42 ? \"ok\" : \"schema mismatch\";", "    }", "",
+              "    private static void Main(string[] args)", "    {", "        if (args.Length > 0)", "        {", "            Console.WriteLine(Suffixes());", "            return;", "        }",
+              "        string? line;", "        while ((line = Console.ReadLine()) != null)", "        {",
               "            var parts = line.Split(' ');", "            var limit = parts[4] == \"-\" ? long.MaxValue : long.Parse(parts[4]);",
               "            try { Console.WriteLine(Run(int.Parse(parts[0]), parts[1], Bytes(parts[2]), Bytes(parts[3]), limit)); }",
               "            catch (GameEventScript.Api.GesWireException error) { Console.WriteLine(\"error \" + error.Code + \" \" + error.Path); }", "        }", "    }", "}"]
@@ -391,9 +405,18 @@ def swift_program(entries):
                       "        if try round.encoded() != record.encoded() { return \"model mismatch\" }"]
         lines += ["        return \"ok \\(count) \" + hex(try record.encoded())"]
     lines += ["    default:", "        return \"none\"", "    }", "}", "",
-              "while let line = readLine() {", "    let parts = line.split(separator: \" \", omittingEmptySubsequences: false)",
-              "    let limit = parts[4] == \"-\" ? Int.max : Int(parts[4])!", "    do {",
-              "        print(try run(Int(parts[0])!, parts[1], bytes(parts[2]), bytes(parts[3]), limit))", "    } catch {", "        print(\"error \\(error.code) \\(error.path)\")", "    }", "}"]
+              "// Generations with different message suffixes read each other's bytes.",
+              "func suffixes() throws(GesWireError) -> String {",
+              "    var shield = SuffixA.ShieldMessage()", "    shield.level = 7", "    var other = SuffixB.ShieldMsg()", "    _ = try other.read(from: shield.encoded())",
+              "    if other.level != 7 { return \"message mismatch\" }",
+              "    var actions = SuffixB.Actions()", "    actions.selected = .move", "    actions.move.x = 200", "    var read = SuffixA.Actions()", "    _ = try read.read(from: actions.encoded())",
+              "    if read.selected != .move || read.move.x != 200 { return \"message set mismatch\" }",
+              "    var schema = SuffixA.Shield()", "    schema.strength = 42", "    var copy = SuffixB.Shield()", "    _ = try copy.read(from: schema.encoded())",
+              "    return copy.strength == 42 ? \"ok\" : \"schema mismatch\"", "}", "",
+              "if CommandLine.arguments.count > 1 {", "    do { print(try suffixes()) } catch { print(\"error \\(error.code) \\(error.path)\") }", "} else {",
+              "    while let line = readLine() {", "        let parts = line.split(separator: \" \", omittingEmptySubsequences: false)",
+              "        let limit = parts[4] == \"-\" ? Int.max : Int(parts[4])!", "        do {",
+              "            print(try run(Int(parts[0])!, parts[1], bytes(parts[2]), bytes(parts[3]), limit))", "        } catch {", "            print(\"error \\(error.code) \\(error.path)\")", "        }", "    }", "}"]
     return "\n".join(lines) + "\n"
 
 
@@ -540,6 +563,18 @@ def main():
                                   "--access", "internal", *output], cwd=directory, capture_output=True, check=False)
             if run.returncode != 0:
                 raise SystemExit(f"The schema set {name} does not generate: {run.stderr.decode('utf-8', 'replace').strip()}")
+    suffixed, mismatches = {}, []
+    for suffix, space in SUFFIXES:
+        for language, target in (("csharp", csharp / f"{space}.g.cs"), ("swift", swift / f"{space}.swift")):
+            run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", MESSAGES.name, "--root", ":Game", "--values", "--message-suffix", suffix,
+                                  "--language", language, "--namespace", space, "--access", "internal", "-o", str(target)], cwd=MESSAGES.parent, capture_output=True, check=False)
+            if run.returncode != 0:
+                raise SystemExit(f"The message fixture does not generate with the suffix {suffix}: {run.stderr.decode('utf-8', 'replace').strip()}")
+            suffixed[suffix, language] = target.read_text(encoding="utf-8")
+    for language in ("csharp", "swift"):
+        renamed = suffixed["Message", language].replace("ShieldMessage", "ShieldMsg").replace("MoveMessage", "MoveMsg").replace("SuffixA", "SuffixB")
+        if renamed != suffixed["Msg", language]:
+            mismatches.append(f"{language}: the generations with the suffixes Message and Msg differ beyond the message type names")
     for target, generations in HIDING:
         for index, (selection, space) in enumerate(generations):
             (WORK / "swift/Sources" / target).mkdir(parents=True, exist_ok=True)
@@ -669,7 +704,9 @@ let package = Package(
             raise SystemExit("\n".join(dict.fromkeys(errors[:40])) or f"{command[0]} build failed")
     lines = "".join(f"{index} {operation} {data or '.'} {second or '.'} {'-' if limit is None else limit}\n" for _, index, operation, data, second, limit, _ in requests)
     runs = {"C#": ["dotnet", str(WORK / "csharp-bin/Harness.dll")], "Swift": [str(WORK / "swift/.build/release/Harness")]}
-    failures = 0
+    failures = len(mismatches)
+    for mismatch in mismatches:
+        print(mismatch)
     guarantee = subprocess.run(["dotnet", str(WORK / "csharp-unchecked-bin/Unchecked.dll")], capture_output=True, check=False)
     if guarantee.returncode != 0:
         failures += 1
@@ -679,6 +716,10 @@ let package = Package(
         failures += 1
         print("C# unchecked control: the program passes without the guard of a shared list.")
     for port, command in runs.items():
+        interop = subprocess.run([*command, "suffixes"], capture_output=True, check=False).stdout.decode().strip()
+        if interop != "ok":
+            failures += 1
+            print(f"{port} message suffixes: {interop or 'no result'}")
         output = subprocess.run(command, input=lines.encode(), capture_output=True, check=True).stdout.decode().splitlines()
         if len(output) != len(requests):
             raise SystemExit(f"{port}: {len(output)} results for {len(requests)} requests")

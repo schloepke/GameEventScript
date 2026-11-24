@@ -24,7 +24,7 @@ Usage:
   dotnet ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                              [--param <name>=<literal> ...]
                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                             [--checked-exclusivity] [--bindings] [--documents] [--models <namespace>] [--extend-namespace <A>]
+                             [--checked-exclusivity] [--message-suffix <text>] [--bindings] [--documents] [--models <namespace>] [--extend-namespace <A>]
                              [--schemas <Name> | --use-schemas <A.Name>] [--import <Module> ...]
                              [-o <file> | -d <dir> [--split schema|file]] [--check]
 
@@ -47,6 +47,8 @@ Options:
   --access <level>          The visibility of the generated types: public (default) or internal.
   --values                  Also convert generated records and models to and from GES values and messages.
   --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
+  --message-suffix <text>   Append the text to every generated message type name, such as Message for MoveMessage;
+                            only wire code. Hashes, documents and wire bytes keep the declared names.
   --extend-namespace <A>    Extend this leading part of the Swift namespace, which another generation of the module
                             declares, instead of declaring it; wire code with --models does so for the part it shares.
   --schemas <Name>          Declare the schema set type <Name>, which holds the embedded sources and parameter values
@@ -102,6 +104,7 @@ Options:
         string? models = null;
         string? schemaSet = null;
         string? useSchemaSet = null;
+        string? messageSuffix = null;
         var imports = new List<string>();
         var quiet = false;
         var parameters = new List<(string Name, string Literal)>();
@@ -121,7 +124,7 @@ Options:
             else if (argument == "--checked-exclusivity" && command == "generate") checkedExclusivity = true;
             else if (argument == "--bindings" && command == "generate") bindings = true;
             else if (argument == "--documents" && command == "generate") documents = true;
-            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace" or "--schemas" or "--use-schemas" or "--import")
+            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace" or "--schemas" or "--use-schemas" or "--import" or "--message-suffix")
             {
                 var applies = argument switch
                 {
@@ -129,7 +132,7 @@ Options:
                     "--wire" or "--model" => command is "layout" or "generate",
                     "--param" => command is "hash" or "dump" or "layout" or "generate",
                     "--data" or "--baseline" => command == "dump",
-                    "--language" or "--namespace" or "--access" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace" or "--schemas" or "--use-schemas" or "--import" => command == "generate",
+                    "--language" or "--namespace" or "--access" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace" or "--schemas" or "--use-schemas" or "--import" or "--message-suffix" => command == "generate",
                     _ => command is "format" or "layout" or "generate"
                 };
                 if (!applies) return UsageError($"Unknown schema {command} option '{argument}'.");
@@ -159,6 +162,7 @@ Options:
                 else if (argument == "--extend-namespace") extendNamespace = next;
                 else if (argument == "--schemas") schemaSet = next;
                 else if (argument == "--use-schemas") useSchemaSet = next;
+                else if (argument == "--message-suffix") messageSuffix = next;
                 else if (argument == "--import")
                 {
                     if (imports.Contains(next)) return UsageError($"The module '{next}' is given twice.");
@@ -185,6 +189,7 @@ Options:
         if (command is "layout" or "generate" && (roots.Count > 0 ? 1 : 0) + (allRoots ? 1 : 0) + (wireGroup is null && modelGroup is null ? 0 : 1) != 1)
             return UsageError($"{command} requires one of --root, --all-roots, --wire and --model.");
         if (modelGroup is not null && checkedExclusivity) return UsageError("--checked-exclusivity concerns wire code, not --model.");
+        if (modelGroup is not null && messageSuffix is not null) return UsageError("--message-suffix concerns wire code, not --model.");
         if (bindings && modelGroup is null) return UsageError("--bindings concerns model code and requires --model.");
         if (documents && modelGroup is null) return UsageError("--documents concerns model code and requires --model.");
         if (models is not null && modelGroup is not null) return UsageError("--models concerns wire code, not --model.");
@@ -250,7 +255,8 @@ Options:
                         Models = models,
                         SchemaSet = schemaSet,
                         UseSchemaSet = useSchemaSet,
-                        Imports = imports
+                        Imports = imports,
+                        MessageSuffix = messageSuffix ?? ""
                     };
                     if (wireGroup is not null || modelGroup is not null)
                     {
@@ -263,7 +269,7 @@ Options:
                         }
                     }
 
-                    return Layout(set, allRoots ? set.Schemas.Select(schema => schema.Name).ToList() : roots, parameters, output, outDir, options, check, modelGroup is not null);
+                    return Layout(set, allRoots ? AllRoots(set) : roots, parameters, output, outDir, options, check, modelGroup is not null);
             }
 
             var schema = set.Schema(root!);
@@ -322,15 +328,24 @@ Options:
     // Whether a root reaches a parameter; a network reaches the parameters of its route roots.
     private static bool Reaches(GesSchemaSet set, string root, string name)
     {
+        var plain = root.StartsWith(':') ? root[1..] : root;
         foreach (var network in set.Networks)
         {
-            if (network.Name != root) continue;
+            if (network.Name != plain) continue;
             foreach (var route in network.Routes)
                 if (route.Root.Parameters.Any(parameter => parameter.Name == name)) return true;
             return false;
         }
 
         return set.Schema(root).Parameters.Any(parameter => parameter.Name == name);
+    }
+
+    // Every declaration as a root: by its plain name, unless a message and a schema, set or network share it.
+    private static List<string> AllRoots(GesSchemaSet set)
+    {
+        var messages = set.Schemas.Where(schema => schema.Kind == GesSchemaKind.Message).Select(schema => schema.Name).ToHashSet(StringComparer.Ordinal);
+        var others = set.Schemas.Where(schema => schema.Kind != GesSchemaKind.Message).Select(schema => schema.Name).Concat(set.Networks.Select(network => network.Name)).ToHashSet(StringComparer.Ordinal);
+        return [.. set.Schemas.Select(schema => !messages.Contains(schema.Name) || !others.Contains(schema.Name) ? schema.Name : schema.Kind == GesSchemaKind.Message ? schema.Name + "()" : ":" + schema.Name)];
     }
 
     // Prints the layout, or with options the generated code; with check it compares the code with the output file.

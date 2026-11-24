@@ -45,7 +45,7 @@ public struct GesSchemaDocument {
         let failure: GesDocumentError?
         let declaration: GesResolvedDeclaration
         do {
-            declaration = try schemas.declaration(name)
+            declaration = try schemas.typeDeclaration(name)
         } catch {
             throw GesDocumentError(code: Self.schemaMismatch, line: 1, column: 1, message: "The schema set declares no :\(name).")
         }

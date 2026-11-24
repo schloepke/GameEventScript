@@ -90,13 +90,14 @@ enum GesModelLayoutBuilder {
         guard !roots.isEmpty else { throw GesGeneratorError(GesGeneratorError.usage, "Specify at least one root.") }
         var reached: [String: GesSchema] = [:]
         var rootNames: [String] = []
-        for root in roots where !rootNames.contains(root) {
+        for root in roots {
             let schema = try set.schema(root)
+            if rootNames.contains(schema.name) { continue }
             if schema.kind != .schema { throw GesGeneratorError(GesGeneratorError.usage, "The model root '\(root)' is no schema.") }
             if schema.isAbstract {
                 throw GesGeneratorError(GesGeneratorError.usage, "The model root '\(root)' is abstract; only its protocol is generated, where a model takes it.")
             }
-            rootNames.append(root)
+            rootNames.append(schema.name)
             reach(schema, &reached)
         }
         var types: [GesModelType] = []
@@ -104,7 +105,7 @@ enum GesModelLayoutBuilder {
             let schema = reached[name]!
             var type = GesModelType(name: schema.name, hash: schema.hash, constants: GesLayoutConstant.of(schema))
             type.computed = schema.computedFields
-            if schema.packedWidth > 0 { type.packed = try GesSchemaLayoutBuilder.build(set, roots: [schema.name], parameters: GesSchemaParameters()) }
+            if schema.packedWidth > 0 { type.packed = try GesSchemaLayoutBuilder.build(set, roots: [set.rootName(of: schema)], parameters: GesSchemaParameters()) }
             for info in schema.fields {
                 let field = try self.field(info.name, info.name, info.alternatives)
                 field.optional = info.isOptional

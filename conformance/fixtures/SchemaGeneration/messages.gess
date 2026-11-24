@@ -1,0 +1,19 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The fixture of message type names: a schema and a message share a name in their separate namespaces, a message belongs
+// to two message sets, and a network routes the message, a set and the schema. Generated code tells the two apart only
+// with a message suffix, which leaves wire bytes and hashes alone.
+wire schema :Shield as {
+  strength: :Number integer between 0 and 100
+}
+
+wire messages :Actions as (Shield, Move)
+wire messages :Defense as (Shield)
+wire message Shield(level: :Number integer between 0 and 10)
+wire message Move(x: :Number integer between 0 and 255)
+
+network :Game as {
+  client sends Shield reliable
+  client sends :Actions reliable
+  server sends :Shield reliable
+}

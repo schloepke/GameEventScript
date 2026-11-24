@@ -11,7 +11,7 @@ enum GesSchemaLayoutJson {
         var json = Writer()
         json.beginObject()
         json.number("layout", Int64(GesSchemaLayout.version))
-        json.strings("roots", layout.roots)
+        json.strings("roots", layout.rootNames)
         json.beginArray("parameters")
         for parameter in layout.parameters {
             json.beginObject()
@@ -37,7 +37,7 @@ enum GesSchemaLayoutJson {
                     json.number("index", Int64(route.index))
                     json.string("side", route.side)
                     json.string("verb", route.verb)
-                    json.string("root", route.root)
+                    json.string("root", route.rootName)
                     json.string("class", route.deliveryClass)
                     json.number("rateMicroseconds", route.rateMicroseconds)
                     json.endObject()
@@ -53,7 +53,7 @@ enum GesSchemaLayoutJson {
 
     private static func type(_ json: inout Writer, _ type: GesLayoutType) {
         json.beginObject()
-        json.string("name", type.name)
+        json.string("name", type.declared)
         json.string("kind", type.kind == .schema ? "schema" : type.kind == .message ? "message" : "messages")
         json.string("hash", hex(type.hash))
         json.string("bindingHash", hex(type.bindingHash))
@@ -65,7 +65,7 @@ enum GesSchemaLayoutJson {
             json.number("packedBits", Int64(type.packedBits))
         }
         if type.kind == .messages {
-            json.strings("members", type.members)
+            json.strings("members", type.memberNames)
             json.number("memberWidth", Int64(type.memberWidth))
         } else {
             json.beginArray("fields")

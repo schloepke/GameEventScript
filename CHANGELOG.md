@@ -10,6 +10,20 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+### Added
+- Schema messages have a namespace of their own, so a message may share its name with a schema, message set, tag set or
+  network; a network route names a message without `:` (`client sends Move reliable`). Where a name is in both
+  namespaces, a root is written `:Name` for the schema, set or network and `Name()` for the message; the plain name is
+  `schema.ambiguousName` (specs/Schemas.md#declarations).
+- `ges schema generate --message-suffix <text>` (`GesSchemaGenerateOptions.MessageSuffix`, Swift `messageSuffix`)
+  appends a suffix to every generated message type name, such as `MoveMessage`. Hashes, documents and wire bytes keep the
+  declared names, so generations with different suffixes interoperate; a message type that collides with another
+  generated type is `generate.nameCollision` (specs/Schemas.md#message-type-names).
+
+### Changed
+- A network route that names a single message drops the `:` (`client sends Move reliable`); `:Name` in a route names
+  only a schema or message set, so the former `client sends :Move` is now `schema.unknownName`.
+
 ## [0.6.0] — 2026-11-23
 
 This release adds GES Network: a `network` declaration in `.gess` schemas, a portable session core with topics,

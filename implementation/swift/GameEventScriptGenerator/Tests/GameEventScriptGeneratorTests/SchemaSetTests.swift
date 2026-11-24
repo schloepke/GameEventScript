@@ -69,4 +69,48 @@ final class SchemaSetTests: XCTestCase {
             XCTAssertFalse(try generate(GesSchemaGenerateOptions(language: language, useSchemaSet: "Shared.GameSchemas")).contains("GameSchemas\n"))
         }
     }
+
+    func testAMessageSuffixNamesOnlyMessageTypes() throws {
+        let set = try GesSchemaSet(
+            parsing: "wire schema :Shield as { strength: :Number integer between 0 and 100 }\nwire schema :ShieldMessage as { x: :Boolean }\n"
+                + "wire messages :Actions as (Shield, Move)\nwire message Shield(level: :Number integer between 0 and 10)\nwire message Move(x: :Number integer between 0 and 255)\n"
+        )
+
+        func messages(_ roots: [String], _ suffix: String, _ language: GesSchemaLanguage = .csharp) throws -> String {
+            try GesSchemaGenerator.generate(set, roots: roots, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: language, messageSuffix: suffix))
+        }
+
+        func code(_ action: () throws -> Void) -> String {
+            do {
+                try action()
+                return ""
+            } catch let error as GesGeneratorError {
+                return error.code
+            } catch {
+                return "\(error)"
+            }
+        }
+
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            // Without a suffix the message and the schema both claim Shield; with one, ShieldMessage meets the schema of that name.
+            XCTAssertEqual(code { _ = try messages([":Shield", "Shield()"], "", language) }, "generate.nameCollision")
+            XCTAssertEqual(code { _ = try messages([":ShieldMessage", "Shield()"], "Message", language) }, "generate.nameCollision")
+            XCTAssertTrue(try messages([":Shield", "Shield()"], "Message", language).contains("ShieldMessage"))
+            for suffix in ["a-b", "Ä", " "] {
+                XCTAssertEqual(code { _ = try messages(["Shield()"], suffix, language) }, "generate.usage")
+            }
+            XCTAssertTrue(try messages(["Move"], "1x", language).contains("Move1x"))
+            XCTAssertEqual(code { _ = try GesSchemaGenerator.generateModels(set, roots: [":Shield"], options: GesSchemaGenerateOptions(language: language, messageSuffix: "Message")) }, "generate.usage")
+        }
+        // Set members keep the declared names; only the message types they hold take the suffix.
+        let actions = try messages(["Actions"], "Message")
+        XCTAssertTrue(actions.contains("public MoveMessage Move"))
+        XCTAssertTrue(actions.contains("case Member.Move:"))
+        XCTAssertFalse(actions.contains("Member.MoveMessage"))
+        // The suffix exists only in code: hashes and paths keep the declared name.
+        let plain = try messages(["Shield()"], "")
+        let suffixed = try messages(["Shield()"], "Message")
+        XCTAssertTrue(plain.contains("SchemaHash = 0x03181e32445ba5acUL"))
+        XCTAssertEqual(plain, suffixed.replacing("ShieldMessage", with: "Shield"))
+    }
 }

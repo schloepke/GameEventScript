@@ -115,7 +115,7 @@ record      = "[" ":" "]" | "[" entry { "," entry } "]"
 entry       = LowerName ":" ( literal | "$" ConstantName | "true" | "false" | "#" TagName | record )
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
 network     = "network" ":" TypeName "as" "{" route { route } "}"
-route       = ( "client" | "server" ) ( "sends" | "publishes" ) ":" TypeName
+route       = ( "client" | "server" ) ( "sends" | "publishes" ) ( ":" TypeName | MessageName )
               ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ]
 
 expression  = fallen [ "when" fallen { "," fallen "when" fallen } [ "," ] "otherwise" fallen ]
@@ -242,7 +242,13 @@ A source is a sequence of declarations in any order; a reference may come before
   which wire root in which delivery class. [GES network](Network.md#declaration) owns its rules, errors, binding and
   hash. A network is no type; only code generation takes it as a root. *Since: 0.6.0.*
 
-Schemas, messages, message sets, tag sets and networks share one namespace across all sources.
+Schemas, message sets, tag sets and networks share one namespace across all sources; messages have a namespace of their
+own, so a message may take the name of a schema, message set, tag set or network. A message set lists messages and a
+[network route](Network.md#declaration) names a message without `:` (`client sends Move reliable`), while `:Name` always
+names a schema or message set. A root that the API or a tool names may be written plainly while only one of the two
+namespaces declares it; otherwise `:Name` selects the schema, message set or network, `Name()` the message, and the plain
+name is `schema.ambiguousName`. A name repeated within one namespace stays `schema.duplicateName`. *Since: Unreleased —
+message namespace.*
 
 A union alternative may carry a label, as in `units: :List(:Text max 64 | bind: :Loadout_UnitBind)`. Generated code
 names the alternative after its label instead of its type (`.bind`, C# `Bind`); the label changes no bytes, values,
@@ -715,7 +721,7 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
 - A `max` is positive.
 - A position relative to something else, such as a carrier, is a schema of its own
   with its own bounds.
-- Names are unique: declarations of schemas, messages and sets together, constants and
+- Names are unique: declarations of schemas and sets together, of messages, constants and
   parameters per file, fields and lets within a schema, a let and the parameters of its file, arguments within a
   message, axes within a block, tags within a set or Flags, members within a message set. A Message's labels and their order are part of its
   signature, as everywhere in GES.
@@ -751,6 +757,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.syntax` | the source does not match the grammar |
 | `schema.duplicateName` | a name repeats within its kind, or a schema, message or message set takes the name of a built-in type or `Record` |
 | `schema.unknownName` | a type, message, constant, let or parameter is not declared, a step, delta range or `max` names no let of its schema, or a default names neither a field nor a let |
+| `schema.ambiguousName` | a root named by the API or a tool is written plainly, but a message and a schema, message set or network both take the name |
 | `schema.cycle` | schema references form a cycle, references or `:List` types nest more than 32 levels, or sibling defaults form a cycle |
 | `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, a `max` names a let with a unit, or a computed expression combines units that have no result unit or gives another unit than its field, or a function, root or power reads a unit it does not take or a quantity's power has no literal exponent |
 | `schema.invalidRange` | a lower bound is not below its upper bound |
@@ -1606,8 +1613,9 @@ Success allocates nothing.
 
 ### Description
 
-`GesSchemaSet.Schemas` lists every declaration in source order and `Schema(name)` finds one;
-an unknown name is `schema.unknownName`. A `GesSchema` describes what a source declares,
+`GesSchemaSet.Schemas` lists every declaration in source order and `Schema(name)` finds one, written `Name`, `:Name`
+or `Name()` as for [roots](#declarations); an unknown name is `schema.unknownName`, a plain name that a message and a
+schema or message set share `schema.ambiguousName`. A `GesSchema` describes what a source declares,
 independent of parameter values, so it holds no widths or indices, and writer and reader do
 not use it:
 
@@ -1697,13 +1705,14 @@ console and the highlighter know `.gess`, and the editor bundles have a grammar 
 repeated; naming a root twice is a usage error. A `--root` may name a [network](Network.md#declaration): it follows the
 network with the roots of its routes in route order that are not roots yet, and generated code gets the
 [network constants and typed functions](#network-constants) beside their types. *Since: 0.6.0.* `--all-roots` makes every declaration of the files
-except networks a root, in declaration order. `--wire <group>` makes the [wire roots](#roles) of the group in the given files the roots,
+except networks a root, in declaration order. A root is written as in the [API](#declarations): plainly, or as `:Name` or
+`Name()` where a message shares its name. `--wire <group>` makes the [wire roots](#roles) of the group in the given files the roots,
 in declaration order, and `--model <group>` the model roots, which `layout` then prints as the [model layout](#model-layout)
 and `generate` writes as [model types](#model-types). Exactly one of `--root`, `--all-roots`, `--wire` and `--model` is
 given, a run names one group, and a group without a root in the files fails with `generate.usage`; wire and model code go to
 separate files. A `--param` that no root reaches fails with `schema.unknownName`, and so does a reached parameter without a
-value; models reach no parameter, so every `--param` of a `--model` run fails, and `--checked-exclusivity` is a usage error
-there.
+value; models reach no parameter, so every `--param` of a `--model` run fails, and `--checked-exclusivity` and
+`--message-suffix` are usage errors there.
 
 `generate` takes the same roots and parameters and writes code in the language of `--language`,
 `csharp` (C# 9, for Unity) or `swift` (Swift 6, without Foundation); every CLI writes every language,
@@ -1802,6 +1811,22 @@ case, `generate.invalidNamespace`, and `generate.usage` when the [Generator API]
 receives no root or a split that does not fit the call. Generated C# instead qualifies every platform type it uses that
 a type or member of the same name could hide, such as `global::System.Math` and `[global::System.Flags]`, so a schema
 `:Math` or a field `system` needs no reservation.
+
+#### Message type names
+
+> **Since: Unreleased**
+
+A message and a schema, message set, tag set or network may share a name ([declarations](#declarations)), but generated
+code declares both as types of one namespace. `--message-suffix <text>` (option `MessageSuffix`, Swift `messageSuffix`,
+empty by default) names every generated message type `<Name><text>`, such as `MoveMessage` for a message `Move`; the
+text holds only ASCII letters, digits and `_`, else `generate.usage`, and model generation, which declares no messages,
+rejects a non-empty suffix with `generate.usage`. Everything else keeps the declared name: the members, cases and `Case`
+types of a message set, the constants, functions and handler names of a network route, schema hashes, canonical forms,
+the generation layout's `name`, documents, diagnostics, field paths and wire bytes. Generations with different suffixes
+therefore exchange the same bytes and interoperate. A generated message type that takes the name of another generated
+type, a tag set or a network, such as a message `Shield` beside `:Shield` without a suffix or `Shield` with the suffix
+`Message` beside `:ShieldMessage`, is `generate.nameCollision`, whose message names both declarations and suggests
+`--message-suffix`.
 
 #### Packed records and models
 
@@ -1978,7 +2003,7 @@ that root. The events of the end follow: `Connected` and `Disconnected` on the c
 the client id. A received name that repeats one of these fails with `generate.nameCollision`; the end's internal fields never collide with received roots. The constants, properties and typed functions of the network type must differ from one another in the spelling of each language, and in C# none may take the network's name (`generate.nameCollision`). The types nested in a network, `Client` and `Server` with `IClientHandler` and `IServerHandler` in
 C# or `ClientEvent` and `ServerEvent` in Swift, and `Topic` and `Tick` in an end that publishes, would hide a root, a tag
 set or the network of their name for the code inside; such a name fails with `generate.nameCollision` too. A payload that does not
-decode as its root closes the connection with the detail `undecodable :Root` and reports nothing; the end skips the
+decode as its root closes the connection with the detail `undecodable :Root`, for a message root `undecodable Root`, and reports nothing; the end skips the
 connection's later events of that poll up to its disconnect ([ends](Network.md#ends)).
 
 ```swift

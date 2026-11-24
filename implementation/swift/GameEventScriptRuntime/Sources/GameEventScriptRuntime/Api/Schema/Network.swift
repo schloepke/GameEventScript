@@ -118,13 +118,14 @@ extension GesFileScope {
     private static let maximumRateMicroseconds: Int64 = 3_600_000_000
 
     /// Resolves the networks of this source once every declaration has its public description.
-    func resolveNetworks(_ all: [String: GesResolvedDeclaration], _ networks: inout [GesNetwork]) throws {
+    func resolveNetworks(_ all: [String: GesResolvedDeclaration], _ messages: [String: GesResolvedDeclaration], _ networks: inout [GesNetwork]) throws {
         for syntax in networkSyntaxes {
             var routes: [GesNetworkRoute] = []
             var seen: Set<String> = []
             for (index, route) in syntax.routes.enumerated() {
-                guard let root = all[route.root] else {
-                    throw error(Code.unknownName, route.rootOffset, "'\(route.root)' is no declared schema, message or message set.")
+                // A route names a message without a colon and a schema or message set with one.
+                guard let root = (route.isMessage ? messages : all)[route.root] else {
+                    throw error(Code.unknownName, route.rootOffset, route.isMessage ? "Message '\(route.root)' is not declared." : "':\(route.root)' is no declared schema or message set.")
                 }
                 if root.syntax.wireGroup == nil { throw error(Code.invalidRoute, route.rootOffset, "'\(route.root)' has no wire role.") }
                 if root.isAbstract { throw error(Code.invalidRoute, route.rootOffset, "'\(route.root)' is abstract.") }
@@ -147,7 +148,7 @@ extension GesFileScope {
                 }
                 let side = route.server ? "server" : "client"
                 let verb = route.publishes ? "publishes" : "sends"
-                if !seen.insert("\(side) \(verb) \(route.root)").inserted {
+                if !seen.insert("\(side) \(verb) \(route.isMessage ? "" : ":")\(route.root)").inserted {
                     throw error(Code.duplicateRoute, route.offset, "The \(side) \(verb) '\(route.root)' twice.")
                 }
                 routes.append(

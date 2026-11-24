@@ -209,6 +209,8 @@ public enum GesSchemaDefaultKind: Sendable {
     case field
     /// A record literal of a field whose type is a schema: the fields it names, each other field taking its own default.
     case record
+    /// The empty value of a Map field, written `[:]`, or of a List field, written `[]`.
+    case empty
 }
 
 /// The value a field takes when a value or document leaves it out, declared with `default`; the wire always carries the field.

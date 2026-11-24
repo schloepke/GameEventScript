@@ -92,6 +92,7 @@ struct GesLayoutDefault {
             case .tag: "tag"
             case .field: "field"
             case .record: "record"
+            case .empty: "empty"
             }
         json.string("kind", kind)
         if self.kind == .record {
@@ -105,7 +106,7 @@ struct GesLayoutDefault {
             json.endArray()
         } else if self.kind == .boolean {
             json.boolean("value", boolean)
-        } else {
+        } else if self.kind != .empty {
             json.string("value", value)
         }
         json.endObject()

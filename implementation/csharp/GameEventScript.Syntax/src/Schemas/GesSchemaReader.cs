@@ -464,7 +464,7 @@ internal sealed partial class GesSchemaSourceReader
         return _position < _text.Length && _text[_position] == '[' ? ReadRecordDefault(offset, 1) : ReadEntryValue(offset);
     }
 
-    // `[:]`, or `[name: value, ...]` with comma-separated entries; comments and line breaks may stand between the tokens.
+    // `[:]`, `[]`, or `[name: value, ...]` with comma-separated entries; comments and line breaks may stand between the tokens.
     private GesSchemaDefaultSyntax ReadRecordDefault(int offset, int depth)
     {
         if (depth > MaximumTypeNesting) throw Failure($"Record defaults nest at most {MaximumTypeNesting} levels.");
@@ -477,6 +477,8 @@ internal sealed partial class GesSchemaSourceReader
             Expect(']');
             return new GesSchemaDefaultSyntax { Record = [], Offset = offset };
         }
+
+        if (Consume(']')) return new GesSchemaDefaultSyntax { EmptyList = true, Offset = offset };
 
         do
         {

@@ -284,8 +284,8 @@ public static class GesSchemaValues
         }
     }
 
-    // The value of a literal default that names no sibling: a Boolean, a tag, the Map of a record literal, or a number of
-    // the field's kind and unit.
+    // The value of a literal default that names no sibling: a Boolean, a tag, the Map of a record literal, the empty List,
+    // or a number of the field's kind and unit.
     internal static GesValue Literal(GesResolvedDefault fallback, bool integer, bool percentage, GesQuantityUnit unit)
     {
         switch (fallback.Kind)
@@ -296,6 +296,9 @@ public static class GesSchemaValues
                 return GesValue.GesTag(fallback.Name);
             case GesSchemaDefaultKind.Record:
                 return fallback.Record!.Value;
+            case GesSchemaDefaultKind.Empty:
+                // Only a List binds, so an empty default that a bound schema holds is the empty List.
+                return GesValue.GesList([]);
             case var _ when integer:
                 var whole = fallback.Value.Significand;
                 for (var power = 0; power < fallback.Value.Exponent; power++) whole *= 10;

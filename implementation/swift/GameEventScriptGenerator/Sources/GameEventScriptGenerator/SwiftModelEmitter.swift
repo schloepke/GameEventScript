@@ -488,6 +488,7 @@ enum GesSwiftModelEmitter {
         case .tag: literal(fallback.value)
         case .record:
             "\(plain(value))(\(GesModelPlanner.entries(layout, value, fallback).map { "\(label($0.field.base)): \(native(layout, $0.field.value, $0.value))" }.joined(separator: ", ")))"
+        case .empty: value.kind == .map || value.kind == .values ? ".empty" : "[]"
         default: GesModelPlanner.number(value, fallback)
         }
     }
@@ -503,6 +504,7 @@ enum GesSwiftModelEmitter {
         case .field: return "\(key) ?? \(sibling(GesModelPlanner.sibling(fields, field)!))"
         case .tag: return "\(key) ?? \(support).tag(\(literal(fallback.value)))"
         case .record: return "\(key) ?? \(defaults).\(member(field.base))"
+        case .empty: return "\(key) ?? \(field.value.kind == .map ? "GesDataMap.empty.toValue()" : ".list([])")"
         default: return "\(key) ?? \(encode(field.value, owner, native(layout, field.value, fallback), "", support, nullable: false, plain: true))"
         }
     }
@@ -527,7 +529,7 @@ enum GesSwiftModelEmitter {
     }
 
     private static func defaultValue(_ value: GesModelPlanValue) -> String {
-        value.nullable ? " = nil" : value.kind == .list || value.kind == .dice || value.kind == .bytes || value.kind == .flags ? " = []" : ""
+        value.nullable ? " = nil" : value.kind == .list || value.kind == .dice || value.kind == .bytes || value.kind == .flags ? " = []" : value.kind == .values ? " = .empty" : ""
     }
 
     static func type(_ value: GesModelPlanValue) -> String { plain(value) + (value.nullable ? "?" : "") }
@@ -540,6 +542,8 @@ enum GesSwiftModelEmitter {
         case .text: "String"
         case .bytes: "[UInt8]"
         case .list: "[\(type(value.element!))]"
+        case .values: "GesDataList"
+        case .map: "GesDataMap"
         case .dice: "[Int]"
         case .point: "GesPoint"
         case .vector: "GesVector"
@@ -604,6 +608,7 @@ enum GesSwiftModelEmitter {
         case .tag: return "\(support).tag(\(expression))"
         case .list: return ".list(\(expression).map { \(encode(value.element!, owner, "$0", helper, support, plain: plain)) })"
         case .dice: return "\(support).dice(\(expression))"
+        case .values, .map: return "\(expression).toValue()"
         case .point, .vector, .box, .poly, .disc: return "\(expression).value(unit: \(unit(value.model.unit)))"
         case .schema: return plain ? "\(expression).toValue()" : "\(expression).gesValue()"
         case .union, .nothing, .flags: return "\(helper).value(\(expression))"
@@ -625,6 +630,8 @@ enum GesSwiftModelEmitter {
         case .tag: return "\(support).tag(\(expression))"
         case .list: return "\(support).list(\(expression), { \(decode(value.element!, owner, "$0", helper, support, plain: plain)) })"
         case .dice: return "\(support).dice(\(expression))"
+        case .values: return "GesDataList(value: \(expression))"
+        case .map: return "GesDataMap(value: \(expression))"
         case .point: return "GesPoint(\(expression), unit: \(unit(value.model.unit)))"
         case .vector: return "GesVector(\(expression), unit: \(unit(value.model.unit)))"
         case .box: return "GesBox(\(expression), unit: \(unit(value.model.unit)))"

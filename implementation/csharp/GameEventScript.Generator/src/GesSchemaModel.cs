@@ -92,7 +92,11 @@ internal enum GesModelKind
     Flags,
     Box,
     Poly,
-    Disc
+    Disc,
+
+    // Free data: a Map of any values, and a List without an element type, whose elements are any values.
+    Map,
+    Values
 }
 
 internal sealed class GesModelValue
@@ -326,6 +330,12 @@ internal static class GesModelLayoutBuilder
                 value.Depth = type.Depth;
                 value.Element = Field("[]", path + "[]", type.Element);
                 break;
+            case GesSchemaTypeKind.List:
+                value.Kind = GesModelKind.Values;
+                break;
+            case GesSchemaTypeKind.Map:
+                value.Kind = GesModelKind.Map;
+                break;
             case GesSchemaTypeKind.Dice:
                 value.Kind = GesModelKind.Dice;
                 value.Max = type.Max;
@@ -354,8 +364,7 @@ internal static class GesModelLayoutBuilder
                 value.Kind = GesModelKind.Nothing;
                 break;
             default:
-                var what = type.Kind == GesSchemaTypeKind.List ? "A List without an element type" : $"A {type.Kind}";
-                throw new GesGeneratorException(GesGeneratorException.Unsupported, $"{what} at '{path}' has no model type.");
+                throw new GesGeneratorException(GesGeneratorException.Unsupported, $"A {type.Kind} at '{path}' has no model type.");
         }
 
         return value;
@@ -527,6 +536,8 @@ internal static class GesModelLayoutJson
         GesModelKind.Disc => "disc",
         GesModelKind.Schema => "schema",
         GesModelKind.Union => "union",
+        GesModelKind.Map => "map",
+        GesModelKind.Values => "values",
         _ => "nothing"
     };
 }

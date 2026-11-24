@@ -43,6 +43,90 @@ extension GesValue {
     }
 }
 
+/// Codable over the value object of the V1 value JSON, the form `json()` writes inside its envelope: data survives exactly,
+/// external values are written as Record snapshots, and decoding never invokes constructors. Encoding throws
+/// `EncodingError.invalidValue` and decoding `DecodingError.dataCorrupted` for what `json()` and `init(json:)` reject, with
+/// the `GesMessageFormatError` as the underlying error.
+extension GesValue: Codable {
+    /// Writes the value object of the V1 value JSON through the encoder's containers.
+    public func encode(to encoder: any Encoder) throws {
+        let tree: GesValue
+        do { tree = try GesMessageJsonCodec().encode(self, 0) } catch let error as GesMessageFormatError {
+            throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: "The value has no V1 JSON form (\(error.code)).", underlyingError: error))
+        }
+        try GesJsonTree(value: tree).encode(to: encoder)
+    }
+
+    /// Reads the value object of the V1 value JSON as data only.
+    public init(from decoder: any Decoder) throws {
+        let tree = try GesJsonTree(from: decoder).value
+        do { self = try GesMessageJsonCodec().decode(tree, 0) } catch let error as GesMessageFormatError {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "No V1 JSON value (\(error.code)).", underlyingError: error))
+        }
+    }
+}
+
+// The JSON tree of the codec (objects as Maps, arrays as Lists, strings, Booleans, integers and null) through Codable
+// containers.
+private struct GesJsonTree: Codable {
+    struct Key: CodingKey {
+        let stringValue: String
+        var intValue: Int? { nil }
+
+        init(stringValue: String) { self.stringValue = stringValue }
+
+        init?(intValue: Int) { nil }
+    }
+
+    let value: GesValue
+
+    init(value: GesValue) { self.value = value }
+
+    func encode(to encoder: any Encoder) throws {
+        switch value.kind {
+        case .map:
+            var container = encoder.container(keyedBy: Key.self)
+            for (key, item) in value.asMap! { try container.encode(GesJsonTree(value: item), forKey: Key(stringValue: key)) }
+        case .list:
+            var container = encoder.unkeyedContainer()
+            for item in value.asList { try container.encode(GesJsonTree(value: item)) }
+        case .text:
+            var container = encoder.singleValueContainer()
+            try container.encode(value.textValue!)
+        case .boolean:
+            var container = encoder.singleValueContainer()
+            try container.encode(value.asBoolean)
+        case .integer:
+            var container = encoder.singleValueContainer()
+            try container.encode(value.integerValue!)
+        default:
+            var container = encoder.singleValueContainer()
+            try container.encodeNil()
+        }
+    }
+
+    init(from decoder: any Decoder) throws {
+        if let container = try? decoder.container(keyedBy: Key.self) {
+            value = GesJson.object(try container.allKeys.map { ($0.stringValue, try container.decode(GesJsonTree.self, forKey: $0).value) })
+        } else if var container = try? decoder.unkeyedContainer() {
+            var items: [GesValue] = []
+            while !container.isAtEnd { items.append(try container.decode(GesJsonTree.self).value) }
+            value = .list(items)
+        } else {
+            let container = try decoder.singleValueContainer()
+            if container.decodeNil() {
+                value = .nothing
+            } else if let boolean = try? container.decode(Bool.self) {
+                value = .boolean(boolean)
+            } else if let text = try? container.decode(String.self) {
+                value = .text(text)
+            } else {
+                value = .integer(try container.decode(Int64.self))
+            }
+        }
+    }
+}
+
 private final class GesMessageJsonCodec {
     var items = 0
 

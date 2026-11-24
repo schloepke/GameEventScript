@@ -274,6 +274,9 @@ internal sealed class GesSchemaDefaultSyntax
     // The named fields of a record literal in written order, empty for `[:]`; null for every other default.
     internal GesSchemaRecordEntrySyntax[]? Record { get; init; }
 
+    // Whether the default is `[]`, the empty List.
+    internal bool EmptyList { get; init; }
+
     internal int Offset { get; init; }
 }
 

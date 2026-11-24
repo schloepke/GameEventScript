@@ -409,6 +409,10 @@ schema :DriveUnit as {
   Flags, spatial or other field without a literal: such a field keeps its own default or stays out. The literal applies
   only when the whole record is left out; a given record, even a partial one, takes the defaults of its own schema for
   what it leaves out.
+- **An empty default**, `[:]` for a `:Map` and `[]` for a `:List`, with or without an element type, gives the field an
+  empty value. Only an empty literal is a default of these types; one with entries is `schema.invalidDefault`, as is `[]`
+  for a Map, `[:]` for a List or either for another type. A Map or a List without an element type has no wire encoding,
+  so such a field belongs to a model root. *Since: Unreleased.*
 
 ```gess
 schema :Unit_Consumer as {
@@ -2170,13 +2174,24 @@ needs no ranges, steps or parameters, and every reached schema becomes one type,
 | `:Point`, `:Vector` | `GesPoint`, `GesVector` | `GesPoint`, `GesVector` |
 | `:Box`, `:Poly`, `:Disc` | `GesBox`, `GesPoly`, `GesDisc` | `GesBox`, `GesPoly`, `GesDisc` |
 | `:Name` | the model type `Name` | the model type `Name` |
+| `:Map` | `GesDataMap` | `GesDataMap` |
+| `:List` without an element type | `GesDataList` | `GesDataList` |
 | union | an enum `<Field>Alternative` with one case and value per alternative | an abstract class `<Field>Alternative` with one sealed subclass per alternative, named after it, holding `Value` |
 | `optional`, `:Nothing` alternative | `Optional`; `nil` is absent or `nothing` | nullable; `null` is absent or `nothing` |
 
 A union with a `:Nothing` alternative becomes a nullable value without it, and when one alternative remains, that
-alternative's type. A list element type is named `<Field>Item`, so a closed Tag in a list is `<Field>ItemTag`. `:Map`,
-`:Range`, `:Series`, `:Message`, `:Handler` and a `:List` without an element type have no model type yet:
-`generate.unsupported`. Each property is documented with its declaration, so its unit and documented range stay visible.
+alternative's type. A list element type is named `<Field>Item`, so a closed Tag in a list is `<Field>ItemTag`. `:Range`,
+`:Series`, `:Message` and `:Handler` have no model type yet: `generate.unsupported`.
+
+A `:Map` and a `:List` without an element type hold free data as the Runtime's GES values, so a model carries data whose
+shape its schema leaves open. *Since: Unreleased.* Reading a value or document takes a Map, or a List, whose entries
+are data: nested Maps and Lists, scalars, Points, Vectors and Records, but no external value, which belongs to its host;
+any other value is `wire.typeMismatch` at the field's path. Equality and hashing compare the values as GES equality does.
+`GesDataMap` and `GesDataList` are immutable Runtime types that reject an external value when they are created
+([PublicApi](PublicApi.md#free-data)), so a Swift model or union that holds free data is `Sendable` like every other
+model. `Codable` writes free data as the value object of the [V1 value JSON](MessageFormat.md). An empty default is
+`GesDataMap.Empty` or `GesDataList.Empty` (Swift `.empty`); in C# both are the `default` of their struct, so a
+constructor takes them as an optional parameter `= default`. Each property is documented with its declaration, so its unit and documented range stay visible.
 
 A [packed schema](#packed-schemas) is a value type over one unsigned word of its width (C# `byte`, `ushort`, `uint` or
 `ulong`, Swift `UInt8` to `UInt64`), whose size is the word's: a Swift struct's `MemoryLayout.stride` equals the word's
@@ -2380,7 +2395,7 @@ protocols it refines) and `fields` (the shared fields it requires besides those)
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
 `tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max`, `depth` only for a [recursive List](#recursion), and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
 `vector` add `unit` and `axes` (the names of an axis block), so do `box` and `disc`, whose axes may name `radius`, `poly` adds `unit`, `axes` and `max`, `schema` adds `name`, and `union` adds `alternatives`;
-`boolean` and `nothing` have none. A missing `max` is `null`.
+`boolean`, `nothing`, `map` and `values`, a `:List` without an element type, have none. A missing `max` is `null`.
 
 ### Generation layout
 
@@ -2417,8 +2432,8 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   arithmetic operations `first`, `second` and `third`, the unit checks the virtual machine makes for them, and an operation
   `children`.
 - A field has `name`, `path`, `optional`, `key`, `unlabeled`, with a [default](#defaults) `default` with `kind`
-  (`number`, `boolean`, `tag`, `field` or `record`) and `value` (an exact decimal in base units, a Boolean, a tag without
-  `#` or the sibling's name), or for a record `entries`, each with `name` and its own `default`, and `encoding`. List elements,
+  (`number`, `boolean`, `tag`, `field`, `record` or `empty`) and `value` (an exact decimal in base units, a Boolean, a tag without
+  `#` or the sibling's name; none for `empty`), or for a record `entries`, each with `name` and its own `default`, and `encoding`. List elements,
   axes and union alternatives are written with `name`, `path` and `encoding` only; an element is
   named `[]` and an alternative by its label or else by its type, as in its path.
 - Networks are ordered as roots. A network has `name`, `hash` (its [network hash](Network.md#network-hash) with the

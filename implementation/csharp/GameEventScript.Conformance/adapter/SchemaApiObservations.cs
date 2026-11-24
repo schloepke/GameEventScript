@@ -90,7 +90,7 @@ internal static class SchemaApiObservations
         else if (fallback.Kind == GesSchemaDefaultKind.Boolean) described["value"] = fallback.Boolean;
         else if (fallback.Kind == GesSchemaDefaultKind.Record)
             described["entries"] = fallback.Entries.Select(entry => new Dictionary<string, object?> { ["name"] = entry.Name, ["value"] = DescribeDefault(entry.Value) }).ToArray();
-        else described["name"] = fallback.Name;
+        else if (fallback.Kind != GesSchemaDefaultKind.Empty) described["name"] = fallback.Name;
         return described;
     }
 

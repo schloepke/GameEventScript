@@ -2571,7 +2571,7 @@ schema:
 
 ## Test: an empty record literal without a colon
 
-An empty record literal is written `[:]`.
+An empty record literal is written `[:]`; `[]` is the empty List, which is no default of a record.
 
 ### Case description
 
@@ -2589,9 +2589,221 @@ schemaApi:
 gesBlock: expect
 schema:
   error:
-    code: "schema.syntax"
+    code: "schema.invalidDefault"
     line: 2
+    column: 22
+```
+
+---
+
+## Test: empty defaults in the canonical form
+
+The empty Map prints `[:]` and the empty List `[]`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-default-empty
+schemaApi:
+  sources:
+    - "model(view) schema :S as {\n  data: :Map default [:]\n  free: :List default []\n  items: :List(:Number) default []\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield data Map default [:]\nfield free List default []\nfield items List(Number) default []\n"
+  hash: "82788c02c07cfcdf"
+```
+
+---
+
+## Test: the description of an empty default
+
+An empty Map or List default names no value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-default-empty
+schemaApi:
+  sources:
+    - "model(view) schema :S as {\n  data: :Map default [:]\n  free: :List default []\n  items: :List(:Number) default []\n}\n"
+  root: "S"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "S"
+    kind: "Schema"
+    modelGroup: "view"
+    fields:
+      - name: "data"
+        alternatives:
+          - kind: "Map"
+        default:
+          kind: "Empty"
+      - name: "free"
+        alternatives:
+          - kind: "List"
+        default:
+          kind: "Empty"
+      - name: "items"
+        alternatives:
+          - kind: "List"
+            element:
+              - kind: "Number"
+        default:
+          kind: "Empty"
+```
+
+---
+
+## Test: a left-out List takes the empty default
+
+A wire List with the default `[]` is the empty List when it is left out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-empty-list
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer between 0 and 7 default 1\n  items: :List(:Number integer between 0 and 7) max 4 default []\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "01"
+```
+
+---
+
+## Test: the empty Map is no default of a List
+
+A List takes `[]`, not `[:]`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-empty-map-for-list
+schemaApi:
+  sources:
+    - "schema :S as { items: :List(:Number integer between 0 and 7) max 4 default [:] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 1
+    column: 68
+```
+
+---
+
+## Test: the empty List is no default of a Map
+
+A Map takes `[:]`, not `[]`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-empty-list-for-map
+schemaApi:
+  sources:
+    - "model(view) schema :S as { data: :Map default [] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 1
+    column: 39
+```
+
+---
+
+## Test: the empty List is no default of a scalar
+
+Only a List takes `[]`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-empty-list-for-text
+schemaApi:
+  sources:
+    - "schema :S as { t: :Text max 4 default [] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 1
     column: 31
+```
+
+---
+
+## Test: a Map takes only the empty default
+
+A Map default names no entries.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-map-entries
+schemaApi:
+  sources:
+    - "model(view) schema :S as { data: :Map default [a: 1] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 1
+    column: 39
 ```
 
 ---

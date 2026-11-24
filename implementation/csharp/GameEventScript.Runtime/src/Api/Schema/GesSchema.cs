@@ -33,7 +33,9 @@ public enum GesSchemaDefaultKind : byte
     Field,
     /// <summary>A record literal of a field whose type is a schema: the fields it names, each other field taking its own
     /// default.</summary>
-    Record
+    Record,
+    /// <summary>The empty value of a Map field, written <c>[:]</c>, or of a List field, written <c>[]</c>.</summary>
+    Empty
 }
 
 /// <summary>The value a field takes when a value or document leaves it out, declared with <c>default</c>; the wire always

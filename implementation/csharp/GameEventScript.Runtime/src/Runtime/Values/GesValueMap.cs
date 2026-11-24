@@ -16,6 +16,9 @@ public sealed class GesValueMap : IEnumerable<KeyValuePair<string, GesValue>>
 {
     private static readonly string[] EntryKeys = ["key", "value"];
 
+    // The map without entries, which every caller shares.
+    internal static GesValueMap Empty { get; } = new([], []);
+
     private readonly string[] _keys;
     private readonly GesValue[] _values;
     private GesValue[]? _keyList;

@@ -417,8 +417,8 @@ internal sealed class GesResolvedField
     internal GesFileScope Scope { get; init; } = null!;
 }
 
-/// <summary>The default of a field: an exact number in base units, a Boolean, a tag, the name of a sibling field, or a record
-/// literal.</summary>
+/// <summary>The default of a field: an exact number in base units, a Boolean, a tag, the name of a sibling field, a record
+/// literal, or the empty Map or List.</summary>
 internal sealed class GesResolvedDefault
 {
     internal GesSchemaDefaultKind Kind { get; init; }
@@ -629,7 +629,7 @@ internal sealed partial class GesFileScope
         {
             if (declaration.Syntax.Fields[index].Default is not { } written) continue;
             var field = declaration.Fields[index];
-            if (written.Value is { Name.Length: > 0 } || written.Record is not null)
+            if (written.Value is { Name.Length: > 0 } || written.Record is not null || written.EmptyList)
                 throw Error(Code.InvalidDefault, written.Offset, "An argument default is a literal or a constant.");
             if (field.Marker == GesSchemaFieldMarker.Optional) throw Error(Code.InvalidDefault, written.Offset, "An argument is optional or has a default, not both.");
             if (field.Alternatives.Length != 1) throw Error(Code.InvalidDefault, written.Offset, "A union argument takes no default.");
@@ -752,7 +752,8 @@ internal sealed partial class GesFileScope
         return entries;
     }
 
-    // A default is a number, a Boolean or a tag of the field's single type, or a sibling field of the same type whose value it
+    // A default is a number, a Boolean or a tag of the field's single type, a record literal of a schema, `[:]` of a Map, `[]`
+    // of a List, or a sibling field of the same type whose value it
     // takes; chains resolve in dependency order and must not form a cycle.
     private void ResolveDefaults(GesResolvedDeclaration declaration)
     {
@@ -812,6 +813,9 @@ internal sealed partial class GesFileScope
                 var record = new GesResolvedRecord();
                 _records.Add((record, type.Reference!, written));
                 return new GesResolvedDefault { Kind = GesSchemaDefaultKind.Record, Record = record, Offset = written.Offset };
+            case GesSchemaTypeKind.Map when written.Record is { Length: 0 }:
+            case GesSchemaTypeKind.List when written.EmptyList:
+                return new GesResolvedDefault { Kind = GesSchemaDefaultKind.Empty, Offset = written.Offset };
             default:
                 throw Error(Code.InvalidDefault, written.Offset, $"A {type.Kind} field takes no such default; a sibling field of its type can be one.");
         }
@@ -1223,6 +1227,7 @@ internal static class GesSchemaCanonical
                 GesSchemaDefaultKind.Boolean => fallback.Boolean ? "true" : "false",
                 GesSchemaDefaultKind.Tag => "#" + fallback.Name,
                 GesSchemaDefaultKind.Record => RecordText(fallback),
+                GesSchemaDefaultKind.Empty => field.Alternatives[0].Kind == GesSchemaTypeKind.Map ? "[:]" : "[]",
                 _ => "field " + fallback.Name
             });
         }

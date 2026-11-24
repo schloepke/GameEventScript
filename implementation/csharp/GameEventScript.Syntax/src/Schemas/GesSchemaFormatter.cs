@@ -165,7 +165,7 @@ internal static class GesSchemaFormatter
         DefaultText(fallback, builder);
     }
 
-    // A record literal prints on one line, `[:]` when it names no field.
+    // A record literal prints on one line, `[:]` when it names no field; the empty List prints `[]`.
     private static void DefaultText(GesSchemaDefaultSyntax fallback, StringBuilder builder)
     {
         if (fallback.Record is { } record)
@@ -186,6 +186,7 @@ internal static class GesSchemaFormatter
 
             builder.Append(']');
         }
+        else if (fallback.EmptyList) builder.Append("[]");
         else if (fallback.Tag is { } tag) builder.Append('#').Append(tag);
         else if (fallback.Boolean is { } boolean) builder.Append(boolean ? "true" : "false");
         else builder.Append(Value(fallback.Value!));

@@ -474,6 +474,7 @@ internal static class GesSwiftModelEmitter
         GesSchemaDefaultKind.Tag when value.ClosedTag => "." + Name(fallback.Value),
         GesSchemaDefaultKind.Tag => GesSchemaPlanner.Literal(fallback.Value, true),
         GesSchemaDefaultKind.Record => $"{Plain(value)}({string.Join(", ", GesModelPlanner.Entries(layout, value, fallback).ConvertAll(entry => $"{Label(entry.Field.Base)}: {Native(layout, entry.Field.Value, entry.Value)}"))})",
+        GesSchemaDefaultKind.Empty => value.Kind is GesModelKind.Map or GesModelKind.Values ? ".empty" : "[]",
         _ => GesModelPlanner.Number(value, fallback)
     };
 
@@ -490,6 +491,7 @@ internal static class GesSwiftModelEmitter
             { Kind: GesSchemaDefaultKind.Field } => $"{key} ?? {sibling(GesModelPlanner.Sibling(fields, field)!.Value)}",
             { Kind: GesSchemaDefaultKind.Tag } fallback => $"{key} ?? {support}.tag({GesSchemaPlanner.Literal(fallback.Value, true)})",
             { Kind: GesSchemaDefaultKind.Record } => $"{key} ?? {defaults}.{Member(field.Base)}",
+            { Kind: GesSchemaDefaultKind.Empty } => $"{key} ?? {(field.Value.Kind == GesModelKind.Map ? "GesDataMap.empty.toValue()" : ".list([])")}",
             { } fallback => $"{key} ?? {Encode(field.Value, owner, Native(layout, field.Value, fallback), "", support, false, true)}"
         };
     }
@@ -512,7 +514,7 @@ internal static class GesSwiftModelEmitter
         code.Blank();
     }
 
-    private static string Default(GesModelPlanValue value) => value.Nullable ? " = nil" : value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Bytes or GesModelKind.Flags ? " = []" : "";
+    private static string Default(GesModelPlanValue value) => value.Nullable ? " = nil" : value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Bytes or GesModelKind.Flags ? " = []" : value.Kind == GesModelKind.Values ? " = .empty" : "";
 
     internal static string Type(GesModelPlanValue value) => Plain(value) + (value.Nullable ? "?" : "");
 
@@ -524,6 +526,8 @@ internal static class GesSwiftModelEmitter
         GesModelKind.Text => "String",
         GesModelKind.Bytes => "[UInt8]",
         GesModelKind.List => $"[{Type(value.Element!)}]",
+        GesModelKind.Values => "GesDataList",
+        GesModelKind.Map => "GesDataMap",
         GesModelKind.Dice => "[Int]",
         GesModelKind.Point => "GesPoint",
         GesModelKind.Vector => "GesVector",
@@ -599,6 +603,7 @@ internal static class GesSwiftModelEmitter
             GesModelKind.Tag => $"{support}.tag({expression})",
             GesModelKind.List => $".list({expression}.map {{ {Encode(value.Element!, owner, "$0", helper, support, plain: plain)} }})",
             GesModelKind.Dice => $"{support}.dice({expression})",
+            GesModelKind.Values or GesModelKind.Map => $"{expression}.toValue()",
             GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly or GesModelKind.Disc => $"{expression}.value(unit: {Unit(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{expression}.toValue()" : $"{expression}.gesValue()",
             _ => $"{helper}.value({expression})"
@@ -621,6 +626,8 @@ internal static class GesSwiftModelEmitter
             GesModelKind.Tag => $"{support}.tag({expression})",
             GesModelKind.List => $"{support}.list({expression}, {{ {Decode(value.Element!, owner, "$0", helper, support, plain: plain)} }})",
             GesModelKind.Dice => $"{support}.dice({expression})",
+            GesModelKind.Values => $"GesDataList(value: {expression})",
+            GesModelKind.Map => $"GesDataMap(value: {expression})",
             GesModelKind.Point => $"GesPoint({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Vector => $"GesVector({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Box => $"GesBox({expression}, unit: {Unit(value.Model.Unit)})",

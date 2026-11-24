@@ -331,6 +331,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var tag: String?
     /// The named fields of a record literal in written order, empty for `[:]`; nil for every other default.
     @_spi(Syntax) public var record: [GesSchemaRecordEntrySyntax]?
+    /// Whether the default is `[]`, the empty List.
+    @_spi(Syntax) public var emptyList = false
     @_spi(Syntax) public var offset = 0
 }
 

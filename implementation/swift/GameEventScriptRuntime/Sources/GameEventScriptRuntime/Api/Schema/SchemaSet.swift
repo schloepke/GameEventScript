@@ -670,7 +670,7 @@ final class GesFileScope {
         for (index, field) in declaration.syntax.fields.enumerated() {
             guard let written = field.defaultValue else { continue }
             let resolved = declaration.fields[index]
-            if !(written.value?.name ?? "").isEmpty || written.record != nil {
+            if !(written.value?.name ?? "").isEmpty || written.record != nil || written.emptyList {
                 throw error(Code.invalidDefault, written.offset, "An argument default is a literal or a constant.")
             }
             if resolved.marker == .optional { throw error(Code.invalidDefault, written.offset, "An argument is optional or has a default, not both.") }
@@ -733,6 +733,8 @@ final class GesFileScope {
             let record = GesResolvedRecord()
             records.append((record, type.reference!, written))
             return GesResolvedDefault(kind: .record, record: record, offset: written.offset)
+        case .map where written.record?.isEmpty == true, .list where written.emptyList:
+            return GesResolvedDefault(kind: .empty, offset: written.offset)
         default:
             break
         }
@@ -1093,6 +1095,7 @@ enum GesSchemaCanonical {
             case .tag: output += "#" + fallback.name
             case .field: output += "field " + fallback.name
             case .record: output += recordText(fallback)
+            case .empty: output += field.alternatives[0].kind == .map ? "[:]" : "[]"
             }
         }
         output += "\n"

@@ -151,6 +151,7 @@ internal sealed class GesLayoutDefault
             GesSchemaDefaultKind.Boolean => "boolean",
             GesSchemaDefaultKind.Tag => "tag",
             GesSchemaDefaultKind.Record => "record",
+            GesSchemaDefaultKind.Empty => "empty",
             _ => "field"
         });
         if (Kind == GesSchemaDefaultKind.Record)
@@ -167,7 +168,7 @@ internal sealed class GesLayoutDefault
             json.EndArray();
         }
         else if (Kind == GesSchemaDefaultKind.Boolean) json.Boolean("value", Boolean);
-        else json.String("value", Value);
+        else if (Kind != GesSchemaDefaultKind.Empty) json.String("value", Value);
         json.EndObject();
     }
 }

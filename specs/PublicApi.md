@@ -529,6 +529,31 @@ the member read never run host code.
 A `ValueMap` can be traversed in canonical key order; `Length`, `Key(index)` and
 `Value(index)` are its minimal form.
 
+#### Free data
+
+> **Since: Unreleased**
+
+`GesDataMap` and `GesDataList` hold free data: an immutable plain Map or List whose values contain no external value
+anywhere inside, not in nested Lists, Maps, Records or Message arguments. Generated
+[models](Schemas.md#model-types) hold `:Map` and untyped `:List` fields in them.
+
+| Operation | C# | Swift |
+| --- | --- | --- |
+| create, rejecting an external value | `new GesDataMap(GesValueMap)`, `new GesDataList(GesValue[])`, `ArgumentException` | `init(_:) throws(GesApiError)`, `.invalidArgument` |
+| read a value; a Record, another kind or an external value inside gives none | `FromValue(in GesValue)`, nullable | `init?(value:)` |
+| empty | `Empty`, equal to `default` | `.empty`, `init()` |
+| the value, without copying | `ToValue()` | `toValue()` |
+| the stored entries or elements, without copying | `AsMap()`, `AsList()` | `asMap`, `asList` |
+
+A data map shares the entries of its `ValueMap`, the stored fields of a Record included; a C# data list copies the
+array it is created from, a Swift one shares the copy-on-write array. Lookups, iteration and `Length` follow
+`ValueMap` and List. Equality, hashing and text follow GES Map and List semantics. Both are `Sendable` in Swift, since
+they hold only immutable data, and `Codable` as the value object of the [V1 value JSON](MessageFormat.md), the form
+`json()` writes inside its envelope: decoding never invokes constructors, and a value of another kind fails as
+`DecodingError.typeMismatch`. Swift `GesValue` is `Codable` in the same form; what `json()` or `init(json:)` rejects
+fails as `EncodingError.invalidValue` or `DecodingError.dataCorrupted` with the `GesMessageFormatError` as the
+underlying error.
+
 Each port spells these with the language's own means, without another library.
 
 `ValueKind`, `ValueUnit`, `HasValue`, `IsNothing`, `IsNumeric`, `HasUnit`,

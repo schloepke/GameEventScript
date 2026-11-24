@@ -392,7 +392,7 @@
         position < bytes.count && bytes[position] == 91 ? try recordDefault(offset, depth: 1) : try entryValue(offset)
     }
 
-    /// `[:]`, or `[name: value, ...]` with comma-separated entries; comments and line breaks may stand between the tokens.
+    /// `[:]`, `[]`, or `[name: value, ...]` with comma-separated entries; comments and line breaks may stand between the tokens.
     private mutating func recordDefault(_ offset: Int, depth: Int) throws -> GesSchemaDefaultSyntax {
         if depth > Self.maximumTypeNesting { throw failure("Record defaults nest at most \(Self.maximumTypeNesting) levels.") }
         try expect(91)
@@ -402,6 +402,7 @@
             try expect(93)
             return GesSchemaDefaultSyntax(record: [], offset: offset)
         }
+        if consume(93) { return GesSchemaDefaultSyntax(emptyList: true, offset: offset) }
         var entries: [GesSchemaRecordEntrySyntax] = []
         repeat {
             skipTrivia()

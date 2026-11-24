@@ -537,8 +537,9 @@ def main():
             raise SystemExit(f"The network gate schema does not generate: {error}")
         target.with_name(target.name.replace("Gate", "NetworkGate")).write_text(code, encoding="utf-8")
     # The checked-in wire and model code of the role fixture, which compare-schema-generation.py keeps current, compiles
-    # under the same rules: models of every field type, spatial wire fields in 2D and 3D, and the constants and typed functions of a network.
-    for name in ("RolesWire", "RolesModel", "RolesBound", "NetworkWire"):
+    # under the same rules: models of every field type, spatial wire fields in 2D and 3D, the constants and typed functions of a network,
+    # and models that hold free data.
+    for name in ("RolesWire", "RolesModel", "RolesBound", "NetworkWire", "FreeDataModel"):
         shutil.copy(GENERATED_CSHARP / f"{name}.g.cs", csharp / f"{name}.g.cs")
         shutil.copy(GENERATED_SWIFT / f"{name}.swift", swift / f"{name}.swift")
     for split, selection, space in SPLITS:

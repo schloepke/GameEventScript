@@ -73,7 +73,8 @@ internal static class GesCSharpModelEmitter
         if (schemaSet?.Declared is { } setName)
             document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteCSharp(code, setName, access, layout.Sources, [], networks: false)));
         var geometry = GesModelPlanner.UsesGeometry(layout);
-        document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || options.Values, geometry)));
+        var data = GesModelPlanner.UsesData(layout);
+        document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || options.Values, geometry, data)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: false, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)), GesComputedEmitter.UsesSpatial(layout.Types.ConvertAll(type => type.Computed)))));
         return document;
@@ -243,8 +244,9 @@ internal static class GesCSharpModelEmitter
             while (trailing > 0 && fields[trailing - 1].Field.Default is not null) trailing--;
             code.Blank();
             code.Line("/// <summary>Creates a record from its fields.</summary>");
-            // A record default is no constant, so a trailing parameter of one is null for it.
-            bool RecordDefault(int index) => index >= trailing && fields[index].Field.Default is { Kind: GesSchemaDefaultKind.Record };
+            // A record default or an empty typed List is no constant, so a trailing parameter of one is null for it; free
+            // data is a struct whose default value is empty.
+            bool RecordDefault(int index) => index >= trailing && fields[index].Field.Default is { Kind: GesSchemaDefaultKind.Record or GesSchemaDefaultKind.Empty } && !IsData(fields[index].Value);
             for (var index = 0; index < fields.Count; index++)
             {
                 var field = fields[index];
@@ -279,7 +281,8 @@ internal static class GesCSharpModelEmitter
             code.Blank();
             code.Line($"/// <summary><c>{Escape(field.Field.Name + ": " + GesModelPlanner.Describe(layout, field.Field))}</c></summary>");
             // Both constructors assign a sibling default and a created object, so neither needs an initializer.
-            var initial = Allocating(layout, field) is not null || GesModelPlanner.Sibling(fields, field) is not null ? "" : field.Field.Default is { Kind: not GesSchemaDefaultKind.Field } fallback ? Native(layout, field.Value, fallback) : Initial(field.Value);
+            // Free data starts as its empty default value.
+            var initial = Allocating(layout, field) is not null || GesModelPlanner.Sibling(fields, field) is not null || IsData(field.Value) ? "" : field.Field.Default is { Kind: not GesSchemaDefaultKind.Field } fallback ? Native(layout, field.Value, fallback) : Initial(field.Value);
             code.Line($"public {Type(field.Value)} {field.Base} {{ get; set; }}{(initial.Length > 0 ? " = " + initial + ";" : "")}");
         }
 
@@ -639,6 +642,8 @@ internal static class GesCSharpModelEmitter
         GesModelKind.Box => "GesBox",
         GesModelKind.Poly => "GesPoly",
         GesModelKind.Disc => "GesDisc",
+        GesModelKind.Map => "GesDataMap",
+        GesModelKind.Values => "GesDataList",
         GesModelKind.Schema => qualifier + value.Model.Schema,
         _ => Nested(value, qualifier, owner)
     };
@@ -656,6 +661,7 @@ internal static class GesCSharpModelEmitter
         GesSchemaDefaultKind.Tag when value.ClosedTag => Plain(value, qualifier, owner) + "." + GesSchemaPlanner.Pascal(fallback.Value),
         GesSchemaDefaultKind.Tag => GesSchemaPlanner.Literal(fallback.Value, false),
         GesSchemaDefaultKind.Record => RecordNative(layout, value, fallback, qualifier),
+        GesSchemaDefaultKind.Empty => IsData(value) ? "default" : $"new {Plain(value, qualifier, owner)}()",
         _ => GesModelPlanner.Number(value, fallback)
     };
 
@@ -698,6 +704,7 @@ internal static class GesCSharpModelEmitter
             { Kind: GesSchemaDefaultKind.Field } => $"{key} ?? {sibling(GesModelPlanner.Sibling(fields, field)!.Value)}",
             { Kind: GesSchemaDefaultKind.Tag } fallback => $"{key} ?? GesValue.GesTag({GesSchemaPlanner.Literal(fallback.Value, false)})",
             { Kind: GesSchemaDefaultKind.Record } => $"{key} ?? {defaults}.{field.Base}",
+            { Kind: GesSchemaDefaultKind.Empty } => $"{key} ?? {(IsData(field.Value) ? Plain(field.Value) + ".Empty.ToValue()" : "GesValue.GesList(global::System.Array.Empty<GesValue>())")}",
             { } fallback => $"{key} ?? {Encode(field.Value, owner, Native(layout, field.Value, fallback, qualifier), qualifier, support, nullable: false, plain: true)}"
         };
     }
@@ -725,7 +732,8 @@ internal static class GesCSharpModelEmitter
     // constructor, which assigns every field, creates none in vain; null for a constant or no initial value.
     private static string? Allocating(GesModelLayout layout, GesModelPlanField field)
     {
-        if (field.Field.Default is { Kind: GesSchemaDefaultKind.Record } fallback) return Native(layout, field.Value, fallback);
+        if (IsData(field.Value)) return null;
+        if (field.Field.Default is { Kind: GesSchemaDefaultKind.Record or GesSchemaDefaultKind.Empty } fallback) return Native(layout, field.Value, fallback);
         if (field.Field.Default is not null || field.Value.Nullable) return null;
         if (field.Value.Kind == GesModelKind.Schema && field.Value.Model.Packed) return null;
         return field.Value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union or GesModelKind.Poly ? Initial(field.Value) : null;
@@ -758,7 +766,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Number => value.Model.Integer ? "0L" : "0d",
             GesModelKind.Tag when value.ClosedTag => $"default({value.Nested})",
             GesModelKind.Flags => $"default({value.Nested})",
-            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc => $"default({Plain(value)})",
+            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc or GesModelKind.Map or GesModelKind.Values => $"default({Plain(value)})",
             _ => Initial(value)
         };
     }
@@ -889,7 +897,7 @@ internal static class GesCSharpModelEmitter
 
     // Equality and hashing helpers of the file, named after its header so that two generated files can share a namespace, and
     // the conversions that the script bindings and the plain values share.
-    private static void Support(GesSchemaPlanner.Code code, string name, bool conversions, bool geometry)
+    private static void Support(GesSchemaPlanner.Code code, string name, bool conversions, bool geometry, bool data)
     {
         code.Line($"/// <summary>Value equality of lists and numbers{(conversions ? " and GES value conversions" : "")} for the models of this file.</summary>");
         code.Line($"internal static class {name}");
@@ -938,6 +946,14 @@ internal static class GesCSharpModelEmitter
         code.Close();
         code.Close();
         if (conversions) Helpers(code);
+        if (conversions && data)
+        {
+            code.Blank();
+            code.Line("internal static bool Map(in GesValue value, out GesDataMap result) => Read(GesDataMap.FromValue(value), out result);");
+            code.Blank();
+            code.Line("internal static bool Values(in GesValue value, out GesDataList result) => Read(GesDataList.FromValue(value), out result);");
+        }
+
         if (conversions && geometry)
         {
             code.Blank();
@@ -958,7 +974,10 @@ internal static class GesCSharpModelEmitter
     private static string UnitName(string unit) => "GesQuantityUnit.Unit" + GesSchemaPlanner.Pascal(unit);
 
     private static bool IsValueType(GesModelPlanValue value) => value.Kind is GesModelKind.Boolean or GesModelKind.Number or GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc or GesModelKind.Flags
-        || value.ClosedTag || (value.Kind == GesModelKind.Schema && value.Model.Packed);
+        || IsData(value) || value.ClosedTag || (value.Kind == GesModelKind.Schema && value.Model.Packed);
+
+    // Free data: a Map or an untyped List of GES values, held by the struct GesDataMap or GesDataList.
+    private static bool IsData(GesModelPlanValue value) => value.Kind is GesModelKind.Map or GesModelKind.Values;
 
     private static string Depth(int depth) => depth.ToString(CultureInfo.InvariantCulture);
 
@@ -981,6 +1000,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Tag => $"{support}.Tag({expression})",
             GesModelKind.List => $"{support}.List({expression}, x{Depth(depth)} => {Encode(value.Element!, owner, "x" + Depth(depth), qualifier, support, depth + 1, plain: plain, pattern: pattern)})",
             GesModelKind.Dice => $"{support}.Dice({expression})",
+            GesModelKind.Map or GesModelKind.Values => $"{expression}.ToValue()",
             GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly or GesModelKind.Disc => $"{expression}.ToValue({UnitName(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{expression}.ToValue()" : $"{expression}.ToGesValue()",
             _ => $"Value({expression})"
@@ -1008,6 +1028,8 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Tag => $"{support}.Tag({expression}, {target})",
             GesModelKind.List => $"{support}.List({expression}, (in GesValue x{Depth(depth)}, out {Type(value.Element!, qualifier, owner)} y{Depth(depth)}) => {Decode(value.Element!, owner, "x" + Depth(depth), "out y" + Depth(depth), qualifier, support, depth + 1)}, {target})",
             GesModelKind.Dice => $"{support}.Dice({expression}, {target})",
+            GesModelKind.Map => $"{support}.Map({expression}, {target})",
+            GesModelKind.Values => $"{support}.Values({expression}, {target})",
             GesModelKind.Point => $"{support}.Point({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Vector => $"{support}.Vector({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Box => $"{support}.Box({expression}, {UnitName(value.Model.Unit)}, {target})",

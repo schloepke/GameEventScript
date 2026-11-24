@@ -285,7 +285,7 @@
         }
     }
 
-    /// A record literal prints on one line, `[:]` when it names no field.
+    /// A record literal prints on one line, `[:]` when it names no field; the empty List prints `[]`.
     private static func defaultText(_ fallback: GesSchemaDefaultSyntax, _ output: inout String) {
         if let record = fallback.record {
             if record.isEmpty {
@@ -299,6 +299,8 @@
                 defaultText(entry.value, &output)
             }
             output += "]"
+        } else if fallback.emptyList {
+            output += "[]"
         } else if let tag = fallback.tag {
             output += "#" + tag
         } else if let boolean = fallback.boolean {

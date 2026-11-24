@@ -123,7 +123,7 @@ enum SchemaApiObservations {
     }
 
     private static func describeDefault(_ fallback: GesSchemaDefaultInfo) -> [String: Any] {
-        let kinds: [GesSchemaDefaultKind: String] = [.number: "Number", .boolean: "Boolean", .tag: "Tag", .field: "Field", .record: "Record"]
+        let kinds: [GesSchemaDefaultKind: String] = [.number: "Number", .boolean: "Boolean", .tag: "Tag", .field: "Field", .record: "Record", .empty: "Empty"]
         var described: [String: Any] = ["kind": kinds[fallback.kind]!]
         if let number = fallback.number {
             described["value"] = text(number)
@@ -131,7 +131,7 @@ enum SchemaApiObservations {
             described["value"] = fallback.boolean
         } else if fallback.kind == .record {
             described["entries"] = fallback.entries.map { ["name": $0.name, "value": describeDefault($0.value)] as [String: Any] }
-        } else {
+        } else if fallback.kind != .empty {
             described["name"] = fallback.name
         }
         return described

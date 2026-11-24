@@ -220,6 +220,14 @@ public partial struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    // A Map that holds the entries of map without copying them; the stored fields of a Record become plain entries.
+    internal static GesValue GesMap(GesValueMap map)
+    {
+        var value = new GesValue();
+        value.SetMap(map);
+        return value;
+    }
+
     /// <summary>
     /// Creates a Map from ordered entries in canonical key order, keeping the last value of a duplicate key.
     /// </summary>

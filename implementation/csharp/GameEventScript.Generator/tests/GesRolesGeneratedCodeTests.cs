@@ -393,7 +393,7 @@ public sealed class GesRolesGeneratedCodeTests
         Assert.AreEqual("generate.usage", error.Code);
         error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.ModelLayout(GesSchemaSet.Parse("message M()\n"), ["M"]));
         Assert.AreEqual("generate.usage", error.Code);
-        error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.ModelLayout(GesSchemaSet.Parse("schema :A as { m: :Map }\n"), ["A"]));
+        error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.ModelLayout(GesSchemaSet.Parse("schema :A as { m: :Range }\n"), ["A"]));
         Assert.AreEqual("generate.unsupported", error.Code);
     }
 }

@@ -57,6 +57,8 @@ final class GesModelField {
 
 enum GesModelKind {
     case boolean, number, tag, text, bytes, list, dice, point, vector, schema, union, nothing, flags, box, poly, disc
+    // Free data: a Map of any values, and a List without an element type, whose elements are any values.
+    case map, values
 }
 
 final class GesModelValue {
@@ -254,6 +256,10 @@ enum GesModelLayoutBuilder {
             value.max = type.max
             value.depth = type.depth
             value.element = try field("[]", path + "[]", type.element)
+        case .list:
+            value.kind = .values
+        case .map:
+            value.kind = .map
         case .dice:
             value.kind = .dice
             value.max = type.max
@@ -271,8 +277,7 @@ enum GesModelLayoutBuilder {
         case .nothing:
             value.kind = .nothing
         default:
-            let what = type.kind == .list ? "A List without an element type" : "A \(type.kind.rawValue)"
-            throw GesGeneratorError(GesGeneratorError.unsupported, "\(what) at '\(path)' has no model type.")
+            throw GesGeneratorError(GesGeneratorError.unsupported, "A \(type.kind.rawValue) at '\(path)' has no model type.")
         }
         return value
     }
@@ -382,7 +387,7 @@ enum GesModelLayoutJson {
             json.beginArray("alternatives")
             for alternative in value.alternatives { field(&json, alternative, member: false) }
             json.endArray()
-        case .boolean, .nothing:
+        case .boolean, .nothing, .map, .values:
             break
         }
         json.endObject()
@@ -413,6 +418,8 @@ enum GesModelLayoutJson {
         case .disc: "disc"
         case .schema: "schema"
         case .union: "union"
+        case .map: "map"
+        case .values: "values"
         case .nothing: "nothing"
         }
     }

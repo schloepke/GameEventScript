@@ -174,6 +174,8 @@ ARGUMENTS_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/arguments.gess
 COMPUTED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/computed.gess"
 SPATIAL_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/spatial.gess"
 GEOMETRY_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/geometry.gess"
+# Models that hold free data: Maps and Lists without an element type.
+FREEDATA_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/freedata.gess"
 PACKED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/packed.gess"
 NETWORK_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/network.gess"
 # A schema and a message of one name, which generate side by side only with a message suffix.
@@ -208,6 +210,8 @@ GOLDENS = (
     (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--wire", "geometry", "--values"], "swift", "GeometryWire", SWIFT_GENERATED / "GeometryWire.swift"),
     (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--model", "geometry", "--bindings", "--documents"], "csharp", "GameEventScript.Tests.Generator.Geometry.Model", CSHARP_GENERATED / "GeometryModel.g.cs"),
     (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--model", "geometry", "--bindings", "--documents"], "swift", "GeometryModel", SWIFT_GENERATED / "GeometryModel.swift"),
+    (FREEDATA_FIXTURE.parent, [FREEDATA_FIXTURE.name], ["--model", "freedata", "--values", "--bindings", "--documents"], "csharp", "GameEventScript.Tests.Generator.FreeData.Model", CSHARP_GENERATED / "FreeDataModel.g.cs"),
+    (FREEDATA_FIXTURE.parent, [FREEDATA_FIXTURE.name], ["--model", "freedata", "--values", "--bindings", "--documents"], "swift", "FreeDataModel", SWIFT_GENERATED / "FreeDataModel.swift"),
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--model", "packed", "--values"], "csharp", "GameEventScript.Tests.Generator.Packed.Model", CSHARP_GENERATED / "PackedModel.g.cs"),
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--model", "packed", "--values"], "swift", "PackedModel", SWIFT_GENERATED / "PackedModel.swift"),
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed", "--values", "--models", "GameEventScript.Tests.Generator.Packed.Model"], "csharp", "GameEventScript.Tests.Generator.Packed.Wire", CSHARP_GENERATED / "PackedWire.g.cs"),

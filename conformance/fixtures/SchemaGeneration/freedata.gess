@@ -1,0 +1,20 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The fixture of the checked-in free-data code: Maps and Lists without an element type in models, with the empty default,
+// optional, as list elements and as a union alternative.
+model(freedata) schema :Program as {
+  script: :Text max 64
+  extra: :Map optional
+  layers: :List(:Map) max 4
+  pick: :Map | :Text
+  data: :Map default [:]
+  args: :List default []
+  steps: :List(:Number integer) default []
+}
+
+// A record that holds the free data of others.
+model(freedata) schema :Scene as {
+  name: :Text
+  notes: :List optional
+  programs: :List(:Program) default []
+}

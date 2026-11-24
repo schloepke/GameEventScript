@@ -24,6 +24,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `completeMessage(_:_:)`) fills left-out arguments with their defaults and optional ones with `nothing`, reporting
   `wire.missingField` or `wire.typeMismatch` otherwise; generated code with values offers it as `ReadMessageLenient`
   (Swift `read(lenientMessage:)`), and generated initializers take the defaults (specs/Schemas.md#lenient-read).
+- Generated models hold free data: a `:Map` field is a `GesDataMap` and a `:List` without an element type a
+  `GesDataList`. Reading takes a Map or List of data and reports any other value, an external one included, as
+  `wire.typeMismatch`; Swift models that hold free data stay `Hashable`, `Codable` and `Sendable`. `[:]` and `[]` are the empty defaults of such fields and of typed Lists
+  (`GesSchemaDefaultKind.Empty`), so `[]` is no longer a syntax error but `schema.invalidDefault` where it does not fit
+  (specs/Schemas.md#model-types).
+- `GesDataMap` and `GesDataList` are immutable Maps and Lists of data that reject external values when created; in
+  Swift they are `Sendable`. Swift `GesValue`, `GesDataMap` and `GesDataList` are `Codable` as the value object of the
+  V1 value JSON (specs/PublicApi.md#free-data).
 
 ### Changed
 - A network route that names a single message drops the `:` (`client sends Move reliable`); `:Name` in a route names

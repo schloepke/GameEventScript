@@ -175,8 +175,6 @@ enum GesModelPlanner {
         for alternative in value.alternatives { references(layout, alternative.value, &seen, &ordered) }
     }
 
-    // The type a script sees for a field: a built-in kind with its unit, or a type name; a union keeps its value as `Value`.
-    // Whether a model holds a Box, a Poly or a Disc, whose conversions the support class then offers.
     // The type that reads a document of any root of a generation: Document within a namespace, which qualifies it, and
     // ModelDocument without one, where Document would collide too easily. It must not take the name of a generated type.
     static func documentType(_ layout: GesModelLayout, _ space: [String]) throws(GesGeneratorError) -> String {
@@ -187,12 +185,21 @@ enum GesModelPlanner {
         return name
     }
 
+    // Whether a field holds free data, a Map or an untyped List, whose comparisons and conversions the support type then holds.
+    static func usesData(_ layout: GesModelLayout) -> Bool { layout.types.contains { $0.fields.contains { usesData($0.value) } } }
+
+    private static func usesData(_ value: GesModelValue) -> Bool {
+        value.kind == .map || value.kind == .values || (value.element.map { usesData($0.value) } ?? false) || value.alternatives.contains { usesData($0.value) }
+    }
+
+    // Whether a model holds a Box, a Poly or a Disc, whose conversions the support type then offers.
     static func usesGeometry(_ layout: GesModelLayout) -> Bool { layout.types.contains { $0.fields.contains { usesGeometry($0.value) } } }
 
     private static func usesGeometry(_ value: GesModelValue) -> Bool {
         value.kind == .box || value.kind == .poly || value.kind == .disc || (value.element.map { usesGeometry($0.value) } ?? false) || value.alternatives.contains { usesGeometry($0.value) }
     }
 
+    // The type a script sees for a field: a built-in kind with its unit, or a type name; a union keeps its value as `Value`.
     static func declared(_ value: GesModelPlanValue) -> (kind: String?, unit: String, typeName: String?) {
         switch value.kind {
         case .boolean: ("Boolean", "none", nil)
@@ -202,7 +209,8 @@ enum GesModelPlanner {
         case .bytes: ("Bytes", "none", nil)
         case .tag: ("Tag", "none", nil)
         case .flags: ("Map", "none", nil)
-        case .list: ("List", "none", nil)
+        case .list, .values: ("List", "none", nil)
+        case .map: ("Map", "none", nil)
         case .dice: ("Dice", "none", nil)
         case .point: ("Point", value.model.unit, nil)
         case .vector: ("Vector", value.model.unit, nil)
@@ -236,6 +244,7 @@ enum GesModelPlanner {
             let entries = fallback.entries.map { entry in entry.name + ": " + describeDefault(layout, fields.first { $0.name == entry.name }!.value, entry.value) }
             return "[" + entries.joined(separator: ", ") + "]"
         case .field: return fallback.value
+        case .empty: return value.kind == .map ? "[:]" : "[]"
         }
     }
 
@@ -279,6 +288,10 @@ enum GesModelPlanner {
             text += ")"
             if let max = value.max { text += " max \(max)" }
             if value.depth > 0 { text += " depth \(value.depth)" }
+        case .values:
+            text += ":List"
+        case .map:
+            text += ":Map"
         case .dice:
             text += ":Dice"
             if let max = value.max { text += " max \(max)" }

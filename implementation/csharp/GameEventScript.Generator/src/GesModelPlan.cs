@@ -303,6 +303,12 @@ internal static class GesModelPlanner
         return name;
     }
 
+    // Whether a field holds free data, a Map or an untyped List, whose comparisons and conversions the support class then holds.
+    internal static bool UsesData(GesModelLayout layout) => layout.Types.Exists(type => type.Fields.Exists(field => UsesData(field.Value)));
+
+    private static bool UsesData(GesModelValue value)
+        => value.Kind is GesModelKind.Map or GesModelKind.Values || (value.Element is { } element && UsesData(element.Value)) || value.Alternatives.Exists(alternative => UsesData(alternative.Value));
+
     // Whether a model holds a Box, a Poly or a Disc, whose conversions the support class then offers.
     internal static bool UsesGeometry(GesModelLayout layout) => layout.Types.Exists(type => type.Fields.Exists(field => UsesGeometry(field.Value)));
 
@@ -319,7 +325,8 @@ internal static class GesModelPlanner
         GesModelKind.Bytes => ("Bytes", "none", null),
         GesModelKind.Tag => ("Tag", "none", null),
         GesModelKind.Flags => ("Map", "none", null),
-        GesModelKind.List => ("List", "none", null),
+        GesModelKind.List or GesModelKind.Values => ("List", "none", null),
+        GesModelKind.Map => ("Map", "none", null),
         GesModelKind.Dice => ("Dice", "none", null),
         GesModelKind.Point => ("Point", value.Model.Unit, null),
         GesModelKind.Vector => ("Vector", value.Model.Unit, null),
@@ -349,6 +356,7 @@ internal static class GesModelPlanner
             case GesSchemaDefaultKind.Number: return Decimal(fallback.Value, value.Type == "Percentage" ? 2 : 0);
             case GesSchemaDefaultKind.Boolean: return fallback.Boolean ? "true" : "false";
             case GesSchemaDefaultKind.Tag: return "#" + fallback.Value;
+            case GesSchemaDefaultKind.Empty: return value.Kind == GesModelKind.Map ? "[:]" : "[]";
             case GesSchemaDefaultKind.Record:
                 if (fallback.Entries.Count == 0) return "[:]";
                 var fields = layout.Type(value.Schema).Fields;
@@ -402,6 +410,12 @@ internal static class GesModelPlanner
                 text.Append(')');
                 if (value.Max is { } listMax) text.Append(" max ").Append(listMax);
                 if (value.Depth > 0) text.Append(" depth ").Append(value.Depth);
+                break;
+            case GesModelKind.Values:
+                text.Append(":List");
+                break;
+            case GesModelKind.Map:
+                text.Append(":Map");
                 break;
             case GesModelKind.Dice:
                 text.Append(":Dice");

@@ -83,7 +83,8 @@ enum GesCSharpModelEmitter {
         }
         let conversions = options.bindings || options.values
         let geometry = GesModelPlanner.usesGeometry(layout)
-        document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, conversions: conversions, geometry: geometry) })
+        let data = GesModelPlanner.usesData(layout)
+        document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, conversions: conversions, geometry: geometry, data: data) })
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
             let values = options.bindings || options.values || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
             let math = GesComputedEmitter.usesMath(layout.types.map(\.computed))
@@ -249,8 +250,9 @@ enum GesCSharpModelEmitter {
             while trailing > 0 && fields[trailing - 1].field.defaultValue != nil { trailing -= 1 }
             code.blank()
             code.line("/// <summary>Creates a record from its fields.</summary>")
-            // A record default is no constant, so a trailing parameter of one is null for it.
-            let record = { (index: Int) in index >= trailing && fields[index].field.defaultValue?.kind == .record }
+            // A record default or an empty typed List is no constant, so a trailing parameter of one is null for it; free
+            // data is a struct whose default value is empty.
+            let record = { (index: Int) in index >= trailing && (fields[index].field.defaultValue?.kind == .record || fields[index].field.defaultValue?.kind == .empty) && !isData(fields[index].value) }
             for (index, field) in fields.enumerated() {
                 let note = GesModelPlanner.sibling(fields, field).map { "; null takes <c>\(fields[$0].field.name)</c>" } ?? (record(index) ? "; null takes its default" : "")
                 code.line("/// <param name=\"\(GesSchemaPlanner.camel(field.base))\">The field <c>\(field.field.name)</c>\(note).</param>")
@@ -274,7 +276,8 @@ enum GesCSharpModelEmitter {
             code.line("/// <summary><c>\(escape(field.field.name + ": " + GesModelPlanner.describe(layout, field.field)))</c></summary>")
             // Both constructors assign a sibling default and a created object, so neither needs an initializer.
             let initial: String
-            if allocating(layout, field) != nil || GesModelPlanner.sibling(fields, field) != nil {
+            // Free data starts as its empty default value.
+            if allocating(layout, field) != nil || GesModelPlanner.sibling(fields, field) != nil || isData(field.value) {
                 initial = ""
             } else if let fallback = field.field.defaultValue, fallback.kind != .field {
                 initial = native(layout, field.value, fallback)
@@ -629,6 +632,8 @@ enum GesCSharpModelEmitter {
         case .box: "GesBox"
         case .poly: "GesPoly"
         case .disc: "GesDisc"
+        case .map: "GesDataMap"
+        case .values: "GesDataList"
         case .schema: qualifier + value.model.schema
         case .union, .nothing, .flags: nested(value, qualifier, owner)
         }
@@ -650,6 +655,7 @@ enum GesCSharpModelEmitter {
         case .tag where value.closedTag: plain(value, qualifier, owner) + "." + GesSchemaPlanner.pascal(fallback.value)
         case .tag: literal(fallback.value)
         case .record: recordNative(layout, value, fallback, qualifier)
+        case .empty: isData(value) ? "default" : "new \(plain(value, qualifier, owner))()"
         default: GesModelPlanner.number(value, fallback)
         }
     }
@@ -691,6 +697,7 @@ enum GesCSharpModelEmitter {
         case .field: return "\(key) ?? \(sibling(GesModelPlanner.sibling(fields, field)!))"
         case .tag: return "\(key) ?? GesValue.GesTag(\(literal(fallback.value)))"
         case .record: return "\(key) ?? \(defaults).\(field.base)"
+        case .empty: return "\(key) ?? \(isData(field.value) ? plain(field.value) + ".Empty.ToValue()" : "GesValue.GesList(global::System.Array.Empty<GesValue>())")"
         default: return "\(key) ?? \(encode(field.value, owner, native(layout, field.value, fallback, qualifier), qualifier, support, nullable: false, plain: true))"
         }
     }
@@ -718,7 +725,8 @@ enum GesCSharpModelEmitter {
     // The initial value of a field that creates an object, which the parameterless constructor assigns, so that the other
     // constructor, which assigns every field, creates none in vain; nil for a constant or no initial value.
     private static func allocating(_ layout: GesModelLayout, _ field: GesModelPlanField) -> String? {
-        if let fallback = field.field.defaultValue, fallback.kind == .record { return native(layout, field.value, fallback) }
+        if isData(field.value) { return nil }
+        if let fallback = field.field.defaultValue, fallback.kind == .record || fallback.kind == .empty { return native(layout, field.value, fallback) }
         if field.field.defaultValue != nil || field.value.nullable { return nil }
         if field.value.kind == .schema && field.value.model.packed { return nil }
         switch field.value.kind {
@@ -751,7 +759,7 @@ enum GesCSharpModelEmitter {
         case .number: return value.model.integer ? "0L" : "0d"
         case .tag where value.closedTag: return "default(\(value.nested))"
         case .flags: return "default(\(value.nested))"
-        case .point, .vector, .box, .disc: return "default(\(plain(value)))"
+        case .point, .vector, .box, .disc, .map, .values: return "default(\(plain(value)))"
         default: return initial(value)
         }
     }
@@ -863,7 +871,7 @@ enum GesCSharpModelEmitter {
 
     // Equality and hashing helpers of the file, named after its header so that two generated files can share a namespace, and
     // the conversions that the script bindings and the plain values share.
-    private static func supportType(_ code: inout Code, _ name: String, conversions: Bool, geometry: Bool) {
+    private static func supportType(_ code: inout Code, _ name: String, conversions: Bool, geometry: Bool, data: Bool) {
         code.line("/// <summary>Value equality of lists and numbers\(conversions ? " and GES value conversions" : "") for the models of this file.</summary>")
         code.line("internal static class \(name)")
         code.open("{")
@@ -911,6 +919,12 @@ enum GesCSharpModelEmitter {
         code.close()
         code.close()
         if conversions { helpers(&code) }
+        if conversions && data {
+            code.blank()
+            code.line("internal static bool Map(in GesValue value, out GesDataMap result) => Read(GesDataMap.FromValue(value), out result);")
+            code.blank()
+            code.line("internal static bool Values(in GesValue value, out GesDataList result) => Read(GesDataList.FromValue(value), out result);")
+        }
         if conversions && geometry {
             code.blank()
             code.line("internal static bool Box(in GesValue value, GesQuantityUnit unit, out GesBox result) => Read(GesBox.FromValue(value, unit), out result);")
@@ -946,10 +960,13 @@ enum GesCSharpModelEmitter {
 
     private static func isValueType(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
-        case .boolean, .number, .point, .vector, .box, .disc, .flags: true
+        case .boolean, .number, .point, .vector, .box, .disc, .flags, .map, .values: true
         default: value.closedTag || (value.kind == .schema && value.model.packed)
         }
     }
+
+    // Free data: a Map or an untyped List of GES values, held by the struct GesDataMap or GesDataList.
+    private static func isData(_ value: GesModelPlanValue) -> Bool { value.kind == .map || value.kind == .values }
 
     private static func literal(_ text: String) -> String { GesSchemaPlanner.literal(text, swift: false) }
 
@@ -981,6 +998,7 @@ enum GesCSharpModelEmitter {
         case .tag: return "\(support).Tag(\(expression))"
         case .list: return "\(support).List(\(expression), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, support, depth + 1, plain: plain, pattern: pattern)))"
         case .dice: return "\(support).Dice(\(expression))"
+        case .map, .values: return "\(expression).ToValue()"
         case .point, .vector, .box, .poly, .disc: return "\(expression).ToValue(\(unitName(value.model.unit)))"
         case .schema: return plain ? "\(expression).ToValue()" : "\(expression).ToGesValue()"
         case .union, .nothing, .flags: return "Value(\(expression))"
@@ -1015,6 +1033,8 @@ enum GesCSharpModelEmitter {
             let element = value.element!
             return "\(support).List(\(expression), (in GesValue x\(depth), out \(type(element, qualifier, owner)) y\(depth)) => \(decode(element, owner, "x\(depth)", "out y\(depth)", qualifier, support, depth + 1)), \(target))"
         case .dice: return "\(support).Dice(\(expression), \(target))"
+        case .map: return "\(support).Map(\(expression), \(target))"
+        case .values: return "\(support).Values(\(expression), \(target))"
         case .point: return "\(support).Point(\(expression), \(unitName(value.model.unit)), \(target))"
         case .vector: return "\(support).Vector(\(expression), \(unitName(value.model.unit)), \(target))"
         case .box: return "\(support).Box(\(expression), \(unitName(value.model.unit)), \(target))"

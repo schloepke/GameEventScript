@@ -267,6 +267,9 @@ public enum GesSchemaValues {
             return (try? .tag(fallback.name)) ?? .nothing
         case .record:
             return fallback.record?.value ?? .map(keys: [], values: [])
+        case .empty:
+            // Only a List binds, so an empty default that a bound schema holds is the empty List.
+            return .list([])
         case .number where integer:
             var whole = fallback.value.significand
             for _ in 0..<max(fallback.value.exponent, 0) { whole *= 10 }

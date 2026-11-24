@@ -120,8 +120,12 @@ private struct GesJsonTree: Codable {
                 value = .boolean(boolean)
             } else if let text = try? container.decode(String.self) {
                 value = .text(text)
+            } else if let integer = try? container.decode(Int64.self) {
+                value = .integer(integer)
             } else {
-                value = .integer(try container.decode(Int64.self))
+                // A fraction, an exponent or a number beyond Int64 is invalid JSON for the codec, as for init(json:).
+                let error = GesJson.error("message.invalidJson")
+                throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "No V1 JSON value (\(error.code)).", underlyingError: error))
             }
         }
     }

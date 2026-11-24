@@ -181,4 +181,15 @@ final class GeneratedFreeDataCodeTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode(GesDataMap.self, from: JSONEncoder().encode(GesValue.list(items))))
         XCTAssertThrowsError(try JSONDecoder().decode(GesDataList.self, from: JSONEncoder().encode(data())))
     }
+
+    /// Numbers the value JSON rejects are corrupted data with the codec's error underneath, as every other rejection.
+    func testCodableRejectsNumbersWithoutInt64Form() {
+        for number in ["1.5", "-0.25", "9223372036854775808"] {
+            let json = Data(#"{"type":"Text","value":\#(number)}"#.utf8)
+            XCTAssertThrowsError(try JSONDecoder().decode(GesValue.self, from: json), number) { error in
+                guard case .dataCorrupted(let context) = error as? DecodingError else { return XCTFail("\(number): \(error)") }
+                XCTAssertEqual((context.underlyingError as? GesMessageFormatError)?.code, "message.invalidJson", number)
+            }
+        }
+    }
 }

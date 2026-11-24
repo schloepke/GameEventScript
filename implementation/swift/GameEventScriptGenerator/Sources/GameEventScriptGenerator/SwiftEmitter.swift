@@ -260,12 +260,13 @@ enum GesSwiftEmitter {
         code.blank()
         code.line(type.isItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.")
         code.line("\(access)init() {}")
+        argumentInitializer(&code, type, access)
         methods(&code, type, access)
         if type.isClass && (type.kind == .schema || type.isItem) { sharingMembers(&code, type, stored) }
         let deltas = type.kind == .schema && !type.isItem
         if deltas { sameHelpers(&code, type) }
         extras(&code, type, access, deltas, context.elements.contains(type.name))
-        if context.values && !type.isItem { valueMembers(&code, type, access, context.holder, schemaSet: context.schemaSet) }
+        if context.values && !type.isItem { valueMembers(&code, type, access, context.holder, schemaSet: context.schemaSet, lenient: GesCSharpEmitter.lenient(type.layout, context.layout)) }
         for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
     }
@@ -600,7 +601,7 @@ enum GesSwiftEmitter {
         read.append("}")
         code.blank()
         publicMethods(&code, access, type.membersAreClasses ? "" : "mutating ", write, read, "message")
-        if context.values { valueMembers(&code, type, access, context.holder, schemaSet: context.schemaSet) }
+        if context.values { valueMembers(&code, type, access, context.holder, schemaSet: context.schemaSet, lenient: GesCSharpEmitter.lenient(type.layout, context.layout)) }
         messageCases(&code, type, access)
         code.blank()
         code.line("/// The messages of the set, in declared order.")

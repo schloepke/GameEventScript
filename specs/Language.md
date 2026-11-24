@@ -367,7 +367,11 @@ argument and list separators rather than numeric digit separators.
 Messages have a name, ordered argument names, argument values, and tags. The
 ordered argument names form the signature. An unlabeled argument uses `_`.
 Argument order is observable; named arguments are not a dictionary. Duplicate
-named labels are invalid, while multiple `_` positions are valid.
+named labels are invalid, while multiple `_` positions are valid. A send keeps
+the arguments as written: neither the compiler nor the host fills an argument
+that a [schema](Schemas.md#argument-defaults) gives a default; a receiver that
+wants them completes the message with a
+[lenient read](Schemas.md#lenient-read).
 
 ```ges
 emit Hit(target: unit, amount: 10)

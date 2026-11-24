@@ -303,6 +303,8 @@ reports member reads, map traversal, field reads, materializations and the exter
 reads of an adapter-owned probe. A `schemaApi` case with `encodeExternal` wraps its `encode`
 Record in an adapter-owned external value of the same type name; `baselineExternal` does so for
 `baseline`, `baselineFailingField` makes a getter of it fail, `externalFields` for Record fields of `encode`, and `failingField` makes one getter fail, with `failingCode` as a deliberate fault.
+A `complete` Message passes through the lenient read; `completed` reports the completed Message with its strict
+encoding as `bytes`, or the wire error of either step.
 Defensive-copy cases mutate the source array after constructing a List, Dice,
 Map or Record and then observe the constructed value. Negative controls verify
 that reordered Map observations and incorrect hash results are rejected.

@@ -81,6 +81,7 @@ enum Validation {
                         api,
                         [
                             "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key",
+                            "complete",
                             "dump", "dumpBaseline",
                             "deltaEncode",
                             "deltaDecode", "describe", "document", "readDocument", "network",

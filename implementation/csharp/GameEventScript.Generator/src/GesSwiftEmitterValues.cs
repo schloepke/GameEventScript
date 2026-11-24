@@ -8,7 +8,7 @@ namespace GameEventScript.Generator;
 // The conversion of generated Swift types to and from GES values, as in the C# output.
 internal static partial class GesSwiftEmitter
 {
-    private static void ValueMembers(GesSchemaPlanner.Code code, GesPlanType type, string access, string holder, bool schemaSet)
+    private static void ValueMembers(GesSchemaPlanner.Code code, GesPlanType type, string access, string holder, bool schemaSet, bool lenient = false)
     {
         var name = GesSchemaPlanner.Literal(type.Layout.Lookup, true);
         var mutating = (type.Kind == GesSchemaKind.Messages ? type.MembersAreClasses : type.IsClass) ? "" : "mutating ";
@@ -42,6 +42,7 @@ internal static partial class GesSwiftEmitter
         code.Open($"{access}{mutating}func read(message: GameEventScriptMessage) throws {{");
         code.Line("_ = try read(from: GesSchemaValues.encode(Self.__valueSchema.get(), .message(message)))");
         code.Close();
+        if (lenient) LenientMember(code, access, mutating);
     }
 
     // The embedded sources, parsed when a type first converts a value; a different binding hash fails each conversion.

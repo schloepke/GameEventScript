@@ -84,7 +84,7 @@ let         = "let" LowerName "be" ( literal | "$" ConstantName )
 message     = "message" MessageName "(" [ argument { "," argument } ] ")" [ "tags" tagset ]
 messages    = "messages" ":" TypeName "as" "(" MessageName { "," MessageName } ")"
 field       = LowerName ":" union [ "optional" | "key" ] [ "default" fallback | "computed" "by" expression ]
-argument    = [ "_" ] LowerName ":" union [ "optional" ]
+argument    = [ "_" ] LowerName ":" union [ "optional" ] [ "default" fallback ]
 
 union       = alternative { "|" alternative }
 alternative = [ LowerName ":" ] type
@@ -226,8 +226,8 @@ A source is a sequence of declarations in any order; a reference may come before
   order, and a closed set of tags, of which any subset may be present. An argument has the
   label of its name, as in `target: 5`, or with `_` none, so `_ damage` is passed by position
   and its name serves only the [field handle](#writer-and-reader) and the
-  [description](#description). A message can have no arguments. It can be a root, but it is
-  not a type: a field cannot name it.
+  [description](#description). An argument may take a literal [default](#argument-defaults). A message can have no
+  arguments. It can be a root, but it is not a type: a field cannot name it.
 - **`messages :Name as (A, B)`** declares a message set: a closed, ordered choice of one
   of the listed messages, at least one, each once. Its encoding starts with the index of the chosen
   message, so a receiver learns which message follows; see [messages](#messages). A set
@@ -422,8 +422,8 @@ model(data) schema :WeaponUnit as { electricity: :Unit_Consumer default [efficie
 
 - **`optional`** with a default only names an optional sibling: the field is absent when the sibling is, and a literal
   would make `optional` meaningless. Both are optional or both are not. A `key` takes no default, since it identifies the
-  record. Message arguments take none, since a message holds every argument of its signature. A record default is no
-  sibling, so an optional field or a union takes none.
+  record. A record default is no sibling, so an optional field or a union takes none. Message arguments take only
+  [literal defaults](#argument-defaults).
 - **Where it applies:** reading a [value](#record-values) or a model's value, [checking a document](#document-checking),
   and generated model initializers. The wire always carries the field without a presence bit, since the sender holds the
   resolved value, and decoding gives every field; a record with a record default is encoded in full like any other. `nothing` given for a required field stays `wire.nothingValue`: only
@@ -432,6 +432,28 @@ model(data) schema :WeaponUnit as { electricity: :Unit_Consumer default [efficie
   alike. `with` takes a record default with its field like any other default, also from an abstract schema, and
   `all optional` drops it. Only sibling fields, literals and lets serve as defaults, not [computed fields](#computed-fields) or
   expressions: a default is a value the sender left out and resolves to a field that the wire carries.
+
+### Argument defaults
+
+> **Since: Unreleased**
+
+A message argument may end with a literal **`default`**, which a [lenient read](#lenient-read) gives an argument that a
+message leaves out.
+
+```gess
+tags :FireMode as (#aimed, #snap)
+message Fire(count: :Number integer between 1 and 1024 default 1, mode: :FireMode default #aimed, loud: :Boolean default false)
+```
+
+- It follows the rules of a [literal default](#defaults): a number or file constant of the argument's unit, in its range
+  and on its step, `true` or `false`, or a tag of the set. A sibling, a record literal, a union argument and an argument
+  that is also `optional` take none and are `schema.invalidDefault`; so is a Text, Bytes, List or other argument without
+  a literal.
+- A defaulted argument is required on the wire: it has no presence bit, an encoder writes the value the message holds,
+  and strict decoding gives every argument as before. A default never fills an argument while encoding or decoding.
+- The default belongs to the [canonical form](#canonical-form) and the hash, so both sides fill a left-out argument
+  alike.
+- A [send](Language.md#messages-and-dispatch) in a script stays as written: the compiler fills no argument.
 
 ### Computed fields
 
@@ -778,7 +800,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name without backticks, an optional list in an aggregate), gives `hypot` or `atan2` another number of arguments, combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
 | `schema.invalidRoute` | a [network route](Network.md#declaration) breaks its rules |
 | `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root with the same side and verb |
-| `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
+| `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field or argument with a literal, is no literal on an argument, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
 `schema.invalidConstraint`, `schema.tooWide` and `schema.tooLarge` can also arise at binding,
@@ -1639,6 +1661,27 @@ means no closed set, no element type and no axis block. A limit is a `GesSchemaB
 name, or the exact decimal `Significand` and `Exponent` of the [canonical form](#schema-hash),
 with a conversion to the closest binary64. `GesBoundSchema.Schema` leads back to the description.
 
+### Lenient read
+
+> **Since: Unreleased**
+
+A lenient read completes a Message that leaves out arguments before it is typed or encoded. It accepts the declared labels
+of the message as any subsequence in declared order: an argument the message leaves out takes its
+[default](#argument-defaults), or `nothing` when it is optional. It is a pure function of the bound schema and the
+Message, and it keeps the message name and tags.
+
+| Code | Condition |
+| --- | --- |
+| `wire.missingField` | an argument without a default that is not optional is left out; the path names the argument |
+| `wire.typeMismatch` | a label is unknown, repeated or out of declared order, or the message is not the schema's message or a member of its set |
+
+Labels are matched in declared order, so the first error in that order counts: a label given before an earlier declared
+argument without a default leaves that argument missing. It checks labels only; kinds and ranges are checked as in a strict read when the completed message is encoded or read. A
+lenient read belongs to in-process receivers and to the typing step before encoding, such as a host that hands a script's
+message to generated code. It never belongs in a decoder: the wire carries every argument, and decoding stays strict.
+Runtime offers it as `GesSchemaValues.CompleteMessage(bound, message)` (Swift `completeMessage(_:_:)`), which returns the
+message itself when nothing is missing; generated code with values offers it as [`ReadMessageLenient`](#tools).
+
 ### Value path
 
 For rare data, Runtime offers `GesSchemaValues`: `Encode(bot, value, buffer)` encodes a
@@ -1788,7 +1831,17 @@ and `ReadMessage` (Swift `toMessage()` and `read(message:)`). The conversion goe
 bytes and the [value path](#value-path), so it gives exactly its values, codes and paths; for that the
 code embeds the schema sources under their file names and binds them once per type with the
 generation's parameters, and a binding hash that differs from the generated one fails the conversion. It
-allocates and serves values from scripts, not the hot path. A Swift class marks its stored properties
+allocates and serves values from scripts, not the hot path. A message with an [argument default](#argument-defaults), and
+a message set with such a member, adds `ReadMessageLenient(message)` (Swift `read(lenientMessage:)`), which completes the
+message with the [lenient read](#lenient-read) and then reads it like `ReadMessage`.
+
+A message type with an argument default also gets an initializer from its arguments, unless an argument is a union,
+Bytes or List; a message without one generates exactly as before. Swift `init(count: Int64 = 1, …)` gives each defaulted
+argument its default and each optional argument `nil`, which leaves it absent. C# allows defaults only on trailing
+parameters, so its constructor gives a defaulted argument its default, and an optional one `null`, only when every later
+argument has a default or is optional; a C# class keeps a public parameterless constructor beside it. Swift `Fire()`
+and C# `new Fire()` still call the initializer that sets every field to its zero value, not the defaults. Encoding writes
+the value the type holds. A Swift class marks its stored properties
 `@exclusivity(unchecked)`, since the dynamic exclusivity checks would take about half the time of
 reading and writing; a caller must therefore not access one record while another access to it is
 under way, such as passing a list of it `inout` while the record reads into it, which is undefined

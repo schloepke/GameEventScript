@@ -179,7 +179,7 @@
                     with.sequence = sequence
                     result.withs.append(with)
                 } else {
-                    var entry = try field(allowUnlabeled: false, allowDefault: true)
+                    var entry = try field(message: false)
                     entry.sequence = sequence
                     if entry.computed == nil { result.fields.append(entry) } else { result.computed.append(entry) }
                 }
@@ -199,7 +199,7 @@
                     try expect(44)
                     skipTrivia()
                 }
-                result.fields.append(try field(allowUnlabeled: true, allowDefault: false))
+                result.fields.append(try field(message: true))
                 skipTrivia()
             }
             skipSpaces()
@@ -343,10 +343,10 @@
         return result
     }
 
-    private mutating func field(allowUnlabeled: Bool, allowDefault: Bool) throws -> GesSchemaFieldSyntax {
+    private mutating func field(message: Bool) throws -> GesSchemaFieldSyntax {
         let offset = position
         var unlabeled = false
-        if allowUnlabeled && consume(95) {
+        if message && consume(95) {
             unlabeled = true
             skipSpaces()
         }
@@ -367,7 +367,7 @@
         var fallback: GesSchemaDefaultSyntax?
         skipSpaces()
         if atWord("computed") {
-            if !allowDefault { throw failure("A message argument is not computed.") }
+            if message { throw failure("A message argument is not computed.") }
             _ = word()
             skipSpaces()
             try expectWord("by")
@@ -378,7 +378,7 @@
             result.computed = expression
             return result
         }
-        if allowDefault && atWord("default") {
+        if atWord("default") {
             let start = position
             _ = word()
             skipSpaces()

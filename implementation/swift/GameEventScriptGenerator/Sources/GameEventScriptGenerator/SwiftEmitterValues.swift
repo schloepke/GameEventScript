@@ -3,7 +3,7 @@
 
 // The conversion of generated Swift types to and from GES values, as in the C# output.
 extension GesSwiftEmitter {
-    static func valueMembers(_ code: inout Code, _ type: GesPlanType, _ access: String, _ holder: String, schemaSet: Bool) {
+    static func valueMembers(_ code: inout Code, _ type: GesPlanType, _ access: String, _ holder: String, schemaSet: Bool, lenient: Bool = false) {
         let name = GesSchemaPlanner.literal(type.layout.lookup, swift: true)
         let mutating = (type.kind == .messages ? type.membersAreClasses : type.isClass) ? "" : "mutating "
         code.blank()
@@ -34,6 +34,7 @@ extension GesSwiftEmitter {
         code.open("\(access)\(mutating)func read(message: GameEventScriptMessage) throws {")
         code.line("_ = try read(from: GesSchemaValues.encode(Self.__valueSchema.get(), .message(message)))")
         code.close()
+        if lenient { lenientMember(&code, access, mutating) }
     }
 
     // The embedded sources, parsed when a type first converts a value; a different binding hash fails each conversion.

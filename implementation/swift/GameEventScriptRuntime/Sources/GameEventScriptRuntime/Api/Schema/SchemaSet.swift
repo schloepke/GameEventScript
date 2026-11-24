@@ -526,6 +526,7 @@ final class GesFileScope {
                 if recursive { throw error(Code.invalidConstraint, field.alternatives[0].depthOffset, "A schema holds at most one List with depth.") }
                 recursive = true
             }
+            if declaration.kind == .message { try resolveArgumentDefaults(declaration) }
         }
         // A declaration holds its scope, so the scope lets go of them once they are resolved.
         own = []
@@ -663,6 +664,21 @@ final class GesFileScope {
 
     /// A default is a number, a Boolean or a tag of the field's single type, or a sibling field of the same type whose value it
     /// takes; chains resolve in dependency order and must not form a cycle.
+    /// An argument default is a literal number or constant, a Boolean or a tag of the argument's single type; it fills a
+    /// missing argument in a lenient read, so a defaulted argument is required on the wire.
+    private func resolveArgumentDefaults(_ declaration: GesResolvedDeclaration) throws {
+        for (index, field) in declaration.syntax.fields.enumerated() {
+            guard let written = field.defaultValue else { continue }
+            let resolved = declaration.fields[index]
+            if !(written.value?.name ?? "").isEmpty || written.record != nil {
+                throw error(Code.invalidDefault, written.offset, "An argument default is a literal or a constant.")
+            }
+            if resolved.marker == .optional { throw error(Code.invalidDefault, written.offset, "An argument is optional or has a default, not both.") }
+            if resolved.alternatives.count != 1 { throw error(Code.invalidDefault, written.offset, "A union argument takes no default.") }
+            declaration.fields[index].defaultValue = try resolveDefault(resolved.alternatives[0], written)
+        }
+    }
+
     private func resolveDefaults(_ declaration: GesResolvedDeclaration) throws {
         for field in declaration.syntax.fields {
             guard let written = field.defaultValue else { continue }

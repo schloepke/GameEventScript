@@ -1850,33 +1850,6 @@ schema:
 
 ---
 
-## Test: a default of a message argument
-
-Defaults belong to schema fields; message arguments have none.
-
-### Case description
-
-```yaml
-gesBlock: case
-id: error-default-message
-schemaApi:
-  sources:
-    - "message M(a: :Number default 1)\n"
-```
-
-### Expectation
-
-```yaml
-gesBlock: expect
-schema:
-  error:
-    code: "schema.syntax"
-    line: 1
-    column: 22
-```
-
----
-
 ## Test: record defaults in the canonical form
 
 A record literal lists the fields it names in the field order of their schema, each value exact in base units, and `[:]` names none; a constant is replaced by its value.
@@ -27905,4 +27878,445 @@ schemaApi:
 ```yaml
 gesBlock: expect
 schema: {"canonical": "gess1\nmessages Defense\nmember Shield\nmessage Shield\nargument level Number integer between 0e0 1e1\n", "hash": "3848fd4f58e0214b"}
+```
+
+---
+
+## Test: message argument defaults in the canonical form
+
+A number, quantity, tag or Boolean default of an argument enters the canonical form and the hash like a field default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-argument-default
+schemaApi: {"sources": ["tags :When as (#aimed, #now)\nwire message Fire(count: :Number integer between 1 and 1024 default 1, charge: :Number integer between 0 and 9 optional, when: :When default #aimed, delay: :Quantity(s) between 0s and 60s step 1ms default 2s, loud: :Boolean default false)\n"], "root": "Fire"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"canonical": "gess1\nmessage Fire\nargument count Number integer between 1e0 1024e0 default 1e0\nargument charge Number integer between 0e0 9e0 optional\nargument when Tag(#aimed #now) default #aimed\nargument delay Quantity(second) between 0e0 6e1 step 1e-3 default 2e0\nargument loud Boolean default false\n", "hash": "26b914be7c0f6664"}
+```
+
+---
+
+## Test: an invalid argument default: text
+
+A Text argument has no literal default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-argument-default-text
+schemaApi: {"sources": ["message M(name: :Text max 4 default hello)\n"]}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidDefault", "line": 1, "column": 29}}
+```
+
+---
+
+## Test: an invalid argument default: optional
+
+An optional argument takes no default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-argument-default-optional
+schemaApi: {"sources": ["message M(count: :Number integer between 0 and 9 optional default 1)\n"]}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidDefault", "line": 1, "column": 59}}
+```
+
+---
+
+## Test: an invalid argument default: union
+
+A union argument takes no default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-argument-default-union
+schemaApi: {"sources": ["message M(value: :Number integer between 0 and 9 | :Boolean default 1)\n"]}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidDefault", "line": 1, "column": 61}}
+```
+
+---
+
+## Test: an invalid argument default: sibling
+
+An argument default never names a sibling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-argument-default-sibling
+schemaApi: {"sources": ["message M(a: :Number integer between 0 and 9, b: :Number integer between 0 and 9 default a)\n"]}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidDefault", "line": 1, "column": 82}}
+```
+
+---
+
+## Test: an invalid argument default: range
+
+A default outside the range.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-argument-default-range
+schemaApi: {"sources": ["message M(count: :Number integer between 1 and 9 default 10)\n"]}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidDefault", "line": 1, "column": 50}}
+```
+
+---
+
+## Test: an invalid argument default: tag
+
+A tag outside the set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-argument-default-tag
+schemaApi: {"sources": ["message M(mode: :Tag(#a, #b) default #c)\n"]}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidDefault", "line": 1, "column": 30}}
+```
+
+---
+
+## Test: an argument default of another unit
+
+A default of another unit is a unit mismatch, as on a field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-argument-default-unit
+schemaApi: {"sources": ["message M(delay: :Quantity(s) between 0s and 9s default 2m)\n"]}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.unitMismatch", "line": 1, "column": 57}}
+```
+
+---
+
+## Test: a defaulted argument has no presence bit
+
+A defaulted two-tag argument encodes in one bit, and strict decoding gives it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-argument-default-bits
+schemaApi: {"sources": ["wire message Turn(side: :Tag(#left, #right) default #left)\n"], "root": "Turn", "encode": {"type": ":Message", "message": {"name": "Turn", "args": [{"name": "side", "value": {"type": ":Tag", "value": "right"}}]}}, "decode": "01"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"encoded": {"bytes": "01"}, "decoded": {"value": {"type": ":Message", "message": {"name": "Turn", "args": [{"name": "side", "value": {"type": ":Tag", "value": "right"}}]}}, "byteCount": 1}}
+```
+
+---
+
+## Test: strict encoding fills no default
+
+An encoder requires a defaulted argument; only the lenient read fills it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-argument-default-missing
+schemaApi: {"sources": ["wire message Turn(side: :Tag(#left, #right) default #left)\n"], "root": "Turn", "encode": {"type": ":Message", "message": {"name": "Turn", "args": []}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"encoded": {"error": {"code": "wire.missingField", "path": "side"}}}
+```
+
+---
+
+## Test: a lenient read keeps every given argument
+
+Given arguments stay in declared order; each left-out one takes its default, an optional one stays absent, and the strict encoding of the result decodes back to it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: complete-all
+schemaApi: {"sources": ["tags :When as (#aimed, #now)\nwire message Fire(count: :Number integer between 1 and 1024 default 1, charge: :Number integer between 0 and 9 optional, when: :When default #aimed, delay: :Quantity(s) between 0s and 60s step 1ms default 2s, loud: :Boolean default false)\n"], "root": "Fire", "complete": {"type": ":Message", "message": {"name": "Fire", "args": [{"name": "count", "value": {"type": ":Number.int64", "value": "3"}}, {"name": "charge", "value": {"type": ":Number.int64", "value": "7"}}, {"name": "when", "value": {"type": ":Tag", "value": "now"}}, {"name": "delay", "value": {"type": ":Quantity.binary64", "value": "1.5", "unit": ":second"}}, {"name": "loud", "value": {"type": ":Boolean", "value": true}}]}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"value": {"type": ":Message", "message": {"name": "Fire", "tags": [], "args": [{"name": "count", "value": {"type": ":Number.int64", "value": "3"}}, {"name": "charge", "value": {"type": ":Number.int64", "value": "7"}}, {"name": "when", "value": {"type": ":Tag", "value": "now"}}, {"name": "delay", "value": {"type": ":Quantity.binary64", "value": "1.5", "unit": ":second"}}, {"name": "loud", "value": {"type": ":Boolean", "value": "true"}}]}}, "bytes": "02bcdc0501"}}
+```
+
+---
+
+## Test: a lenient read fills the arguments a message leaves out
+
+Given arguments stay in declared order; each left-out one takes its default, an optional one stays absent, and the strict encoding of the result decodes back to it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: complete-subsequence
+schemaApi: {"sources": ["tags :When as (#aimed, #now)\nwire message Fire(count: :Number integer between 1 and 1024 default 1, charge: :Number integer between 0 and 9 optional, when: :When default #aimed, delay: :Quantity(s) between 0s and 60s step 1ms default 2s, loud: :Boolean default false)\n"], "root": "Fire", "complete": {"type": ":Message", "message": {"name": "Fire", "args": [{"name": "when", "value": {"type": ":Tag", "value": "now"}}, {"name": "loud", "value": {"type": ":Boolean", "value": true}}]}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"value": {"type": ":Message", "message": {"name": "Fire", "tags": [], "args": [{"name": "count", "value": {"type": ":Number.int64", "value": "1"}}, {"name": "charge", "value": {"type": ":Nothing"}}, {"name": "when", "value": {"type": ":Tag", "value": "now"}}, {"name": "delay", "value": {"type": ":Quantity.int64", "value": "2", "unit": ":second"}}, {"name": "loud", "value": {"type": ":Boolean", "value": "true"}}]}}, "bytes": "00087d10"}}
+```
+
+---
+
+## Test: a lenient read fills a gap in the middle
+
+Given arguments stay in declared order; each left-out one takes its default, an optional one stays absent, and the strict encoding of the result decodes back to it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: complete-gap
+schemaApi: {"sources": ["tags :When as (#aimed, #now)\nwire message Fire(count: :Number integer between 1 and 1024 default 1, charge: :Number integer between 0 and 9 optional, when: :When default #aimed, delay: :Quantity(s) between 0s and 60s step 1ms default 2s, loud: :Boolean default false)\n"], "root": "Fire", "complete": {"type": ":Message", "message": {"name": "Fire", "args": [{"name": "count", "value": {"type": ":Number.int64", "value": "3"}}, {"name": "loud", "value": {"type": ":Boolean", "value": true}}]}}, "decode": "02007d10"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"value": {"type": ":Message", "message": {"name": "Fire", "tags": [], "args": [{"name": "count", "value": {"type": ":Number.int64", "value": "3"}}, {"name": "charge", "value": {"type": ":Nothing"}}, {"name": "when", "value": {"type": ":Tag", "value": "aimed"}}, {"name": "delay", "value": {"type": ":Quantity.int64", "value": "2", "unit": ":second"}}, {"name": "loud", "value": {"type": ":Boolean", "value": "true"}}]}}, "bytes": "02007d10"}, "decoded": {"value": {"type": ":Message", "message": {"name": "Fire", "tags": [], "args": [{"name": "count", "value": {"type": ":Number.int64", "value": "3"}}, {"name": "charge", "value": {"type": ":Nothing"}}, {"name": "when", "value": {"type": ":Tag", "value": "aimed"}}, {"name": "delay", "value": {"type": ":Quantity.int64", "value": "2", "unit": ":second"}}, {"name": "loud", "value": {"type": ":Boolean", "value": "true"}}]}}, "byteCount": 4}}
+```
+
+---
+
+## Test: a lenient read of a message without arguments
+
+Given arguments stay in declared order; each left-out one takes its default, an optional one stays absent, and the strict encoding of the result decodes back to it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: complete-required-only
+schemaApi: {"sources": ["tags :When as (#aimed, #now)\nwire message Fire(count: :Number integer between 1 and 1024 default 1, charge: :Number integer between 0 and 9 optional, when: :When default #aimed, delay: :Quantity(s) between 0s and 60s step 1ms default 2s, loud: :Boolean default false)\n"], "root": "Fire", "complete": {"type": ":Message", "message": {"name": "Fire", "args": []}}, "decode": "00007d00"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"value": {"type": ":Message", "message": {"name": "Fire", "tags": [], "args": [{"name": "count", "value": {"type": ":Number.int64", "value": "1"}}, {"name": "charge", "value": {"type": ":Nothing"}}, {"name": "when", "value": {"type": ":Tag", "value": "aimed"}}, {"name": "delay", "value": {"type": ":Quantity.int64", "value": "2", "unit": ":second"}}, {"name": "loud", "value": {"type": ":Boolean", "value": "false"}}]}}, "bytes": "00007d00"}, "decoded": {"value": {"type": ":Message", "message": {"name": "Fire", "tags": [], "args": [{"name": "count", "value": {"type": ":Number.int64", "value": "1"}}, {"name": "charge", "value": {"type": ":Nothing"}}, {"name": "when", "value": {"type": ":Tag", "value": "aimed"}}, {"name": "delay", "value": {"type": ":Quantity.int64", "value": "2", "unit": ":second"}}, {"name": "loud", "value": {"type": ":Boolean", "value": "false"}}]}}, "byteCount": 4}}
+```
+
+---
+
+## Test: a lenient read fills only the defaulted argument
+
+A required argument without default stays required.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: complete-required
+schemaApi: {"sources": ["wire message Hit(target: :Number integer between 0 and 99, damage: :Number integer between 0 and 99 default 5)\n"], "root": "Hit", "complete": {"type": ":Message", "message": {"name": "Hit", "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "4"}}]}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"value": {"type": ":Message", "message": {"name": "Hit", "tags": [], "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "4"}}, {"name": "damage", "value": {"type": ":Number.int64", "value": "5"}}]}}, "bytes": "8402"}}
+```
+
+---
+
+## Test: a lenient read misses an argument without default
+
+The lenient read reports the error of the strict read for the completed message.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-complete-missing
+schemaApi: {"sources": ["wire message Hit(target: :Number integer between 0 and 99, damage: :Number integer between 0 and 99 default 5)\n"], "root": "Hit", "complete": {"type": ":Message", "message": {"name": "Hit", "args": [{"name": "damage", "value": {"type": ":Number.int64", "value": "4"}}]}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"error": {"code": "wire.missingField", "path": "target"}}}
+```
+
+---
+
+## Test: a lenient read rejects an unknown label
+
+The lenient read reports the error of the strict read for the completed message.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-complete-unknown
+schemaApi: {"sources": ["wire message Hit(target: :Number integer between 0 and 99, damage: :Number integer between 0 and 99 default 5)\n"], "root": "Hit", "complete": {"type": ":Message", "message": {"name": "Hit", "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "4"}}, {"name": "speed", "value": {"type": ":Number.int64", "value": "1"}}]}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"error": {"code": "wire.typeMismatch", "path": ""}}}
+```
+
+---
+
+## Test: a label before an earlier argument without default
+
+The lenient read reports the error of the strict read for the completed message.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-complete-order-missing
+schemaApi: {"sources": ["wire message Hit(target: :Number integer between 0 and 99, damage: :Number integer between 0 and 99 default 5)\n"], "root": "Hit", "complete": {"type": ":Message", "message": {"name": "Hit", "args": [{"name": "damage", "value": {"type": ":Number.int64", "value": "4"}}, {"name": "target", "value": {"type": ":Number.int64", "value": "5"}}]}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"error": {"code": "wire.missingField", "path": "target"}}}
+```
+
+---
+
+## Test: a lenient read keeps the range checks
+
+The lenient read reports the error of the strict read for the completed message.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-complete-range
+schemaApi: {"sources": ["wire message Hit(target: :Number integer between 0 and 99, damage: :Number integer between 0 and 99 default 5)\n"], "root": "Hit", "complete": {"type": ":Message", "message": {"name": "Hit", "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "400"}}]}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"error": {"code": "wire.outOfRange", "path": "target"}}}
+```
+
+---
+
+## Test: a lenient read rejects labels out of order
+
+A label given after a later declared one is out of order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-complete-order
+schemaApi: {"sources": ["tags :When as (#aimed, #now)\nwire message Fire(count: :Number integer between 1 and 1024 default 1, charge: :Number integer between 0 and 9 optional, when: :When default #aimed, delay: :Quantity(s) between 0s and 60s step 1ms default 2s, loud: :Boolean default false)\n"], "root": "Fire", "complete": {"type": ":Message", "message": {"name": "Fire", "args": [{"name": "loud", "value": {"type": ":Boolean", "value": true}}, {"name": "count", "value": {"type": ":Number.int64", "value": "3"}}]}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"error": {"code": "wire.typeMismatch", "path": "count"}}}
+```
+
+---
+
+## Test: a lenient read of a message set
+
+A message set completes the member the message names.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: complete-set
+schemaApi: {"sources": ["wire messages :Combat as (Hit, Died)\nwire message Hit(target: :Number integer between 0 and 99, damage: :Number integer between 0 and 99 default 5)\nwire message Died(target: :Number integer between 0 and 99)\n"], "root": "Combat", "complete": {"type": ":Message", "message": {"name": "Hit", "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "4"}}]}}, "decode": "0805"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"value": {"type": ":Message", "message": {"name": "Hit", "tags": [], "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "4"}}, {"name": "damage", "value": {"type": ":Number.int64", "value": "5"}}]}}, "bytes": "0805"}, "decoded": {"value": {"type": ":Message", "message": {"name": "Hit", "tags": [], "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "4"}}, {"name": "damage", "value": {"type": ":Number.int64", "value": "5"}}]}}, "byteCount": 2}}
 ```

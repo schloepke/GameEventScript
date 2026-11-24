@@ -4,7 +4,7 @@
 // The conversion of generated C# types to and from GES values. It goes through the bytes and GesSchemaValues, with the schema
 // sources the file embeds, so it gives exactly the values of the value path; it allocates and serves values from scripts.
 extension GesCSharpEmitter {
-    static func valueMembers(_ code: inout Code, _ type: GesPlanType, _ holder: String) {
+    static func valueMembers(_ code: inout Code, _ type: GesPlanType, _ holder: String, lenient: Bool = false) {
         let selfModifier = (type.kind == .messages ? type.membersAreClasses : type.isClass) ? "" : "readonly "
         let bind = "__valueSchema ??= \(holder).Bind(\(GesSchemaPlanner.literal(type.layout.lookup, swift: false)), BindingHash)"
         code.blank()
@@ -41,6 +41,7 @@ extension GesCSharpEmitter {
         code.line("var buffer = new byte[MaxByteCount];")
         code.line("Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, global::GameEventScript.Runtime.Values.GesValue.GesMessage(message), buffer)));")
         code.close()
+        if lenient { lenientMember(&code, bind) }
     }
 
     // The embedded sources, parsed when a type first converts a value, and bound with the parameters of this code. A binding

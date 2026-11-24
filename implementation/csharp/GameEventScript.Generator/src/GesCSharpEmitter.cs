@@ -24,7 +24,7 @@ internal static partial class GesCSharpEmitter
     };
 
     // Members that converting to and from GES values adds.
-    private static readonly string[] ValueReserved = ["ToValue", "ReadValue", "ToMessage", "ReadMessage"];
+    private static readonly string[] ValueReserved = ["ToValue", "ReadValue", "ToMessage", "ReadMessage", "ReadMessageLenient"];
 
     // Members every generated type declares, and those every C# object inherits.
     private static readonly string[] Reserved =
@@ -186,6 +186,7 @@ internal static partial class GesCSharpEmitter
             code.Line($"public bool {name};");
         }
 
+        ArgumentInitializer(code, type);
         foreach (var field in type.Fields) ListAccess(code, field);
         if (!type.IsItem) context.Computed.Members(code, type.Name, type.Layout.Computed, "public");
         Methods(code, type);
@@ -193,7 +194,7 @@ internal static partial class GesCSharpEmitter
         var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;
         if (deltas) SameHelpers(code, type, context.Global);
         Extras(code, type, deltas, context.Elements.Contains(type.Name));
-        if (context.Values && !type.IsItem) ValueMembers(code, type, context.Holder);
+        if (context.Values && !type.IsItem) ValueMembers(code, type, context.Holder, Lenient(type.Layout, context.Layout));
         if (model is not null) ModelMembers(code, type, model, context.Models!);
         foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
@@ -565,7 +566,7 @@ internal static partial class GesCSharpEmitter
         read.Add("}");
         code.Blank();
         PublicMethods(code, type.MembersAreClasses ? "" : "readonly ", write, read, "message");
-        if (context.Values) ValueMembers(code, type, context.Holder);
+        if (context.Values) ValueMembers(code, type, context.Holder, Lenient(type.Layout, context.Layout));
         code.Blank();
         MessageCases(code, type, context);
         code.Blank();

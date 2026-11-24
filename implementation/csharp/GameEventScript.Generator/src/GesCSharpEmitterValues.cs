@@ -9,7 +9,7 @@ namespace GameEventScript.Generator;
 // sources the file embeds, so it gives exactly the values of the value path; it allocates and serves values from scripts.
 internal static partial class GesCSharpEmitter
 {
-    private static void ValueMembers(GesSchemaPlanner.Code code, GesPlanType type, string holder)
+    private static void ValueMembers(GesSchemaPlanner.Code code, GesPlanType type, string holder, bool lenient = false)
     {
         var self = (type.Kind == GesSchemaKind.Messages ? type.MembersAreClasses : type.IsClass) ? "" : "readonly ";
         var bind = $"__valueSchema ??= {holder}.Bind({GesSchemaPlanner.Literal(type.Layout.Lookup, false)}, BindingHash)";
@@ -49,6 +49,7 @@ internal static partial class GesCSharpEmitter
         code.Line("var buffer = new byte[MaxByteCount];");
         code.Line("Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, global::GameEventScript.Runtime.Values.GesValue.GesMessage(message), buffer)));");
         code.Close();
+        if (lenient) LenientMember(code, bind);
     }
 
     // The embedded sources, parsed when a type first converts a value, and bound with the parameters of this code. A binding

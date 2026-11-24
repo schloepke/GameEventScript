@@ -10,9 +10,10 @@ internal static class SchemaApiObservations
 {
     internal static void Validate(JsonElement input)
     {
-        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument", "network");
+        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "complete", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument", "network");
         if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("encode"));
         if (input.GetProperty("baseline").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("baseline"));
+        if (input.GetProperty("complete").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("complete"));
     }
 
     internal static object Run(JsonElement input)
@@ -61,6 +62,7 @@ internal static class SchemaApiObservations
                 if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) result["encoded"] = Encode(bound, input);
                 if (input.GetProperty("decode").GetString() is { } decode) result["decoded"] = Decode(bound, decode, input);
                 if (input.GetProperty("key").GetString() is { } key) result["key"] = GesSchemaValues.ReadKey(bound, Convert.FromHexString(key));
+                if (input.GetProperty("complete").ValueKind != JsonValueKind.Null) result["completed"] = Complete(bound, input.GetProperty("complete"));
                 if (input.GetProperty("deltaEncode").ValueKind != JsonValueKind.Null) result["deltaEncoded"] = DeltaEncode(bound, input.GetProperty("deltaEncode"));
                 if (input.GetProperty("deltaDecode").ValueKind != JsonValueKind.Null) result["deltaDecoded"] = DeltaDecode(bound, input.GetProperty("deltaDecode"));
                 if (input.GetProperty("dump").GetString() is { } dump)
@@ -261,6 +263,23 @@ internal static class SchemaApiObservations
         {
             var decoded = GesSchemaDelta.Decode(bound, Convert.FromHexString(input.GetProperty("delta").GetString()!), Convert.FromHexString(input.GetProperty("baseline").GetString()!), buffer);
             return new { record = Convert.ToHexString(buffer, 0, decoded.ByteCount).ToLowerInvariant(), deltaByteCount = decoded.DeltaByteCount };
+        }
+        catch (GesWireException exception)
+        {
+            return new { error = new { code = exception.Code, path = exception.Path } };
+        }
+    }
+
+    // The lenient read of a message, then the strict encoding of the completed message.
+    private static object Complete(GesBoundSchema bound, JsonElement input)
+    {
+        try
+        {
+            var message = ValueApiObservations.Construct(input).Message ?? throw new InvalidOperationException("complete requires a message");
+            var completed = GesSchemaValues.CompleteMessage(bound, message);
+            var buffer = new byte[bound.MaxByteCount];
+            var length = GesSchemaValues.Encode(bound, GesValue.GesMessage(completed), buffer);
+            return new { value = RuntimeValues.Encode(GesValue.GesMessage(completed)), bytes = Convert.ToHexString(buffer, 0, length).ToLowerInvariant() };
         }
         catch (GesWireException exception)
         {

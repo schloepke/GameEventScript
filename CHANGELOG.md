@@ -19,6 +19,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   appends a suffix to every generated message type name, such as `MoveMessage`. Hashes, documents and wire bytes keep the
   declared names, so generations with different suffixes interoperate; a message type that collides with another
   generated type is `generate.nameCollision` (specs/Schemas.md#message-type-names).
+- Schema message arguments take `default <literal>` under the rules of field defaults; the default enters the canonical
+  form and the hash, while the wire always carries every argument. `GesSchemaValues.CompleteMessage` (Swift
+  `completeMessage(_:_:)`) fills left-out arguments with their defaults and optional ones with `nothing`, reporting
+  `wire.missingField` or `wire.typeMismatch` otherwise; generated code with values offers it as `ReadMessageLenient`
+  (Swift `read(lenientMessage:)`), and generated initializers take the defaults (specs/Schemas.md#lenient-read).
 
 ### Changed
 - A network route that names a single message drops the `:` (`client sends Move reliable`); `:Name` in a route names

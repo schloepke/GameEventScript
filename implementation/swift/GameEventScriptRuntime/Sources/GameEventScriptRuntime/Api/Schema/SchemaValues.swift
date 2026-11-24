@@ -119,6 +119,68 @@ public enum GesSchemaValues {
         }
     }
 
+    /// Completes a Message whose arguments are a subsequence of the declared labels in declared order: a missing argument
+    /// takes its default, or nothing when it is optional. The result has every declared argument and encodes strictly. This
+    /// lenient read belongs to in-process receivers and to the typing step before encoding, never to a decoder; it checks
+    /// labels only, so kinds and ranges are checked when the result is encoded or read.
+    /// - Parameters:
+    ///   - schema: The bound message or message set; a set selects its member by the message name.
+    ///   - message: The message.
+    /// - Returns: The completed message with the same name and tags, or the message itself when nothing is missing.
+    /// - Throws: `GesWireError` `wire.missingField` with the argument path when an argument without default is missing and
+    ///   not optional; `wire.typeMismatch` when the name is not a message of the schema or a label is unknown, repeated or
+    ///   out of order.
+    public static func completeMessage(_ schema: GesBoundSchema, _ message: GameEventScriptMessage) throws -> GameEventScriptMessage {
+        var current = schema
+        if schema.kind == .messages {
+            guard let member = schema.memberIndex(message.name) else { throw GesWireError(code: GesWireError.typeMismatch) }
+            current = schema.members[member]
+        }
+        guard current.kind == .message, message.name == current.name else { throw GesWireError(code: GesWireError.typeMismatch) }
+        let given = Array(message.arguments)
+        var completed: [GesMessageArgument] = []
+        completed.reserveCapacity(current.labels.count)
+        var position = 0
+        var argument = 0
+        var index = 0
+        while index < current.nodes.count {
+            defer { index = current.nodes[index].next }
+            if current.nodes[index].isTagBit { continue }
+            let info = current.infos[index]
+            let label = current.labels[argument]
+            argument += 1
+            if position < given.count && given[position].name == label {
+                completed.append(given[position])
+                position += 1
+            } else if let fallback = info.defaultValue {
+                let value = literal(fallback, integer: current.nodes[index].kind == .integer, percentage: info.valueKind == .percentage, unit: info.unit)
+                completed.append(try GesMessageArgument(name: label, value: value))
+            } else if current.nodes[index].optional {
+                completed.append(try GesMessageArgument(name: label, value: .nothing))
+            } else if position < given.count && !current.labels[(argument - 1)...].contains(given[position].name) {
+                throw GesWireError(code: GesWireError.typeMismatch, path: info.path)
+            } else {
+                throw GesWireError(code: GesWireError.missingField, path: info.path)
+            }
+        }
+        if position < given.count { throw GesWireError(code: GesWireError.typeMismatch, path: argumentPath(current, given[position].name)) }
+        return given.count == completed.count ? message : try GameEventScriptMessage(name: message.name, arguments: completed, tags: message.tags)
+    }
+
+    /// The path of the argument a label names, or the empty path of the message for a label it does not declare.
+    private static func argumentPath(_ schema: GesBoundSchema, _ label: String) -> String {
+        var argument = 0
+        var index = 0
+        while index < schema.nodes.count {
+            if !schema.nodes[index].isTagBit {
+                if schema.labels[argument] == label { return schema.infos[index].path }
+                argument += 1
+            }
+            index = schema.nodes[index].next
+        }
+        return ""
+    }
+
     private static func encodeMessage(_ writer: inout GesSchemaWriter, _ schema: GesBoundSchema, _ value: GesValue) throws {
         guard let message = value.messageValue, message.name == schema.name else { throw GesWireError(code: GesWireError.typeMismatch) }
         for tag in message.tags where !schema.infos.enumerated().contains(where: { schema.nodes[$0.offset].isTagBit && $0.element.name == tag }) {

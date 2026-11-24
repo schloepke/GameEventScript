@@ -617,6 +617,23 @@ internal sealed partial class GesFileScope
             }
 
             declaration.Fields = fields;
+            if (declaration.Kind == GesSchemaKind.Message) ResolveArgumentDefaults(declaration);
+        }
+    }
+
+    // An argument default is a literal number or constant, a Boolean or a tag of the argument's single type; it fills a
+    // missing argument in a lenient read, so a defaulted argument is required on the wire.
+    private void ResolveArgumentDefaults(GesResolvedDeclaration declaration)
+    {
+        for (var index = 0; index < declaration.Fields.Length; index++)
+        {
+            if (declaration.Syntax.Fields[index].Default is not { } written) continue;
+            var field = declaration.Fields[index];
+            if (written.Value is { Name.Length: > 0 } || written.Record is not null)
+                throw Error(Code.InvalidDefault, written.Offset, "An argument default is a literal or a constant.");
+            if (field.Marker == GesSchemaFieldMarker.Optional) throw Error(Code.InvalidDefault, written.Offset, "An argument is optional or has a default, not both.");
+            if (field.Alternatives.Length != 1) throw Error(Code.InvalidDefault, written.Offset, "A union argument takes no default.");
+            field.Default = ResolveDefault(field.Alternatives[0], written);
         }
     }
 

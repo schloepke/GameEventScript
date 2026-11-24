@@ -45,6 +45,7 @@ enum SchemaApiObservations {
                 if let encode = input["encode"], encode != .null { result["encoded"] = try self.encode(bound, encode, input) }
                 if let decode = input["decode"]?.stringValue { result["decoded"] = self.decode(bound, decode, input) }
                 if let key = input["key"]?.stringValue { result["key"] = try GesSchemaValues.readKey(bound, bytes(key)) }
+                if let message = input["complete"], message != .null { result["completed"] = try complete(bound, message) }
                 if let delta = input["deltaEncode"], delta != .null { result["deltaEncoded"] = deltaEncode(bound, delta) }
                 if let delta = input["deltaDecode"], delta != .null { result["deltaDecoded"] = deltaDecode(bound, delta) }
                 if let dump = input["dump"]?.stringValue {
@@ -256,6 +257,17 @@ enum SchemaApiObservations {
             return ["error": ["code": error.code, "path": error.path]]
         } catch {
             return ["error": ["code": "\(error)", "path": ""]]
+        }
+    }
+
+    // The lenient read of a message, then the strict encoding of the completed message.
+    private static func complete(_ bound: GesBoundSchema, _ input: Input) throws -> [String: Any] {
+        guard let message = try RuntimeValues.decode(input).messageValue else { throw ConformanceExecutionError.invalidInput("complete requires a message") }
+        do {
+            let completed = try GesSchemaValues.completeMessage(bound, message)
+            return ["value": try RuntimeValues.encode(.message(completed)), "bytes": hexadecimal(try GesSchemaValues.encode(bound, .message(completed)))]
+        } catch let error as GesWireError {
+            return ["error": ["code": error.code, "path": error.path]]
         }
     }
 

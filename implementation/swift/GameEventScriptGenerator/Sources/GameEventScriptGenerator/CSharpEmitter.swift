@@ -15,7 +15,7 @@ enum GesCSharpEmitter {
     ]
 
     // Members that converting to and from GES values adds.
-    static let valueReserved = ["ToValue", "ReadValue", "ToMessage", "ReadMessage"]
+    static let valueReserved = ["ToValue", "ReadValue", "ToMessage", "ReadMessage", "ReadMessageLenient"]
 
     // Members every generated type declares, and those every C# object inherits.
     static let reserved = [
@@ -202,6 +202,7 @@ enum GesCSharpEmitter {
             code.line("/// <summary>Whether the tag <c>#\(tag.tag)</c> is set.</summary>")
             code.line("public bool \(tag.base);")
         }
+        argumentInitializer(&code, type)
         for field in type.fields { listAccess(&code, field) }
         if !type.isItem { context.computed.members(&code, type.name, type.layout.computed, "public") }
         methods(&code, type)
@@ -209,7 +210,7 @@ enum GesCSharpEmitter {
         let deltas = type.kind == .schema && !type.isItem
         if deltas { sameHelpers(&code, type, context.global) }
         extras(&code, type, deltas, context.elements.contains(type.name))
-        if context.values && !type.isItem { valueMembers(&code, type, context.holder) }
+        if context.values && !type.isItem { valueMembers(&code, type, context.holder, lenient: lenient(type.layout, context.layout)) }
         if let model { try modelMembers(&code, type, model, context.models!) }
         for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
@@ -588,7 +589,7 @@ enum GesCSharpEmitter {
         read.append("}")
         code.blank()
         publicMethods(&code, type.membersAreClasses ? "" : "readonly ", write, read, "message")
-        if context.values { valueMembers(&code, type, context.holder) }
+        if context.values { valueMembers(&code, type, context.holder, lenient: lenient(type.layout, context.layout)) }
         code.blank()
         messageCases(&code, type, context)
         code.blank()

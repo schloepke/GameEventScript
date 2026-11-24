@@ -194,7 +194,7 @@ internal sealed partial class GesSchemaSourceReader
                     else if (ReadWith(fields.Count, sequence) is { } with) withs.Add(with);
                     else
                     {
-                        var field = ReadField(allowUnlabeled: false, allowDefault: true);
+                        var field = ReadField(message: false);
                         field.Sequence = sequence;
                         (field.Computed is null ? fields : computed).Add(field);
                     }
@@ -230,7 +230,7 @@ internal sealed partial class GesSchemaSourceReader
                         SkipTrivia();
                     }
 
-                    fields.Add(ReadField(allowUnlabeled: true, allowDefault: false));
+                    fields.Add(ReadField(message: true));
                     SkipTrivia();
                 }
 
@@ -405,11 +405,11 @@ internal sealed partial class GesSchemaSourceReader
         return new GesSchemaWithSyntax { Name = name, AllOptional = allOptional, Without = without.ToArray(), WithoutOffsets = offsets.ToArray(), Position = position, Sequence = sequence, Offset = offset };
     }
 
-    private GesSchemaFieldSyntax ReadField(bool allowUnlabeled, bool allowDefault)
+    private GesSchemaFieldSyntax ReadField(bool message)
     {
         var offset = _position;
         var unlabeled = false;
-        if (allowUnlabeled && Consume('_'))
+        if (message && Consume('_'))
         {
             unlabeled = true;
             SkipSpaces();
@@ -437,7 +437,7 @@ internal sealed partial class GesSchemaSourceReader
         SkipSpaces();
         if (AtWord("computed"))
         {
-            if (!allowDefault) throw Failure("A message argument is not computed.");
+            if (message) throw Failure("A message argument is not computed.");
             ReadWord();
             SkipSpaces();
             ExpectWord("by");
@@ -447,7 +447,7 @@ internal sealed partial class GesSchemaSourceReader
             return new GesSchemaFieldSyntax { Name = name, Alternatives = alternatives, Marker = marker, Computed = expression, Offset = offset };
         }
 
-        if (allowDefault && AtWord("default"))
+        if (AtWord("default"))
         {
             var start = _position;
             ReadWord();

@@ -92,7 +92,7 @@ def prepare(case):
         raise InvalidDocument('Schema API requires no GES source, Steps or assembler')
     numeric_checks.options(case)
     raw = case.metadata.get('schemaApi')
-    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeExternal', 'baselineExternal', 'externalFields', 'failingField', 'baselineFailingField', 'failingCode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document', 'readDocument', 'network'}, 'schema API input')
+    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeExternal', 'baselineExternal', 'externalFields', 'failingField', 'baselineFailingField', 'failingCode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'complete', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document', 'readDocument', 'network'}, 'schema API input')
     sources = raw.get('sources')
     if not isinstance(sources, list) or not sources or any(not isinstance(s, str) for s in sources):
         raise InvalidDocument('Schema API requires source texts')
@@ -104,7 +104,7 @@ def prepare(case):
         raise InvalidDocument('Invalid bind flag')
     if 'describe' in raw and (raw['describe'] is not True or 'root' not in raw):
         raise InvalidDocument('A description requires a root')
-    if ('encode' in raw or 'decode' in raw or 'key' in raw or 'dump' in raw or 'deltaEncode' in raw or 'deltaDecode' in raw) and 'root' not in raw:
+    if ('encode' in raw or 'decode' in raw or 'key' in raw or 'complete' in raw or 'dump' in raw or 'deltaEncode' in raw or 'deltaDecode' in raw) and 'root' not in raw:
         raise InvalidDocument('Encoding requires a root')
     external_inputs(raw)
     if 'encodeBuffer' in raw and 'baseline' in raw:
@@ -130,6 +130,7 @@ def prepare(case):
         'decode': hexadecimal(raw['decode']) if 'decode' in raw else None,
         'decodeLimit': positive(raw['decodeLimit']) if 'decodeLimit' in raw else None,
         'key': hexadecimal(raw['key']) if 'key' in raw else None,
+        'complete': input_value(raw['complete']) if 'complete' in raw else None,
         'dump': hexadecimal(raw['dump']) if 'dump' in raw else None,
         'dumpBaseline': hexadecimal(raw['dumpBaseline']) if 'dumpBaseline' in raw else None,
         'deltaEncode': delta_input(raw['deltaEncode'], 'record') if 'deltaEncode' in raw else None,
@@ -141,7 +142,7 @@ def prepare(case):
     }
     closed(case.expected, {'gesBlock', 'schema'}, 'schema expectation')
     expected = case.expected.get('schema')
-    closed(expected, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'dump', 'description', 'document', 'readDocument', 'network'}, 'schema result')
+    closed(expected, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'completed', 'dump', 'description', 'document', 'readDocument', 'network'}, 'schema result')
     if not expected:
         raise InvalidDocument('Schema expectation requires a result')
     if 'error' in expected:
@@ -215,6 +216,19 @@ def prepare(case):
             positive(expected['decoded']['byteCount'])
     if 'key' in expected and (type(expected['key']) is not int or request['key'] is None):
         raise InvalidDocument('A key expectation requires key data')
+    if 'completed' in expected:
+        if request['complete'] is None:
+            raise InvalidDocument('A completion expectation requires a message to complete')
+        closed(expected['completed'], {'value', 'bytes', 'error'}, 'completion result')
+        if 'error' in expected['completed']:
+            if len(expected['completed']) != 1:
+                raise InvalidDocument('A completion error stands alone')
+            wire_error(expected['completed']['error'])
+        elif set(expected['completed']) != {'value', 'bytes'}:
+            raise InvalidDocument('A completion has the completed message and its strict encoding')
+        else:
+            value(expected['completed']['value'])
+            hexadecimal(expected['completed']['bytes'])
     if 'description' in expected and not request['describe']:
         raise InvalidDocument('A description expectation requires describe')
     if 'dump' in expected:
@@ -269,7 +283,7 @@ def compare(case, observed):
     if set(observed) != {'status', 'schema'} or observed['status'] != 'ok':
         raise InvalidDocument('Invalid schema API outcome')
     actual = observed['schema']
-    closed(actual, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'dump', 'description', 'document', 'readDocument', 'network'}, 'schema observation')
+    closed(actual, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'completed', 'dump', 'description', 'document', 'readDocument', 'network'}, 'schema observation')
     expected = case.expected['schema']
     differences = []
     def differ(path, wanted, seen):
@@ -306,6 +320,15 @@ def compare(case, observed):
         elif not isinstance(seen, dict) or 'value' not in seen or seen.get('byteCount') != wanted['byteCount'] \
                 or not numeric_checks.equal(value(wanted['value']), input_value(seen['value']), numeric_checks.options(case)):
             differ('decoded', wanted, seen)
+    if 'completed' in expected:
+        seen = actual.get('completed')
+        wanted = expected['completed']
+        if 'error' in wanted:
+            if not isinstance(seen, dict) or not contains(wanted['error'], seen.get('error')):
+                differ('completed', wanted, seen)
+        elif not isinstance(seen, dict) or 'value' not in seen or seen.get('bytes') != wanted['bytes'] \
+                or not numeric_checks.equal(value(wanted['value']), input_value(seen['value']), numeric_checks.options(case)):
+            differ('completed', wanted, seen)
     if 'document' in expected:
         seen = actual.get('document')
         wanted = expected['document']

@@ -248,12 +248,13 @@ internal static partial class GesSwiftEmitter
         code.Blank();
         code.Line(type.IsItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.");
         code.Line($"{access}init() {{}}");
+        ArgumentInitializer(code, type, access);
         Methods(code, type, access);
         if (type.IsClass && (type.Kind == GesSchemaKind.Schema || type.IsItem)) Sharing(code, type, stored);
         var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;
         if (deltas) SameHelpers(code, type);
         Extras(code, type, access, deltas, context.Elements.Contains(type.Name));
-        if (context.Values && !type.IsItem) ValueMembers(code, type, access, context.Holder, context.SchemaSet);
+        if (context.Values && !type.IsItem) ValueMembers(code, type, access, context.Holder, context.SchemaSet, GesCSharpEmitter.Lenient(type.Layout, context.Layout));
         foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
     }
@@ -618,7 +619,7 @@ internal static partial class GesSwiftEmitter
         read.Add("}");
         code.Blank();
         PublicMethods(code, access, type.MembersAreClasses ? "" : "mutating ", write, read, "message");
-        if (context.Values) ValueMembers(code, type, access, context.Holder, context.SchemaSet);
+        if (context.Values) ValueMembers(code, type, access, context.Holder, context.SchemaSet, GesCSharpEmitter.Lenient(type.Layout, context.Layout));
         MessageCases(code, type, access);
         code.Blank();
         code.Line("/// The messages of the set, in declared order.");

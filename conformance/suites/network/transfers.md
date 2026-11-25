@@ -35,7 +35,7 @@ Ten zero bytes compress to a shorter Deflate stream; the header carries compress
 gesBlock: case
 id: compressed-transfer
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   link: "none"
@@ -84,7 +84,7 @@ A receiver that does not accept Deflate gets the data with compression `0`; so d
 gesBlock: case
 id: uncompressed-transfer
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   clientOptions: {"deflateTransfers": false}
@@ -133,7 +133,7 @@ Empty data travels uncompressed with size `0` and the hash of no bytes.
 gesBlock: case
 id: empty-transfer
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   link: "none"
@@ -177,7 +177,7 @@ Transfers of 32767, 32768 and 32769 bytes arrive intact over a loopback link.
 gesBlock: case
 id: window-transfers
 networkApi:
-  sources: ["wire schema :Pack as { data: :List(:Number integer between 0 and 255) max 200000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Files as {\n  client sends :Commands reliable\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :Pack as { data: :List(:Number integer between 0 and 255) max 200000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Files as {\n  client sends Commands reliable\n  server sends :Pack bulk\n}\n"]
   network: "Files"
   token: ""
   steps:
@@ -226,7 +226,7 @@ A transfer larger than a packet travels in fragments and arrives intact; both si
 gesBlock: case
 id: large-transfer
 networkApi:
-  sources: ["wire schema :Pack as { data: :List(:Number integer between 0 and 255) max 200000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Files as {\n  client sends :Commands reliable\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :Pack as { data: :List(:Number integer between 0 and 255) max 200000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Files as {\n  client sends Commands reliable\n  server sends :Pack bulk\n}\n"]
   network: "Files"
   token: ""
   options: {"transport": "stream"}
@@ -267,7 +267,7 @@ Data above the smaller transfer limit of both sides is `messageTooLarge`; queued
 gesBlock: case
 id: sender-limit
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   clientOptions: {"maxTransferBytes": 4}
@@ -311,7 +311,7 @@ The server sends four bytes, which arrive altered. A size above the receiver's t
 gesBlock: case
 id: receiver-too-large
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   clientOptions: {"maxTransferBytes": 4}
@@ -368,7 +368,7 @@ Altered data whose SHA-256 hash differs from the header is cancelled with `netwo
 gesBlock: case
 id: corrupt-hash
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   clientOptions: {"maxTransferBytes": 4}
@@ -425,7 +425,7 @@ An altered header with a compression other than `0` and `1` is cancelled with `n
 gesBlock: case
 id: unknown-compression
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   clientOptions: {"maxTransferBytes": 4}
@@ -482,7 +482,7 @@ A transfer cancelled before it is sent never travels, but the peer still receive
 gesBlock: case
 id: cancel-unsent
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   link: "none"
@@ -534,7 +534,7 @@ The host may name its own code, which the peer receives.
 gesBlock: case
 id: cancel-code
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   link: "none"
@@ -580,7 +580,7 @@ Only a bulk route this side sends can be cancelled, with a valid code; an unknow
 gesBlock: case
 id: cancel-arguments
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   link: "none"
@@ -631,7 +631,7 @@ A receiver cancels only a transfer the sender started: the server gave its first
 gesBlock: case
 id: cancel-unknown-transfer
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   link: "none"
@@ -675,7 +675,7 @@ Over datagrams the cancel frame reaches the receiver, which skips the cancelled 
 gesBlock: case
 id: cancel-datagram
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: ""
   options: {"transport": "datagram"}

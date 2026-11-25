@@ -27,6 +27,7 @@ extension GesCSharpEmitter {
     }
 
     static func modelMembers(_ code: inout Code, _ type: GesPlanType, _ model: GesModelType, _ conversion: ModelConversion) throws(GesGeneratorError) {
+        if type.kind == .messages { return try setModelMembers(&code, type, model, conversion) }
         let name = conversion.qualifier + model.name
         let fields = GesModelPlanner.fields(model)
         code.blank()
@@ -45,6 +46,7 @@ extension GesCSharpEmitter {
             guard let match = fields.first(where: { $0.field.name == field.layout.name }) else { throw unconvertible(type, field.layout.name) }
             toModelField(&code, field, match, model.name, "this", "", "model.\(match.base)", conversion)
         }
+        for tag in type.tags { code.line("model.\(try tagField(type, fields, tag.tag).base) = \(tag.base);") }
         code.line("return model;")
         code.close()
         code.blank()
@@ -55,6 +57,72 @@ extension GesCSharpEmitter {
         code.open("{")
         code.line("if (model is null) throw new global::System.ArgumentNullException(nameof(model));")
         code.line("if (!__modelMatches) throw new global::System.InvalidOperationException(\"The model type \(model.name) was generated from another state of the schema than this wire record.\");")
+        conversion.reset()
+        for field in type.fields {
+            let match = fields.first { $0.field.name == field.layout.name }!
+            fromModelField(&code, field, match, model.name, "this", "", "model.\(match.base)", conversion)
+        }
+        for tag in type.tags { code.line("\(tag.base) = model.\(try tagField(type, fields, tag.tag).base);") }
+        code.close()
+    }
+
+    // The model's Boolean of a message's tag.
+    private static func tagField(_ type: GesPlanType, _ fields: [GesModelPlanField], _ tag: String) throws(GesGeneratorError) -> GesModelPlanField {
+        guard let field = fields.first(where: { $0.tag && $0.field.name == tag }) else { throw unconvertible(type, "#" + tag) }
+        return field
+    }
+
+    // A wire message set that is also a model set converts its parameters as fields and its selected member as the case.
+    private static func setModelMembers(_ code: inout Code, _ type: GesPlanType, _ model: GesModelType, _ conversion: ModelConversion) throws(GesGeneratorError) {
+        let name = conversion.qualifier + model.name
+        let fields = GesModelPlanner.fields(model)
+        code.blank()
+        code.line("// Whether the model type was generated from the same schema; generated code of another schema state never converts.")
+        code.line("private static readonly bool __modelMatches = \(name).SchemaHash == SchemaHash;")
+        code.blank()
+        code.line("/// <summary>Creates the model of this set, with its parameters and the case of the selected message, field by field without GES values.</summary>")
+        code.line("/// <returns>The model.</returns>")
+        code.line("/// <exception cref=\"global::System.InvalidOperationException\">The model type was generated from another state of the schema.</exception>")
+        code.line("/// <exception cref=\"GesWireException\"><see cref=\"Selected\"/> names no message of the set.</exception>")
+        code.line("public \(type.membersAreClasses ? "" : "readonly ")\(name) ToModel()")
+        code.open("{")
+        code.line("if (!__modelMatches) throw new global::System.InvalidOperationException(\"The model type \(model.name) was generated from another state of the schema than this wire record.\");")
+        code.line("var model = new \(name)(Selected switch")
+        code.open("{")
+        for (member, _) in type.memberPairs { code.line("Member.\(member) => new \(name).Case.\(member)(\(member).ToModel()),") }
+        code.line("_ => throw new GesWireException(GesWireException.OutOfRange, \"\"),")
+        code.close("});")
+        conversion.reset()
+        for field in type.fields {
+            guard let match = fields.first(where: { $0.field.name == field.layout.name }) else { throw unconvertible(type, field.layout.name) }
+            toModelField(&code, field, match, model.name, "this", "", "model.\(match.base)", conversion)
+        }
+        code.line("return model;")
+        code.close()
+        code.blank()
+        code.line("/// <summary>Fills this set from a model, its parameters and the message of its case, field by field without GES values; the values are checked when the set is written.</summary>")
+        code.line("/// <param name=\"model\">The model.</param>")
+        code.line("/// <exception cref=\"global::System.InvalidOperationException\">The model type was generated from another state of the schema.</exception>")
+        code.line("public void CopyFrom(\(name) model)")
+        code.open("{")
+        code.line("if (model is null) throw new global::System.ArgumentNullException(nameof(model));")
+        code.line("if (!__modelMatches) throw new global::System.InvalidOperationException(\"The model type \(model.name) was generated from another state of the schema than this wire record.\");")
+        code.line("switch (model.Message)")
+        code.open("{")
+        for (member, _) in type.memberPairs {
+            let local = "@" + GesSchemaPlanner.camel(member)
+            code.line("case \(name).Case.\(member) \(local):")
+            code.indent()
+            code.line("Selected = Member.\(member);")
+            code.line("\(member).CopyFrom(\(local).Value);")
+            code.line("break;")
+            code.dedent()
+        }
+        code.line("default:")
+        code.indent()
+        code.line("throw new global::System.ArgumentNullException(nameof(model));")
+        code.dedent()
+        code.close()
         conversion.reset()
         for field in type.fields {
             let match = fields.first { $0.field.name == field.layout.name }!

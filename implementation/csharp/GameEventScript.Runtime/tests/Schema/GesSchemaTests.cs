@@ -48,7 +48,7 @@ public sealed class GesSchemaTests
     [TestMethod]
     public void MessageSetMembersCarryTheSetHash()
     {
-        var set = GesSchemaSet.Parse("message Hit(target: :Number integer between 0 and 15)\nmessage Died(target: :Number integer between 0 and 15)\nmessages :Combat as (Hit, Died)\n");
+        var set = GesSchemaSet.Parse("message Hit(target: :Number integer between 0 and 15)\nmessage Died(target: :Number integer between 0 and 15)\nmessages Combat as (Hit, Died)\n");
         var combat = set.Schema("Combat").Bind();
         var member = combat.Member("Hit");
         Assert.AreEqual(combat.Hash, member.Hash);

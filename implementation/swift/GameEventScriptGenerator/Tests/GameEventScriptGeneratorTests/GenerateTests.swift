@@ -60,7 +60,7 @@ final class GenerateTests: XCTestCase {
 
     func testCaseFieldsOfTypedEndsStayDistinct() throws {
         // Message-set roots Foo_Bar with Baz and Foo with Bar_Baz would share one case field if its parts joined with one `_`.
-        let source = "wire messages :Foo_Bar as (Baz, Qux)\nwire messages :Foo as (Bar_Baz, Qux)\nmessage Baz()\nmessage Qux()\nmessage Bar_Baz()\n\nnetwork :Net as {\n  client sends :Foo_Bar reliable\n  client sends :Foo reliable\n}\n"
+        let source = "wire messages Foo_Bar as (Baz, Qux)\nwire messages Foo as (Bar_Baz, Qux)\nmessage Baz()\nmessage Qux()\nmessage Bar_Baz()\n\nnetwork :Net as {\n  client sends Foo_Bar reliable\n  client sends Foo reliable\n}\n"
         let code = try generate(source, "Net", .csharp)
         XCTAssertTrue(code.contains("__case_foo_Bar__Baz"))
         XCTAssertTrue(code.contains("__case_foo__Bar_Baz"))
@@ -288,7 +288,7 @@ final class GenerateTests: XCTestCase {
     func testStorageMakesClassesAndMessagesGetTagsAndSets() throws {
         let source =
             "schema :Cell as {\n  x: :Boolean\n}\nschema :S as {\n  name: :Text max 4\n  cells: :List(:Cell) max 2\n  words: :List(:Text max 2) max 2\n  heat: :Number optional\n}\n"
-            + "message Hit(target: :Number integer between 0 and 9) tags (#critical)\nmessage Miss()\nmessages :Events as (Hit, Miss)\n"
+            + "message Hit(target: :Number integer between 0 and 9) tags (#critical)\nmessage Miss()\nmessages Events as (Hit, Miss)\n"
         let set = try GesSchemaSet(parsing: source)
         let csharp = try GesSchemaGenerator.generate(set, roots: ["S", "Events"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions())
         XCTAssertTrue(csharp.contains("public sealed partial class S"))

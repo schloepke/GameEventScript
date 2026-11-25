@@ -383,6 +383,8 @@ enum GesSchemaLayoutBuilder {
             type.members = schema.members.map { typeName($0, messageSuffix) }
             type.memberNames = schema.members.map(\.name)
             type.memberWidth = bound.memberWidth
+            type.fields = fields(schema, bound)
+            for field in type.fields { collect(field, &depends) }
             for member in bound.members {
                 for field in fields(member.schema, member) { collect(field, &depends) }
             }

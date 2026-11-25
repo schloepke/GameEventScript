@@ -20,4 +20,4 @@ schema :Bot as {
 
 message Hit(target: :Number integer between 0 and 65535, _ damage: :Number integer between 0 and 1000) tags (#critical, #splash)
 message Died(target: :Number integer between 0 and 65535)
-messages :Combat as (Hit, Died)
+messages Combat as (Hit, Died)

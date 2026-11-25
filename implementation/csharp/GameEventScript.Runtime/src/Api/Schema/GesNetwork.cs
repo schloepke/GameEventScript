@@ -171,9 +171,12 @@ internal sealed partial class GesFileScope
             for (var index = 0; index < routes.Length; index++)
             {
                 var route = syntax.Routes[index];
-                // A route names a message without a colon and a schema or message set with one.
+                // A route names a message or message set without a colon and a schema with one.
                 if (!(route.IsMessage ? messages : all).TryGetValue(route.Root, out var root))
-                    throw Error(Code.UnknownName, route.RootOffset, route.IsMessage ? $"Message '{route.Root}' is not declared." : $"':{route.Root}' is no declared schema or message set.");
+                    throw Error(Code.UnknownName, route.RootOffset, route.IsMessage ? $"Message or message set '{route.Root}' is not declared."
+                        : messages.TryGetValue(route.Root, out var set) && set.Kind == GesSchemaKind.Messages
+                            ? $"':{route.Root}' is no declared schema; a message set is named without ':', as '{route.Root}'."
+                            : $"':{route.Root}' is no declared schema.");
                 if (root.Syntax.WireGroup is null)
                     throw Error(Code.InvalidRoute, route.RootOffset, $"'{route.Root}' has no wire role.");
                 if (root.Abstract) throw Error(Code.InvalidRoute, route.RootOffset, $"'{route.Root}' is abstract.");

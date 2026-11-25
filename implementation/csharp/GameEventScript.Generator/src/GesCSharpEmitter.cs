@@ -140,21 +140,12 @@ internal static partial class GesCSharpEmitter
             foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
         if (!type.IsItem && context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
-        foreach (var field in type.Fields)
-        {
-            names.Add((field.Base, "the field " + field.Layout.Name));
-            if (field.Optional) names.Add(("Has" + field.Base, "the presence of " + field.Layout.Name));
-            if (field.Optional && Plain(field.Value)) names.Add((field.Base + "Optional", "the optional value of " + field.Layout.Name));
-            Nested(field.Value, names, field.Layout.Name);
-            if (IsPooledList(field)) names.Add(("Set" + field.Base + "Count", "the element count of " + field.Layout.Name));
-            if (IsTextList(field)) names.Add((field.Base + "Values", "the texts of " + field.Layout.Name));
-        }
-
+        FieldNames(type, names);
         foreach (var (tag, name, _) in type.Tags) names.Add((name, "the tag #" + tag));
         if (!type.IsItem)
             foreach (var constant in type.Layout.Constants) names.Add((GesSchemaPlanner.Pascal(constant.Name), "the let " + constant.Name));
         if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: false, names);
-        var model = type.IsItem || type.Kind != GesSchemaKind.Schema ? null : context.Models?.Type(type.Name);
+        var model = type.IsItem ? null : context.Models?.Type(type.Name);
         if (model is not null) names.Add(("ToModel", "the generated member ToModel"));
         GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
 
@@ -165,11 +156,7 @@ internal static partial class GesCSharpEmitter
         if (!type.IsItem)
         {
             Constants(code, type.Layout);
-            code.Blank();
-            code.Line("internal static readonly string[] __paths =");
-            code.Open("{");
-            foreach (var path in type.Paths) code.Line(Quote(path) + ",");
-            code.Close("};");
+            Paths(code, type);
         }
 
         var first = type.IsItem;
@@ -198,6 +185,30 @@ internal static partial class GesCSharpEmitter
         if (model is not null) ModelMembers(code, type, model, context.Models!);
         foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
+    }
+
+    // The paths of a type's nodes in node order, which errors name.
+    private static void Paths(GesSchemaPlanner.Code code, GesPlanType type)
+    {
+        code.Blank();
+        code.Line("internal static readonly string[] __paths =");
+        code.Open("{");
+        foreach (var path in type.Paths) code.Line(Quote(path) + ",");
+        code.Close("};");
+    }
+
+    // The members that a type's fields declare, for the collision check.
+    private static void FieldNames(GesPlanType type, List<(string, string)> names)
+    {
+        foreach (var field in type.Fields)
+        {
+            names.Add((field.Base, "the field " + field.Layout.Name));
+            if (field.Optional) names.Add(("Has" + field.Base, "the presence of " + field.Layout.Name));
+            if (field.Optional && Plain(field.Value)) names.Add((field.Base + "Optional", "the optional value of " + field.Layout.Name));
+            Nested(field.Value, names, field.Layout.Name);
+            if (IsPooledList(field)) names.Add(("Set" + field.Base + "Count", "the element count of " + field.Layout.Name));
+            if (IsTextList(field)) names.Add((field.Base + "Values", "the texts of " + field.Layout.Name));
+        }
     }
 
     private static void Constants(GesSchemaPlanner.Code code, GesLayoutType layout)
@@ -434,6 +445,13 @@ internal static partial class GesCSharpEmitter
             }
         }
 
+        FieldMethods(code, type);
+    }
+
+    // Writes and reads a type's fields in wire order, at the paths that start at `at`.
+    private static void FieldMethods(GesSchemaPlanner.Code code, GesPlanType type)
+    {
+        var self = type.IsClass || type.Kind == GesSchemaKind.Messages && type.MembersAreClasses ? "" : "readonly ";
         code.Blank();
         code.Line($"internal {self}void __WriteFields(ref GesBitWriter writer, string[] paths, int at{LevelParameter(type)})");
         code.Open("{");
@@ -532,13 +550,22 @@ internal static partial class GesCSharpEmitter
         if (context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var member in type.MemberNames) names.Add((member, "the member " + member));
+        FieldNames(type, names);
         GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
         var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);
         var last = Unsigned((ulong)type.Members.Count - 1);
-        code.Line($"/// <summary>The message set <c>:{type.Layout.Declared}</c>: one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.</summary>");
+        var parameters = type.Fields.Count > 0;
+        code.Line($"/// <summary>The message set <c>{type.Layout.Declared}</c>: {(parameters ? "its parameters and " : "")}one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.</summary>");
         code.Line(type.MembersAreClasses ? $"{access} sealed partial class {type.Name}" : $"{access} partial struct {type.Name}");
         code.Open("{");
         Constants(code, type.Layout);
+        if (parameters)
+        {
+            Paths(code, type);
+            foreach (var field in type.Fields) Members(code, field, false);
+            foreach (var field in type.Fields) ListAccess(code, field);
+        }
+
         code.Blank();
         code.Line("/// <summary>The message this record holds.</summary>");
         code.Line("public Member Selected;");
@@ -550,8 +577,16 @@ internal static partial class GesCSharpEmitter
             code.Line($"public {record} {member}{(type.MembersAreClasses ? $" = new {record}();" : ";")}");
         }
 
-        var write = new List<string> { $"if ((ulong)Selected > {last}) throw new GesWireException(GesWireException.OutOfRange, \"\");", $"writer.Write((ulong)Selected, {width});", "switch (Selected)", "{" };
-        var read = new List<string> { $"var index = reader.Read({width}, \"\");" };
+        var write = new List<string> { $"if ((ulong)Selected > {last}) throw new GesWireException(GesWireException.OutOfRange, \"\");" };
+        var read = new List<string>();
+        if (parameters)
+        {
+            write.Add("__WriteFields(ref writer, __paths, 0);");
+            read.Add("__ReadFields(ref reader, __paths, 0);");
+        }
+
+        write.AddRange([$"writer.Write((ulong)Selected, {width});", "switch (Selected)", "{"]);
+        read.Add($"var index = reader.Read({width}, \"\");");
         if ((ulong)type.Members.Count - 1 < Full(type.Layout.MemberWidth)) read.Add($"if (index > {last}) throw new GesWireException(GesWireException.InvalidIndex, \"\");");
         read.AddRange(["Selected = (Member)index;", "switch (Selected)", "{"]);
         // The paths are static members of the message type, whose name differs from the member's with a message suffix.
@@ -566,7 +601,9 @@ internal static partial class GesCSharpEmitter
         read.Add("}");
         code.Blank();
         PublicMethods(code, type.MembersAreClasses ? "" : "readonly ", write, read, "message");
+        if (parameters) FieldMethods(code, type);
         if (context.Values) ValueMembers(code, type, context.Holder, Lenient(type.Layout, context.Layout));
+        if (context.Models?.Type(type.Name) is { } model) ModelMembers(code, type, model, context.Models);
         code.Blank();
         MessageCases(code, type, context);
         code.Blank();
@@ -580,6 +617,7 @@ internal static partial class GesCSharpEmitter
         }
 
         code.Close();
+        foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
     }
 
@@ -989,7 +1027,9 @@ internal static partial class GesCSharpEmitter
 
         internal GesPlanType Plan { get; } = plan;
 
-        internal bool IsSet => Plan.Kind == GesSchemaKind.Messages;
+        // A message set without parameters, whose routes take and hand its cases; one with parameters is sent as its record,
+        // which holds them.
+        internal bool IsSet => Plan.Kind == GesSchemaKind.Messages && Plan.Fields.Count == 0;
     }
 
     // The constants of a network, its hash, the index of each route and the rate of each topic that has one, a function

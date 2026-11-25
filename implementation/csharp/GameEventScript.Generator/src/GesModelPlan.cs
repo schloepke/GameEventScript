@@ -15,6 +15,9 @@ internal sealed class GesModelPlanField
     internal GesModelField Field = new();
     internal string Base = "";
     internal GesModelPlanValue Value = new();
+
+    // Whether the field is the Boolean of a message's tag, which its message carries as the tag rather than an argument.
+    internal bool Tag;
 }
 
 internal sealed class GesModelPlanValue
@@ -162,6 +165,13 @@ internal static class GesModelPlanner
             var value = Value(field.Value, member, "");
             value.Nullable |= field.Optional;
             fields.Add(new GesModelPlanField { Field = field, Base = member, Value = value });
+        }
+
+        // A message holds a Boolean per tag after its arguments, false unless given.
+        foreach (var tag in type.Tags)
+        {
+            var field = new GesModelField { Name = tag, Path = "#" + tag, Default = new GesLayoutDefault { Kind = GesSchemaDefaultKind.Boolean }, Value = new GesModelValue { Kind = GesModelKind.Boolean } };
+            fields.Add(new GesModelPlanField { Field = field, Base = GesSchemaPlanner.Pascal(tag), Value = new GesModelPlanValue { Kind = GesModelKind.Boolean, Model = field.Value }, Tag = true });
         }
 
         return fields;

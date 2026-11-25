@@ -7,12 +7,12 @@ import XCTest
 
 final class NetworkSecurityTests: XCTestCase {
     private static let source = """
-        wire messages :Commands as (Move)
+        wire messages Commands as (Move)
         message Move(x: :Number integer between 0 and 255)
 
         network :Game as {
-          client sends :Commands reliable
-          server sends :Commands reliable
+          client sends Commands reliable
+          server sends Commands reliable
         }
         """
 

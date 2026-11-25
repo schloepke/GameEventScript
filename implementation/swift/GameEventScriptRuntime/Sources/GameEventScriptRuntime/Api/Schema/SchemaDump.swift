@@ -22,6 +22,8 @@ public enum GesSchemaDump {
             do throws(GesWireError) {
                 var current = schema
                 if schema.kind == .messages {
+                    // A set's parameters come before the index of its message.
+                    try walk(&reader, schema, 0, schema.nodes.count, &output)
                     let member = try reader.readMember()
                     current = schema.members[member]
                     output += "message \(current.name) index=\(member)\n"

@@ -466,6 +466,8 @@ internal static class GesSchemaLayoutBuilder
             }
 
             type.MemberWidth = bound.MemberWidth;
+            type.Fields = Fields(schema, bound);
+            foreach (var field in type.Fields) Collect(field, depends);
             foreach (var member in bound.Members)
                 foreach (var field in Fields(member.Schema, member)) Collect(field, depends);
         }

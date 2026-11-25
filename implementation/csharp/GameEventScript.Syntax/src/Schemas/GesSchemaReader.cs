@@ -120,7 +120,7 @@ internal sealed partial class GesSchemaSourceReader
         if (wire is not null || model is not null)
         {
             if (word is "constant" or "parameter" or "tags" or "network") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
-            if (model is not null && word is "message" or "messages") throw new SyntaxFailure(offset, "A model root is a schema.", Code.InvalidRole);
+            if (model is not null && word is "message") throw new SyntaxFailure(offset, "A model root is a schema or message set.", Code.InvalidRole);
         }
         else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages" or "tags" or "network") && AtRoleEnd())
             throw new SyntaxFailure(offset, $"'{word}' is no role; a root is marked wire or model.", Code.InvalidRole);
@@ -247,8 +247,30 @@ internal sealed partial class GesSchemaSourceReader
             }
             case "messages":
             {
-                var name = ReadTypeName();
                 SkipSpaces();
+                if (_position < _text.Length && _text[_position] == ':')
+                    throw new SyntaxFailure(_position, "A message set is named without ':', as a message is: messages Name as (...).");
+                var name = ReadName(GesText.IsMessageName, "message set name");
+                SkipSpaces();
+                var parameters = new List<GesSchemaFieldSyntax>();
+                if (Consume('('))
+                {
+                    SkipTrivia();
+                    while (!Consume(')'))
+                    {
+                        if (parameters.Count > 0)
+                        {
+                            Expect(',');
+                            SkipTrivia();
+                        }
+
+                        parameters.Add(ReadField(message: true));
+                        SkipTrivia();
+                    }
+
+                    SkipSpaces();
+                }
+
                 ExpectWord("as");
                 SkipTrivia();
                 Expect('(');
@@ -263,7 +285,7 @@ internal sealed partial class GesSchemaSourceReader
                 }
                 while (Consume(','));
                 Expect(')');
-                return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Messages, Name = name, Offset = offset, Members = members.ToArray(), MemberOffsets = offsets.ToArray() };
+                return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Messages, Name = name, Offset = offset, Fields = parameters.ToArray(), Members = members.ToArray(), MemberOffsets = offsets.ToArray() };
             }
             case "tags":
             {

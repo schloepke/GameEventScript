@@ -14,9 +14,9 @@ internal static partial class GesCSharpEmitter
     // Whether a message declares an argument default.
     internal static bool HasArgumentDefaults(GesLayoutType layout) => layout.Kind == GesSchemaKind.Message && layout.Fields.Exists(field => field.Default is not null);
 
-    // Whether a message or a member of a message set declares an argument default.
+    // Whether a message, a message set's parameter or a member of a message set declares an argument default.
     internal static bool Lenient(GesLayoutType type, GesSchemaLayout layout) => type.Kind == GesSchemaKind.Messages
-        ? type.Members.Exists(member => layout.Types.Find(candidate => candidate.Name == member) is { } found && HasArgumentDefaults(found))
+        ? type.Fields.Exists(field => field.Default is not null) || type.Members.Exists(member => layout.Types.Find(candidate => candidate.Name == member) is { } found && HasArgumentDefaults(found))
         : HasArgumentDefaults(type);
 
     // The lenient read, which fills left-out arguments as GesSchemaValues.CompleteMessage does and then reads the message.

@@ -22,6 +22,14 @@ struct GesModelLayout {
 struct GesModelType {
     var name = ""
     var hash: UInt64 = 0
+
+    // A schema, a message reached by a model set or a model set; the name a schema set looks it up by.
+    var kind = GesSchemaKind.schema
+    var lookup = ""
+
+    // The tags of a message and the members of a set, in declared order.
+    var tags: [String] = []
+    var members: [String] = []
     var fields: [GesModelField] = []
     var constants: [GesLayoutConstant] = []
     /// The schemas it takes unchanged with `with`, whose protocols or interfaces it adopts, in declared order.
@@ -50,6 +58,10 @@ final class GesModelField {
     var key = false
     var defaultValue: GesLayoutDefault?
     var value = GesModelValue()
+
+    // Whether a message argument is written without a label, so that its message carries the label `_`.
+    var unlabeled = false
+
     // Whether the member takes the suffix Value because a schema lends the field with `with` and the field is named like that
     // schema or one that takes it, so that the interface or protocol and every type taking it name it alike.
     var renamed = false
@@ -95,27 +107,32 @@ enum GesModelLayoutBuilder {
         for root in roots {
             let schema = try set.schema(root)
             if rootNames.contains(schema.name) { continue }
-            if schema.kind != .schema { throw GesGeneratorError(GesGeneratorError.usage, "The model root '\(root)' is no schema.") }
+            if schema.kind == .message {
+                throw GesGeneratorError(GesGeneratorError.usage, "The model root '\(root)' is a message; a model root is a schema or message set.")
+            }
             if schema.isAbstract {
                 throw GesGeneratorError(GesGeneratorError.usage, "The model root '\(root)' is abstract; only its protocol is generated, where a model takes it.")
             }
             rootNames.append(schema.name)
-            reach(schema, &reached)
+            try reach(schema, &reached)
         }
         var types: [GesModelType] = []
         for name in reached.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) {
             let schema = reached[name]!
-            var type = GesModelType(name: schema.name, hash: schema.hash, constants: GesLayoutConstant.of(schema))
+            var type = GesModelType(name: schema.name, hash: schema.hash, kind: schema.kind, lookup: set.rootName(of: schema), constants: GesLayoutConstant.of(schema))
             type.computed = schema.computedFields
             if schema.packedWidth > 0 { type.packed = try GesSchemaLayoutBuilder.build(set, roots: [set.rootName(of: schema)], parameters: GesSchemaParameters()) }
             for info in schema.fields {
                 let field = try self.field(info.name, info.name, info.alternatives)
                 field.optional = info.isOptional
                 field.key = info.isKey
+                field.unlabeled = schema.kind != .schema && info.isUnlabeled
                 field.defaultValue = GesLayoutDefault.of(info)
                 type.fields.append(field)
             }
             type.takes = schema.takes.filter(\.isUnchanged).map(\.schema.name)
+            if schema.kind == .message { type.tags.append(contentsOf: schema.tags) }
+            type.members = schema.members.map(\.name)
             types.append(type)
         }
         var layout = GesModelLayout(roots: rootNames, types: types)
@@ -190,17 +207,33 @@ enum GesModelLayoutBuilder {
         }
     }
 
-    private static func reach(_ schema: GesSchema, _ reached: inout [String: GesSchema]) {
-        if reached[schema.name] != nil { return }
+    private static func reach(_ schema: GesSchema, _ reached: inout [String: GesSchema]) throws {
+        if let known = reached[schema.name] {
+            // Model types share one namespace: a message beside a schema of its name has no second type name.
+            if known === schema { return }
+            throw GesGeneratorError(
+                GesGeneratorError.nameCollision,
+                "The model types of \(describe(known)) and \(describe(schema)) are both named '\(schema.name)'; models have no message suffix."
+            )
+        }
         reached[schema.name] = schema
         for field in schema.fields {
-            for type in field.alternatives { reach(type, &reached) }
+            for type in field.alternatives { try reach(type, &reached) }
+        }
+        for member in schema.members { try reach(member, &reached) }
+    }
+
+    private static func describe(_ schema: GesSchema) -> String {
+        switch schema.kind {
+        case .message: "the message " + schema.name
+        case .messages: "the message set " + schema.name
+        default: "the schema :" + schema.name
         }
     }
 
-    private static func reach(_ type: GesSchemaType, _ reached: inout [String: GesSchema]) {
-        if let schema = type.schema { reach(schema, &reached) }
-        for element in type.element { reach(element, &reached) }
+    private static func reach(_ type: GesSchemaType, _ reached: inout [String: GesSchema]) throws {
+        if let schema = type.schema { try reach(schema, &reached) }
+        for element in type.element { try reach(element, &reached) }
     }
 
     private static func field(_ name: String, _ path: String, _ alternatives: [GesSchemaType]) throws -> GesModelField {
@@ -296,17 +329,24 @@ enum GesModelLayoutJson {
         json.number("model", Int64(GesModelLayout.version))
         json.strings("roots", layout.roots)
         json.beginArray("types")
+        // Only a generation with a model set tells its kinds of types apart, so that other layouts stay unchanged.
+        let kinds = layout.types.contains { $0.kind == .messages }
         for type in layout.types {
             json.beginObject()
             json.string("name", type.name)
+            if kinds { json.string("kind", type.kind == .message ? "message" : type.kind == .messages ? "messages" : "schema") }
             json.string("hash", GesSchemaLayoutJson.hex(type.hash))
             if let packed = type.packed?.type(type.name) {
                 json.number("packedWidth", Int64(packed.packedWidth))
                 json.number("packedBits", Int64(packed.packedBits))
             }
-            json.beginArray("fields")
-            for field in type.fields { self.field(&json, field, member: true) }
-            json.endArray()
+            if type.kind != .messages || !type.fields.isEmpty {
+                json.beginArray("fields")
+                for field in type.fields { self.field(&json, field, member: true) }
+                json.endArray()
+            }
+            if type.kind == .message { json.strings("tags", type.tags) }
+            if type.kind == .messages { json.strings("members", type.members) }
             GesSchemaLayoutJson.constants(&json, type.constants)
             GesSchemaLayoutJson.computed(&json, type.computed)
             if !type.takes.isEmpty { json.strings("takes", type.takes) }
@@ -338,6 +378,7 @@ enum GesModelLayoutJson {
         if member {
             json.boolean("optional", field.optional)
             json.boolean("key", field.key)
+            if field.unlabeled { json.boolean("unlabeled", true) }
             field.defaultValue?.write(&json)
         }
         json.key("type")

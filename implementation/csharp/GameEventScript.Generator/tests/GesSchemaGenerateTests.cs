@@ -108,7 +108,7 @@ public sealed class GesSchemaGenerateTests
     public void CaseFieldsOfTypedEndsStayDistinct()
     {
         // Message-set roots Foo_Bar with Baz and Foo with Bar_Baz would share one case field if its parts joined with one `_`.
-        const string source = "wire messages :Foo_Bar as (Baz, Qux)\nwire messages :Foo as (Bar_Baz, Qux)\nmessage Baz()\nmessage Qux()\nmessage Bar_Baz()\n\nnetwork :Net as {\n  client sends :Foo_Bar reliable\n  client sends :Foo reliable\n}\n";
+        const string source = "wire messages Foo_Bar as (Baz, Qux)\nwire messages Foo as (Bar_Baz, Qux)\nmessage Baz()\nmessage Qux()\nmessage Bar_Baz()\n\nnetwork :Net as {\n  client sends Foo_Bar reliable\n  client sends Foo reliable\n}\n";
         var code = Generate(source, "Net", GesSchemaLanguage.CSharp);
         StringAssert.Contains(code, "__case_foo_Bar__Baz");
         StringAssert.Contains(code, "__case_foo__Bar_Baz");
@@ -221,7 +221,7 @@ public sealed class GesSchemaGenerateTests
     public void StorageMakesClassesAndMessagesGetTagsAndSets()
     {
         const string source = "schema :Cell as {\n  x: :Boolean\n}\nschema :S as {\n  name: :Text max 4\n  cells: :List(:Cell) max 2\n  words: :List(:Text max 2) max 2\n  heat: :Number optional\n}\n"
-            + "message Hit(target: :Number integer between 0 and 9) tags (#critical)\nmessage Miss()\nmessages :Events as (Hit, Miss)\n";
+            + "message Hit(target: :Number integer between 0 and 9) tags (#critical)\nmessage Miss()\nmessages Events as (Hit, Miss)\n";
         var set = GesSchemaSet.Parse(source);
         var csharp = GesSchemaGenerator.Generate(set, ["S", "Events"], new GesSchemaParameters(), new GesSchemaGenerateOptions());
         StringAssert.Contains(csharp, "public sealed partial class S");

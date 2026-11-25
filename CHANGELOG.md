@@ -21,7 +21,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   generated type is `generate.nameCollision` (specs/Schemas.md#message-type-names).
 - Schema message arguments take `default <literal>` under the rules of field defaults; the default enters the canonical
   form and the hash, while the wire always carries every argument. `GesSchemaValues.CompleteMessage` (Swift
-  `completeMessage(_:_:)`) fills left-out arguments with their defaults and optional ones with `nothing`, reporting
+  `completeMessage(_:_:)`), for a `GesSchema` without binding as for a bound schema, fills left-out arguments with their defaults and optional ones with `nothing`, reporting
   `wire.missingField` or `wire.typeMismatch` otherwise; generated code with values offers it as `ReadMessageLenient`
   (Swift `read(lenientMessage:)`), and generated initializers take the defaults (specs/Schemas.md#lenient-read).
 - Generated models hold free data: a `:Map` field is a `GesDataMap` and a `:List` without an element type a
@@ -33,9 +33,23 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   Swift they are `Sendable`. Swift `GesValue`, `GesDataMap` and `GesDataList` are `Codable` as the value object of the
   V1 value JSON (specs/PublicApi.md#free-data).
 
+- Message sets take parameters: `messages DroneCommands(ids: :List(:DroneId) max 64 default []) as (MoveTo, Hold)`
+  writes the parameters before the member index, and its value form is a message named after the set with the
+  parameters and the argument `message` holding the carried message. Generated wire sets expose the parameters next to
+  the selected member (specs/Schemas.md#set-parameters).
+- `model(group) messages Name` generates a model set: a value type with the set's parameters and `Case`, model types
+  for the reached messages and conversions to and from Messages (Swift `toMessage()`, `init(message:)`,
+  `init(lenientMessage:)`; C# `ToMessage()`, `FromMessage`, `FromMessageLenient`). Two model sets that share members
+  convert into each other where the case fits (Swift `init?(_:)`, C# `From`) (specs/Schemas.md#model-message-sets).
+- Message arguments and set parameters accept the empty defaults `[]` for a List and `[:]` for a Map.
+
 ### Changed
+- Message sets move into the message namespace: `messages Name as (...)` declares a set without `:`, a route names it
+  as `client sends Name reliable`, and a set may no longer share its name with a message. The former spelling
+  `messages :Name` is `schema.syntax` with a hint, and a route or root naming a set with `:` is `schema.unknownName`
+  with a hint. A set without parameters keeps its canonical form, hash and bytes (specs/Schemas.md#declarations).
 - A network route that names a single message drops the `:` (`client sends Move reliable`); `:Name` in a route names
-  only a schema or message set, so the former `client sends :Move` is now `schema.unknownName`.
+  only a schema, so the former `client sends :Move` is now `schema.unknownName`.
 
 ## [0.6.0] — 2026-11-23
 

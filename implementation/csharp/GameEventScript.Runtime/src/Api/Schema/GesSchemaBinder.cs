@@ -555,10 +555,12 @@ internal static class GesSchemaBinder
                 largest = Math.Max(largest, members[index].MaxBitCount);
             }
 
+            // The set's parameters come first, then the member index and the message.
+            var own = BindNodes(root, parameters, hash, bindingHash);
             var width = BitLength((ulong)members.Length - 1);
-            var total = largest + width;
+            var total = own.MaxBitCount + largest + width;
             if (total > MaximumByteCount * 8) throw root.Scope.Error(Code.TooLarge, root.Offset, $"The largest encoding of '{root.Name}' exceeds {MaximumByteCount} bytes.");
-            return new GesBoundSchema(root.Public, root.Name, root.Kind, [], members, width, (total + 7) / 8, hash, bindingHash);
+            return new GesBoundSchema(root.Public, root.Name, root.Kind, own.Nodes, members, width, (total + 7) / 8, hash, bindingHash) { Labels = own.Labels, MaxBitCount = total };
         }
 
         return BindNodes(root, parameters, hash, bindingHash);
@@ -898,6 +900,7 @@ internal static class GesSchemaBinder
         var levels = new Dictionary<GesResolvedDeclaration, int>();
         if (root.Kind == GesSchemaKind.Messages)
         {
+            CheckEncodable(root, 0, known, levels);
             foreach (var member in root.Members) CheckEncodable(member, 0, known, levels);
             return;
         }

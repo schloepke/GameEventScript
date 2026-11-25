@@ -10,9 +10,9 @@ namespace GameEventScript.Tests.Native.Network;
 public sealed class GesNetworkCookiesTests
 {
     private const string Source = """
-        wire messages :Commands as (Move)
+        wire messages Commands as (Move)
         message Move(x: :Number integer between 0 and 255)
-        network :Game as { client sends :Commands reliable }
+        network :Game as { client sends Commands reliable }
         """;
 
     private const long Window = 10_000_000;

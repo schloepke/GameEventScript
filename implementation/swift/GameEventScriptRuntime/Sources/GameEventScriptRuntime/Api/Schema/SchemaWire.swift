@@ -114,8 +114,10 @@ public struct GesSchemaWriter {
     public mutating func selectMember(_ member: Int) throws(GesWireError) {
         if schema.kind != .messages { throw GesWireError(GesWireError.typeMismatch) }
         if member < 0 || member >= schema.members.count { throw GesWireError(GesWireError.outOfRange) }
+        if cursor != schema.nodes.count { throw GesWireError(GesWireError.missingField, schema.infos[cursor].path) }
         try put(UInt64(member), schema.memberWidth)
         schema = schema.members[member]
+        cursor = 0
     }
 
     /// Writes a Boolean field or a message tag.
@@ -361,9 +363,11 @@ public struct GesSchemaReader {
     /// - Throws: `GesWireError` when the data is invalid.
     public mutating func readMember() throws(GesWireError) -> Int {
         if schema.kind != .messages { throw GesWireError(GesWireError.typeMismatch) }
+        if cursor != schema.nodes.count { throw GesWireError(GesWireError.fieldOrder, schema.infos[cursor].path) }
         let index = try get(schema.memberWidth, -1)
         if index >= UInt64(schema.members.count) { throw GesWireError(GesWireError.invalidIndex) }
         schema = schema.members[Int(index)]
+        cursor = 0
         return Int(index)
     }
 

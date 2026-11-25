@@ -85,6 +85,14 @@ internal static class GesSchemaLayoutJson
 
         if (type.Kind == GesSchemaKind.Messages)
         {
+            // A set's parameters, only when it has any, so that the layout of a set without stays that of 0.6.0.
+            if (type.Fields.Count > 0)
+            {
+                json.BeginArray("fields");
+                foreach (var field in type.Fields) Field(json, field, member: true);
+                json.EndArray();
+            }
+
             json.Strings("members", type.MemberNames);
             json.Number("memberWidth", type.MemberWidth);
         }

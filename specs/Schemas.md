@@ -65,7 +65,7 @@ schema :Bot as {
 
 message Hit(target: :Number integer between 0 and 65535, _ damage: :Number integer between 0 and 1000) tags (#critical, #splash)
 message Died(target: :Number integer between 0 and 65535)
-messages :Combat as (Hit, Died)
+messages Combat as (Hit, Died)
 ```
 
 ### Grammar
@@ -82,7 +82,7 @@ schema      = "schema" ":" TypeName "as" "{" { field | let | with } "}"
 with        = "with" ":" TypeName [ "all" "optional" ] [ "without" "(" LowerName { "," LowerName } ")" ]
 let         = "let" LowerName "be" ( literal | "$" ConstantName )
 message     = "message" MessageName "(" [ argument { "," argument } ] ")" [ "tags" tagset ]
-messages    = "messages" ":" TypeName "as" "(" MessageName { "," MessageName } ")"
+messages    = "messages" MessageName [ "(" argument { "," argument } ")" ] "as" "(" MessageName { "," MessageName } ")"
 field       = LowerName ":" union [ "optional" | "key" ] [ "default" fallback | "computed" "by" expression ]
 argument    = [ "_" ] LowerName ":" union [ "optional" ] [ "default" fallback ]
 
@@ -110,7 +110,7 @@ constraints = [ "integer" ] [ range ] [ "step" value ] [ "delta" "within" value 
 range       = [ "wrapping" ] "between" value "and" value
 value       = literal | "$" ConstantName | LowerName
 maximum     = integer | LowerName
-fallback    = "true" | "false" | "#" TagName | value | record
+fallback    = "true" | "false" | "#" TagName | value | record | "[" "]"
 record      = "[" ":" "]" | "[" entry { "," entry } "]"
 entry       = LowerName ":" ( literal | "$" ConstantName | "true" | "false" | "#" TagName | record )
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
@@ -228,10 +228,14 @@ A source is a sequence of declarations in any order; a reference may come before
   and its name serves only the [field handle](#writer-and-reader) and the
   [description](#description). An argument may take a literal [default](#argument-defaults). A message can have no
   arguments. It can be a root, but it is not a type: a field cannot name it.
-- **`messages :Name as (A, B)`** declares a message set: a closed, ordered choice of one
+- **`messages Name as (A, B)`** declares a message set: a closed, ordered choice of one
   of the listed messages, at least one, each once. Its encoding starts with the index of the chosen
   message, so a receiver learns which message follows; see [messages](#messages). A set
-  can be a root and nothing else: it is not a type, and a message may belong to several sets.
+  can be a root and nothing else: it is not a type, and a message may belong to several sets. A set is
+  named like a message and without `:`, since it is something sent, not data. *Since: Unreleased — sets in the message
+  namespace.*
+- **`messages Name(ids: ...) as (A, B)`** gives a message set [parameters](#set-parameters), values
+  that accompany whichever message it carries, such as the units a command addresses. *Since: Unreleased.*
 - **`tags :Name as (#a, #b)`** names a closed tag set, each tag once. A field, argument, list element or union
   alternative of type `:Name` is the `:Tag(#a, #b)` written in place: the same constraints, encoding, values and
   [canonical form](#canonical-form), so the name belongs to no hash and renaming a set changes no bytes. A set
@@ -242,13 +246,16 @@ A source is a sequence of declarations in any order; a reference may come before
   which wire root in which delivery class. [GES network](Network.md#declaration) owns its rules, errors, binding and
   hash. A network is no type; only code generation takes it as a root. *Since: 0.6.0.*
 
-Schemas, message sets, tag sets and networks share one namespace across all sources; messages have a namespace of their
-own, so a message may take the name of a schema, message set, tag set or network. A message set lists messages and a
-[network route](Network.md#declaration) names a message without `:` (`client sends Move reliable`), while `:Name` always
-names a schema or message set. A root that the API or a tool names may be written plainly while only one of the two
-namespaces declares it; otherwise `:Name` selects the schema, message set or network, `Name()` the message, and the plain
-name is `schema.ambiguousName`. A name repeated within one namespace stays `schema.duplicateName`. *Since: Unreleased —
-message namespace.*
+Schemas, tag sets and networks share one namespace across all sources, the data namespace; messages and message sets
+share the other, the message namespace. `:Name` always names data and a plain name what is sent: a message set lists
+messages and a [network route](Network.md#declaration) names a message or message set without `:`
+(`client sends Move reliable`), a schema with it. So a message or message set may take the name of a schema, tag set or
+network, but a message set and a message of the same name are `schema.duplicateName`, as is any name repeated within one
+namespace. A root that the API or a tool names may be written plainly while only one of the two namespaces declares it;
+otherwise `:Name` selects the schema or network, `Name()` the message or message set, and the plain name is
+`schema.ambiguousName`. The spelling of 0.6.0, `messages :Name` and a route or tool naming a set with `:`, is
+`schema.syntax` and `schema.unknownName` respectively, each with a message that names the new spelling. *Since:
+Unreleased — message namespace.*
 
 A union alternative may carry a label, as in `units: :List(:Text max 64 | bind: :Loadout_UnitBind)`. Generated code
 names the alternative after its label instead of its type (`.bind`, C# `Bind`); the label changes no bytes, values,
@@ -265,23 +272,25 @@ A role marks a declaration as a root of a kind of [code generation](#tools), opt
 
 ```gess
 wire(world) schema :World as { tick: :Number integer between 0 and 1000000, bots: :List(:World_Bot) max 64 }
-wire(protocol) messages :GameEvents as (Hit, Died)
+wire(protocol) messages GameEvents as (Hit, Died)
+model(view) messages Orders as (Hit, Died)
 model(view) schema :WorldView as { tick: :Number integer, bots: :List(:BotView) }
 wire schema :Arena as { size: :Number integer between 1 and 64 }
 schema :World_Bot as { id: :Number integer between 0 and 255 key }
 ```
 
 - **`wire(group)`** makes a schema, message or message set a wire root of the group: code that writes, reads,
-  compares, quantizes and deltas its records. **`model(group)`** makes a schema a model root of the group: a plain value
-  type that is never encoded. A role without a group belongs to the group `default`. A group is a `LowerName`.
+  compares, quantizes and deltas its records. **`model(group)`** makes a schema or message set a model root of the group:
+  a plain value type that is never encoded. A model message set generates only its value part, its messages as model
+  parts; see [model message sets](#model-message-sets). *Since: Unreleased — model message sets.* A role without a group belongs to the group `default`. A group is a `LowerName`.
 - **Roles belong to roots.** A declaration without a role is a part: it is generated when a root reaches it, through
   fields, union alternatives, list elements or the members of a message set, and takes its form from that root. A part that
   a wire root and a model root both reach is generated in both forms, each in the output of its own generation.
 - **A marked declaration can also be a part.** A root of one group that another group's root reaches is generated as a part
   there and is no root of that group, so generating the group pulls in nothing else of the root's own group.
-- A declaration takes at most one `wire` and one `model` role, so `wire(world) model(view) schema :Arena` is both. A model
-  root is a schema; messages and message sets carry no data model of their own. A role on a constant or a parameter, `model`
-  on a message or message set, a word in the place of a role that is neither `wire` nor `model`, and a group that is no
+- A declaration takes at most one `wire` and one `model` role, so `wire(world) model(view) schema :Arena` and
+  `wire model messages Orders` are both. A model root is a schema or message set; a message is a model part only, reached
+  through a model set. A role on a constant or a parameter, `model` on a message, a word in the place of a role that is neither `wire` nor `model`, and a group that is no
   `LowerName` are `schema.invalidRole`; a second `wire` or `model` role is `schema.duplicateRole`.
 - **A wire root must be encodable.** Reading the sources reports `schema.notEncodable` for a wire root that reaches a
   document-only type, as far as it is decided without parameter values: the conditions and the order of
@@ -450,14 +459,46 @@ message Fire(count: :Number integer between 1 and 1024 default 1, mode: :FireMod
 ```
 
 - It follows the rules of a [literal default](#defaults): a number or file constant of the argument's unit, in its range
-  and on its step, `true` or `false`, or a tag of the set. A sibling, a record literal, a union argument and an argument
-  that is also `optional` take none and are `schema.invalidDefault`; so is a Text, Bytes, List or other argument without
-  a literal.
+  and on its step, `true` or `false`, a tag of the set, or an [empty default](#defaults), `[]` for a List and `[:]` for a
+  Map. A sibling, a record literal, a union argument and an argument that is also `optional` take none and are
+  `schema.invalidDefault`; so is a Text, Bytes or other argument without a literal. *Since: Unreleased — empty argument
+  defaults.*
 - A defaulted argument is required on the wire: it has no presence bit, an encoder writes the value the message holds,
   and strict decoding gives every argument as before. A default never fills an argument while encoding or decoding.
 - The default belongs to the [canonical form](#canonical-form) and the hash, so both sides fill a left-out argument
   alike.
 - A [send](Language.md#messages-and-dispatch) in a script stays as written: the compiler fills no argument.
+
+### Set parameters
+
+> **Since: Unreleased**
+
+A message set may declare parameters: values that accompany whichever message it carries, written like the arguments of a
+message.
+
+```gess
+schema :DroneId as { id: :Number integer between 0 and 4095 }
+message MoveTo(target: :Point(m) { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m })
+message Stop()
+wire messages DroneCommands(ids: :List(:DroneId) max 64 default []) as (MoveTo, Stop)
+```
+
+- **Parameters are arguments of the set.** They follow every rule of [message arguments](#declarations): labels or `_`,
+  `optional`, [literal defaults](#argument-defaults), the [lenient read](#lenient-read) and the bounds of the wire. Their
+  names differ from each other and from `message`, which names the carried message, or it is `schema.duplicateName`.
+- **Encoding.** A set writes its parameters as a message writes its arguments, then the index of the carried message,
+  then the message; see [messages](#messages). The messages themselves are unchanged and encode alike in every set.
+- **Hash.** The parameters belong to the set's [canonical form](#canonical-form) and hash, not to those of its messages. A
+  set without parameters keeps its form, so its hash is that of 0.6.0.
+- **Values.** A set with parameters is a message of its own, named after the set: its parameters in order, followed by
+  the argument `message`, which holds the carried message as a `:Message` value, as in
+  `DroneCommands(ids: [[id: 3]], message: MoveTo(target: :Point(4m, 2m)))`. A set without parameters reads and writes
+  the carried message itself, as before. Since sets and messages share the [message namespace](#declarations), the name of
+  such a message never stands for two things.
+- A set with parameters carries no tags of its own; the carried message keeps its tags.
+- **Paths.** An error inside the carried message, such as a message that is no member of the set, has the path of the
+  argument `message` before its own, as in `message.target.x`, when encoding, in the [lenient read](#lenient-read) and in
+  [model sets](#model-message-sets).
 
 ### Computed fields
 
@@ -747,9 +788,9 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
 - A `max` is positive.
 - A position relative to something else, such as a carrier, is a schema of its own
   with its own bounds.
-- Names are unique: declarations of schemas and sets together, of messages, constants and
-  parameters per file, fields and lets within a schema, a let and the parameters of its file, arguments within a
-  message, axes within a block, tags within a set or Flags, members within a message set. A Message's labels and their order are part of its
+- Names are unique: declarations of schemas, tag sets and networks together, of messages and message sets together,
+  of constants and parameters per file, fields and lets within a schema, a let and the parameters of its file, arguments within a
+  message or within a message set's parameters, axes within a block, tags within a set or Flags, members within a message set. A Message's labels and their order are part of its
   signature, as everywhere in GES.
 
 ### Encodable and document-only types
@@ -781,9 +822,9 @@ Source errors use the phase `schema` with line and column, in the manner of
 | Code | Condition |
 | --- | --- |
 | `schema.syntax` | the source does not match the grammar |
-| `schema.duplicateName` | a name repeats within its kind, or a schema, message or message set takes the name of a built-in type or `Record` |
+| `schema.duplicateName` | a name repeats within its namespace, a message set and a message share a name, a set parameter is named `message`, or a schema, message or message set takes the name of a built-in type or `Record` |
 | `schema.unknownName` | a type, message, constant, let or parameter is not declared, a step, delta range or `max` names no let of its schema, or a default names neither a field nor a let |
-| `schema.ambiguousName` | a root named by the API or a tool is written plainly, but a message and a schema, message set or network both take the name |
+| `schema.ambiguousName` | a root named by the API or a tool is written plainly, but a message or message set and a schema or network both take the name |
 | `schema.cycle` | schema references form a cycle, references or `:List` types nest more than 32 levels, or sibling defaults form a cycle |
 | `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, a `max` names a let with a unit, or a computed expression combines units that have no result unit or gives another unit than its field, or a function, root or power reads a unit it does not take or a quantity's power has no literal exponent |
 | `schema.invalidRange` | a lower bound is not below its upper bound |
@@ -859,7 +900,7 @@ A [keyed list](#keyed-lists) counts its form bit and the larger of the whole lis
 element form: three counts and `max · (position + the larger of the largest element and its largest
 delta without the key)`. That is the worst case for `removed + changed <= max` and
 `changed + added <= max`, because the size is linear in `changed`, so one of both ends gives the largest.
-A message set adds its index to the bits of its largest member, before rounding up to bytes.
+A message set adds its parameters and its index to the bits of its largest member, before rounding up to bytes.
 A bound layout has at most 1 048 576 fields, counting each use of a referenced schema and each
 List element type once; more also fails with `schema.tooLarge`.
 
@@ -909,9 +950,13 @@ field <name> <type>
 computed <name> <kind> [optional] <expression>
 message <MessageName> [tags <#tag> ...]
 argument <name or _ name> <type>
-messages <TypeName>
+messages <MessageName>
+argument <name or _ name> <type>
 member <MessageName>
 ```
+
+A message set writes one `argument` line per [parameter](#set-parameters) after its `messages` line, before its `member`
+lines; a set without parameters writes none, so its form stays that of 0.6.0.
 
 A [packed schema](#packed-schemas) adds ` packed` and its word's width, declared or chosen, to its `schema` line, so packing
 changes the hash. A schema writes its lets right after its `schema` line, in declared order, so where they stand among the fields does
@@ -949,7 +994,7 @@ The variable of a projection is not written, so renaming it keeps the hash.
 A numeric type is followed by its constraints, and any field or argument then by its
 marker, in this order: `integer`, `between <a> <b>` or `wrapping between <a> <b>`,
 `step <s>`, `delta <d>`, then `optional` or `key`, then `default` and a number, `true`, `false`, `#<tag>`,
-`field <name>` for a sibling, or a record literal: `[:]`, or `[<name>: <value>, ...]` with the named fields in the order of
+`field <name>` for a sibling, `[]` for an empty List, or a record literal: `[:]`, which is also an empty Map, or `[<name>: <value>, ...]` with the named fields in the order of
 their schema, each value written like a default and a nested record literal again in brackets. A union writes its alternatives in
 source order with ` | ` between them, also inside `List(...)`; the marker follows the last
 one. Unit names are the
@@ -1081,8 +1126,8 @@ tag in declared order. The name and labels are not transmitted. A message with a
 outside its set cannot be encoded. Tag order is not transmitted: a decoded message
 holds its tags in declared order.
 
-A message set encodes the index of the message in declared order in `width(n)` bits,
-followed by the message. A `message` encoded outside a set has no index; the caller
+A message set encodes its [parameters](#set-parameters) as a message encodes its arguments, then the index of the
+message in declared order in `width(n)` bits, followed by the message. A `message` encoded outside a set has no index; the caller
 knows what it receives. Message priorities and send IDs belong to the host and are not transmitted.
 
 ## Quantization
@@ -1640,8 +1685,8 @@ Success allocates nothing.
 ### Description
 
 `GesSchemaSet.Schemas` lists every declaration in source order and `Schema(name)` finds one, written `Name`, `:Name`
-or `Name()` as for [roots](#declarations); an unknown name is `schema.unknownName`, a plain name that a message and a
-schema, message set or network share `schema.ambiguousName`. A `GesSchema` describes what a source declares,
+or `Name()` as for [roots](#declarations); an unknown name is `schema.unknownName`, a plain name that a message or message
+set and a schema or network share `schema.ambiguousName`. A `GesSchema` describes what a source declares,
 independent of parameter values, so it holds no widths or indices, and writer and reader do
 not use it:
 
@@ -1654,7 +1699,8 @@ not use it:
   `Value`, or null;
 - `IsAbstract`, and `Takes`, what a schema takes with `with` in declared order: each a `GesSchemaTakeInfo` with
   `Schema`, `IsAllOptional`, `Without` and `IsUnchanged`; `Fields` already holds the taken fields in place;
-- `Tags` of a message and `Members` of a message set, in declared order;
+- `Tags` of a message and `Members` of a message set, in declared order; `Fields` of a message set are its
+  [parameters](#set-parameters);
 - `Bind` and `CheckDocument`.
 
 An alternative is a `GesSchemaType` with `Kind`, `Unit`, `IsInteger`, `IsWrapping`, `Lower`,
@@ -1671,20 +1717,25 @@ with a conversion to the closest binary64. `GesBoundSchema.Schema` leads back to
 
 A lenient read completes a Message that leaves out arguments before it is typed or encoded. It accepts the declared labels
 of the message as any subsequence in declared order: an argument the message leaves out takes its
-[default](#argument-defaults), or `nothing` when it is optional. It is a pure function of the bound schema and the
-Message, and it keeps the message name and tags.
+[default](#argument-defaults), or `nothing` when it is optional. It is a pure function of the schema and the Message,
+and it keeps the message name and tags. It depends on no parameter value, so it needs no binding and also completes a
+message whose arguments hold free data, such as a `:Map` of a [model](#model-types), which has no wire form.
 
 | Code | Condition |
 | --- | --- |
 | `wire.missingField` | an argument without a default that is not optional is left out; the path names the argument |
 | `wire.typeMismatch` | a label is unknown, repeated or out of declared order, or the message is not the schema's message or a member of its set |
 
+For a set with [parameters](#set-parameters), the lenient read completes the set's message with the parameters and the
+carried message alike: `message` is never left out, and a left-out argument of the carried message reports its path
+below it, as `message.count`.
+
 Labels are matched in declared order, so the first error in that order counts: a label given before an earlier declared
 argument without a default leaves that argument missing. It checks labels only; kinds and ranges are checked as in a strict read when the completed message is encoded or read. A
 lenient read belongs to in-process receivers and to the typing step before encoding, such as a host that hands a script's
 message to generated code. It never belongs in a decoder: the wire carries every argument, and decoding stays strict.
-Runtime offers it as `GesSchemaValues.CompleteMessage(bound, message)` (Swift `completeMessage(_:_:)`), which returns the
-message itself when nothing is missing; generated code with values offers it as [`ReadMessageLenient`](#tools).
+Runtime offers it as `GesSchemaValues.CompleteMessage(schema, message)` (Swift `completeMessage(_:_:)`) for a
+`GesSchema` and for a bound schema alike, which returns the message itself when nothing is missing; generated code with values offers it as [`ReadMessageLenient`](#tools).
 
 ### Value path
 
@@ -1737,7 +1788,7 @@ is `true` or `false`, a number, a quoted Text, the [Bytes literal](Language.md#b
 ` mask=<mask>` for Flags, `count=<n>` for a List or Dice,
 `<alternative> index=<i>` for a union, with the type name of the alternative, or `absent`. A nested
 schema, Point, Vector, Box, Box corner, Disc or Disc centre has no line of its own, only its fields; a Poly has the line of a List. A message set starts with
-`message <name> index=<i>`. A valid record ends with `bytes <n>`, an invalid one with
+the lines of its [parameters](#set-parameters), then `message <name> index=<i>`. A valid record ends with `bytes <n>`, an invalid one with
 `error <code> path=<path> bit=<offset>`. With `--baseline` the data is a [delta](#deltas): a first
 line `delta bytes <n>` is followed by the lines of the resulting record, or the error ends the text
 with its bit offset in the delta. An invalid baseline is the single line `baseline error <code> path=<path> bit=<offset>`
@@ -1787,6 +1838,11 @@ member's record: C# an abstract class with one sealed subclass per member and it
 matching; Swift an enum with one associated value per case, `Sendable` when its records are. C# `ToCase()` (Swift
 `asCase`) returns the selected member as a case, and `Assign(case)` (Swift `assign(_:)`) selects the case's member and
 takes its record. — **Since: 0.6.0**
+
+A set with [parameters](#set-parameters) holds them as fields before the selected member, generated like the arguments of
+a message, so `DroneCommands` has `ids` beside `selected` and its records; writing and reading the set write and read
+them first. Its `ToMessage` (Swift `toMessage()`) gives the envelope message and `ReadMessage` reads one. A parameter
+named like a generated member of the set, such as `selected` or `asCase`, is `generate.nameCollision`. *Since: Unreleased.*
 A field named like its type, which C# does not allow, gets the suffix `Value` in every language.
 
 A schema with a [recursive List](#recursion) is a class whose List holds records of itself. Its internal methods take the
@@ -1907,7 +1963,10 @@ packed types instead of declaring its own, so a wire record with a List of packe
 array element (`points: [MapPoint]`, C# `List<MapPoint>`), and assigning such a List between a model and a record copies
 no element. Every wire record whose schema a model root of any group reaches also converts to and from its model
 directly, field by field, without GES values and without the bytes: C# `ToModel()` and `CopyFrom(model)`, Swift
-`toModel()`, `read(model:)` and the model's `init(wire:)`. The conversion compares the model type's `SchemaHash` with the
+`toModel()`, `read(model:)` and the model's `init(wire:)`. So does every wire message that a [model message
+set](#model-message-sets) reaches, into the message's model, and a wire message set that is also a model set (`wire model
+messages DroneCommands`) into its model set, with its parameters and the case of its selected member. *Since: Unreleased
+— messages and sets.* The conversion compares the model type's `SchemaHash` with the
 record's, so a model generated from another state of the schema fails with C# `InvalidOperationException` or a Swift
 precondition and is never converted. Values are checked when the record is written, as for any value a caller sets.
 Each field converts as the record holds it: an absent optional field stays absent in the model and back, also where it
@@ -2024,8 +2083,9 @@ reachable (C# `End` and `Connection`, Swift `end` and `connection`; on the serve
 **Sending.** Per outgoing route a method named after the side's verb: `Send` or `Publish` (Swift `send(_:)`,
 `publish(_:)`) with the root record, on the server also `Send(value, client)` (Swift `send(_:client:)`) for one client. It
 writes the record into a buffer that the end owns, sized by the largest root encoding of the side, and returns the end's
-send status; a record that does not encode fails like its own write. A message-set root also takes its
-[case](#message-cases). The methods allocate nothing for a record. The typed end also forwards closing, and on the server
+send status; a record that does not encode fails like its own write. A message-set root without
+[parameters](#set-parameters) also takes its [case](#message-cases); one with parameters takes the set record only, which
+holds them. *Since: Unreleased — set parameters.* The methods allocate nothing for a record. The typed end also forwards closing, and on the server
 refusing, per-client closing, and, when the side publishes topics, subscribing and unsubscribing with the nested enum
 `Topic` of its topics.
 
@@ -2325,6 +2385,40 @@ A generated name that collides, such as a field named `id` beside a key named ot
 models are `Hashable`, so they reserve `hashValue` and `hash`, as C# models reserve the members every object inherits:
 a stored `hashValue` would otherwise satisfy the deprecated requirement in place of the synthesized hash.
 
+### Model message sets
+
+> **Since: Unreleased**
+
+A message set with the role `model(group)` generates its value part for programs that build, keep and compare messages,
+such as a server that hands a script's command on: a model type named after the set, and a model type for every message
+it reaches, which every model set of the generation shares. Neither reads nor writes bytes.
+
+- **A model message** is a value type like a [model schema](#model-types) (Swift `struct`, `Hashable`, `Sendable`,
+  `Codable`; C# `sealed class` with value equality), whose properties are its arguments in declared order, with their
+  model types, and a `Bool` per tag. Its initializer gives each argument with a [default](#argument-defaults) that
+  default and each optional argument absence. An unlabeled argument is named after its type, as a field.
+- **A model set** holds its [parameters](#set-parameters) as properties and the carried message as `message` (C#
+  `Message`), of its nested type `Case`: Swift an enum with one case per member that holds the member's model, C# an
+  abstract class with one sealed subclass per member holding `Value`, as the [message cases](#message-cases) of wire code.
+  `Member` lists the members in declared order. Swift builds a set as `DroneCommands(ids: [DroneId(id: 3)],
+  .moveTo(MoveTo(target: point)))`, C# as `new DroneCommands(new DroneCommands.Case.MoveTo(new MoveTo(point)), ids)`,
+  whose parameters follow the case so that their defaults may end the list.
+- **Messages.** A model set converts to and from the GES message of its [values](#set-parameters): Swift `toMessage()`,
+  `init(message:)` and `init(lenientMessage:)`, C# `ToMessage()`, `FromMessage(message)` and
+  `FromMessageLenient(message)`, which complete the message with the [lenient read](#lenient-read) first. Reading fails
+  with the codes and paths of the [value path](#value-path): a message that is no member of a set without parameters, or no
+  envelope of a set with parameters, is `wire.typeMismatch` at the empty path, and errors inside an envelope's message
+  follow the [paths](#set-parameters) of set parameters. A model message converts alike. The conversions embed the schema
+  sources as [`--values`](#model-types) does and are always generated for model sets.
+- **Converters.** For every other model set of the generation that shares at least one member, a set's `Case` gets a
+  failable conversion from that set's case: Swift `init?(_ other: DroneCommands.Case)` on `PropulsionCommands.Case`, C#
+  `static PropulsionCommands.Case? From(DroneCommands.Case other)`. It gives the same message when this set has it as a
+  member and else `nil`; parameters belong to the sets, not to their cases, so converting a case drops them.
+- A model set is no field type and reaches its members only, never schemas through another model root; the schemas the
+  messages hold become model types as for a model schema. A name that the model types of the generation take twice,
+  such as a message `Move` beside a schema `:Move`, is `generate.nameCollision` (wire code's `--message-suffix` does not
+  apply to models).
+
 ### Model documents
 
 > **Since: 0.5.0**
@@ -2396,6 +2490,9 @@ protocols it refines) and `fields` (the shared fields it requires besides those)
 `tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max`, `depth` only for a [recursive List](#recursion), and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
 `vector` add `unit` and `axes` (the names of an axis block), so do `box` and `disc`, whose axes may name `radius`, `poly` adds `unit`, `axes` and `max`, `schema` adds `name`, and `union` adds `alternatives`;
 `boolean`, `nothing`, `map` and `values`, a `:List` without an element type, have none. A missing `max` is `null`.
+A [model message](#model-message-sets) is a type with `kind` `message`, its arguments as `fields` and `tags`, and a model
+set one with `kind` `messages`, its parameters as `fields` when it has any and `members`; schema types have `kind`
+`schema`, which only a generation with a model set writes. *Since: Unreleased.*
 
 ### Generation layout
 
@@ -2422,7 +2519,8 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
 - Types are ordered by name, comparing UTF-16 code units. A type has `name`, `kind` (`schema`,
   `message` or `messages`), `hash`, `bindingHash`, `bindingHashDepends` (the parameters the type
   reaches), `maxByteCount` and `maxByteCountDepends` (the parameters named in the bounds of its
-  fields and of the types it reaches). A message set adds `members` and `memberWidth`; a schema
+  fields and of the types it reaches). A message set adds `fields`, its [parameters](#set-parameters), only when it has
+any, then `members` and `memberWidth`; a schema
   or message adds `fields`, a schema with [lets](#declarations) `constants`, a schema with
   [computed fields](#computed-fields) `computed`, and a message `tags`. A constant has `name`, `type` and `unit` as a
   parameter, `value`, its exact decimal in base units, and `integer`. A computed field has `name`, `type` (`Number`,

@@ -107,8 +107,8 @@
             if written == "constant" || written == "parameter" || written == "tags" || written == "network" {
                 throw Failure(offset: offset, message: "Only a schema, message or message set can be a root.", code: Code.invalidRole)
             }
-            if model != nil && (written == "message" || written == "messages") {
-                throw Failure(offset: offset, message: "A model root is a schema.", code: Code.invalidRole)
+            if model != nil && written == "message" {
+                throw Failure(offset: offset, message: "A model root is a schema or message set.", code: Code.invalidRole)
             }
         } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags", "network"].contains(written) && atRoleEnd() {
             throw Failure(offset: offset, message: "'\(written)' is no role; a root is marked wire or model.", code: Code.invalidRole)
@@ -209,9 +209,25 @@
                 result.tags = try tagSet()
             }
         case "messages":
-            result.kind = .messages
-            result.name = try typeName()
             skipSpaces()
+            if position < bytes.count && bytes[position] == 58 {
+                throw Failure(offset: position, message: "A message set is named without ':', as a message is: messages Name as (...).")
+            }
+            result.kind = .messages
+            result.name = try name(GesNames.type, "message set name")
+            skipSpaces()
+            if consume(40) {
+                skipTrivia()
+                while !consume(41) {
+                    if !result.fields.isEmpty {
+                        try expect(44)
+                        skipTrivia()
+                    }
+                    result.fields.append(try field(message: true))
+                    skipTrivia()
+                }
+                skipSpaces()
+            }
             try expectWord("as")
             skipTrivia()
             try expect(40)

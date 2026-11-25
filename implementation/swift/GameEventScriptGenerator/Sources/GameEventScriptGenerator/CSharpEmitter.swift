@@ -157,22 +157,13 @@ enum GesCSharpEmitter {
         if !type.isItem && context.values {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
-        for field in type.fields {
-            names.append((field.base, "the field " + field.layout.name))
-            if field.optional { names.append(("Has" + field.base, "the presence of " + field.layout.name)) }
-            if field.optional && plain(field.value) { names.append((field.base + "Optional", "the optional value of " + field.layout.name)) }
-            nested(field.value, &names, field.layout.name)
-        }
-        for field in type.fields {
-            if isPooledList(field) { names.append(("Set" + field.base + "Count", "the element count of " + field.layout.name)) }
-            if isTextList(field) { names.append((field.base + "Values", "the texts of " + field.layout.name)) }
-        }
+        fieldNames(type, &names)
         for tag in type.tags { names.append((tag.base, "the tag #" + tag.tag)) }
         if !type.isItem {
             for constant in type.layout.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
         }
         if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: false, &names) }
-        let model = type.isItem || type.kind != .schema ? nil : context.models?.type(type.name)
+        let model = type.isItem ? nil : context.models?.type(type.name)
         if model != nil { names.append(("ToModel", "the generated member ToModel")) }
         try GesSchemaPlanner.unique(type.name, names, context.topLevel)
 
@@ -186,11 +177,7 @@ enum GesCSharpEmitter {
         code.open("{")
         if !type.isItem {
             constants(&code, type.layout)
-            code.blank()
-            code.line("internal static readonly string[] __paths =")
-            code.open("{")
-            for path in type.paths { code.line(GesSchemaPlanner.quote(path) + ",") }
-            code.close("};")
+            paths(&code, type)
         }
         var first = type.isItem
         for field in type.fields {
@@ -214,6 +201,27 @@ enum GesCSharpEmitter {
         if let model { try modelMembers(&code, type, model, context.models!) }
         for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
+    }
+
+    // The paths of a type's nodes in node order, which errors name.
+    private static func paths(_ code: inout Code, _ type: GesPlanType) {
+        code.blank()
+        code.line("internal static readonly string[] __paths =")
+        code.open("{")
+        for path in type.paths { code.line(GesSchemaPlanner.quote(path) + ",") }
+        code.close("};")
+    }
+
+    // The members that a type's fields declare, for the collision check.
+    private static func fieldNames(_ type: GesPlanType, _ names: inout Names) {
+        for field in type.fields {
+            names.append((field.base, "the field " + field.layout.name))
+            if field.optional { names.append(("Has" + field.base, "the presence of " + field.layout.name)) }
+            if field.optional && plain(field.value) { names.append((field.base + "Optional", "the optional value of " + field.layout.name)) }
+            nested(field.value, &names, field.layout.name)
+            if isPooledList(field) { names.append(("Set" + field.base + "Count", "the element count of " + field.layout.name)) }
+            if isTextList(field) { names.append((field.base + "Values", "the texts of " + field.layout.name)) }
+        }
     }
 
     static func constants(_ code: inout Code, _ layout: GesLayoutType) {
@@ -465,6 +473,12 @@ enum GesCSharpEmitter {
                 code.close()
             }
         }
+        fieldMethods(&code, type)
+    }
+
+    // Writes and reads a type's fields in wire order, at the paths that start at `at`.
+    private static func fieldMethods(_ code: inout Code, _ type: GesPlanType) {
+        let selfModifier = type.isClass || type.kind == .messages && type.membersAreClasses ? "" : "readonly "
         code.blank()
         code.line("internal \(selfModifier)void __WriteFields(ref GesBitWriter writer, string[] paths, int at\(levelParameter(type)))")
         code.open("{")
@@ -557,15 +571,22 @@ enum GesCSharpEmitter {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
         for member in type.memberNames { names.append((member, "the member " + member)) }
+        fieldNames(type, &names)
         try GesSchemaPlanner.unique(type.name, names, context.topLevel)
         let width = String(type.layout.memberWidth)
         let last = unsigned(UInt64(type.members.count) - 1)
+        let parameters = !type.fields.isEmpty
         code.line(
-            "/// <summary>The message set <c>:\(type.layout.declared)</c>: one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "").</summary>"
+            "/// <summary>The message set <c>\(type.layout.declared)</c>: \(parameters ? "its parameters and " : "")one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "").</summary>"
         )
         code.line(type.membersAreClasses ? "\(access) sealed partial class \(type.name)" : "\(access) partial struct \(type.name)")
         code.open("{")
         constants(&code, type.layout)
+        if parameters {
+            paths(&code, type)
+            for field in type.fields { members(&code, field, false) }
+            for field in type.fields { listAccess(&code, field) }
+        }
         code.blank()
         code.line("/// <summary>The message this record holds.</summary>")
         code.line("public Member Selected;")
@@ -574,10 +595,14 @@ enum GesCSharpEmitter {
             code.line("/// <summary>The message when <see cref=\"Selected\"/> is <c>\(member)</c>.</summary>")
             code.line("public \(record) \(member)\(type.membersAreClasses ? " = new \(record)();" : ";")")
         }
-        var write = [
-            "if ((ulong)Selected > \(last)) throw new GesWireException(GesWireException.OutOfRange, \"\");", "writer.Write((ulong)Selected, \(width));", "switch (Selected)", "{",
-        ]
-        var read = ["var index = reader.Read(\(width), \"\");"]
+        var write = ["if ((ulong)Selected > \(last)) throw new GesWireException(GesWireException.OutOfRange, \"\");"]
+        var read: [String] = []
+        if parameters {
+            write.append("__WriteFields(ref writer, __paths, 0);")
+            read.append("__ReadFields(ref reader, __paths, 0);")
+        }
+        write += ["writer.Write((ulong)Selected, \(width));", "switch (Selected)", "{"]
+        read.append("var index = reader.Read(\(width), \"\");")
         if UInt64(type.members.count) - 1 < full(type.layout.memberWidth) { read.append("if (index > \(last)) throw new GesWireException(GesWireException.InvalidIndex, \"\");") }
         read += ["Selected = (Member)index;", "switch (Selected)", "{"]
         // The paths are static members of the message type, whose name differs from the member's with a message suffix.
@@ -589,7 +614,9 @@ enum GesCSharpEmitter {
         read.append("}")
         code.blank()
         publicMethods(&code, type.membersAreClasses ? "" : "readonly ", write, read, "message")
+        if parameters { fieldMethods(&code, type) }
         if context.values { valueMembers(&code, type, context.holder, lenient: lenient(type.layout, context.layout)) }
+        if let model = context.models?.type(type.name) { try modelMembers(&code, type, model, context.models!) }
         code.blank()
         messageCases(&code, type, context)
         code.blank()
@@ -601,6 +628,7 @@ enum GesCSharpEmitter {
             code.line(member + ",")
         }
         code.close()
+        for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
     }
 
@@ -961,7 +989,9 @@ enum GesCSharpEmitter {
         let owner: String
         let plan: GesPlanType
 
-        var isSet: Bool { plan.kind == .messages }
+        // A message set without parameters, whose routes take and hand its cases; one with parameters is sent as its record,
+        // which holds them.
+        var isSet: Bool { plan.kind == .messages && plan.fields.isEmpty }
     }
 
     // The constants of a network, its hash, the index of each route and the rate of each topic that has one, a function

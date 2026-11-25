@@ -75,7 +75,7 @@ public sealed class GesSchemaSetGenerateTests
     public void AMessageSuffixNamesOnlyMessageTypes()
     {
         const string messages = "wire schema :Shield as { strength: :Number integer between 0 and 100 }\nwire schema :ShieldMessage as { x: :Boolean }\n"
-            + "wire messages :Actions as (Shield, Move)\nwire message Shield(level: :Number integer between 0 and 10)\nwire message Move(x: :Number integer between 0 and 255)\n";
+            + "wire messages Actions as (Shield, Move)\nwire message Shield(level: :Number integer between 0 and 10)\nwire message Move(x: :Number integer between 0 and 255)\n";
         var set = GesSchemaSet.Parse(messages);
         string Messages(string[] roots, string suffix, GesSchemaLanguage language = GesSchemaLanguage.CSharp)
             => GesSchemaGenerator.Generate(set, roots, new GesSchemaParameters(), new() { Language = language, MessageSuffix = suffix });

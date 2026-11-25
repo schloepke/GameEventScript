@@ -57,7 +57,7 @@ schema: {"description": {"name": "Arena", "kind": "Schema", "wireGroup": "world"
 gesBlock: case
 id: roles-default-group
 schemaApi:
-  sources: ["wire messages :Events as (Hit)\nmessage Hit()\n"]
+  sources: ["wire messages Events as (Hit)\nmessage Hit()\n"]
   root: "Events"
   bind: false
   describe: true
@@ -244,7 +244,7 @@ Members of a message set are checked like fields.
 gesBlock: case
 id: roles-wire-message-not-encodable
 schemaApi:
-  sources: ["wire messages :Events as (Said)\nmessage Said(text: :Text)\n"]
+  sources: ["wire messages Events as (Said)\nmessage Said(text: :Text)\n"]
 ```
 
 ### Expectation

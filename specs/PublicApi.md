@@ -778,7 +778,7 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 | bit reader | `ref struct GesBitReader(ReadOnlySpan<byte>, byteLimit)`: `BitPosition`, `RemainingBits`, `Read(width, path)`, `ReadBytes`, `Require`, `Seek`, `Finish` | `struct GesBitReader(data:byteLimit:)`: `bitPosition`, `remainingBits`, `read(_:path:)`, `readBytes(into:path:)`, `readBytes(_:into:path:)` into a `[UInt8]` that keeps its capacity, `require(_:path:)`, `seek(to:)`, `finish()` |
 | wire rules | `static class GesWireRules`: `IsValidUtf8`, `IsTagName`, `QuantizedIndex`, `WrappedQuantizedIndex`, `QuantizedValue`, `WrappedIndex`, `WriteDeltaRange`, `ReadDeltaRange` | `enum GesWireRules`: `isValidUTF8(_:)`, `isTagName(_:)`, `quantizedIndex(_:lowerValue:upperValue:tenPower:numerator:lower:path:)`, `wrappedQuantizedIndex(_:tenPower:numerator:lower:period:path:)`, `quantizedValue(_:lower:numerator:tenPower:)`, `wrappedIndex(_:lower:period:)`, `writeDeltaRange(_:index:held:maxIndex:wrapping:deltaRange:deltaWidth:width:)`, `readDeltaRange(_:held:maxIndex:wrapping:deltaRange:deltaWidth:width:path:)` |
 | deltas | `static GesSchemaDelta.Encode(schema, record, baseline, buffer)`, `Decode(schema, delta, baseline, buffer, byteLimit)` returning `GesSchemaDeltaDecoded` with `ByteCount`, `DeltaByteCount` | `GesSchemaDelta.encode(_:record:baseline:into:)`, `decode(_:delta:baseline:into:byteLimit:)` returning `GesSchemaDeltaDecoded` with `byteCount`, `deltaByteCount` |
-| value path (Runtime) | `static GesSchemaValues.Encode`, `Decode` returning `GesSchemaDecoded`, `ReadKey`, each `Encode` and `Decode` also with a baseline value, and the [lenient read](Schemas.md#lenient-read) `CompleteMessage(schema, message)` | `GesSchemaValues.encode`, `decode` returning `GesSchemaDecoded`, `readKey`, each `encode` and `decode` also with `baseline:`, and `completeMessage(_:_:)` |
+| value path (Runtime) | `static GesSchemaValues.Encode`, `Decode` returning `GesSchemaDecoded`, `ReadKey`, each `Encode` and `Decode` also with a baseline value, and the [lenient read](Schemas.md#lenient-read) `CompleteMessage(schema, message)` for a `GesSchema` or a `GesBoundSchema` | `GesSchemaValues.encode`, `decode` returning `GesSchemaDecoded`, `readKey`, each `encode` and `decode` also with `baseline:`, and `completeMessage(_:_:)` for both |
 | dump | `static GesSchemaDump.Read(schema, data)`, also with a baseline record | `GesSchemaDump.read(_:data:)`, also with `baseline:` |
 
 `GesSchemaDocument` reads a document as [generated models](Schemas.md#model-documents) do: its header must name one of the
@@ -826,8 +826,8 @@ port.
 
 `WireRoots` and `ModelRoots` list the [roots of a group](Schemas.md#roles) in declaration order, empty when it has none.
 `ModelLayout` and `GenerateModels` write the [model layout](Schemas.md#model-layout) and the
-[model types](Schemas.md#model-types) of schema roots, where `Values` adds their plain values; a root that is no schema
-fails with `generate.usage`, and so do the wire-only options `CheckedExclusivity`, `Models` and a non-empty `MessageSuffix` ([message type names](Schemas.md#message-type-names)); `Generate` rejects the model-only options
+[model types](Schemas.md#model-types) of schema roots and the [model sets](Schemas.md#model-message-sets) of message set
+roots, where `Values` adds their plain values; any other root fails with `generate.usage`, and so do the wire-only options `CheckedExclusivity`, `Models` and a non-empty `MessageSuffix` ([message type names](Schemas.md#message-type-names)); `Generate` rejects the model-only options
 `Bindings` and `Documents` with `generate.usage`. A reached type without a model type fails with `generate.unsupported`.
 
 > **Since: 0.5.0** — split files

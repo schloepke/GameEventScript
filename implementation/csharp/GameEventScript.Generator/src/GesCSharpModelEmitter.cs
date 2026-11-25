@@ -12,7 +12,7 @@ namespace GameEventScript.Generator;
 // constructor that sets every field and one that leaves every field at its zero value, an enum per closed Tag, an abstract
 // class with one sealed subclass per alternative for a union, and the runtime's GesPoint and GesVector for spatial fields.
 // Classes avoid struct copies that would share a list; no `record`, `init` accessor or Reflection is used.
-internal static class GesCSharpModelEmitter
+internal static partial class GesCSharpModelEmitter
 {
     // Members every model type declares or inherits.
     private static readonly string[] Reserved = ["Equals", "GetHashCode", "ToString", "GetType"];
@@ -39,7 +39,10 @@ internal static class GesCSharpModelEmitter
         prologue.Line("using System;");
         prologue.Line("using System.Collections.Generic;");
         prologue.Line("using GameEventScript.Api;");
-        if (options.Bindings || options.Values) prologue.Line("using GameEventScript.Runtime.Values;");
+        // Model messages and sets convert to and from messages through the values class, which they need without --values.
+        var messages = layout.Types.Exists(type => type.Kind != GesSchemaKind.Schema);
+        var valued = options.Values || messages;
+        if (options.Bindings || valued) prologue.Line("using GameEventScript.Runtime.Values;");
         prologue.Blank();
         var header = GesModelPlanner.Header(layout);
         var suffix = GesSchemaPlanner.Suffix(header, options);
@@ -57,16 +60,25 @@ internal static class GesCSharpModelEmitter
         foreach (var root in layout.Roots)
             if (options.Documents && root is "Value" or "FromDocument")
                 throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The document type '{documentType}' declares the class '{root}' for that root, which C# cannot hold beside its member {root}.");
+        var schemas = "__GesModelSchemas" + suffix;
+        // Bindings and documents concern the schemas only.
+        var plain = Schemas(layout);
         foreach (var type in layout.Types)
-            document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, support, qualifier, options.Bindings, options.Values ? values : null, computed, layout.Roots.Contains(type.Name) ? documents : null)));
+            document.Units.Add(new GesCodeUnit(type.Name, code =>
+            {
+                if (type.Kind == GesSchemaKind.Messages) MessageSet(code, layout, type, access, support, qualifier, values, schemas);
+                else if (type.Kind == GesSchemaKind.Message) Record(code, layout, type, access, support, qualifier, false, null, computed, null, values, schemas);
+                else Record(code, layout, type, access, support, qualifier, options.Bindings, valued ? values : null, computed, plain.Roots.Contains(type.Name) ? documents : null);
+            }));
         foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Interface(code, layout, protocol, access)));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>")));
-        if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, layout, access, qualifier, support, computed)));
-        if (options.Values) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, qualifier, support, computed)));
-        if (documents is not null)
+        if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, plain, access, qualifier, support, computed)));
+        if (valued) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, qualifier, support, computed)));
+        if (messages) document.Units.Add(new GesCodeUnit("", code => SchemasHolder(code, layout, schemas, schemaSet)));
+        if (documents is not null && plain.Roots.Count > 0)
         {
-            document.Units.Add(new GesCodeUnit("", code => DocumentType(code, layout, documentType, documents, access, qualifier)));
+            document.Units.Add(new GesCodeUnit("", code => DocumentType(code, plain, documentType, documents, access, qualifier)));
             if (schemaSet is null) document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, "__GesModelDocuments" + suffix)));
         }
 
@@ -74,9 +86,9 @@ internal static class GesCSharpModelEmitter
             document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteCSharp(code, setName, access, layout.Sources, [], networks: false)));
         var geometry = GesModelPlanner.UsesGeometry(layout);
         var data = GesModelPlanner.UsesData(layout);
-        document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || options.Values, geometry, data)));
+        document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || valued, geometry, data)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: false, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)), GesComputedEmitter.UsesSpatial(layout.Types.ConvertAll(type => type.Computed)))));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: false, options.Bindings || valued || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)), GesComputedEmitter.UsesSpatial(layout.Types.ConvertAll(type => type.Computed)))));
         return document;
     }
 
@@ -189,7 +201,7 @@ internal static class GesCSharpModelEmitter
         code.Close();
     }
 
-    private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, string support, string qualifier, bool bindings, string? values, GesComputedEmitter computed, string? documents)
+    private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, string support, string qualifier, bool bindings, string? values, GesComputedEmitter computed, string? documents, string? messageValues = null, string? schemas = null)
     {
         if (type.Packed is not null)
         {
@@ -207,6 +219,8 @@ internal static class GesCSharpModelEmitter
         if (values is not null)
             foreach (var reserved in new[] { "ToValue", "FromValue" }) names.Add((reserved, "the generated member " + reserved));
         if (documents is not null) names.Add(("FromDocument", "the generated member FromDocument"));
+        if (messageValues is not null)
+            foreach (var reserved in MessageMembers) names.Add((reserved, "the generated member " + reserved));
         if (bindings && fields.Exists(field => field.Field.Name == "fields"))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{type.Name}', the field fields and the generated field fields of its bindings share a name.");
         // The values of the record defaults are held by a class named after the type.
@@ -222,10 +236,14 @@ internal static class GesCSharpModelEmitter
         GesComputedEmitter.Names(type.Computed, type.Name, swift: false, names);
         GesSchemaPlanner.Unique(type.Name, names, GesModelPlanner.TopLevel(layout, swift: false));
 
-        code.Line($"/// <summary>The model of the schema <c>:{type.Name}</c>: a plain value that is never encoded and compares by value.</summary>");
+        code.Line(type.Kind == GesSchemaKind.Message
+            ? $"/// <summary>The model of the message <c>{type.Name}</c>: its arguments and a Boolean per tag, a plain value that is never encoded and compares by value.</summary>"
+            : $"/// <summary>The model of the schema <c>:{type.Name}</c>: a plain value that is never encoded and compares by value.</summary>");
         code.Line($"{access} sealed class {type.Name} : IEquatable<{type.Name}>{string.Concat(GesModelPlanner.Adopted(layout, type, swift: false).ConvertAll(name => ", " + name))}");
         code.Open("{");
-        code.Line($"/// <summary>The hash of the schema <c>:{type.Name}</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>");
+        code.Line(type.Kind == GesSchemaKind.Message
+            ? $"/// <summary>The hash of the message <c>{type.Name}</c>, which wire code of it carries too; a test that compares it notices stale generated code.</summary>"
+            : $"/// <summary>The hash of the schema <c>:{type.Name}</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>");
         code.Line($"public const ulong SchemaHash = 0x{GesSchemaLayoutJson.Hex(type.Hash)}UL;");
         GesCSharpEmitter.Lets(code, type.Constants);
         code.Blank();
@@ -239,40 +257,13 @@ internal static class GesCSharpModelEmitter
         code.Close();
         if (fields.Count > 0)
         {
-            // Optional parameters end the list, so a default becomes one only where every later field has a default too.
-            var trailing = fields.Count;
-            while (trailing > 0 && fields[trailing - 1].Field.Default is not null) trailing--;
             code.Blank();
             code.Line("/// <summary>Creates a record from its fields.</summary>");
-            // A record default or an empty typed List is no constant, so a trailing parameter of one is null for it; free
-            // data is a struct whose default value is empty.
-            bool RecordDefault(int index) => index >= trailing && fields[index].Field.Default is { Kind: GesSchemaDefaultKind.Record or GesSchemaDefaultKind.Empty } && !IsData(fields[index].Value);
-            for (var index = 0; index < fields.Count; index++)
-            {
-                var field = fields[index];
-                var note = GesModelPlanner.Sibling(fields, field) is { } named ? $"; null takes <c>{fields[named].Field.Name}</c>" : RecordDefault(index) ? "; null takes its default" : "";
-                code.Line($"/// <param name=\"{GesSchemaPlanner.Camel(field.Base)}\">The field <c>{field.Field.Name}</c>{note}.</param>");
-            }
-
-            var parameters = new List<string>();
-            for (var index = 0; index < fields.Count; index++)
-            {
-                var field = fields[index];
-                var optional = index >= trailing;
-                parameters.Add(GesModelPlanner.Sibling(fields, field) is null && !RecordDefault(index)
-                    ? $"{Type(field.Value)} {Parameter(field.Base)}{(optional ? " = " + Native(layout, field.Value, field.Field.Default!) : "")}"
-                    : $"{Plain(field.Value)}? {Parameter(field.Base)}{(optional ? " = null" : "")}");
-            }
-
+            var (documentation, parameters, assignments) = Constructor(layout, fields, order, type.Kind != GesSchemaKind.Schema);
+            foreach (var line in documentation) code.Line(line);
             code.Line($"public {type.Name}({string.Join(", ", parameters)})");
             code.Open("{");
-            foreach (var index in order)
-            {
-                var field = fields[index];
-                var fallback = GesModelPlanner.Sibling(fields, field) is { } named ? " ?? " + fields[named].Base : RecordDefault(index) ? " ?? " + Native(layout, field.Value, field.Field.Default!) : "";
-                code.Line($"{field.Base} = {Parameter(field.Base)}{fallback};");
-            }
-
+            foreach (var line in assignments) code.Line(line);
             code.Close();
         }
 
@@ -370,6 +361,7 @@ internal static class GesCSharpModelEmitter
             code.Close();
         }
 
+        if (messageValues is not null) MessageConversions(code, type, messageValues, schemas!);
         foreach (var field in fields) Declarations(code, field.Value, support, qualifier);
         code.Close();
     }
@@ -1105,27 +1097,34 @@ internal static class GesCSharpModelEmitter
             code.Line($"private static readonly string[] {names} = {{ {string.Join(", ", fields.ConvertAll(field => GesSchemaPlanner.Literal(field.Field.Name, false)))} }};");
             code.Blank();
             Defaults(code, layout, fields, type.Name + "Defaults", type.Name, qualifier, support);
-            // One statement per field, so that the pattern variables of optional fields stay apart.
-            code.Line($"internal static GesValue Value({record} record)");
-            code.Open("{");
-            code.Line($"var values = new GesValue[{(fields.Count + type.Computed.Length).ToString(CultureInfo.InvariantCulture)}];");
-            for (var index = 0; index < fields.Count; index++) code.Line($"values[{Depth(index)}] = {Encode(fields[index].Value, type.Name, "record." + fields[index].Base, qualifier, support, plain: true, pattern: "value" + Depth(index) + "_")};");
-
-            // A value also carries the computed fields, as decoding the record's bytes gives them; reading ignores them.
-            for (var index = 0; index < type.Computed.Length; index++)
+            var schema = type.Kind == GesSchemaKind.Schema;
+            // A set reads its parameters with the message it carries, which its constructor takes first.
+            var carried = type.Kind != GesSchemaKind.Messages ? "" : fields.Count > 0 ? "message, " : "message";
+            if (schema)
             {
-                var field = type.Computed[index];
-                var unit = UnitName(field.Kind == GesSchemaTypeKind.Quantity || field.IsSpatial ? field.Unit.ToTypeName() : "none");
-                code.Line($"values[{Depth(fields.Count + index)}] = {computed.HelperName}.ToGesValue({computed.ValueOf("record", type.Name, field)}, {unit});");
+                // One statement per field, so that the pattern variables of optional fields stay apart.
+                code.Line($"internal static GesValue Value({record} record)");
+                code.Open("{");
+                code.Line($"var values = new GesValue[{(fields.Count + type.Computed.Length).ToString(CultureInfo.InvariantCulture)}];");
+                for (var index = 0; index < fields.Count; index++) code.Line($"values[{Depth(index)}] = {Encode(fields[index].Value, type.Name, "record." + fields[index].Base, qualifier, support, plain: true, pattern: "value" + Depth(index) + "_")};");
+
+                // A value also carries the computed fields, as decoding the record's bytes gives them; reading ignores them.
+                for (var index = 0; index < type.Computed.Length; index++)
+                {
+                    var field = type.Computed[index];
+                    var unit = UnitName(field.Kind == GesSchemaTypeKind.Quantity || field.IsSpatial ? field.Unit.ToTypeName() : "none");
+                    code.Line($"values[{Depth(fields.Count + index)}] = {computed.HelperName}.ToGesValue({computed.ValueOf("record", type.Name, field)}, {unit});");
+                }
+
+                var keyNames = fields.ConvertAll(field => GesSchemaPlanner.Literal(field.Field.Name, false));
+                foreach (var field in type.Computed) keyNames.Add(GesSchemaPlanner.Literal(field.Name, false));
+                var keys = type.Computed.Length == 0 ? names : $"new[] {{ {string.Join(", ", keyNames)} }}";
+                code.Line($"return GesValue.GesRecord({GesSchemaPlanner.Literal(type.Name, false)}, {keys}, values);");
+                code.Close();
+                code.Blank();
             }
 
-            var keyNames = fields.ConvertAll(field => GesSchemaPlanner.Literal(field.Field.Name, false));
-            foreach (var field in type.Computed) keyNames.Add(GesSchemaPlanner.Literal(field.Name, false));
-            var keys = type.Computed.Length == 0 ? names : $"new[] {{ {string.Join(", ", keyNames)} }}";
-            code.Line($"return GesValue.GesRecord({GesSchemaPlanner.Literal(type.Name, false)}, {keys}, values);");
-            code.Close();
-            code.Blank();
-            code.Line($"internal static {record} Read{type.Name}(in GesValue value, string path)");
+            code.Line($"internal static {record} Read{type.Name}(in GesValue value, string path{(carried.Length > 0 ? $", {record}.Case message" : "")})");
             code.Open("{");
             code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names}) ?? throw Failure(value, path);");
             var fits = PackedFits(type, fields);
@@ -1143,33 +1142,39 @@ internal static class GesCSharpModelEmitter
             }
 
             var kept = GesModelPlanner.Kept(fields);
-            if (kept.Count == 0) code.Line($"return new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
+            if (kept.Count == 0) code.Line($"return new {record}({carried}{string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
             else
             {
                 // An optional field read as absent stays absent, though the constructor would take its sibling for null.
-                code.Line($"var record = new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
+                code.Line($"var record = new {record}({carried}{string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
                 foreach (var index in kept) code.Line($"record.{fields[index].Base} = field{Depth(index)};");
                 code.Line("return record;");
             }
             code.Close();
-            code.Blank();
-            code.Line($"private static bool Decode{type.Name}(in GesValue value, out {record} result)");
-            code.Open("{");
-            code.Line(type.Packed is null ? "result = null!;" : "result = default;");
-            code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names});");
-            var conditions = new List<string> { "fields is null" };
-            for (var index = 0; index < fields.Count; index++)
+            if (type.Kind == GesSchemaKind.Message) MessageValues(code, type, fields, record, qualifier, support);
+            if (type.Kind == GesSchemaKind.Messages) SetValues(code, layout, type, fields, record, qualifier, support);
+            if (schema)
             {
-                conditions.Add("!" + Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, qualifier, support, type.Name + "Defaults"), "out var field" + Depth(index), qualifier, support));
-                if (fits[index] is { } check) conditions.Add($"!({check("field" + Depth(index))})");
+                code.Blank();
+                code.Line($"private static bool Decode{type.Name}(in GesValue value, out {record} result)");
+                code.Open("{");
+                code.Line(type.Packed is null ? "result = null!;" : "result = default;");
+                code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names});");
+                var conditions = new List<string> { "fields is null" };
+                for (var index = 0; index < fields.Count; index++)
+                {
+                    conditions.Add("!" + Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, qualifier, support, type.Name + "Defaults"), "out var field" + Depth(index), qualifier, support));
+                    if (fits[index] is { } check) conditions.Add($"!({check("field" + Depth(index))})");
+                }
+
+                for (var index = 0; index < conditions.Count; index++)
+                    code.Line((index == 0 ? "if (" : "    || ") + conditions[index] + (index == conditions.Count - 1 ? ") return false;" : ""));
+                code.Line($"result = new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
+                foreach (var index in GesModelPlanner.Kept(fields)) code.Line($"result.{fields[index].Base} = field{Depth(index)};");
+                code.Line("return true;");
+                code.Close();
             }
 
-            for (var index = 0; index < conditions.Count; index++)
-                code.Line((index == 0 ? "if (" : "    || ") + conditions[index] + (index == conditions.Count - 1 ? ") return false;" : ""));
-            code.Line($"result = new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
-            foreach (var index in GesModelPlanner.Kept(fields)) code.Line($"result.{fields[index].Base} = field{Depth(index)};");
-            code.Line("return true;");
-            code.Close();
             var conversions = new List<GesModelPlanValue>();
             foreach (var field in fields) Conversions(field.Value, conversions);
             foreach (var conversion in conversions)
@@ -1207,6 +1212,7 @@ internal static class GesCSharpModelEmitter
         code.Close();
         code.Blank();
         code.Line("private static T? ReadOptional<T>(in GesValue value, string path, Reader<T> read) where T : class => value.IsNothing ? null : read(value, path);");
+        if (layout.Types.Exists(type => type.Kind != GesSchemaKind.Schema)) MessageHelpers(code);
         if (layout.Types.Exists(type => type.Packed is not null))
             code.Line("private static T? ReadOptionalValue<T>(in GesValue value, string path, Reader<T> read) where T : struct => value.IsNothing ? null : read(value, path);");
         code.Close();

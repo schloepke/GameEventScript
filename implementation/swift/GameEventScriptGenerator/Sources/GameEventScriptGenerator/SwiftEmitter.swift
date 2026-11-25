@@ -60,7 +60,7 @@ enum GesSwiftEmitter {
         let conversion = modelLayout.map { ModelConversion($0, models, space) }
         var conversions: [(type: GesPlanType, model: GesModelType)] = []
         if let conversion {
-            for type in types where type.kind == .schema && type.layout.packedWidth == 0 {
+            for type in types where type.layout.packedWidth == 0 {
                 if let model = conversion.type(type.name) { conversions.append((type, model)) }
             }
         }
@@ -217,22 +217,13 @@ enum GesSwiftEmitter {
         if !type.isItem && context.values {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
-        for field in type.fields {
-            names.append((GesSchemaPlanner.camel(field.base), "the field " + field.layout.name))
-            if field.optional { names.append(("has" + field.base, "the presence of " + field.layout.name)) }
-            if field.optional && plain(field.value) { names.append((GesSchemaPlanner.camel(field.base) + "Optional", "the optional value of " + field.layout.name)) }
-            nested(field.value, &names, field.layout.name)
-        }
-        for field in type.fields {
-            if GesCSharpEmitter.isPooledList(field) { names.append(("set" + field.base + "Count", "the element count of " + field.layout.name)) }
-            if GesCSharpEmitter.isTextList(field) { names.append((GesSchemaPlanner.camel(field.base) + "Values", "the texts of " + field.layout.name)) }
-        }
+        fieldNames(type, &names)
         for tag in type.tags { names.append((GesSchemaPlanner.camel(tag.base), "the tag #" + tag.tag)) }
         if !type.isItem {
             for constant in type.layout.constants { names.append((constant.name, "the let " + constant.name)) }
         }
         if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: true, &names) }
-        let model = type.isItem || type.kind != .schema ? nil : context.models?.type(type.name)
+        let model = type.isItem ? nil : context.models?.type(type.name)
         if model != nil { names.append(("toModel", "the generated member toModel")) }
         try GesSchemaPlanner.unique(type.name, names, context.topLevel, hidden: model != nil ? context.converted : context.inside)
 
@@ -240,9 +231,7 @@ enum GesSwiftEmitter {
         code.open(type.isClass ? "\(access)final class \(type.name) {" : "\(access)struct \(type.name): Sendable {")
         if !type.isItem {
             constants(&code, type.layout, access)
-            code.line("static let __paths: [String] = [")
-            for path in type.paths { code.line("    " + GesSchemaPlanner.quote(path) + ",") }
-            code.line("]")
+            paths(&code, type)
         }
         let stored = context.stored(type.isClass)
         var first = type.isItem
@@ -269,6 +258,25 @@ enum GesSwiftEmitter {
         if context.values && !type.isItem { valueMembers(&code, type, access, context.holder, schemaSet: context.schemaSet, lenient: GesCSharpEmitter.lenient(type.layout, context.layout)) }
         for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
+    }
+
+    // The paths of a type's nodes in node order, which errors name.
+    private static func paths(_ code: inout Code, _ type: GesPlanType) {
+        code.line("static let __paths: [String] = [")
+        for path in type.paths { code.line("    " + GesSchemaPlanner.quote(path) + ",") }
+        code.line("]")
+    }
+
+    // The members that a type's fields declare, for the collision check.
+    private static func fieldNames(_ type: GesPlanType, _ names: inout Names) {
+        for field in type.fields {
+            names.append((GesSchemaPlanner.camel(field.base), "the field " + field.layout.name))
+            if field.optional { names.append(("has" + field.base, "the presence of " + field.layout.name)) }
+            if field.optional && plain(field.value) { names.append((GesSchemaPlanner.camel(field.base) + "Optional", "the optional value of " + field.layout.name)) }
+            nested(field.value, &names, field.layout.name)
+            if GesCSharpEmitter.isPooledList(field) { names.append(("set" + field.base + "Count", "the element count of " + field.layout.name)) }
+            if GesCSharpEmitter.isTextList(field) { names.append((GesSchemaPlanner.camel(field.base) + "Values", "the texts of " + field.layout.name)) }
+        }
     }
 
     static func constants(_ code: inout Code, _ layout: GesLayoutType, _ access: String) {
@@ -471,6 +479,11 @@ enum GesSwiftEmitter {
                 code.close()
             }
         }
+        fieldMethods(&code, type, mutating)
+    }
+
+    // Writes and reads a type's fields in wire order, at the paths that start at `at`.
+    private static func fieldMethods(_ code: inout Code, _ type: GesPlanType, _ mutating: String) {
         code.blank()
         code.open("func __writeFields(_ writer: inout GesBitWriter, _ paths: [String], _ at: Int\(levelParameter(type))) throws(GesWireError) {")
         for field in type.fields {
@@ -573,14 +586,27 @@ enum GesSwiftEmitter {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
         for member in type.memberNames { names.append((GesSchemaPlanner.camel(member), "the member " + member)) }
-        try GesSchemaPlanner.unique(type.name, names, context.topLevel)
+        fieldNames(type, &names)
+        let model = context.models?.type(type.name)
+        if model != nil { names.append(("toModel", "the generated member toModel")) }
+        try GesSchemaPlanner.unique(type.name, names, context.topLevel, hidden: model != nil ? context.converted : [])
         let width = String(type.layout.memberWidth)
         let last = String(UInt64(type.members.count) - 1)
-        code.line("/// The message set `:\(type.layout.declared)`: one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "").")
+        let parameters = !type.fields.isEmpty
+        code.line(
+            "/// The message set `\(type.layout.declared)`: \(parameters ? "its parameters and " : "")one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "")."
+        )
         code.open(type.membersAreClasses ? "\(access)final class \(type.name) {" : "\(access)struct \(type.name): Sendable {")
         constants(&code, type.layout, access)
-        code.line("/// The message this record holds.")
         let stored = context.stored(type.membersAreClasses)
+        if parameters {
+            paths(&code, type)
+            for field in type.fields { members(&code, field, access, stored, false) }
+            for field in type.fields { pools(&code, field.value, stored) }
+            for field in type.fields { listAccess(&code, field, access) }
+            code.blank()
+        }
+        code.line("/// The message this record holds.")
         code.line("\(stored)\(access)var selected: Member = .\(member(type.memberNames[0]))")
         for (name, record) in type.memberPairs {
             code.line("/// The message when `selected` is `\(GesSchemaPlanner.camel(name))`.")
@@ -589,8 +615,14 @@ enum GesSwiftEmitter {
         code.blank()
         code.line("/// Creates a record that holds the first message, with every field at its zero value.")
         code.line("\(access)init() {}")
-        var write = ["try writer.write(UInt64(self.selected.rawValue), width: \(width))", "switch self.selected {"]
-        var read = ["let index = try reader.read(\(width), path: \"\")"]
+        var write: [String] = []
+        var read: [String] = []
+        if parameters {
+            write.append("try __writeFields(&writer, Self.__paths, 0)")
+            read.append("try __readFields(&reader, Self.__paths, 0)")
+        }
+        write += ["try writer.write(UInt64(self.selected.rawValue), width: \(width))", "switch self.selected {"]
+        read.append("let index = try reader.read(\(width), path: \"\")")
         if UInt64(type.members.count) - 1 < full(type.layout.memberWidth) { read.append("if index > \(last) { throw GesWireError(code: GesWireError.invalidIndex, path: \"\") }") }
         read += ["self.selected = Member(rawValue: \(underlying(type.members.count))(index))!", "switch self.selected {"]
         for (name, record) in type.memberPairs {
@@ -601,6 +633,7 @@ enum GesSwiftEmitter {
         read.append("}")
         code.blank()
         publicMethods(&code, access, type.membersAreClasses ? "" : "mutating ", write, read, "message")
+        if parameters { fieldMethods(&code, type, type.membersAreClasses ? "" : "mutating ") }
         if context.values { valueMembers(&code, type, access, context.holder, schemaSet: context.schemaSet, lenient: GesCSharpEmitter.lenient(type.layout, context.layout)) }
         messageCases(&code, type, access)
         code.blank()
@@ -611,6 +644,7 @@ enum GesSwiftEmitter {
             code.line("case \(member(name))")
         }
         code.close()
+        for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
     }
 
@@ -927,7 +961,9 @@ enum GesSwiftEmitter {
         let wire: String?
         let plan: GesPlanType
 
-        var isSet: Bool { plan.kind == .messages }
+        // A message set without parameters, whose routes take and hand its cases; one with parameters is sent as its record,
+        // which holds them.
+        var isSet: Bool { plan.kind == .messages && plan.fields.isEmpty }
 
         // The type whose `maxByteCount` bounds an encoding.
         var owner: String { wire ?? type }

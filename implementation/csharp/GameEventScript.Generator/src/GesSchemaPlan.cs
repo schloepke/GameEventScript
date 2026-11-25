@@ -344,7 +344,8 @@ internal static class GesSchemaPlanner
             plan.Members.AddRange(type.Members);
             plan.MemberNames.AddRange(type.MemberNames);
             foreach (var member in type.Members) plan.MembersAreClasses |= IsClass(context, member);
-            return plan;
+            plan.MembersAreClasses |= type.Fields.Exists(field => HoldsStorage(context, field.Encoding));
+            if (type.Fields.Count == 0) return plan;
         }
 
         plan.Paths = Paths(context, type);
@@ -356,6 +357,9 @@ internal static class GesSchemaPlanner
             node += Count(context.Layout, field.Encoding, context.Counts, type.Name);
             plan.Fields.Add(planned);
         }
+
+        // A message set's parameters are its own fields; its members keep their own types.
+        if (type.Kind == GesSchemaKind.Messages) return plan;
 
         foreach (var tag in type.Tags) plan.Tags.Add((tag, Member(tag, type.Name), node++));
 
@@ -456,7 +460,7 @@ internal static class GesSchemaPlanner
         if (context.Classes.TryGetValue(name, out var known)) return known;
         var type = context.Layout.Type(name);
         var result = type.Kind == GesSchemaKind.Messages
-            ? type.Members.Exists(member => IsClass(context, member))
+            ? type.Members.Exists(member => IsClass(context, member)) || type.Fields.Exists(field => HoldsStorage(context, field.Encoding))
             : type.Fields.Exists(field => HoldsStorage(context, field.Encoding));
         context.Classes[name] = result;
         return result;

@@ -7,9 +7,9 @@ import XCTest
 
 final class NetworkCookiesTests: XCTestCase {
     private static let source = """
-        wire messages :Commands as (Move)
+        wire messages Commands as (Move)
         message Move(x: :Number integer between 0 and 255)
-        network :Game as { client sends :Commands reliable }
+        network :Game as { client sends Commands reliable }
         """
 
     private static let window: Int64 = 10_000_000

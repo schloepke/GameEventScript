@@ -45,6 +45,7 @@ extension GesSwiftEmitter {
 
     // The members of a wire record that convert it to and from its model.
     static func modelMembers(_ code: inout Code, _ type: GesPlanType, _ model: GesModelType, _ access: String, _ conversion: ModelConversion) throws(GesGeneratorError) {
+        if type.kind == .messages { return try setModelMembers(&code, type, model, access, conversion) }
         let name = conversion.qualifier + model.name
         let fields = GesModelPlanner.fields(model)
         let check = "precondition(\(name).schemaHash == Self.schemaHash, \"The model type \(model.name) was generated from another state of the schema than this wire record.\")"
@@ -56,6 +57,12 @@ extension GesSwiftEmitter {
         var arguments: [String] = []
         var absent: [String] = []
         for field in fields {
+            if field.tag {
+                // A message's tag is a Boolean of the model.
+                guard let tag = type.tags.first(where: { $0.tag == field.field.name }) else { throw unconvertible(type, "#" + field.field.name) }
+                arguments.append("\(GesSchemaPlanner.camel(field.base)): self.\(member(tag.base))")
+                continue
+            }
             guard let wire = type.fields.first(where: { $0.layout.name == field.field.name }) else {
                 throw GesGeneratorError(
                     GesGeneratorError.usage,
@@ -90,6 +97,67 @@ extension GesSwiftEmitter {
                     "The field \(field.layout.name) of :\(type.name) has no counterpart in the model; generate the model from the same schema."
                 )
             }
+            fromModelField(&code, field, match, model.name, "self", "model.\(member(match.base))", conversion)
+        }
+        for tag in type.tags {
+            guard let match = fields.first(where: { $0.tag && $0.field.name == tag.tag }) else { throw unconvertible(type, "#" + tag.tag) }
+            code.line("self.\(member(tag.base)) = model.\(member(match.base))")
+        }
+        code.close()
+    }
+
+    private static func unconvertible(_ type: GesPlanType, _ field: String) -> GesGeneratorError {
+        GesGeneratorError(GesGeneratorError.usage, "The field \(field) of :\(type.name) has no counterpart in the model; generate the model from the same schema.")
+    }
+
+    // A wire message set that is also a model set converts its parameters as fields and its selected member as the case.
+    private static func setModelMembers(_ code: inout Code, _ type: GesPlanType, _ model: GesModelType, _ access: String, _ conversion: ModelConversion) throws(GesGeneratorError) {
+        let name = conversion.qualifier + model.name
+        let fields = GesModelPlanner.fields(model)
+        let check = "precondition(\(name).schemaHash == Self.schemaHash, \"The model type \(model.name) was generated from another state of the schema than this wire record.\")"
+        code.line("/// Creates the model of this set, with its parameters and the case of the selected message, field by field without GES values.")
+        code.line("/// - Precondition: The model type was generated from the same state of the schema.")
+        code.open("\(access)func toModel() -> \(name) {")
+        code.line(check)
+        code.line("let message: \(name).Case")
+        code.line("switch selected {")
+        for member in type.memberNames { code.line("case .\(Self.member(member)): message = .\(Self.member(member))(self.\(Self.member(member)).toModel())") }
+        code.line("}")
+        conversion.reset()
+        var arguments: [String] = []
+        var absent: [String] = []
+        for field in fields {
+            guard let wire = type.fields.first(where: { $0.layout.name == field.field.name }) else { throw unconvertible(type, field.field.name) }
+            let local = conversion.local("field")
+            code.line("let \(local): \(modelType(field.value, model.name, conversion))")
+            toModelField(&code, wire, field, model.name, "self", local, conversion)
+            arguments.append("\(GesSchemaPlanner.camel(field.base)): \(local)")
+            if wire.optional, GesModelPlanner.sibling(fields, field) != nil { absent.append("model.\(member(field.base)) = \(local)") }
+        }
+        arguments.append("message")
+        if absent.isEmpty {
+            code.line("return \(name)(\(arguments.joined(separator: ", ")))")
+        } else {
+            code.line("var model = \(name)(\(arguments.joined(separator: ", ")))")
+            for line in absent { code.line(line) }
+            code.line("return model")
+        }
+        code.close()
+        code.blank()
+        code.line("/// Fills this set from a model, its parameters and the message of its case, field by field without GES values; the values are checked when the set is written.")
+        code.line("/// - Precondition: The model type was generated from the same state of the schema.")
+        code.open("\(access)\(type.membersAreClasses ? "" : "mutating ")func read(model: \(name)) {")
+        code.line(check)
+        code.line("switch model.message {")
+        for member in type.memberNames {
+            code.line("case .\(Self.member(member))(let value):")
+            code.line("    selected = .\(Self.member(member))")
+            code.line("    self.\(Self.member(member)).read(model: value)")
+        }
+        code.line("}")
+        conversion.reset()
+        for field in type.fields {
+            guard let match = fields.first(where: { $0.field.name == field.layout.name }) else { throw unconvertible(type, field.layout.name) }
             fromModelField(&code, field, match, model.name, "self", "model.\(member(match.base))", conversion)
         }
         code.close()

@@ -10,11 +10,11 @@ final class NetworkTickTests: XCTestCase {
         wire schema :Alpha as { v: :Number integer between 0 and 255 }
         wire schema :Beta as { v: :Number integer between 0 and 255 }
         wire schema :Log as { v: :Number integer between 0 and 255 }
-        wire messages :Commands as (Move)
+        wire messages Commands as (Move)
         message Move(x: :Number integer between 0 and 255)
 
         network :Game as {
-          client sends :Commands reliable
+          client sends Commands reliable
           server publishes :Alpha latest
           server publishes :Beta latest
           server publishes :Log reliable

@@ -93,7 +93,20 @@ internal static class GesSchemaFormatter
                     builder.Append("}\n");
                     break;
                 case GesSchemaDeclarationKind.Messages:
-                    builder.Append("messages :").Append(declaration.Name).Append(" as (").Append(string.Join(", ", declaration.Members)).Append(")\n");
+                    builder.Append("messages ").Append(declaration.Name);
+                    if (declaration.Fields.Length > 0)
+                    {
+                        builder.Append('(');
+                        for (var index = 0; index < declaration.Fields.Length; index++)
+                        {
+                            if (index > 0) builder.Append(", ");
+                            Field(declaration.Fields[index], builder, "");
+                        }
+
+                        builder.Append(')');
+                    }
+
+                    builder.Append(" as (").Append(string.Join(", ", declaration.Members)).Append(")\n");
                     break;
             }
         }

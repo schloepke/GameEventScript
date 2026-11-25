@@ -241,7 +241,8 @@ enum GesSchemaPlanner {
             plan.members = type.members
             plan.memberNames = type.memberNames
             for member in type.members where isClass(context, member) { plan.membersAreClasses = true }
-            return plan
+            if type.fields.contains(where: { holdsStorage(context, $0.encoding) }) { plan.membersAreClasses = true }
+            if type.fields.isEmpty { return plan }
         }
         plan.paths = paths(context.layout, type, &context.paths)
         var node = 0
@@ -251,6 +252,8 @@ enum GesSchemaPlanner {
             node += count(context.layout, field.encoding, &context.counts, owner: type.name)
             plan.fields.append(planned)
         }
+        // A message set's parameters are its own fields; its members keep their own types.
+        if type.kind == .messages { return plan }
         for tag in type.tags {
             plan.tags.append((tag, member(tag, type.name), node))
             node += 1
@@ -335,7 +338,10 @@ enum GesSchemaPlanner {
     private static func isClass(_ context: Context, _ name: String) -> Bool {
         if let known = context.classes[name] { return known }
         let type = context.layout.type(name)
-        let result = type.kind == .messages ? type.members.contains { isClass(context, $0) } : type.fields.contains { holdsStorage(context, $0.encoding) }
+        let result =
+            type.kind == .messages
+            ? type.members.contains { isClass(context, $0) } || type.fields.contains { holdsStorage(context, $0.encoding) }
+            : type.fields.contains { holdsStorage(context, $0.encoding) }
         context.classes[name] = result
         return result
     }

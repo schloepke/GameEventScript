@@ -239,7 +239,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         }
     }
 
-    /// <summary>The message set <c>:Commands</c>: one of its messages, read and written without allocation.</summary>
+    /// <summary>The message set <c>Commands</c>: one of its messages, read and written without allocation.</summary>
     internal partial struct Commands
     {
         /// <summary>The schema hash, independent of parameter values.</summary>

@@ -180,6 +180,8 @@ PACKED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/packed.gess"
 NETWORK_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/network.gess"
 # A schema and a message of one name, which generate side by side only with a message suffix.
 MESSAGES_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/messages.gess"
+# Message sets with parameters: a wire set beside its model, and two model sets that convert into each other.
+SETS_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/sets.gess"
 ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
 CSHARP_GENERATED = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
 SWIFT_GENERATED = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
@@ -226,6 +228,10 @@ GOLDENS = (
     # The constants of a network beside the wire code of its route roots.
     (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=2km"], "csharp", "GameEventScript.Tests.Generator.Network.Wire", CSHARP_GENERATED / "NetworkWire.g.cs"),
     (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=2km"], "swift", "NetworkWire", SWIFT_GENERATED / "NetworkWire.swift"),
+    (SETS_FIXTURE.parent, [SETS_FIXTURE.name], ["--model", "sets", "--values"], "csharp", "GameEventScript.Tests.Generator.Sets.Model", CSHARP_GENERATED / "SetsModel.g.cs"),
+    (SETS_FIXTURE.parent, [SETS_FIXTURE.name], ["--model", "sets", "--values"], "swift", "SetsModel", SWIFT_GENERATED / "SetsModel.swift"),
+    (SETS_FIXTURE.parent, [SETS_FIXTURE.name], ["--wire", "sets", "--values", "--models", "GameEventScript.Tests.Generator.Sets.Model"], "csharp", "GameEventScript.Tests.Generator.Sets.Wire", CSHARP_GENERATED / "SetsWire.g.cs"),
+    (SETS_FIXTURE.parent, [SETS_FIXTURE.name], ["--wire", "sets", "--values", "--models", "SetsModel"], "swift", "SetsWire", SWIFT_GENERATED / "SetsWire.swift"),
 )
 # The layouts of the role fixture, which both CLIs must print identically.
 ROLE_LAYOUTS = (["--wire", "world", "--param", "worldWidth=2000m"], ["--wire", "panels"], ["--model", "view"])

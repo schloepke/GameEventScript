@@ -468,22 +468,24 @@ enum GesSchemaBinder {
         if root.kind == .messages {
             let members = try root.members.map { try bindNodes($0, parameters, hash, bindingHash) }
             let largest = members.map(\.maxBitCount).max() ?? 0
+            // The set's parameters come first, then the member index and the message.
+            let own = try bindNodes(root, parameters, hash, bindingHash)
             let width = bitLength(UInt64(members.count) - 1)
-            let total = largest + Int64(width)
+            let total = own.maxBitCount + largest + Int64(width)
             if total > maximumByteCount * 8 { throw root.scope.error(Code.tooLarge, root.offset, "The largest encoding of '\(root.name)' exceeds \(maximumByteCount) bytes.") }
             return GesBoundSchema(
                 schema: root.schema!,
                 name: root.name,
                 kind: .messages,
-                nodes: [],
-                infos: [],
+                nodes: own.nodes,
+                infos: own.infos,
                 members: members,
                 memberWidth: width,
                 maxByteCount: Int((total + 7) / 8),
                 maxBitCount: total,
                 hash: hash,
                 bindingHash: bindingHash,
-                labels: []
+                labels: own.labels
             )
         }
         return try bindNodes(root, parameters, hash, bindingHash)
@@ -840,6 +842,7 @@ enum GesSchemaBinder {
         var known: Set<EncodableVisit> = []
         var levels: [ObjectIdentifier: Int] = [:]
         if root.kind == .messages {
+            try checkEncodable(root, 0, &known, &levels)
             for member in root.members { try checkEncodable(member, 0, &known, &levels) }
             return
         }

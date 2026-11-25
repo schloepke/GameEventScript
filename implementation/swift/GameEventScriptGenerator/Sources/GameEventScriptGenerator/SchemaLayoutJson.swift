@@ -65,6 +65,12 @@ enum GesSchemaLayoutJson {
             json.number("packedBits", Int64(type.packedBits))
         }
         if type.kind == .messages {
+            // A set's parameters, only when it has any, so that the layout of a set without stays that of 0.6.0.
+            if !type.fields.isEmpty {
+                json.beginArray("fields")
+                for field in type.fields { self.field(&json, field, member: true) }
+                json.endArray()
+            }
             json.strings("members", type.memberNames)
             json.number("memberWidth", Int64(type.memberWidth))
         } else {

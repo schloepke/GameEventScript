@@ -35,7 +35,7 @@ The client seals `hello` to the pinned server key; the server answers with a sea
 gesBlock: case
 id: verified-handshake
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
@@ -87,7 +87,7 @@ Sealed packets carry the stream length prefix like any other packet; a stream ne
 gesBlock: case
 id: verified-stream
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"transport": "stream", "serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
@@ -139,7 +139,7 @@ The sealed `hello` is padded to 1200 bytes; a datagram receiver reconstructs the
 gesBlock: case
 id: verified-datagram
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"transport": "datagram", "serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
@@ -191,7 +191,7 @@ A client in development mode asks for the key; the server answers with a `retry`
 gesBlock: case
 id: key-retry
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
@@ -237,7 +237,7 @@ A client without security sends a plain `hello`; a server with a key answers wit
 gesBlock: case
 id: plain-client-encrypted
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
@@ -283,7 +283,7 @@ Neither side has a security; both report `none`.
 gesBlock: case
 id: plain-session
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {}
@@ -318,7 +318,7 @@ The client asks for the key of a server that has none: the server closes with `n
 gesBlock: case
 id: insecure
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {}
@@ -350,7 +350,7 @@ A client that sealed its `hello` opens every `welcome` as a sealed one; a plain 
 gesBlock: case
 id: plain-welcome
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {}
@@ -384,7 +384,7 @@ The server cannot open a `hello` sealed to a key it does not hold and closes wit
 gesBlock: case
 id: wrong-key
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
@@ -416,7 +416,7 @@ On the message and stream transports a sealed packet that does not authenticate 
 gesBlock: case
 id: changed-packet
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
@@ -458,7 +458,7 @@ On the datagram transport a sealed packet that does not authenticate is dropped,
 gesBlock: case
 id: changed-datagram
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"transport": "datagram", "serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
@@ -502,7 +502,7 @@ On the datagram transport anyone can send a `retry`. A client without a pinned k
 gesBlock: case
 id: forged-retry
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"transport": "datagram", "serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
@@ -553,7 +553,7 @@ transports a plain `close` is malformed.
 gesBlock: case
 id: plain-close-stream
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}
@@ -596,7 +596,7 @@ encryption until it reads the `welcome`; after that it drops one too.
 gesBlock: case
 id: plain-close-datagram
 networkApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends :Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nwire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }\nwire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\n\nnetwork :Game as {\n  client sends Commands reliable\n  server sends :Blob reliable\n  server publishes :World latest at most every 50ms\n  server sends :Pack bulk\n}\n"]
   network: "Game"
   token: "74"
   options: {"transport": "datagram", "serverSecurity": "key", "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", "testKeySeed": 7}

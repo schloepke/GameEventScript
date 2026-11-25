@@ -10,6 +10,9 @@ struct GesModelPlanField {
     let field: GesModelField
     let base: String
     let value: GesModelPlanValue
+
+    // Whether the field is the Boolean of a message's tag, which its message carries as the tag rather than an argument.
+    var tag = false
 }
 
 final class GesModelPlanValue {
@@ -51,13 +54,26 @@ enum GesModelPlanner {
     static func conversionName(_ owner: String, _ value: GesModelPlanValue) -> String { value.tagSet.isEmpty ? owner + value.nested : value.tagSet }
 
     static func fields(_ type: GesModelType) -> [GesModelPlanField] {
-        type.fields.map { field in
+        var fields = type.fields.map { field in
             let pascal = GesSchemaPlanner.pascal(field.name)
             let member = pascal == type.name || field.renamed ? pascal + "Value" : pascal
             let value = self.value(field.value, member, "")
             if field.optional { value.nullable = true }
             return GesModelPlanField(field: field, base: member, value: value)
         }
+        // A message holds a Boolean per tag after its arguments, false unless given.
+        for tag in type.tags {
+            let field = GesModelField()
+            field.name = tag
+            field.path = "#" + tag
+            field.defaultValue = GesLayoutDefault(kind: .boolean)
+            field.value.kind = .boolean
+            let value = GesModelPlanValue()
+            value.kind = .boolean
+            value.model = field.value
+            fields.append(GesModelPlanField(field: field, base: GesSchemaPlanner.pascal(tag), value: value, tag: true))
+        }
+        return fields
     }
 
     private static func value(_ model: GesModelValue, _ name: String, _ label: String) -> GesModelPlanValue {

@@ -437,7 +437,8 @@ public sealed class GesSchema
     /// <summary>Gets the parameters it reaches, in ascending name order.</summary>
     public GesReadOnlyArray<GesSchemaParameterInfo> Parameters { get; private set; }
 
-    /// <summary>Gets the fields of a schema or the arguments of a message, in declared order.</summary>
+    /// <summary>Gets the fields of a schema, the arguments of a message or the parameters of a message set, in declared
+    /// order.</summary>
     public GesReadOnlyArray<GesSchemaFieldInfo> Fields { get; private set; }
 
     /// <summary>Gets the fields of a schema written <c>computed by</c>, own and taken, in the order their expressions may read

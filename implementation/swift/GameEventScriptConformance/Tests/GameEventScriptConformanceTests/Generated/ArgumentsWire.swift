@@ -16,7 +16,7 @@ import GameEventScriptRuntime
 enum ArgumentsWire {}
 
 extension ArgumentsWire {
-    /// The message set `:Actions`: one of its messages, read and written without allocation once its storage has grown.
+    /// The message set `Actions`: one of its messages, read and written without allocation once its storage has grown.
     final class Actions {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0xd07a004247613730
@@ -1159,7 +1159,7 @@ private enum __GesSchemas56eecc37077cfa57 {
                 "// initializer; a message without defaults generates as before.",
                 "tags :FireWhen as (#aimed, #now)",
                 "",
-                "wire(arguments) messages :Actions as (Fire, Turn, Say, Mark, Stop)",
+                "wire(arguments) messages Actions as (Fire, Turn, Say, Mark, Stop)",
                 "wire(arguments) message Fire(count: :Number integer between 1 and 1024 default 1, charge: :Number integer between 0 and 9 optional, when: :FireWhen default #aimed, delay: :Quantity(s) between 0s and 60s step 1ms default 2s, ratio: :Number between 0 and 1 step 0.25 default 0.5, loud: :Boolean default false)",
                 "wire(arguments) message Turn(speed: :Number integer between 0 and 9 default 3, side: :Tag(#left, #right))",
                 "wire(arguments) message Say(text: :Text max 8, loud: :Boolean default true)",

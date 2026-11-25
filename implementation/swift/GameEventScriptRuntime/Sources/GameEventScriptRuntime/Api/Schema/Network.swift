@@ -123,9 +123,14 @@ extension GesFileScope {
             var routes: [GesNetworkRoute] = []
             var seen: Set<String> = []
             for (index, route) in syntax.routes.enumerated() {
-                // A route names a message without a colon and a schema or message set with one.
+                // A route names a message or message set without a colon and a schema with one.
                 guard let root = (route.isMessage ? messages : all)[route.root] else {
-                    throw error(Code.unknownName, route.rootOffset, route.isMessage ? "Message '\(route.root)' is not declared." : "':\(route.root)' is no declared schema or message set.")
+                    let message =
+                        route.isMessage
+                        ? "Message or message set '\(route.root)' is not declared."
+                        : messages[route.root]?.kind == .messages
+                            ? "':\(route.root)' is no declared schema; a message set is named without ':', as '\(route.root)'." : "':\(route.root)' is no declared schema."
+                    throw error(Code.unknownName, route.rootOffset, message)
                 }
                 if root.syntax.wireGroup == nil { throw error(Code.invalidRoute, route.rootOffset, "'\(route.root)' has no wire role.") }
                 if root.isAbstract { throw error(Code.invalidRoute, route.rootOffset, "'\(route.root)' is abstract.") }

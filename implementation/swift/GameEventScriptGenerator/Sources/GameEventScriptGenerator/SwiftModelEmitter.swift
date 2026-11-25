@@ -40,11 +40,23 @@ enum GesSwiftModelEmitter {
         // The call that reads a document up to its roots: the schema set's, or that of the helper holding the sources of this file.
         let documents = !options.documents ? nil : schemaSet.map { $0.qualified + ".readDocument(text, roots: [" } ?? "__GesModelDocuments" + suffix + ".read(text, ["
         let documentType = options.documents ? try GesModelPlanner.documentType(layout, document.space) : ""
+        // Model messages and sets convert to and from messages through the values enum, which they need without --values.
+        let messages = layout.types.contains { $0.kind != .schema }
+        let valued = options.values || messages
+        let schemas = "__GesModelSchemas" + suffix
+        // Bindings and documents concern the schemas only.
+        let plain = GesCSharpModelEmitter.schemasOnly(layout)
         for type in layout.types {
-            let reads = layout.roots.contains(type.name) ? documents : nil
+            let reads = plain.roots.contains(type.name) ? documents : nil
             document.units.append(
                 GesCodeUnit(owner: type.name) { code in
-                    try record(&code, layout, type, access, bindings: options.bindings, values: options.values ? values : nil, computed: computed, documents: reads)
+                    if type.kind == .messages {
+                        try messageSet(&code, layout, type, access, values, schemas)
+                    } else if type.kind == .message {
+                        try record(&code, layout, type, access, bindings: false, values: nil, computed: computed, documents: nil, messageValues: values, schemas: schemas)
+                    } else {
+                        try record(&code, layout, type, access, bindings: options.bindings, values: valued ? values : nil, computed: computed, documents: reads)
+                    }
                 }
             )
         }
@@ -58,18 +70,19 @@ enum GesSwiftModelEmitter {
                 }
             )
         }
-        if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, layout, access, support, computed) }) }
-        if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, support, computed) }) }
-        if let documents {
-            document.units.append(GesCodeUnit(owner: "") { code in documentTypeDeclaration(&code, layout, documentType, documents, access) })
+        if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, plain, access, support, computed) }) }
+        if valued { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, support, computed) }) }
+        if messages { document.units.append(GesCodeUnit(owner: "") { code in schemasHolder(&code, layout, schemas, schemaSet) }) }
+        if let documents, !plain.roots.isEmpty {
+            document.units.append(GesCodeUnit(owner: "") { code in documentTypeDeclaration(&code, plain, documentType, documents, access) })
             if schemaSet == nil { document.units.append(GesCodeUnit(owner: "") { code in documentsHolder(&code, layout, "__GesModelDocuments" + suffix) }) }
         }
         if let setName = schemaSet?.declared {
             document.units.append(GesCodeUnit(owner: "") { code in GesSchemaSetReference.writeSwift(&code, setName, access, layout.sources, [], networks: false) })
         }
-        if options.bindings || options.values { document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support) }) }
+        if options.bindings || valued { document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support) }) }
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
-            let values = options.bindings || options.values || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
+            let values = options.bindings || valued || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
             let math = GesComputedEmitter.usesMath(layout.types.map(\.computed))
             let spatial = GesComputedEmitter.usesSpatial(layout.types.map(\.computed))
             document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: true, values: values, math: math, spatial: spatial) })
@@ -133,10 +146,10 @@ enum GesSwiftModelEmitter {
         code.close()
     }
 
-    private static func member(_ pascal: String) -> String { GesSwiftEmitter.member(pascal) }
+    static func member(_ pascal: String) -> String { GesSwiftEmitter.member(pascal) }
 
     // The argument label of a declaration: Swift needs backticks there only for inout, var and let; a call needs none.
-    private static func label(_ pascal: String) -> String {
+    static func label(_ pascal: String) -> String {
         let name = GesSchemaPlanner.camel(pascal)
         return name == "inout" || name == "var" || name == "let" ? "`" + name + "`" : name
     }
@@ -162,7 +175,9 @@ enum GesSwiftModelEmitter {
         bindings: Bool,
         values: String?,
         computed: GesComputedEmitter,
-        documents: String?
+        documents: String?,
+        messageValues: String? = nil,
+        schemas: String? = nil
     ) throws(GesGeneratorError) {
         if type.packed != nil {
             try packedRecord(&code, layout, type, access, bindings: bindings, values: values, documents: documents)
@@ -185,6 +200,7 @@ enum GesSwiftModelEmitter {
         GesComputedEmitter.names(type.computed, type.name, swift: true, &names)
         if bindings { names.append(("gesValue", "the generated member gesValue")) }
         if values != nil { names.append(("toValue", "the generated member toValue")) }
+        if messageValues != nil { names.append(("toMessage", "the generated member toMessage")) }
         if bindings && fields.contains(where: { $0.field.name == "fields" }) {
             throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(type.name)', the field fields and the generated field fields of its bindings share a name.")
         }
@@ -194,10 +210,18 @@ enum GesSwiftModelEmitter {
         }
         try GesSchemaPlanner.unique(type.name, names, GesModelPlanner.topLevel(layout, swift: true))
 
-        code.line("/// The model of the schema `:\(type.name)`: a plain value that is never encoded.")
+        code.line(
+            type.kind == .message
+                ? "/// The model of the message `\(type.name)`: its arguments and a Boolean per tag, a plain value that is never encoded."
+                : "/// The model of the schema `:\(type.name)`: a plain value that is never encoded."
+        )
         let adopted = GesModelPlanner.adopted(layout, type, swift: true).map { ", " + $0 }.joined()
         code.open("\(access)struct \(type.name): Hashable, Sendable, Codable\(key == nil ? "" : ", Identifiable")\(adopted) {")
-        code.line("/// The hash of the schema `:\(type.name)`, which wire records of it carry too; a test that compares it notices stale generated code.")
+        code.line(
+            type.kind == .message
+                ? "/// The hash of the message `\(type.name)`, which wire code of it carries too; a test that compares it notices stale generated code."
+                : "/// The hash of the schema `:\(type.name)`, which wire records of it carry too; a test that compares it notices stale generated code."
+        )
         code.line("\(access)static let schemaHash: UInt64 = 0x\(GesSchemaLayoutJson.hex(type.hash))")
         GesSwiftEmitter.lets(&code, type.constants, access, "Int")
         if !fields.isEmpty { code.blank() }
@@ -262,6 +286,7 @@ enum GesSwiftModelEmitter {
             code.line("}")
             code.close()
         }
+        if let messageValues, let schemas { messageConversions(&code, type, access, messageValues, schemas) }
         for field in fields { try declarations(&code, field.value, access) }
         code.close()
     }
@@ -481,7 +506,7 @@ enum GesSwiftModelEmitter {
 
     /// A literal default as a native value; a record calls the memberwise initializer of its model with the fields the literal
     /// names.
-    private static func native(_ layout: GesModelLayout, _ value: GesModelPlanValue, _ fallback: GesLayoutDefault) -> String {
+    static func native(_ layout: GesModelLayout, _ value: GesModelPlanValue, _ fallback: GesLayoutDefault) -> String {
         switch fallback.kind {
         case .boolean: fallback.boolean ? "true" : "false"
         case .tag where value.closedTag: "." + name(fallback.value)
@@ -528,13 +553,13 @@ enum GesSwiftModelEmitter {
         code.blank()
     }
 
-    private static func defaultValue(_ value: GesModelPlanValue) -> String {
+    static func defaultValue(_ value: GesModelPlanValue) -> String {
         value.nullable ? " = nil" : value.kind == .list || value.kind == .dice || value.kind == .bytes || value.kind == .flags ? " = []" : value.kind == .values ? " = .empty" : ""
     }
 
     static func type(_ value: GesModelPlanValue) -> String { plain(value) + (value.nullable ? "?" : "") }
 
-    private static func plain(_ value: GesModelPlanValue) -> String {
+    static func plain(_ value: GesModelPlanValue) -> String {
         switch value.kind {
         case .boolean: "Bool"
         case .number: value.model.integer ? "Int" : "Double"
@@ -566,7 +591,7 @@ enum GesSwiftModelEmitter {
         code.close()
     }
 
-    private static func declarations(_ code: inout Code, _ value: GesModelPlanValue, _ access: String) throws(GesGeneratorError) {
+    static func declarations(_ code: inout Code, _ value: GesModelPlanValue, _ access: String) throws(GesGeneratorError) {
         if value.closedTag {
             if !value.tagSet.isEmpty { return }
             code.blank()
@@ -591,11 +616,11 @@ enum GesSwiftModelEmitter {
 
     private static func unit(_ unit: String) -> String { "." + unit }
 
-    private static func literal(_ text: String) -> String { GesSchemaPlanner.literal(text, swift: true) }
+    static func literal(_ text: String) -> String { GesSchemaPlanner.literal(text, swift: true) }
 
     // Converts a native value to a GES value; a plain value holds nested records as Records rather than as external values.
     // `helper` declares the conversions of the file's unions and Flags, `support` the conversions that both share.
-    private static func encode(_ value: GesModelPlanValue, _ owner: String, _ expression: String, _ helper: String, _ support: String, nullable: Bool = true, plain: Bool = false) -> String {
+    static func encode(_ value: GesModelPlanValue, _ owner: String, _ expression: String, _ helper: String, _ support: String, nullable: Bool = true, plain: Bool = false) -> String {
         if nullable && value.nullable { return "\(support).present(\(expression), { \(encode(value, owner, "$0", helper, support, nullable: false, plain: plain)) })" }
         switch value.kind {
         case .boolean: return ".boolean(\(expression))"
@@ -850,10 +875,13 @@ enum GesSwiftModelEmitter {
             let fields = GesModelPlanner.fields(type)
             let names = type.name + "Fields"
             let typeLiteral = literal(type.name)
-            let arguments = fields.enumerated().map { "\(GesSchemaPlanner.camel($0.element.base)): field\($0.offset)" }.joined(separator: ", ")
+            var argumentList = fields.enumerated().map { "\(GesSchemaPlanner.camel($0.element.base)): field\($0.offset)" }
             if typeIndex > 0 { code.blank() }
-            code.line("static let \(names) = [\(fields.map { literal($0.field.name) }.joined(separator: ", "))]")
-            code.blank()
+            // A set without parameters reads no Record; a message without arguments needs the element type of its empty list.
+            if type.kind != .messages || !fields.isEmpty {
+                code.line("static let \(names)\(fields.isEmpty ? ": [String]" : "") = [\(fields.map { literal($0.field.name) }.joined(separator: ", "))]")
+                code.blank()
+            }
             defaults(&code, layout, fields, type.name + "Defaults", type.name, support)
             // A value also carries the computed fields, as decoding the record's bytes gives them; reading ignores them.
             var keys = names
@@ -863,59 +891,74 @@ enum GesSwiftModelEmitter {
                 code.blank()
             }
             let checks = packedChecks(type, fields)
-            code.open("static func value(_ record: \(type.name)) -> GesValue {")
-            code.line(".record(typeName: \(typeLiteral), keys: \(keys), values: [")
-            for field in fields { code.line("    " + encode(field.value, type.name, "record." + member(field.base), name, support, plain: true) + ",") }
-            for field in type.computed {
-                code.line("    \(computed.helper).gesValue(\(computed.valueOf("record", type.name, field)), .\(field.kind == .quantity || field.isSpatial ? field.unit.rawValue : "none")),")
+            let schema = type.kind == .schema
+            // A set reads its parameters with the message it carries, which its initializer takes last; a set without
+            // parameters needs no Record of them.
+            let set = type.kind == .messages
+            if set { argumentList.append("message") }
+            let arguments = argumentList.joined(separator: ", ")
+            if schema {
+                code.open("static func value(_ record: \(type.name)) -> GesValue {")
+                code.line(".record(typeName: \(typeLiteral), keys: \(keys), values: [")
+                for field in fields { code.line("    " + encode(field.value, type.name, "record." + member(field.base), name, support, plain: true) + ",") }
+                for field in type.computed {
+                    code.line("    \(computed.helper).gesValue(\(computed.valueOf("record", type.name, field)), .\(field.kind == .quantity || field.isSpatial ? field.unit.rawValue : "none")),")
+                }
+                code.line("])")
+                code.close()
+                code.blank()
             }
-            code.line("])")
-            code.close()
-            code.blank()
-            code.open("static func read\(type.name)(_ value: GesValue, _ path: String) throws(GesWireError) -> \(type.name) {")
-            if fields.isEmpty {
-                code.line("guard recordFields(value, \(typeLiteral), \(names)) != nil else { throw failure(value, path) }")
-                code.line("return \(type.name)()")
-            } else {
-                code.line("guard let fields = recordFields(value, \(typeLiteral), \(names)) else { throw failure(value, path) }")
-                for index in GesModelPlanner.readOrder(fields) {
-                    let field = fields[index]
-                    let fieldLiteral = literal(field.field.name)
-                    let held = "value\(index)"
-                    let missing = field.value.nullable ? "fields.get(\(fieldLiteral)) ?? .nothing" : "try required(fields, \(fieldLiteral), path)"
-                    code.line("let \(held) = \(self.held(layout, fields, index, type.name, support, type.name + "Defaults", { "value\($0)" }, missing))")
-                    if descends(field.value) {
-                        code.line("let field\(index) = \(read(field.value, type.name, held, "fieldPath(path, \(fieldLiteral))", name, support))")
-                    } else {
-                        code.line("guard let field\(index) = \(decode(field.value, type.name, held, name, support, plain: true)) else { throw failure(\(held), fieldPath(path, \(fieldLiteral))) }")
-                        // A value of the field's type outside its range is the value path's error, not a value of another type.
-                        if let check = checks[index] {
-                            code.line("guard \(check)(field\(index)) else { throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, \(fieldLiteral))) }")
+            if !set || !fields.isEmpty {
+                code.open("static func read\(type.name)(_ value: GesValue, _ path: String\(set ? ", _ message: \(type.name).Case" : "")) throws(GesWireError) -> \(type.name) {")
+                if fields.isEmpty {
+                    code.line("guard recordFields(value, \(typeLiteral), \(names)) != nil else { throw failure(value, path) }")
+                    code.line("return \(type.name)()")
+                } else {
+                    code.line("guard let fields = recordFields(value, \(typeLiteral), \(names)) else { throw failure(value, path) }")
+                    for index in GesModelPlanner.readOrder(fields) {
+                        let field = fields[index]
+                        let fieldLiteral = literal(field.field.name)
+                        let held = "value\(index)"
+                        let missing = field.value.nullable ? "fields.get(\(fieldLiteral)) ?? .nothing" : "try required(fields, \(fieldLiteral), path)"
+                        code.line("let \(held) = \(self.held(layout, fields, index, type.name, support, type.name + "Defaults", { "value\($0)" }, missing))")
+                        if descends(field.value) {
+                            code.line("let field\(index) = \(read(field.value, type.name, held, "fieldPath(path, \(fieldLiteral))", name, support))")
+                        } else {
+                            code.line("guard let field\(index) = \(decode(field.value, type.name, held, name, support, plain: true)) else { throw failure(\(held), fieldPath(path, \(fieldLiteral))) }")
+                            // A value of the field's type outside its range is the value path's error, not a value of another type.
+                            if let check = checks[index] {
+                                code.line("guard \(check)(field\(index)) else { throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, \(fieldLiteral))) }")
+                            }
                         }
                     }
+                    construct(&code, type.name, arguments, fields)
+                }
+                code.close()
+            }
+            if type.kind == .message { messageValues(&code, type, fields, name, support) }
+            if set { setValues(&code, type, fields, name, support) }
+            if schema {
+                code.blank()
+                code.open("static func decode\(type.name)(_ value: GesValue) -> \(type.name)? {")
+                if fields.isEmpty {
+                    code.line("guard recordFields(value, \(typeLiteral), \(names)) != nil else { return nil }")
+                } else {
+                    code.open("guard")
+                    code.line("let fields = recordFields(value, \(typeLiteral), \(names)),")
+                    for (index, field) in fields.enumerated() {
+                        code.line(
+                            "let field\(index) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support, type.name + "Defaults"), name, support, plain: true))\(fits(checks, index, "field\(index)"))\(index == fields.count - 1 ? "" : ",")"
+                        )
+                    }
+                    code.dedent()
+                    code.line("else { return nil }")
                 }
                 construct(&code, type.name, arguments, fields)
+                code.close()
             }
-            code.close()
-            code.blank()
-            code.open("static func decode\(type.name)(_ value: GesValue) -> \(type.name)? {")
-            if fields.isEmpty {
-                code.line("guard recordFields(value, \(typeLiteral), \(names)) != nil else { return nil }")
-            } else {
-                code.open("guard")
-                code.line("let fields = recordFields(value, \(typeLiteral), \(names)),")
-                for (index, field) in fields.enumerated() {
-                    code.line(
-                        "let field\(index) = \(decode(field.value, type.name, inline(layout, fields, index, type.name, support, type.name + "Defaults"), name, support, plain: true))\(fits(checks, index, "field\(index)"))\(index == fields.count - 1 ? "" : ",")"
-                    )
-                }
-                code.dedent()
-                code.line("else { return nil }")
-            }
-            construct(&code, type.name, arguments, fields)
-            code.close()
             conversions(&code, type.name, fields, helper: name, support: support, plain: true)
         }
+        if layout.types.contains(where: { $0.kind != .schema }) { messageHelpers(&code) }
         code.blank()
         code.line("// The fields of a Record of the schema, or of a Map whose keys are all fields of it.")
         code.open("static func recordFields(_ value: GesValue, _ name: String, _ names: [String]) -> GesValueMap? {")

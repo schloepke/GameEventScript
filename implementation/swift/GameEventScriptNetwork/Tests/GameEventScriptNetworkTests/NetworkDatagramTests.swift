@@ -10,11 +10,11 @@ final class NetworkDatagramTests: XCTestCase {
         wire schema :World as { tick: :Number integer between 0 and 65535 }
         wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }
         wire schema :Pack as { data: :List(:Number integer between 0 and 255) max 6000 }
-        wire messages :Commands as (Move)
+        wire messages Commands as (Move)
         message Move(x: :Number integer between 0 and 255)
 
         network :Game as {
-          client sends :Commands reliable
+          client sends Commands reliable
           server sends :Blob reliable
           server publishes :World latest at most every 50ms
           server sends :Pack bulk

@@ -27,12 +27,12 @@ wire schema :World as {
   x: :Number between 0 and 100 step 0.5
 }
 
-wire messages :Commands as (Move, Fire)
+wire messages Commands as (Move, Fire)
 message Move(x: :Number between 0 and 100 step 0.5)
 message Fire()
 
 network :Game as {
-  client sends :Commands reliable
+  client sends Commands reliable
   server publishes :World latest at most every 50ms
 }
 ```

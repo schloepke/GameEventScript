@@ -1,0 +1,12 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The fixture of message sets with parameters: a wire and model set whose parameters take empty and optional defaults
+// around the carried message, and a model-only set that shares a member with it, so that each model set converts into
+// the other where the case fits.
+schema :DroneId as { id: :Number integer between 0 and 4095 }
+message MoveTo(target: :Point(m), _ note: :Text max 20 optional) tags (#fast)
+message Stop()
+message Land(slow: :Boolean default false)
+
+wire(sets) model(sets) messages DroneCommands(ids: :List(:DroneId) max 64 default [], urgent: :Boolean optional) as (MoveTo, Stop)
+model(sets) messages Landing(meta: :Map default [:]) as (MoveTo, Land)

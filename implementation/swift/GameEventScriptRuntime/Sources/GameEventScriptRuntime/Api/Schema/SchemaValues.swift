@@ -26,21 +26,48 @@ public enum GesSchemaValues {
     public static func encode(_ schema: GesBoundSchema, _ value: GesValue, bufferSize: Int? = nil) throws -> [UInt8] {
         try withScratch(bufferSize ?? schema.maxByteCount) { bytes in
             var writer = GesSchemaWriter(schema, into: bytes)
-            var current = schema
             if schema.kind == .messages {
-                guard let message = value.messageValue, let member = schema.memberIndex(message.name) else { throw GesWireError(code: GesWireError.typeMismatch) }
-                try writer.selectMember(member)
-                current = schema.members[member]
-            }
-            if current.kind == .message {
-                try encodeMessage(&writer, current, value)
+                guard let message = value.messageValue else { throw GesWireError(code: GesWireError.typeMismatch) }
+                if !schema.nodes.isEmpty {
+                    // The envelope of a set with parameters: the parameters, then the carried message.
+                    let arguments = Array(message.arguments)
+                    if message.name != schema.name || arguments.count != schema.labels.count + 1 { throw GesWireError(code: GesWireError.typeMismatch) }
+                    var argument = 0
+                    var index = 0
+                    while index < schema.nodes.count {
+                        if arguments[argument].name != schema.labels[argument] { throw GesWireError(code: GesWireError.typeMismatch, path: schema.infos[index].path) }
+                        try encodeNode(&writer, schema, index, arguments[argument].value, strict: false)
+                        argument += 1
+                        index = schema.nodes[index].next
+                    }
+                    guard arguments[argument].name == messageLabel, let inner = arguments[argument].value.messageValue else {
+                        throw GesWireError(code: GesWireError.typeMismatch, path: messageLabel)
+                    }
+                    // Errors of the carried message name it as the argument message, as the lenient read does.
+                    do {
+                        try encodeMember(&writer, schema, arguments[argument].value, inner)
+                    } catch let error as GesWireError {
+                        throw GesWireError(code: error.code, path: error.path.isEmpty ? messageLabel : messageLabel + "." + error.path, detail: error.detail)
+                    }
+                } else {
+                    try encodeMember(&writer, schema, value, message)
+                }
+            } else if schema.kind == .message {
+                try encodeMessage(&writer, schema, value)
             } else {
-                if let name = value.customTypeName, name != current.name { throw GesWireError(code: GesWireError.typeMismatch) }
+                if let name = value.customTypeName, name != schema.name { throw GesWireError(code: GesWireError.typeMismatch) }
                 guard let fields = try value.materializedMap() else { throw GesWireError(code: GesWireError.typeMismatch) }
-                try encodeFields(&writer, current, 0, current.nodes.count, fields, strict: false)
+                try encodeFields(&writer, schema, 0, schema.nodes.count, fields, strict: false)
             }
             return Array(UnsafeRawBufferPointer(rebasing: bytes[0..<(try writer.finish())]))
         }
+    }
+
+    // Selects the member of a set that a message names and encodes the message.
+    private static func encodeMember(_ writer: inout GesSchemaWriter, _ schema: GesBoundSchema, _ value: GesValue, _ message: GameEventScriptMessage) throws {
+        guard let member = schema.memberIndex(message.name) else { throw GesWireError(code: GesWireError.typeMismatch) }
+        try writer.selectMember(member)
+        try encodeMessage(&writer, schema.members[member], value)
     }
 
     /// Encodes a Record or Map as a delta against a baseline value of the same schema.
@@ -103,8 +130,25 @@ public enum GesSchemaValues {
         try data.withUnsafeBytes { bytes in
             var reader = GesSchemaReader(schema, data: bytes, byteLimit: byteLimit)
             var current = schema
-            if schema.kind == .messages { current = schema.members[try reader.readMember()] }
-            let value = current.kind == .message ? try decodeMessage(&reader, current) : try decodeRecord(&reader, current, current.name, 0, current.nodes.count)
+            var envelope: [GesMessageArgument]?
+            if schema.kind == .messages {
+                if !schema.nodes.isEmpty {
+                    var arguments: [GesMessageArgument] = []
+                    arguments.reserveCapacity(schema.labels.count + 1)
+                    var index = 0
+                    while index < schema.nodes.count {
+                        arguments.append(try GesMessageArgument(name: schema.labels[arguments.count], value: try decodeNode(&reader, schema, index)))
+                        index = schema.nodes[index].next
+                    }
+                    envelope = arguments
+                }
+                current = schema.members[try reader.readMember()]
+            }
+            var value = current.kind == .message ? try decodeMessage(&reader, current) : try decodeRecord(&reader, current, current.name, 0, current.nodes.count)
+            if var arguments = envelope {
+                arguments.append(try GesMessageArgument(name: messageLabel, value: value))
+                value = .message(try GameEventScriptMessage(name: schema.name, arguments: arguments, tags: []))
+            }
             return GesSchemaDecoded(value: value, byteCount: try reader.finish())
         }
     }
@@ -131,54 +175,102 @@ public enum GesSchemaValues {
     ///   not optional; `wire.typeMismatch` when the name is not a message of the schema or a label is unknown, repeated or
     ///   out of order.
     public static func completeMessage(_ schema: GesBoundSchema, _ message: GameEventScriptMessage) throws -> GameEventScriptMessage {
-        var current = schema
-        if schema.kind == .messages {
-            guard let member = schema.memberIndex(message.name) else { throw GesWireError(code: GesWireError.typeMismatch) }
-            current = schema.members[member]
+        try complete(schema.schema.declaration, message)
+    }
+
+    /// Completes a Message like the overload with a bound schema, but without binding the schema, since the lenient
+    /// read depends on no parameter value. It also completes messages whose arguments hold free data, such as a `:Map`,
+    /// which have no wire form; generated models use it.
+    /// - Parameters:
+    ///   - schema: The message or message set; a set selects its member by the message name.
+    ///   - message: The message.
+    /// - Returns: The completed message with the same name and tags, or the message itself when nothing is missing.
+    /// - Throws: `GesWireError` `wire.missingField` with the argument path when an argument without default is missing and
+    ///   not optional; `wire.typeMismatch` when the name is not a message of the schema or a label is unknown, repeated or
+    ///   out of order.
+    public static func completeMessage(_ schema: GesSchema, _ message: GameEventScriptMessage) throws -> GameEventScriptMessage {
+        try complete(schema.declaration, message)
+    }
+
+    private static func complete(_ schema: GesResolvedDeclaration, _ message: GameEventScriptMessage) throws -> GameEventScriptMessage {
+        if schema.kind == .messages && !schema.fields.isEmpty {
+            // The envelope of a set with parameters: its own arguments, then the carried message, completed in turn.
+            if message.name != schema.name { throw GesWireError(code: GesWireError.typeMismatch) }
+            var arguments = Array(message.arguments)
+            guard let last = arguments.last, last.name == messageLabel else {
+                if arguments.contains(where: { $0.name == messageLabel }) { throw GesWireError(code: GesWireError.typeMismatch, path: messageLabel) }
+                throw GesWireError(code: GesWireError.missingField, path: messageLabel)
+            }
+            guard let carried = last.value.messageValue else { throw GesWireError(code: GesWireError.typeMismatch, path: messageLabel) }
+            let inner: GameEventScriptMessage
+            do {
+                inner = try complete(schema.members.isEmpty ? schema : member(of: schema, carried), carried)
+            } catch let error as GesWireError {
+                throw GesWireError(code: error.code, path: error.path.isEmpty ? messageLabel : messageLabel + "." + error.path, detail: error.detail)
+            }
+            arguments.removeLast()
+            let own = try complete(schema, arguments)
+            if own == nil && inner.storage === carried.storage { return message }
+            var completed = own ?? arguments
+            completed.append(try GesMessageArgument(name: messageLabel, value: .message(inner)))
+            return try GameEventScriptMessage(name: message.name, arguments: completed, tags: message.tags)
         }
+        let current = schema.kind == .messages ? try member(of: schema, message) : schema
         guard current.kind == .message, message.name == current.name else { throw GesWireError(code: GesWireError.typeMismatch) }
-        let given = Array(message.arguments)
+        guard let completed = try complete(current, Array(message.arguments)) else { return message }
+        return try GameEventScriptMessage(name: message.name, arguments: completed, tags: message.tags)
+    }
+
+    /// The label of the argument that carries the message of a set with parameters.
+    static let messageLabel = "message"
+
+    private static func member(of set: GesResolvedDeclaration, _ message: GameEventScriptMessage) throws(GesWireError) -> GesResolvedDeclaration {
+        guard let member = set.members.first(where: { $0.name == message.name }) else { throw GesWireError(code: GesWireError.typeMismatch) }
+        return member
+    }
+
+    /// The label of an argument; an unlabeled one has the label `_`.
+    private static func label(_ field: GesResolvedField) -> String { field.unlabeled ? "_" : field.name }
+
+    /// The arguments with every declared label, or nil when none is missing.
+    private static func complete(_ current: GesResolvedDeclaration, _ given: [GesMessageArgument]) throws -> [GesMessageArgument]? {
+        let fields = current.fields
         var completed: [GesMessageArgument] = []
-        completed.reserveCapacity(current.labels.count)
+        completed.reserveCapacity(fields.count)
         var position = 0
-        var argument = 0
-        var index = 0
-        while index < current.nodes.count {
-            defer { index = current.nodes[index].next }
-            if current.nodes[index].isTagBit { continue }
-            let info = current.infos[index]
-            let label = current.labels[argument]
-            argument += 1
-            if position < given.count && given[position].name == label {
+        for argument in fields.indices {
+            let field = fields[argument]
+            let name = label(field)
+            if position < given.count && given[position].name == name {
                 completed.append(given[position])
                 position += 1
-            } else if let fallback = info.defaultValue {
-                let value = literal(fallback, integer: current.nodes[index].kind == .integer, percentage: info.valueKind == .percentage, unit: info.unit)
-                completed.append(try GesMessageArgument(name: label, value: value))
-            } else if current.nodes[index].optional {
-                completed.append(try GesMessageArgument(name: label, value: .nothing))
-            } else if position < given.count && !current.labels[(argument - 1)...].contains(given[position].name) {
-                throw GesWireError(code: GesWireError.typeMismatch, path: info.path)
+            } else if let fallback = field.defaultValue {
+                completed.append(try GesMessageArgument(name: name, value: literal(field, fallback)))
+            } else if field.marker == .optional {
+                completed.append(try GesMessageArgument(name: name, value: .nothing))
+            } else if position < given.count && !fields[argument...].contains(where: { label($0) == given[position].name }) {
+                throw GesWireError(code: GesWireError.typeMismatch, path: field.name)
             } else {
-                throw GesWireError(code: GesWireError.missingField, path: info.path)
+                throw GesWireError(code: GesWireError.missingField, path: field.name)
             }
         }
         if position < given.count { throw GesWireError(code: GesWireError.typeMismatch, path: argumentPath(current, given[position].name)) }
-        return given.count == completed.count ? message : try GameEventScriptMessage(name: message.name, arguments: completed, tags: message.tags)
+        return given.count == completed.count ? nil : completed
+    }
+
+    /// The value of an argument's literal default; the kind, unit and integer form come from its only type, as when it
+    /// binds, and an empty default is the empty Map of a Map and the empty List otherwise.
+    private static func literal(_ field: GesResolvedField, _ fallback: GesResolvedDefault) -> GesValue {
+        guard field.alternatives.count == 1 else { return literal(fallback, integer: false, percentage: false, unit: .none) }
+        let type = field.alternatives[0]
+        if fallback.kind == .empty { return type.kind == .map ? .map(keys: [], values: []) : .list([]) }
+        let number = type.kind == .number || type.kind == .percentage || type.kind == .quantity
+        return literal(fallback, integer: number && type.constraints.integer && type.constraints.step == nil, percentage: type.kind == .percentage, unit: type.unit)
     }
 
     /// The path of the argument a label names, or the empty path of the message for a label it does not declare.
-    private static func argumentPath(_ schema: GesBoundSchema, _ label: String) -> String {
-        var argument = 0
-        var index = 0
-        while index < schema.nodes.count {
-            if !schema.nodes[index].isTagBit {
-                if schema.labels[argument] == label { return schema.infos[index].path }
-                argument += 1
-            }
-            index = schema.nodes[index].next
-        }
-        return ""
+    private static func argumentPath(_ schema: GesResolvedDeclaration, _ label: String) -> String {
+        schema.fields.first { self.label($0) == label }?.name ?? ""
     }
 
     private static func encodeMessage(_ writer: inout GesSchemaWriter, _ schema: GesBoundSchema, _ value: GesValue) throws {

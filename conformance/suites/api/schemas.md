@@ -11490,7 +11490,7 @@ gesBlock: case
 id: message-hit
 schemaApi:
   sources:
-    - "message Hit(target: :Number integer between 0 and 15, _ damage: :Number integer between 0 and 7) tags (#critical, #splash)\nmessage Died(target: :Number integer between 0 and 15)\nmessages :Combat as (Hit, Died)\n"
+    - "message Hit(target: :Number integer between 0 and 15, _ damage: :Number integer between 0 and 7) tags (#critical, #splash)\nmessage Died(target: :Number integer between 0 and 15)\nmessages Combat as (Hit, Died)\n"
   root: "Hit"
   encode:
     type: ":Message"
@@ -11549,7 +11549,7 @@ gesBlock: case
 id: message-set
 schemaApi:
   sources:
-    - "message Hit(target: :Number integer between 0 and 15, _ damage: :Number integer between 0 and 7) tags (#critical, #splash)\nmessage Died(target: :Number integer between 0 and 15)\nmessages :Combat as (Hit, Died)\n"
+    - "message Hit(target: :Number integer between 0 and 15, _ damage: :Number integer between 0 and 7) tags (#critical, #splash)\nmessage Died(target: :Number integer between 0 and 15)\nmessages Combat as (Hit, Died)\n"
   root: "Combat"
   encode:
     type: ":Message"
@@ -11598,7 +11598,7 @@ gesBlock: case
 id: message-unknown-tag
 schemaApi:
   sources:
-    - "message Hit(target: :Number integer between 0 and 15, _ damage: :Number integer between 0 and 7) tags (#critical, #splash)\nmessage Died(target: :Number integer between 0 and 15)\nmessages :Combat as (Hit, Died)\n"
+    - "message Hit(target: :Number integer between 0 and 15, _ damage: :Number integer between 0 and 7) tags (#critical, #splash)\nmessage Died(target: :Number integer between 0 and 15)\nmessages Combat as (Hit, Died)\n"
   root: "Hit"
   encode:
     type: ":Message"
@@ -11802,7 +11802,7 @@ gesBlock: case
 id: error-set-builtin-name
 schemaApi:
   sources:
-    - "message A()\nmessages :Dice as (A)\n"
+    - "message A()\nmessages Dice as (A)\n"
 ```
 
 ### Expectation
@@ -17261,7 +17261,7 @@ gesBlock: case
 id: message-set-wide-index
 schemaApi:
   sources:
-    - "message M0(x: :Number)\nmessage M1(x: :Number)\nmessage M2(x: :Number)\nmessage M3(x: :Number)\nmessage M4(x: :Number)\nmessage M5(x: :Number)\nmessage M6(x: :Number)\nmessage M7(x: :Number)\nmessage M8(x: :Number)\nmessage M9(x: :Number)\nmessage M10(x: :Number)\nmessage M11(x: :Number)\nmessage M12(x: :Number)\nmessage M13(x: :Number)\nmessage M14(x: :Number)\nmessage M15(x: :Number)\nmessage M16(x: :Number)\nmessage M17(x: :Number)\nmessage M18(x: :Number)\nmessage M19(x: :Number)\nmessage M20(x: :Number)\nmessage M21(x: :Number)\nmessage M22(x: :Number)\nmessage M23(x: :Number)\nmessage M24(x: :Number)\nmessage M25(x: :Number)\nmessage M26(x: :Number)\nmessage M27(x: :Number)\nmessage M28(x: :Number)\nmessage M29(x: :Number)\nmessage M30(x: :Number)\nmessage M31(x: :Number)\nmessage M32(x: :Number)\nmessage M33(x: :Number)\nmessage M34(x: :Number)\nmessage M35(x: :Number)\nmessage M36(x: :Number)\nmessage M37(x: :Number)\nmessage M38(x: :Number)\nmessage M39(x: :Number)\nmessage M40(x: :Number)\nmessage M41(x: :Number)\nmessage M42(x: :Number)\nmessage M43(x: :Number)\nmessage M44(x: :Number)\nmessage M45(x: :Number)\nmessage M46(x: :Number)\nmessage M47(x: :Number)\nmessage M48(x: :Number)\nmessage M49(x: :Number)\nmessage M50(x: :Number)\nmessage M51(x: :Number)\nmessage M52(x: :Number)\nmessage M53(x: :Number)\nmessage M54(x: :Number)\nmessage M55(x: :Number)\nmessage M56(x: :Number)\nmessage M57(x: :Number)\nmessage M58(x: :Number)\nmessage M59(x: :Number)\nmessage M60(x: :Number)\nmessage M61(x: :Number)\nmessage M62(x: :Number)\nmessage M63(x: :Number)\nmessage M64(x: :Number)\nmessage M65(x: :Number)\nmessage M66(x: :Number)\nmessage M67(x: :Number)\nmessage M68(x: :Number)\nmessage M69(x: :Number)\nmessage M70(x: :Number)\nmessage M71(x: :Number)\nmessage M72(x: :Number)\nmessage M73(x: :Number)\nmessage M74(x: :Number)\nmessage M75(x: :Number)\nmessage M76(x: :Number)\nmessage M77(x: :Number)\nmessage M78(x: :Number)\nmessage M79(x: :Number)\nmessage M80(x: :Number)\nmessage M81(x: :Number)\nmessage M82(x: :Number)\nmessage M83(x: :Number)\nmessage M84(x: :Number)\nmessage M85(x: :Number)\nmessage M86(x: :Number)\nmessage M87(x: :Number)\nmessage M88(x: :Number)\nmessage M89(x: :Number)\nmessage M90(x: :Number)\nmessage M91(x: :Number)\nmessage M92(x: :Number)\nmessage M93(x: :Number)\nmessage M94(x: :Number)\nmessage M95(x: :Number)\nmessage M96(x: :Number)\nmessage M97(x: :Number)\nmessage M98(x: :Number)\nmessage M99(x: :Number)\nmessage M100(x: :Number)\nmessage M101(x: :Number)\nmessage M102(x: :Number)\nmessage M103(x: :Number)\nmessage M104(x: :Number)\nmessage M105(x: :Number)\nmessage M106(x: :Number)\nmessage M107(x: :Number)\nmessage M108(x: :Number)\nmessage M109(x: :Number)\nmessage M110(x: :Number)\nmessage M111(x: :Number)\nmessage M112(x: :Number)\nmessage M113(x: :Number)\nmessage M114(x: :Number)\nmessage M115(x: :Number)\nmessage M116(x: :Number)\nmessage M117(x: :Number)\nmessage M118(x: :Number)\nmessage M119(x: :Number)\nmessage M120(x: :Number)\nmessage M121(x: :Number)\nmessage M122(x: :Number)\nmessage M123(x: :Number)\nmessage M124(x: :Number)\nmessage M125(x: :Number)\nmessage M126(x: :Number)\nmessage M127(x: :Number)\nmessage M128(x: :Number)\nmessage M129(x: :Number)\nmessage M130(x: :Number)\nmessage M131(x: :Number)\nmessage M132(x: :Number)\nmessage M133(x: :Number)\nmessage M134(x: :Number)\nmessage M135(x: :Number)\nmessage M136(x: :Number)\nmessage M137(x: :Number)\nmessage M138(x: :Number)\nmessage M139(x: :Number)\nmessage M140(x: :Number)\nmessage M141(x: :Number)\nmessage M142(x: :Number)\nmessage M143(x: :Number)\nmessage M144(x: :Number)\nmessage M145(x: :Number)\nmessage M146(x: :Number)\nmessage M147(x: :Number)\nmessage M148(x: :Number)\nmessage M149(x: :Number)\nmessage M150(x: :Number)\nmessage M151(x: :Number)\nmessage M152(x: :Number)\nmessage M153(x: :Number)\nmessage M154(x: :Number)\nmessage M155(x: :Number)\nmessage M156(x: :Number)\nmessage M157(x: :Number)\nmessage M158(x: :Number)\nmessage M159(x: :Number)\nmessage M160(x: :Number)\nmessage M161(x: :Number)\nmessage M162(x: :Number)\nmessage M163(x: :Number)\nmessage M164(x: :Number)\nmessage M165(x: :Number)\nmessage M166(x: :Number)\nmessage M167(x: :Number)\nmessage M168(x: :Number)\nmessage M169(x: :Number)\nmessage M170(x: :Number)\nmessage M171(x: :Number)\nmessage M172(x: :Number)\nmessage M173(x: :Number)\nmessage M174(x: :Number)\nmessage M175(x: :Number)\nmessage M176(x: :Number)\nmessage M177(x: :Number)\nmessage M178(x: :Number)\nmessage M179(x: :Number)\nmessage M180(x: :Number)\nmessage M181(x: :Number)\nmessage M182(x: :Number)\nmessage M183(x: :Number)\nmessage M184(x: :Number)\nmessage M185(x: :Number)\nmessage M186(x: :Number)\nmessage M187(x: :Number)\nmessage M188(x: :Number)\nmessage M189(x: :Number)\nmessage M190(x: :Number)\nmessage M191(x: :Number)\nmessage M192(x: :Number)\nmessage M193(x: :Number)\nmessage M194(x: :Number)\nmessage M195(x: :Number)\nmessage M196(x: :Number)\nmessage M197(x: :Number)\nmessage M198(x: :Number)\nmessage M199(x: :Number)\nmessage M200(x: :Number)\nmessage M201(x: :Number)\nmessage M202(x: :Number)\nmessage M203(x: :Number)\nmessage M204(x: :Number)\nmessage M205(x: :Number)\nmessage M206(x: :Number)\nmessage M207(x: :Number)\nmessage M208(x: :Number)\nmessage M209(x: :Number)\nmessage M210(x: :Number)\nmessage M211(x: :Number)\nmessage M212(x: :Number)\nmessage M213(x: :Number)\nmessage M214(x: :Number)\nmessage M215(x: :Number)\nmessage M216(x: :Number)\nmessage M217(x: :Number)\nmessage M218(x: :Number)\nmessage M219(x: :Number)\nmessage M220(x: :Number)\nmessage M221(x: :Number)\nmessage M222(x: :Number)\nmessage M223(x: :Number)\nmessage M224(x: :Number)\nmessage M225(x: :Number)\nmessage M226(x: :Number)\nmessage M227(x: :Number)\nmessage M228(x: :Number)\nmessage M229(x: :Number)\nmessage M230(x: :Number)\nmessage M231(x: :Number)\nmessage M232(x: :Number)\nmessage M233(x: :Number)\nmessage M234(x: :Number)\nmessage M235(x: :Number)\nmessage M236(x: :Number)\nmessage M237(x: :Number)\nmessage M238(x: :Number)\nmessage M239(x: :Number)\nmessage M240(x: :Number)\nmessage M241(x: :Number)\nmessage M242(x: :Number)\nmessage M243(x: :Number)\nmessage M244(x: :Number)\nmessage M245(x: :Number)\nmessage M246(x: :Number)\nmessage M247(x: :Number)\nmessage M248(x: :Number)\nmessage M249(x: :Number)\nmessage M250(x: :Number)\nmessage M251(x: :Number)\nmessage M252(x: :Number)\nmessage M253(x: :Number)\nmessage M254(x: :Number)\nmessage M255(x: :Number)\nmessage M256(x: :Number)\nmessages :Many as (M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13, M14, M15, M16, M17, M18, M19, M20, M21, M22, M23, M24, M25, M26, M27, M28, M29, M30, M31, M32, M33, M34, M35, M36, M37, M38, M39, M40, M41, M42, M43, M44, M45, M46, M47, M48, M49, M50, M51, M52, M53, M54, M55, M56, M57, M58, M59, M60, M61, M62, M63, M64, M65, M66, M67, M68, M69, M70, M71, M72, M73, M74, M75, M76, M77, M78, M79, M80, M81, M82, M83, M84, M85, M86, M87, M88, M89, M90, M91, M92, M93, M94, M95, M96, M97, M98, M99, M100, M101, M102, M103, M104, M105, M106, M107, M108, M109, M110, M111, M112, M113, M114, M115, M116, M117, M118, M119, M120, M121, M122, M123, M124, M125, M126, M127, M128, M129, M130, M131, M132, M133, M134, M135, M136, M137, M138, M139, M140, M141, M142, M143, M144, M145, M146, M147, M148, M149, M150, M151, M152, M153, M154, M155, M156, M157, M158, M159, M160, M161, M162, M163, M164, M165, M166, M167, M168, M169, M170, M171, M172, M173, M174, M175, M176, M177, M178, M179, M180, M181, M182, M183, M184, M185, M186, M187, M188, M189, M190, M191, M192, M193, M194, M195, M196, M197, M198, M199, M200, M201, M202, M203, M204, M205, M206, M207, M208, M209, M210, M211, M212, M213, M214, M215, M216, M217, M218, M219, M220, M221, M222, M223, M224, M225, M226, M227, M228, M229, M230, M231, M232, M233, M234, M235, M236, M237, M238, M239, M240, M241, M242, M243, M244, M245, M246, M247, M248, M249, M250, M251, M252, M253, M254, M255, M256)\n"
+    - "message M0(x: :Number)\nmessage M1(x: :Number)\nmessage M2(x: :Number)\nmessage M3(x: :Number)\nmessage M4(x: :Number)\nmessage M5(x: :Number)\nmessage M6(x: :Number)\nmessage M7(x: :Number)\nmessage M8(x: :Number)\nmessage M9(x: :Number)\nmessage M10(x: :Number)\nmessage M11(x: :Number)\nmessage M12(x: :Number)\nmessage M13(x: :Number)\nmessage M14(x: :Number)\nmessage M15(x: :Number)\nmessage M16(x: :Number)\nmessage M17(x: :Number)\nmessage M18(x: :Number)\nmessage M19(x: :Number)\nmessage M20(x: :Number)\nmessage M21(x: :Number)\nmessage M22(x: :Number)\nmessage M23(x: :Number)\nmessage M24(x: :Number)\nmessage M25(x: :Number)\nmessage M26(x: :Number)\nmessage M27(x: :Number)\nmessage M28(x: :Number)\nmessage M29(x: :Number)\nmessage M30(x: :Number)\nmessage M31(x: :Number)\nmessage M32(x: :Number)\nmessage M33(x: :Number)\nmessage M34(x: :Number)\nmessage M35(x: :Number)\nmessage M36(x: :Number)\nmessage M37(x: :Number)\nmessage M38(x: :Number)\nmessage M39(x: :Number)\nmessage M40(x: :Number)\nmessage M41(x: :Number)\nmessage M42(x: :Number)\nmessage M43(x: :Number)\nmessage M44(x: :Number)\nmessage M45(x: :Number)\nmessage M46(x: :Number)\nmessage M47(x: :Number)\nmessage M48(x: :Number)\nmessage M49(x: :Number)\nmessage M50(x: :Number)\nmessage M51(x: :Number)\nmessage M52(x: :Number)\nmessage M53(x: :Number)\nmessage M54(x: :Number)\nmessage M55(x: :Number)\nmessage M56(x: :Number)\nmessage M57(x: :Number)\nmessage M58(x: :Number)\nmessage M59(x: :Number)\nmessage M60(x: :Number)\nmessage M61(x: :Number)\nmessage M62(x: :Number)\nmessage M63(x: :Number)\nmessage M64(x: :Number)\nmessage M65(x: :Number)\nmessage M66(x: :Number)\nmessage M67(x: :Number)\nmessage M68(x: :Number)\nmessage M69(x: :Number)\nmessage M70(x: :Number)\nmessage M71(x: :Number)\nmessage M72(x: :Number)\nmessage M73(x: :Number)\nmessage M74(x: :Number)\nmessage M75(x: :Number)\nmessage M76(x: :Number)\nmessage M77(x: :Number)\nmessage M78(x: :Number)\nmessage M79(x: :Number)\nmessage M80(x: :Number)\nmessage M81(x: :Number)\nmessage M82(x: :Number)\nmessage M83(x: :Number)\nmessage M84(x: :Number)\nmessage M85(x: :Number)\nmessage M86(x: :Number)\nmessage M87(x: :Number)\nmessage M88(x: :Number)\nmessage M89(x: :Number)\nmessage M90(x: :Number)\nmessage M91(x: :Number)\nmessage M92(x: :Number)\nmessage M93(x: :Number)\nmessage M94(x: :Number)\nmessage M95(x: :Number)\nmessage M96(x: :Number)\nmessage M97(x: :Number)\nmessage M98(x: :Number)\nmessage M99(x: :Number)\nmessage M100(x: :Number)\nmessage M101(x: :Number)\nmessage M102(x: :Number)\nmessage M103(x: :Number)\nmessage M104(x: :Number)\nmessage M105(x: :Number)\nmessage M106(x: :Number)\nmessage M107(x: :Number)\nmessage M108(x: :Number)\nmessage M109(x: :Number)\nmessage M110(x: :Number)\nmessage M111(x: :Number)\nmessage M112(x: :Number)\nmessage M113(x: :Number)\nmessage M114(x: :Number)\nmessage M115(x: :Number)\nmessage M116(x: :Number)\nmessage M117(x: :Number)\nmessage M118(x: :Number)\nmessage M119(x: :Number)\nmessage M120(x: :Number)\nmessage M121(x: :Number)\nmessage M122(x: :Number)\nmessage M123(x: :Number)\nmessage M124(x: :Number)\nmessage M125(x: :Number)\nmessage M126(x: :Number)\nmessage M127(x: :Number)\nmessage M128(x: :Number)\nmessage M129(x: :Number)\nmessage M130(x: :Number)\nmessage M131(x: :Number)\nmessage M132(x: :Number)\nmessage M133(x: :Number)\nmessage M134(x: :Number)\nmessage M135(x: :Number)\nmessage M136(x: :Number)\nmessage M137(x: :Number)\nmessage M138(x: :Number)\nmessage M139(x: :Number)\nmessage M140(x: :Number)\nmessage M141(x: :Number)\nmessage M142(x: :Number)\nmessage M143(x: :Number)\nmessage M144(x: :Number)\nmessage M145(x: :Number)\nmessage M146(x: :Number)\nmessage M147(x: :Number)\nmessage M148(x: :Number)\nmessage M149(x: :Number)\nmessage M150(x: :Number)\nmessage M151(x: :Number)\nmessage M152(x: :Number)\nmessage M153(x: :Number)\nmessage M154(x: :Number)\nmessage M155(x: :Number)\nmessage M156(x: :Number)\nmessage M157(x: :Number)\nmessage M158(x: :Number)\nmessage M159(x: :Number)\nmessage M160(x: :Number)\nmessage M161(x: :Number)\nmessage M162(x: :Number)\nmessage M163(x: :Number)\nmessage M164(x: :Number)\nmessage M165(x: :Number)\nmessage M166(x: :Number)\nmessage M167(x: :Number)\nmessage M168(x: :Number)\nmessage M169(x: :Number)\nmessage M170(x: :Number)\nmessage M171(x: :Number)\nmessage M172(x: :Number)\nmessage M173(x: :Number)\nmessage M174(x: :Number)\nmessage M175(x: :Number)\nmessage M176(x: :Number)\nmessage M177(x: :Number)\nmessage M178(x: :Number)\nmessage M179(x: :Number)\nmessage M180(x: :Number)\nmessage M181(x: :Number)\nmessage M182(x: :Number)\nmessage M183(x: :Number)\nmessage M184(x: :Number)\nmessage M185(x: :Number)\nmessage M186(x: :Number)\nmessage M187(x: :Number)\nmessage M188(x: :Number)\nmessage M189(x: :Number)\nmessage M190(x: :Number)\nmessage M191(x: :Number)\nmessage M192(x: :Number)\nmessage M193(x: :Number)\nmessage M194(x: :Number)\nmessage M195(x: :Number)\nmessage M196(x: :Number)\nmessage M197(x: :Number)\nmessage M198(x: :Number)\nmessage M199(x: :Number)\nmessage M200(x: :Number)\nmessage M201(x: :Number)\nmessage M202(x: :Number)\nmessage M203(x: :Number)\nmessage M204(x: :Number)\nmessage M205(x: :Number)\nmessage M206(x: :Number)\nmessage M207(x: :Number)\nmessage M208(x: :Number)\nmessage M209(x: :Number)\nmessage M210(x: :Number)\nmessage M211(x: :Number)\nmessage M212(x: :Number)\nmessage M213(x: :Number)\nmessage M214(x: :Number)\nmessage M215(x: :Number)\nmessage M216(x: :Number)\nmessage M217(x: :Number)\nmessage M218(x: :Number)\nmessage M219(x: :Number)\nmessage M220(x: :Number)\nmessage M221(x: :Number)\nmessage M222(x: :Number)\nmessage M223(x: :Number)\nmessage M224(x: :Number)\nmessage M225(x: :Number)\nmessage M226(x: :Number)\nmessage M227(x: :Number)\nmessage M228(x: :Number)\nmessage M229(x: :Number)\nmessage M230(x: :Number)\nmessage M231(x: :Number)\nmessage M232(x: :Number)\nmessage M233(x: :Number)\nmessage M234(x: :Number)\nmessage M235(x: :Number)\nmessage M236(x: :Number)\nmessage M237(x: :Number)\nmessage M238(x: :Number)\nmessage M239(x: :Number)\nmessage M240(x: :Number)\nmessage M241(x: :Number)\nmessage M242(x: :Number)\nmessage M243(x: :Number)\nmessage M244(x: :Number)\nmessage M245(x: :Number)\nmessage M246(x: :Number)\nmessage M247(x: :Number)\nmessage M248(x: :Number)\nmessage M249(x: :Number)\nmessage M250(x: :Number)\nmessage M251(x: :Number)\nmessage M252(x: :Number)\nmessage M253(x: :Number)\nmessage M254(x: :Number)\nmessage M255(x: :Number)\nmessage M256(x: :Number)\nmessages Many as (M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13, M14, M15, M16, M17, M18, M19, M20, M21, M22, M23, M24, M25, M26, M27, M28, M29, M30, M31, M32, M33, M34, M35, M36, M37, M38, M39, M40, M41, M42, M43, M44, M45, M46, M47, M48, M49, M50, M51, M52, M53, M54, M55, M56, M57, M58, M59, M60, M61, M62, M63, M64, M65, M66, M67, M68, M69, M70, M71, M72, M73, M74, M75, M76, M77, M78, M79, M80, M81, M82, M83, M84, M85, M86, M87, M88, M89, M90, M91, M92, M93, M94, M95, M96, M97, M98, M99, M100, M101, M102, M103, M104, M105, M106, M107, M108, M109, M110, M111, M112, M113, M114, M115, M116, M117, M118, M119, M120, M121, M122, M123, M124, M125, M126, M127, M128, M129, M130, M131, M132, M133, M134, M135, M136, M137, M138, M139, M140, M141, M142, M143, M144, M145, M146, M147, M148, M149, M150, M151, M152, M153, M154, M155, M156, M157, M158, M159, M160, M161, M162, M163, M164, M165, M166, M167, M168, M169, M170, M171, M172, M173, M174, M175, M176, M177, M178, M179, M180, M181, M182, M183, M184, M185, M186, M187, M188, M189, M190, M191, M192, M193, M194, M195, M196, M197, M198, M199, M200, M201, M202, M203, M204, M205, M206, M207, M208, M209, M210, M211, M212, M213, M214, M215, M216, M217, M218, M219, M220, M221, M222, M223, M224, M225, M226, M227, M228, M229, M230, M231, M232, M233, M234, M235, M236, M237, M238, M239, M240, M241, M242, M243, M244, M245, M246, M247, M248, M249, M250, M251, M252, M253, M254, M255, M256)\n"
   root: "Many"
   encode:
     type: ":Message"
@@ -17298,7 +17298,7 @@ gesBlock: case
 id: message-at-limit
 schemaApi:
   sources:
-    - "message A(t: :Text max 67108860, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean, e: :Boolean, f: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
+    - "message A(t: :Text max 67108860, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean, e: :Boolean, f: :Boolean)\nmessage B()\nmessages S as (A, B)\n"
   root: "A"
 ```
 
@@ -17323,7 +17323,7 @@ gesBlock: case
 id: error-set-too-large
 schemaApi:
   sources:
-    - "message A(t: :Text max 67108860, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean, e: :Boolean, f: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
+    - "message A(t: :Text max 67108860, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean, e: :Boolean, f: :Boolean)\nmessage B()\nmessages S as (A, B)\n"
   root: "S"
 ```
 
@@ -18560,7 +18560,7 @@ gesBlock: case
 id: describe-messages
 schemaApi:
   sources:
-    - "parameter b: :Number\nparameter a: :Percentage\nmessage M(x: :Number between 0 and b)\nmessage N(y: :Percentage between 0% and a)\nmessages :S as (N, M)\n"
+    - "parameter b: :Number\nparameter a: :Percentage\nmessage M(x: :Number between 0 and b)\nmessage N(y: :Percentage between 0% and a)\nmessages S as (N, M)\n"
   root: "S"
   bind: false
   describe: true
@@ -18877,7 +18877,7 @@ gesBlock: case
 id: error-underscore-name-7
 schemaApi:
   sources:
-    - "messages :All as (Unit__Fire)\n"
+    - "messages All as (Unit__Fire)\n"
 ```
 
 ### Expectation
@@ -18902,7 +18902,7 @@ gesBlock: case
 id: underscore-message-names
 schemaApi:
   sources:
-    - "message Unit_Fire(target: :Number integer between 0 and 15)\nmessage Unit_Stop()\nmessages :Unit_Events as (Unit_Fire, Unit_Stop)\n"
+    - "message Unit_Fire(target: :Number integer between 0 and 15)\nmessage Unit_Stop()\nmessages Unit_Events as (Unit_Fire, Unit_Stop)\n"
   root: "Unit_Events"
   encode:
     type: ":Message"
@@ -28072,9 +28072,9 @@ schema: {"error": {"code": "schema.duplicateName", "line": 2, "column": 1}}
 
 ---
 
-## Test: a message set named like a schema
+## Test: a message set named like a message
 
-Message sets share the namespace of schemas.
+Message sets share the namespace of messages.
 
 ### Case description
 
@@ -28082,7 +28082,7 @@ Message sets share the namespace of schemas.
 gesBlock: case
 id: error-message-set-name-taken
 schemaApi:
-  sources: ["schema :Actions as { x: :Boolean }\nmessages :Actions as (Move)\nmessage Move()\n"]
+  sources: ["message Actions()\nmessages Actions as (Move)\nmessage Move()\n"]
 ```
 
 ### Expectation
@@ -28104,7 +28104,7 @@ A message may belong to several sets.
 gesBlock: case
 id: message-in-two-sets
 schemaApi:
-  sources: ["wire messages :Actions as (Shield, Move)\nwire messages :Defense as (Shield)\nwire message Shield(level: :Number integer between 0 and 10)\nwire message Move(x: :Number integer between 0 and 255)\n"]
+  sources: ["wire messages Actions as (Shield, Move)\nwire messages Defense as (Shield)\nwire message Shield(level: :Number integer between 0 and 10)\nwire message Move(x: :Number integer between 0 and 255)\n"]
   root: "Defense"
 ```
 
@@ -28546,7 +28546,7 @@ A message set completes the member the message names.
 ```yaml
 gesBlock: case
 id: complete-set
-schemaApi: {"sources": ["wire messages :Combat as (Hit, Died)\nwire message Hit(target: :Number integer between 0 and 99, damage: :Number integer between 0 and 99 default 5)\nwire message Died(target: :Number integer between 0 and 99)\n"], "root": "Combat", "complete": {"type": ":Message", "message": {"name": "Hit", "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "4"}}]}}, "decode": "0805"}
+schemaApi: {"sources": ["wire messages Combat as (Hit, Died)\nwire message Hit(target: :Number integer between 0 and 99, damage: :Number integer between 0 and 99 default 5)\nwire message Died(target: :Number integer between 0 and 99)\n"], "root": "Combat", "complete": {"type": ":Message", "message": {"name": "Hit", "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "4"}}]}}, "decode": "0805"}
 ```
 
 ### Expectation

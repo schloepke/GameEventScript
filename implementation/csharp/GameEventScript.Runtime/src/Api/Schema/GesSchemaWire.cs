@@ -89,7 +89,7 @@ public ref struct GesSchemaWriter
     private int _cursor;
 
     /// <summary>Starts a record or message in a buffer.</summary>
-    /// <param name="schema">The bound schema; for a message set, select a member first.</param>
+    /// <param name="schema">The bound schema; for a message set, write its parameters and then select a member.</param>
     /// <param name="buffer">The buffer that receives the encoding.</param>
     public GesSchemaWriter(GesBoundSchema schema, Span<byte> buffer)
     {
@@ -107,9 +107,11 @@ public ref struct GesSchemaWriter
     {
         if (_schema.Kind != GesSchemaKind.Messages) throw new GesWireException(GesWireException.TypeMismatch, "");
         if (member < 0 || member >= _schema.Members.Length) throw new GesWireException(GesWireException.OutOfRange, "");
+        if (_cursor != _nodes.Length) throw new GesWireException(GesWireException.MissingField, _nodes[_cursor].Path);
         Put((ulong)member, _schema.MemberWidth);
         _schema = _schema.Members[member];
         _nodes = _schema.Nodes;
+        _cursor = 0;
     }
 
     /// <summary>Writes a Boolean field or a message tag.</summary>
@@ -394,10 +396,12 @@ public ref struct GesSchemaReader
     public int ReadMember()
     {
         if (_schema.Kind != GesSchemaKind.Messages) throw new GesWireException(GesWireException.TypeMismatch, "");
+        if (_cursor != _nodes.Length) throw new GesWireException(GesWireException.FieldOrder, _nodes[_cursor].Path);
         var index = Get(_schema.MemberWidth, "");
         if (index >= (ulong)_schema.Members.Length) throw new GesWireException(GesWireException.InvalidIndex, "");
         _schema = _schema.Members[(int)index];
         _nodes = _schema.Nodes;
+        _cursor = 0;
         return (int)index;
     }
 

@@ -44,25 +44,57 @@ public static class GesSchemaValues
     {
         if (schema is null) throw new ArgumentNullException(nameof(schema));
         var writer = new GesSchemaWriter(schema, buffer);
-        var current = schema;
         if (schema.Kind == GesSchemaKind.Messages)
         {
             if (value.Message is not { } message) throw new GesWireException(GesWireException.TypeMismatch, "");
-            var member = Array.FindIndex(schema.Members, candidate => candidate.Name == message.Name);
-            if (member < 0) throw new GesWireException(GesWireException.TypeMismatch, "");
-            writer.SelectMember(member);
-            current = schema.Members[member];
+            if (schema.Nodes.Length > 0)
+            {
+                // The envelope of a set with parameters: the parameters, then the carried message.
+                if (message.Name != schema.Name || message.Arguments.Count != schema.Labels.Length + 1) throw new GesWireException(GesWireException.TypeMismatch, "");
+                var argument = 0;
+                for (var index = 0; index < schema.Nodes.Length; index = schema.Nodes[index].Next, argument++)
+                {
+                    if (message.Arguments.NameAt(argument) != schema.Labels[argument]) throw new GesWireException(GesWireException.TypeMismatch, schema.Nodes[index].Path);
+                    EncodeNode(ref writer, schema, index, message.Arguments.ValueAt(argument), false);
+                }
+
+                var carried = message.Arguments.ValueAt(argument);
+                if (message.Arguments.NameAt(argument) != MessageLabel || carried.Message is not { } inner) throw new GesWireException(GesWireException.TypeMismatch, MessageLabel);
+                // Errors of the carried message name it as the argument message, as the lenient read does.
+                try
+                {
+                    EncodeMember(ref writer, schema, carried, inner);
+                }
+                catch (GesWireException exception)
+                {
+                    throw new GesWireException(exception.Code, exception.Path.Length > 0 ? MessageLabel + "." + exception.Path : MessageLabel, exception.Detail);
+                }
+
+                return writer.Finish();
+            }
+
+            EncodeMember(ref writer, schema, value, message);
+            return writer.Finish();
         }
 
-        if (current.Kind == GesSchemaKind.Message) EncodeMessage(ref writer, current, value);
+        if (schema.Kind == GesSchemaKind.Message) EncodeMessage(ref writer, schema, value);
         else
         {
-            if (value.CustomTypeName is { } name && name != current.Name) throw new GesWireException(GesWireException.TypeMismatch, "");
+            if (value.CustomTypeName is { } name && name != schema.Name) throw new GesWireException(GesWireException.TypeMismatch, "");
             var fields = value.MaterializedMap() ?? throw new GesWireException(GesWireException.TypeMismatch, "");
-            EncodeFields(ref writer, current, 0, current.Nodes.Length, fields, false);
+            EncodeFields(ref writer, schema, 0, schema.Nodes.Length, fields, false);
         }
 
         return writer.Finish();
+    }
+
+    // Selects the member of a set that a message names and encodes the message.
+    private static void EncodeMember(ref GesSchemaWriter writer, GesBoundSchema schema, GesValue value, GameEventScriptMessage message)
+    {
+        var member = Array.FindIndex(schema.Members, candidate => candidate.Name == message.Name);
+        if (member < 0) throw new GesWireException(GesWireException.TypeMismatch, "");
+        writer.SelectMember(member);
+        EncodeMessage(ref writer, schema.Members[member], value);
     }
 
     /// <summary>Encodes a Record or Map as a delta against a baseline value of the same schema.</summary>
@@ -114,8 +146,26 @@ public static class GesSchemaValues
         if (schema is null) throw new ArgumentNullException(nameof(schema));
         var reader = new GesSchemaReader(schema, data, byteLimit);
         var current = schema;
-        if (schema.Kind == GesSchemaKind.Messages) current = schema.Members[reader.ReadMember()];
+        List<GesMessageArgument>? envelope = null;
+        if (schema.Kind == GesSchemaKind.Messages)
+        {
+            if (schema.Nodes.Length > 0)
+            {
+                envelope = new List<GesMessageArgument>(schema.Labels.Length + 1);
+                for (var index = 0; index < schema.Nodes.Length; index = schema.Nodes[index].Next)
+                    envelope.Add(new GesMessageArgument(schema.Labels[envelope.Count], DecodeNode(ref reader, schema, index)));
+            }
+
+            current = schema.Members[reader.ReadMember()];
+        }
+
         var value = current.Kind == GesSchemaKind.Message ? DecodeMessage(ref reader, current) : DecodeRecord(ref reader, current, current.Name, 0, current.Nodes.Length);
+        if (envelope is not null)
+        {
+            envelope.Add(new GesMessageArgument(MessageLabel, value));
+            value = GesValue.GesMessage(GameEventScriptMessage.Create(schema.Name, envelope, []));
+        }
+
         return new GesSchemaDecoded(value, reader.Finish());
     }
 
@@ -142,55 +192,124 @@ public static class GesSchemaValues
     {
         if (schema is null) throw new ArgumentNullException(nameof(schema));
         if (message is null) throw new ArgumentNullException(nameof(message));
-        var current = schema;
-        if (schema.Kind == GesSchemaKind.Messages)
+        return Complete(schema.Schema.Declaration, message);
+    }
+
+    /// <summary>
+    /// Completes a Message like <see cref="CompleteMessage(GesBoundSchema, GameEventScriptMessage)"/> without binding the
+    /// schema, since the lenient read depends on no parameter value. It also completes messages whose arguments hold free
+    /// data, such as a <c>:Map</c>, which have no wire form; generated models use it.
+    /// </summary>
+    /// <param name="schema">The message or message set; a set selects its member by the message name.</param>
+    /// <param name="message">The message.</param>
+    /// <returns>The completed message with the same name and tags, or the message itself when nothing is missing.</returns>
+    /// <exception cref="GesWireException">
+    /// <c>wire.missingField</c> with the argument path when an argument without default is missing and not optional;
+    /// <c>wire.typeMismatch</c> when the name is not a message of the schema or a label is unknown, repeated or out of order.
+    /// </exception>
+    public static GameEventScriptMessage CompleteMessage(GesSchema schema, GameEventScriptMessage message)
+    {
+        if (schema is null) throw new ArgumentNullException(nameof(schema));
+        if (message is null) throw new ArgumentNullException(nameof(message));
+        return Complete(schema.Declaration, message);
+    }
+
+    private static GameEventScriptMessage Complete(GesResolvedDeclaration schema, GameEventScriptMessage message)
+    {
+        if (schema.Kind == GesSchemaKind.Messages && schema.Fields.Length > 0)
         {
-            var member = Array.FindIndex(schema.Members, candidate => candidate.Name == message.Name);
-            if (member < 0) throw new GesWireException(GesWireException.TypeMismatch, "");
-            current = schema.Members[member];
+            // The envelope of a set with parameters: its own arguments, then the carried message, completed in turn.
+            if (message.Name != schema.Name) throw new GesWireException(GesWireException.TypeMismatch, "");
+            var arguments = new List<GesMessageArgument>(message.Arguments);
+            var last = arguments.Count - 1;
+            if (last < 0 || arguments[last].Name != MessageLabel)
+            {
+                if (arguments.Exists(candidate => candidate.Name == MessageLabel)) throw new GesWireException(GesWireException.TypeMismatch, MessageLabel);
+                throw new GesWireException(GesWireException.MissingField, MessageLabel);
+            }
+
+            if (arguments[last].Value.Message is not { } carried) throw new GesWireException(GesWireException.TypeMismatch, MessageLabel);
+            GameEventScriptMessage inner;
+            try
+            {
+                inner = Complete(schema.Members.Length > 0 ? MemberOf(schema, carried) : schema, carried);
+            }
+            catch (GesWireException exception)
+            {
+                throw new GesWireException(exception.Code, exception.Path.Length > 0 ? MessageLabel + "." + exception.Path : MessageLabel, exception.Detail);
+            }
+
+            arguments.RemoveAt(last);
+            var own = Complete(schema, arguments);
+            if (own is null && ReferenceEquals(inner, carried)) return message;
+            own ??= arguments;
+            own.Add(new GesMessageArgument(MessageLabel, GesValue.GesMessage(inner)));
+            return GameEventScriptMessage.Create(message.Name, own, message.Tags);
         }
 
+        var current = schema.Kind == GesSchemaKind.Messages ? MemberOf(schema, message) : schema;
         if (current.Kind != GesSchemaKind.Message || message.Name != current.Name) throw new GesWireException(GesWireException.TypeMismatch, "");
-        var given = new List<GesMessageArgument>(message.Arguments);
-        var nodes = current.Nodes;
-        var completed = new List<GesMessageArgument>(current.Labels.Length);
+        var completed = Complete(current, new List<GesMessageArgument>(message.Arguments));
+        return completed is null ? message : GameEventScriptMessage.Create(message.Name, completed, message.Tags);
+    }
+
+    // The label of the argument that carries the message of a set with parameters.
+    internal const string MessageLabel = "message";
+
+    private static GesResolvedDeclaration MemberOf(GesResolvedDeclaration set, GameEventScriptMessage message)
+    {
+        var member = Array.FindIndex(set.Members, candidate => candidate.Name == message.Name);
+        return member < 0 ? throw new GesWireException(GesWireException.TypeMismatch, "") : set.Members[member];
+    }
+
+    // The label of an argument; an unlabeled one has the label _.
+    private static string Label(GesResolvedField field) => field.Unlabeled ? "_" : field.Name;
+
+    // The arguments with every declared label, or null when none is missing.
+    private static List<GesMessageArgument>? Complete(GesResolvedDeclaration current, List<GesMessageArgument> given)
+    {
+        var fields = current.Fields;
+        var completed = new List<GesMessageArgument>(fields.Length);
         var position = 0;
-        var argument = 0;
-        for (var index = 0; index < nodes.Length; index = nodes[index].Next)
+        for (var argument = 0; argument < fields.Length; argument++)
         {
-            if (nodes[index].IsTagBit) continue;
-            ref readonly var node = ref nodes[index];
-            var label = current.Labels[argument++];
+            var field = fields[argument];
+            var label = Label(field);
             if (position < given.Count && given[position].Name == label) completed.Add(given[position++]);
-            else if (node.Default is { } fallback)
-                completed.Add(new GesMessageArgument(label, Literal(fallback, node.Kind == GesSchemaNodeKind.Integer, node.ValueKind == GesSchemaTypeKind.Percentage, node.Unit)));
-            else if (node.Optional) completed.Add(new GesMessageArgument(label, GesValue.GesNothing()));
-            else if (position < given.Count && !Declared(current, argument - 1, given[position].Name)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
-            else throw new GesWireException(GesWireException.MissingField, node.Path);
+            else if (field.Default is { } fallback) completed.Add(new GesMessageArgument(label, Literal(field, fallback)));
+            else if (field.Marker == GesSchemaFieldMarker.Optional) completed.Add(new GesMessageArgument(label, GesValue.GesNothing()));
+            else if (position < given.Count && !Declared(current, argument, given[position].Name)) throw new GesWireException(GesWireException.TypeMismatch, field.Name);
+            else throw new GesWireException(GesWireException.MissingField, field.Name);
         }
 
         if (position < given.Count) throw new GesWireException(GesWireException.TypeMismatch, ArgumentPath(current, given[position].Name));
-        return given.Count == completed.Count ? message : GameEventScriptMessage.Create(message.Name, completed, message.Tags);
+        return given.Count == completed.Count ? null : completed;
+    }
+
+    // The value of an argument's literal default; the kind, unit and integer form come from its only type, as when it binds,
+    // and an empty default is the empty Map of a Map and the empty List otherwise.
+    private static GesValue Literal(GesResolvedField field, GesResolvedDefault fallback)
+    {
+        if (field.Alternatives.Length != 1) return Literal(fallback, false, false, default);
+        var type = field.Alternatives[0];
+        if (fallback.Kind == GesSchemaDefaultKind.Empty) return type.Kind == GesSchemaTypeKind.Map ? GesValue.GesMap([], []) : GesValue.GesList([]);
+        var number = type.Kind is GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity;
+        return Literal(fallback, number && type.Constraints.Integer && type.Constraints.Step is null, type.Kind == GesSchemaTypeKind.Percentage, type.Unit);
     }
 
     // Whether a label is declared at or after an argument, so that a missing argument rather than a wrong label stops a read.
-    private static bool Declared(GesBoundSchema schema, int from, string label)
+    private static bool Declared(GesResolvedDeclaration schema, int from, string label)
     {
-        for (var index = from; index < schema.Labels.Length; index++)
-            if (schema.Labels[index] == label) return true;
+        for (var index = from; index < schema.Fields.Length; index++)
+            if (Label(schema.Fields[index]) == label) return true;
         return false;
     }
 
     // The path of the argument a label names, or the empty path of the message for a label it does not declare.
-    private static string ArgumentPath(GesBoundSchema schema, string label)
+    private static string ArgumentPath(GesResolvedDeclaration schema, string label)
     {
-        var argument = 0;
-        for (var index = 0; index < schema.Nodes.Length; index = schema.Nodes[index].Next)
-        {
-            if (schema.Nodes[index].IsTagBit) continue;
-            if (schema.Labels[argument++] == label) return schema.Nodes[index].Path;
-        }
-
+        foreach (var field in schema.Fields)
+            if (Label(field) == label) return field.Name;
         return "";
     }
 

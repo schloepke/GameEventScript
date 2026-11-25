@@ -13,11 +13,11 @@ import XCTest
 final class SocketTests: XCTestCase {
     private static let source = """
         wire schema :Blob as { data: :List(:Number integer between 0 and 255) max 6000 }
-        wire messages :Commands as (Move)
+        wire messages Commands as (Move)
         message Move(x: :Number integer between 0 and 255)
 
         network :Game as {
-          client sends :Commands reliable
+          client sends Commands reliable
           server sends :Blob reliable
         }
         """

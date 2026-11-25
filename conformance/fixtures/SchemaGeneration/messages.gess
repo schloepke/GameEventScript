@@ -7,13 +7,13 @@ wire schema :Shield as {
   strength: :Number integer between 0 and 100
 }
 
-wire messages :Actions as (Shield, Move)
-wire messages :Defense as (Shield)
+wire messages Actions as (Shield, Move)
+wire messages Defense as (Shield)
 wire message Shield(level: :Number integer between 0 and 10)
 wire message Move(x: :Number integer between 0 and 255)
 
 network :Game as {
   client sends Shield reliable
-  client sends :Actions reliable
+  client sends Actions reliable
   server sends :Shield reliable
 }

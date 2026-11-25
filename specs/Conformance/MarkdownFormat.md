@@ -974,7 +974,7 @@ or `invalidArgument` for options the connection rejects.
 
 ```yaml
 networkApi:
-  sources: ["wire messages :Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\nnetwork :Game as {\n  client sends :Commands reliable\n}\n"]
+  sources: ["wire messages Commands as (Move)\nmessage Move(x: :Number integer between 0 and 255)\nnetwork :Game as {\n  client sends Commands reliable\n}\n"]
   network: Game
   steps:
     - advance: 0

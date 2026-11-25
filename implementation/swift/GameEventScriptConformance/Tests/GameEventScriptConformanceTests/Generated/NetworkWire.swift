@@ -240,7 +240,7 @@ extension NetworkWire {
         }
     }
 
-    /// The message set `:Commands`: one of its messages, read and written without allocation.
+    /// The message set `Commands`: one of its messages, read and written without allocation.
     struct Commands: Sendable {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0x85cd879b1cf54613

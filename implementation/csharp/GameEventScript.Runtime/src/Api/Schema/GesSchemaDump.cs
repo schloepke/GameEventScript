@@ -41,6 +41,8 @@ public static class GesSchemaDump
             var current = schema;
             if (schema.Kind == GesSchemaKind.Messages)
             {
+                // A set's parameters come before the index of its message.
+                Walk(ref reader, schema, 0, schema.Nodes.Length, builder);
                 var member = reader.ReadMember();
                 current = schema.Members[member];
                 builder.Append("message ").Append(current.Name).Append(" index=").Append(member.ToString(CultureInfo.InvariantCulture)).Append('\n');

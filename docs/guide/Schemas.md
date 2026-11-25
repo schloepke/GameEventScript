@@ -316,10 +316,10 @@ That is what a message set declares:
 ```gess
 message Hit(target: :Number integer between 0 and 65535, _ damage: :Number integer between 0 and 1000) tags (#critical, #splash)
 message Died(target: :Number integer between 0 and 65535)
-messages :Combat as (Hit, Died)
+messages Combat as (Hit, Died)
 ```
 
-`messages :Combat as (Hit, Died)` says: a record of `Combat` is exactly one of these messages. Its
+`messages Combat as (Hit, Died)` says: a record of `Combat` is exactly one of these messages. Its
 encoding starts with the index of the message in this list, which takes 1 bit for two messages, and
 the message follows:
 
@@ -358,7 +358,7 @@ using GameEventScript.Api;
 var schemas = GesSchemaSet.Parse("""
     message Hit(target: :Number integer between 0 and 65535, _ damage: :Number integer between 0 and 1000) tags (#critical, #splash)
     message Died(target: :Number integer between 0 and 65535)
-    messages :Combat as (Hit, Died)
+    messages Combat as (Hit, Died)
     """);
 var combat = schemas.Schema("Combat").Bind();
 var hit = combat.Member("Hit");
@@ -392,7 +392,7 @@ import GameEventScriptRuntime
 let schemas = try GesSchemaSet(parsing: """
     message Hit(target: :Number integer between 0 and 65535, _ damage: :Number integer between 0 and 1000) tags (#critical, #splash)
     message Died(target: :Number integer between 0 and 65535)
-    messages :Combat as (Hit, Died)
+    messages Combat as (Hit, Died)
     """)
 let combat = try schemas.schema("Combat").bind()
 let hit = combat.member("Hit")!

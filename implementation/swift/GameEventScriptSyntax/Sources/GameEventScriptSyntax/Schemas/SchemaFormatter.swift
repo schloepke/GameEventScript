@@ -65,7 +65,16 @@
                 }
                 output += "\n"
             case .messages:
-                output += "messages :\(declaration.name) as (\(declaration.members.joined(separator: ", ")))\n"
+                output += "messages \(declaration.name)"
+                if !declaration.fields.isEmpty {
+                    output += "("
+                    for (index, item) in declaration.fields.enumerated() {
+                        if index > 0 { output += ", " }
+                        field(item, &output, "")
+                    }
+                    output += ")"
+                }
+                output += " as (\(declaration.members.joined(separator: ", ")))\n"
             case .tagSet:
                 output += "tags :\(declaration.name) as "
                 tags(declaration.tags, &output)

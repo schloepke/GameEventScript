@@ -13,12 +13,12 @@ wire schema :Chunk as {
   index: :Number integer between 0 and 255
 }
 
-wire messages :Commands as (Move, Fire)
+wire messages Commands as (Move, Fire)
 message Move(x: :Quantity(m) between 0m and worldSize step 1m)
 message Fire()
 
 network :Game as {
-  client sends :Commands reliable
+  client sends Commands reliable
   server publishes :World latest at most every 50ms
   server sends :Chunk bulk
 }

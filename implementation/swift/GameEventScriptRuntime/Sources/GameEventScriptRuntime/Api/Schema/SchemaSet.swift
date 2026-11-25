@@ -111,11 +111,11 @@ public final class GesSchemaSet: @unchecked Sendable {
     /// The schemas, messages and message sets, in source order.
     public private(set) var schemas: [GesSchema] = []
 
-    /// A declaration by its exact name, compared by Unicode scalars. Messages have their own namespace: `:Name` selects a
-    /// schema or message set, `Name()` a message, and a plain `Name` whichever of the two declares it.
+    /// A declaration by its exact name, compared by Unicode scalars. Messages and message sets have their own namespace:
+    /// `:Name` selects a schema, `Name()` a message or message set, and a plain `Name` whichever of the two declares it.
     /// - Parameter name: The name of a schema, message or message set, written `Name`, `:Name` or `Name()`.
     /// - Throws: `GesSchemaError` with `schema.unknownName` when the name is not declared, or with `schema.ambiguousName`
-    ///   when a plain name declares both a schema, message set or network and a message.
+    ///   when a plain name declares both a schema or network and a message or message set.
     public func schema(_ name: String) throws -> GesSchema { try declaration(name).schema! }
 
     /// The networks, in source order.
@@ -190,54 +190,61 @@ public final class GesSchemaSet: @unchecked Sendable {
         for alternative in type.element ?? [] { collectReferences(alternative, owner, &referenced) }
     }
 
-    /// The name of the source that declares a schema, message set, tag set or network, which places its generated code in
+    /// The name of the source that declares a schema, tag set, network or message set, which places its generated code in
     /// split output. The name must be declared.
     @_spi(Generator) public func sourceName(of name: String) -> String {
-        declarations[name]?.scope.sourceName ?? networkSources[name] ?? tagSetSources[name]!
+        declarations[name]?.scope.sourceName ?? networkSources[name] ?? tagSetSources[name] ?? messageSourceName(of: name)
     }
 
-    /// The name of the source that declares a message. The message must be declared.
+    /// The name of the source that declares a message or message set. The name must be declared.
     @_spi(Generator) public func messageSourceName(of name: String) -> String { messages[name]!.scope.sourceName }
 
-    /// Whether a plain name declares both a message and a schema, message set or network, so that a root needs `:` or `()`.
+    /// Whether a plain name declares both a message or message set and a schema or network, so that a root needs `:` or
+    /// `()`.
     @_spi(Generator) public func namesBoth(_ name: String) -> Bool {
         messages[name] != nil && (declarations[name] != nil || networksByName[name] != nil)
     }
 
     /// A declaration as a root names it: plainly, unless the name is also declared in the other namespace.
     @_spi(Generator) public func rootName(of schema: GesSchema) -> String {
-        !namesBoth(schema.name) ? schema.name : schema.kind == .message ? schema.name + "()" : ":" + schema.name
+        !namesBoth(schema.name) ? schema.name : schema.kind == .schema ? ":" + schema.name : schema.name + "()"
     }
 
-    // A root as an API or tool names it: `:Name` is a schema or message set, `Name()` a message and a plain name either,
+    // A root as an API or tool names it: `:Name` is a schema, `Name()` a message or message set and a plain name either,
     // when only one of the two namespaces declares it.
     func declaration(_ root: String) throws -> GesResolvedDeclaration {
         if root.hasPrefix(":") { return try typeDeclaration(String(root.dropFirst())) }
         if root.hasSuffix("()") {
             let name = String(root.dropLast(2))
-            guard let message = messages[name] else { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "Message '\(name)' is not declared.") }
+            guard let message = messages[name] else { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "Message or message set '\(name)' is not declared.") }
             return message
         }
         let found = declarations[root]
         if let other = messages[root] {
-            // A network shares the namespace of schemas and message sets, so it makes the plain name ambiguous too.
-            let what = found.map { $0.kind == .schema ? "schema" : "message set" } ?? (networksByName[root] != nil ? "network" : nil)
+            // A network shares the namespace of schemas, so it makes the plain name ambiguous too.
+            let what = found != nil ? "schema" : networksByName[root] != nil ? "network" : nil
             guard let what else { return other }
+            let sent = other.kind == .message ? "message" : "message set"
             throw GesSchemaError(
                 code: Code.ambiguousName,
                 sourceName: "",
                 line: 0,
                 column: 0,
-                message: "'\(root)' names a \(what) and a message; write ':\(root)' or '\(root)()'."
+                message: "'\(root)' names a \(what) and a \(sent); write ':\(root)' or '\(root)()'."
             )
         }
         guard let found else { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "'\(root)' is not declared.") }
         return found
     }
 
-    // A schema or message set, as a document header or a `:Name` names it.
+    // A schema, as a document header or a `:Name` names it; a message set named so gets a hint at its spelling.
     func typeDeclaration(_ name: String) throws -> GesResolvedDeclaration {
-        guard let found = declarations[name] else { throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "':\(name)' is not declared.") }
+        guard let found = declarations[name] else {
+            let message =
+                messages[name]?.kind == .messages
+                ? "':\(name)' is not declared; a message set is named without ':', as '\(name)' or '\(name)()'." : "':\(name)' is not declared."
+            throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: message)
+        }
         return found
     }
 
@@ -485,9 +492,11 @@ final class GesFileScope {
                 if GesSchemaTypeNames.isBuiltIn(declaration.name) {
                     throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
                 }
-                // Messages have their own namespace; schemas, message sets, tag sets and networks share one.
-                if kind == .message {
-                    if messages[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "Message '\(declaration.name)' is declared twice.") }
+                // Messages and message sets share one namespace; schemas, tag sets and networks the other.
+                if kind != .schema {
+                    if messages[declaration.name] != nil {
+                        throw error(Code.duplicateName, declaration.offset, "Message or message set '\(declaration.name)' is declared twice.")
+                    }
                     messages[declaration.name] = resolved
                 } else {
                     if all[declaration.name] != nil || tagSets[declaration.name] != nil || networks.contains(declaration.name) {
@@ -509,18 +518,28 @@ final class GesFileScope {
                 var seen: Set<String> = []
                 for (index, name) in syntax.members.enumerated() {
                     if !seen.insert(name).inserted { throw error(Code.duplicateName, syntax.memberOffsets[index], "Message '\(name)' is listed twice.") }
-                    guard let member = messages[name] else { throw error(Code.unknownName, syntax.memberOffsets[index], "Message '\(name)' is not declared.") }
+                    guard let member = messages[name], member.kind == .message else {
+                        let message = messages[name] == nil ? "Message '\(name)' is not declared." : "'\(name)' is a message set; a set lists messages."
+                        throw error(Code.unknownName, syntax.memberOffsets[index], message)
+                    }
                     declaration.members.append(member)
                 }
-                continue
             }
             var tags: Set<String> = []
             for tag in syntax.tags where !tags.insert(tag).inserted { throw error(Code.duplicateName, syntax.offset, "Tag '#\(tag)' is listed twice.") }
             var names: Set<String> = []
+            // A set's parameter cannot be named `message`, which the set's value names the carried message by.
+            if declaration.kind == .messages { names.insert(GesSchemaValues.messageLabel) }
             declaration.lets = try resolveLets(syntax, &names)
             var recursive = false
             for (index, field) in syntax.fields.enumerated() {
-                if !names.insert(field.name).inserted { throw error(Code.duplicateName, field.offset, "'\(field.name)' is declared twice in '\(declaration.name)'.") }
+                if !names.insert(field.name).inserted {
+                    let message =
+                        declaration.kind == .messages && field.name == GesSchemaValues.messageLabel
+                        ? "A parameter of '\(declaration.name)' cannot be named '\(GesSchemaValues.messageLabel)', which names the carried message."
+                        : "'\(field.name)' is declared twice in '\(declaration.name)'."
+                    throw error(Code.duplicateName, field.offset, message)
+                }
                 let resolved = try resolveField(field, index, declaration.kind, all)
                 declaration.fields.append(resolved)
                 try checkDepth(field.alternatives, resolved.alternatives, declaration, top: true)
@@ -528,7 +547,7 @@ final class GesFileScope {
                 if recursive { throw error(Code.invalidConstraint, field.alternatives[0].depthOffset, "A schema holds at most one List with depth.") }
                 recursive = true
             }
-            if declaration.kind == .message { try resolveArgumentDefaults(declaration) }
+            if declaration.kind != .schema { try resolveArgumentDefaults(declaration) }
         }
         // A declaration holds its scope, so the scope lets go of them once they are resolved.
         own = []
@@ -666,13 +685,16 @@ final class GesFileScope {
 
     /// A default is a number, a Boolean or a tag of the field's single type, or a sibling field of the same type whose value it
     /// takes; chains resolve in dependency order and must not form a cycle.
-    /// An argument default is a literal number or constant, a Boolean or a tag of the argument's single type; it fills a
-    /// missing argument in a lenient read, so a defaulted argument is required on the wire.
+    /// An argument default is a literal number or constant, a Boolean, a tag of the argument's single type or the empty List
+    /// or Map; it fills a missing argument in a lenient read, so a defaulted argument is required on the wire. A set's
+    /// parameters follow the same rules.
     private func resolveArgumentDefaults(_ declaration: GesResolvedDeclaration) throws {
         for (index, field) in declaration.syntax.fields.enumerated() {
             guard let written = field.defaultValue else { continue }
             let resolved = declaration.fields[index]
-            if !(written.value?.name ?? "").isEmpty || written.record != nil || written.emptyList {
+            // `[:]` is the empty Map here, never a record literal.
+            let emptyMap = written.record?.isEmpty == true && resolved.alternatives[0].kind == .map
+            if !(written.value?.name ?? "").isEmpty || (written.record != nil && !emptyMap) {
                 throw error(Code.invalidDefault, written.offset, "An argument default is a literal or a constant.")
             }
             if resolved.marker == .optional { throw error(Code.invalidDefault, written.offset, "An argument is optional or has a default, not both.") }
@@ -1079,6 +1101,7 @@ enum GesSchemaCanonical {
             for field in declaration.fields { writeField("argument ", field, &output) }
         case .messages:
             output += "messages \(declaration.name)\n"
+            for field in declaration.fields { writeField("argument ", field, &output) }
             for member in declaration.members { output += "member \(member.name)\n" }
         }
     }

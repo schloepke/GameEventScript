@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Globalization;
+using GameEventScript.Api;
 
 namespace GameEventScript.Generator;
 
@@ -46,6 +47,12 @@ internal static partial class GesSwiftEmitter
     // The members of a wire record that convert it to and from its model.
     private static void ModelMembers(GesSchemaPlanner.Code code, GesPlanType type, GesModelType model, string access, ModelConversion conversion)
     {
+        if (type.Kind == GesSchemaKind.Messages)
+        {
+            SetModelMembers(code, type, model, access, conversion);
+            return;
+        }
+
         var name = conversion.Qualifier + model.Name;
         var fields = GesModelPlanner.Fields(model);
         var check = $"precondition({name}.schemaHash == Self.schemaHash, \"The model type {model.Name} was generated from another state of the schema than this wire record.\")";
@@ -58,6 +65,14 @@ internal static partial class GesSwiftEmitter
         var absent = new List<string>();
         foreach (var field in fields)
         {
+            if (field.Tag)
+            {
+                // A message's tag is a Boolean of the model.
+                var (_, tag, _) = type.Tags.Find(candidate => candidate.Tag == field.Field.Name);
+                arguments.Add($"{GesSchemaPlanner.Camel(field.Base)}: self.{Member(tag ?? throw Unconvertible(type, "#" + field.Field.Name))}");
+                continue;
+            }
+
             var wire = type.Fields.Find(candidate => candidate.Layout.Name == field.Field.Name)
                 ?? throw new GesGeneratorException(GesGeneratorException.Usage, $"The field {field.Field.Name} of the model :{model.Name} has no counterpart in the wire record; generate the model from the same schema.");
             var local = conversion.Local("field");
@@ -87,6 +102,72 @@ internal static partial class GesSwiftEmitter
         {
             var match = fields.Find(candidate => candidate.Field.Name == field.Layout.Name)
                 ?? throw new GesGeneratorException(GesGeneratorException.Usage, $"The field {field.Layout.Name} of :{type.Name} has no counterpart in the model; generate the model from the same schema.");
+            FromModelField(code, field, match, model.Name, "self", $"model.{Member(match.Base)}", conversion);
+        }
+
+        foreach (var (tag, member, _) in type.Tags)
+            code.Line($"self.{Member(member)} = model.{Member((fields.Find(candidate => candidate.Tag && candidate.Field.Name == tag) ?? throw Unconvertible(type, "#" + tag)).Base)}");
+        code.Close();
+    }
+
+    private static GesGeneratorException Unconvertible(GesPlanType type, string field)
+        => new(GesGeneratorException.Usage, $"The field {field} of :{type.Name} has no counterpart in the model; generate the model from the same schema.");
+
+    // A wire message set that is also a model set converts its parameters as fields and its selected member as the case.
+    private static void SetModelMembers(GesSchemaPlanner.Code code, GesPlanType type, GesModelType model, string access, ModelConversion conversion)
+    {
+        var name = conversion.Qualifier + model.Name;
+        var fields = GesModelPlanner.Fields(model);
+        var check = $"precondition({name}.schemaHash == Self.schemaHash, \"The model type {model.Name} was generated from another state of the schema than this wire record.\")";
+        code.Line("/// Creates the model of this set, with its parameters and the case of the selected message, field by field without GES values.");
+        code.Line("/// - Precondition: The model type was generated from the same state of the schema.");
+        code.Open($"{access}func toModel() -> {name} {{");
+        code.Line(check);
+        code.Line($"let message: {name}.Case");
+        code.Line("switch selected {");
+        foreach (var member in type.MemberNames) code.Line($"case .{Member(member)}: message = .{Member(member)}(self.{Member(member)}.toModel())");
+        code.Line("}");
+        conversion.Reset();
+        var arguments = new List<string>();
+        var absent = new List<string>();
+        foreach (var field in fields)
+        {
+            var wire = type.Fields.Find(candidate => candidate.Layout.Name == field.Field.Name) ?? throw Unconvertible(type, field.Field.Name);
+            var local = conversion.Local("field");
+            code.Line($"let {local}: {ModelType(field.Value, model.Name, conversion)}");
+            ToModelField(code, wire, field, model.Name, "self", local, conversion);
+            arguments.Add($"{GesSchemaPlanner.Camel(field.Base)}: {local}");
+            if (wire.Optional && GesModelPlanner.Sibling(fields, field) is not null) absent.Add($"model.{Member(field.Base)} = {local}");
+        }
+
+        arguments.Add("message");
+        if (absent.Count == 0) code.Line($"return {name}({string.Join(", ", arguments)})");
+        else
+        {
+            code.Line($"var model = {name}({string.Join(", ", arguments)})");
+            foreach (var line in absent) code.Line(line);
+            code.Line("return model");
+        }
+
+        code.Close();
+        code.Blank();
+        code.Line("/// Fills this set from a model, its parameters and the message of its case, field by field without GES values; the values are checked when the set is written.");
+        code.Line("/// - Precondition: The model type was generated from the same state of the schema.");
+        code.Open($"{access}{(type.MembersAreClasses ? "" : "mutating ")}func read(model: {name}) {{");
+        code.Line(check);
+        code.Line("switch model.message {");
+        foreach (var member in type.MemberNames)
+        {
+            code.Line($"case .{Member(member)}(let value):");
+            code.Line($"    selected = .{Member(member)}");
+            code.Line($"    self.{Member(member)}.read(model: value)");
+        }
+
+        code.Line("}");
+        conversion.Reset();
+        foreach (var field in type.Fields)
+        {
+            var match = fields.Find(candidate => candidate.Field.Name == field.Layout.Name) ?? throw Unconvertible(type, field.Layout.Name);
             FromModelField(code, field, match, model.Name, "self", $"model.{Member(match.Base)}", conversion);
         }
 

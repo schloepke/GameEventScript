@@ -43,7 +43,7 @@ final class SchemaTests: XCTestCase {
     }
 
     func testMessageSetMembersCarryTheSetHash() throws {
-        let set = try GesSchemaSet(parsing: "message Hit(target: :Number integer between 0 and 15)\nmessage Died(target: :Number integer between 0 and 15)\nmessages :Combat as (Hit, Died)\n")
+        let set = try GesSchemaSet(parsing: "message Hit(target: :Number integer between 0 and 15)\nmessage Died(target: :Number integer between 0 and 15)\nmessages Combat as (Hit, Died)\n")
         let combat = try set.schema("Combat").bind()
         let member = try XCTUnwrap(combat.member("Hit"))
         XCTAssertEqual(member.hash, combat.hash)
@@ -110,7 +110,7 @@ final class SchemaTests: XCTestCase {
             weak var set: GesSchemaSet?
         }
 
-        let source = "schema :U as {\n  x: :Boolean\n}\nschema :A as {\n  u: :U\n}\nmessage M(a: :A)\nmessages :S as (M)\n"
+        let source = "schema :U as {\n  x: :Boolean\n}\nschema :A as {\n  u: :U\n}\nmessage M(a: :A)\nmessages S as (M)\n"
         let box = Box()
         do {
             let set = try GesSchemaSet(parsing: source)

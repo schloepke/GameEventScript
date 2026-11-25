@@ -32,7 +32,7 @@ Each route line names side, verb, root, class, rate in microseconds and the root
 gesBlock: case
 id: network-canonical
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Commands reliable\n  server publishes :World latest at most every 50ms\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends Commands reliable\n  server publishes :World latest at most every 50ms\n}\n"]
   network: "Game"
 ```
 
@@ -55,7 +55,7 @@ The same routes in another order give another canonical form and hash.
 gesBlock: case
 id: network-order
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 50ms\n  client sends :Commands reliable\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 50ms\n  client sends Commands reliable\n}\n"]
   network: "Game"
 ```
 
@@ -78,7 +78,7 @@ Routes may share a line separated by commas; repeated and trailing separators ar
 gesBlock: case
 id: network-separators
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as { client sends :Commands reliable,, server publishes :World reliable, }\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as { client sends Commands reliable,, server publishes :World reliable, }\n"]
   network: "Game"
 ```
 
@@ -101,7 +101,7 @@ schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute client sends Comma
 gesBlock: case
 id: network-rate-rounding
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 33.3333ms\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 33.3333ms\n}\n"]
   network: "Game"
 ```
 
@@ -124,7 +124,7 @@ A file constant with a time value gives the rate; seconds and milliseconds give 
 gesBlock: case
 id: network-rate-constant
 schemaApi:
-  sources: ["constant $tick be 0.25s\nwire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every $tick\n}\n"]
+  sources: ["constant $tick be 0.25s\nwire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every $tick\n}\n"]
   network: "Game"
 ```
 
@@ -147,7 +147,7 @@ schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes W
 gesBlock: case
 id: network-rate-maximum
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 3600s\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 3600s\n}\n"]
   network: "Game"
 ```
 
@@ -195,7 +195,7 @@ Names are shared across all sources.
 gesBlock: case
 id: network-sources
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\n", "network :Game as {\n  client sends :Commands bulk\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\n", "network :Game as {\n  client sends Commands bulk\n}\n"]
   network: "Game"
 ```
 
@@ -216,7 +216,7 @@ schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute client sends Comma
 gesBlock: case
 id: network-unknown-root
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Missing reliable\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Missing reliable\n}\n"]
   network: "Game"
 ```
 
@@ -237,7 +237,7 @@ schema: {"error": {"code": "schema.unknownName", "line": 7, "column": 16}}
 gesBlock: case
 id: network-no-wire-role
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nschema :Plain as { a: :Boolean }\nnetwork :Game as {\n  server publishes :Plain latest\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nschema :Plain as { a: :Boolean }\nnetwork :Game as {\n  server publishes :Plain latest\n}\n"]
   network: "Game"
 ```
 
@@ -258,7 +258,7 @@ schema: {"error": {"code": "schema.invalidRoute", "line": 8, "column": 20}}
 gesBlock: case
 id: network-publishes-messages
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :Commands reliable\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes Commands reliable\n}\n"]
   network: "Game"
 ```
 
@@ -279,7 +279,7 @@ schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 20}}
 gesBlock: case
 id: network-publishes-bulk
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World bulk\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World bulk\n}\n"]
   network: "Game"
 ```
 
@@ -300,7 +300,7 @@ schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 27}}
 gesBlock: case
 id: network-sends-latest
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Commands latest\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends Commands latest\n}\n"]
   network: "Game"
 ```
 
@@ -308,7 +308,7 @@ schemaApi:
 
 ```yaml
 gesBlock: expect
-schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 26}}
+schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 25}}
 ```
 
 ---
@@ -321,7 +321,7 @@ schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 26}}
 gesBlock: case
 id: network-rate-on-sends
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Commands reliable at most every 1s\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends Commands reliable at most every 1s\n}\n"]
   network: "Game"
 ```
 
@@ -329,7 +329,7 @@ schemaApi:
 
 ```yaml
 gesBlock: expect
-schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 49}}
+schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 48}}
 ```
 
 ---
@@ -342,7 +342,7 @@ schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 49}}
 gesBlock: case
 id: network-rate-zero
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 0s\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 0s\n}\n"]
   network: "Game"
 ```
 
@@ -363,7 +363,7 @@ schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 48}}
 gesBlock: case
 id: network-rate-too-large
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 3600.000001s\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 3600.000001s\n}\n"]
   network: "Game"
 ```
 
@@ -384,7 +384,7 @@ schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 48}}
 gesBlock: case
 id: network-rate-not-time
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 5m\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every 5m\n}\n"]
   network: "Game"
 ```
 
@@ -405,7 +405,7 @@ schema: {"error": {"code": "schema.invalidRoute", "line": 7, "column": 48}}
 gesBlock: case
 id: network-rate-name
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every tick\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  server publishes :World latest at most every tick\n}\n"]
   network: "Game"
 ```
 
@@ -426,7 +426,7 @@ schema: {"error": {"code": "schema.syntax", "line": 7, "column": 48}}
 gesBlock: case
 id: network-duplicate-route
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Commands reliable\n  client sends :Commands bulk\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends Commands reliable\n  client sends Commands bulk\n}\n"]
   network: "Game"
 ```
 
@@ -447,7 +447,7 @@ schema: {"error": {"code": "schema.duplicateRoute", "line": 8, "column": 3}}
 gesBlock: case
 id: network-duplicate-name
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :World as {\n  client sends :Commands reliable\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :World as {\n  client sends Commands reliable\n}\n"]
 ```
 
 ### Expectation
@@ -467,7 +467,7 @@ schema: {"error": {"code": "schema.duplicateName", "line": 6, "column": 1}}
 gesBlock: case
 id: network-role
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nwire network :Game as {\n  client sends :Commands reliable\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nwire network :Game as {\n  client sends Commands reliable\n}\n"]
 ```
 
 ### Expectation
@@ -487,7 +487,7 @@ schema: {"error": {"code": "schema.invalidRole", "line": 6, "column": 1}}
 gesBlock: case
 id: network-empty
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n}\n"]
 ```
 
 ### Expectation
@@ -507,7 +507,7 @@ schema: {"error": {"code": "schema.syntax", "line": 7, "column": 1}}
 gesBlock: case
 id: network-too-many
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n  client sends :Commands reliable\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n  client sends Commands reliable\n}\n"]
 ```
 
 ### Expectation
@@ -527,14 +527,14 @@ schema: {"error": {"code": "schema.tooLarge", "line": 71, "column": 3}}
 gesBlock: case
 id: network-bad-class
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Commands fast\n}\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends Commands fast\n}\n"]
 ```
 
 ### Expectation
 
 ```yaml
 gesBlock: expect
-schema: {"error": {"code": "schema.syntax", "line": 7, "column": 26}}
+schema: {"error": {"code": "schema.syntax", "line": 7, "column": 25}}
 ```
 
 ---
@@ -547,7 +547,7 @@ schema: {"error": {"code": "schema.syntax", "line": 7, "column": 26}}
 gesBlock: case
 id: network-field-names-network
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Commands reliable\n}\nschema :Holder as { g: :Game }\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends Commands reliable\n}\nschema :Holder as { g: :Game }\n"]
 ```
 
 ### Expectation
@@ -567,7 +567,7 @@ schema: {"error": {"code": "schema.unknownName", "line": 9, "column": 24}}
 gesBlock: case
 id: network-unknown-network
 schemaApi:
-  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages :Commands as (Move)\nmessage Move()\n"]
+  sources: ["wire schema :World as {\n  tick: :Number integer between 0 and 65535\n}\nwire messages Commands as (Move)\nmessage Move()\n"]
   network: "Game"
 ```
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Collections.Generic;
+using GameEventScript.Api;
 
 namespace GameEventScript.Generator;
 
@@ -26,6 +27,12 @@ internal static partial class GesCSharpEmitter
 
     private static void ModelMembers(GesSchemaPlanner.Code code, GesPlanType type, GesModelType model, ModelConversion conversion)
     {
+        if (type.Kind == GesSchemaKind.Messages)
+        {
+            SetModelMembers(code, type, model, conversion);
+            return;
+        }
+
         var name = conversion.Qualifier + model.Name;
         var fields = GesModelPlanner.Fields(model);
         code.Blank();
@@ -46,6 +53,7 @@ internal static partial class GesCSharpEmitter
             ToModelField(code, field, match, model.Name, "this", "", $"model.{match.Base}", conversion);
         }
 
+        foreach (var (tag, member, _) in type.Tags) code.Line($"model.{TagField(type, fields, tag).Base} = {member};");
         code.Line("return model;");
         code.Close();
         code.Blank();
@@ -56,6 +64,77 @@ internal static partial class GesCSharpEmitter
         code.Open("{");
         code.Line("if (model is null) throw new global::System.ArgumentNullException(nameof(model));");
         code.Line($"if (!__modelMatches) throw new global::System.InvalidOperationException(\"The model type {model.Name} was generated from another state of the schema than this wire record.\");");
+        conversion.Reset();
+        foreach (var field in type.Fields)
+        {
+            var match = fields.Find(candidate => candidate.Field.Name == field.Layout.Name)!;
+            FromModelField(code, field, match, model.Name, "this", "", $"model.{match.Base}", conversion);
+        }
+
+        foreach (var (tag, member, _) in type.Tags) code.Line($"{member} = model.{TagField(type, fields, tag).Base};");
+        code.Close();
+    }
+
+    // The model's Boolean of a message's tag.
+    private static GesModelPlanField TagField(GesPlanType type, List<GesModelPlanField> fields, string tag)
+        => fields.Find(candidate => candidate.Tag && candidate.Field.Name == tag) ?? throw Unconvertible(type, "#" + tag);
+
+    // A wire message set that is also a model set converts its parameters as fields and its selected member as the case.
+    private static void SetModelMembers(GesSchemaPlanner.Code code, GesPlanType type, GesModelType model, ModelConversion conversion)
+    {
+        var name = conversion.Qualifier + model.Name;
+        var fields = GesModelPlanner.Fields(model);
+        code.Blank();
+        code.Line("// Whether the model type was generated from the same schema; generated code of another schema state never converts.");
+        code.Line($"private static readonly bool __modelMatches = {name}.SchemaHash == SchemaHash;");
+        code.Blank();
+        code.Line($"/// <summary>Creates the model of this set, with its parameters and the case of the selected message, field by field without GES values.</summary>");
+        code.Line("/// <returns>The model.</returns>");
+        code.Line("/// <exception cref=\"global::System.InvalidOperationException\">The model type was generated from another state of the schema.</exception>");
+        code.Line("/// <exception cref=\"GesWireException\"><see cref=\"Selected\"/> names no message of the set.</exception>");
+        code.Line($"public {(type.MembersAreClasses ? "" : "readonly ")}{name} ToModel()");
+        code.Open("{");
+        code.Line($"if (!__modelMatches) throw new global::System.InvalidOperationException(\"The model type {model.Name} was generated from another state of the schema than this wire record.\");");
+        code.Line($"var model = new {name}(Selected switch");
+        code.Open("{");
+        foreach (var (member, _) in type.MemberPairs) code.Line($"Member.{member} => new {name}.Case.{member}({member}.ToModel()),");
+        code.Line("_ => throw new GesWireException(GesWireException.OutOfRange, \"\"),");
+        code.Close("});");
+        conversion.Reset();
+        foreach (var field in type.Fields)
+        {
+            var match = fields.Find(candidate => candidate.Field.Name == field.Layout.Name) ?? throw Unconvertible(type, field.Layout.Name);
+            ToModelField(code, field, match, model.Name, "this", "", $"model.{match.Base}", conversion);
+        }
+
+        code.Line("return model;");
+        code.Close();
+        code.Blank();
+        code.Line($"/// <summary>Fills this set from a model, its parameters and the message of its case, field by field without GES values; the values are checked when the set is written.</summary>");
+        code.Line("/// <param name=\"model\">The model.</param>");
+        code.Line("/// <exception cref=\"global::System.InvalidOperationException\">The model type was generated from another state of the schema.</exception>");
+        code.Line($"public void CopyFrom({name} model)");
+        code.Open("{");
+        code.Line("if (model is null) throw new global::System.ArgumentNullException(nameof(model));");
+        code.Line($"if (!__modelMatches) throw new global::System.InvalidOperationException(\"The model type {model.Name} was generated from another state of the schema than this wire record.\");");
+        code.Line("switch (model.Message)");
+        code.Open("{");
+        foreach (var (member, _) in type.MemberPairs)
+        {
+            var local = "@" + GesSchemaPlanner.Camel(member);
+            code.Line($"case {name}.Case.{member} {local}:");
+            code.Indent();
+            code.Line($"Selected = Member.{member};");
+            code.Line($"{member}.CopyFrom({local}.Value);");
+            code.Line("break;");
+            code.Dedent();
+        }
+
+        code.Line("default:");
+        code.Indent();
+        code.Line("throw new global::System.ArgumentNullException(nameof(model));");
+        code.Dedent();
+        code.Close();
         conversion.Reset();
         foreach (var field in type.Fields)
         {

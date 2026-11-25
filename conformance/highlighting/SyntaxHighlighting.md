@@ -174,7 +174,7 @@ and ANSI text preservation.
 ```
 
 ```highlight
-{"name":"schema roles","language":"gess","source":"wire(world) model(view) schema :Arena as { size: :Number integer between 1 and 64 }\nwire messages :Events as (Hit)\nmessage Hit()\n","expect":[{"text":"wire","occurrence":0,"kind":"keyword"},{"text":"model","kind":"keyword"},{"text":"schema","kind":"keyword"},{"text":"wire","occurrence":1,"kind":"keyword"},{"text":"messages","kind":"keyword"}],"diagnostics":[]}
+{"name":"schema roles","language":"gess","source":"wire(world) model(view) schema :Arena as { size: :Number integer between 1 and 64 }\nwire messages Events as (Hit)\nmessage Hit()\n","expect":[{"text":"wire","occurrence":0,"kind":"keyword"},{"text":"model","kind":"keyword"},{"text":"schema","kind":"keyword"},{"text":"wire","occurrence":1,"kind":"keyword"},{"text":"messages","kind":"keyword"}],"diagnostics":[]}
 ```
 
 ```highlight
@@ -182,7 +182,7 @@ and ANSI text preservation.
 ```
 
 ```highlight
-{"name":"schema network routes","language":"gess","source":"wire schema :World as { tick: :Boolean }\nwire messages :Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends :Commands reliable\n  server publishes :World latest at most every 50ms\n  server sends :World bulk\n}\n","expect":[{"text":"network","kind":"keyword"},{"text":":Game","kind":"type"},{"text":"client","kind":"keyword"},{"text":"sends","occurrence":0,"kind":"keyword"},{"text":"reliable","kind":"keyword"},{"text":"server","occurrence":0,"kind":"keyword"},{"text":"publishes","kind":"keyword"},{"text":":World","occurrence":1,"kind":"type"},{"text":"latest","kind":"keyword"},{"text":"at","kind":"keyword"},{"text":"most","kind":"keyword"},{"text":"every","kind":"keyword"},{"text":"50ms","kind":"number"},{"text":"bulk","kind":"keyword"}],"diagnostics":[]}
+{"name":"schema network routes","language":"gess","source":"wire schema :World as { tick: :Boolean }\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends Commands reliable\n  server publishes :World latest at most every 50ms\n  server sends :World bulk\n}\n","expect":[{"text":"network","kind":"keyword"},{"text":":Game","kind":"type"},{"text":"client","kind":"keyword"},{"text":"sends","occurrence":0,"kind":"keyword"},{"text":"reliable","kind":"keyword"},{"text":"server","occurrence":0,"kind":"keyword"},{"text":"publishes","kind":"keyword"},{"text":":World","occurrence":1,"kind":"type"},{"text":"latest","kind":"keyword"},{"text":"at","kind":"keyword"},{"text":"most","kind":"keyword"},{"text":"every","kind":"keyword"},{"text":"50ms","kind":"number"},{"text":"bulk","kind":"keyword"}],"diagnostics":[]}
 ```
 
 ```highlight

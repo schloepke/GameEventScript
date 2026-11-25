@@ -9,10 +9,10 @@ extension GesCSharpEmitter {
     // Whether a message declares an argument default.
     static func hasArgumentDefaults(_ layout: GesLayoutType) -> Bool { layout.kind == .message && layout.fields.contains { $0.defaultValue != nil } }
 
-    // Whether a message or a member of a message set declares an argument default.
+    // Whether a message, a message set's parameter or a member of a message set declares an argument default.
     static func lenient(_ type: GesLayoutType, _ layout: GesSchemaLayout) -> Bool {
         guard type.kind == .messages else { return hasArgumentDefaults(type) }
-        return type.members.contains { member in layout.types.first { $0.name == member }.map(hasArgumentDefaults) ?? false }
+        return type.fields.contains { $0.defaultValue != nil } || type.members.contains { member in layout.types.first { $0.name == member }.map(hasArgumentDefaults) ?? false }
     }
 
     // The lenient read, which fills left-out arguments as GesSchemaValues.CompleteMessage does and then reads the message.

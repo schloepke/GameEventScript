@@ -10,7 +10,7 @@ namespace GameEventScript.Generator;
 
 // Writes Swift models: a Hashable, Sendable and Codable struct per schema with stored properties in declared order and a
 // memberwise initializer, an enum per closed Tag and per union, and the runtime's GesPoint and GesVector for spatial fields.
-internal static class GesSwiftModelEmitter
+internal static partial class GesSwiftModelEmitter
 {
     internal static GesCodeDocument Emit(GesModelLayout layout, GesSchemaGenerateOptions options, int extended)
     {
@@ -45,24 +45,36 @@ internal static class GesSwiftModelEmitter
         // The call that reads a document up to its roots: the schema set's, or that of the helper holding the sources of this file.
         var documents = !options.Documents ? null : schemaSet is not null ? schemaSet.Qualified + ".readDocument(text, roots: [" : "__GesModelDocuments" + suffix + ".read(text, [";
         var documentType = options.Documents ? GesModelPlanner.DocumentType(layout, document.Space) : "";
+        // Model messages and sets convert to and from messages through the values enum, which they need without --values.
+        var messages = layout.Types.Exists(type => type.Kind != GesSchemaKind.Schema);
+        var valued = options.Values || messages;
+        var schemas = "__GesModelSchemas" + suffix;
+        // Bindings and documents concern the schemas only.
+        var plain = GesCSharpModelEmitter.Schemas(layout);
         foreach (var type in layout.Types)
-            document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, options.Bindings, options.Values ? values : null, computed, layout.Roots.Contains(type.Name) ? documents : null)));
+            document.Units.Add(new GesCodeUnit(type.Name, code =>
+            {
+                if (type.Kind == GesSchemaKind.Messages) MessageSet(code, layout, type, access, values, schemas);
+                else if (type.Kind == GesSchemaKind.Message) Record(code, layout, type, access, false, null, computed, null, values, schemas);
+                else Record(code, layout, type, access, options.Bindings, valued ? values : null, computed, plain.Roots.Contains(type.Name) ? documents : null);
+            }));
         foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Protocol(code, layout, protocol, access)));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.")));
-        if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, layout, access, support, computed)));
-        if (options.Values) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, support, computed)));
-        if (documents is not null)
+        if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, plain, access, support, computed)));
+        if (valued) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, support, computed)));
+        if (messages) document.Units.Add(new GesCodeUnit("", code => SchemasHolder(code, layout, schemas, schemaSet)));
+        if (documents is not null && plain.Roots.Count > 0)
         {
-            document.Units.Add(new GesCodeUnit("", code => DocumentType(code, layout, documentType, documents, access)));
+            document.Units.Add(new GesCodeUnit("", code => DocumentType(code, plain, documentType, documents, access)));
             if (schemaSet is null) document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, "__GesModelDocuments" + suffix)));
         }
 
         if (schemaSet?.Declared is { } setName)
             document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteSwift(code, setName, access, layout.Sources, [], networks: false)));
-        if (options.Bindings || options.Values) document.Units.Add(new GesCodeUnit("", code => Support(code, support)));
+        if (options.Bindings || valued) document.Units.Add(new GesCodeUnit("", code => Support(code, support)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: true, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)), GesComputedEmitter.UsesSpatial(layout.Types.ConvertAll(type => type.Computed)))));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: true, options.Bindings || valued || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)), GesComputedEmitter.UsesSpatial(layout.Types.ConvertAll(type => type.Computed)))));
         return document;
     }
 
@@ -154,7 +166,7 @@ internal static class GesSwiftModelEmitter
         code.Close();
     }
 
-    private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, bool bindings, string? values, GesComputedEmitter computed, string? documents)
+    private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, bool bindings, string? values, GesComputedEmitter computed, string? documents, string? messageValues = null, string? schemas = null)
     {
         if (type.Packed is not null)
         {
@@ -180,6 +192,7 @@ internal static class GesSwiftModelEmitter
         GesComputedEmitter.Names(type.Computed, type.Name, swift: true, names);
         if (bindings) names.Add(("gesValue", "the generated member gesValue"));
         if (values is not null) names.Add(("toValue", "the generated member toValue"));
+        if (messageValues is not null) names.Add(("toMessage", "the generated member toMessage"));
         if (bindings && fields.Exists(field => field.Field.Name == "fields"))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{type.Name}', the field fields and the generated field fields of its bindings share a name.");
         // The values of the record defaults are held by a class named after the type.
@@ -187,10 +200,14 @@ internal static class GesSwiftModelEmitter
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The record defaults of '{type.Name}' are generated as '{type.Name}Defaults', which hides the top-level type of that name.");
         GesSchemaPlanner.Unique(type.Name, names, GesModelPlanner.TopLevel(layout, swift: true));
 
-        code.Line($"/// The model of the schema `:{type.Name}`: a plain value that is never encoded.");
+        code.Line(type.Kind == GesSchemaKind.Message
+            ? $"/// The model of the message `{type.Name}`: its arguments and a Boolean per tag, a plain value that is never encoded."
+            : $"/// The model of the schema `:{type.Name}`: a plain value that is never encoded.");
         var adopted = string.Concat(GesModelPlanner.Adopted(layout, type, swift: true).ConvertAll(name => ", " + name));
         code.Open($"{access}struct {type.Name}: Hashable, Sendable, Codable{(key is null ? "" : ", Identifiable")}{adopted} {{");
-        code.Line($"/// The hash of the schema `:{type.Name}`, which wire records of it carry too; a test that compares it notices stale generated code.");
+        code.Line(type.Kind == GesSchemaKind.Message
+            ? $"/// The hash of the message `{type.Name}`, which wire code of it carries too; a test that compares it notices stale generated code."
+            : $"/// The hash of the schema `:{type.Name}`, which wire records of it carry too; a test that compares it notices stale generated code.");
         code.Line($"{access}static let schemaHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(type.Hash)}");
         GesSwiftEmitter.Lets(code, type.Constants, access, "Int");
         if (fields.Count > 0) code.Blank();
@@ -270,6 +287,7 @@ internal static class GesSwiftModelEmitter
             code.Close();
         }
 
+        if (messageValues is not null) MessageConversions(code, type, access, messageValues, schemas!);
         foreach (var field in fields) Declarations(code, field.Value, access);
         code.Close();
     }
@@ -875,8 +893,12 @@ internal static class GesSwiftModelEmitter
             for (var index = 0; index < fields.Count; index++) arguments.Add($"{GesSchemaPlanner.Camel(fields[index].Base)}: field{index}");
             if (!first) code.Blank();
             first = false;
-            code.Line($"static let {names} = [{string.Join(", ", fields.ConvertAll(field => GesSchemaPlanner.Literal(field.Field.Name, true)))}]");
-            code.Blank();
+            // A set without parameters reads no Record; a message without arguments needs the element type of its empty list.
+            if (type.Kind != GesSchemaKind.Messages || fields.Count > 0)
+            {
+                code.Line($"static let {names}{(fields.Count == 0 ? ": [String]" : "")} = [{string.Join(", ", fields.ConvertAll(field => GesSchemaPlanner.Literal(field.Field.Name, true)))}]");
+                code.Blank();
+            }
             Defaults(code, layout, fields, type.Name + "Defaults", type.Name, support);
             // A value also carries the computed fields, as decoding the record's bytes gives them; reading ignores them.
             var keys = names;
@@ -888,60 +910,81 @@ internal static class GesSwiftModelEmitter
             }
 
             var checks = PackedChecks(type, fields);
-            code.Open($"static func value(_ record: {type.Name}) -> GesValue {{");
-            code.Line($".record(typeName: {typeLiteral}, keys: {keys}, values: [");
-            foreach (var field in fields) code.Line("    " + Encode(field.Value, type.Name, "record." + Member(field.Base), name, support, plain: true) + ",");
-            foreach (var field in type.Computed)
-                code.Line($"    {computed.HelperName}.gesValue({computed.ValueOf("record", type.Name, field)}, .{(field.Kind == GesSchemaTypeKind.Quantity || field.IsSpatial ? field.Unit.ToTypeName() : "none")}),");
-            code.Line("])");
-            code.Close();
-            code.Blank();
-            code.Open($"static func read{type.Name}(_ value: GesValue, _ path: String) throws(GesWireError) -> {type.Name} {{");
-            if (fields.Count == 0)
+            var schema = type.Kind == GesSchemaKind.Schema;
+            // A set reads its parameters with the message it carries, which its initializer takes last; a set without
+            // parameters needs no Record of them.
+            var set = type.Kind == GesSchemaKind.Messages;
+            if (set) arguments.Add("message");
+            if (schema)
             {
-                code.Line($"guard recordFields(value, {typeLiteral}, {names}) != nil else {{ throw failure(value, path) }}");
-                code.Line($"return {type.Name}()");
+                code.Open($"static func value(_ record: {type.Name}) -> GesValue {{");
+                code.Line($".record(typeName: {typeLiteral}, keys: {keys}, values: [");
+                foreach (var field in fields) code.Line("    " + Encode(field.Value, type.Name, "record." + Member(field.Base), name, support, plain: true) + ",");
+                foreach (var field in type.Computed)
+                    code.Line($"    {computed.HelperName}.gesValue({computed.ValueOf("record", type.Name, field)}, .{(field.Kind == GesSchemaTypeKind.Quantity || field.IsSpatial ? field.Unit.ToTypeName() : "none")}),");
+                code.Line("])");
+                code.Close();
+                code.Blank();
             }
-            else
+
+            if (!set || fields.Count > 0)
             {
-                code.Line($"guard let fields = recordFields(value, {typeLiteral}, {names}) else {{ throw failure(value, path) }}");
-                foreach (var index in GesModelPlanner.ReadOrder(fields))
+                code.Open($"static func read{type.Name}(_ value: GesValue, _ path: String{(set ? $", _ message: {type.Name}.Case" : "")}) throws(GesWireError) -> {type.Name} {{");
+                if (fields.Count == 0)
                 {
-                    var fieldLiteral = GesSchemaPlanner.Literal(fields[index].Field.Name, true);
-                    var held = "value" + index.ToString(CultureInfo.InvariantCulture);
-                    var missing = fields[index].Value.Nullable ? $"fields.get({fieldLiteral}) ?? .nothing" : $"try required(fields, {fieldLiteral}, path)";
-                    code.Line($"let {held} = {Held(layout, fields, index, type.Name, support, type.Name + "Defaults", sibling => "value" + sibling.ToString(CultureInfo.InvariantCulture), missing)}");
-                    if (Descends(fields[index].Value)) code.Line($"let field{index} = {Read(fields[index].Value, type.Name, held, $"fieldPath(path, {fieldLiteral})", name, support)}");
-                    else
+                    code.Line($"guard recordFields(value, {typeLiteral}, {names}) != nil else {{ throw failure(value, path) }}");
+                    code.Line($"return {type.Name}()");
+                }
+                else
+                {
+                    code.Line($"guard let fields = recordFields(value, {typeLiteral}, {names}) else {{ throw failure(value, path) }}");
+                    foreach (var index in GesModelPlanner.ReadOrder(fields))
                     {
-                        code.Line($"guard let field{index} = {Decode(fields[index].Value, type.Name, held, name, support, plain: true)} else {{ throw failure({held}, fieldPath(path, {fieldLiteral})) }}");
-                        // A value of the field's type outside its range is the value path's error, not a value of another type.
-                        if (checks[index] is { } check)
-                            code.Line($"guard {check}(field{index}) else {{ throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, {fieldLiteral})) }}");
+                        var fieldLiteral = GesSchemaPlanner.Literal(fields[index].Field.Name, true);
+                        var held = "value" + index.ToString(CultureInfo.InvariantCulture);
+                        var missing = fields[index].Value.Nullable ? $"fields.get({fieldLiteral}) ?? .nothing" : $"try required(fields, {fieldLiteral}, path)";
+                        code.Line($"let {held} = {Held(layout, fields, index, type.Name, support, type.Name + "Defaults", sibling => "value" + sibling.ToString(CultureInfo.InvariantCulture), missing)}");
+                        if (Descends(fields[index].Value)) code.Line($"let field{index} = {Read(fields[index].Value, type.Name, held, $"fieldPath(path, {fieldLiteral})", name, support)}");
+                        else
+                        {
+                            code.Line($"guard let field{index} = {Decode(fields[index].Value, type.Name, held, name, support, plain: true)} else {{ throw failure({held}, fieldPath(path, {fieldLiteral})) }}");
+                            // A value of the field's type outside its range is the value path's error, not a value of another type.
+                            if (checks[index] is { } check)
+                                code.Line($"guard {check}(field{index}) else {{ throw GesWireError(code: GesWireError.outOfRange, path: fieldPath(path, {fieldLiteral})) }}");
+                        }
                     }
+
+                    Construct(code, type.Name, arguments, fields);
+                }
+
+                code.Close();
+            }
+
+            if (type.Kind == GesSchemaKind.Message) MessageValues(code, type, fields, name, support);
+            if (set) SetValues(code, type, fields, name, support);
+            if (schema)
+            {
+                code.Blank();
+                code.Open($"static func decode{type.Name}(_ value: GesValue) -> {type.Name}? {{");
+                if (fields.Count == 0) code.Line($"guard recordFields(value, {typeLiteral}, {names}) != nil else {{ return nil }}");
+                else
+                {
+                    code.Open("guard");
+                    code.Line($"let fields = recordFields(value, {typeLiteral}, {names}),");
+                    for (var index = 0; index < fields.Count; index++)
+                        code.Line($"let field{index} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support, type.Name + "Defaults"), name, support, plain: true)}{Fits(checks, index, "field" + index.ToString(CultureInfo.InvariantCulture))}{(index == fields.Count - 1 ? "" : ",")}");
+                    code.Dedent();
+                    code.Line("else { return nil }");
                 }
 
                 Construct(code, type.Name, arguments, fields);
+                code.Close();
             }
 
-            code.Close();
-            code.Blank();
-            code.Open($"static func decode{type.Name}(_ value: GesValue) -> {type.Name}? {{");
-            if (fields.Count == 0) code.Line($"guard recordFields(value, {typeLiteral}, {names}) != nil else {{ return nil }}");
-            else
-            {
-                code.Open("guard");
-                code.Line($"let fields = recordFields(value, {typeLiteral}, {names}),");
-                for (var index = 0; index < fields.Count; index++)
-                    code.Line($"let field{index} = {Decode(fields[index].Value, type.Name, Inline(layout, fields, index, type.Name, support, type.Name + "Defaults"), name, support, plain: true)}{Fits(checks, index, "field" + index.ToString(CultureInfo.InvariantCulture))}{(index == fields.Count - 1 ? "" : ",")}");
-                code.Dedent();
-                code.Line("else { return nil }");
-            }
-
-            Construct(code, type.Name, arguments, fields);
-            code.Close();
             Conversions(code, type.Name, fields, name, support, true);
         }
+
+        if (layout.Types.Exists(type => type.Kind != GesSchemaKind.Schema)) MessageHelpers(code);
 
         code.Blank();
         code.Line("// The fields of a Record of the schema, or of a Map whose keys are all fields of it.");

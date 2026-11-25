@@ -37,6 +37,14 @@ internal sealed class GesModelType
 {
     internal string Name = "";
     internal ulong Hash;
+
+    // A schema, a message reached by a model set or a model set; the name a schema set looks it up by.
+    internal GesSchemaKind Kind = GesSchemaKind.Schema;
+    internal string Lookup = "";
+
+    // The tags of a message and the members of a set, in declared order.
+    internal List<string> Tags = [];
+    internal List<string> Members = [];
     internal List<GesModelField> Fields = [];
     internal List<GesLayoutConstant> Constants = [];
 
@@ -69,6 +77,9 @@ internal sealed class GesModelField
     internal bool Key;
     internal GesLayoutDefault? Default;
     internal GesModelValue Value = new();
+
+    // Whether a message argument is written without a label, so that its message carries the label `_`.
+    internal bool Unlabeled;
 
     // Whether the member takes the suffix Value because a schema lends the field with `with` and the field is named like that
     // schema or one that takes it, so that the interface or protocol and every type taking it name it alike.
@@ -141,7 +152,7 @@ internal static class GesModelLayoutBuilder
         {
             var schema = set.Schema(root);
             if (rootNames.Contains(schema.Name)) continue;
-            if (schema.Kind != GesSchemaKind.Schema) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is no schema.");
+            if (schema.Kind == GesSchemaKind.Message) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is a message; a model root is a schema or message set.");
             if (schema.IsAbstract) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is abstract; only its protocol is generated, where a model takes it.");
             rootNames.Add(schema.Name);
             Reach(schema, reached);
@@ -150,19 +161,22 @@ internal static class GesModelLayoutBuilder
         var types = new List<GesModelType>();
         foreach (var schema in reached.Values)
         {
-            var type = new GesModelType { Name = schema.Name, Hash = schema.Hash, Constants = GesLayoutConstant.Of(schema), Computed = schema.Declaration.Computed };
+            var type = new GesModelType { Name = schema.Name, Hash = schema.Hash, Kind = schema.Kind, Lookup = set.RootName(schema), Constants = GesLayoutConstant.Of(schema), Computed = schema.Declaration.Computed };
             if (schema.PackedWidth > 0) type.Packed = GesSchemaLayoutBuilder.Build(set, [set.RootName(schema)], new GesSchemaParameters());
             foreach (var info in schema.Fields)
             {
                 var field = Field(info.Name, info.Name, info.Alternatives);
                 field.Optional = info.IsOptional;
                 field.Key = info.IsKey;
+                field.Unlabeled = schema.Kind != GesSchemaKind.Schema && info.IsUnlabeled;
                 field.Default = GesLayoutDefault.Of(info);
                 type.Fields.Add(field);
             }
 
             foreach (var take in schema.Takes)
                 if (take.IsUnchanged) type.Takes.Add(take.Schema.Name);
+            if (schema.Kind == GesSchemaKind.Message) type.Tags.AddRange(schema.Tags);
+            foreach (var member in schema.Members) type.Members.Add(member.Name);
             types.Add(type);
         }
 
@@ -256,11 +270,25 @@ internal static class GesModelLayoutBuilder
 
     private static void Reach(GesSchema schema, SortedDictionary<string, GesSchema> reached)
     {
-        if (reached.ContainsKey(schema.Name)) return;
+        if (reached.TryGetValue(schema.Name, out var known))
+        {
+            // Model types share one namespace: a message beside a schema of its name has no second type name.
+            if (ReferenceEquals(known, schema)) return;
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The model types of {Describe(known)} and {Describe(schema)} are both named '{schema.Name}'; models have no message suffix.");
+        }
+
         reached.Add(schema.Name, schema);
         foreach (var field in schema.Fields)
             foreach (var type in field.Alternatives) Reach(type, reached);
+        foreach (var member in schema.Members) Reach(member, reached);
     }
+
+    private static string Describe(GesSchema schema) => schema.Kind switch
+    {
+        GesSchemaKind.Message => "the message " + schema.Name,
+        GesSchemaKind.Messages => "the message set " + schema.Name,
+        _ => "the schema :" + schema.Name
+    };
 
     private static void Reach(GesSchemaType type, SortedDictionary<string, GesSchema> reached)
     {
@@ -387,10 +415,13 @@ internal static class GesModelLayoutJson
         json.Number("model", GesModelLayout.Version);
         json.Strings("roots", layout.Roots);
         json.BeginArray("types");
+        // Only a generation with a model set tells its kinds of types apart, so that other layouts stay unchanged.
+        var kinds = layout.Types.Exists(type => type.Kind == GesSchemaKind.Messages);
         foreach (var type in layout.Types)
         {
             json.BeginObject();
             json.String("name", type.Name);
+            if (kinds) json.String("kind", type.Kind switch { GesSchemaKind.Message => "message", GesSchemaKind.Messages => "messages", _ => "schema" });
             json.String("hash", GesSchemaLayoutJson.Hex(type.Hash));
             if (type.Packed?.Type(type.Name) is { } packed)
             {
@@ -398,9 +429,15 @@ internal static class GesModelLayoutJson
                 json.Number("packedBits", packed.PackedBits);
             }
 
-            json.BeginArray("fields");
-            foreach (var field in type.Fields) Field(json, field, member: true);
-            json.EndArray();
+            if (type.Kind != GesSchemaKind.Messages || type.Fields.Count > 0)
+            {
+                json.BeginArray("fields");
+                foreach (var field in type.Fields) Field(json, field, member: true);
+                json.EndArray();
+            }
+
+            if (type.Kind == GesSchemaKind.Message) json.Strings("tags", type.Tags);
+            if (type.Kind == GesSchemaKind.Messages) json.Strings("members", type.Members);
             GesSchemaLayoutJson.Constants(json, type.Constants);
             GesSchemaLayoutJson.Computed(json, type.Computed);
             if (type.Takes.Count > 0) json.Strings("takes", type.Takes);
@@ -440,6 +477,7 @@ internal static class GesModelLayoutJson
         {
             json.Boolean("optional", field.Optional);
             json.Boolean("key", field.Key);
+            if (field.Unlabeled) json.Boolean("unlabeled", true);
             field.Default?.Write(json);
         }
 

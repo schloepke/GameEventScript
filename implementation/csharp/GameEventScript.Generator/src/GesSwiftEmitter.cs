@@ -73,7 +73,7 @@ internal static partial class GesSwiftEmitter
         {
             var conversion = context.Models = new ModelConversion(modelLayout, models, space);
             foreach (var type in types)
-                if (type.Kind == GesSchemaKind.Schema && type.Layout.PackedWidth == 0 && conversion.Type(type.Name) is { } model)
+                if (type.Layout.PackedWidth == 0 && conversion.Type(type.Name) is { } model)
                 {
                     conversions.Add((type, model));
                     document.Units.Add(new GesCodeUnit(type.Name, code => ModelConversionUnit(code, type, model, access, conversion), outside: true));
@@ -200,21 +200,12 @@ internal static partial class GesSwiftEmitter
             foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
         if (!type.IsItem && context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
-        foreach (var field in type.Fields)
-        {
-            names.Add((GesSchemaPlanner.Camel(field.Base), "the field " + field.Layout.Name));
-            if (field.Optional) names.Add(("has" + field.Base, "the presence of " + field.Layout.Name));
-            if (field.Optional && Plain(field.Value)) names.Add((GesSchemaPlanner.Camel(field.Base) + "Optional", "the optional value of " + field.Layout.Name));
-            Nested(field.Value, names, field.Layout.Name);
-            if (GesCSharpEmitter.IsPooledList(field)) names.Add(("set" + field.Base + "Count", "the element count of " + field.Layout.Name));
-            if (GesCSharpEmitter.IsTextList(field)) names.Add((GesSchemaPlanner.Camel(field.Base) + "Values", "the texts of " + field.Layout.Name));
-        }
-
+        FieldNames(type, names);
         foreach (var (tag, name, _) in type.Tags) names.Add((GesSchemaPlanner.Camel(name), "the tag #" + tag));
         if (!type.IsItem)
             foreach (var constant in type.Layout.Constants) names.Add((constant.Name, "the let " + constant.Name));
         if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: true, names);
-        var model = type.IsItem || type.Kind != GesSchemaKind.Schema ? null : context.Models?.Type(type.Name);
+        var model = type.IsItem ? null : context.Models?.Type(type.Name);
         if (model is not null) names.Add(("toModel", "the generated member toModel"));
         GesSchemaPlanner.Unique(type.Name, names, context.TopLevel, model is not null ? context.Converted : context.Inside);
 
@@ -223,9 +214,7 @@ internal static partial class GesSwiftEmitter
         if (!type.IsItem)
         {
             Constants(code, type.Layout, access);
-            code.Line("static let __paths: [String] = [");
-            foreach (var path in type.Paths) code.Line("    " + Quote(path) + ",");
-            code.Line("]");
+            Paths(code, type);
         }
 
         var stored = context.Stored(type.IsClass);
@@ -257,6 +246,28 @@ internal static partial class GesSwiftEmitter
         if (context.Values && !type.IsItem) ValueMembers(code, type, access, context.Holder, context.SchemaSet, GesCSharpEmitter.Lenient(type.Layout, context.Layout));
         foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
+    }
+
+    // The paths of a type's nodes in node order, which errors name.
+    private static void Paths(GesSchemaPlanner.Code code, GesPlanType type)
+    {
+        code.Line("static let __paths: [String] = [");
+        foreach (var path in type.Paths) code.Line("    " + Quote(path) + ",");
+        code.Line("]");
+    }
+
+    // The members that a type's fields declare, for the collision check.
+    private static void FieldNames(GesPlanType type, List<(string, string)> names)
+    {
+        foreach (var field in type.Fields)
+        {
+            names.Add((GesSchemaPlanner.Camel(field.Base), "the field " + field.Layout.Name));
+            if (field.Optional) names.Add(("has" + field.Base, "the presence of " + field.Layout.Name));
+            if (field.Optional && Plain(field.Value)) names.Add((GesSchemaPlanner.Camel(field.Base) + "Optional", "the optional value of " + field.Layout.Name));
+            Nested(field.Value, names, field.Layout.Name);
+            if (GesCSharpEmitter.IsPooledList(field)) names.Add(("set" + field.Base + "Count", "the element count of " + field.Layout.Name));
+            if (GesCSharpEmitter.IsTextList(field)) names.Add((GesSchemaPlanner.Camel(field.Base) + "Values", "the texts of " + field.Layout.Name));
+        }
     }
 
     private static void Constants(GesSchemaPlanner.Code code, GesLayoutType layout, string access)
@@ -479,6 +490,12 @@ internal static partial class GesSwiftEmitter
             }
         }
 
+        FieldMethods(code, type, mutating);
+    }
+
+    // Writes and reads a type's fields in wire order, at the paths that start at `at`.
+    private static void FieldMethods(GesSchemaPlanner.Code code, GesPlanType type, string mutating)
+    {
         code.Blank();
         code.Open($"func __writeFields(_ writer: inout GesBitWriter, _ paths: [String], _ at: Int{LevelParameter(type)}) throws(GesWireError) {{");
         foreach (var field in type.Fields)
@@ -587,14 +604,28 @@ internal static partial class GesSwiftEmitter
         if (context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var member in type.MemberNames) names.Add((GesSchemaPlanner.Camel(member), "the member " + member));
-        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
+        FieldNames(type, names);
+        var model = context.Models?.Type(type.Name);
+        if (model is not null) names.Add(("toModel", "the generated member toModel"));
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel, model is not null ? context.Converted : null);
         var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);
         var last = ((ulong)type.Members.Count - 1).ToString(CultureInfo.InvariantCulture);
-        code.Line($"/// The message set `:{type.Layout.Declared}`: one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.");
+        var parameters = type.Fields.Count > 0;
+        code.Line($"/// The message set `{type.Layout.Declared}`: {(parameters ? "its parameters and " : "")}one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.");
         code.Open(type.MembersAreClasses ? $"{access}final class {type.Name} {{" : $"{access}struct {type.Name}: Sendable {{");
         Constants(code, type.Layout, access);
-        code.Line("/// The message this record holds.");
         var stored = context.Stored(type.MembersAreClasses);
+        if (parameters)
+        {
+            Paths(code, type);
+            foreach (var field in type.Fields) Members(code, field, access, stored, false);
+
+            foreach (var field in type.Fields) Pools(code, field.Value, stored);
+            foreach (var field in type.Fields) ListAccess(code, field, access);
+            code.Blank();
+        }
+
+        code.Line("/// The message this record holds.");
         code.Line($"{stored}{access}var selected: Member = .{Member(type.MemberNames[0])}");
         foreach (var (member, record) in type.MemberPairs)
         {
@@ -605,8 +636,16 @@ internal static partial class GesSwiftEmitter
         code.Blank();
         code.Line("/// Creates a record that holds the first message, with every field at its zero value.");
         code.Line($"{access}init() {{}}");
-        var write = new List<string> { $"try writer.write(UInt64(self.selected.rawValue), width: {width})", "switch self.selected {" };
-        var read = new List<string> { $"let index = try reader.read({width}, path: \"\")" };
+        var write = new List<string>();
+        var read = new List<string>();
+        if (parameters)
+        {
+            write.Add("try __writeFields(&writer, Self.__paths, 0)");
+            read.Add("try __readFields(&reader, Self.__paths, 0)");
+        }
+
+        write.AddRange([$"try writer.write(UInt64(self.selected.rawValue), width: {width})", "switch self.selected {"]);
+        read.Add($"let index = try reader.read({width}, path: \"\")");
         if ((ulong)type.Members.Count - 1 < Full(type.Layout.MemberWidth)) read.Add($"if index > {last} {{ throw GesWireError(code: GesWireError.invalidIndex, path: \"\") }}");
         read.AddRange([$"self.selected = Member(rawValue: {Underlying(type.Members.Count)}(index))!", "switch self.selected {"]);
         foreach (var (member, record) in type.MemberPairs)
@@ -619,6 +658,7 @@ internal static partial class GesSwiftEmitter
         read.Add("}");
         code.Blank();
         PublicMethods(code, access, type.MembersAreClasses ? "" : "mutating ", write, read, "message");
+        if (parameters) FieldMethods(code, type, type.MembersAreClasses ? "" : "mutating ");
         if (context.Values) ValueMembers(code, type, access, context.Holder, context.SchemaSet, GesCSharpEmitter.Lenient(type.Layout, context.Layout));
         MessageCases(code, type, access);
         code.Blank();
@@ -631,6 +671,7 @@ internal static partial class GesSwiftEmitter
         }
 
         code.Close();
+        foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
     }
 
@@ -990,7 +1031,9 @@ internal static partial class GesSwiftEmitter
 
         internal GesPlanType Plan { get; } = plan;
 
-        internal bool IsSet => Plan.Kind == GesSchemaKind.Messages;
+        // A message set without parameters, whose routes take and hand its cases; one with parameters is sent as its record,
+        // which holds them.
+        internal bool IsSet => Plan.Kind == GesSchemaKind.Messages && Plan.Fields.Count == 0;
 
         // The type whose `maxByteCount` bounds an encoding.
         internal string Owner => Wire ?? Type;

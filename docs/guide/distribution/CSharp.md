@@ -3,7 +3,7 @@
 
 # C# distribution
 
-The C# reference implementation publishes five independently consumable
+The C# reference implementation publishes seven independently consumable
 packages under the `GameEventScript` product name:
 
 - `GameEventScript.Runtime` contains the portable Runtime, Program codec and
@@ -19,6 +19,11 @@ packages under the `GameEventScript` product name:
 - `GameEventScript.Generator` (since 0.5.0) writes typed C# and Swift code
   for `.gess` schemas at build time and depends on Runtime and Syntax. Games
   never ship it; the code it generates needs Runtime only.
+- `GameEventScript.Network` (since 0.6.0) contains the portable, synchronous
+  session core for the routes of a `.gess` `network` declaration and a
+  deterministic simulated network, and depends only on Runtime.
+- `GameEventScript.Network.Sockets` (since 0.6.0) adds TCP, WebSocket and UDP
+  transports for Network sessions and depends on Runtime and Network.
 
 Conformance remains an internal project for repository verification. CLI NuGet
 tools (since 0.3.0) are separate from these library packages; see [CLI installation](Tools.md).
@@ -30,15 +35,16 @@ Source compilation additionally requires Compiler. The direct entry points are
 File reading belongs to the CLI or embedding, which supplies text through
 `AddScript(text, sourceName)`; the previous Bridge `AddFile` helper is removed.
 
-All five public libraries target `netstandard2.1`. Their NuGet packages contain the
+Six public libraries target `netstandard2.1`; Network.Sockets targets `net8.0` and is not part of the Unity DLL set. Their NuGet packages contain the
 Apache-2.0 license, repository README, XML API documentation, deterministic
 assemblies, and separate portable-PDB symbol packages.
 
 Package and assembly names identify the module; the shared namespace root is
 `GameEventScript`. Public APIs use `GameEventScript.Api`, values use
 `GameEventScript.Runtime.Values`, and the optional libraries use
-`GameEventScript.CSharpBridge`, `GameEventScript.Syntax` and
-`GameEventScript.Generator`.
+`GameEventScript.CSharpBridge`, `GameEventScript.Syntax`,
+`GameEventScript.Generator`, `GameEventScript.Network` and
+`GameEventScript.Network.Sockets`.
 The public type names retain their existing `GameEventScript` or `Ges` prefixes.
 
 ## Local release dry run

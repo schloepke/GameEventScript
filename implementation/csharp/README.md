@@ -17,10 +17,13 @@ separate libraries; the CLI and internal Conformance adapter are executables.
 | [`GameEventScript.CSharpBridge`](GameEventScript.CSharpBridge) | Delegate adapters, Reflection/attribute bindings, CLR value conversion and optional automatic host pumping | Runtime |
 | [`GameEventScript.Syntax`](GameEventScript.Syntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting of whole documents with UTF-16 spans and ANSI rendering | .NET Standard library |
 | [`GameEventScript.Generator`](GameEventScript.Generator/README.md) | Generation layout and typed C# and Swift code for `.gess` schemas, used at build time | Runtime and Syntax |
+| `GameEventScript.Network` | Portable, synchronous network sessions over the routes of a `.gess` `network` declaration, with a deterministic simulated network | Runtime |
+| `GameEventScript.Network.Sockets` | TCP, WebSocket and UDP transports for Network sessions; background tasks move bytes only, the host drives the connection | Runtime and Network; .NET 8 |
 | [`GameEventScript.Conformance`](GameEventScript.Conformance/README.md) | Internal observation adapter for the independent Python runner | Runtime and Compiler |
 | [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge, Syntax, Generator and PrettyPrompt |
 
-All five libraries target **.NET Standard 2.1**. Runtime, CSharpBridge and Generator use
+Six libraries target **.NET Standard 2.1**; Network Sockets targets **.NET 8** and is not part
+of the Unity DLL set. Runtime, CSharpBridge, Generator, Network and Network Sockets use
 **C# 12**, Syntax and Compiler **C# 14**. Runtime and Compiler are synchronous,
 fileless and independent of a test framework. CLR-specific adapters belong to
 CSharpBridge. Runtime depends only on Syntax, and neither Runtime nor CSharpBridge
@@ -30,7 +33,7 @@ compiler or test infrastructure.
 
 The public entry points use `GameEventScript.Api`; values use
 `GameEventScript.Runtime.Values`. The compiler's builder also lives in
-`GameEventScript.Api`, even though its assembly is separate. C# adapters use `GameEventScript.CSharpBridge` and the schema code generator `GameEventScript.Generator`. The internal Conformance adapter
+`GameEventScript.Api`, even though its assembly is separate. C# adapters use `GameEventScript.CSharpBridge`, the schema code generator `GameEventScript.Generator` and the network sessions `GameEventScript.Network` and `GameEventScript.Network.Sockets`. The internal Conformance adapter
 is not a public library API.
 
 ## Module layout
@@ -42,18 +45,22 @@ module directly by passing its `.csproj` to `dotnet build` or `dotnet test`.
 
 ```text
 implementation/csharp/
-  GameEventScript.Runtime/       src/ + tests/
-  GameEventScript.Compiler/      src/ + tests/ + worker/
-  GameEventScript.CSharpBridge/  src/ + tests/
-  GameEventScript.Tool/          src/ + tests/
-  GameEventScript.Conformance/   adapter/ + fixtures/ + fixture-exporter/
-  verification/                 Repository.Tests, consumers, package tool, test support
+  GameEventScript.Runtime/         src/ + tests/
+  GameEventScript.Compiler/        src/ + tests/ + worker/
+  GameEventScript.CSharpBridge/    src/ + tests/
+  GameEventScript.Syntax/          src/ + tests/
+  GameEventScript.Generator/       src/ + tests/
+  GameEventScript.Network/         src/ + tests/
+  GameEventScript.Network.Sockets/ src/ + tests/
+  GameEventScript.Tool/            src/ + tests/
+  GameEventScript.Conformance/     adapter/ + fixtures/ + fixture-exporter/
+  verification/                    Repository.Tests, consumers, package tool, test support
 ```
 
 The internal C# Conformance adapter depends on Runtime and Compiler. The shared
 Markdown corpus and portable fixtures stay in repository-level `conformance/`.
 `verification/Tests.props` supplies common MSTest settings and linked helpers;
-it contains no test cases. The six test projects each discover their own tests
+it contains no test cases. The nine test projects each discover their own tests
 exactly once. Some native Runtime and Bridge tests use Compiler to build inputs;
 these are test-only dependencies and do not change the product boundaries.
 

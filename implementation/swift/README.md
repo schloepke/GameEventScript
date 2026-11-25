@@ -13,6 +13,8 @@
 | [`GameEventScriptSwiftBridge`](GameEventScriptSwiftBridge/README.md) | Native closure adapters, typed value conversion, KeyPath/external-type bindings and an optional synchronized Host runner | Runtime; Foundation for the runner |
 | [`GameEventScriptSyntax`](GameEventScriptSyntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting of whole documents with UTF-16 spans and ANSI rendering | Swift standard library |
 | [`GameEventScriptGenerator`](GameEventScriptGenerator/README.md) | Generation layout and typed C# and Swift code for `.gess` schemas, used at build time | Runtime, Syntax and Swift standard library |
+| `GameEventScriptNetwork` | Portable, synchronous network sessions over the routes of a `.gess` `network` declaration, with a deterministic simulated network | Runtime and Swift standard library |
+| `GameEventScriptNetworkSockets` | TCP, WebSocket and UDP transports for Network sessions; empty on WASI | Runtime, Network, SwiftNIO and SwiftNIO SSL |
 | `GameEventScriptConformance` | Internal observation adapter, codec probes and native implementation tests | Runtime and Compiler |
 | `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, Syntax, Generator, Foundation and POSIX |
 
@@ -28,8 +30,8 @@ is the user-facing tool.
 ## Build and verify
 
 For application dependencies, use the repository-root SwiftPM package. It exposes
-Runtime, Compiler, SwiftBridge, Syntax and Generator as five selectable library products with one
-shared version. The packages below this directory remain local development entry
+Runtime, Compiler, SwiftBridge, Syntax, Generator, Network and NetworkSockets as seven selectable
+library products with one shared version; only NetworkSockets depends on SwiftNIO. The packages below this directory remain local development entry
 points; CLI and Conformance are internal to the repository distribution.
 See the [package release guide](../../docs/guide/distribution/Packages.md) for
 Xcode installation, tagged consumer verification and release preparation.

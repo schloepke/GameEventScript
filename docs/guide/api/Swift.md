@@ -15,6 +15,8 @@ the latest SwiftPM release; check the [changelog](../../../CHANGELOG.md) and
 | Swift bridge | [GameEventScriptSwiftBridge](https://gameeventscript.org/api/swift/gameeventscriptswiftbridge/documentation/gameeventscriptswiftbridge/) |
 | Syntax | [GameEventScriptSyntax](https://gameeventscript.org/api/swift/gameeventscriptsyntax/documentation/gameeventscriptsyntax/) |
 | Generator | [GameEventScriptGenerator](https://gameeventscript.org/api/swift/gameeventscriptgenerator/documentation/gameeventscriptgenerator/) |
+| Network | [GameEventScriptNetwork](https://gameeventscript.org/api/swift/gameeventscriptnetwork/documentation/gameeventscriptnetwork/) |
+| Network sockets | [GameEventScriptNetworkSockets](https://gameeventscript.org/api/swift/gameeventscriptnetworksockets/documentation/gameeventscriptnetworksockets/) |
 
 DocC builds these pages from public Swift symbol graphs and their documentation
 comments. The internal macro implementation, CLI and Conformance are excluded;

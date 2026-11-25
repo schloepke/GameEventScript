@@ -5,8 +5,10 @@
 
 Syntax highlighting for `.ges` source and `.gesa` assembler dumps, including
 embedded GES source in dumps. Includes line comments, GES bracket pairing and
-automatic bracket indentation, GESA `.region` folding, and GES snippets:
-`ges-on`, `ges-iflet`, `ges-fold`, `ges-reduce`, and `ges-after`.
+automatic bracket indentation, GESA `.region` folding, syntax completions
+(keywords, built-in types and collection selectors, shared with Sublime Text and
+TextMate) and GES snippets: `ges-on`, `ges-iflet`, `ges-fold`, `ges-reduce`, and
+`ges-after`.
 
 Markdown fenced blocks tagged `ges`, `gesa`, `gesd` or `gess` are highlighted both in the source
 editor and in VS Code's built-in Markdown preview. Backtick and tilde fences are
@@ -31,8 +33,8 @@ default reader limits and shows at most 4 MB of source text, of which it highlig
 the CLI and workspace trust. Use **Reopen Editor With…** for another editor.
 
 Highlighting needs no CLI or account. Optional commands use the installed GES
-CLI; no compiler or runtime is bundled. Semantic completion and debugging are
-not provided.
+CLI; no compiler or runtime is bundled. Completion is syntax-only; semantic
+completion and debugging are not provided.
 
 ## CLI commands
 
@@ -112,9 +114,11 @@ under `artifacts`. Commit the updated VSIX together with its sources. The script
 does not publish or install the extension.
 
 Edit the canonical JSON TextMate grammars under `tools/editors/TextMate` and
-the snippets in `tools/editors/support/completions.json`, then run
+the completions and snippets in `tools/editors/support/completions.json` (the
+provider is `tools/editors/support/ges-completions.js`), then run
 `python3 scripts/sync-editor-bundles.py`. Do not hand-edit this extension's
-generated `syntaxes`, `snippets`, or `LICENSE` files.
+generated `syntaxes`, `snippets`, `completions.json`, `ges-completions.js`, or
+`LICENSE` files.
 
 The manifest and language configurations are maintained here. Verify with
 `python3 scripts/sync-editor-bundles.py --check` and

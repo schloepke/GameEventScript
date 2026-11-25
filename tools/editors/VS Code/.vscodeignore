@@ -3,6 +3,8 @@
 **/*
 !package.json
 !extension.js
+!ges-completions.js
+!completions.json
 !markdown-preview.js
 !markdown-preview.css
 !gesb-reader.js

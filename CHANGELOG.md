@@ -42,6 +42,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `init(lenientMessage:)`; C# `ToMessage()`, `FromMessage`, `FromMessageLenient`). Two model sets that share members
   convert into each other where the case fits (Swift `init?(_:)`, C# `From`) (specs/Schemas.md#model-message-sets).
 - Message arguments and set parameters accept the empty defaults `[]` for a List and `[:]` for a Map.
+- The VS Code extension offers the syntax completions of Sublime Text and TextMate: keywords, built-in types after
+  `as`, `is` and `:`, and collection selectors after `[:`. The shared catalog now lists every selector and more keywords.
 
 ### Changed
 - Message sets move into the message namespace: `messages Name as (...)` declares a set without `:`, a route names it
@@ -50,6 +52,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   with a hint. A set without parameters keeps its canonical form, hash and bytes (specs/Schemas.md#declarations).
 - A network route that names a single message drops the `:` (`client sends Move reliable`); `:Name` in a route names
   only a schema, so the former `client sends :Move` is now `schema.unknownName`.
+
+### Fixed
+- The TextMate, Sublime Text and VS Code grammars highlight `between`, `step`, `ascending`/`descending`,
+  `:contains any`/`all`, `:map … by`, `:split on whitespace` and `:has three of …` as keywords, and words such as
+  `from`, `after` and `integer` as names when they are argument labels or variables.
 
 ## [0.6.0] — 2026-11-23
 

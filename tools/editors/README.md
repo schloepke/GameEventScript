@@ -12,7 +12,7 @@ No compiler or language server is bundled.
 ## Visual Studio Code
 
 The local [VS Code extension](VS%20Code/README.md) includes GES, GESA and GES
-document highlighting, embedded source highlighting, language configuration and snippets.
+document highlighting, embedded source highlighting, language configuration, syntax completions and snippets.
 It also offers Check, Run and Dump editor buttons using an installed GES CLI,
 plus Compile in the Command Palette. Dump opens a read-only highlighted document.
 Markdown blocks tagged `ges`, `gesa`, `gesd` or `gess` are highlighted in both the source editor
@@ -125,8 +125,11 @@ these single-file actions.
 
 > **Since: 0.5.0**
 
-Sublime offers completion through its popup; TextMate uses its normal completion
-command (Escape by default). Suggestions are deliberately syntax-only:
+> **Since: Unreleased** — VS Code completions
+
+Sublime and VS Code offer completion through their popup; TextMate uses its normal
+completion command (Escape by default). VS Code also opens it after `:` and `[`.
+Suggestions are deliberately syntax-only:
 
 - After `as` or `is`: built-in type names, with `:` supplied when needed.
 - After `[:`: collection selectors such as `fold`, `reduce` and `count`.
@@ -138,7 +141,7 @@ types, visible variables, user-defined functions or native extensions. Suggestio
 are editing aids, not a statement that every offered type/selector is valid for
 the surrounding expression; `ges check` performs validation.
 
-Both editors provide the same Tab-triggered snippets: `ges-on`, `ges-iflet`,
+All three editors provide the same Tab-triggered snippets: `ges-on`, `ges-iflet`,
 `ges-fold`, `ges-reduce` and `ges-after`. Tab moves between placeholders.
 
 ## Repository sources

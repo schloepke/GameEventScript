@@ -56,10 +56,10 @@
         1: "punctuation.definition.variable.begin.gameeventscript"
         3: "punctuation.definition.variable.end.gameeventscript"
     -
-      "match": "\\b(?:to|nothing|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)(?=[ \\t]*:(?![A-Za-z:]))"
+      "match": "\\b(?:to|nothing|from|then|after|between|step|ascending|descending|whitespace|integer|fractional|numeric|by|any|all|where|at|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)(?=[ \\t]*:(?![A-Za-z:]))"
       "scope": "variable.parameter.label.gameeventscript"
     -
-      "match": "(?<=[A-Za-z0-9_)\\]`]\\.)(?:to|nothing|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)\\b"
+      "match": "(?<=[A-Za-z0-9_)\\]`]\\.)(?:to|nothing|from|then|after|between|step|ascending|descending|whitespace|integer|fractional|numeric|by|any|all|where|at|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)\\b"
       "scope": "variable.other.member.gameeventscript"
   "comments":
     -
@@ -230,7 +230,7 @@
         7: "keyword.other.definition.gameeventscript"
         9: "keyword.other.definition.gameeventscript"
     -
-      "match": ":(has|take)([ \\t]+)(pair)([ \\t]+)(of)\\b"
+      "match": ":(has|take)([ \\t]+)(pair|three|four|five|six|seven)([ \\t]+)(of)\\b"
       "scope": "meta.selector-phrase.gameeventscript"
       "captures":
         1: "support.function.selector.pipeline.gameeventscript"
@@ -242,6 +242,26 @@
       "captures":
         1: "support.function.selector.pipeline.gameeventscript"
         3: "keyword.other.definition.gameeventscript"
+    -
+      "match": ":(contains)([ \\t]+)(any|all)\\b"
+      "scope": "meta.selector-phrase.gameeventscript"
+      "captures":
+        1: "support.function.selector.pipeline.gameeventscript"
+        3: "keyword.other.definition.gameeventscript"
+    -
+      "match": ":(split)([ \\t]+)(on)([ \\t]+)(whitespace)\\b"
+      "scope": "meta.selector-phrase.gameeventscript"
+      "captures":
+        1: "support.function.selector.pipeline.gameeventscript"
+        3: "keyword.other.definition.gameeventscript"
+        5: "keyword.other.definition.gameeventscript"
+    -
+      "match": ":(map)([ \\t]+)((?:[a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?|_)(?:[ \\t]*,[ \\t]*(?:[a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?|_))*)([ \\t]+)(by)\\b"
+      "scope": "meta.selector-phrase.gameeventscript"
+      "captures":
+        1: "support.function.selector.pipeline.gameeventscript"
+        3: "variable.other.gameeventscript"
+        5: "keyword.other.definition.gameeventscript"
     -
       "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|foreach|cartesian|lockstep|zip|union|intersect|difference|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b"
       "scope": "support.function.selector.pipeline.gameeventscript"
@@ -255,7 +275,7 @@
         3: "entity.other.attribute-name.unit.gameeventscript"
         4: "punctuation.bracket.gameeventscript"
     -
-      "match": "(?<!:)\\b(?:numeric|integer|fractional)\\b"
+      "match": "(?<!:)\\bnumeric\\b(?![ \\t]*:(?![A-Za-z:]))"
       "scope": "support.type.primitive.gameeventscript"
     -
       "match": "\\b(?:distance|length)([ \\t]+)(squared)\\b"
@@ -366,6 +386,15 @@
     -
       "match": "\\b(clamp)(?=\\s)"
       "scope": "keyword.operator.word.gameeventscript"
+    -
+      "match": "\\bbetween\\b(?![ \\t]*:(?![A-Za-z:]))"
+      "scope": "keyword.operator.word.gameeventscript"
+    -
+      "match": "(?<=[A-Za-z0-9_)\\]%°'\"][ \\t])step(?=[ \\t]+(?!(?:be|is|and|or|xor|as|div|mod|rem|in|to|then|else|otherwise)\\b)[-−0-9$(\\[:A-Za-z'\"])"
+      "scope": "keyword.operator.word.gameeventscript"
+    -
+      "match": "(?<=[A-Za-z0-9_)\\]%°'\"][ \\t])(?:ascending|descending)\\b(?![ \\t]*:(?![A-Za-z:]))(?=[ \\t]*(?:$|[\\]\\n]|//))"
+      "scope": "keyword.other.definition.gameeventscript"
     -
       "match": "\\b(min|max)([ \\t]+)(of)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"

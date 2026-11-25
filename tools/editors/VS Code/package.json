@@ -1,8 +1,8 @@
 {
   "name": "gameeventscript",
   "displayName": "Game Event Script",
-  "description": "GES, GESA and GES document syntax highlighting, a .gesb viewer, snippets, and CLI commands.",
-  "version": "0.5.0",
+  "description": "GES, GESA and GES document syntax highlighting, a .gesb viewer, syntax completions, snippets, and CLI commands.",
+  "version": "0.6.0",
   "publisher": "schloepke",
   "license": "Apache-2.0",
   "engines": {

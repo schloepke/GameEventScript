@@ -91,6 +91,8 @@ def generate():
     data = json.loads(completion_text)
     vscode = EDITORS / 'VS Code'
     output[vscode / 'LICENSE'] = (ROOT / 'LICENSE').read_text()
+    output[vscode / 'completions.json'] = completion_text
+    output[vscode / 'ges-completions.js'] = (support / 'ges-completions.js').read_text()
     output[vscode / 'snippets/ges.json'] = json.dumps({
         snippet['name']: {'prefix': snippet['trigger'], 'body': snippet['body'].split('\n'), 'description': snippet['name']}
         for snippet in data['snippets']}, indent=2) + '\n'

@@ -197,6 +197,13 @@ here.
   in single expressions, which a C++ compiler under `-ffp-contract=on` may fuse into one rounding, unlike .NET and Swift;
   specs/Semantics/Determinism.md requires separate operations. Generated computed-field code already avoids the shape
   (specs/Schemas.md#tools); measure on a device build before changing the hot path.
+- Add a GES Language Server (`ges lsp` over stdio) for intelligent editor support beyond the
+  syntax-only completions: completion of visible bindings, `$constants`, message argument labels,
+  record fields, the project's records, functions and predicates and `.gess` names; live diagnostics;
+  hover; go-to-definition; and semantic tokens. Build it on the Syntax parser's lossless tree, name
+  roles and visibility, and the Compiler validator for cross-source rules, so VS Code, Sublime LSP,
+  Neovim and other LSP clients share one implementation. Start in one CLI port and reach parity in
+  the other; replace the AGENTS.md rule that completion is syntax-only without a Language Server.
 - After the Kotlin port is stable, build a dedicated IntelliJ plugin with native
   `.ges`/`.gesa` support beyond portable TextMate highlighting and `.region`
   folding. Keep the portable dump and TextMate bundles free of IntelliJ-specific

@@ -64,6 +64,8 @@ class EditorTests(unittest.TestCase):
         files = {
             'package.json': 'package.json',
             'extension.js': 'extension.js',
+            'ges-completions.js': 'ges-completions.js',
+            'completions.json': 'completions.json',
             'markdown-preview.js': 'markdown-preview.js',
             'markdown-preview.css': 'markdown-preview.css',
             'gesb-reader.js': 'gesb-reader.js',
@@ -155,6 +157,12 @@ class EditorTests(unittest.TestCase):
                 env = dict(os.environ, TM_CURRENT_LINE=line, TM_LINE_INDEX=str(len(line.encode())), TM_CURRENT_WORD=current, TM_SCOPE='source.gameeventscript')
                 perl = subprocess.check_output(['perl', str(SUPPORT / 'complete.pl')], env=env, text=True).splitlines()
                 self.assertEqual(python, perl)
+                if shutil.which('node'):
+                    script = ('const c = require(process.argv[1]).candidates(process.argv[2]) || [];'
+                              'const p = process.argv[3].toLowerCase();'
+                              'console.log(c.filter(w => w.replace(/^:/, "").toLowerCase().startsWith(p)).join("\\n"))')
+                    node = subprocess.check_output(['node', '-e', script, str(SUPPORT / 'ges-completions.js'), line, current], text=True).splitlines()
+                    self.assertEqual(python, node)
                 self.assertIn(expected, perl)
                 self.assertNotIn(absent, perl)
         result = subprocess.check_output(['perl', str(SUPPORT / 'complete.pl')], env=dict(

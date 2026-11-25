@@ -36,11 +36,11 @@
           }
         },
         {
-          "match": "\\b(?:to|nothing|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)(?=[ \\t]*:(?![A-Za-z:]))",
+          "match": "\\b(?:to|nothing|from|then|after|between|step|ascending|descending|whitespace|integer|fractional|numeric|by|any|all|where|at|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)(?=[ \\t]*:(?![A-Za-z:]))",
           "name": "variable.parameter.label.gameeventscript"
         },
         {
-          "match": "(?<=[A-Za-z0-9_)\\]`]\\.)(?:to|nothing|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)\\b",
+          "match": "(?<=[A-Za-z0-9_)\\]`]\\.)(?:to|nothing|from|then|after|between|step|ascending|descending|whitespace|integer|fractional|numeric|by|any|all|where|at|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)\\b",
           "name": "variable.other.member.gameeventscript"
         }
       ]
@@ -357,7 +357,7 @@
           }
         },
         {
-          "match": ":(has|take)([ \\t]+)(pair)([ \\t]+)(of)\\b",
+          "match": ":(has|take)([ \\t]+)(pair|three|four|five|six|seven)([ \\t]+)(of)\\b",
           "name": "meta.selector-phrase.gameeventscript",
           "captures": {
             "1": {
@@ -379,6 +379,48 @@
               "name": "support.function.selector.pipeline.gameeventscript"
             },
             "3": {
+              "name": "keyword.other.definition.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": ":(contains)([ \\t]+)(any|all)\\b",
+          "name": "meta.selector-phrase.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "support.function.selector.pipeline.gameeventscript"
+            },
+            "3": {
+              "name": "keyword.other.definition.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": ":(split)([ \\t]+)(on)([ \\t]+)(whitespace)\\b",
+          "name": "meta.selector-phrase.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "support.function.selector.pipeline.gameeventscript"
+            },
+            "3": {
+              "name": "keyword.other.definition.gameeventscript"
+            },
+            "5": {
+              "name": "keyword.other.definition.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": ":(map)([ \\t]+)((?:[a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?|_)(?:[ \\t]*,[ \\t]*(?:[a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?|_))*)([ \\t]+)(by)\\b",
+          "name": "meta.selector-phrase.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "support.function.selector.pipeline.gameeventscript"
+            },
+            "3": {
+              "name": "variable.other.gameeventscript"
+            },
+            "5": {
               "name": "keyword.other.definition.gameeventscript"
             }
           }
@@ -411,7 +453,7 @@
           }
         },
         {
-          "match": "(?<!:)\\b(?:numeric|integer|fractional)\\b",
+          "match": "(?<!:)\\bnumeric\\b(?![ \\t]*:(?![A-Za-z:]))",
           "name": "support.type.primitive.gameeventscript"
         },
         {
@@ -605,6 +647,21 @@
         {
           "match": "\\b(clamp)(?=\\s)",
           "name": "keyword.operator.word.gameeventscript"
+        },
+        {
+          "comment": "between follows clamp, angle, clamped and is.",
+          "match": "\\bbetween\\b(?![ \\t]*:(?![A-Za-z:]))",
+          "name": "keyword.operator.word.gameeventscript"
+        },
+        {
+          "comment": "step follows the upper bound of a range or for loop and precedes its step value.",
+          "match": "(?<=[A-Za-z0-9_)\\]%°'\"][ \\t])step(?=[ \\t]+(?!(?:be|is|and|or|xor|as|div|mod|rem|in|to|then|else|otherwise)\\b)[-−0-9$(\\[:A-Za-z'\"])",
+          "name": "keyword.operator.word.gameeventscript"
+        },
+        {
+          "comment": "A sort direction ends :sort and :order by.",
+          "match": "(?<=[A-Za-z0-9_)\\]%°'\"][ \\t])(?:ascending|descending)\\b(?![ \\t]*:(?![A-Za-z:]))(?=[ \\t]*(?:$|[\\]\\n]|//))",
+          "name": "keyword.other.definition.gameeventscript"
         },
         {
           "match": "\\b(min|max)([ \\t]+)(of)\\b",

@@ -9,6 +9,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createHighlighter, createMarkdownExtension } = require('./markdown-preview');
 const { registerGesbViewer } = require('./gesb-viewer');
+const { registerCompletions } = require('./ges-completions');
 
 // Split arguments without invoking a shell or expanding variables/globs.
 function parseArguments(text) {
@@ -55,6 +56,7 @@ async function activate(context) {
     });
     context.subscriptions.push(output,
         registerGesbViewer(vscode, context, highlighter),
+        registerCompletions(vscode),
         vscode.window.onDidCloseTerminal(terminal => {
             for (const [source, session] of sessions) {
                 if (session === terminal) sessions.delete(source);

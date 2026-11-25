@@ -12,7 +12,7 @@ function harness({ trusted = true, save = true, failure = null, input = undefine
     const calls = [], tasks = [], errors = [], shown = [], shownOptions = [], viewers = [], outputLines = [], commands = new Map();
     const terminals = [], terminalListeners = new Set();
     const disposable = { dispose() {} };
-    let provider, close;
+    let provider, close, completion;
     const document = {
         languageId: 'ges', isDirty: true,
         uri: { scheme: 'file', fsPath: path.resolve('a directory', "cards ' $(touch injected).ges") },
@@ -48,7 +48,13 @@ function harness({ trusted = true, save = true, failure = null, input = undefine
             async showTextDocument(doc, options) { shown.push(doc); shownOptions.push(options); },
             async showErrorMessage(message) { errors.push(message); },
         },
-        languages: { async setTextDocumentLanguage(doc, language) { doc.languageId = language; } },
+        languages: {
+            async setTextDocumentLanguage(doc, language) { doc.languageId = language; },
+            registerCompletionItemProvider(language, value, ...triggers) { completion = { language, provider: value, triggers }; return disposable; },
+        },
+        CompletionItem: class { constructor(label, kind) { this.label = label; this.kind = kind; } },
+        CompletionItemKind: { Keyword: 13, Class: 6, Function: 2 },
+        Range: class { constructor(...args) { this.args = args; } },
         commands: { registerCommand(name, fn) { commands.set(name, fn); return disposable; } },
         Task: class { constructor(...args) { this.args = args; } },
         ProcessExecution: class { constructor(...args) { this.args = args; } },
@@ -66,12 +72,13 @@ function harness({ trusted = true, save = true, failure = null, input = undefine
     const module = { exports: {} };
     vm.runInNewContext(source, { module, process, require(name) {
         if (name === './markdown-preview') return { createHighlighter: highlighter, createMarkdownExtension() { return md => md; } };
+        if (name === './ges-completions') return require(path.join(__dirname, '../tools/editors/VS Code/ges-completions.js'));
         if (name === './gesb-viewer') return { registerGesbViewer(_vscode, _context, value) { viewers.push(value); return disposable; } };
         return name === 'vscode' ? vscode : name === 'node:child_process' ? child : require(name);
     } });
     const ready = module.exports.activate({ subscriptions: [] });
     return { ready, calls, tasks, errors, shown, shownOptions, viewers, outputLines, document, terminals, parseArguments: module.exports.parseArguments,
-        provider: () => provider, close: doc => close(doc),
+        provider: () => provider, completion: () => completion, close: doc => close(doc),
         run: async (action, ...args) => { await ready; return commands.get('ges.' + action)(...args); } };
 }
 
@@ -208,4 +215,33 @@ test('the binary dump requires workspace trust and a local file', async () => {
         assert.equal(h.calls.length, 0);
         assert.equal(h.errors.length, 1);
     }
+});
+
+test('syntax completions follow the shared contexts and skip comments and strings', async () => {
+    const h = harness();
+    await h.ready;
+    const { language, provider, triggers } = h.completion();
+    assert.equal(language, 'ges');
+    assert.deepEqual(triggers, [':', '[']);
+    const complete = before => provider.provideCompletionItems(
+        { lineAt() { return { text: before + ' rest' }; } }, { line: 3, character: before.length });
+    const labels = before => (complete(before) ?? []).map(item => item.label);
+    assert.ok(labels('em').includes('emit'));
+    assert.ok(labels('items[:f').includes('fold'));
+    assert.ok(labels('x as ').includes(':Number'));
+    assert.ok(labels('x as :N').includes('Number'));
+    assert.equal(complete('// em'), undefined);
+    assert.equal(complete('let x be "a :N'), undefined);
+    assert.ok(labels("let x be 'a''b' as ").includes(':Number'));
+    // The typed word is replaced, without the colon a candidate omits.
+    const fold = complete('items[:fo').find(item => item.label === 'fold');
+    assert.deepEqual(fold.range.args, [3, 7, 3, 9]);
+    assert.equal(fold.kind, 2);
+    const number = complete('x as :Nu').find(item => item.label === 'Number');
+    assert.deepEqual(number.range.args, [3, 6, 3, 8]);
+    assert.equal(number.kind, 6);
+    const typed = complete('x is Nu').find(item => item.label === ':Number');
+    assert.deepEqual(typed.range.args, [3, 5, 3, 7]);
+    assert.equal(typed.filterText, 'Number');
+    assert.equal(complete('em').find(item => item.label === 'emit').kind, 13);
 });

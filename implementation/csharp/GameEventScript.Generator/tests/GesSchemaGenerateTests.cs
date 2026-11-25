@@ -309,6 +309,22 @@ public sealed class GesSchemaGenerateTests
         StringAssert.Contains(text, "\"i.a\",");
     }
     [TestMethod]
+    public void SplitOutputPlacesAMessageSetInItsOwnFileBesideASchemaOfTheSameName()
+    {
+        var set = GesSchemaSet.Parse(
+            new GesSchemaSource("order.gess", "schema :Order as {\n  on: :Boolean\n}\n"),
+            new GesSchemaSource("commands.gess", "message Go()\nmessages Order as (Go)\n"));
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            var extension = language == GesSchemaLanguage.Swift ? ".swift" : ".g.cs";
+            var options = new GesSchemaGenerateOptions { Language = language, Namespace = "Game.Wire", Split = GesSchemaSplit.File };
+            var files = GesSchemaGenerator.GenerateFiles(set, ["Order()"], new GesSchemaParameters(), options);
+            Assert.AreEqual("Game.Wire.commands" + extension, files[0].Path);
+            Assert.IsFalse(files.Any(file => file.Path.Contains("order", StringComparison.Ordinal)));
+        }
+    }
+
+    [TestMethod]
     public void SplitOutputPlacesEachDeclarationInTheFileOfItsDeclaration()
     {
         var set = GesSchemaSet.Parse(

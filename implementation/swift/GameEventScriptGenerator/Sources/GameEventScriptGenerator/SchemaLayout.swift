@@ -370,7 +370,7 @@ enum GesSchemaLayoutBuilder {
         type.name = typeName(schema, messageSuffix)
         type.declared = schema.name
         type.lookup = set.rootName(of: schema)
-        type.source = schema.kind == .message ? set.messageSourceName(of: schema.name) : set.sourceName(of: schema.name)
+        type.source = schema.kind == .schema ? set.sourceName(of: schema.name) : set.messageSourceName(of: schema.name)
         type.kind = schema.kind
         type.hash = bound.hash
         type.bindingHash = bound.bindingHash

@@ -404,6 +404,20 @@ final class GenerateTests: XCTestCase {
         XCTAssertFalse(swift[0].text.contains("from the root"))
     }
 
+    func testSplitOutputPlacesAMessageSetInItsOwnFileBesideASchemaOfTheSameName() throws {
+        let set = try GesSchemaSet(sources: [
+            GesSchemaSource(name: "order.gess", text: "schema :Order as {\n  on: :Boolean\n}\n"),
+            GesSchemaSource(name: "commands.gess", text: "message Go()\nmessages Order as (Go)\n"),
+        ])
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            let fileExtension = language == .swift ? ".swift" : ".g.cs"
+            let options = GesSchemaGenerateOptions(language: language, namespace: "Game.Wire", split: .file)
+            let files = try GesSchemaGenerator.generateFiles(set, roots: ["Order()"], parameters: GesSchemaParameters(), options: options)
+            XCTAssertEqual(files.first?.path, "Game.Wire.commands" + fileExtension)
+            XCTAssertFalse(files.contains { $0.path.contains("order") })
+        }
+    }
+
     func testSplitOutputRejectsMismatchedRequestsAndCollidingFileNames() throws {
         let set = try GesSchemaSet(parsing: "schema :S as {\n  on: :Boolean\n}\n")
         let split = GesSchemaGenerateOptions(split: .schema)

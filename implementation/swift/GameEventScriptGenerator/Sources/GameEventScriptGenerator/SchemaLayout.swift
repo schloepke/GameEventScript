@@ -41,13 +41,13 @@ struct GesLayoutRoute {
     var type: String
     // The root as a schema set looks it up, see GesSchemaLayout.rootNames.
     var rootName: String
-    // Whether the root is a message, which the source names without `:`.
-    var isMessage: Bool
+    // Whether the root is a schema, which the source names with `:`; a message or message set goes by its bare name.
+    var isSchema: Bool
     var deliveryClass: String
     var rateMicroseconds: Int64
 
-    // The root as the route spells it in source: a message by its name, a schema or set with `:`.
-    var written: String { isMessage ? root : ":" + root }
+    // The root as the route spells it in source: a schema with `:`, a message or message set by its name.
+    var written: String { isSchema ? ":" + root : root }
 
     // The name of the route's constants: side, verb and root, which identify a route within its network.
     var name: String { (side == "client" ? "Client" : "Server") + (verb == "sends" ? "Sends" : "Publishes") + root }
@@ -338,7 +338,7 @@ enum GesSchemaLayoutBuilder {
                 root: route.root.name,
                 type: typeName(route.root, messageSuffix),
                 rootName: set.rootName(of: route.root),
-                isMessage: route.root.kind == .message,
+                isSchema: route.root.kind == .schema,
                 deliveryClass: GesBoundNetwork.className(route.deliveryClass),
                 rateMicroseconds: route.rateMicroseconds
             )

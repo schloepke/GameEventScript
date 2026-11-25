@@ -121,4 +121,67 @@ public sealed class GesSchemaSetGenerateTests
         Assert.AreEqual("schema.ambiguousName", Assert.ThrowsExactly<GesSchemaException>(() => set.Schema("Lobby")).Code);
         Assert.AreEqual(GesSchemaKind.Message, set.Schema("Lobby()").Kind);
     }
+
+    [TestMethod]
+    public void WireCodeCountsOnlyTheModelGroupsItConvertsTo()
+    {
+        const string shield = "schema :Shield as { maxShield: :Number between 0 and 100_000 }\n"
+            + "schema :Components as { shield: :Shield optional }\n"
+            + "message Shield(range: :Quantity(m) between 0m and 1000m step 1cm)\n"
+            + "model(commands) messages ShieldCommands as (Shield)\n"
+            + "wire model(commands) messages DroneCommands as (Shield)\n"
+            + "model(data) schema :Composition as { components: :Components }\n";
+        foreach (var language in Languages)
+        {
+            // The models of data hold a type Shield too, but the wire code converts only to those of commands.
+            var set = GesSchemaSet.Parse(shield);
+            var roots = GesSchemaGenerator.WireRoots(set, "default");
+            var options = new GesSchemaGenerateOptions { Language = language, Namespace = "Wire", Models = "Commands", SchemaSet = "Schemas" };
+            var wire = GesSchemaGenerator.Generate(set, roots, new GesSchemaParameters(), options);
+            StringAssert.Contains(wire, language == GesSchemaLanguage.CSharp ? "ToModel()" : "toModel()");
+
+            // A suffixed wire message still converts to its model, which keeps the declared name.
+            var suffixed = GesSchemaGenerator.Generate(set, roots, new GesSchemaParameters(), new GesSchemaGenerateOptions
+            {
+                Language = language,
+                Namespace = "Wire",
+                Models = "Commands",
+                SchemaSet = "Schemas",
+                MessageSuffix = "Message",
+            });
+            var conversions = Regex.Count(wire, language == GesSchemaLanguage.CSharp ? @"\bToModel\(\)" : @"\btoModel\(\)");
+            Assert.IsGreaterThan(0, conversions);
+            Assert.AreEqual(conversions, Regex.Count(suffixed, language == GesSchemaLanguage.CSharp ? @"\bToModel\(\)" : @"\btoModel\(\)"));
+
+            // A wire root that reaches data as well puts both groups into the models' namespace, where Shield collides.
+            var both = GesSchemaSet.Parse(shield.Replace("schema :Components", "wire schema :Components"));
+            var collision = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(
+                both, GesSchemaGenerator.WireRoots(both, "default"), new GesSchemaParameters(), new GesSchemaGenerateOptions
+                {
+                    Language = language,
+                    Namespace = "Wire",
+                    Models = "Commands",
+                    MessageSuffix = "Message",
+                }));
+            Assert.AreEqual("generate.nameCollision", collision.Code);
+            StringAssert.Contains(collision.Message, "'commands'");
+            StringAssert.Contains(collision.Message, "'data'");
+        }
+    }
+
+    [TestMethod]
+    public void RoutesWriteMessageSetsWithoutAColon()
+    {
+        var set = GesSchemaSet.Parse("wire schema :World as { tick: :Number integer between 0 and 255 }\nwire messages Commands as (Fire)\n"
+            + "wire message Fire()\nnetwork :Game as {\n  client sends Commands reliable\n  server publishes :World latest\n}\n");
+        foreach (var language in Languages)
+        {
+            var code = GesSchemaGenerator.Generate(set, [":Game"], new GesSchemaParameters(), new() { Language = language });
+            StringAssert.Contains(code, "client sends Commands reliable");
+            StringAssert.Contains(code, "undecodable Commands");
+            StringAssert.Contains(code, "undecodable :World");
+            StringAssert.Contains(code, "The message " + (language == GesSchemaLanguage.CSharp ? "<c>Fire</c>" : "`Fire`") + ", read and written");
+            Assert.DoesNotMatchRegex(new Regex("[^:]:(Commands|Fire)\\b"), code);
+        }
+    }
 }

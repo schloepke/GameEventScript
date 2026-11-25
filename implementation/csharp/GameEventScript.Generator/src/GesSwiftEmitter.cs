@@ -73,7 +73,7 @@ internal static partial class GesSwiftEmitter
         {
             var conversion = context.Models = new ModelConversion(modelLayout, models, space);
             foreach (var type in types)
-                if (type.Layout.PackedWidth == 0 && conversion.Type(type.Name) is { } model)
+                if (type.Layout.PackedWidth == 0 && conversion.Type(type) is { } model)
                 {
                     conversions.Add((type, model));
                     document.Units.Add(new GesCodeUnit(type.Name, code => ModelConversionUnit(code, type, model, access, conversion), outside: true));
@@ -193,6 +193,9 @@ internal static partial class GesSwiftEmitter
 
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
 
+    // A message name stands without the colon that marks schemas.
+    private static string Written(GesPlanType type) => type.Kind == GesSchemaKind.Message ? type.Layout.Declared : ":" + type.Layout.Declared;
+
     private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access, Context context)
     {
         var names = new List<(string, string)>();
@@ -205,11 +208,11 @@ internal static partial class GesSwiftEmitter
         if (!type.IsItem)
             foreach (var constant in type.Layout.Constants) names.Add((constant.Name, "the let " + constant.Name));
         if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: true, names);
-        var model = type.IsItem ? null : context.Models?.Type(type.Name);
+        var model = type.IsItem ? null : context.Models?.Type(type);
         if (model is not null) names.Add(("toModel", "the generated member toModel"));
         GesSchemaPlanner.Unique(type.Name, names, context.TopLevel, model is not null ? context.Converted : context.Inside);
 
-        code.Line(type.IsItem ? "/// An element of the list." : $"/// The {Kind(type)} `:{type.Layout.Declared}`, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.");
+        code.Line(type.IsItem ? "/// An element of the list." : $"/// The {Kind(type)} `{Written(type)}`, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.");
         code.Open(type.IsClass ? $"{access}final class {type.Name} {{" : $"{access}struct {type.Name}: Sendable {{");
         if (!type.IsItem)
         {
@@ -605,7 +608,7 @@ internal static partial class GesSwiftEmitter
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var member in type.MemberNames) names.Add((GesSchemaPlanner.Camel(member), "the member " + member));
         FieldNames(type, names);
-        var model = context.Models?.Type(type.Name);
+        var model = context.Models?.Type(type);
         if (model is not null) names.Add(("toModel", "the generated member toModel"));
         GesSchemaPlanner.Unique(type.Name, names, context.TopLevel, model is not null ? context.Converted : null);
         var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);

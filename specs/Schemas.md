@@ -1980,9 +1980,14 @@ records and the wire members of a packed root that wire code declares itself ext
 split files, and name wire and model types so that neither hides the other. `--models` must name another namespace than
 `--namespace`, and where one of the two namespaces continues the other, its next component must not be the name of a
 type in the shorter one, else `generate.nameCollision`: a type that the wire code declares, including its `<Name>Wire`
-types but not the packed types that the models declare, or a type of any model group, since the wire code converts to the
-models of every group and their namespace holds them all; a `<Name>Wire` that another type of the generation already names
-is `generate.nameCollision` too. A Swift file declares its namespace components as enums, extending those that another
+types but not the packed types that the models declare, or a model type of a group whose models the wire code converts to,
+whose namespace holds them all; a `<Name>Wire` that another type of the generation already names is
+`generate.nameCollision` too. The wire code converts to the models of exactly the groups whose model roots reach one of its
+records, messages or sets; another group, such as one of schemas that only a model root reaches, is generated into
+another namespace and does not count. Two counted groups whose model types share a name, such as a message `Shield` in
+one and a schema `:Shield` in the other, would declare that name twice in the models' namespace and are
+`generate.nameCollision`, whose message names both groups and suggests generating the wire roots that reach each group
+separately, each with that group's namespace in `--models`. *Since: Unreleased — only converted groups count.* A Swift file declares its namespace components as enums, extending those that another
 generation of the module declares, and then extends the whole namespace with its declarations (`enum Wire {}` then
 `extension Wire { … }`), as split files do; there Swift finds neither the members of an enclosing component nor a later
 component of the namespace. Swift wire code that shares packed types names the models' types through their namespace
@@ -2030,7 +2035,7 @@ Generated code of a network therefore uses the Network package (C# `GameEventScr
 
 ```gess
 network :Game as {
-  client sends :Commands reliable
+  client sends Commands reliable
   server publishes :World latest at most every 50ms
 }
 ```
@@ -2120,7 +2125,7 @@ that root. The events of the end follow: `Connected` and `Disconnected` on the c
 the client id. A received name that repeats one of these fails with `generate.nameCollision`; the end's internal fields never collide with received roots. The constants, properties and typed functions of the network type must differ from one another in the spelling of each language, and in C# none may take the network's name (`generate.nameCollision`). The types nested in a network, `Client` and `Server` with `IClientHandler` and `IServerHandler` in
 C# or `ClientEvent` and `ServerEvent` in Swift, and `Topic` and `Tick` in an end that publishes, would hide a root, a tag
 set or the network of their name for the code inside; such a name fails with `generate.nameCollision` too. A payload that does not
-decode as its root closes the connection with the detail `undecodable :Root`, for a message root `undecodable Root`, and reports nothing; the end skips the
+decode as its root closes the connection with the detail `undecodable :Root`, for a message or message set root `undecodable Root`, and reports nothing; the end skips the
 connection's later events of that poll up to its disconnect ([ends](Network.md#ends)).
 
 ```swift
@@ -2417,7 +2422,8 @@ it reaches, which every model set of the generation shares. Neither reads nor wr
 - A model set is no field type and reaches its members only, never schemas through another model root; the schemas the
   messages hold become model types as for a model schema. A name that the model types of the generation take twice,
   such as a message `Move` beside a schema `:Move`, is `generate.nameCollision` (wire code's `--message-suffix` does not
-  apply to models).
+  apply to models); its message suggests putting the roots that reach them into different model groups, generated into
+  different namespaces.
 
 ### Model documents
 

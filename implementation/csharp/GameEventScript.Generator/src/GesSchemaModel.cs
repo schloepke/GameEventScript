@@ -211,6 +211,70 @@ internal static class GesModelLayoutBuilder
         return layout;
     }
 
+    // The models that wire code generated with `--models` converts to. Each model group is generated with `--model` like any
+    // other, and those groups whose roots reach a wire type lie in the models' namespace: their types, laid out as the group's
+    // generation lays them out, may not share a name there. A group that reaches no wire type is not part of that namespace,
+    // so its types count for nothing, even where they share a name with a model the wire code converts to.
+    internal static GesModelLayout? Converted(GesSchemaSet set, GesSchemaLayout wire)
+    {
+        var wanted = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var type in wire.Types) wanted.Add(type.Lookup);
+        var groups = new List<string>();
+        foreach (var schema in set.Schemas)
+            if (schema.ModelGroup is { } group && !groups.Contains(group)) groups.Add(group);
+        var types = new SortedDictionary<string, GesModelType>(StringComparer.Ordinal);
+        var protocols = new SortedDictionary<string, GesModelProtocol>(StringComparer.Ordinal);
+        var owners = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var group in groups)
+        {
+            var roots = GesSchemaGenerator.ModelRoots(set, group);
+            var seen = new HashSet<GesSchema>();
+            foreach (var root in roots) Collect(set.Schema(root), seen);
+
+            var converts = false;
+            foreach (var schema in seen) converts |= wanted.Contains(set.RootName(schema));
+            if (!converts) continue;
+            var layout = Build(set, roots);
+            foreach (var type in layout.Types)
+            {
+                if (types.TryGetValue(type.Name, out var known))
+                {
+                    // One schema in several groups is one model type; two schemas of one name are two.
+                    if (known.Lookup == type.Lookup) continue;
+                    throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The wire code converts to the models of the groups '{owners[known.Name]}' and '{group}', whose model types of {Describe(set, known)} and {Describe(set, type)} are both named '{type.Name}' in the models' namespace; generate the wire roots that reach each group separately, each with the namespace of that group's models in --models.");
+                }
+
+                types.Add(type.Name, type);
+                owners.Add(type.Name, group);
+            }
+
+            foreach (var protocol in layout.Protocols)
+                if (!protocols.ContainsKey(protocol.Name)) protocols.Add(protocol.Name, protocol);
+        }
+
+        if (types.Count == 0) return null;
+        var converted = new GesModelLayout([], [.. types.Values]);
+        converted.Protocols.AddRange(protocols.Values);
+        return converted;
+    }
+
+    // Every schema that a model of the schema names, as Reach finds them, without the check of their names.
+    private static void Collect(GesSchema schema, HashSet<GesSchema> seen)
+    {
+        if (!seen.Add(schema)) return;
+        foreach (var field in schema.Fields)
+            foreach (var type in field.Alternatives) Collect(type, seen);
+        foreach (var member in schema.Members) Collect(member, seen);
+    }
+
+    private static void Collect(GesSchemaType type, HashSet<GesSchema> seen)
+    {
+        if (type.Schema is { } schema) Collect(schema, seen);
+        foreach (var element in type.Element) Collect(element, seen);
+    }
+
+    private static string Describe(GesSchemaSet set, GesModelType type) => Describe(set.Schema(type.Lookup));
+
     // A field that a schema lends with `with` takes one member name in its interface or protocol and in every type that takes
     // it: like a field named after its own type, it is renamed where it is named like the lending schema or one taking it.
     private static void RenameLent(GesModelLayout layout)
@@ -274,7 +338,7 @@ internal static class GesModelLayoutBuilder
         {
             // Model types share one namespace: a message beside a schema of its name has no second type name.
             if (ReferenceEquals(known, schema)) return;
-            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The model types of {Describe(known)} and {Describe(schema)} are both named '{schema.Name}'; models have no message suffix.");
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The model types of {Describe(known)} and {Describe(schema)} are both named '{schema.Name}'; models take declared names without a message suffix, so put the roots that reach them into different model groups, generated into different namespaces.");
         }
 
         reached.Add(schema.Name, schema);

@@ -365,7 +365,7 @@ extension NetworkWire {
         }
     }
 
-    /// The message `:Fire`, read and written without allocation.
+    /// The message `Fire`, read and written without allocation.
     struct Fire: Sendable {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0xa8976980a71a1121
@@ -455,7 +455,7 @@ extension NetworkWire {
         }
     }
 
-    /// The message `:Move`, read and written without allocation.
+    /// The message `Move`, read and written without allocation.
     struct Move: Sendable {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0x103d752f56bb0003
@@ -862,7 +862,7 @@ extension NetworkWire {
         /// The network hash over the routes and their bound roots, which the handshake compares.
         static let hash: UInt64 = 0xf589a3e2e3aaff61
 
-        /// The index of the route `client sends :Commands reliable`.
+        /// The index of the route `client sends Commands reliable`.
         static let clientSendsCommands = 0
 
         /// The index of the route `server publishes :World latest`.
@@ -874,7 +874,7 @@ extension NetworkWire {
         /// The index of the route `server sends :Chunk bulk`.
         static let serverSendsChunk = 2
 
-        /// Encodes a record into a buffer and sends it on the route `client sends :Commands reliable`.
+        /// Encodes a record into a buffer and sends it on the route `client sends Commands reliable`.
         /// - Parameters:
         ///   - value: The record.
         ///   - connection: The client's connection.
@@ -935,7 +935,7 @@ extension NetworkWire {
             /// The end's connection.
             var connection: GesNetworkConnection { end.connection }
 
-            /// Encodes a record and sends it on the route `client sends :Commands reliable`.
+            /// Encodes a record and sends it on the route `client sends Commands reliable`.
             /// - Parameter value: The record.
             /// - Returns: The status of `GesNetworkClientEnd.send(route:payload:)`.
             /// - Throws: `GesWireError` when a value does not fit its field.
@@ -945,7 +945,7 @@ extension NetworkWire {
                 return end.send(route: Game.clientSendsCommands, payload: UnsafeRawBufferPointer(rebasing: __send_buffer[..<count]))
             }
 
-            /// Encodes a message and sends it on the route `client sends :Commands reliable`.
+            /// Encodes a message and sends it on the route `client sends Commands reliable`.
             /// - Parameter value: The message.
             /// - Returns: The status of `GesNetworkClientEnd.send(route:payload:)`.
             /// - Throws: `GesWireError` when a value does not fit its field.
@@ -1181,7 +1181,7 @@ extension NetworkWire {
                         do {
                             _ = try __commands.read(from: event.payload)
                         } catch {
-                            try end.close(client: event.client, detail: "undecodable :Commands")
+                            try end.close(client: event.client, detail: "undecodable Commands")
                             return
                         }
                         try handler(.commands(client: event.client, __commands.asCase))
@@ -1210,7 +1210,7 @@ extension NetworkWire {
             case clientConnected(client: Int, security: GesNetworkSecurity)
             /// A client's connection closed, with its code, its detail and whether the client closed it; the client leaves the end.
             case clientDisconnected(client: Int, code: String, detail: String, byPeer: Bool)
-            /// A message arrived on the route `client sends :Commands reliable`.
+            /// A message arrived on the route `client sends Commands reliable`.
             case commands(client: Int, Commands.Case)
             /// A tick is complete; the events of its changed members precede it.
             case tick(client: Int, number: Int)

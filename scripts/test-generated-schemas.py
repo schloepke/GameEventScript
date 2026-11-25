@@ -68,7 +68,10 @@ SPLITS = (("schema", ["--wire", "world", "--param", "worldWidth=2000m", "--value
 # of the same sources in another namespace uses it for its documents.
 SETS = ((ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m", "--values", "--schemas", "RoleSchemas"], "RoleSet.Wire", "SetRolesWire", "file"),
         (ROLES, ROLE_FILES, ["--model", "view", "--values", "--use-schemas", "RoleSet.Wire.RoleSchemas"], "RoleModels", "SetRolesModel", "schema"),
-        (ROOT / "conformance/fixtures/SchemaGeneration", ["network.gess"], ["--all-roots", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas"], "SetGame", "SetGame", None))
+        (ROOT / "conformance/fixtures/SchemaGeneration", ["network.gess"], ["--all-roots", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas"], "SetGame", "SetGame", None),
+        # Wire code that converts only to the model group of its roots, beside a schema of the same name in another group.
+        (ROOT / "conformance/fixtures/SchemaGeneration", ["shield.gess"], ["--model", "commands", "--values"], "ShieldModel", "ShieldModel", None),
+        (ROOT / "conformance/fixtures/SchemaGeneration", ["shield.gess"], ["--wire", "default", "--values", "--schemas", "Schemas", "--models", "ShieldModel"], "ShieldWire", "ShieldWire", None))
 GENERATED_SWIFT = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
 # A schema and a message of one name, told apart in generated code by a message suffix: two generations with different
 # suffixes are the same code apart from the message type names, and each reads the other's bytes.

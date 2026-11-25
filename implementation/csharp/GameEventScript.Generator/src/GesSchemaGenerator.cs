@@ -110,14 +110,10 @@ public static class GesSchemaGenerator
         // Packed records are model types over one word, which wire code declares itself unless it shares those of models.
         var packed = layout.Types.FindAll(type => type.PackedWidth > 0).ConvertAll(type => type.Name);
         var shared = packed.Count > 0 && options.Models is null ? GesModelLayoutBuilder.Build(set, layout.Types.FindAll(type => type.PackedWidth > 0).ConvertAll(type => type.Lookup)) : null;
-        // With models, wire records that a model root of any group reaches convert to their model directly.
-        var modelRoots = new List<string>();
-        if (options.Models is not null)
-            foreach (var schema in set.Schemas)
-                if (schema.ModelGroup is not null) modelRoots.Add(set.RootName(schema));
-        var models = modelRoots.Count > 0 ? GesModelLayoutBuilder.Build(set, modelRoots) : null;
+        // With models, wire records that a model root reaches convert to their model directly.
+        var models = options.Models is null ? null : GesModelLayoutBuilder.Converted(set, layout);
         // Where one namespace continues the other, its next component must not take the name of a type in the shorter one. The
-        // models' namespace holds every type of every model group, since the wire code converts to the models of any of them;
+        // models' namespace holds every type of the model groups whose models the wire code converts to;
         // the wire namespace holds the wire types without the packed ones, which the models declare, and instead the
         // `<Name>Wire` members of packed roots and the helper of computed fields.
         HashSet<string>? wireNames = null;

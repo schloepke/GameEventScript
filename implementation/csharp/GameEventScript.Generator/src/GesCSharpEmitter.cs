@@ -133,6 +133,9 @@ internal static partial class GesCSharpEmitter
 
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
 
+    // A message name stands without the colon that marks schemas.
+    private static string Written(GesPlanType type) => type.Kind == GesSchemaKind.Message ? type.Layout.Declared : ":" + type.Layout.Declared;
+
     private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access, Context context)
     {
         var names = new List<(string, string)> { (type.Name, "the type itself") };
@@ -145,12 +148,12 @@ internal static partial class GesCSharpEmitter
         if (!type.IsItem)
             foreach (var constant in type.Layout.Constants) names.Add((GesSchemaPlanner.Pascal(constant.Name), "the let " + constant.Name));
         if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: false, names);
-        var model = type.IsItem ? null : context.Models?.Type(type.Name);
+        var model = type.IsItem ? null : context.Models?.Type(type);
         if (model is not null) names.Add(("ToModel", "the generated member ToModel"));
         GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
 
         var visibility = type.IsItem ? "public" : access;
-        code.Line(type.IsItem ? "/// <summary>An element of the list.</summary>" : $"/// <summary>The {Kind(type)} <c>:{type.Layout.Declared}</c>, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.</summary>");
+        code.Line(type.IsItem ? "/// <summary>An element of the list.</summary>" : $"/// <summary>The {Kind(type)} <c>{Written(type)}</c>, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.</summary>");
         code.Line(type.IsClass ? $"{visibility} sealed partial class {type.Name}" : $"{visibility} partial struct {type.Name}");
         code.Open("{");
         if (!type.IsItem)
@@ -603,7 +606,7 @@ internal static partial class GesCSharpEmitter
         PublicMethods(code, type.MembersAreClasses ? "" : "readonly ", write, read, "message");
         if (parameters) FieldMethods(code, type);
         if (context.Values) ValueMembers(code, type, context.Holder, Lenient(type.Layout, context.Layout));
-        if (context.Models?.Type(type.Name) is { } model) ModelMembers(code, type, model, context.Models);
+        if (context.Models?.Type(type) is { } model) ModelMembers(code, type, model, context.Models);
         code.Blank();
         MessageCases(code, type, context);
         code.Blank();

@@ -338,7 +338,7 @@ namespace GameEventScript.Tests.Generator.Arguments.Wire
         }
     }
 
-    /// <summary>The message <c>:Fire</c>, read and written without allocation.</summary>
+    /// <summary>The message <c>Fire</c>, read and written without allocation.</summary>
     internal partial struct Fire
     {
         /// <summary>The schema hash, independent of parameter values.</summary>
@@ -644,7 +644,7 @@ namespace GameEventScript.Tests.Generator.Arguments.Wire
         public void ReadMessageLenient(GameEventScriptMessage message) => ReadMessage(GesSchemaValues.CompleteMessage(__valueSchema ??= __GesSchemas56eecc37077cfa57.Bind("Fire", BindingHash), message));
     }
 
-    /// <summary>The message <c>:Mark</c>, read and written without allocation once its storage has grown.</summary>
+    /// <summary>The message <c>Mark</c>, read and written without allocation once its storage has grown.</summary>
     internal sealed partial class Mark
     {
         /// <summary>The schema hash, independent of parameter values.</summary>
@@ -833,7 +833,7 @@ namespace GameEventScript.Tests.Generator.Arguments.Wire
         public void ReadMessageLenient(GameEventScriptMessage message) => ReadMessage(GesSchemaValues.CompleteMessage(__valueSchema ??= __GesSchemas56eecc37077cfa57.Bind("Mark", BindingHash), message));
     }
 
-    /// <summary>The message <c>:Say</c>, read and written without allocation once its storage has grown.</summary>
+    /// <summary>The message <c>Say</c>, read and written without allocation once its storage has grown.</summary>
     internal sealed partial class Say
     {
         /// <summary>The schema hash, independent of parameter values.</summary>
@@ -1026,7 +1026,7 @@ namespace GameEventScript.Tests.Generator.Arguments.Wire
         public void ReadMessageLenient(GameEventScriptMessage message) => ReadMessage(GesSchemaValues.CompleteMessage(__valueSchema ??= __GesSchemas56eecc37077cfa57.Bind("Say", BindingHash), message));
     }
 
-    /// <summary>The message <c>:Stop</c>, read and written without allocation.</summary>
+    /// <summary>The message <c>Stop</c>, read and written without allocation.</summary>
     internal partial struct Stop
     {
         /// <summary>The schema hash, independent of parameter values.</summary>
@@ -1157,7 +1157,7 @@ namespace GameEventScript.Tests.Generator.Arguments.Wire
         }
     }
 
-    /// <summary>The message <c>:Turn</c>, read and written without allocation.</summary>
+    /// <summary>The message <c>Turn</c>, read and written without allocation.</summary>
     internal partial struct Turn
     {
         /// <summary>The schema hash, independent of parameter values.</summary>

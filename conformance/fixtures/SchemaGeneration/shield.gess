@@ -1,0 +1,10 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The fixture of a message and a schema with one name in different model groups: wire code with --models converts only
+// to the group of its roots, so the model type Shield of data does not collide with the message model Shield.
+schema :Shield as { maxShield: :Number between 0 and 100_000 }
+schema :Components as { shield: :Shield optional }
+message Shield(range: :Quantity(m) between 0m and 1000m step 1cm)
+model(commands) messages ShieldCommands as (Shield)
+wire model(commands) messages DroneCommands as (Shield)
+model(data) schema :Composition as { components: :Components }

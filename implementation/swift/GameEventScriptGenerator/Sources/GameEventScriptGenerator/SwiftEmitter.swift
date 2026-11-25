@@ -61,7 +61,7 @@ enum GesSwiftEmitter {
         var conversions: [(type: GesPlanType, model: GesModelType)] = []
         if let conversion {
             for type in types where type.layout.packedWidth == 0 {
-                if let model = conversion.type(type.name) { conversions.append((type, model)) }
+                if let model = conversion.type(type) { conversions.append((type, model)) }
             }
         }
         var inside: [String] = []
@@ -209,6 +209,9 @@ enum GesSwiftEmitter {
 
     static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
 
+    // A message name stands without the colon that marks schemas.
+    static func written(_ type: GesPlanType) -> String { type.kind == .message ? type.layout.declared : ":" + type.layout.declared }
+
     static func record(_ code: inout Code, _ type: GesPlanType, _ access: String, _ context: Context) throws(GesGeneratorError) {
         var names: Names = []
         if !type.isItem {
@@ -223,11 +226,11 @@ enum GesSwiftEmitter {
             for constant in type.layout.constants { names.append((constant.name, "the let " + constant.name)) }
         }
         if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: true, &names) }
-        let model = type.isItem ? nil : context.models?.type(type.name)
+        let model = type.isItem ? nil : context.models?.type(type)
         if model != nil { names.append(("toModel", "the generated member toModel")) }
         try GesSchemaPlanner.unique(type.name, names, context.topLevel, hidden: model != nil ? context.converted : context.inside)
 
-        code.line(type.isItem ? "/// An element of the list." : "/// The \(kind(type)) `:\(type.layout.declared)`, read and written without allocation\(type.isClass ? " once its storage has grown" : "").")
+        code.line(type.isItem ? "/// An element of the list." : "/// The \(kind(type)) `\(written(type))`, read and written without allocation\(type.isClass ? " once its storage has grown" : "").")
         code.open(type.isClass ? "\(access)final class \(type.name) {" : "\(access)struct \(type.name): Sendable {")
         if !type.isItem {
             constants(&code, type.layout, access)
@@ -587,7 +590,7 @@ enum GesSwiftEmitter {
         }
         for member in type.memberNames { names.append((GesSchemaPlanner.camel(member), "the member " + member)) }
         fieldNames(type, &names)
-        let model = context.models?.type(type.name)
+        let model = context.models?.type(type)
         if model != nil { names.append(("toModel", "the generated member toModel")) }
         try GesSchemaPlanner.unique(type.name, names, context.topLevel, hidden: model != nil ? context.converted : [])
         let width = String(type.layout.memberWidth)

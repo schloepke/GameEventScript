@@ -213,7 +213,7 @@ enum GesModelLayoutBuilder {
             if known === schema { return }
             throw GesGeneratorError(
                 GesGeneratorError.nameCollision,
-                "The model types of \(describe(known)) and \(describe(schema)) are both named '\(schema.name)'; models have no message suffix."
+                "The model types of \(describe(known)) and \(describe(schema)) are both named '\(schema.name)'; models take declared names without a message suffix, so put the roots that reach them into different model groups, generated into different namespaces."
             )
         }
         reached[schema.name] = schema
@@ -221,6 +221,59 @@ enum GesModelLayoutBuilder {
             for type in field.alternatives { try reach(type, &reached) }
         }
         for member in schema.members { try reach(member, &reached) }
+    }
+
+    // The models that wire code generated with `--models` converts to. Each model group is generated with `--model` like any
+    // other, and those groups whose roots reach a wire type lie in the models' namespace: their types, laid out as the group's
+    // generation lays them out, may not share a name there. A group that reaches no wire type is not part of that namespace,
+    // so its types count for nothing, even where they share a name with a model the wire code converts to.
+    static func converted(_ set: GesSchemaSet, wire: GesSchemaLayout) throws -> GesModelLayout? {
+        let wanted = Set(wire.types.map(\.lookup))
+        var groups: [String] = []
+        for schema in set.schemas {
+            if let group = schema.modelGroup, !groups.contains(group) { groups.append(group) }
+        }
+        var types: [String: GesModelType] = [:]
+        var protocols: [String: GesModelProtocol] = [:]
+        var owners: [String: String] = [:]
+        for group in groups {
+            let roots = GesSchemaGenerator.modelRoots(set, group: group)
+            var seen: [ObjectIdentifier: GesSchema] = [:]
+            for root in roots { collect(try set.schema(root), &seen) }
+            guard seen.values.contains(where: { wanted.contains(set.rootName(of: $0)) }) else { continue }
+            let layout = try build(set, roots: roots)
+            for type in layout.types {
+                if let known = types[type.name] {
+                    // One schema in several groups is one model type; two schemas of one name are two.
+                    if known.lookup == type.lookup { continue }
+                    throw GesGeneratorError(
+                        GesGeneratorError.nameCollision,
+                        "The wire code converts to the models of the groups '\(owners[known.name]!)' and '\(group)', whose model types of \(describe(try set.schema(known.lookup))) and \(describe(try set.schema(type.lookup))) are both named '\(type.name)' in the models' namespace; generate the wire roots that reach each group separately, each with the namespace of that group's models in --models."
+                    )
+                }
+                types[type.name] = type
+                owners[type.name] = group
+            }
+            for protocolType in layout.protocols where protocols[protocolType.name] == nil { protocols[protocolType.name] = protocolType }
+        }
+        if types.isEmpty { return nil }
+        var converted = GesModelLayout(roots: [], types: types.keys.sorted(by: GesSchemaLayoutBuilder.ordinal).map { types[$0]! })
+        converted.protocols = protocols.keys.sorted(by: GesSchemaLayoutBuilder.ordinal).map { protocols[$0]! }
+        return converted
+    }
+
+    // Every schema that a model of the schema names, as reach finds them, without the check of their names.
+    private static func collect(_ schema: GesSchema, _ seen: inout [ObjectIdentifier: GesSchema]) {
+        if seen.updateValue(schema, forKey: ObjectIdentifier(schema)) != nil { return }
+        for field in schema.fields {
+            for type in field.alternatives { collect(type, &seen) }
+        }
+        for member in schema.members { collect(member, &seen) }
+    }
+
+    private static func collect(_ type: GesSchemaType, _ seen: inout [ObjectIdentifier: GesSchema]) {
+        if let schema = type.schema { collect(schema, &seen) }
+        for element in type.element { collect(element, &seen) }
     }
 
     private static func describe(_ schema: GesSchema) -> String {

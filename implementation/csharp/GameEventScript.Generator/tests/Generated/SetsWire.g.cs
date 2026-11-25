@@ -618,7 +618,7 @@ namespace GameEventScript.Tests.Generator.Sets.Wire
         }
     }
 
-    /// <summary>The message <c>:MoveTo</c>, read and written without allocation once its storage has grown.</summary>
+    /// <summary>The message <c>MoveTo</c>, read and written without allocation once its storage has grown.</summary>
     internal sealed partial class MoveTo
     {
         /// <summary>The schema hash, independent of parameter values.</summary>
@@ -921,7 +921,7 @@ namespace GameEventScript.Tests.Generator.Sets.Wire
         }
     }
 
-    /// <summary>The message <c>:Stop</c>, read and written without allocation.</summary>
+    /// <summary>The message <c>Stop</c>, read and written without allocation.</summary>
     internal partial struct Stop
     {
         /// <summary>The schema hash, independent of parameter values.</summary>

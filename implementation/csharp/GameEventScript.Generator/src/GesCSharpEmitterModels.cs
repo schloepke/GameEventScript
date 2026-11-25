@@ -16,7 +16,8 @@ internal static partial class GesCSharpEmitter
     {
         internal string Qualifier { get; } = qualifier;
 
-        internal GesModelType? Type(string name) => layout.Types.Find(type => type.Name == name);
+        // The model of a wire type, found by its schema: a wire message's name may carry the message suffix, a model's never.
+        internal GesModelType? Type(GesPlanType wire) => layout.Types.Find(type => type.Lookup == wire.Layout.Lookup);
 
         private int _local;
 
@@ -153,7 +154,7 @@ internal static partial class GesCSharpEmitter
     }
 
     private static GesGeneratorException Unconvertible(GesPlanType type, string field)
-        => new(GesGeneratorException.Usage, $"The field {field} of :{type.Name} has no counterpart in the model; generate the model from the same schema.");
+        => new(GesGeneratorException.Usage, $"The field {field} of the {Kind(type)} {Written(type)} has no counterpart in the model; generate the model from the same schema.");
 
     // Converts a field of `owner`, whose nested wire types `wired` qualifies, into the model member `target`.
     private static void ToModelField(GesSchemaPlanner.Code code, GesPlanField field, GesModelPlanField model, string modelOwner, string owner, string wired, string target, ModelConversion conversion)

@@ -70,7 +70,7 @@ internal sealed class GesLayoutNetwork(string name, ulong hash, List<GesLayoutRo
 
 // One route: its side `client` or `server`, its verb `sends` or `publishes`, its root, its class `reliable`, `latest` or
 // `bulk` and its rate in microseconds, 0 without one.
-internal sealed class GesLayoutRoute(int index, string side, string verb, string root, string type, string rootName, bool message, string deliveryClass, long rateMicroseconds)
+internal sealed class GesLayoutRoute(int index, string side, string verb, string root, string type, string rootName, bool schema, string deliveryClass, long rateMicroseconds)
 {
     internal int Index { get; } = index;
 
@@ -87,11 +87,11 @@ internal sealed class GesLayoutRoute(int index, string side, string verb, string
     // The root as a schema set looks it up, see GesSchemaLayout.RootNames.
     internal string RootName { get; } = rootName;
 
-    // Whether the root is a message, which the source names without `:`.
-    internal bool IsMessage { get; } = message;
+    // Whether the root is a schema, which the source names with `:`; a message or message set goes by its bare name.
+    internal bool IsSchema { get; } = schema;
 
-    // The root as the route spells it in source: a message by its name, a schema or set with `:`.
-    internal string Written => IsMessage ? Root : ":" + Root;
+    // The root as the route spells it in source: a schema with `:`, a message or message set by its name.
+    internal string Written => IsSchema ? ":" + Root : Root;
 
     internal string Class { get; } = deliveryClass;
 
@@ -419,7 +419,7 @@ internal static class GesSchemaLayoutBuilder
         var routes = new List<GesLayoutRoute>();
         foreach (var route in network.Routes)
             routes.Add(new GesLayoutRoute(route.Index, route.Side == GesNetworkSide.Client ? "client" : "server", route.Verb == GesNetworkVerb.Sends ? "sends" : "publishes",
-                route.Root.Name, TypeName(route.Root, messageSuffix), set.RootName(route.Root), route.Root.Kind == GesSchemaKind.Message, GesBoundNetwork.ClassName(route.DeliveryClass), route.RateMicroseconds));
+                route.Root.Name, TypeName(route.Root, messageSuffix), set.RootName(route.Root), route.Root.Kind == GesSchemaKind.Schema, GesBoundNetwork.ClassName(route.DeliveryClass), route.RateMicroseconds));
         return new GesLayoutNetwork(network.Name, network.Bind(parameters).Hash, routes);
     }
 

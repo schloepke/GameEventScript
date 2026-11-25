@@ -85,14 +85,10 @@ public enum GesSchemaGenerator {
         // Packed records are model types over one word, which wire code declares itself unless it shares those of models.
         let packed = layout.types.filter { $0.packedWidth > 0 }.map(\.name)
         let shared = !packed.isEmpty && options.models == nil ? try GesModelLayoutBuilder.build(set, roots: layout.types.filter { $0.packedWidth > 0 }.map(\.lookup)) : nil
-        // With models, wire records that a model root of any group reaches convert to their model directly.
-        var modelRoots: [String] = []
-        if options.models != nil {
-            for schema in set.schemas where schema.modelGroup != nil { modelRoots.append(set.rootName(of: schema)) }
-        }
-        let models = !modelRoots.isEmpty ? try GesModelLayoutBuilder.build(set, roots: modelRoots) : nil
+        // With models, wire records that a model root reaches convert to their model directly.
+        let models = options.models == nil ? nil : try GesModelLayoutBuilder.converted(set, wire: layout)
         // Where one namespace continues the other, its next component must not take the name of a type in the shorter one. The
-        // models' namespace holds every type of every model group, since the wire code converts to the models of any of them;
+        // models' namespace holds every type of the model groups whose models the wire code converts to;
         // the wire namespace holds the wire types without the packed ones, which the models declare, and instead the
         // `<Name>Wire` members of packed roots and the helper of computed fields.
         var wireNames: Set<String>?

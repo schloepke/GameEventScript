@@ -14,11 +14,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Schema messages and message sets have a namespace of their own, so a message or set may share its name with a schema,
   tag set or network; a network route names a message or set without `:` (`client sends Move reliable`). Where a name
   is in both namespaces, a root is written `:Name` for the schema or network and `Name()` for the message or set; the
-  plain name is `schema.ambiguousName` (specs/Schemas.md#declarations).
+  plain name is `schema.ambiguousName` (specs/Schemas.md#declarations). Generated comments and close details also write
+  messages and sets without `:` (`client sends Commands reliable`, `undecodable Commands`).
 - `ges schema generate --message-suffix <text>` (`GesSchemaGenerateOptions.MessageSuffix`, Swift `messageSuffix`)
   appends a suffix to every generated message type name, such as `MoveMessage`. Hashes, documents and wire bytes keep the
   declared names, so generations with different suffixes interoperate; a message type that collides with another
-  generated type is `generate.nameCollision` (specs/Schemas.md#message-type-names).
+  generated type is `generate.nameCollision` (specs/Schemas.md#message-type-names). With `--models`, suffixed wire
+  messages convert to their models too.
 - Schema message arguments take `default <literal>` under the rules of field defaults; the default enters the canonical
   form and the hash, while the wire always carries every argument. `GesSchemaValues.CompleteMessage` (Swift
   `completeMessage(_:_:)`), for a `GesSchema` without binding as for a bound schema, fills left-out arguments with their defaults and optional ones with `nothing`, reporting
@@ -41,6 +43,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   for the reached messages and conversions to and from Messages (Swift `toMessage()`, `init(message:)`,
   `init(lenientMessage:)`; C# `ToMessage()`, `FromMessage`, `FromMessageLenient`). Two model sets that share members
   convert into each other where the case fits (Swift `init?(_:)`, C# `From`) (specs/Schemas.md#model-message-sets).
+  Wire code with `--models` counts only the model groups whose models it converts to, so a message `Shield` of one group
+  no longer collides with a schema `:Shield` of a group generated elsewhere; a real collision names both groups and
+  suggests separate wire generations.
 - Message arguments and set parameters accept the empty defaults `[]` for a List and `[:]` for a Map.
 - The VS Code extension offers the syntax completions of Sublime Text and TextMate: keywords, built-in types after
   `as`, `is` and `:`, and collection selectors after `[:`. The shared catalog now lists every selector and more keywords.
@@ -57,6 +62,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - The TextMate, Sublime Text and VS Code grammars highlight `between`, `step`, `ascending`/`descending`,
   `:contains any`/`all`, `:map … by`, `:split on whitespace` and `:has three of …` as keywords, and words such as
   `from`, `after` and `integer` as names when they are argument labels or variables.
+- VS Code's default themes color GES word operators such as `and`, `is`, `default` and `parse` as keywords (scope
+  `keyword.operator.wordlike`); the grammars highlight extension names such as `:math.distance` and function calls.
+  The TextMate Classic grammars are generated from the JSON grammars and now match them again.
 
 ## [0.6.0] — 2026-11-23
 

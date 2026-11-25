@@ -21,7 +21,8 @@ extension GesSwiftEmitter {
             self.wireSpace = wireSpace
         }
 
-        func type(_ name: String) -> GesModelType? { layout.types.first { $0.name == name } }
+        // The model of a wire type, found by its schema: a wire message's name may carry the message suffix, a model's never.
+        func type(_ wire: GesPlanType) -> GesModelType? { layout.types.first { $0.lookup == wire.layout.lookup } }
 
         func local(_ name: String) -> String {
             defer { counter += 1 }
@@ -66,7 +67,7 @@ extension GesSwiftEmitter {
             guard let wire = type.fields.first(where: { $0.layout.name == field.field.name }) else {
                 throw GesGeneratorError(
                     GesGeneratorError.usage,
-                    "The field \(field.field.name) of the model :\(model.name) has no counterpart in the wire record; generate the model from the same schema."
+                    "The field \(field.field.name) of the model \(model.name) has no counterpart in the wire record; generate the model from the same schema."
                 )
             }
             let local = conversion.local("field")
@@ -94,7 +95,7 @@ extension GesSwiftEmitter {
             guard let match = fields.first(where: { $0.field.name == field.layout.name }) else {
                 throw GesGeneratorError(
                     GesGeneratorError.usage,
-                    "The field \(field.layout.name) of :\(type.name) has no counterpart in the model; generate the model from the same schema."
+                    "The field \(field.layout.name) of the \(kind(type)) \(written(type)) has no counterpart in the model; generate the model from the same schema."
                 )
             }
             fromModelField(&code, field, match, model.name, "self", "model.\(member(match.base))", conversion)
@@ -107,7 +108,7 @@ extension GesSwiftEmitter {
     }
 
     private static func unconvertible(_ type: GesPlanType, _ field: String) -> GesGeneratorError {
-        GesGeneratorError(GesGeneratorError.usage, "The field \(field) of :\(type.name) has no counterpart in the model; generate the model from the same schema.")
+        GesGeneratorError(GesGeneratorError.usage, "The field \(field) of the \(kind(type)) \(written(type)) has no counterpart in the model; generate the model from the same schema.")
     }
 
     // A wire message set that is also a model set converts its parameters as fields and its selected member as the case.

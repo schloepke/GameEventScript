@@ -16,7 +16,8 @@ extension GesCSharpEmitter {
             self.qualifier = qualifier
         }
 
-        func type(_ name: String) -> GesModelType? { layout.types.first { $0.name == name } }
+        // The model of a wire type, found by its schema: a wire message's name may carry the message suffix, a model's never.
+        func type(_ wire: GesPlanType) -> GesModelType? { layout.types.first { $0.lookup == wire.layout.lookup } }
 
         func local(_ name: String) -> String {
             defer { counter += 1 }
@@ -138,7 +139,7 @@ extension GesCSharpEmitter {
     }
 
     private static func unconvertible(_ type: GesPlanType, _ field: String) -> GesGeneratorError {
-        GesGeneratorError(GesGeneratorError.usage, "The field \(field) of :\(type.name) has no counterpart in the model; generate the model from the same schema.")
+        GesGeneratorError(GesGeneratorError.usage, "The field \(field) of the \(kind(type)) \(written(type)) has no counterpart in the model; generate the model from the same schema.")
     }
 
     private static func trimmed(_ text: String) -> String {

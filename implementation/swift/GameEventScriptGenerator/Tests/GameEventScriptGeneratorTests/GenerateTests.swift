@@ -104,15 +104,13 @@ final class GenerateTests: XCTestCase {
         XCTAssertTrue(single.contains("\nextension Game {\n"))
         XCTAssertEqual(single.filter { $0 == "{" }.count, single.filter { $0 == "}" }.count)
         XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Grid"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Panels", extendNamespace: "Panels")) }, "generate.usage")
-        // A type of any model group counts, since the models' namespace holds them all: models in Game hold Report, so wire code
-        // cannot live in Game.Report, whether Report shares the wire root's group or not.
-        for source in ["wire model schema :Grid as { a: :Boolean }\nmodel schema :Report as { b: :Boolean }\n", "wire model schema :Grid as { a: :Boolean }\nmodel(hud) schema :Report as { b: :Boolean }\n"] {
-            let withReport = try GesSchemaSet(parsing: source)
-            XCTAssertEqual(
-                code { try GesSchemaGenerator.generate(withReport, roots: ["Grid"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Report", models: "Game")) },
-                "generate.nameCollision"
-            )
-        }
+        // A type of the model group that the wire code converts to counts, since the models' namespace holds it: models in Game
+        // hold Report, so wire code cannot live in Game.Report. A type of another group lives where its own generation puts it.
+        let report = GesSchemaGenerateOptions(language: .swift, namespace: "Game.Report", models: "Game")
+        let sameGroup = try GesSchemaSet(parsing: "wire model schema :Grid as { a: :Boolean }\nmodel schema :Report as { b: :Boolean }\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(sameGroup, roots: ["Grid"], parameters: GesSchemaParameters(), options: report) }, "generate.nameCollision")
+        let other = try GesSchemaSet(parsing: "wire model schema :Grid as { a: :Boolean }\nmodel(hud) schema :Report as { b: :Boolean }\n")
+        XCTAssertTrue(try GesSchemaGenerator.generate(other, roots: ["Grid"], parameters: GesSchemaParameters(), options: report).contains("enum Report"))
         // The wire namespace holds the `<Name>Wire` members of packed roots, which a models' namespace continuing it cannot name.
         XCTAssertEqual(wire(.swift, "Game", "Game.CellWire"), "generate.nameCollision")
         // Swift wire code names model types through the models' namespace and its conversions name the wire namespace. Inside

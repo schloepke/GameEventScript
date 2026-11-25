@@ -22,7 +22,8 @@ internal static partial class GesSwiftEmitter
         // record or tag set means the model's when the models live in the global namespace.
         internal string WireSpace { get; } = wireSpace;
 
-        internal GesModelType? Type(string name) => layout.Types.Find(type => type.Name == name);
+        // The model of a wire type, found by its schema: a wire message's name may carry the message suffix, a model's never.
+        internal GesModelType? Type(GesPlanType wire) => layout.Types.Find(type => type.Lookup == wire.Layout.Lookup);
 
         private int _local;
 
@@ -74,7 +75,7 @@ internal static partial class GesSwiftEmitter
             }
 
             var wire = type.Fields.Find(candidate => candidate.Layout.Name == field.Field.Name)
-                ?? throw new GesGeneratorException(GesGeneratorException.Usage, $"The field {field.Field.Name} of the model :{model.Name} has no counterpart in the wire record; generate the model from the same schema.");
+                ?? throw new GesGeneratorException(GesGeneratorException.Usage, $"The field {field.Field.Name} of the model {model.Name} has no counterpart in the wire record; generate the model from the same schema.");
             var local = conversion.Local("field");
             code.Line($"let {local}: {ModelType(field.Value, model.Name, conversion)}");
             ToModelField(code, wire, field, model.Name, "self", local, conversion);
@@ -101,7 +102,7 @@ internal static partial class GesSwiftEmitter
         foreach (var field in type.Fields)
         {
             var match = fields.Find(candidate => candidate.Field.Name == field.Layout.Name)
-                ?? throw new GesGeneratorException(GesGeneratorException.Usage, $"The field {field.Layout.Name} of :{type.Name} has no counterpart in the model; generate the model from the same schema.");
+                ?? throw new GesGeneratorException(GesGeneratorException.Usage, $"The field {field.Layout.Name} of the {Kind(type)} {Written(type)} has no counterpart in the model; generate the model from the same schema.");
             FromModelField(code, field, match, model.Name, "self", $"model.{Member(match.Base)}", conversion);
         }
 
@@ -111,7 +112,7 @@ internal static partial class GesSwiftEmitter
     }
 
     private static GesGeneratorException Unconvertible(GesPlanType type, string field)
-        => new(GesGeneratorException.Usage, $"The field {field} of :{type.Name} has no counterpart in the model; generate the model from the same schema.");
+        => new(GesGeneratorException.Usage, $"The field {field} of the {Kind(type)} {Written(type)} has no counterpart in the model; generate the model from the same schema.");
 
     // A wire message set that is also a model set converts its parameters as fields and its selected member as the case.
     private static void SetModelMembers(GesSchemaPlanner.Code code, GesPlanType type, GesModelType model, string access, ModelConversion conversion)

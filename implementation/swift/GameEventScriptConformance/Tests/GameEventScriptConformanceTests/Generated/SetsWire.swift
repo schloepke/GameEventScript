@@ -453,7 +453,7 @@ extension SetsWire {
         }
     }
 
-    /// The message `:MoveTo`, read and written without allocation once its storage has grown.
+    /// The message `MoveTo`, read and written without allocation once its storage has grown.
     final class MoveTo {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0x64d93f94e7201d18
@@ -684,7 +684,7 @@ extension SetsWire {
         }
     }
 
-    /// The message `:Stop`, read and written without allocation.
+    /// The message `Stop`, read and written without allocation.
     struct Stop: Sendable {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0x44a4ba36abe21015

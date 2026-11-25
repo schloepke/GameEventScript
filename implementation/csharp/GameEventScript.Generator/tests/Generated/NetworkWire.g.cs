@@ -423,7 +423,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         }
     }
 
-    /// <summary>The message <c>:Fire</c>, read and written without allocation.</summary>
+    /// <summary>The message <c>Fire</c>, read and written without allocation.</summary>
     internal partial struct Fire
     {
         /// <summary>The schema hash, independent of parameter values.</summary>
@@ -510,7 +510,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         public void Quantize() => __Quantize(__paths, 0);
     }
 
-    /// <summary>The message <c>:Move</c>, read and written without allocation.</summary>
+    /// <summary>The message <c>Move</c>, read and written without allocation.</summary>
     internal partial struct Move
     {
         /// <summary>The schema hash, independent of parameter values.</summary>
@@ -916,7 +916,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         /// <summary>The network hash over the routes and their bound roots, which the handshake compares.</summary>
         public const ulong Hash = 0xf589a3e2e3aaff61UL;
 
-        /// <summary>The index of the route <c>client sends :Commands reliable</c>.</summary>
+        /// <summary>The index of the route <c>client sends Commands reliable</c>.</summary>
         public const int ClientSendsCommands = 0;
 
         /// <summary>The index of the route <c>server publishes :World latest</c>.</summary>
@@ -928,7 +928,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
         /// <summary>The index of the route <c>server sends :Chunk bulk</c>.</summary>
         public const int ServerSendsChunk = 2;
 
-        /// <summary>Encodes <paramref name="value"/> into <paramref name="buffer"/> and sends it on the route <c>client sends :Commands reliable</c>.</summary>
+        /// <summary>Encodes <paramref name="value"/> into <paramref name="buffer"/> and sends it on the route <c>client sends Commands reliable</c>.</summary>
         /// <param name="connection">The client's connection.</param>
         /// <param name="value">The record.</param>
         /// <param name="buffer">The buffer the record is encoded into; its <c>MaxByteCount</c> bytes always suffice.</param>
@@ -983,13 +983,13 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             /// <summary>Gets the end's connection.</summary>
             public GesNetworkConnection Connection => End.Connection;
 
-            /// <summary>Encodes a record and sends it on the route <c>client sends :Commands reliable</c>.</summary>
+            /// <summary>Encodes a record and sends it on the route <c>client sends Commands reliable</c>.</summary>
             /// <param name="value">The record.</param>
             /// <returns>The status of <see cref="GesNetworkClientEnd.Send(int, ReadOnlySpan{byte})"/>.</returns>
             /// <exception cref="GesWireException">A value does not fit its field.</exception>
             public GesNetworkSendStatus Send(in global::GameEventScript.Tests.Generator.Network.Wire.Commands value) => End.Send(ClientSendsCommands, __send_buffer.AsSpan(0, value.Write(__send_buffer)));
 
-            /// <summary>Encodes a message and sends it on the route <c>client sends :Commands reliable</c>.</summary>
+            /// <summary>Encodes a message and sends it on the route <c>client sends Commands reliable</c>.</summary>
             /// <param name="value">The message.</param>
             /// <returns>The status of <see cref="GesNetworkClientEnd.Send(int, ReadOnlySpan{byte})"/>.</returns>
             /// <exception cref="global::System.ArgumentNullException"><paramref name="value"/> is null.</exception>
@@ -1325,7 +1325,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
                                 }
                                 catch (GesWireException)
                                 {
-                                    End.Close(networkEvent.Client, "undecodable :Commands");
+                                    End.Close(networkEvent.Client, "undecodable Commands");
                                     break;
                                 }
 
@@ -1405,7 +1405,7 @@ namespace GameEventScript.Tests.Generator.Network.Wire
             {
             }
 
-            /// <summary>A message arrived on the route <c>client sends :Commands reliable</c>.</summary>
+            /// <summary>A message arrived on the route <c>client sends Commands reliable</c>.</summary>
             /// <param name="client">The client.</param>
             /// <param name="value">The message, whose record is valid until the method returns.</param>
             void OnCommands(int client, global::GameEventScript.Tests.Generator.Network.Wire.Commands.Case value)

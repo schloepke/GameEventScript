@@ -210,7 +210,7 @@ extension ArgumentsWire {
         }
     }
 
-    /// The message `:Fire`, read and written without allocation.
+    /// The message `Fire`, read and written without allocation.
     struct Fire: Sendable {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0xf5b0aae8e2083728
@@ -496,7 +496,7 @@ extension ArgumentsWire {
         }
     }
 
-    /// The message `:Mark`, read and written without allocation once its storage has grown.
+    /// The message `Mark`, read and written without allocation once its storage has grown.
     final class Mark {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0xdc2f97c5f1a42d91
@@ -674,7 +674,7 @@ extension ArgumentsWire {
         }
     }
 
-    /// The message `:Say`, read and written without allocation once its storage has grown.
+    /// The message `Say`, read and written without allocation once its storage has grown.
     final class Say {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0x8c08da8bd1569841
@@ -836,7 +836,7 @@ extension ArgumentsWire {
         }
     }
 
-    /// The message `:Stop`, read and written without allocation.
+    /// The message `Stop`, read and written without allocation.
     struct Stop: Sendable {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0x75103ff98f298835
@@ -965,7 +965,7 @@ extension ArgumentsWire {
         }
     }
 
-    /// The message `:Turn`, read and written without allocation.
+    /// The message `Turn`, read and written without allocation.
     struct Turn: Sendable {
         /// The schema hash, independent of parameter values.
         static let schemaHash: UInt64 = 0x2bfdbc6814fe7069

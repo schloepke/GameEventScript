@@ -182,6 +182,8 @@ NETWORK_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/network.gess"
 MESSAGES_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/messages.gess"
 # Message sets with parameters: a wire set beside its model, and two model sets that convert into each other.
 SETS_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/sets.gess"
+# A message and a schema of one name in different model groups, which wire code with --models converts apart.
+SHIELD_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/shield.gess"
 ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
 CSHARP_GENERATED = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
 SWIFT_GENERATED = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
@@ -285,7 +287,9 @@ SET_OUTPUTS = tuple((directory, files, selection, language, space)
                         (NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=64m", "--use-schemas", "SetGame.GameSchemas"], "SetGameUse"))
                     for language in ("csharp", "swift")) \
     + ((NETWORK_FIXTURE.parent, [NETWORK_FIXTURE.name], ["--root", "Game", "--param", "worldSize=64m", "--values", "--schemas", "GameSchemas", "--import", "Foundation", "--import", "Shared"], "swift", "SetImports"),) \
-    + tuple((MESSAGES_FIXTURE.parent, [MESSAGES_FIXTURE.name], ["--root", ":Game", "--values", "--message-suffix", "Message"], language, "Suffixed") for language in ("csharp", "swift"))
+    + tuple((MESSAGES_FIXTURE.parent, [MESSAGES_FIXTURE.name], ["--root", ":Game", "--values", "--message-suffix", "Message"], language, "Suffixed") for language in ("csharp", "swift")) \
+    + tuple((SHIELD_FIXTURE.parent, [SHIELD_FIXTURE.name], [*selection, "--values", "--schemas", "Schemas", "--models", "Commands"], language, "Wire")
+            for selection in (["--wire", "default"], ["--wire", "default", "--message-suffix", "Message"]) for language in ("csharp", "swift"))
 
 
 def set_outputs(csharp, swift, work):

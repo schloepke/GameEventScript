@@ -140,4 +140,67 @@ final class SchemaSetTests: XCTestCase {
         XCTAssertEqual(schemaCode { _ = try set.schema("Lobby") }, "schema.ambiguousName")
         XCTAssertEqual(try set.schema("Lobby()").kind, .message)
     }
+
+    func testWireCodeCountsOnlyTheModelGroupsItConvertsTo() throws {
+        let shield =
+            "schema :Shield as { maxShield: :Number between 0 and 100_000 }\n"
+            + "schema :Components as { shield: :Shield optional }\n"
+            + "message Shield(range: :Quantity(m) between 0m and 1000m step 1cm)\n"
+            + "model(commands) messages ShieldCommands as (Shield)\n"
+            + "wire model(commands) messages DroneCommands as (Shield)\n"
+            + "model(data) schema :Composition as { components: :Components }\n"
+
+        func conversions(_ code: String, _ language: GesSchemaLanguage) -> Int {
+            code.components(separatedBy: language == .csharp ? ".ToModel()" : ".toModel()").count - 1
+                + code.components(separatedBy: language == .csharp ? " ToModel()" : " toModel()").count - 1
+        }
+
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            // The models of data hold a type Shield too, but the wire code converts only to those of commands.
+            let set = try GesSchemaSet(parsing: shield)
+            let roots = GesSchemaGenerator.wireRoots(set, group: "default")
+
+            func generate(_ set: GesSchemaSet, _ roots: [String], suffix: String = "") throws -> String {
+                try GesSchemaGenerator.generate(
+                    set,
+                    roots: roots,
+                    parameters: GesSchemaParameters(),
+                    options: GesSchemaGenerateOptions(language: language, namespace: "Wire", models: "Commands", schemaSet: "Schemas", messageSuffix: suffix)
+                )
+            }
+
+            let wire = try generate(set, roots)
+            XCTAssertGreaterThan(conversions(wire, language), 0)
+
+            // A suffixed wire message still converts to its model, which keeps the declared name.
+            XCTAssertEqual(conversions(try generate(set, roots, suffix: "Message"), language), conversions(wire, language))
+
+            // A wire root that reaches data as well puts both groups into the models' namespace, where Shield collides.
+            let both = try GesSchemaSet(parsing: shield.replacingOccurrences(of: "schema :Components", with: "wire schema :Components"))
+            do {
+                _ = try generate(both, GesSchemaGenerator.wireRoots(both, group: "default"), suffix: "Message")
+                XCTFail("Expected a name collision")
+            } catch let error as GesGeneratorError {
+                XCTAssertEqual(error.code, "generate.nameCollision")
+                XCTAssertTrue(error.message.contains("'commands'") && error.message.contains("'data'"), error.message)
+            }
+        }
+    }
+
+    func testRoutesWriteMessageSetsWithoutAColon() throws {
+        let set = try GesSchemaSet(
+            parsing: "wire schema :World as { tick: :Number integer between 0 and 255 }\nwire messages Commands as (Fire)\n"
+                + "wire message Fire()\nnetwork :Game as {\n  client sends Commands reliable\n  server publishes :World latest\n}\n"
+        )
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            let code = try GesSchemaGenerator.generate(set, roots: [":Game"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: language))
+            XCTAssertTrue(code.contains("client sends Commands reliable"))
+            XCTAssertTrue(code.contains("undecodable Commands"))
+            XCTAssertTrue(code.contains("undecodable :World"))
+            XCTAssertTrue(code.contains("The message " + (language == .csharp ? "<c>Fire</c>" : "`Fire`") + ", read and written"))
+            for name in ["Commands", "Fire"] {
+                XCTAssertFalse(code.replacingOccurrences(of: "::" + name, with: "").contains(":" + name), name)
+            }
+        }
+    }
 }

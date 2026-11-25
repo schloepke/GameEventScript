@@ -149,6 +149,9 @@ enum GesCSharpEmitter {
 
     static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
 
+    // A message name stands without the colon that marks schemas.
+    static func written(_ type: GesPlanType) -> String { type.kind == .message ? type.layout.declared : ":" + type.layout.declared }
+
     static func record(_ code: inout Code, _ type: GesPlanType, _ access: String, _ context: Context) throws(GesGeneratorError) {
         var names: Names = [(type.name, "the type itself")]
         if !type.isItem {
@@ -163,7 +166,7 @@ enum GesCSharpEmitter {
             for constant in type.layout.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
         }
         if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: false, &names) }
-        let model = type.isItem ? nil : context.models?.type(type.name)
+        let model = type.isItem ? nil : context.models?.type(type)
         if model != nil { names.append(("ToModel", "the generated member ToModel")) }
         try GesSchemaPlanner.unique(type.name, names, context.topLevel)
 
@@ -171,7 +174,7 @@ enum GesCSharpEmitter {
         code.line(
             type.isItem
                 ? "/// <summary>An element of the list.</summary>"
-                : "/// <summary>The \(kind(type)) <c>:\(type.layout.declared)</c>, read and written without allocation\(type.isClass ? " once its storage has grown" : "").</summary>"
+                : "/// <summary>The \(kind(type)) <c>\(written(type))</c>, read and written without allocation\(type.isClass ? " once its storage has grown" : "").</summary>"
         )
         code.line(type.isClass ? "\(visibility) sealed partial class \(type.name)" : "\(visibility) partial struct \(type.name)")
         code.open("{")
@@ -616,7 +619,7 @@ enum GesCSharpEmitter {
         publicMethods(&code, type.membersAreClasses ? "" : "readonly ", write, read, "message")
         if parameters { fieldMethods(&code, type) }
         if context.values { valueMembers(&code, type, context.holder, lenient: lenient(type.layout, context.layout)) }
-        if let model = context.models?.type(type.name) { try modelMembers(&code, type, model, context.models!) }
+        if let model = context.models?.type(type) { try modelMembers(&code, type, model, context.models!) }
         code.blank()
         messageCases(&code, type, context)
         code.blank()

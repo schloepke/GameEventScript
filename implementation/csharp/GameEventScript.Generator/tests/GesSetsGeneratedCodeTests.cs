@@ -96,6 +96,18 @@ public sealed class GesSetsGeneratedCodeTests
     }
 
     [TestMethod]
+    public void ReadRejectsTagsOnTheEnvelope()
+    {
+        var message = Commands().ToMessage();
+        var tagged = GameEventScriptMessage.Create(message.Name, message.Arguments.ToArray(), ["urgent"]);
+        var error = Assert.ThrowsExactly<GesWireException>(() => Model.DroneCommands.FromMessage(tagged));
+        Assert.AreEqual(GesWireException.UnknownTag, error.Code);
+        Assert.AreEqual("", error.Path);
+        var bound = Set().Schema("DroneCommands").Bind();
+        Assert.AreEqual(GesWireException.UnknownTag, Assert.ThrowsExactly<GesWireException>(() => GesSchemaValues.Encode(bound, GesValue.GesMessage(tagged), new byte[Wire.DroneCommands.MaxByteCount])).Code);
+    }
+
+    [TestMethod]
     public void ConvertersTakeSharedMembers()
     {
         var move = Commands().Message;

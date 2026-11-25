@@ -32,6 +32,8 @@ public enum GesSchemaValues {
                     // The envelope of a set with parameters: the parameters, then the carried message.
                     let arguments = Array(message.arguments)
                     if message.name != schema.name || arguments.count != schema.labels.count + 1 { throw GesWireError(code: GesWireError.typeMismatch) }
+                    // The envelope carries no tags of its own; the carried message keeps its tags.
+                    if !message.tags.isEmpty { throw GesWireError(code: GesWireError.unknownTag) }
                     var argument = 0
                     var index = 0
                     while index < schema.nodes.count {
@@ -249,7 +251,8 @@ public enum GesSchemaValues {
             } else if field.marker == .optional {
                 completed.append(try GesMessageArgument(name: name, value: .nothing))
             } else if position < given.count && !fields[argument...].contains(where: { label($0) == given[position].name }) {
-                throw GesWireError(code: GesWireError.typeMismatch, path: field.name)
+                // An unknown label names its own argument (the message itself), as a label left over at the end does.
+                throw GesWireError(code: GesWireError.typeMismatch, path: argumentPath(current, given[position].name))
             } else {
                 throw GesWireError(code: GesWireError.missingField, path: field.name)
             }

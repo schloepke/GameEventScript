@@ -51,6 +51,8 @@ public static class GesSchemaValues
             {
                 // The envelope of a set with parameters: the parameters, then the carried message.
                 if (message.Name != schema.Name || message.Arguments.Count != schema.Labels.Length + 1) throw new GesWireException(GesWireException.TypeMismatch, "");
+                // The envelope carries no tags of its own; the carried message keeps its tags.
+                if (message.Tags.Count > 0) throw new GesWireException(GesWireException.UnknownTag, "");
                 var argument = 0;
                 for (var index = 0; index < schema.Nodes.Length; index = schema.Nodes[index].Next, argument++)
                 {
@@ -278,7 +280,8 @@ public static class GesSchemaValues
             if (position < given.Count && given[position].Name == label) completed.Add(given[position++]);
             else if (field.Default is { } fallback) completed.Add(new GesMessageArgument(label, Literal(field, fallback)));
             else if (field.Marker == GesSchemaFieldMarker.Optional) completed.Add(new GesMessageArgument(label, GesValue.GesNothing()));
-            else if (position < given.Count && !Declared(current, argument, given[position].Name)) throw new GesWireException(GesWireException.TypeMismatch, field.Name);
+            // An unknown label names its own argument (the message itself), as a label left over at the end does.
+            else if (position < given.Count && !Declared(current, argument, given[position].Name)) throw new GesWireException(GesWireException.TypeMismatch, ArgumentPath(current, given[position].Name));
             else throw new GesWireException(GesWireException.MissingField, field.Name);
         }
 

@@ -715,6 +715,7 @@ namespace GameEventScript.Tests.Generator.Sets.Model
         internal static global::GameEventScript.Tests.Generator.Sets.Model.DroneCommands ReadDroneCommandsMessage(GameEventScriptMessage message, string path)
         {
             if (message.Name != "DroneCommands") throw new GesWireException(GesWireException.TypeMismatch, path);
+            if (message.Tags.Count > 0) throw new GesWireException(GesWireException.UnknownTag, path);
             var last = message.Arguments.Count - 1;
             if (last < 0 || message.Arguments.NameAt(last) != "message")
             {
@@ -796,8 +797,7 @@ namespace GameEventScript.Tests.Generator.Sets.Model
         internal static global::GameEventScript.Tests.Generator.Sets.Model.Land ReadLandMessage(GameEventScriptMessage message, string path)
         {
             if (message.Name != "Land") throw new GesWireException(GesWireException.TypeMismatch, path);
-            foreach (var tag in message.Tags)
-                if (true) throw new GesWireException(GesWireException.UnknownTag, path);
+            if (message.Tags.Count > 0) throw new GesWireException(GesWireException.UnknownTag, path);
             var values = new GesValue[1];
             if (message.Arguments.Count <= 0) throw new GesWireException(GesWireException.MissingField, Path(path, "slow"));
             if (message.Arguments.NameAt(0) != "slow") throw new GesWireException(GesWireException.TypeMismatch, Path(path, "slow"));
@@ -833,6 +833,7 @@ namespace GameEventScript.Tests.Generator.Sets.Model
         internal static global::GameEventScript.Tests.Generator.Sets.Model.Landing ReadLandingMessage(GameEventScriptMessage message, string path)
         {
             if (message.Name != "Landing") throw new GesWireException(GesWireException.TypeMismatch, path);
+            if (message.Tags.Count > 0) throw new GesWireException(GesWireException.UnknownTag, path);
             var last = message.Arguments.Count - 1;
             if (last < 0 || message.Arguments.NameAt(last) != "message")
             {
@@ -922,8 +923,7 @@ namespace GameEventScript.Tests.Generator.Sets.Model
         internal static global::GameEventScript.Tests.Generator.Sets.Model.Stop ReadStopMessage(GameEventScriptMessage message, string path)
         {
             if (message.Name != "Stop") throw new GesWireException(GesWireException.TypeMismatch, path);
-            foreach (var tag in message.Tags)
-                if (true) throw new GesWireException(GesWireException.UnknownTag, path);
+            if (message.Tags.Count > 0) throw new GesWireException(GesWireException.UnknownTag, path);
             var values = new GesValue[0];
             if (message.Arguments.Count != 0) throw new GesWireException(GesWireException.TypeMismatch, path);
             return ReadStop(GesValue.GesRecord("Stop", StopFields, values), path);

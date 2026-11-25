@@ -281,6 +281,7 @@ extension SetsModel {
 
         static func readDroneCommandsMessage(_ message: GameEventScriptMessage, _ path: String) throws(GesWireError) -> DroneCommands {
             guard same(message.name, "DroneCommands") else { throw GesWireError(code: GesWireError.typeMismatch, path: path) }
+            guard message.tags.isEmpty else { throw GesWireError(code: GesWireError.unknownTag, path: path) }
             let arguments = message.arguments
             let last = arguments.count - 1
             guard last >= 0, same(arguments.nameAt(last), "message") else {
@@ -367,6 +368,7 @@ extension SetsModel {
 
         static func readLandingMessage(_ message: GameEventScriptMessage, _ path: String) throws(GesWireError) -> Landing {
             guard same(message.name, "Landing") else { throw GesWireError(code: GesWireError.typeMismatch, path: path) }
+            guard message.tags.isEmpty else { throw GesWireError(code: GesWireError.unknownTag, path: path) }
             let arguments = message.arguments
             let last = arguments.count - 1
             guard last >= 0, same(arguments.nameAt(last), "message") else {

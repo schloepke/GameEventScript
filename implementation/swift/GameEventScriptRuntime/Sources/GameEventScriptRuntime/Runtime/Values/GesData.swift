@@ -2,19 +2,29 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Data holds no external value, whose fields may change between handlers, anywhere inside: not in List items, Map
-// entries, Record fields or Message arguments. The walk keeps its own stack, so that no nesting depth exhausts the thread's.
+// entries, Record fields or Message arguments. The walk keeps its own stack, so that no nesting depth exhausts the thread's;
+// it checks scalar children in place and fills the stack only with nested Lists, Maps and Messages.
 func gesIsData(_ value: GesValue) -> Bool {
-    var pending = [value]
-    while let next = pending.popLast() {
-        if next.externalValue != nil { return false }
+    if value.externalValue != nil { return false }
+    var pending: [GesValue] = []
+    var next = value
+    while true {
         if let items = next.listValue {
-            pending.append(contentsOf: items)
+            for item in items where !gesVisitData(item, &pending) { return false }
         } else if let fields = next.asMap {
-            pending.append(contentsOf: fields.valueStorage)
+            for item in fields.valueStorage where !gesVisitData(item, &pending) { return false }
         } else if let message = next.messageValue {
-            pending.append(contentsOf: message.arguments.values)
+            for item in message.arguments.values where !gesVisitData(item, &pending) { return false }
         }
+        guard let deferred = pending.popLast() else { return true }
+        next = deferred
     }
+}
+
+// Rejects an external child and defers a nested one to the walk.
+private func gesVisitData(_ child: GesValue, _ pending: inout [GesValue]) -> Bool {
+    if child.externalValue != nil { return false }
+    if child.listValue != nil || child.asMap != nil || child.messageValue != nil { pending.append(child) }
     return true
 }
 

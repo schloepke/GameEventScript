@@ -273,11 +273,15 @@ extension GesCSharpModelEmitter {
         code.line("internal static \(record) Read\(type.name)Message(GameEventScriptMessage message, string path)")
         code.open("{")
         code.line("if (message.Name != \(literal(type.name))) throw new GesWireException(GesWireException.TypeMismatch, path);")
-        code.line("foreach (var tag in message.Tags)")
-        let unknown = tags.isEmpty ? "true" : tags.map { "tag != " + literal($0.field.name) }.joined(separator: " && ")
-        code.line("    if (\(unknown)) throw new GesWireException(GesWireException.UnknownTag, path);")
+        if tags.isEmpty {
+            code.line("if (message.Tags.Count > 0) throw new GesWireException(GesWireException.UnknownTag, path);")
+        } else {
+            code.line("foreach (var tag in message.Tags)")
+            let unknown = tags.map { "tag != " + literal($0.field.name) }.joined(separator: " && ")
+            code.line("    if (\(unknown)) throw new GesWireException(GesWireException.UnknownTag, path);")
+        }
         code.line("var values = new GesValue[\(fields.count)];")
-        argumentValues(&code, arguments, 0)
+        argumentValues(&code, arguments)
         code.line("if (message.Arguments.Count != \(arguments.count)) throw new GesWireException(GesWireException.TypeMismatch, path);")
         for (index, tag) in tags.enumerated() {
             code.line("values[\(arguments.count + index)] = GesValue.GesBoolean(HasTag(message, \(literal(tag.field.name))));")
@@ -287,13 +291,12 @@ extension GesCSharpModelEmitter {
     }
 
     // Takes the arguments of a message into `values`, each with its declared label at its index.
-    private static func argumentValues(_ code: inout Code, _ arguments: [GesModelPlanField], _ offset: Int) {
-        for (index, field) in arguments.enumerated() {
-            let at = offset + index
+    private static func argumentValues(_ code: inout Code, _ arguments: [GesModelPlanField]) {
+        for (at, field) in arguments.enumerated() {
             let path = "Path(path, \(literal(field.field.name)))"
             code.line("if (message.Arguments.Count <= \(at)) throw new GesWireException(GesWireException.MissingField, \(path));")
             code.line("if (message.Arguments.NameAt(\(at)) != \(literal(field.field.unlabeled ? "_" : field.field.name))) throw new GesWireException(GesWireException.TypeMismatch, \(path));")
-            code.line("values[\(index)] = message.Arguments.ValueAt(\(at));")
+            code.line("values[\(at)] = message.Arguments.ValueAt(\(at));")
         }
     }
 
@@ -329,6 +332,8 @@ extension GesCSharpModelEmitter {
         } else {
             // The envelope: the parameters in declared order, then the carried message as `message`.
             code.line("if (message.Name != \(literal(type.name))) throw new GesWireException(GesWireException.TypeMismatch, path);")
+            // The envelope carries no tags of its own; the carried message keeps its tags.
+            code.line("if (message.Tags.Count > 0) throw new GesWireException(GesWireException.UnknownTag, path);")
             code.line("var last = message.Arguments.Count - 1;")
             code.line("if (last < 0 || message.Arguments.NameAt(last) != \"message\")")
             code.open("{")

@@ -155,30 +155,42 @@ public readonly struct GesDataMap : IEquatable<GesDataMap>, IEnumerable<KeyValue
     public static bool operator !=(GesDataMap left, GesDataMap right) => !left.Equals(right);
 
     // Data holds no external value, whose fields may change between handlers, anywhere inside: not in List items, Map
-    // entries, Record fields or Message arguments. The walk keeps its own stack, so that no nesting depth exhausts the thread's.
+    // entries, Record fields or Message arguments. The walk keeps its own stack, so that no nesting depth exhausts the thread's;
+    // it checks scalar children in place and creates the stack only for the first nested List, Map or Message.
     internal static bool IsData(in GesValue value)
     {
-        var pending = new Stack<GesValue>();
-        pending.Push(value);
-        while (pending.Count > 0)
+        if (value.ExternalValue is not null) return false;
+        Stack<GesValue>? pending = null;
+        var next = value;
+        while (true)
         {
-            var next = pending.Pop();
-            if (next.ExternalValue is not null) return false;
             if (next.ValueKind == GesBytecodeTypeKind.List)
             {
                 var items = next.AsList();
-                for (var index = 0; index < items.Length; index++) pending.Push(items[index]);
+                for (var index = 0; index < items.Length; index++)
+                    if (!Visit(items[index], ref pending)) return false;
             }
             else if (next.AsMap() is { } map)
             {
-                for (var index = 0; index < map.Length; index++) pending.Push(map.ValueAt(index));
+                for (var index = 0; index < map.Length; index++)
+                    if (!Visit(map.ValueAt(index), ref pending)) return false;
             }
             else if (next.Message is { } message)
             {
-                for (var index = 0; index < message.Arguments.Count; index++) pending.Push(message.Arguments.ValueAt(index));
+                for (var index = 0; index < message.Arguments.Count; index++)
+                    if (!Visit(message.Arguments.ValueAt(index), ref pending)) return false;
             }
-        }
 
+            if (pending is null || pending.Count == 0) return true;
+            next = pending.Pop();
+        }
+    }
+
+    // Rejects an external child and defers a nested one to the walk.
+    private static bool Visit(in GesValue child, ref Stack<GesValue>? pending)
+    {
+        if (child.ExternalValue is not null) return false;
+        if (child.ValueKind == GesBytecodeTypeKind.List || child.Message is not null || child.AsMap() is not null) (pending ??= new Stack<GesValue>()).Push(child);
         return true;
     }
 }

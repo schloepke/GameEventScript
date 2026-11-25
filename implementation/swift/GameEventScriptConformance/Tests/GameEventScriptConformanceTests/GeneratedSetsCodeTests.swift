@@ -66,6 +66,22 @@ final class GeneratedSetsCodeTests: XCTestCase {
         }
     }
 
+    func testReadRejectsTagsOnTheEnvelope() throws {
+        let message = commands().toMessage()
+        let tagged = try GameEventScriptMessage(name: message.name, arguments: Array(message.arguments), tags: ["urgent"])
+        do {
+            _ = try SetsModel.DroneCommands(message: tagged)
+            XCTFail("expected an unknown tag")
+        } catch {
+            XCTAssertEqual(error.code, GesWireError.unknownTag)
+            XCTAssertEqual(error.path, "")
+        }
+        let bound = try set().schema("DroneCommands").bind()
+        XCTAssertThrowsError(try GesSchemaValues.encode(bound, .message(tagged))) { error in
+            XCTAssertEqual((error as? GesWireError)?.code, GesWireError.unknownTag)
+        }
+    }
+
     func testConvertersTakeSharedMembers() {
         let move = commands().message
         let landing = SetsModel.Landing.Case(move)

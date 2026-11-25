@@ -207,6 +207,8 @@ extension GesSwiftModelEmitter {
         } else {
             // The envelope: the parameters in declared order, then the carried message as `message`.
             code.line("guard same(message.name, \(name)) else { throw GesWireError(code: GesWireError.typeMismatch, path: path) }")
+            // The envelope carries no tags of its own; the carried message keeps its tags.
+            code.line("guard message.tags.isEmpty else { throw GesWireError(code: GesWireError.unknownTag, path: path) }")
             code.line("let arguments = message.arguments")
             code.line("let last = arguments.count - 1")
             code.open("guard last >= 0, same(arguments.nameAt(last), \"message\") else {")

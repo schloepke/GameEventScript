@@ -495,7 +495,8 @@ wire messages DroneCommands(ids: :List(:DroneId) max 64 default []) as (MoveTo, 
   `DroneCommands(ids: [[id: 3]], message: MoveTo(target: :Point(4m, 2m)))`. A set without parameters reads and writes
   the carried message itself, as before. Since sets and messages share the [message namespace](#declarations), the name of
   such a message never stands for two things.
-- A set with parameters carries no tags of its own; the carried message keeps its tags.
+- A set with parameters carries no tags of its own; the carried message keeps its tags. Encoding or reading a model of
+  such a set fails with `wire.unknownTag` when the envelope holds a tag.
 - **Paths.** An error inside the carried message, such as a message that is no member of the set, has the path of the
   argument `message` before its own, as in `message.target.x`, when encoding, in the [lenient read](#lenient-read) and in
   [model sets](#model-message-sets).
@@ -1724,7 +1725,7 @@ message whose arguments hold free data, such as a `:Map` of a [model](#model-typ
 | Code | Condition |
 | --- | --- |
 | `wire.missingField` | an argument without a default that is not optional is left out; the path names the argument |
-| `wire.typeMismatch` | a label is unknown, repeated or out of declared order, or the message is not the schema's message or a member of its set |
+| `wire.typeMismatch` | a label is unknown, repeated or out of declared order, or the message is not the schema's message or a member of its set; the path names the argument of that label, or the message for an unknown label |
 
 For a set with [parameters](#set-parameters), the lenient read completes the set's message with the parameters and the
 carried message alike: `message` is never left out, and a left-out argument of the carried message reports its path

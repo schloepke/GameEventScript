@@ -219,6 +219,8 @@ internal static partial class GesSwiftModelEmitter
         {
             // The envelope: the parameters in declared order, then the carried message as `message`.
             code.Line($"guard same(message.name, {name}) else {{ throw GesWireError(code: GesWireError.typeMismatch, path: path) }}");
+            // The envelope carries no tags of its own; the carried message keeps its tags.
+            code.Line("guard message.tags.isEmpty else { throw GesWireError(code: GesWireError.unknownTag, path: path) }");
             code.Line("let arguments = message.arguments");
             code.Line("let last = arguments.count - 1");
             code.Open("guard last >= 0, same(arguments.nameAt(last), \"message\") else {");

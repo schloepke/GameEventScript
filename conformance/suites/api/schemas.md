@@ -28516,6 +28516,27 @@ schema: {"completed": {"error": {"code": "wire.outOfRange", "path": "target"}}}
 
 ---
 
+## Test: a lenient read reports an unknown label before a required argument
+
+The path names the unknown label's argument, the message itself, not the next declared argument.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-complete-unknown-required
+schemaApi: {"sources": ["wire message Move(x: :Number integer between 0 and 9, y: :Number integer between 0 and 9)\n"], "root": "Move", "complete": {"type": ":Message", "message": {"name": "Move", "args": [{"name": "x", "value": {"type": ":Number.int64", "value": "1"}}, {"name": "z", "value": {"type": ":Number.int64", "value": "2"}}, {"name": "y", "value": {"type": ":Number.int64", "value": "3"}}]}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"completed": {"error": {"code": "wire.typeMismatch", "path": ""}}}
+```
+
+---
+
 ## Test: a lenient read rejects labels out of order
 
 A label given after a later declared one is out of order.

@@ -281,10 +281,15 @@ internal static partial class GesCSharpModelEmitter
         code.Line($"internal static {record} Read{type.Name}Message(GameEventScriptMessage message, string path)");
         code.Open("{");
         code.Line($"if (message.Name != {GesSchemaPlanner.Literal(type.Name, false)}) throw new GesWireException(GesWireException.TypeMismatch, path);");
-        code.Line("foreach (var tag in message.Tags)");
-        code.Line($"    if ({(tags.Count == 0 ? "true" : string.Join(" && ", tags.ConvertAll(tag => "tag != " + GesSchemaPlanner.Literal(tag.Field.Name, false))))}) throw new GesWireException(GesWireException.UnknownTag, path);");
+        if (tags.Count == 0) code.Line("if (message.Tags.Count > 0) throw new GesWireException(GesWireException.UnknownTag, path);");
+        else
+        {
+            code.Line("foreach (var tag in message.Tags)");
+            code.Line($"    if ({string.Join(" && ", tags.ConvertAll(tag => "tag != " + GesSchemaPlanner.Literal(tag.Field.Name, false)))}) throw new GesWireException(GesWireException.UnknownTag, path);");
+        }
+
         code.Line($"var values = new GesValue[{Depth(fields.Count)}];");
-        Arguments(code, arguments, 0);
+        Arguments(code, arguments);
         code.Line($"if (message.Arguments.Count != {Depth(arguments.Count)}) throw new GesWireException(GesWireException.TypeMismatch, path);");
         for (var index = 0; index < tags.Count; index++)
             code.Line($"values[{Depth(arguments.Count + index)}] = GesValue.GesBoolean(HasTag(message, {GesSchemaPlanner.Literal(tags[index].Field.Name, false)}));");
@@ -293,16 +298,16 @@ internal static partial class GesCSharpModelEmitter
     }
 
     // Takes the arguments of a message into `values`, each with its declared label at its index.
-    private static void Arguments(GesSchemaPlanner.Code code, List<GesModelPlanField> arguments, int offset)
+    private static void Arguments(GesSchemaPlanner.Code code, List<GesModelPlanField> arguments)
     {
         for (var index = 0; index < arguments.Count; index++)
         {
             var field = arguments[index];
-            var at = Depth(offset + index);
+            var at = Depth(index);
             var path = $"Path(path, {GesSchemaPlanner.Literal(field.Field.Name, false)})";
             code.Line($"if (message.Arguments.Count <= {at}) throw new GesWireException(GesWireException.MissingField, {path});");
             code.Line($"if (message.Arguments.NameAt({at}) != {GesSchemaPlanner.Literal(field.Field.Unlabeled ? "_" : field.Field.Name, false)}) throw new GesWireException(GesWireException.TypeMismatch, {path});");
-            code.Line($"values[{Depth(index)}] = message.Arguments.ValueAt({at});");
+            code.Line($"values[{at}] = message.Arguments.ValueAt({at});");
         }
     }
 
@@ -341,6 +346,8 @@ internal static partial class GesCSharpModelEmitter
         {
             // The envelope: the parameters in declared order, then the carried message as `message`.
             code.Line($"if (message.Name != {GesSchemaPlanner.Literal(type.Name, false)}) throw new GesWireException(GesWireException.TypeMismatch, path);");
+            // The envelope carries no tags of its own; the carried message keeps its tags.
+            code.Line("if (message.Tags.Count > 0) throw new GesWireException(GesWireException.UnknownTag, path);");
             code.Line("var last = message.Arguments.Count - 1;");
             code.Line("if (last < 0 || message.Arguments.NameAt(last) != \"message\")");
             code.Open("{");

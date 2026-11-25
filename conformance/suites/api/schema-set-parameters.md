@@ -126,6 +126,27 @@ schema: {"canonical": "gess1\nmessages Cmd\nargument ids List(Number integer bet
 
 ---
 
+## Test: the envelope of a set with parameters carries no tags
+
+Only the carried message keeps its tags; a tag on the envelope is unknown.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-set-parameters-envelope-tag
+schemaApi: {"sources": ["wire message Hit(target: :Number integer between 0 and 15) tags (#crit)\nwire message Stop()\nwire messages Cmd(ids: :List(:Number integer between 0 and 7) max 4 default [], urgent: :Boolean optional) as (Hit, Stop)\n"], "root": "Cmd", "encode": {"type": ":Message", "message": {"name": "Cmd", "args": [{"name": "ids", "value": {"type": ":List", "items": []}}, {"name": "urgent", "value": {"type": ":Nothing"}}, {"name": "message", "value": {"type": ":Message", "message": {"name": "Hit", "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "9"}}], "tags": ["crit"]}}}], "tags": ["crit"]}}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"canonical": "gess1\nmessages Cmd\nargument ids List(Number integer between 0e0 7e0) max 4 default []\nargument urgent Boolean optional\nmember Hit\nmember Stop\nmessage Hit tags #crit\nargument target Number integer between 0e0 15e0\nmessage Stop\n", "hash": "816d67972cf7aa66", "bindingHash": "f2dcb1ad1c91a785", "maxByteCount": 3, "encoded": {"error": {"code": "wire.unknownTag", "path": ""}}}
+```
+
+---
+
 ## Test: a lenient read of a set with parameters
 
 Left-out parameters take their defaults and the carried message is completed too.

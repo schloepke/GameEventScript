@@ -43,6 +43,9 @@
       "match": "\\b[a-z][A-Za-z0-9]*(?=\\s*:)"
       "scope": "variable.parameter.label.gameeventscript"
     -
+      "match": "\\b[a-z][A-Za-z0-9]*(?=\\()"
+      "scope": "entity.name.function.call.gameeventscript"
+    -
       "match": "\\b[a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?\\b"
       "scope": "variable.other.gameeventscript"
     -
@@ -93,16 +96,16 @@
       "scope": "keyword.other.definition.gameeventscript"
     -
       "match": "\\b(?:or|xor|and|not|is|empty|div|mod|rem|of)\\b"
-      "scope": "keyword.operator.word.gameeventscript"
+      "scope": "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(parse)([ \\t]+)(strict)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(?:parse|random|clamp|min|max|zip|default)\\b"
-      "scope": "keyword.operator.word.gameeventscript"
+      "scope": "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(?:emit|publish|after)\\b"
       "scope": "keyword.control.emit.gameeventscript"
@@ -309,19 +312,19 @@
       "match": "\\b(series)([ \\t]+)(fibonacci|factorial)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "(:Series)([ \\t]*)(\\()([ \\t]*)(fibonacci|factorial)\\b"
       "captures":
         1: "support.type.primitive.gameeventscript"
         3: "punctuation.bracket.gameeventscript"
-        5: "keyword.operator.word.gameeventscript"
+        5: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(kind)[ \\t]*:[ \\t]*(fibonacci|factorial)\\b"
       "captures":
         1: "variable.parameter.label.gameeventscript"
-        2: "keyword.operator.word.gameeventscript"
+        2: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "(:Dice|:Bytes)([ \\t\\r\\n]*)(\\[)"
       "scope": "meta.literal.dice.gameeventscript"
@@ -331,6 +334,9 @@
     -
       "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Bytes|Record)(?=$|[^A-Za-z0-9_])"
       "scope": "support.type.primitive.gameeventscript"
+    -
+      "match": "(?<![A-Za-z0-9_`)\\]]):[a-z][a-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)+"
+      "scope": "support.function.extension.gameeventscript"
     -
       "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*(?=$|[^A-Za-z0-9_])"
       "scope": "entity.name.type.custom.gameeventscript"
@@ -375,23 +381,23 @@
       "match": "\\b(roll)([ \\t]+)(dice)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(random)([ \\t]+)(with|from)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(clamp)(?=\\s)"
-      "scope": "keyword.operator.word.gameeventscript"
+      "scope": "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\bbetween\\b(?![ \\t]*:(?![A-Za-z:]))"
-      "scope": "keyword.operator.word.gameeventscript"
+      "scope": "keyword.operator.wordlike.gameeventscript"
     -
       "match": "(?<=[A-Za-z0-9_)\\]%°'\"][ \\t])step(?=[ \\t]+(?!(?:be|is|and|or|xor|as|div|mod|rem|in|to|then|else|otherwise)\\b)[-−0-9$(\\[:A-Za-z'\"])"
-      "scope": "keyword.operator.word.gameeventscript"
+      "scope": "keyword.operator.wordlike.gameeventscript"
     -
       "match": "(?<=[A-Za-z0-9_)\\]%°'\"][ \\t])(?:ascending|descending)\\b(?![ \\t]*:(?![A-Za-z:]))(?=[ \\t]*(?:$|[\\]\\n]|//))"
       "scope": "keyword.other.definition.gameeventscript"
@@ -399,82 +405,82 @@
       "match": "\\b(min|max)([ \\t]+)(of)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(has)([ \\t]+)(value)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(in)([ \\t]+)(values)([ \\t]+)(of)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
-        5: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
+        5: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(starts)([ \\t]+)(with)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(ends)([ \\t]+)(with)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
-        5: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
+        5: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(at)([ \\t]+)(least|most)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
-        5: "keyword.operator.word.gameeventscript"
-        7: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
+        5: "keyword.operator.wordlike.gameeventscript"
+        7: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(is)([ \\t]+)(at)([ \\t]+)(least|most)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
-        5: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
+        5: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(less|more)([ \\t]+)(than)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
-        5: "keyword.operator.word.gameeventscript"
-        7: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
+        5: "keyword.operator.wordlike.gameeventscript"
+        7: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(is)([ \\t]+)(less|more)([ \\t]+)(than)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
-        5: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
+        5: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(or)([ \\t]+)(less|more)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
-        1: "keyword.operator.word.gameeventscript"
-        3: "keyword.operator.word.gameeventscript"
+        1: "keyword.operator.wordlike.gameeventscript"
+        3: "keyword.operator.wordlike.gameeventscript"
     -
       "match": "\\b(clamped)([ \\t]+)(between)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"

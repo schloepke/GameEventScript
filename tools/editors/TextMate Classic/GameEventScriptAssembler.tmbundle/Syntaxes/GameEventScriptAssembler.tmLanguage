@@ -6,6 +6,10 @@
 <dict>
 	<key>$schema</key>
 	<string>https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json</string>
+	<key>name</key>
+	<string>GameEventScript Assembler</string>
+	<key>scopeName</key>
+	<string>source.gameeventscript.assembler</string>
 	<key>fileTypes</key>
 	<array>
 		<string>gesa</string>
@@ -16,8 +20,6 @@
 	<string>^\s*\.region(?:\s|$)</string>
 	<key>foldingStopMarker</key>
 	<string>^\s*\.region-end(?:\s|$)</string>
-	<key>name</key>
-	<string>GameEventScript Assembler</string>
 	<key>patterns</key>
 	<array>
 		<dict>
@@ -55,80 +57,6 @@
 	</array>
 	<key>repository</key>
 	<dict>
-		<key>comments</key>
-		<dict>
-			<key>patterns</key>
-			<array>
-				<dict>
-					<key>match</key>
-					<string>//.*$</string>
-					<key>name</key>
-					<string>comment.line.double-slash.gameeventscript.assembler</string>
-				</dict>
-			</array>
-		</dict>
-		<key>directives</key>
-		<dict>
-			<key>patterns</key>
-			<array>
-				<dict>
-					<key>match</key>
-					<string>^\s*\.region\s+"(?:\\.|[^"\\])*"\s*$</string>
-					<key>name</key>
-					<string>comment.line.region.begin.gameeventscript.assembler</string>
-				</dict>
-				<dict>
-					<key>match</key>
-					<string>^\s*\.region-end\s+"(?:\\.|[^"\\])*"\s*$</string>
-					<key>name</key>
-					<string>comment.line.region.end.gameeventscript.assembler</string>
-				</dict>
-				<dict>
-					<key>captures</key>
-					<dict>
-						<key>1</key>
-						<dict>
-							<key>name</key>
-							<string>keyword.control.directive.gameeventscript.assembler</string>
-						</dict>
-						<key>2</key>
-						<dict>
-							<key>name</key>
-							<string>constant.numeric.version.gameeventscript.assembler</string>
-						</dict>
-					</dict>
-					<key>match</key>
-					<string>^\s*(\.(?:gesb|program-version))\s+(\d+)\b</string>
-					<key>name</key>
-					<string>meta.directive.version.gameeventscript.assembler</string>
-				</dict>
-				<dict>
-					<key>captures</key>
-					<dict>
-						<key>1</key>
-						<dict>
-							<key>name</key>
-							<string>keyword.control.directive.segment.gameeventscript.assembler</string>
-						</dict>
-						<key>2</key>
-						<dict>
-							<key>name</key>
-							<string>entity.other.attribute-name.tag.gameeventscript</string>
-						</dict>
-					</dict>
-					<key>match</key>
-					<string>^\s*(\.segment)\s+(text|lists|bind|code)\b</string>
-					<key>name</key>
-					<string>meta.directive.segment.gameeventscript.assembler</string>
-				</dict>
-				<dict>
-					<key>match</key>
-					<string>(?&lt;!\S)\.(?:gesb|module|program-version|text|u16|registers|texts|bind)\b</string>
-					<key>name</key>
-					<string>keyword.control.directive.gameeventscript.assembler</string>
-				</dict>
-			</array>
-		</dict>
 		<key>embedded-source</key>
 		<dict>
 			<key>patterns</key>
@@ -245,6 +173,80 @@
 							<string>source.gameeventscript</string>
 						</dict>
 					</array>
+				</dict>
+			</array>
+		</dict>
+		<key>comments</key>
+		<dict>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>match</key>
+					<string>//.*$</string>
+					<key>name</key>
+					<string>comment.line.double-slash.gameeventscript.assembler</string>
+				</dict>
+			</array>
+		</dict>
+		<key>directives</key>
+		<dict>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>match</key>
+					<string>^\s*\.region\s+"(?:\\.|[^"\\])*"\s*$</string>
+					<key>name</key>
+					<string>comment.line.region.begin.gameeventscript.assembler</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>^\s*\.region-end\s+"(?:\\.|[^"\\])*"\s*$</string>
+					<key>name</key>
+					<string>comment.line.region.end.gameeventscript.assembler</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.control.directive.gameeventscript.assembler</string>
+						</dict>
+						<key>2</key>
+						<dict>
+							<key>name</key>
+							<string>constant.numeric.version.gameeventscript.assembler</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>^\s*(\.(?:gesb|program-version))\s+(\d+)\b</string>
+					<key>name</key>
+					<string>meta.directive.version.gameeventscript.assembler</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.control.directive.segment.gameeventscript.assembler</string>
+						</dict>
+						<key>2</key>
+						<dict>
+							<key>name</key>
+							<string>entity.other.attribute-name.tag.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>^\s*(\.segment)\s+(text|lists|bind|code)\b</string>
+					<key>name</key>
+					<string>meta.directive.segment.gameeventscript.assembler</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>(?&lt;!\S)\.(?:gesb|module|program-version|text|u16|registers|texts|bind)\b</string>
+					<key>name</key>
+					<string>keyword.control.directive.gameeventscript.assembler</string>
 				</dict>
 			</array>
 		</dict>
@@ -380,7 +382,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\bNormalizeResultAsPredicate\b</string>
+					<string>\b(?:NormalizeResultAsPredicate|Numeric)\b</string>
 					<key>name</key>
 					<string>constant.language.flag.gameeventscript.assembler</string>
 				</dict>
@@ -392,7 +394,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:id|name|args|entry|requiredTags|excludedTags|flags)\b(?=\s*=)</string>
+					<string>\b(?:id|name|args|entry|requiredTags|excludedTags|flags|mode)\b(?=\s*=)</string>
 					<key>name</key>
 					<string>variable.parameter.attribute.gameeventscript.assembler</string>
 				</dict>
@@ -446,7 +448,5 @@
 			</array>
 		</dict>
 	</dict>
-	<key>scopeName</key>
-	<string>source.gameeventscript.assembler</string>
 </dict>
 </plist>

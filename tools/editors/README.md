@@ -155,9 +155,9 @@ GameEventScript assembler (`.gesa`), GameEventScript documents (`.gesd`) and
 GameEventScript schemas (`.gess`). The modern and classic bundles describe the
 same grammars; only the file format is different.
 
-The JSON grammars under `TextMate/` are the maintained source. The XML plist
-grammars under `TextMate Classic/` must be regenerated from them whenever syntax
-support changes so both editor generations remain semantically identical.
+The JSON grammars under `TextMate/` are the maintained source.
+`scripts/sync-editor-bundles.py` generates the XML plist grammars under
+`TextMate Classic/` from them, so both editor generations remain identical.
 
 `.ges` is the only canonical GameEventScript source extension. The assembler
 grammar follows the current dumper output, including `.program-version`, current

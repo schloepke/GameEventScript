@@ -11,6 +11,11 @@
           "name": "variable.parameter.label.gameeventscript"
         },
         {
+          "comment": "A name directly before ( calls a function or predicate.",
+          "match": "\\b[a-z][A-Za-z0-9]*(?=\\()",
+          "name": "entity.name.function.call.gameeventscript"
+        },
+        {
           "match": "\\b[a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?\\b",
           "name": "variable.other.gameeventscript"
         },
@@ -99,23 +104,23 @@
         {
           "comment": "is name and is not name call parameterless predicates; value is name calls unary predicates. Both use the existing operator and identifier scopes.",
           "match": "\\b(?:or|xor|and|not|is|empty|div|mod|rem|of)\\b",
-          "name": "keyword.operator.word.gameeventscript"
+          "name": "keyword.operator.wordlike.gameeventscript"
         },
         {
           "match": "\\b(parse)([ \\t]+)(strict)\\b",
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
         {
           "match": "\\b(?:parse|random|clamp|min|max|zip|default)\\b",
-          "name": "keyword.operator.word.gameeventscript"
+          "name": "keyword.operator.wordlike.gameeventscript"
         },
         {
           "match": "\\b(?:emit|publish|after)\\b",
@@ -516,10 +521,10 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -533,7 +538,7 @@
               "name": "punctuation.bracket.gameeventscript"
             },
             "5": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -544,7 +549,7 @@
               "name": "variable.parameter.label.gameeventscript"
             },
             "2": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -563,6 +568,11 @@
         {
           "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Bytes|Record)(?=$|[^A-Za-z0-9_])",
           "name": "support.type.primitive.gameeventscript"
+        },
+        {
+          "comment": "Extension names such as :math.distance; the parser classifies them as built-ins.",
+          "match": "(?<![A-Za-z0-9_`)\\]]):[a-z][a-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)+",
+          "name": "support.function.extension.gameeventscript"
         },
         {
           "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*(?=$|[^A-Za-z0-9_])",
@@ -625,10 +635,10 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -637,26 +647,26 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
         {
           "match": "\\b(clamp)(?=\\s)",
-          "name": "keyword.operator.word.gameeventscript"
+          "name": "keyword.operator.wordlike.gameeventscript"
         },
         {
           "comment": "between follows clamp, angle, clamped and is.",
           "match": "\\bbetween\\b(?![ \\t]*:(?![A-Za-z:]))",
-          "name": "keyword.operator.word.gameeventscript"
+          "name": "keyword.operator.wordlike.gameeventscript"
         },
         {
           "comment": "step follows the upper bound of a range or for loop and precedes its step value.",
           "match": "(?<=[A-Za-z0-9_)\\]%°'\"][ \\t])step(?=[ \\t]+(?!(?:be|is|and|or|xor|as|div|mod|rem|in|to|then|else|otherwise)\\b)[-−0-9$(\\[:A-Za-z'\"])",
-          "name": "keyword.operator.word.gameeventscript"
+          "name": "keyword.operator.wordlike.gameeventscript"
         },
         {
           "comment": "A sort direction ends :sort and :order by.",
@@ -668,10 +678,10 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -680,10 +690,10 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -692,13 +702,13 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "5": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -707,10 +717,10 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -719,10 +729,10 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -731,13 +741,13 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "5": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -746,10 +756,10 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -758,16 +768,16 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "5": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "7": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -776,13 +786,13 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "5": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -791,16 +801,16 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "5": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "7": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -809,13 +819,13 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "5": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },
@@ -824,10 +834,10 @@
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             },
             "3": {
-              "name": "keyword.operator.word.gameeventscript"
+              "name": "keyword.operator.wordlike.gameeventscript"
             }
           }
         },

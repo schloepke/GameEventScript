@@ -137,7 +137,7 @@
         },
         {
           "match": "\\bwith\\b",
-          "name": "keyword.operator.word.gameeventscript.document"
+          "name": "keyword.operator.wordlike.gameeventscript.document"
         },
         {
           "match": "#[A-Za-z0-9_]+",

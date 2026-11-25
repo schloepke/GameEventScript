@@ -90,7 +90,7 @@
       "scope": "constant.language.nothing.gameeventscript.document"
     -
       "match": "\\bwith\\b"
-      "scope": "keyword.operator.word.gameeventscript.document"
+      "scope": "keyword.operator.wordlike.gameeventscript.document"
     -
       "match": "#[A-Za-z0-9_]+"
       "scope": "entity.name.tag.gameeventscript.document"

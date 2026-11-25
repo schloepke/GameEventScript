@@ -115,7 +115,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>(:(?:Message|Handler))\s*(\()\s*([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*|initialization|undeliverable)\b</string>
+					<string>(:(?:Message|Handler))\s*(\()\s*([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)\b</string>
 					<key>captures</key>
 					<dict>
 						<key>1</key>
@@ -156,6 +156,12 @@
 							<string>support.function.series.gameeventscript.document</string>
 						</dict>
 					</dict>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\b(fibonacci|factorial)\b(?!\s*:)</string>
+					<key>name</key>
+					<string>support.function.series.gameeventscript.document</string>
 				</dict>
 				<dict>
 					<key>match</key>
@@ -209,7 +215,7 @@
 					<key>match</key>
 					<string>\bwith\b</string>
 					<key>name</key>
-					<string>keyword.operator.word.gameeventscript.document</string>
+					<string>keyword.operator.wordlike.gameeventscript.document</string>
 				</dict>
 				<dict>
 					<key>match</key>

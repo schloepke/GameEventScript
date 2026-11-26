@@ -315,14 +315,23 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     static func containerDepth(_ items: [GesValue], handleKeys: Bool = false) -> Int64 {
-        var deepest: Int64 = 0
+        // One kind test per item: a container contributes its word's depth and handle bit, a handle only the bit.
+        var deepest: UInt64 = 0
         var handles = handleKeys ? holdsHandleBit : 0
         for item in items {
-            let depth = item.nestingDepth
-            if depth > deepest { deepest = depth }
-            handles |= item.handleBits
+            switch item.storageKind {
+            case .list, .map, .record, .message:
+                let word = item.numericBits
+                handles |= word
+                let depth = word & ~holdsHandleBit
+                if depth > deepest { deepest = depth }
+            case .handle:
+                handles |= holdsHandleBit
+            default:
+                break
+            }
         }
-        return Int64(bitPattern: UInt64(bitPattern: deepest + 1) | handles)
+        return Int64(bitPattern: (deepest + 1) | (handles & holdsHandleBit))
     }
 
     mutating func setList(_ value: [GesValue]) {

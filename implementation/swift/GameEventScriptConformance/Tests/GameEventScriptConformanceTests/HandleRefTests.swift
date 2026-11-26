@@ -46,17 +46,33 @@ final class HandleRefTests: XCTestCase {
 
     func testReceiveRejectsARefAtAnyNestingDepth() throws {
         let host = try GameEventScriptHost.makeBuilder().build().startForTest()
+        let live = try Self.live()
+        let versioned = try GesHandle(parsing: "@Drone:7~3")
 
+        // Levels cycle through List, Map, Record and Message, so the walk crosses every container kind on both sides
+        // of its recursion limit.
         func deep(_ inner: GesValue) throws -> GameEventScriptMessage {
             var value = inner
-            for level in 0..<1000 { value = .list([.integer(Int64(level)), value]) }
+            for level in 0..<1000 {
+                switch level % 4 {
+                case 0: value = .list([.integer(Int64(level)), value])
+                case 1: value = .map([(key: "a", value: .integer(Int64(level))), (key: "b", value: value)])
+                case 2: value = .record(typeName: "Level", [(key: "value", value: value)])
+                default: value = .message(try GameEventScriptMessage(name: "Level", arguments: [.init(name: "value", value: value)]))
+                }
+            }
             return try GameEventScriptMessage(name: "Deep", arguments: [.init(name: "value", value: value)])
         }
 
-        XCTAssertThrowsError(try host.receive(deep(.handle(Self.live())))) { error in
-            XCTAssertEqual((error as? GesWireError)?.code, GesWireError.unresolvedRef)
+        func keyed(by key: GesHandle) throws -> GesValue { try .map(keyValues: [.handle(key)], values: [.integer(1)]) }
+
+        for inner in [GesValue.handle(live), try keyed(by: live)] {
+            XCTAssertThrowsError(try host.receive(deep(inner))) { error in
+                XCTAssertEqual((error as? GesWireError)?.code, GesWireError.unresolvedRef)
+            }
         }
-        _ = try host.receive(deep(.handle(GesHandle(parsing: "@Drone:7~3"))))
+        _ = try host.receive(deep(.handle(versioned)))
+        _ = try host.receive(deep(keyed(by: versioned)))
         _ = try host.receive(deep(.integer(1)))
     }
 

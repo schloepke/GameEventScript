@@ -934,16 +934,26 @@ public partial struct GesValue : IEquatable<GesValue>
 
     internal static long ContainerDepth(GesValue[] items, bool handleKeys = false)
     {
+        // One kind test per item: a container contributes its word's depth and handle bit, a handle only the bit.
         long deepest = 0;
         var handles = handleKeys ? HoldsHandleBit : 0;
         for (var i = 0; i < items.Length; i++)
         {
-            var depth = items[i].NestingDepth;
-            if (depth > deepest) deepest = depth;
-            handles |= items[i].HandleBits;
+            switch (items[i].Kind)
+            {
+                case List or Map or Custom or GesBytecodeTypeKind.Message:
+                    var word = items[i].IntegerValue;
+                    handles |= word;
+                    word &= ~HoldsHandleBit;
+                    if (word > deepest) deepest = word;
+                    break;
+                case GesBytecodeTypeKind.Handle:
+                    handles |= HoldsHandleBit;
+                    break;
+            }
         }
 
-        return (deepest + 1) | handles;
+        return (deepest + 1) | (handles & HoldsHandleBit);
     }
 
     internal void SetList(GesValue[] list)

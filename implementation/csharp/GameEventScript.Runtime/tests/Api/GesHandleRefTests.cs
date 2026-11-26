@@ -47,16 +47,33 @@ public sealed class GesHandleRefTests
     public void ReceiveRejectsARefAtAnyNestingDepth()
     {
         var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
-        GesValue Nested(GesValue inner, int depth)
+
+        // Levels cycle through List, Map, Record and Message, so the walk crosses every container kind on both sides
+        // of its recursion limit.
+        GesValue Nested(GesValue inner)
         {
-            for (var level = 0; level < depth; level++) inner = GesValue.GesList([GesValue.GesInteger(level), inner]);
+            for (var level = 0; level < 1000; level++)
+            {
+                inner = (level % 4) switch
+                {
+                    0 => GesValue.GesList([GesValue.GesInteger(level), inner]),
+                    1 => GesValue.GesMap(("a", GesValue.GesInteger(level)), ("b", inner)),
+                    2 => GesValue.GesRecord("Level", ("value", inner)),
+                    _ => GesValue.GesMessage(GameEventScriptMessage.Create("Level", [new GesMessageArgument("value", inner)])),
+                };
+            }
+
             return inner;
         }
 
-        GameEventScriptMessage Deep(GesValue inner) => GameEventScriptMessage.Create("Deep", [new GesMessageArgument("value", Nested(inner, 1000))]);
+        GameEventScriptMessage Deep(GesValue inner) => GameEventScriptMessage.Create("Deep", [new GesMessageArgument("value", Nested(inner))]);
+        GesValue KeyedBy(GesHandle key) => GesValue.GesMapOfKeys([GesValue.GesHandle(key)], [GesValue.GesInteger(1)]);
+        var versioned = GesHandle.Parse("@Drone:7~3");
 
         Assert.AreEqual(GesWireException.UnresolvedRef, Assert.ThrowsExactly<GesWireException>(() => host.Receive(Deep(GesValue.GesHandle(Live)))).Code);
-        host.Receive(Deep(GesValue.GesHandle(GesHandle.Parse("@Drone:7~3"))));
+        Assert.AreEqual(GesWireException.UnresolvedRef, Assert.ThrowsExactly<GesWireException>(() => host.Receive(Deep(KeyedBy(Live)))).Code);
+        host.Receive(Deep(GesValue.GesHandle(versioned)));
+        host.Receive(Deep(KeyedBy(versioned)));
         host.Receive(Deep(GesValue.GesInteger(1)));
     }
 

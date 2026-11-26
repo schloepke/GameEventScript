@@ -216,8 +216,12 @@ keep counting, so a following `Start` runs it as the initial group and the
 and the loading rules apply.
 
 A reset is allowed on a loading, ready or failed host and between the frames of a
-paused handler. It is rejected while the host starts or pumps, including from a
-native handler or another host callback; the rejection changes nothing.
+paused handler. A failed start has already detached its initial group, so a reset
+after it yields a loading host without those Programs; the embedding loads them
+again before the next `Start`. A reset is rejected while the host starts or pumps,
+including from a native handler or another host callback, and from an observer or
+publish-sink callback of a host operation outside pumping, such as `Detach` or a
+captured context's `Emit` or `Publish`; the rejection changes nothing.
 
 ## Random Ownership, Boundaries, and Limits
 
@@ -710,7 +714,8 @@ scheduled, exactly like an unnamed delayed emit, and leaves the name free after
 removing the old timer.
 
 **One-shot timers.** An `after` timer is registered until its firing starts
-dispatch, or until a due firing finds no local recipient and is not queued. A
+dispatch, or until a due firing finds no local recipient and is dropped without a
+`MessageDiscarded` report, like an unnamed delayed send. A
 zero delay is allowed and schedules a firing that is due at once. Recipients are
 captured at acceptance as for an unnamed delayed send.
 

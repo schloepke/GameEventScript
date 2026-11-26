@@ -123,7 +123,7 @@
           "name": "keyword.operator.wordlike.gameeventscript"
         },
         {
-          "comment": "every, named and cancel are contextual words: keywords only in a send or cancel position.",
+          "comment": "every and named are contextual words: keywords only in a send or cancel position; cancel is reserved.",
           "match": "\\b(emit|publish)\\s+(every)\\b",
           "captures": {
             "1": {
@@ -146,11 +146,11 @@
           }
         },
         {
-          "match": "\\b(?:cancel|named)\\b(?=\\s+(?:['\"#$(]|[A-Za-z_]))",
+          "match": "\\bnamed\\b(?=\\s+(?:['\"#$(]|[A-Za-z_]))",
           "name": "keyword.control.emit.gameeventscript"
         },
         {
-          "match": "\\b(?:emit|publish|after)\\b",
+          "match": "\\b(?:emit|publish|after|cancel)\\b",
           "name": "keyword.control.emit.gameeventscript"
         }
       ]

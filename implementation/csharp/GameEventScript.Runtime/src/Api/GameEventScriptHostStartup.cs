@@ -15,6 +15,8 @@ public sealed partial class GameEventScriptHost
     private bool _starting;
     private bool _pumping;
     private bool _executingScript;
+    // Counts host operations outside pumping that may call the observer or publish sink, so those callbacks cannot reset the host.
+    private int _callbackDepth;
     private GesProgramInstance? _initializationInstance;
     private GesDiagnostic? _initializationDiagnostic;
     private List<GesDeferredPublication>? _initializationPublications;

@@ -36,6 +36,44 @@ final class DelayedObservationTests: XCTestCase {
         XCTAssertEqual(observed, silent)
     }
 
+    /// Resets the host from discard and publish callbacks and records each rejection.
+    final class ResettingCallbacks: GesRuntimeObserver, GesPublishSink, GesNativeMessageHandler {
+        weak var host: GameEventScriptHost?
+        var captured: GesContext?
+        var rejected: [String] = []
+
+        func tryReset(_ origin: String) {
+            do { try host?.reset() } catch { rejected.append(origin) }
+        }
+
+        func messageDiscarded(id: Int64) { tryReset("discarded") }
+
+        func publish(_ message: GameEventScriptMessage) throws -> Bool {
+            tryReset("publish")
+            return true
+        }
+
+        func handle(_ message: GameEventScriptMessage, context: GesContext) throws { captured = context }
+    }
+
+    func testResetIsRejectedFromCallbacksOfOtherHostOperations() throws {
+        let callbacks = ResettingCallbacks()
+        let host = try GameEventScriptHost.makeBuilder().withRuntimeObserver(callbacks).withPublishSink(callbacks).build().startForTest()
+        callbacks.host = host
+        _ = try host.subscribe(.init(name: "Capture"), handler: callbacks)
+        let instance = try host.load(GesProgramBuilder().addScript("on Start { emit every 1s named 'beat' Beat() }\non Beat { }").compile())
+        host.receive(try .init(name: "Capture"))
+        host.receive(try .init(name: "Start"))
+        _ = try host.runToCompletion()
+
+        try callbacks.captured?.publish("Out")
+        instance.detach()
+
+        XCTAssertEqual(callbacks.rejected, ["publish", "discarded"])
+        XCTAssertTrue(host.isReady)
+        try host.reset()
+    }
+
     private func runDelayedScenario(observer: (any GesRuntimeObserver)?) throws -> [String] {
         let clock = ManualClock()
         let recorder = Recorder(clock: clock)

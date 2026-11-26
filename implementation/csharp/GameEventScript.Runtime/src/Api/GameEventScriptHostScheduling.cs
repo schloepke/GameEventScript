@@ -30,6 +30,13 @@ public sealed partial class GameEventScriptHost
 
     internal bool SendFromContext(GameEventScriptMessage message, bool publish, long microseconds)
     {
+        _callbackDepth++;
+        try { return SendFromContextCore(message, publish, microseconds); }
+        finally { _callbackDepth--; }
+    }
+
+    private bool SendFromContextCore(GameEventScriptMessage message, bool publish, long microseconds)
+    {
         if (microseconds < 0 || _random.HasActiveScopeFault) return false;
         if (microseconds == 0)
         {

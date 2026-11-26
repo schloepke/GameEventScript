@@ -436,6 +436,13 @@ public sealed partial class GameEventScriptHost
 
     internal bool EmitFromContext(GameEventScriptMessage message)
     {
+        _callbackDepth++;
+        try { return EmitFromContextCore(message); }
+        finally { _callbackDepth--; }
+    }
+
+    private bool EmitFromContextCore(GameEventScriptMessage message)
+    {
         var id = _random.HasActiveScopeFault ? 0 : EnqueueMessage(message, _initializationInstance is not null);
         _stepEmittedMessages++;
         if (_initializationInstance is not null) _initializationEmits++;
@@ -444,6 +451,13 @@ public sealed partial class GameEventScriptHost
     }
 
     internal GesPublishResult PublishFromContext(GameEventScriptMessage message)
+    {
+        _callbackDepth++;
+        try { return PublishFromContextCore(message); }
+        finally { _callbackDepth--; }
+    }
+
+    private GesPublishResult PublishFromContextCore(GameEventScriptMessage message)
     {
         if (_initializationInstance is not null) _initializationPublishes++;
         var randomScopeFault = _random.HasActiveScopeFault;
@@ -649,7 +663,9 @@ public sealed partial class GameEventScriptHost
         else previous.NextRegistration = current.NextRegistration;
         current.NextRegistration = null;
         RemoveInstanceRegistrations(current);
-        DetachTimers(current);
+        _callbackDepth++;
+        try { DetachTimers(current); }
+        finally { _callbackDepth--; }
         return true;
     }
 

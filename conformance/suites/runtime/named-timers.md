@@ -684,6 +684,71 @@ steps:
 
 ---
 
+## Test: a reset after a failed start keeps no Programs of the failed group
+
+The failed start already detached its initial group, so the reset returns a loading host without those Programs; a Program loaded afterwards forms the next initial group.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: reset-after-failed-start
+deferredPrograms: [late]
+sources:
+  - name: failing.ges
+    program: main
+  - name: late.ges
+    program: late
+stepActions:
+  retry:
+    - resetHost: host
+      expectResult: true
+    - loadProgram: late
+    - startHost: host
+      expectResult: true
+```
+
+### Source code under test
+
+```ges
+module main
+on initialization { let failure be :test.declaredFault() }
+on Ping { emit Old() }
+```
+
+```ges
+module late
+on Ping { emit Pong() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| retry | Ping | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  hostReady: false
+  programStarts: { main: runtimeError }
+  diagnostics:
+    - phase: runtime
+      code: test.declaredFault
+      programName: main
+      handlerName: initialization()
+steps:
+  retry:
+    accepted: true
+    hostReady: true
+    programStarts: { main: runtimeError, late: ready }
+    local: [{ name: Pong }]
+```
+
+---
+
 ## Test: a heartbeat without a positive period is rejected
 
 ### Case description

@@ -58,6 +58,7 @@
         "function": .function,
         "emit": .emit,
         "publish": .publish,
+        "cancel": .cancel,
         "matching": .matching,
         "without": .without,
         "let": .`let`,

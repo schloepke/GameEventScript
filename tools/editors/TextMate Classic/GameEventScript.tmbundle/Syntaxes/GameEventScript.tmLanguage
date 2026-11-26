@@ -197,7 +197,7 @@
 				</dict>
 				<dict>
 					<key>comment</key>
-					<string>every, named and cancel are contextual words: keywords only in a send or cancel position.</string>
+					<string>every and named are contextual words: keywords only in a send or cancel position; cancel is reserved.</string>
 					<key>match</key>
 					<string>\b(emit|publish)\s+(every)\b</string>
 					<key>captures</key>
@@ -233,13 +233,13 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:cancel|named)\b(?=\s+(?:['"#$(]|[A-Za-z_]))</string>
+					<string>\bnamed\b(?=\s+(?:['"#$(]|[A-Za-z_]))</string>
 					<key>name</key>
 					<string>keyword.control.emit.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:emit|publish|after)\b</string>
+					<string>\b(?:emit|publish|after|cancel)\b</string>
 					<key>name</key>
 					<string>keyword.control.emit.gameeventscript</string>
 				</dict>

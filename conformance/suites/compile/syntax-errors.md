@@ -1779,6 +1779,43 @@ error:
 
 ---
 
+## Test: cancel is reserved and cannot name a function
+
+This negative compiler case verifies that `cancel` is a reserved keyword: like `if`, it cannot name a function.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cancel-reserved-function-name
+kind: compileError
+level: scenario
+sources:
+  - name: "cancel is reserved and cannot name a function.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function cancel(_ value) be value
+
+on Start {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
 ## Test: keyword later argument label is rejected
 
 This negative compiler case verifies that a reserved keyword cannot be a later argument label after an accepted one.

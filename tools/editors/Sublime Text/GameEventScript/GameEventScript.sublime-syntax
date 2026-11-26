@@ -117,10 +117,10 @@
         1: "keyword.control.emit.gameeventscript"
         2: "keyword.control.emit.gameeventscript"
     -
-      "match": "\\b(?:cancel|named)\\b(?=\\s+(?:['\"#$(]|[A-Za-z_]))"
+      "match": "\\bnamed\\b(?=\\s+(?:['\"#$(]|[A-Za-z_]))"
       "scope": "keyword.control.emit.gameeventscript"
     -
-      "match": "\\b(?:emit|publish|after)\\b"
+      "match": "\\b(?:emit|publish|after|cancel)\\b"
       "scope": "keyword.control.emit.gameeventscript"
   "declarations":
     -

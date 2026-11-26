@@ -560,9 +560,9 @@ extension GesSyntaxParser {
             let start = index
             advance()
             return try sendExpression(start, checkpoint)
-        case .identifier where isCancelExpressionStart():
+        case .cancel:
             startNode(.cancelExpression)
-            advanceKeyword()
+            advance()
             let start = previousIndex
             if !matchWord("named") && !matchWord("all") { _ = try expression(15) }
             return finishNode(try node(start))
@@ -1258,14 +1258,5 @@ extension GesSyntaxParser {
         } else {
             _ = try expression(15)
         }
-    }
-}
-
-extension GesSyntaxParser {
-    // `cancel` is a contextual word: it cancels timers only before a key, `named` or `all` on the same line.
-    func isCancelExpressionStart() -> Bool {
-        guard current.isIdentifier("cancel") else { return false }
-        let next = peek()
-        return next.line == current.endLine && [.identifier, .tag, .text, .constantReference, .leftParen].contains(next.kind)
     }
 }

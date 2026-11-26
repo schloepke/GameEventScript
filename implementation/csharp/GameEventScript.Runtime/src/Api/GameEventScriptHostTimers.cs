@@ -48,12 +48,12 @@ public sealed partial class GameEventScriptHost
     /// waiting state and every start result are cleared without individual discard reports; the observer receives one
     /// <see cref="IGesRuntimeObserver.HostReset"/>. The initialization of each attached instance is queued again in load
     /// order under new send IDs, so a following <see cref="Start"/> runs it as the initial group. Send IDs keep counting
-    /// and the random generator is neither reseeded nor rewound. A reset is also allowed after a failed start.
+    /// and the random generator is neither reseeded nor rewound. A reset is also allowed after a failed start, which has already detached its Programs.
     /// </remarks>
-    /// <exception cref="InvalidOperationException">Thrown while the host is starting or pumping, including from a native handler or callback.</exception>
+    /// <exception cref="InvalidOperationException">Thrown while the host is starting or pumping, or from an observer or publish-sink callback of another host operation.</exception>
     public void Reset()
     {
-        if (_pumping || _starting || _executingScript)
+        if (_pumping || _starting || _executingScript || _callbackDepth > 0)
             throw new InvalidOperationException("A host cannot be reset while it is starting or executing.");
         if (_hasActiveMessage)
         {
@@ -265,8 +265,9 @@ public sealed partial class GameEventScriptHost
         }
         else
         {
-            if (!timer.Publish) _observer?.MessageDiscarded(timer.Id);
-            if (!timer.Repeats) UnregisterTimer(timer);
+            // A due one-shot firing without a recipient is dropped silently, like an unnamed delayed send.
+            if (timer.Repeats) { if (!timer.Publish) _observer?.MessageDiscarded(timer.Id); }
+            else UnregisterTimer(timer);
         }
 
         if (timer.Publish)

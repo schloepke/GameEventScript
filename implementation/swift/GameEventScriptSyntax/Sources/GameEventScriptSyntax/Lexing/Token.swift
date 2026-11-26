@@ -72,6 +72,7 @@
     case on
     case emit
     case publish
+    case cancel
     case matching
     case without
     case `let`

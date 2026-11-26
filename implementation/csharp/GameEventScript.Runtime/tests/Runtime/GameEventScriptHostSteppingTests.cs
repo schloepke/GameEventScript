@@ -322,6 +322,41 @@ public sealed class GameEventScriptHostSteppingTests
         CollectionAssert.AreEqual(silent, observed);
     }
 
+    [TestMethod]
+    public void ResetIsRejectedFromCallbacksOfOtherHostOperations()
+    {
+        GameEventScriptHost? host = null;
+        var rejected = new List<string>();
+        void TryReset(string origin)
+        {
+            try { host!.Reset(); }
+            catch (InvalidOperationException) { rejected.Add(origin); }
+        }
+
+        host = GameEventScriptHost.CreateBuilder()
+            .WithRuntimeObserver(new DiscardObserver(() => TryReset("discarded")))
+            .WithPublishSink(new TestPublishSink(_ => TryReset("publish")))
+            .Build().StartForTest();
+        GesContext? captured = null;
+        host.Subscribe("Capture", [], (_, context) => captured = context);
+        var instance = host.Load(Compile("on Start { emit every 1s named 'beat' Beat() }\non Beat { }"));
+        host.Receive(Create("Capture"));
+        host.Receive(Create("Start"));
+        host.RunToCompletion();
+
+        captured!.Publish(Create("Out"));
+        instance.Detach();
+
+        CollectionAssert.AreEqual(new[] { "publish", "discarded" }, rejected);
+        Assert.IsTrue(host.IsReady);
+        host.Reset();
+    }
+
+    private sealed class DiscardObserver(Action discarded) : IGesRuntimeObserver
+    {
+        public void MessageDiscarded(long id) => discarded();
+    }
+
     private static List<string> RunDelayedScenario(IGesRuntimeObserver? observer)
     {
         var clock = new ManualClock();

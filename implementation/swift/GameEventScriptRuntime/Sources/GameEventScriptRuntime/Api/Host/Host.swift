@@ -31,6 +31,8 @@ public final class GameEventScriptHost {
     private var initializationOpcodes = 0, initializationEmits = 0, initializationPublishes = 0
     private var starting = false
     private var executingScript = false
+    // Counts host operations outside pumping that may call the observer or publish sink, so those callbacks cannot reset the host.
+    private var callbackDepth = 0
     private var initializationInstance: GesProgramInstance?
     private var initializationDiagnostic: GesStartDiagnostic?
     private var initializationPublications: [GesDeferredPublication] = []
@@ -350,6 +352,8 @@ public final class GameEventScriptHost {
     public var nextMessageDelay: Int64? { delayed.first.map { max(0, $0.deadline - elapsedMicroseconds) } }
 
     func send(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64) -> Bool {
+        callbackDepth += 1
+        defer { callbackDepth -= 1 }
         guard microseconds >= 0 && !random.hasActiveScopeFault else { return false }
         if microseconds == 0 {
             let matches = (exact[message.signatureId] ?? []).contains { $0.matches(message) } || (byName[message.name] ?? []).contains { $0.matches(message) }
@@ -419,6 +423,8 @@ public final class GameEventScriptHost {
     }
 
     func emit(_ message: GameEventScriptMessage) -> Bool {
+        callbackDepth += 1
+        defer { callbackDepth -= 1 }
         let id = random.hasActiveScopeFault ? 0 : enqueue(message, initializationOutput: initializationInstance != nil)
         emitted += 1
         if initializationInstance != nil { initializationEmits += 1 }
@@ -427,6 +433,8 @@ public final class GameEventScriptHost {
     }
 
     func publish(_ message: GameEventScriptMessage) -> GesPublishResult {
+        callbackDepth += 1
+        defer { callbackDepth -= 1 }
         if initializationInstance != nil { initializationPublishes += 1 }
         let fault = random.hasActiveScopeFault
         // A publish owns its ID even without local recipients; the local entry reuses it.
@@ -552,6 +560,8 @@ public final class GameEventScriptHost {
                 if byName[key]?.isEmpty == true { byName[key] = nil }
             }
         }
+        callbackDepth += 1
+        defer { callbackDepth -= 1 }
         detachTimers(instance)
         return true
     }
@@ -734,11 +744,12 @@ extension GameEventScriptHost {
     /// waiting state and every start result are cleared without individual discard reports; the observer receives one
     /// `hostReset()`. The initialization of each attached instance is queued again in load order under new send IDs, so
     /// a following `start()` runs it as the initial group. Send IDs keep counting and the random generator is neither
-    /// reseeded nor rewound. A reset is also allowed after a failed start.
+    /// reseeded nor rewound. A reset is also allowed after a failed start, which has already detached its Programs.
     ///
-    /// - Throws: An API error while the host is starting or pumping, including from a native handler or callback.
+    /// - Throws: An API error while the host is starting or pumping, or from an observer or publish-sink callback of another
+    ///   host operation.
     public func reset() throws {
-        guard !pumping, !starting, !executingScript else { throw GesApiError.invalidOperation("A host cannot be reset while it is starting or executing.") }
+        guard !pumping, !starting, !executingScript, callbackDepth == 0 else { throw GesApiError.invalidOperation("A host cannot be reset while it is starting or executing.") }
         if active != nil {
             if scriptActive { vm?.reset() }
             if activeHandler != nil { _ = random.releaseBoundary(randomBoundary) }
@@ -909,8 +920,12 @@ extension GameEventScriptHost {
             timer.state = .runnable
             if timer.repeats && !timer.publish { observer?.messageEmitted(timer.message, id: timer.id, accepted: true) }
         } else {
-            if !timer.publish { observer?.messageDiscarded(id: timer.id) }
-            if !timer.repeats { unregisterTimer(timer) }
+            // A due one-shot firing without a recipient is dropped silently, like an unnamed delayed send.
+            if timer.repeats {
+                if !timer.publish { observer?.messageDiscarded(id: timer.id) }
+            } else {
+                unregisterTimer(timer)
+            }
         }
         if timer.publish {
             let attempted = sink != nil

@@ -646,12 +646,12 @@ on Answered {
 on Shutdown { cancel all }
 ```
 
-`every`, `named`, `all` and `cancel` are contextual words, not reserved keywords.
-`every` and `named` have their meaning only at their send positions. `cancel` starts
-a cancel expression only when the next token on the same line is a name, a Tag, a
-Text, a `$` constant or `(`; otherwise it is an ordinary name. After `cancel`, the
-names `named` and `all` always select the modes, so a binding with one of those
-names is cancelled as `cancel (named)`. Replacement, firing, re-arming, limits and
+`cancel` is a reserved keyword: it always starts a cancel expression and cannot
+name a binding, function, predicate, parameter or argument label. `every`, `named`
+and `all` are contextual words, not reserved keywords; `every` and `named` have
+their meaning only at their send positions. After `cancel`, the names `named` and
+`all` always select the modes, so a binding with one of those names is cancelled
+as `cancel (named)`. Replacement, firing, re-arming, limits and
 lifecycle effects are defined in
 [Host runtime](HostRuntime.md#named-timers).
 

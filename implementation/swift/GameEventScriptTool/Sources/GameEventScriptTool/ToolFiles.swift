@@ -55,13 +55,19 @@ enum ToolFiles {
     }
 
     static func handleTypes(_ arguments: [String], activePath: inout String) throws -> [GesHandleType]? {
+        guard let sources = try schemaSources(arguments, activePath: &activePath) else { return nil }
+        return try GesSchemaSet(sources: sources).handleTypes
+    }
+
+    // The UTF-8 sources of `--schema`, each named by its path as given or expanded; nil without the option.
+    static func schemaSources(_ arguments: [String], activePath: inout String) throws -> [GesSchemaSource]? {
         if arguments.isEmpty { return nil }
         var sources: [GesSchemaSource] = []
         for path in try expand(arguments) {
             activePath = path
             sources.append(GesSchemaSource(name: path, text: try source(path)))
         }
-        return try GesSchemaSet(sources: sources).handleTypes
+        return sources
     }
 
     static func builder(_ handles: [GesHandleType]?) -> GesProgramBuilder {

@@ -206,6 +206,13 @@ memory: [
 
 Handle Map keys follow the Text keys, ordered by type name and then by id.
 
+`ges document check` only reads a document. With the schema files, it also checks each document against the schema
+its header names, so `@Target:3~5` on `target` above fails there:
+
+```sh
+ges document check sighting.gesd --schema sighting.gess
+```
+
 ## Refs
 
 In a document, a version may also be a *ref*: `@Unit:drone.gnabblo~#live` or `@Unit:drone.gnabblo~'1.0'` names a

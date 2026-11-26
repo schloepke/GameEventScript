@@ -372,14 +372,37 @@ public sealed class GesSchemaGenerateTests
             StringAssert.Contains(wire[1].Text, " UnitHandle");
             Assert.IsFalse(wire[0].Text.Contains("struct UnitHandle", StringComparison.Ordinal));
             var models = GesSchemaGenerator.GenerateModelFiles(set, ["Move"], options);
-            CollectionAssert.AreEqual(new[] { "Game.Net.commands", "Game.Net.handles", "Game.Net.states", "_Game.Net", ".ges-generated" },
+            CollectionAssert.AreEqual(new[] { "Game.Net.commands", "Game.Net.handles", "_Game.Net", ".ges-generated" },
                 models.Select(file => file.Path.Replace(extension, "", StringComparison.Ordinal).Replace(".json", "", StringComparison.Ordinal)).ToArray());
             StringAssert.Contains(models[1].Text, " UnitHandle");
             options.Split = GesSchemaSplit.Schema;
             CollectionAssert.AreEqual(new[] { "Game.Net.Move" + extension, "Game.Net.UnitHandle" + extension }.Concat(shared).Append(".ges-generated.json").ToArray(),
                 GesSchemaGenerator.GenerateFiles(set, ["Move"], new GesSchemaParameters(), options).Select(file => file.Path).ToArray());
-            CollectionAssert.AreEqual(new[] { "Game.Net.Composition", "Game.Net.Move", "Game.Net.UnitHandle", "_Game.Net", ".ges-generated" },
+            CollectionAssert.AreEqual(new[] { "Game.Net.Move", "Game.Net.UnitHandle", "_Game.Net", ".ges-generated" },
                 GesSchemaGenerator.GenerateModelFiles(set, ["Move"], options).Select(file => file.Path.Replace(extension, "", StringComparison.Ordinal).Replace(".json", "", StringComparison.Ordinal)).ToArray());
+        }
+    }
+
+    [TestMethod]
+    public void HandleFieldsReachTheirHandleTypesButNotTheirStates()
+    {
+        var set = GesSchemaSet.Parse(
+            "schema :Composition as { name: :Text max 4 }\nschema :Source as { text: :Text }\n" +
+            "handle @Unit of :Composition as { id: :Text max 4, version: :ContentHash }\n" +
+            "handle @Repository of :Source as { id: :Text max 4, version: :Hash(#sha1) }\n" +
+            "handle @UnitFile of :Composition composite @Repository as { part: :Text max 8 }\n" +
+            "model schema :Move as { unit: @Unit~, parts: :List(@Unit) max 2, file: @UnitFile~ | :Nothing }\n" +
+            "model schema :Stock as { move: :Move, unit: :Composition }\n");
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            var extension = language == GesSchemaLanguage.Swift ? ".swift" : ".g.cs";
+            var options = new GesSchemaGenerateOptions { Language = language, Namespace = "Game.Net", Split = GesSchemaSplit.Schema };
+            string[] Types(params string[] roots) => [.. GesSchemaGenerator.GenerateModelFiles(set, roots, options).Select(file => file.Path.Replace(extension, "", StringComparison.Ordinal))];
+
+            // A composite brings its root's handle type, which it holds, and neither handle brings its state.
+            CollectionAssert.AreEqual(new[] { "Game.Net.Move", "Game.Net.RepositoryHandle", "Game.Net.UnitFileHandle", "Game.Net.UnitHandle", "_Game.Net", ".ges-generated.json" }, Types("Move"));
+            // A state that a root reaches otherwise is a model type; a state of no reached field stays out.
+            CollectionAssert.AreEqual(new[] { "Game.Net.Composition", "Game.Net.Move", "Game.Net.RepositoryHandle", "Game.Net.Stock", "Game.Net.UnitFileHandle", "Game.Net.UnitHandle", "_Game.Net", ".ges-generated.json" }, Types("Stock"));
         }
     }
 

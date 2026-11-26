@@ -2412,7 +2412,10 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
 `:Series`, `:Message` and `:Handler` have no model type yet: `generate.unsupported`.
 
 **Handles.** *Since: Unreleased.* Every handle type a generation reaches becomes one value type `<Name>Handle`, in
-models and wire code alike, and the state schema becomes its model type as any schema does. Wire code generated with
+models and wire code alike. A handle field reaches only its handle type and, for a composite, its root's handle type,
+whose `<Name>Handle` the composite holds; it never reaches the state schema, which a handle names in its documentation
+only. The state is a model type of a generation only when a root reaches it otherwise or is itself a model root, as in
+the [generation layout](#generation-layout). Wire code generated with
 `--models` declares none and names the models' `<Name>Handle`, as it does their packed types, so the model generation
 must reach the same handle types:
 

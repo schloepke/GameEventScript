@@ -15,7 +15,7 @@ enum ToolHelp {
           ges run --interactive [--color] [program files ...]
           ges dump <program.gesb> [-o <output.gesa>] [--addresses]
           ges bench <program.gesb> [--entry <name>] [--warmup <count>] [--iterations <count>] [--json]
-          ges document check <data.gesd> [more.gesd ...] [-q]
+          ges document check <data.gesd> [more.gesd ...] [--schema <file.gess> ...] [-q]
           ges document format <data.gesd> [-o <output.gesd>] [--color]
           ges schema <check|format|hash|canonical|dump|layout|generate> <schema.gess> ...
 
@@ -362,7 +362,7 @@ enum ToolHelp {
         """#
     static let document = #"""
         Usage:
-          ges document check <data.gesd> [more.gesd ...] [-q]
+          ges document check <data.gesd> [more.gesd ...] [--schema <file.gess> ...] [-q]
           ges document format <data.gesd> [-o <output.gesd>] [--color]
 
         Commands:
@@ -370,6 +370,7 @@ enum ToolHelp {
           format  Print a GES document in the recommended layout.
 
         Options:
+          --schema <file.gess> Check each document against the schema its header names; repeatable.
           -o, --output <path>  Write the formatted document to a UTF-8 file instead of stdout.
           --color              Color terminal output (unless NO_COLOR is set).
           -q, --quiet          Hide the success report of check.
@@ -380,5 +381,11 @@ enum ToolHelp {
         invalid literals are errors. Formatting drops comments and layout; the output
         reads back to an equal document. An existing output file is replaced only after
         successful reading. The schema reference is kept, but schema files are not read.
+
+        With --schema, check reads the given files as one schema set and checks every
+        document with a header against its schema: :Schema(:Name) names a schema of the
+        set, :Schema('file.gess') a file relative to the document that must be one of the
+        given files. A schema that the set does not hold is schema.unknownName. Documents
+        without a header are only read.
         """#
 }

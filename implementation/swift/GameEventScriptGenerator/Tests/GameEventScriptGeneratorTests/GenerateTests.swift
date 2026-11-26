@@ -432,13 +432,40 @@ final class GenerateTests: XCTestCase {
             XCTAssertTrue(wire[1].text.contains(" UnitHandle"))
             XCTAssertFalse(wire[0].text.contains("struct UnitHandle"))
             let models = try GesSchemaGenerator.generateModelFiles(set, roots: ["Move"], options: options)
-            XCTAssertEqual(models.map(\.path), ["Game.Net.commands", "Game.Net.handles", "Game.Net.states", "_Game.Net"].map { $0 + fileExtension } + [".ges-generated.json"])
+            XCTAssertEqual(models.map(\.path), ["Game.Net.commands", "Game.Net.handles", "_Game.Net"].map { $0 + fileExtension } + [".ges-generated.json"])
             XCTAssertTrue(models[1].text.contains(" UnitHandle"))
             options.split = .schema
             let wireBySchema = try GesSchemaGenerator.generateFiles(set, roots: ["Move"], parameters: GesSchemaParameters(), options: options)
             XCTAssertEqual(wireBySchema.map(\.path), ["Game.Net.Move" + fileExtension, "Game.Net.UnitHandle" + fileExtension] + shared + [".ges-generated.json"])
             let modelsBySchema = try GesSchemaGenerator.generateModelFiles(set, roots: ["Move"], options: options)
-            XCTAssertEqual(modelsBySchema.map(\.path), ["Game.Net.Composition", "Game.Net.Move", "Game.Net.UnitHandle", "_Game.Net"].map { $0 + fileExtension } + [".ges-generated.json"])
+            XCTAssertEqual(modelsBySchema.map(\.path), ["Game.Net.Move", "Game.Net.UnitHandle", "_Game.Net"].map { $0 + fileExtension } + [".ges-generated.json"])
+        }
+    }
+
+    func testHandleFieldsReachTheirHandleTypesButNotTheirStates() throws {
+        let set = try GesSchemaSet(
+            parsing: "schema :Composition as { name: :Text max 4 }\nschema :Source as { text: :Text }\n"
+                + "handle @Unit of :Composition as { id: :Text max 4, version: :ContentHash }\n"
+                + "handle @Repository of :Source as { id: :Text max 4, version: :Hash(#sha1) }\n"
+                + "handle @UnitFile of :Composition composite @Repository as { part: :Text max 8 }\n"
+                + "model schema :Move as { unit: @Unit~, parts: :List(@Unit) max 2, file: @UnitFile~ | :Nothing }\n"
+                + "model schema :Stock as { move: :Move, unit: :Composition }\n"
+        )
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            let fileExtension = language == .swift ? ".swift" : ".g.cs"
+            let options = GesSchemaGenerateOptions(language: language, namespace: "Game.Net", split: .schema)
+
+            func types(_ roots: [String]) throws -> [String] {
+                try GesSchemaGenerator.generateModelFiles(set, roots: roots, options: options).map { $0.path.hasSuffix(fileExtension) ? String($0.path.dropLast(fileExtension.count)) : $0.path }
+            }
+
+            // A composite brings its root's handle type, which it holds, and neither handle brings its state.
+            XCTAssertEqual(try types(["Move"]), ["Game.Net.Move", "Game.Net.RepositoryHandle", "Game.Net.UnitFileHandle", "Game.Net.UnitHandle", "_Game.Net", ".ges-generated.json"])
+            // A state that a root reaches otherwise is a model type; a state of no reached field stays out.
+            XCTAssertEqual(
+                try types(["Stock"]),
+                ["Game.Net.Composition", "Game.Net.Move", "Game.Net.RepositoryHandle", "Game.Net.Stock", "Game.Net.UnitFileHandle", "Game.Net.UnitHandle", "_Game.Net", ".ges-generated.json"]
+            )
         }
     }
 

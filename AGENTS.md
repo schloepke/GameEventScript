@@ -724,7 +724,8 @@ configurations (JIT, JIT without tiering, ReadyToRun, NativeAOT) in one table. T
 `dotnet-ges`, resolved by `dotnet ges` when the tool directory is on `PATH`.
 `check` uses the complete compiler pipeline without writing a binary or executing
 handlers. `document check` reads `.gesd` files and reports the first error of each
-as `path(line,column): error document.code: message`; `document format` prints the
+as `path(line,column): error document.code: message`, with `--schema` also against
+the schema each header names; `document format` prints the
 recommended layout (`--color`, `-o`).
 `run` accepts jointly compiled sources or multiple `.gesb` files loaded in input
 order. All Programs are loaded into one host before execution. By default it

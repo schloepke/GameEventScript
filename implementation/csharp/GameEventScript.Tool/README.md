@@ -119,7 +119,8 @@ External type catalogs are not configurable through this command yet.
 `--schema <file.gess>` loads a schema set and declares its handle types
 (`handle @Name of ...`, see the [handles guide](../../../docs/guide/Handles.md))
 to the compilation, so sources may use `@Name` in parameters, `is @Name` and handle
-fields. The option is repeatable and available for `compile`, `check` and `run`.
+fields. The option is repeatable and available for `compile`, `check` and `run`;
+`document check` uses it to check documents against their schemas.
 File-name patterns expand as for sources. All given files are read as one
 strict UTF-8 schema set before any source is compiled; a schema error is reported
 as `ges schema check` reports it, for example `catalog.gess(3,1): error schema.syntax: …`,
@@ -690,6 +691,7 @@ provided by the Reader. File errors use `cli.io`, and invalid arguments use
 
 ```sh
 dotnet ges document check data/drive.gesd data/weapons.gesd
+dotnet ges document check data/*.gesd --schema schemas/*.gess
 dotnet ges document format data/drive.gesd
 dotnet ges document format data/drive.gesd --color
 dotnet ges document format data/drive.gesd -o data/drive.gesd.new
@@ -705,7 +707,22 @@ the recommended layout; comments and layout are not kept, and the output reads
 back to an equal document. `--color` highlights terminal output unless `NO_COLOR`
 is set. `-o` writes a UTF-8 file instead, replacing an existing one only after
 successful reading; input and output must differ. Schema references are kept,
-but schema files are not read. Invalid arguments use `cli.usage` with exit code `2`.
+but schema files are not read unless `document check` is given `--schema`.
+Invalid arguments use `cli.usage` with exit code `2`.
+
+> **Since: Unreleased** — `document check --schema`
+
+`document check --schema <file.gess>` reads the given schema files as one strict
+UTF-8 schema set before any document; the option is repeatable and file-name
+patterns expand as for sources. A schema error is reported as `ges schema check`
+reports it and exits with code `1`. Each readable document with a header is then
+checked against its schema as [schema document checking](../../../specs/Schemas.md#document-checking)
+describes, so, for example, a version or ref in an unpinned handle field fails with
+`document.unexpectedVersion`. `:Schema(:Name)` names a schema of the set;
+`:Schema('file.gess')` names a file relative to the document, which must be one of
+the given files. Errors with a position use `path(line,column): error code: message`;
+errors without one, such as `schema.unknownName` for a schema the set does not
+hold, use `path: error code: message`. Documents without a header are only read.
 
 In the event console, `:show <file>` displays a `.ges`, `.gesa`, `.gesd` or `.gess` file
 on stderr, highlighted with `--color`, and lists each error below the text with

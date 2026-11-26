@@ -189,7 +189,7 @@ internal static class GesModelLayoutBuilder
             if (schema.Kind == GesSchemaKind.Message) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is a message; a model root is a schema or message set.");
             if (schema.IsAbstract) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is abstract; only its protocol is generated, where a model takes it.");
             rootNames.Add(schema.Name);
-            Reach(set, schema, reached, handles);
+            Reach(schema, reached, handles);
         }
 
         var types = new List<GesModelType>();
@@ -266,7 +266,7 @@ internal static class GesModelLayoutBuilder
         {
             var roots = GesSchemaGenerator.ModelRoots(set, group);
             var seen = new HashSet<GesSchema>();
-            foreach (var root in roots) Collect(set, set.Schema(root), seen);
+            foreach (var root in roots) Collect(set.Schema(root), seen);
 
             var converts = false;
             foreach (var schema in seen) converts |= wanted.Contains(set.RootName(schema));
@@ -299,23 +299,18 @@ internal static class GesModelLayoutBuilder
     }
 
     // Every schema that a model of the schema names, as Reach finds them, without the check of their names.
-    private static void Collect(GesSchemaSet set, GesSchema schema, HashSet<GesSchema> seen)
+    private static void Collect(GesSchema schema, HashSet<GesSchema> seen)
     {
         if (!seen.Add(schema)) return;
         foreach (var field in schema.Fields)
-            foreach (var type in field.Alternatives) Collect(set, type, seen);
-        foreach (var member in schema.Members) Collect(set, member, seen);
+            foreach (var type in field.Alternatives) Collect(type, seen);
+        foreach (var member in schema.Members) Collect(member, seen);
     }
 
-    private static void Collect(GesSchemaSet set, GesSchemaType type, HashSet<GesSchema> seen)
+    private static void Collect(GesSchemaType type, HashSet<GesSchema> seen)
     {
-        if (type.Schema is { } schema) Collect(set, schema, seen);
-        if (type.HandleType is { } handle)
-        {
-            if (handle.Root is { } root) Collect(set, set.Schema(root.StateName), seen);
-            Collect(set, set.Schema(handle.StateName), seen);
-        }
-        foreach (var element in type.Element) Collect(set, element, seen);
+        if (type.Schema is { } schema) Collect(schema, seen);
+        foreach (var element in type.Element) Collect(element, seen);
     }
 
     private static string Describe(GesSchemaSet set, GesModelType type) => Describe(set.Schema(type.Lookup));
@@ -377,7 +372,7 @@ internal static class GesModelLayoutBuilder
         }
     }
 
-    private static void Reach(GesSchemaSet set, GesSchema schema, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
+    private static void Reach(GesSchema schema, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
     {
         if (reached.TryGetValue(schema.Name, out var known))
         {
@@ -388,8 +383,8 @@ internal static class GesModelLayoutBuilder
 
         reached.Add(schema.Name, schema);
         foreach (var field in schema.Fields)
-            foreach (var type in field.Alternatives) Reach(set, type, reached, handles);
-        foreach (var member in schema.Members) Reach(set, member, reached, handles);
+            foreach (var type in field.Alternatives) Reach(type, reached, handles);
+        foreach (var member in schema.Members) Reach(member, reached, handles);
     }
 
     private static string Describe(GesSchema schema) => schema.Kind switch
@@ -399,20 +394,21 @@ internal static class GesModelLayoutBuilder
         _ => "the schema :" + schema.Name
     };
 
-    private static void Reach(GesSchemaSet set, GesSchemaType type, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
+    private static void Reach(GesSchemaType type, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
     {
-        if (type.Schema is { } schema) Reach(set, schema, reached, handles);
-        if (type.HandleType is { } handle) Reach(set, handle, reached, handles);
-        foreach (var element in type.Element) Reach(set, element, reached, handles);
+        if (type.Schema is { } schema) Reach(schema, reached, handles);
+        if (type.HandleType is { } handle) Reach(handle, handles);
+        foreach (var element in type.Element) Reach(element, reached, handles);
     }
 
-    // A handle type brings its composite root and its state schema, whose model holds a resolved object.
-    private static void Reach(GesSchemaSet set, GesHandleType handle, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
+    // A handle type brings its `<Name>Handle` and a composite's root handle type, whose `<Name>Handle` it holds. It never brings
+    // its state schema: the generated handle names the state in documentation only, so the state is a model type only where
+    // a root reaches it otherwise, as in the wire layout.
+    private static void Reach(GesHandleType handle, SortedDictionary<string, GesHandleType> handles)
     {
         if (handles.ContainsKey(handle.Name)) return;
         handles.Add(handle.Name, handle);
-        if (handle.Root is { } root) Reach(set, root, reached, handles);
-        Reach(set, set.Schema(handle.StateName), reached, handles);
+        if (handle.Root is { } root) Reach(root, handles);
     }
 
     private static GesModelField Field(string name, string path, GesReadOnlyArray<GesSchemaType> alternatives)

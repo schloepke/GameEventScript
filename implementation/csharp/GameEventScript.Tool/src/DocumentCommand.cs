@@ -12,7 +12,7 @@ internal static class DocumentCommand
 
     private const string HelpText = """
 Usage:
-  dotnet ges document check <data.gesd> [more.gesd ...] [-q]
+  dotnet ges document check <data.gesd> [more.gesd ...] [--schema <file.gess> ...] [-q]
   dotnet ges document format <data.gesd> [-o <output.gesd>] [--color]
 
 Commands:
@@ -20,6 +20,7 @@ Commands:
   format  Print a GES document in the recommended layout.
 
 Options:
+  --schema <file.gess> Check each document against the schema its header names; repeatable.
   -o, --output <path>  Write the formatted document to a UTF-8 file instead of stdout.
   --color              Color terminal output (unless NO_COLOR is set).
   -q, --quiet          Hide the success report of check.
@@ -30,6 +31,12 @@ Reading follows the strict document rules: unquoted Text, duplicate keys and
 invalid literals are errors. Formatting drops comments and layout; the output
 reads back to an equal document. An existing output file is replaced only after
 successful reading. The schema reference is kept, but schema files are not read.
+
+With --schema, check reads the given files as one schema set and checks every
+document with a header against its schema: :Schema(:Name) names a schema of the
+set, :Schema('file.gess') a file relative to the document that must be one of the
+given files. A schema that the set does not hold is schema.unknownName. Documents
+without a header are only read.
 """;
 
     internal static int Run(string[] arguments)
@@ -42,6 +49,7 @@ successful reading. The schema reference is kept, but schema files are not read.
         if (arguments[0] is not ("check" or "format")) return UsageError($"Unknown document command '{arguments[0]}'.");
         var check = arguments[0] == "check";
         var paths = new List<string>();
+        var schemaArguments = new List<string>();
         string? outputPath = null;
         var quiet = false;
         var color = false;
@@ -62,6 +70,12 @@ successful reading. The schema reference is kept, but schema files are not read.
                 outputPath = arguments[++index];
             }
             else if (parseOptions && check && argument is "-q" or "--quiet") quiet = true;
+            else if (parseOptions && check && argument == ToolSchemas.Option)
+            {
+                if (index + 1 == arguments.Length || arguments[index + 1].StartsWith('-') || string.IsNullOrWhiteSpace(arguments[index + 1]))
+                    return UsageError("Specify a schema path after --schema; prefix a path starting with '-' with './'.");
+                schemaArguments.Add(arguments[++index]);
+            }
             else if (parseOptions && !check && argument == "--color") color = Environment.GetEnvironmentVariable("NO_COLOR") is null;
             else if (parseOptions && argument.StartsWith('-')) return UsageError($"Unknown document {arguments[0]} option '{argument}'.");
             else if (string.IsNullOrWhiteSpace(argument)) return UsageError("Document paths must not be empty.");
@@ -76,13 +90,15 @@ successful reading. The schema reference is kept, but schema files are not read.
         {
             if (check)
             {
+                var schemas = ToolDocumentSchemas.Load(schemaArguments, ref activePath);
                 var failed = 0;
                 // An unreadable file fails like an invalid one; the remaining files are still checked.
                 foreach (var path in paths)
                 {
                     try
                     {
-                        if (Read(path) is null) failed++;
+                        var source = StrictUtf8.GetString(File.ReadAllBytes(path));
+                        if (Read(path, source) is not { } read || schemas?.Check(path, source, read) == false) failed++;
                     }
                     catch (DecoderFallbackException exception)
                     {
@@ -106,7 +122,7 @@ successful reading. The schema reference is kept, but schema files are not read.
                 var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
                 if (string.Equals(Path.GetFullPath(paths[0]), outputPath, comparison)) return UsageError("Input and output must be different files.");
             }
-            if (Read(paths[0]) is not { } document) return 1;
+            if (Read(paths[0], StrictUtf8.GetString(File.ReadAllBytes(paths[0]))) is not { } document) return 1;
             var text = document.Print();
             if (outputPath is not null)
             {
@@ -118,6 +134,11 @@ successful reading. The schema reference is kept, but schema files are not read.
             Console.Write(color && !Console.IsOutputRedirected ? RunHighlighting.RenderDocument(text) : text);
             return 0;
         }
+        catch (GesSchemaException exception)
+        {
+            ToolSchemas.Report(exception);
+            return 1;
+        }
         catch (DecoderFallbackException exception)
         {
             Console.Error.WriteLine($"{activePath}: error cli.invalidEncoding: {exception.Message}");
@@ -128,12 +149,16 @@ successful reading. The schema reference is kept, but schema files are not read.
             Console.Error.WriteLine($"error cli.io: {exception.Message}");
             return 1;
         }
+        catch (ArgumentException exception)
+        {
+            return UsageError(exception.Message);
+        }
     }
 
     // Reads one document and reports its error as `path(line,column): error code: message`.
-    private static GesDocument? Read(string path)
+    private static GesDocument? Read(string path, string text)
     {
-        var document = ToolDocuments.Read(StrictUtf8.GetString(File.ReadAllBytes(path)), out var error);
+        var document = ToolDocuments.Read(text, out var error);
         if (error is { } found) Console.Error.WriteLine(ToolDocuments.Format(path, found));
         return document;
     }

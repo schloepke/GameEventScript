@@ -36,6 +36,7 @@ extension Tool {
         guard arguments[0] == "check" || arguments[0] == "format" else { throw ToolError.usage("Unknown document command '\(arguments[0])'.") }
         let check = arguments[0] == "check"
         var paths: [String] = []
+        var schemaArguments: [String] = []
         var output: String?
         var quiet = false
         var color = false
@@ -54,6 +55,12 @@ extension Tool {
                 output = arguments[index]
             } else if options && check && ["-q", "--quiet"].contains(argument) {
                 quiet = true
+            } else if options && check && argument == "--schema" {
+                guard index + 1 < arguments.count, !arguments[index + 1].hasPrefix("-"), !arguments[index + 1].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    throw ToolError.usage("Specify a schema path after --schema; prefix a path starting with '-' with './'.")
+                }
+                index += 1
+                schemaArguments.append(arguments[index])
             } else if options && !check && argument == "--color" {
                 color = !io.noColor
             } else if options && argument.hasPrefix("-") {
@@ -72,6 +79,7 @@ extension Tool {
             do { try ToolFiles.ensureDistinct(path, from: paths) } catch ToolError.usage { throw ToolError.usage("Input and output must be different files.") }
         }
         if check {
+            let schemas = try ToolDocumentSchemas.load(schemaArguments)
             var failed = 0
             // An unreadable file fails like an invalid one; the remaining files are still checked.
             for path in paths {
@@ -83,7 +91,11 @@ extension Tool {
                     failed += 1
                     continue
                 }
-                if try readDocument(path, text) == nil { failed += 1 }
+                guard let document = try readDocument(path, text) else {
+                    failed += 1
+                    continue
+                }
+                if let schemas, !schemas.check(path, text, document, io) { failed += 1 }
             }
             if !quiet && failed == 0 { io.line(paths.count == 1 ? "Checked \(paths[0])." : "Checked \(paths.count) documents.") }
             return failed == 0 ? 0 : 1
@@ -105,5 +117,85 @@ extension Tool {
         let (document, failure) = try ToolDocuments.read(text)
         if let failure { io.line(ToolDocuments.format(path, failure), toError: true) }
         return document
+    }
+}
+
+// The schemas of `document check --schema`: the given sources read as one schema set, against which each document with
+// a header is checked. `:Schema(:Name)` names a schema of the set. `:Schema('file.gess')` names a file relative to the
+// document, which must be one of the given sources; the set then names that source by the header's text, as the runtime
+// matches a file header against source names, and every other source by its full path, so no two sources collide.
+final class ToolDocumentSchemas {
+    private struct FileKey: Hashable {
+        let source: Int
+        let name: String
+    }
+
+    private let sources: [GesSchemaSource]
+    private let fullPaths: [String]
+    private let set: GesSchemaSet
+    private var fileSets: [FileKey: GesSchemaSet] = [:]
+
+    private init(_ sources: [GesSchemaSource]) throws {
+        self.sources = sources
+        fullPaths = try sources.map { ToolDocumentSchemas.comparable(try ToolFiles.fullPath($0.name)) }
+        set = try GesSchemaSet(sources: sources)
+    }
+
+    // The schema set of `--schema`, or nil without the option; a schema error throws as for compile.
+    static func load(_ arguments: [String]) throws -> ToolDocumentSchemas? {
+        var activePath = ""
+        guard let sources = try ToolFiles.schemaSources(arguments, activePath: &activePath) else { return nil }
+        return try ToolDocumentSchemas(sources)
+    }
+
+    // Checks a readable document against the schema of its header and reports the first error; a document without a
+    // header has nothing to check against.
+    func check(_ path: String, _ text: String, _ document: GesDocument, _ io: ToolIO) -> Bool {
+        guard let schema = document.schema else { return true }
+        do {
+            switch schema.kind {
+            case .type:
+                try set.checkDocument(text)
+            case .file:
+                guard let set = try fileSet(path, schema.name) else {
+                    io.line("\(path): error schema.unknownName: The schema file '\(schema.name)' is none of the files given with --schema.", toError: true)
+                    return false
+                }
+                try set.checkDocument(text)
+            }
+            return true
+        } catch let error as GesSchemaError {
+            let place = error.line > 0 && error.sourceName.isEmpty ? "\(path)(\(error.line),\(error.column))" : error.line > 0 ? "\(error.sourceName)(\(error.line),\(error.column))" : path
+            io.line("\(place): error \(error.code): \(error.message)", toError: true)
+            return false
+        } catch {
+            io.report(error)
+            return false
+        }
+    }
+
+    // The set for a file header, or nil when the file is none of the given sources.
+    private func fileSet(_ path: String, _ name: String) throws -> GesSchemaSet? {
+        let directory = URL(fileURLWithPath: try ToolFiles.fullPath(path)).deletingLastPathComponent()
+        let fullPath = ToolDocumentSchemas.comparable(URL(fileURLWithPath: name, relativeTo: directory).standardizedFileURL.path)
+        guard let index = fullPaths.firstIndex(of: fullPath) else { return nil }
+        let key = FileKey(source: index, name: name)
+        if let set = fileSets[key] { return set }
+        var renamed: [GesSchemaSource] = []
+        for (other, source) in sources.enumerated() {
+            renamed.append(GesSchemaSource(name: other == index ? name : try ToolFiles.fullPath(source.name), text: source.text))
+        }
+        let set = try GesSchemaSet(sources: renamed)
+        fileSets[key] = set
+        return set
+    }
+
+    // Paths compare as the file system does: case-insensitively on macOS.
+    private static func comparable(_ path: String) -> String {
+        #if os(macOS)
+            return path.lowercased()
+        #else
+            return path
+        #endif
     }
 }

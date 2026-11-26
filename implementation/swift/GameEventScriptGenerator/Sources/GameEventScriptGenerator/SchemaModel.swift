@@ -145,7 +145,7 @@ enum GesModelLayoutBuilder {
                 throw GesGeneratorError(GesGeneratorError.usage, "The model root '\(root)' is abstract; only its protocol is generated, where a model takes it.")
             }
             rootNames.append(schema.name)
-            try reach(set, schema, &reached, &handles)
+            try reach(schema, &reached, &handles)
         }
         var types: [GesModelType] = []
         for name in reached.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) {
@@ -239,7 +239,7 @@ enum GesModelLayoutBuilder {
         }
     }
 
-    private static func reach(_ set: GesSchemaSet, _ schema: GesSchema, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) throws {
+    private static func reach(_ schema: GesSchema, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) throws {
         if let known = reached[schema.name] {
             // Model types share one namespace: a message beside a schema of its name has no second type name.
             if known === schema { return }
@@ -250,9 +250,9 @@ enum GesModelLayoutBuilder {
         }
         reached[schema.name] = schema
         for field in schema.fields {
-            for type in field.alternatives { try reach(set, type, &reached, &handles) }
+            for type in field.alternatives { try reach(type, &reached, &handles) }
         }
-        for member in schema.members { try reach(set, member, &reached, &handles) }
+        for member in schema.members { try reach(member, &reached, &handles) }
     }
 
     // The models that wire code generated with `--models` converts to. Each model group is generated with `--model` like any
@@ -272,7 +272,7 @@ enum GesModelLayoutBuilder {
         for group in groups {
             let roots = GesSchemaGenerator.modelRoots(set, group: group)
             var seen: [ObjectIdentifier: GesSchema] = [:]
-            for root in roots { try collect(set, try set.schema(root), &seen) }
+            for root in roots { collect(try set.schema(root), &seen) }
             guard seen.values.contains(where: { wanted.contains(set.rootName(of: $0)) }) else { continue }
             let layout = try build(set, roots: roots)
             for type in layout.types {
@@ -298,21 +298,17 @@ enum GesModelLayoutBuilder {
     }
 
     // Every schema that a model of the schema names, as reach finds them, without the check of their names.
-    private static func collect(_ set: GesSchemaSet, _ schema: GesSchema, _ seen: inout [ObjectIdentifier: GesSchema]) throws {
+    private static func collect(_ schema: GesSchema, _ seen: inout [ObjectIdentifier: GesSchema]) {
         if seen.updateValue(schema, forKey: ObjectIdentifier(schema)) != nil { return }
         for field in schema.fields {
-            for type in field.alternatives { try collect(set, type, &seen) }
+            for type in field.alternatives { collect(type, &seen) }
         }
-        for member in schema.members { try collect(set, member, &seen) }
+        for member in schema.members { collect(member, &seen) }
     }
 
-    private static func collect(_ set: GesSchemaSet, _ type: GesSchemaType, _ seen: inout [ObjectIdentifier: GesSchema]) throws {
-        if let schema = type.schema { try collect(set, schema, &seen) }
-        if let handle = type.handleType {
-            if let root = handle.root { try collect(set, try set.schema(root.stateName), &seen) }
-            try collect(set, try set.schema(handle.stateName), &seen)
-        }
-        for element in type.element { try collect(set, element, &seen) }
+    private static func collect(_ type: GesSchemaType, _ seen: inout [ObjectIdentifier: GesSchema]) {
+        if let schema = type.schema { collect(schema, &seen) }
+        for element in type.element { collect(element, &seen) }
     }
 
     private static func describe(_ schema: GesSchema) -> String {
@@ -323,18 +319,19 @@ enum GesModelLayoutBuilder {
         }
     }
 
-    private static func reach(_ set: GesSchemaSet, _ type: GesSchemaType, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) throws {
-        if let schema = type.schema { try reach(set, schema, &reached, &handles) }
-        if let handle = type.handleType { try reach(set, handle, &reached, &handles) }
-        for element in type.element { try reach(set, element, &reached, &handles) }
+    private static func reach(_ type: GesSchemaType, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) throws {
+        if let schema = type.schema { try reach(schema, &reached, &handles) }
+        if let handle = type.handleType { reach(handle, &handles) }
+        for element in type.element { try reach(element, &reached, &handles) }
     }
 
-    // A handle type brings its composite root and its state schema, whose model holds a resolved object.
-    private static func reach(_ set: GesSchemaSet, _ handle: GesHandleType, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) throws {
+    // A handle type brings its `<Name>Handle` and a composite's root handle type, whose `<Name>Handle` it holds. It never brings
+    // its state schema: the generated handle names the state in documentation only, so the state is a model type only where
+    // a root reaches it otherwise, as in the wire layout.
+    private static func reach(_ handle: GesHandleType, _ handles: inout [String: GesHandleType]) {
         if handles[handle.name] != nil { return }
         handles[handle.name] = handle
-        if let root = handle.root { try reach(set, root, &reached, &handles) }
-        try reach(set, try set.schema(handle.stateName), &reached, &handles)
+        if let root = handle.root { reach(root, &handles) }
     }
 
     private static func field(_ name: String, _ path: String, _ alternatives: [GesSchemaType]) throws -> GesModelField {

@@ -16,6 +16,10 @@ internal static class ToolSchemas
     internal const string Option = "--schema";
 
     internal static IReadOnlyList<GesHandleType>? Load(IReadOnlyList<string> arguments, ref string? activePath)
+        => Sources(arguments, ref activePath) is { } sources ? [.. GesSchemaSet.Parse(sources).HandleTypes] : null;
+
+    // The strict UTF-8 sources of `--schema`, each named by its path as given or expanded; null without the option.
+    internal static GesSchemaSource[]? Sources(IReadOnlyList<string> arguments, ref string? activePath)
     {
         if (arguments.Count == 0) return null;
         var paths = CompileSources.Expand(arguments);
@@ -25,7 +29,7 @@ internal static class ToolSchemas
             activePath = paths[index];
             sources[index] = new GesSchemaSource(paths[index], StrictUtf8.GetString(File.ReadAllBytes(paths[index])));
         }
-        return [.. GesSchemaSet.Parse(sources).HandleTypes];
+        return sources;
     }
 
     // Reported as `ges schema check` reports it.

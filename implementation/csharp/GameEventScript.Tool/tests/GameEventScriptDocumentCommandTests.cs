@@ -95,6 +95,9 @@ public sealed class GameEventScriptDocumentCommandTests
     [DataRow("document", "check", "--color", "a.gesd")]
     [DataRow("document", "check", "")]
     [DataRow("document", "format", "", "-o", "out.gesd")]
+    [DataRow("document", "check", "a.gesd", "--schema")]
+    [DataRow("document", "check", "a.gesd", "--schema", "-q")]
+    [DataRow("document", "format", "a.gesd", "--schema", "units.gess")]
     public void UsageErrorsExitWithTwo(params string[] arguments)
     {
         Write("a.gesd", Valid);
@@ -102,6 +105,50 @@ public sealed class GameEventScriptDocumentCommandTests
         var result = Run(arguments);
         Assert.AreEqual(2, result.ExitCode, result.StandardError + result.StandardOutput);
         if (arguments.Length > 1) StringAssert.Contains(result.StandardError, "cli.usage");
+    }
+
+    /// <summary>
+    /// Verifies that check with <c>--schema</c> checks each document against the schema its header names: a pinned
+    /// reference in an unpinned handle field breaks it, which reading alone accepts.
+    /// </summary>
+    [TestMethod]
+    public void CheckWithSchemasChecksEachDocumentAgainstItsHeader()
+    {
+        Write("state.gess", "schema :Composition as { name: :Text max 32 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\n");
+        Write("army.gess", "schema :Army as { parts: :List(@Unit) max 4 }\n");
+        Write("pinned.gesd", ":Schema(:Army)\nparts: [@Unit:x~#live]\n");
+        Write("army.gesd", ":Schema(:Army)\nparts: [@Unit:x, @Unit:y]\n");
+        Write("plain.gesd", "parts: [@Unit:x~#live]\n");
+        Directory.CreateDirectory(Path.Combine(_directory, "sub"));
+        Write(Path.Combine("sub", "file.gesd"), ":Schema('../army.gess')\nparts: [@Unit:x]\n");
+        Write(Path.Combine("sub", "pinned.gesd"), ":Schema('../army.gess')\nparts: [@Unit:x~#live]\n");
+        Write("other.gesd", ":Schema('other.gess')\nparts: [@Unit:x]\n");
+        Write("unknown.gesd", ":Schema(:Navy)\nparts: [@Unit:x]\n");
+
+        // Without --schema only reading is checked.
+        var read = Run("document", "check", "pinned.gesd", "other.gesd", "unknown.gesd");
+        Assert.AreEqual(0, read.ExitCode, read.StandardError);
+        Assert.AreEqual(Lines("Checked 3 documents."), read.StandardOutput);
+
+        var valid = Run("document", "check", "army.gesd", "plain.gesd", Path.Combine("sub", "file.gesd"), "--schema", "state.gess", "--schema", "army.gess");
+        Assert.AreEqual(0, valid.ExitCode, valid.StandardError);
+        Assert.AreEqual(Lines("Checked 3 documents."), valid.StandardOutput);
+
+        var invalid = Run("document", "check", "pinned.gesd", Path.Combine("sub", "pinned.gesd"), "other.gesd", "unknown.gesd", "army.gesd", "--schema", "*.gess");
+        Assert.AreEqual(1, invalid.ExitCode);
+        Assert.AreEqual(string.Empty, invalid.StandardOutput);
+        Assert.AreEqual(Lines(
+            "pinned.gesd(2,9): error document.unexpectedVersion: The document breaks its schema (document.unexpectedVersion) at line 2, column 9.",
+            $"{Path.Combine("sub", "pinned.gesd")}(2,9): error document.unexpectedVersion: The document breaks its schema (document.unexpectedVersion) at line 2, column 9.",
+            "other.gesd: error schema.unknownName: The schema file 'other.gess' is none of the files given with --schema.",
+            "unknown.gesd: error schema.unknownName: ':Navy' is not declared."), invalid.StandardError);
+
+        // A schema error stops before any document, as for compile.
+        Write("broken.gess", "schema :Broken { }\n");
+        var broken = Run("document", "check", "army.gesd", "--schema", "broken.gess");
+        Assert.AreEqual(1, broken.ExitCode);
+        StringAssert.StartsWith(broken.StandardError, "broken.gess(1,16): error schema.syntax:");
+        Assert.AreEqual(string.Empty, broken.StandardOutput);
     }
 
     /// <summary>Verifies that :show displays a file and marks its errors without loading it.</summary>

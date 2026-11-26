@@ -114,7 +114,8 @@ usage returns 2. Diagnostics, event traces and run summaries go to stderr.
 Compilation/check reports and ordinary dumps go to stdout.
 
 `document check` reads GES documents and reports the first error of each as
-`path(line,column): error document.code: message`; `document format` prints a
+`path(line,column): error document.code: message`, and with `--schema <file.gess>`
+also checks each document against the schema its header names; `document format` prints a
 document in the recommended layout or writes it with `-o`. Both behave like the
 C# commands documented in the C# CLI README.
 

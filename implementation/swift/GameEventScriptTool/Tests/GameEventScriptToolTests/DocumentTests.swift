@@ -71,11 +71,56 @@ final class DocumentTests: XCTestCase {
         XCTAssertEqual(try String(contentsOfFile: previous, encoding: .utf8), "previous")
     }
 
+    // A pinned reference in an unpinned handle field breaks the schema, which reading alone accepts.
+    func testCheckWithSchemasChecksEachDocumentAgainstItsHeader() throws {
+        let state = try tool.file("state.gess", "schema :Composition as { name: :Text max 32 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\n")
+        let army = try tool.file("army.gess", "schema :Army as { parts: :List(@Unit) max 4 }\n")
+        let pinned = try tool.file("pinned.gesd", ":Schema(:Army)\nparts: [@Unit:x~#live]\n")
+        let good = try tool.file("army.gesd", ":Schema(:Army)\nparts: [@Unit:x, @Unit:y]\n")
+        let plain = try tool.file("plain.gesd", "parts: [@Unit:x~#live]\n")
+        let file = try tool.file("sub/file.gesd", ":Schema('../army.gess')\nparts: [@Unit:x]\n")
+        let filePinned = try tool.file("sub/pinned.gesd", ":Schema('../army.gess')\nparts: [@Unit:x~#live]\n")
+        let other = try tool.file("other.gesd", ":Schema('other.gess')\nparts: [@Unit:x]\n")
+        let unknown = try tool.file("unknown.gesd", ":Schema(:Navy)\nparts: [@Unit:x]\n")
+
+        // Without --schema only reading is checked.
+        let read = tool.run(["document", "check", pinned, other, unknown])
+        XCTAssertEqual(read.code, 0, read.error)
+        XCTAssertEqual(read.output, "Checked 3 documents.\n")
+
+        let valid = tool.run(["document", "check", good, plain, file, "--schema", state, "--schema", army])
+        XCTAssertEqual(valid.code, 0, valid.error)
+        XCTAssertEqual(valid.output, "Checked 3 documents.\n")
+
+        let pattern = tool.directory.appendingPathComponent("*.gess").path
+        let invalid = tool.run(["document", "check", pinned, filePinned, other, unknown, good, "--schema", pattern])
+        XCTAssertEqual(invalid.code, 1)
+        XCTAssertEqual(invalid.output, "")
+        XCTAssertEqual(
+            invalid.error,
+            """
+            \(pinned)(2,9): error document.unexpectedVersion: The document breaks its schema (document.unexpectedVersion) at line 2, column 9.
+            \(filePinned)(2,9): error document.unexpectedVersion: The document breaks its schema (document.unexpectedVersion) at line 2, column 9.
+            \(other): error schema.unknownName: The schema file 'other.gess' is none of the files given with --schema.
+            \(unknown): error schema.unknownName: ':Navy' is not declared.
+
+            """
+        )
+
+        // A schema error stops before any document, as for compile.
+        let broken = try tool.file("broken.gess", "schema :Broken { }\n")
+        let failed = tool.run(["document", "check", good, "--schema", broken])
+        XCTAssertEqual(failed.code, 1)
+        XCTAssertTrue(failed.error.hasPrefix("\(broken)(1,16): error schema.syntax:"), failed.error)
+        XCTAssertEqual(failed.output, "")
+    }
+
     func testUsageErrorsExitWithTwo() throws {
         let a = try tool.file("a.gesd", valid)
         let b = try tool.file("b.gesd", valid)
         for arguments in [
             ["document"], ["document", "lint", a], ["document", "check"], ["document", "format", a, b], ["document", "format", a, "-o", a], ["document", "check", "--color", a], ["document", "check", ""], ["document", "format", "", "-o", "out.gesd"],
+            ["document", "check", a, "--schema"], ["document", "check", a, "--schema", "-q"], ["document", "format", a, "--schema", "units.gess"],
         ] {
             let result = tool.run(arguments)
             XCTAssertEqual(result.code, 2, "\(arguments) \(result.error)")

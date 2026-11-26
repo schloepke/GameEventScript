@@ -28,6 +28,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   session if they fail. The CLI registers no resolver, so a Program that reads handle state fails to load with
   `link.missingHandleResolver`. The guide [Refer to host objects with handles](docs/guide/Handles.md) walks through
   schema, script, resolvers in C# and Swift, text form, documents and refs.
+- `document check --schema <file.gess>` (both CLIs; repeatable, with file-name patterns) reads the files as one schema
+  set and checks each document against the schema its header names, as `GesSchemaSet.CheckDocument` does: a pinned
+  reference such as `parts: [@Unit:x~#live]` in an unpinned handle field now fails with `document.unexpectedVersion`
+  instead of passing as merely readable. `:Schema('file.gess')` resolves relative to the document and must be one of
+  the given files; a schema the set does not hold is `schema.unknownName`, and documents without a header are only read.
+  Without `--schema` the command is unchanged.
 - Handle resolution details (specs/HostRuntime.md#handles): a state read without a static handle type resolves through
   the type's resolver when one is registered and otherwise reads Nothing; a resolver of a revision or hash type that
   passes no version answers for the carried version, and a handle without one fails with `runtime.invalidHandleState`,
@@ -40,7 +46,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   takes tag characters and every other ref is quoted Text (`~'1.0'`). Generated Swift handle types throw
   `GesApiError.invalidArgument` for an id or part out of range, and `init(_ handle: GesHandle)` throws for another
   type or form, like C# `FromHandle`. Split output (`-d`) puts each generated `<Name>Handle` into a file of its own
-  (`--split schema`) or into the file of the source that declares the handle type (`--split file`). Markdown Conformance scripts ref answers, `ResolveRef` results and input
+  (`--split schema`) or into the file of the source that declares the handle type (`--split file`). A model field of a
+  handle type reaches only its `<Name>Handle` and, for a composite, the root's handle type, never the state schema, which
+  the handle names in documentation only; a state model is generated only when it is selected or reached otherwise. Markdown Conformance scripts ref answers, `ResolveRef` results and input
   rejections such as `wire.unresolvedRef` (specs/Conformance/MarkdownFormat.md#handle-catalogs).
 - Named timers and heartbeats: `emit after 30s named 'timeout' GiveUp()` names a delayed send so that a later send
   of the same name replaces it, and `emit every 1s named 'beat' Heartbeat()` (also `publish`) repeats one period after

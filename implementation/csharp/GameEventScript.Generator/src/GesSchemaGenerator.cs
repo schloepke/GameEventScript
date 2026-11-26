@@ -82,7 +82,7 @@ public static class GesSchemaGenerator
         var types = layout.Types;
         var keys = layout.Roots;
         // A message type carries the message suffix, so the layout knows its source; tag sets and networks keep their names.
-        return GesCodeFiles.Split(document, options.Split, owner => types.Find(type => type.Name == owner)?.Source ?? set.SourceName(owner), files => Manifest(options, model: false, layout.RootNames, name => layout.RootHashes(keys[layout.RootNames.IndexOf(name)]), layout.Parameters, files));
+        return GesCodeFiles.Split(document, options.Split, owner => types.Find(type => type.Name == owner)?.Source ?? set.SourceName(owner), set.HandleSourceName, files => Manifest(options, model: false, layout.RootNames, name => layout.RootHashes(keys[layout.RootNames.IndexOf(name)]), layout.Parameters, files));
     }
 
     private static GesCodeDocument Wire(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaParameters parameters, GesSchemaGenerateOptions options, out GesSchemaLayout layout)
@@ -216,7 +216,7 @@ public static class GesSchemaGenerator
         if (roots is null) throw new ArgumentNullException(nameof(roots));
         if (options is null) throw new ArgumentNullException(nameof(options));
         var document = Models(set, roots, options, out var layout);
-        return GesCodeFiles.Split(document, options.Split, set.SourceName, files => Manifest(options, model: true, layout.Roots, root => (layout.Type(root).Hash, null), [], files));
+        return GesCodeFiles.Split(document, options.Split, set.SourceName, set.HandleSourceName, files => Manifest(options, model: true, layout.Roots, root => (layout.Type(root).Hash, null), [], files));
     }
 
     // How many leading components of the namespace another generation declares: those of ExtendNamespace, which is Swift's

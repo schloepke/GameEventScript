@@ -416,6 +416,32 @@ final class GenerateTests: XCTestCase {
         }
     }
 
+    func testSplitOutputPlacesAHandleTypeInTheFileOfItsDeclaration() throws {
+        let set = try GesSchemaSet(sources: [
+            GesSchemaSource(name: "states.gess", text: "schema :Composition as { name: :Text max 4 }\n"),
+            GesSchemaSource(name: "handles.gess", text: "handle @Unit of :Composition as { id: :Text max 4, version: :ContentHash }\n"),
+            GesSchemaSource(name: "commands.gess", text: "model schema :Move as { unit: @Unit, units: :List(@Unit~) max 2 }\n"),
+        ])
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            let fileExtension = language == .swift ? ".swift" : ".g.cs"
+            var options = GesSchemaGenerateOptions(language: language, namespace: "Game.Net", split: .file)
+            // Swift wire code declares its namespace enums in the shared file.
+            let shared = language == .swift ? ["_Game.Net" + fileExtension] : []
+            let wire = try GesSchemaGenerator.generateFiles(set, roots: ["Move"], parameters: GesSchemaParameters(), options: options)
+            XCTAssertEqual(wire.map(\.path), ["Game.Net.commands" + fileExtension, "Game.Net.handles" + fileExtension] + shared + [".ges-generated.json"])
+            XCTAssertTrue(wire[1].text.contains(" UnitHandle"))
+            XCTAssertFalse(wire[0].text.contains("struct UnitHandle"))
+            let models = try GesSchemaGenerator.generateModelFiles(set, roots: ["Move"], options: options)
+            XCTAssertEqual(models.map(\.path), ["Game.Net.commands", "Game.Net.handles", "Game.Net.states", "_Game.Net"].map { $0 + fileExtension } + [".ges-generated.json"])
+            XCTAssertTrue(models[1].text.contains(" UnitHandle"))
+            options.split = .schema
+            let wireBySchema = try GesSchemaGenerator.generateFiles(set, roots: ["Move"], parameters: GesSchemaParameters(), options: options)
+            XCTAssertEqual(wireBySchema.map(\.path), ["Game.Net.Move" + fileExtension, "Game.Net.UnitHandle" + fileExtension] + shared + [".ges-generated.json"])
+            let modelsBySchema = try GesSchemaGenerator.generateModelFiles(set, roots: ["Move"], options: options)
+            XCTAssertEqual(modelsBySchema.map(\.path), ["Game.Net.Composition", "Game.Net.Move", "Game.Net.UnitHandle", "_Game.Net"].map { $0 + fileExtension } + [".ges-generated.json"])
+        }
+    }
+
     func testSplitOutputRejectsMismatchedRequestsAndCollidingFileNames() throws {
         let set = try GesSchemaSet(parsing: "schema :S as {\n  on: :Boolean\n}\n")
         let split = GesSchemaGenerateOptions(split: .schema)

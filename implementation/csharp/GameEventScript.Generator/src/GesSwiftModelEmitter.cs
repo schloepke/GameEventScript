@@ -59,7 +59,7 @@ internal static partial class GesSwiftModelEmitter
                 else Record(code, layout, type, access, options.Bindings, valued ? values : null, computed, plain.Roots.Contains(type.Name) ? documents : null);
             }));
         foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Protocol(code, layout, protocol, access)));
-        foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => Handle(code, layout.Handles, handle, access)));
+        foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => Handle(code, layout.Handles, handle, access), handle: handle.Name));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.")));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, plain, access, support, computed)));

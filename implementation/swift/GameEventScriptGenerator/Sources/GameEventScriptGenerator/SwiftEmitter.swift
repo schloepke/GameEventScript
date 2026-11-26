@@ -128,7 +128,7 @@ enum GesSwiftEmitter {
         if options.models == nil {
             let handles = layout.handles.map(\.model)
             for handle in layout.handles {
-                document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handle.name)) { code in GesSwiftModelEmitter.handle(&code, handles, handle.model, access) })
+                document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handle.name), write: { code in GesSwiftModelEmitter.handle(&code, handles, handle.model, access) }, handle: handle.name))
             }
         }
         if let conversion {

@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // One top-level declaration of generated code and the declaration it belongs to. An empty owner is the shared part, such
-// as the embedded schema sources; an outside unit stands after the namespace, at file level.
+// as the embedded schema sources; an outside unit stands after the namespace, at file level. The type `<Name>Handle` of a
+// handle type is owned by that name and names the handle type, whose source places it in a split by file.
 struct GesCodeUnit {
     var owner: String
     var write: (inout GesSchemaPlanner.Code) throws -> Void
     var outside = false
+    // The handle type, without `@`, whose type `<Name>Handle` the unit declares; nil for any other unit.
+    var handle: String? = nil
 }
 
 // The declarations of generated code with what surrounds them: the header of the single file, the lines before the
@@ -93,8 +96,15 @@ enum GesCodeFiles {
         }
     }
 
-    // The files of split code, ordered by name, and the manifest last.
-    static func split(_ document: GesCodeDocument, _ split: GesSchemaSplit, sourceOf: (String) -> String, manifest: ([String]) -> String) throws -> [GesGeneratedFile] {
+    // The files of split code, ordered by name, and the manifest last. A handle type's unit goes into the file of the source
+    // that declares the handle type, which handleSourceOf names.
+    static func split(
+        _ document: GesCodeDocument,
+        _ split: GesSchemaSplit,
+        sourceOf: (String) -> String,
+        handleSourceOf: (String) -> String,
+        manifest: ([String]) -> String
+    ) throws -> [GesGeneratedFile] {
         if split == .none { throw GesGeneratorError(GesGeneratorError.usage, "Split output needs a split by schema or by file.") }
         let fileExtension = document.swift ? ".swift" : ".g.cs"
         // Swift requires distinct file names within a module, so names carry the namespace: wire and model code of one target
@@ -112,7 +122,7 @@ enum GesCodeFiles {
                 sharedUnits.append(unit)
                 continue
             }
-            let key = split == .schema ? unit.owner : sourceOf(unit.owner)
+            let key = split == .schema ? unit.owner : unit.handle.map(handleSourceOf) ?? sourceOf(unit.owner)
             let index: Int
             if let found = keys[key] {
                 index = found

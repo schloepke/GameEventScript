@@ -1539,3 +1539,228 @@ schema:
   document:
     ok: true
 ```
+
+---
+
+## Test: a document ref in a List element
+
+The elements of a `:List(@Name)` take neither a version nor a ref: the ref the element names is `document.unexpectedVersion` at the element. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-list-element-ref
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nschema :Slot as { unit: @Unit }\nschema :Squad as {\n  parts: :List(@Unit) max 4\n  pinned: :List(@Unit~) max 4 optional\n  either: @Unit | :Number optional\n  slot: :Slot optional\n  slots: :List(:Slot) max 2 optional\n  byUnit: :Map(@Unit → :Number) max 2 optional\n}\n"]
+  document: ":Schema(:Squad)\nparts: [@Unit:x~#live]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.unexpectedVersion"
+      line: 2
+      column: 9
+```
+
+---
+
+## Test: a document version in a List element
+
+A version on an element of a `:List(@Name)` is `document.unexpectedVersion` as well. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-list-element-version
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nschema :Slot as { unit: @Unit }\nschema :Squad as {\n  parts: :List(@Unit) max 4\n  pinned: :List(@Unit~) max 4 optional\n  either: @Unit | :Number optional\n  slot: :Slot optional\n  slots: :List(:Slot) max 2 optional\n  byUnit: :Map(@Unit → :Number) max 2 optional\n}\n"]
+  document: ":Schema(:Squad)\nparts: [@Unit:x, @Unit:y~'1.0']\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.unexpectedVersion"
+      line: 2
+      column: 18
+```
+
+---
+
+## Test: a document ref in a union alternative
+
+A handle alternative of a union is checked as the field type it names: `@Unit` takes no ref, so the alternative stays unsatisfied, and a value that satisfies no alternative is `document.fieldType`. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-union-ref
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nschema :Slot as { unit: @Unit }\nschema :Squad as {\n  parts: :List(@Unit) max 4\n  pinned: :List(@Unit~) max 4 optional\n  either: @Unit | :Number optional\n  slot: :Slot optional\n  slots: :List(:Slot) max 2 optional\n  byUnit: :Map(@Unit → :Number) max 2 optional\n}\n"]
+  document: ":Schema(:Squad)\nparts: []\neither: @Unit:x~#live\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.fieldType"
+      line: 3
+      column: 9
+```
+
+---
+
+## Test: a document ref in a nested record
+
+A handle field of a nested record is checked against its own declaration. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-nested-ref
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nschema :Slot as { unit: @Unit }\nschema :Squad as {\n  parts: :List(@Unit) max 4\n  pinned: :List(@Unit~) max 4 optional\n  either: @Unit | :Number optional\n  slot: :Slot optional\n  slots: :List(:Slot) max 2 optional\n  byUnit: :Map(@Unit → :Number) max 2 optional\n}\n"]
+  document: ":Schema(:Squad)\nparts: []\nslot: [unit: @Unit:x~#live]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.unexpectedVersion"
+      line: 3
+      column: 14
+```
+
+---
+
+## Test: a document ref in a record of a List
+
+So is the handle field of a record in a List. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-nested-list-ref
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nschema :Slot as { unit: @Unit }\nschema :Squad as {\n  parts: :List(@Unit) max 4\n  pinned: :List(@Unit~) max 4 optional\n  either: @Unit | :Number optional\n  slot: :Slot optional\n  slots: :List(:Slot) max 2 optional\n  byUnit: :Map(@Unit → :Number) max 2 optional\n}\n"]
+  document: ":Schema(:Squad)\nparts: []\nslots: [[unit: @Unit:x], [unit: @Unit:y~#live]]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.unexpectedVersion"
+      line: 3
+      column: 33
+```
+
+---
+
+## Test: a document ref on a handle Map key
+
+A handle key carries only the identity: reading already rejects a key with a version or ref as `document.invalidHandle` at the `@`. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-map-key-ref
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nschema :Slot as { unit: @Unit }\nschema :Squad as {\n  parts: :List(@Unit) max 4\n  pinned: :List(@Unit~) max 4 optional\n  either: @Unit | :Number optional\n  slot: :Slot optional\n  slots: :List(:Slot) max 2 optional\n  byUnit: :Map(@Unit → :Number) max 2 optional\n}\n"]
+  document: ":Schema(:Squad)\nparts: []\nbyUnit: [@Unit:x~#live: 1]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.invalidHandle"
+      line: 3
+      column: 10
+```
+
+---
+
+## Test: document refs in a pinned List
+
+The elements of a `:List(@Name~)` take versions and refs, and the unpinned fields beside them take bare handles. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-pinned-list-ref
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nschema :Slot as { unit: @Unit }\nschema :Squad as {\n  parts: :List(@Unit) max 4\n  pinned: :List(@Unit~) max 4 optional\n  either: @Unit | :Number optional\n  slot: :Slot optional\n  slots: :List(:Slot) max 2 optional\n  byUnit: :Map(@Unit → :Number) max 2 optional\n}\n"]
+  document: ":Schema(:Squad)\nparts: [@Unit:x]\npinned: [@Unit:x~#live, @Unit:y~'1.0']\neither: @Unit:z\nslot: [unit: @Unit:x]\nbyUnit: [@Unit:x: 1]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: reading a model document with a ref in a List element
+
+Reading a document into a model checks it as `CheckDocument` does, so the ref in an element of a `:List(@Name)` is
+`document.unexpectedVersion` there too, beside a pinned field that takes the same ref. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-handle-list-element-ref
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nschema :DroneState as { x: :Number integer between 0 and 9, unit: @Unit }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Nothing }\nmodel(commands) schema :Move as { drone: @Drone, unit: @Unit~, parts: :List(@Unit) max 4 }\n"]
+  readDocument:
+    text: ":Schema(:Move)\ndrone: @Drone:3\nunit: @Unit:x~#live\nparts: [@Unit:x~#live]\n"
+    expected: ["Move"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.unexpectedVersion"
+      line: 4
+      column: 9
+      path: "parts[]"
+```

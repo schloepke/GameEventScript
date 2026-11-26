@@ -73,7 +73,7 @@ internal static partial class GesSwiftEmitter
         if (options.Models is null)
         {
             var handles = layout.Handles.ConvertAll(handle => handle.Model);
-            foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => GesSwiftModelEmitter.Handle(code, handles, handle.Model, access)));
+            foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => GesSwiftModelEmitter.Handle(code, handles, handle.Model, access), handle: handle.Name));
         }
 
         var space = string.Concat(document.Space.ConvertAll(part => part + "."));

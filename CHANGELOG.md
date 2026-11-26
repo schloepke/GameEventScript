@@ -39,7 +39,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   field reads as unchecked data. In the text form a part that starts with `/` or contains `//` is quoted, `~#name`
   takes tag characters and every other ref is quoted Text (`~'1.0'`). Generated Swift handle types throw
   `GesApiError.invalidArgument` for an id or part out of range, and `init(_ handle: GesHandle)` throws for another
-  type or form, like C# `FromHandle`. Markdown Conformance scripts ref answers, `ResolveRef` results and input
+  type or form, like C# `FromHandle`. Split output (`-d`) puts each generated `<Name>Handle` into a file of its own
+  (`--split schema`) or into the file of the source that declares the handle type (`--split file`). Markdown Conformance scripts ref answers, `ResolveRef` results and input
   rejections such as `wire.unresolvedRef` (specs/Conformance/MarkdownFormat.md#handle-catalogs).
 - Named timers and heartbeats: `emit after 30s named 'timeout' GiveUp()` names a delayed send so that a later send
   of the same name replaces it, and `emit every 1s named 'beat' Heartbeat()` (also `publish`) repeats one period after

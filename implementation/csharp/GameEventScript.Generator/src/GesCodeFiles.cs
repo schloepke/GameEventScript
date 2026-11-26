@@ -8,14 +8,18 @@ using System.Text;
 namespace GameEventScript.Generator;
 
 // One top-level declaration of generated code and the declaration it belongs to. An empty owner is the shared part, such
-// as the embedded schema sources; an outside unit stands after the namespace, at file level.
-internal sealed class GesCodeUnit(string owner, Action<GesSchemaPlanner.Code> write, bool outside = false)
+// as the embedded schema sources; an outside unit stands after the namespace, at file level. The type `<Name>Handle` of a
+// handle type is owned by that name and names the handle type, whose source places it in a split by file.
+internal sealed class GesCodeUnit(string owner, Action<GesSchemaPlanner.Code> write, bool outside = false, string? handle = null)
 {
     internal string Owner { get; } = owner;
 
     internal Action<GesSchemaPlanner.Code> Write { get; } = write;
 
     internal bool Outside { get; } = outside;
+
+    // The handle type, without `@`, whose type `<Name>Handle` the unit declares; null for any other unit.
+    internal string? Handle { get; } = handle;
 }
 
 // The declarations of generated code with what surrounds them: the header of the single file, the lines before the
@@ -125,8 +129,9 @@ internal static class GesCodeFiles
         }
     }
 
-    // The files of split code, ordered by name, and the manifest last.
-    internal static List<GesGeneratedFile> Split(GesCodeDocument document, GesSchemaSplit split, Func<string, string> sourceOf, Func<List<string>, string> manifest)
+    // The files of split code, ordered by name, and the manifest last. A handle type's unit goes into the file of the source
+    // that declares the handle type, which handleSourceOf names.
+    internal static List<GesGeneratedFile> Split(GesCodeDocument document, GesSchemaSplit split, Func<string, string> sourceOf, Func<string, string> handleSourceOf, Func<List<string>, string> manifest)
     {
         if (split == GesSchemaSplit.None) throw new GesGeneratorException(GesGeneratorException.Usage, "Split output needs a split by schema or by file.");
         var extension = document.Swift ? ".swift" : ".g.cs";
@@ -148,7 +153,7 @@ internal static class GesCodeFiles
                 continue;
             }
 
-            var key = split == GesSchemaSplit.Schema ? unit.Owner : sourceOf(unit.Owner);
+            var key = split == GesSchemaSplit.Schema ? unit.Owner : unit.Handle is { } handle ? handleSourceOf(handle) : sourceOf(unit.Owner);
             if (!keys.TryGetValue(key, out var index))
             {
                 index = groups.Count;

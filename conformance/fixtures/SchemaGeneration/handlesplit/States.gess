@@ -1,0 +1,6 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The state schemas of the split handle fixture; a state refers to a handle type of another source.
+schema :Composition as { name: :Text max 64, slots: :Number integer between 0 and 16 }
+schema :Source as { text: :Text }
+schema :DroneState as { x: :Number integer between 0 and 9, unit: @Unit }

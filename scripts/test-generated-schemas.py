@@ -64,6 +64,14 @@ SPLITS = (("schema", ["--wire", "world", "--param", "worldWidth=2000m", "--value
           ("file", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "FileSplitWire"),
           ("schema", ["--model", "view", "--bindings", "--values"], "SchemaSplitModel"),
           ("file", ["--model", "view", "--values"], "FileSplit.Model"))
+# Split output of the handle fixture, whose handle types another source declares than the roots and states: each
+# `<Name>Handle` lands in the declaring source's file or in a file of its own, and wire code reaches the models' handles.
+HANDLE_SPLIT = ROOT / "conformance/fixtures/SchemaGeneration/handlesplit"
+HANDLE_SPLIT_FILES = ["States.gess", "Handles.gess", "Commands.gess"]
+HANDLE_SPLITS = (("file", ["--model", "commands", "--bindings", "--values"], "HandleSplit.Model"),
+                 ("schema", ["--wire", "commands", "--values", "--models", "HandleSplit.Model"], "HandleSplit.Net"),
+                 ("schema", ["--model", "commands", "--values"], "HandleSchemaSplitModel"),
+                 ("file", ["--wire", "commands", "--values"], "HandleFileSplitWire"))
 # Named schema sets: a wire generation declares the set, split output puts it into the shared file, and a model generation
 # of the same sources in another namespace uses it for its documents.
 SETS = ((ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m", "--values", "--schemas", "RoleSchemas"], "RoleSet.Wire", "SetRolesWire", "file"),
@@ -551,6 +559,12 @@ def main():
                                   "--access", "internal", "--out-dir", str(target / space), "--split", split], cwd=ROLES, capture_output=True, check=False)
             if run.returncode != 0:
                 raise SystemExit(f"The role fixture does not generate split by {split}: {run.stderr.decode('utf-8', 'replace').strip()}")
+    for split, selection, space in HANDLE_SPLITS:
+        for language, target in (("csharp", csharp), ("swift", swift)):
+            run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", *HANDLE_SPLIT_FILES, *selection, "--language", language, "--namespace", space,
+                                  "--access", "internal", "--out-dir", str(target / space), "--split", split], cwd=HANDLE_SPLIT, capture_output=True, check=False)
+            if run.returncode != 0:
+                raise SystemExit(f"The handle fixture does not generate split by {split}: {run.stderr.decode('utf-8', 'replace').strip()}")
     for selection, space, directory, split in PACKED_SPLITS:
         for language, target in (("csharp", csharp), ("swift", swift)):
             # C# merges namespaces, so extending them is Swift's alone.

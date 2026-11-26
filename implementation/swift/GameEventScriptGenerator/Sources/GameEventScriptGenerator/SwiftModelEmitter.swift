@@ -64,7 +64,7 @@ enum GesSwiftModelEmitter {
             document.units.append(GesCodeUnit(owner: protocolType.name) { code in protocolDeclaration(&code, layout, protocolType, access) })
         }
         for handle in layout.handles {
-            document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handle.name)) { code in self.handle(&code, layout.handles, handle, access) })
+            document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handle.name), write: { code in self.handle(&code, layout.handles, handle, access) }, handle: handle.name))
         }
         for set in GesModelPlanner.tagSets(layout) {
             document.units.append(

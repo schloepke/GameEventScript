@@ -2340,6 +2340,12 @@ schema's file. `--split file` writes one file per `.gess` source with every type
 file of its declaration, so a type that another source reaches is never duplicated. `-o` together with `-d`, and `--split`
 without `-d`, fail with `generate.usage`.
 
+> **Since: Unreleased** — handle types
+
+The type `<Name>Handle` of a [handle type](#handles), in wire code and in models alike, follows the same rule: `--split
+schema` gives it a file of its own named `<Name>Handle` (`Wire.UnitHandle.swift`), and `--split file` puts it into the
+file of the source that declares the handle type, not into the file of a field that names it.
+
 A file is named after its declaration or after its source file without `.gess`, with the namespace in front:
 `Wire.World_Bot.swift`, `Wire.world.swift`, `Game.Net.World_Bot.g.cs`. Swift requires distinct file names within a
 module, and wire and model code of one target live in different namespaces, so the namespace keeps their files apart.
@@ -2406,7 +2412,9 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
 `:Series`, `:Message` and `:Handler` have no model type yet: `generate.unsupported`.
 
 **Handles.** *Since: Unreleased.* Every handle type a generation reaches becomes one value type `<Name>Handle`, in
-models and wire code alike, and the state schema becomes its model type as any schema does:
+models and wire code alike, and the state schema becomes its model type as any schema does. Wire code generated with
+`--models` declares none and names the models' `<Name>Handle`, as it does their packed types, so the model generation
+must reach the same handle types:
 
 | Handle type | Swift | C# |
 | --- | --- | --- |

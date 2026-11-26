@@ -1,0 +1,14 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The roots of the split handle fixture: handle fields, with and without the version, as list elements, union alternatives
+// and Map keys, in wire code and models, reaching handle types that another source declares.
+wire(commands) model(commands) schema :Move as {
+  drone: @Drone
+  unit: @Unit~
+  parts: :List(@Unit) max 4
+  file: @UnitFile~ | :Nothing
+}
+
+wire(commands) model(commands) schema :Roster as {
+  pinned: :Map(@Drone → @Unit~ | :Nothing) max 2
+}

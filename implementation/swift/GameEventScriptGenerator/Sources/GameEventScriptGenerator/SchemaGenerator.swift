@@ -53,7 +53,7 @@ public enum GesSchemaGenerator {
         let (document, layout) = try wire(set, roots, parameters, options)
         // A message type carries the message suffix, so the layout knows its source; tag sets and networks keep their names.
         let sourceOf = { (owner: String) in layout.types.first { $0.name == owner }?.source ?? set.sourceName(of: owner) }
-        return try GesCodeFiles.split(document, options.split, sourceOf: sourceOf) { files in
+        return try GesCodeFiles.split(document, options.split, sourceOf: sourceOf, handleSourceOf: set.handleSourceName(of:)) { files in
             manifest(options, model: false, layout.rootNames, { name in layout.rootHashes(layout.roots[layout.rootNames.firstIndex(of: name)!]) }, layout.parameters, files)
         }
     }
@@ -178,7 +178,7 @@ public enum GesSchemaGenerator {
     ///   that differ only in ASCII case collide, or a reached type has no model type.
     public static func generateModelFiles(_ set: GesSchemaSet, roots: [String], options: GesSchemaGenerateOptions) throws -> [GesGeneratedFile] {
         let (document, layout) = try models(set, roots, options)
-        return try GesCodeFiles.split(document, options.split, sourceOf: set.sourceName(of:)) { files in
+        return try GesCodeFiles.split(document, options.split, sourceOf: set.sourceName(of:), handleSourceOf: set.handleSourceName(of:)) { files in
             manifest(options, model: true, layout.roots, { root in (layout.type(root).hash, nil) }, [], files)
         }
     }

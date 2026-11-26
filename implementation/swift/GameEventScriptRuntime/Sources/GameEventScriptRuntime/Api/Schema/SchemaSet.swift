@@ -161,8 +161,9 @@ public final class GesSchemaSet: @unchecked Sendable {
     // A handle type by its name without `@`, or nil.
     func findHandle(_ name: String) -> GesResolvedHandle? { handles[name] }
 
-    // The name of the source that declares a handle type.
-    func handleSourceName(_ name: String) -> String { handles[name]!.scope.sourceName }
+    /// The name of the source that declares a handle type, which places its generated type `<Name>Handle` in split output.
+    /// The handle type, named without `@`, must be declared.
+    @_spi(Generator) public func handleSourceName(of name: String) -> String { handles[name]!.scope.sourceName }
 
     /// Checks a GES document against the schema of its header: a type name, or for a file name the one schema of the source
     /// with that name that no other schema of it refers to. `GesSchema.checkDocument` ignores the header.

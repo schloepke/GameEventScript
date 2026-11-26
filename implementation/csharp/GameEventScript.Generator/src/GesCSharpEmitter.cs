@@ -66,7 +66,7 @@ internal static partial class GesCSharpEmitter
         if (options.Models is null)
         {
             var declared = layout.Handles.ConvertAll(handle => handle.Model);
-            foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => GesCSharpModelEmitter.Handle(code, declared, handle.Model, access)));
+            foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => GesCSharpModelEmitter.Handle(code, declared, handle.Model, access), handle: handle.Name));
         }
 
         if (modelLayout is not null) context.Models = new ModelConversion(modelLayout, models);
@@ -920,7 +920,8 @@ internal static partial class GesCSharpEmitter
                     code.Line($"if (position == __{value.Base}Pool.Count) __{value.Base}Pool.Add(new {name}());");
                     code.Line($"var item = __{value.Base}Pool[position];");
                 }
-                else if (value.Item is not null || element.Encoding.Kind is GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Schema) code.Line($"var item = new {name}();");
+                // A handle element starts empty, because its read passes the current id along.
+                else if (value.Item is not null || element.Encoding.Kind is GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Schema or GesLayoutKind.Handle) code.Line($"var item = new {name}();");
                 else code.Line($"{name} item;");
                 if (value.Item is not null) code.Line($"item.__ReadFields(ref reader, paths, at + {element.Node.ToString(CultureInfo.InvariantCulture)}{ItemLevel(element)});");
                 else Read(code, element, "item");

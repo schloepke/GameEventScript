@@ -91,7 +91,7 @@ enum GesCSharpModelEmitter {
             document.units.append(GesCodeUnit(owner: protocolType.name) { code in interfaceDeclaration(&code, layout, protocolType, access) })
         }
         for handleType in layout.handles {
-            document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handleType.name)) { code in handle(&code, layout.handles, handleType, access) })
+            document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handleType.name), write: { code in handle(&code, layout.handles, handleType, access) }, handle: handleType.name))
         }
         for set in GesModelPlanner.tagSets(layout) {
             document.units.append(

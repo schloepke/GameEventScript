@@ -258,17 +258,27 @@ ROLE_SPLITS = ((["--wire", "world", "--param", "worldWidth=2000m", "--values"], 
                (["--model", "view", "--bindings", "--values"], "swift", "Roles.Model"),
                # Namespaces that another generation declares: the manifest names the option, and the files extend `Roles`.
                (["--model", "view", "--extend-namespace", "Roles"], "swift", "Roles.View"))
+# Handle types declared in a source of their own, reached by roots of a third source directly and through a state: split
+# output puts each `<Name>Handle` into the declaring source's file or into a file of its own, wire code beside models too.
+HANDLE_SPLIT = ROOT / "conformance/fixtures/SchemaGeneration/handlesplit"
+HANDLE_SPLIT_FILES = ["States.gess", "Handles.gess", "Commands.gess"]
+HANDLE_SPLITS = tuple(entry for language in ("csharp", "swift") for entry in (
+    (["--model", "commands", "--bindings", "--values"], language, "Handles.Model"),
+    (["--wire", "commands", "--values"], language, "Handles.Wire"),
+    (["--wire", "commands", "--values", "--models", "Handles.Model"], language, "Handles.Net"))) \
+    + ((["--model", "commands", "--extend-namespace", "Handles"], "swift", "Handles.Copy"),)
+SPLIT_OUTPUTS = tuple((ROLES, ROLE_FILES, *entry) for entry in ROLE_SPLITS) + tuple((HANDLE_SPLIT, HANDLE_SPLIT_FILES, *entry) for entry in HANDLE_SPLITS)
 
 
 def role_splits(csharp, swift, work):
-    """The role fixture's split output, compared between the CLIs file by file."""
+    """The split output of the role and handle fixtures, compared between the CLIs file by file."""
     differences = []
-    for index, (selection, language, space) in enumerate(ROLE_SPLITS):
+    for index, (fixture, files, selection, language, space) in enumerate(SPLIT_OUTPUTS):
         for split in ("schema", "file"):
             directories = [work / f"split-{index}-{split}-{name}" for name in ("csharp", "swift")]
             for command, directory in zip((csharp, swift), directories):
-                run = subprocess.run([*command, "schema", "generate", *ROLE_FILES, *selection, "--language", language, "--namespace", space, "--out-dir", str(directory), "--split", split],
-                                     cwd=ROLES, capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
+                run = subprocess.run([*command, "schema", "generate", *files, *selection, "--language", language, "--namespace", space, "--out-dir", str(directory), "--split", split],
+                                     cwd=fixture, capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
                 if run.returncode != 0:
                     differences.append(f"split {split} {language} {' '.join(selection)}: {run.stderr.decode('utf-8', 'replace').strip()}")
             found = directory_difference(*directories)
@@ -338,7 +348,7 @@ def main():
         + role_layouts(["dotnet", str(args.csharp)], [str(args.swift)]) + splits
     for line in differences:
         print(line)
-    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources, {len(ROLE_LAYOUTS)} role layouts, {2 * len(ROLE_SPLITS)} split outputs, {len(SET_OUTPUTS)} schema set outputs, {len(GOLDENS)} checked-in files: {len(differences)} port differences")
+    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources, {len(ROLE_LAYOUTS)} role layouts, {2 * len(SPLIT_OUTPUTS)} split outputs, {len(SET_OUTPUTS)} schema set outputs, {len(GOLDENS)} checked-in files: {len(differences)} port differences")
     return 1 if differences else 0
 
 

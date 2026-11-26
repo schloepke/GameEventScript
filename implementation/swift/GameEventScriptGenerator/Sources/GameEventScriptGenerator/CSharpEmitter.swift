@@ -81,7 +81,7 @@ enum GesCSharpEmitter {
         if options.models == nil {
             let declared = layout.handles.map(\.model)
             for handle in layout.handles {
-                document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handle.name)) { code in GesCSharpModelEmitter.handle(&code, declared, handle.model, access) })
+                document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handle.name), write: { code in GesCSharpModelEmitter.handle(&code, declared, handle.model, access) }, handle: handle.name))
             }
         }
         for type in types {
@@ -904,7 +904,8 @@ enum GesCSharpEmitter {
             if element.isClass {
                 code.line("if (position == __\(value.base)Pool.Count) __\(value.base)Pool.Add(new \(name)());")
                 code.line("var item = __\(value.base)Pool[position];")
-            } else if value.item != nil || element.encoding.kind == .point || element.encoding.kind == .vector || element.encoding.kind == .schema {
+            } else if value.item != nil || element.encoding.kind == .point || element.encoding.kind == .vector || element.encoding.kind == .schema || element.encoding.kind == .handle {
+                // A handle element starts empty, because its read passes the current id along.
                 code.line("var item = new \(name)();")
             } else {
                 code.line("\(name) item;")

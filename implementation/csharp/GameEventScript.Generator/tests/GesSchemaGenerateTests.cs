@@ -355,6 +355,35 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
+    public void SplitOutputPlacesAHandleTypeInTheFileOfItsDeclaration()
+    {
+        var set = GesSchemaSet.Parse(
+            new GesSchemaSource("states.gess", "schema :Composition as { name: :Text max 4 }\n"),
+            new GesSchemaSource("handles.gess", "handle @Unit of :Composition as { id: :Text max 4, version: :ContentHash }\n"),
+            new GesSchemaSource("commands.gess", "model schema :Move as { unit: @Unit, units: :List(@Unit~) max 2 }\n"));
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            var extension = language == GesSchemaLanguage.Swift ? ".swift" : ".g.cs";
+            var options = new GesSchemaGenerateOptions { Language = language, Namespace = "Game.Net", Split = GesSchemaSplit.File };
+            // Swift wire code declares its namespace enums in the shared file.
+            var shared = language == GesSchemaLanguage.Swift ? new[] { "_Game.Net" + extension } : [];
+            var wire = GesSchemaGenerator.GenerateFiles(set, ["Move"], new GesSchemaParameters(), options);
+            CollectionAssert.AreEqual(new[] { "Game.Net.commands" + extension, "Game.Net.handles" + extension }.Concat(shared).Append(".ges-generated.json").ToArray(), wire.Select(file => file.Path).ToArray());
+            StringAssert.Contains(wire[1].Text, " UnitHandle");
+            Assert.IsFalse(wire[0].Text.Contains("struct UnitHandle", StringComparison.Ordinal));
+            var models = GesSchemaGenerator.GenerateModelFiles(set, ["Move"], options);
+            CollectionAssert.AreEqual(new[] { "Game.Net.commands", "Game.Net.handles", "Game.Net.states", "_Game.Net", ".ges-generated" },
+                models.Select(file => file.Path.Replace(extension, "", StringComparison.Ordinal).Replace(".json", "", StringComparison.Ordinal)).ToArray());
+            StringAssert.Contains(models[1].Text, " UnitHandle");
+            options.Split = GesSchemaSplit.Schema;
+            CollectionAssert.AreEqual(new[] { "Game.Net.Move" + extension, "Game.Net.UnitHandle" + extension }.Concat(shared).Append(".ges-generated.json").ToArray(),
+                GesSchemaGenerator.GenerateFiles(set, ["Move"], new GesSchemaParameters(), options).Select(file => file.Path).ToArray());
+            CollectionAssert.AreEqual(new[] { "Game.Net.Composition", "Game.Net.Move", "Game.Net.UnitHandle", "_Game.Net", ".ges-generated" },
+                GesSchemaGenerator.GenerateModelFiles(set, ["Move"], options).Select(file => file.Path.Replace(extension, "", StringComparison.Ordinal).Replace(".json", "", StringComparison.Ordinal)).ToArray());
+        }
+    }
+
+    [TestMethod]
     public void SplitOutputRejectsMismatchedRequestsAndCollidingFileNames()
     {
         var set = GesSchemaSet.Parse("schema :S as {\n  on: :Boolean\n}\n");

@@ -20,6 +20,9 @@ internal sealed class GesModelLayout
         Types = types;
     }
 
+    // The handle types the types reach, ordered by name, each with its composite root.
+    internal List<GesModelHandle> Handles { get; } = [];
+
     internal List<string> Roots { get; }
 
     internal List<GesModelType> Types { get; }
@@ -61,6 +64,28 @@ internal sealed class GesModelType
 // A schema that types take with `with`: generated as a protocol (Swift) or interface (C#) with read-only properties. It
 // refines the protocols of the schemas it takes unchanged and requires its other fields whose type is shared by name, as
 // every field's type is except a union, Flags and a closed Tag written in place, which generated code declares per field.
+// A handle type: its identity's form, which a model type `<Name>Handle` checks, and the state schema, a type of the layout.
+internal sealed class GesModelHandle
+{
+    internal string Name = "";
+    internal ulong Hash;
+    internal string State = "";
+    internal GesHandleVersionKind Version;
+
+    // The id of a plain handle type, or the part and the root's name of a composite.
+    internal GesHandleKey Id;
+    internal string? Root;
+    internal GesHandleKey Part;
+
+    internal bool IsComposite => Root is not null;
+
+    // The key that a composite's equality compares after its root's id: its part; the id for any other.
+    internal GesHandleKey Key => IsComposite ? Part : Id;
+
+    internal static GesModelHandle Of(GesHandleType handle)
+        => new() { Name = handle.Name, Hash = handle.Hash, State = handle.StateName, Version = handle.Version, Id = handle.Id ?? default, Root = handle.Root?.Name, Part = handle.Part ?? default };
+}
+
 internal sealed class GesModelProtocol
 {
     internal string Name = "";
@@ -107,7 +132,11 @@ internal enum GesModelKind
 
     // Free data: a Map of any values, and a List without an element type, whose elements are any values.
     Map,
-    Values
+    Values,
+
+    // A handle, and a Map from handles of one type to values, whose value is its Element.
+    Handle,
+    HandleMap
 }
 
 internal sealed class GesModelValue
@@ -139,6 +168,10 @@ internal sealed class GesModelValue
 
     // Whether the schema is packed, so that its type is a value type over one word.
     internal bool Packed;
+
+    // The handle type of a handle or a handle Map's key, and whether a handle carries its version.
+    internal string Handle = "";
+    internal bool Versioned;
 }
 
 internal static class GesModelLayoutBuilder
@@ -147,6 +180,7 @@ internal static class GesModelLayoutBuilder
     {
         if (roots.Count == 0) throw new GesGeneratorException(GesGeneratorException.Usage, "Specify at least one root.");
         var reached = new SortedDictionary<string, GesSchema>(StringComparer.Ordinal);
+        var handles = new SortedDictionary<string, GesHandleType>(StringComparer.Ordinal);
         var rootNames = new List<string>();
         foreach (var root in roots)
         {
@@ -155,7 +189,7 @@ internal static class GesModelLayoutBuilder
             if (schema.Kind == GesSchemaKind.Message) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is a message; a model root is a schema or message set.");
             if (schema.IsAbstract) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is abstract; only its protocol is generated, where a model takes it.");
             rootNames.Add(schema.Name);
-            Reach(schema, reached);
+            Reach(set, schema, reached, handles);
         }
 
         var types = new List<GesModelType>();
@@ -181,6 +215,8 @@ internal static class GesModelLayoutBuilder
         }
 
         var layout = new GesModelLayout(rootNames, types);
+        foreach (var handle in handles.Values)
+            layout.Handles.Add(GesModelHandle.Of(handle));
         foreach (var source in set.Sources) layout.Sources.Add(new GesSchemaSource(source.Name.Substring(source.Name.LastIndexOfAny(['/', '\\']) + 1), source.Text));
         var protocols = new SortedDictionary<string, GesSchema>(StringComparer.Ordinal);
         foreach (var schema in reached.Values) Protocols(schema, protocols);
@@ -224,12 +260,13 @@ internal static class GesModelLayoutBuilder
             if (schema.ModelGroup is { } group && !groups.Contains(group)) groups.Add(group);
         var types = new SortedDictionary<string, GesModelType>(StringComparer.Ordinal);
         var protocols = new SortedDictionary<string, GesModelProtocol>(StringComparer.Ordinal);
+        var handles = new SortedDictionary<string, GesModelHandle>(StringComparer.Ordinal);
         var owners = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var group in groups)
         {
             var roots = GesSchemaGenerator.ModelRoots(set, group);
             var seen = new HashSet<GesSchema>();
-            foreach (var root in roots) Collect(set.Schema(root), seen);
+            foreach (var root in roots) Collect(set, set.Schema(root), seen);
 
             var converts = false;
             foreach (var schema in seen) converts |= wanted.Contains(set.RootName(schema));
@@ -250,27 +287,35 @@ internal static class GesModelLayoutBuilder
 
             foreach (var protocol in layout.Protocols)
                 if (!protocols.ContainsKey(protocol.Name)) protocols.Add(protocol.Name, protocol);
+            foreach (var handle in layout.Handles)
+                if (!handles.ContainsKey(handle.Name)) handles.Add(handle.Name, handle);
         }
 
         if (types.Count == 0) return null;
         var converted = new GesModelLayout([], [.. types.Values]);
         converted.Protocols.AddRange(protocols.Values);
+        converted.Handles.AddRange(handles.Values);
         return converted;
     }
 
     // Every schema that a model of the schema names, as Reach finds them, without the check of their names.
-    private static void Collect(GesSchema schema, HashSet<GesSchema> seen)
+    private static void Collect(GesSchemaSet set, GesSchema schema, HashSet<GesSchema> seen)
     {
         if (!seen.Add(schema)) return;
         foreach (var field in schema.Fields)
-            foreach (var type in field.Alternatives) Collect(type, seen);
-        foreach (var member in schema.Members) Collect(member, seen);
+            foreach (var type in field.Alternatives) Collect(set, type, seen);
+        foreach (var member in schema.Members) Collect(set, member, seen);
     }
 
-    private static void Collect(GesSchemaType type, HashSet<GesSchema> seen)
+    private static void Collect(GesSchemaSet set, GesSchemaType type, HashSet<GesSchema> seen)
     {
-        if (type.Schema is { } schema) Collect(schema, seen);
-        foreach (var element in type.Element) Collect(element, seen);
+        if (type.Schema is { } schema) Collect(set, schema, seen);
+        if (type.HandleType is { } handle)
+        {
+            if (handle.Root is { } root) Collect(set, set.Schema(root.StateName), seen);
+            Collect(set, set.Schema(handle.StateName), seen);
+        }
+        foreach (var element in type.Element) Collect(set, element, seen);
     }
 
     private static string Describe(GesSchemaSet set, GesModelType type) => Describe(set.Schema(type.Lookup));
@@ -332,7 +377,7 @@ internal static class GesModelLayoutBuilder
         }
     }
 
-    private static void Reach(GesSchema schema, SortedDictionary<string, GesSchema> reached)
+    private static void Reach(GesSchemaSet set, GesSchema schema, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
     {
         if (reached.TryGetValue(schema.Name, out var known))
         {
@@ -343,8 +388,8 @@ internal static class GesModelLayoutBuilder
 
         reached.Add(schema.Name, schema);
         foreach (var field in schema.Fields)
-            foreach (var type in field.Alternatives) Reach(type, reached);
-        foreach (var member in schema.Members) Reach(member, reached);
+            foreach (var type in field.Alternatives) Reach(set, type, reached, handles);
+        foreach (var member in schema.Members) Reach(set, member, reached, handles);
     }
 
     private static string Describe(GesSchema schema) => schema.Kind switch
@@ -354,10 +399,20 @@ internal static class GesModelLayoutBuilder
         _ => "the schema :" + schema.Name
     };
 
-    private static void Reach(GesSchemaType type, SortedDictionary<string, GesSchema> reached)
+    private static void Reach(GesSchemaSet set, GesSchemaType type, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
     {
-        if (type.Schema is { } schema) Reach(schema, reached);
-        foreach (var element in type.Element) Reach(element, reached);
+        if (type.Schema is { } schema) Reach(set, schema, reached, handles);
+        if (type.HandleType is { } handle) Reach(set, handle, reached, handles);
+        foreach (var element in type.Element) Reach(set, element, reached, handles);
+    }
+
+    // A handle type brings its composite root and its state schema, whose model holds a resolved object.
+    private static void Reach(GesSchemaSet set, GesHandleType handle, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
+    {
+        if (handles.ContainsKey(handle.Name)) return;
+        handles.Add(handle.Name, handle);
+        if (handle.Root is { } root) Reach(set, root, reached, handles);
+        Reach(set, set.Schema(handle.StateName), reached, handles);
     }
 
     private static GesModelField Field(string name, string path, GesReadOnlyArray<GesSchemaType> alternatives)
@@ -372,8 +427,13 @@ internal static class GesModelLayoutBuilder
         field.Value = new GesModelValue { Kind = GesModelKind.Union };
         foreach (var alternative in alternatives)
         {
-            var type = alternative.Kind == GesSchemaTypeKind.Reference ? alternative.Schema!.Name : alternative.Kind.ToString();
-            var label = alternative.Label.Length > 0 ? alternative.Label : type;
+            var type = alternative.Kind switch
+            {
+                GesSchemaTypeKind.Reference => alternative.Schema!.Name,
+                GesSchemaTypeKind.Handle => "@" + alternative.HandleType!.Name,
+                _ => alternative.Kind.ToString()
+            };
+            var label = alternative.Label.Length > 0 ? alternative.Label : type.TrimStart('@');
             field.Value.Alternatives.Add(new GesModelField { Name = label, Path = path + ":" + type, Value = Value(alternative, path + ":" + type) });
         }
 
@@ -425,8 +485,19 @@ internal static class GesModelLayoutBuilder
             case GesSchemaTypeKind.List:
                 value.Kind = GesModelKind.Values;
                 break;
+            case GesSchemaTypeKind.Map when type.HandleType is { } key:
+                value.Kind = GesModelKind.HandleMap;
+                value.Handle = key.Name;
+                value.Max = type.Max;
+                value.Element = Field("[]", path + "[].value", type.Element);
+                break;
             case GesSchemaTypeKind.Map:
                 value.Kind = GesModelKind.Map;
+                break;
+            case GesSchemaTypeKind.Handle:
+                value.Kind = GesModelKind.Handle;
+                value.Handle = type.HandleType!.Name;
+                value.Versioned = type.IsVersioned;
                 break;
             case GesSchemaTypeKind.Dice:
                 value.Kind = GesModelKind.Dice;
@@ -527,8 +598,55 @@ internal static class GesModelLayoutJson
             json.EndArray();
         }
 
+        // Only a model that reaches handle types names them, so that other layouts stay unchanged.
+        if (layout.Handles.Count > 0)
+        {
+            json.BeginArray("handles");
+            foreach (var handle in layout.Handles)
+            {
+                json.BeginObject();
+                json.String("name", handle.Name);
+                json.String("hash", GesSchemaLayoutJson.Hex(handle.Hash));
+                json.String("state", handle.State);
+                json.String("version", GesLayoutHandle.VersionName(handle.Version));
+                if (handle.Root is { } root)
+                {
+                    json.String("root", root);
+                    json.Key("part");
+                    Key(json, handle.Part);
+                }
+                else
+                {
+                    json.Key("id");
+                    Key(json, handle.Id);
+                }
+
+                json.EndObject();
+            }
+
+            json.EndArray();
+        }
+
         json.EndObject();
         return json.ToString();
+    }
+
+    private static void Key(GesSchemaLayoutJson.Writer json, GesHandleKey key)
+    {
+        json.BeginValueObject();
+        if (key.IsText)
+        {
+            json.String("kind", "text");
+            json.Number("max", key.MaxLength);
+        }
+        else
+        {
+            json.String("kind", "integer");
+            json.Number("lower", key.Minimum);
+            json.Number("upper", key.Maximum);
+        }
+
+        json.EndObject();
     }
 
     private static void Field(GesSchemaLayoutJson.Writer json, GesModelField field, bool member, bool value = false)
@@ -604,6 +722,16 @@ internal static class GesModelLayoutJson
                 foreach (var alternative in value.Alternatives) Field(json, alternative, member: false);
                 json.EndArray();
                 break;
+            case GesModelKind.Handle:
+                json.String("name", value.Handle);
+                json.Boolean("versioned", value.Versioned);
+                break;
+            case GesModelKind.HandleMap:
+                json.String("key", value.Handle);
+                Optional(json, "max", value.Max);
+                json.Key("value");
+                Field(json, value.Element!, member: false, value: true);
+                break;
         }
 
         json.EndObject();
@@ -640,6 +768,8 @@ internal static class GesModelLayoutJson
         GesModelKind.Union => "union",
         GesModelKind.Map => "map",
         GesModelKind.Values => "values",
+        GesModelKind.Handle => "handle",
+        GesModelKind.HandleMap => "handleMap",
         _ => "nothing"
     };
 }

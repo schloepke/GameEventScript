@@ -74,7 +74,7 @@ public struct GesSchemaDocument {
         var offset = 0
         for segment in error.path.split(separator: ".", omittingEmptySubsequences: false) {
             let name = segment.prefix { $0 != "[" && $0 != ":" }
-            guard let current = node, case .map(let keys, let values, _, let valueOffsets) = Self.entries(current), let index = keys.firstIndex(where: { GesText.scalarEqual($0, String(name)) }) else { break }
+            guard let current = node, case .map(let keys, let values, _, let valueOffsets, _) = Self.entries(current), let index = keys.firstIndex(where: { GesText.scalarEqual($0, String(name)) }) else { break }
             node = values[index]
             offset = valueOffsets[index]
             if segment.contains("[") { break }

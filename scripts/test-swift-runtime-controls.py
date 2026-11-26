@@ -22,7 +22,7 @@ class RuntimeInputTests(unittest.TestCase):
         self.binary = b'independent binary payload'
         self.digest = hashlib.sha256(self.binary).hexdigest().upper()
         self.document = SimpleNamespace(digest='a' * 64)
-        self.case = SimpleNamespace(id='suite/case', sources=[{'program': 'main'}], document=self.document)
+        self.case = SimpleNamespace(id='suite/case', kind='scriptApi', metadata={}, sources=[{'program': 'main'}], document=self.document)
         self.row = '\t'.join([self.case.id, 'main', self.digest + '.gesb', self.digest, 'A' * 64])
         (self.path / (self.digest + '.gesb')).write_bytes(self.binary)
         self.manifest(self.row)
@@ -63,6 +63,17 @@ class RuntimeInputTests(unittest.TestCase):
         self.case.sources = []
         self.manifest('\t'.join([self.case.id, '', '', '', 'A' * 64]))
         self.assertEqual(module.foreign_inputs([self.case], self.path), {self.case.id: {}})
+
+    def test_binary_fixture_compiles_only_to_compare_runtime(self):
+        self.case.kind = 'programBinary'
+        sourceless = '\t'.join([self.case.id, '', '', '', 'A' * 64])
+        self.manifest(sourceless)
+        self.assertEqual(module.foreign_inputs([self.case], self.path), {self.case.id: {}})
+        self.case.metadata = {'binaryFixture': {'compareCompiledRuntime': True}}
+        with self.assertRaisesRegex(ValueError, 'Missing'):
+            module.foreign_inputs([self.case], self.path)
+        self.manifest(self.row)
+        self.assertIn('main', module.foreign_inputs([self.case], self.path)[self.case.id])
 
 
 if __name__ == '__main__':

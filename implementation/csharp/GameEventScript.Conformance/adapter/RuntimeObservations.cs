@@ -4,6 +4,7 @@
 using System.Globalization;
 using System.Text.Json;
 using GameEventScript.Api;
+using GameEventScript.Runtime.Values;
 
 internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObserver, IGesPublishSink
 {
@@ -15,14 +16,14 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
 
     internal static object Run(GameEventScriptProgram program, JsonElement request) => Run(new Dictionary<string, GameEventScriptProgram> { ["main"] = program }, request);
 
-    internal static object Run(IReadOnlyDictionary<string, GameEventScriptProgram> programs, JsonElement request)
+    internal static object Run(IReadOnlyDictionary<string, GameEventScriptProgram> programs, JsonElement request, AdapterHandles? handles = null)
     {
         var hosts = new object[request.GetProperty("hostCount").GetInt32()];
-        for (var index = 0; index < hosts.Length; index++) hosts[index] = RunHost(programs, request);
+        for (var index = 0; index < hosts.Length; index++) hosts[index] = RunHost(programs, request, handles);
         return new { hosts };
     }
 
-    private static object RunHost(IReadOnlyDictionary<string, GameEventScriptProgram> programs, JsonElement request)
+    private static object RunHost(IReadOnlyDictionary<string, GameEventScriptProgram> programs, JsonElement request, AdapterHandles? handles)
     {
         var observer = new RuntimeObservations(request.GetProperty("publishSink").GetString()!);
         var clock = new VirtualClock();
@@ -30,6 +31,7 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
             .WithExternalTypeRegistry(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Registry)
             .WithExtensionRegistry(GesGeometryLibrary.Extensions(new RuntimeFixtures())).WithRuntimeLimits(CreateLimits(request.GetProperty("limits")));
         if (request.GetProperty("publishSink").GetString() != "absent") builder.WithPublishSink(observer);
+        handles?.Register(builder);
         RuntimeRandom.Configure(builder, request.GetProperty("random"));
         var host = builder.Build();
         var scenario = new HostScenario(host, programs, request, clock);
@@ -164,7 +166,7 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
         => _trace.Add(new() { ["event"] = "dispatchCompleted", ["message"] = message, ["id"] = Id(id), ["signatureId"] = dispatchSignatureId });
 
     /// <summary>Records a delayed send with its send ID and absolute deadline, and a named send's name and period, as exact decimal text.</summary>
-    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish, string? name, long period)
+    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish, GesValue name, long period)
     {
         var item = new Dictionary<string, object>
         {
@@ -175,13 +177,16 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
             ["publish"] = publish
         };
         // Only named sends report their name and period, so unnamed traces stay unchanged.
-        if (name is not null)
+        if (!name.IsNothing)
         {
-            item["name"] = name;
+            item["name"] = TimerName(name);
             item["period"] = period.ToString(CultureInfo.InvariantCulture);
         }
         _trace.Add(item);
     }
+
+    // A Text timer name as its text, a handle name as its text form, which starts with @.
+    internal static string TimerName(GesValue name) => name.Handle?.ToString() ?? name.AsText();
 
     /// <summary>Records one host reset.</summary>
     public void HostReset()

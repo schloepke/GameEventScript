@@ -212,7 +212,7 @@ extension Tool {
     static func runOnce(_ host: GameEventScriptHost, _ recorder: BenchRecorder, _ entry: GameEventScriptMessage, _ ticks: inout UInt64) throws -> String? {
         recorder.messages.removeAll(keepingCapacity: true)
         let started = now()
-        let accepted = host.receive(entry)
+        let accepted = try host.receive(entry)
         let result = try host.runToCompletion()
         ticks = now() - started
         if !accepted { return "the host rejected the entry message" }

@@ -49,6 +49,7 @@ public final class GameEventScriptHost {
     // (specs/HostRuntime.md#named-timers). A one-shot timer leaves the registry when its firing starts dispatch; a
     // repeating one stays until it is cancelled, replaced or its sender is detached.
     private var timers: [GesNamedTimer.Key: GesNamedTimer] = [:]
+    var handleResolvers: [String: GesHandleBinding]?
 
     // Hosts are created only through `GesHostBuilder.build()`, which forwards its complete configuration here.
     init(
@@ -127,7 +128,7 @@ public final class GameEventScriptHost {
                 message: "Program requires call-stack depth \(program.requiredCallStackDepth) but the host limit is \(depth)."
             )
         }
-        let linked = try GesLinkedProgram(program, extensions: extensions, types: externalTypes)
+        let linked = try GesLinkedProgram(program, extensions: extensions, types: externalTypes, handleResolvers: handleResolvers)
         if queueFull && linked.handlers.contains(where: { $0.signature.name == "initialization" }) {
             throw GesDynamicLinkError(code: "link.initializationQueueFull", program: program.moduleName, message: "The host message queue has no capacity for program initialization.")
         }
@@ -197,9 +198,33 @@ public final class GameEventScriptHost {
 
     /// Enqueues an external message using the current subscription snapshot. Returns false before readiness, for
     /// initialization messages, or when the queue rejects delivery.
-    @discardableResult public func receive(_ message: GameEventScriptMessage) -> Bool {
+    ///
+    /// - Throws: `GesWireError` with `wire.unresolvedRef` when an argument contains a handle that carries a ref; nothing
+    ///   is enqueued.
+    @discardableResult public func receive(_ message: GameEventScriptMessage) throws(GesWireError) -> Bool {
+        try Self.rejectRefs(message)
         if !isReady || message.name.isEmpty || message.name == "initialization" { return false }
         return enqueue(message) != 0
+    }
+
+    /// Turns the ref a handle read from a document carries into a version through the resolver of its type. Messages
+    /// and values passed to the host must not contain refs; see specs/HostRuntime.md#handles.
+    ///
+    /// - Parameter handle: The handle; one without a ref is returned unchanged.
+    /// - Returns: The handle carrying the version its resolver named for the ref.
+    /// - Throws: `GesHandleError` when no resolver is registered for the type, the resolver failed, or it returned no
+    ///   valid version.
+    public func resolveRef(_ handle: GesHandle) throws(GesHandleError) -> GesHandle {
+        if handle.ref.isNothing { return handle }
+        return try GesHandleStates.resolveRef(handleResolvers?[handle.typeName], handle)
+    }
+
+    // A ref never reaches the VM; the check runs before anything is enqueued.
+    static func rejectRefs(_ message: GameEventScriptMessage) throws(GesWireError) {
+        let index = GesHandleStates.refArgument(message)
+        if index < 0 { return }
+        let label = message.arguments.nameAt(index)
+        throw GesHandleStates.unresolvedRef(message.name + "." + (label.isEmpty || label == GesMessageSignature.unlabeledParameterName ? String(index) : label))
     }
 
     /// Processes queued work up to an opcode budget, preserving a paused script for the next frame. Native callbacks
@@ -352,8 +377,14 @@ public final class GameEventScriptHost {
     public var nextMessageDelay: Int64? { delayed.first.map { max(0, $0.deadline - elapsedMicroseconds) } }
 
     func send(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64) -> Bool {
+        // Pumping already rejects reset, so the hot path skips the guard.
+        if pumping { return sendCore(message, publish: publish, microseconds: microseconds) }
         callbackDepth += 1
         defer { callbackDepth -= 1 }
+        return sendCore(message, publish: publish, microseconds: microseconds)
+    }
+
+    private func sendCore(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64) -> Bool {
         guard microseconds >= 0 && !random.hasActiveScopeFault else { return false }
         if microseconds == 0 {
             let matches = (exact[message.signatureId] ?? []).contains { $0.matches(message) } || (byName[message.name] ?? []).contains { $0.matches(message) }
@@ -389,7 +420,7 @@ public final class GameEventScriptHost {
         let entry = GesDelayedMessage(deadline: now + microseconds, pending: pending, publish: publish, owner: initializationInstance, sender: activeHandler?.instance)
         delayed.add(entry)
         idleSinceMicroseconds = nil
-        observer?.messageScheduled(message, id: entry.id, deadline: entry.deadline, publish: publish, name: nil, period: 0)
+        observer?.messageScheduled(message, id: entry.id, deadline: entry.deadline, publish: publish, name: .nothing, period: 0)
         if publish {
             published += 1
             if initializationInstance != nil { initializationPublishes += 1 }
@@ -423,8 +454,14 @@ public final class GameEventScriptHost {
     }
 
     func emit(_ message: GameEventScriptMessage) -> Bool {
+        // Pumping already rejects reset, so the hot path skips the guard.
+        if pumping { return emitCore(message) }
         callbackDepth += 1
         defer { callbackDepth -= 1 }
+        return emitCore(message)
+    }
+
+    private func emitCore(_ message: GameEventScriptMessage) -> Bool {
         let id = random.hasActiveScopeFault ? 0 : enqueue(message, initializationOutput: initializationInstance != nil)
         emitted += 1
         if initializationInstance != nil { initializationEmits += 1 }
@@ -433,8 +470,14 @@ public final class GameEventScriptHost {
     }
 
     func publish(_ message: GameEventScriptMessage) -> GesPublishResult {
+        // Pumping already rejects reset, so the hot path skips the guard.
+        if pumping { return publishCore(message) }
         callbackDepth += 1
         defer { callbackDepth -= 1 }
+        return publishCore(message)
+    }
+
+    private func publishCore(_ message: GameEventScriptMessage) -> GesPublishResult {
         if initializationInstance != nil { initializationPublishes += 1 }
         let fault = random.hasActiveScopeFault
         // A publish owns its ID even without local recipients; the local entry reuses it.
@@ -790,7 +833,7 @@ extension GameEventScriptHost {
         exact.contains(where: { $0.matches(message) }) || names.contains(where: { $0.matches(message) })
     }
 
-    func sendNamed(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64, name: String, repeats: Bool) -> Bool {
+    func sendNamed(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64, name: GesValue, repeats: Bool) -> Bool {
         guard !random.hasActiveScopeFault, let sender = activeHandler?.instance else { return false }
         guard repeats ? microseconds > 0 : microseconds >= 0 else { return false }
         let now = elapsedMicroseconds
@@ -849,7 +892,7 @@ extension GameEventScriptHost {
     }
 
     // Mode 0 cancels one name, mode 1 every named timer and mode 2 also the unnamed delayed sends of the active instance.
-    func cancelTimers(mode: Int, name: String?) -> Bool {
+    func cancelTimers(mode: Int, name: GesValue?) -> Bool {
         guard let sender = activeHandler?.instance else { return false }
         var selected: [GesNamedTimer] = []
         if !timers.isEmpty {

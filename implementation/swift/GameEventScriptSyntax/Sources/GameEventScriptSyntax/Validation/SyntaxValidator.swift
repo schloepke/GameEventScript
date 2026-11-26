@@ -565,7 +565,7 @@
                 if target >= 0 {
                     let name = text(target)
                     callableCase(name, "Predicate test target '\(name)' must use identifier casing (start lowercase)", name, .predicate, range(node))
-                } else if let type = child(node, .typeReference) {
+                } else if let type = child(node, .typeReference), text(type.firstToken).unicodeScalars.first == ":" {
                     removedType(GesSyntaxValidator.canonicalTypeName(String(text(type.firstToken).dropFirst())), range(node))
                 }
             }

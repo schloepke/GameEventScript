@@ -78,6 +78,7 @@ dotnet ges compile game.ges --output artifacts/game.gesb --no-debug
 dotnet ges compile handlers.ges definitions.ges -o artifacts/game.gesb
 dotnet ges compile "scripts/*.ges" -o artifacts/game.gesb --verbose
 dotnet ges compile game.ges --quiet
+dotnet ges compile game.ges --handles catalog.gess
 dotnet ges compile --help
 ```
 
@@ -110,6 +111,21 @@ truncate an existing output.
 Debug symbols, source maps, and the source archive are included by default.
 `--no-debug` omits all three. Program version remains the compiler default `0`.
 External type catalogs are not configurable through this command yet.
+
+### Handle types
+
+> **Since: Unreleased**
+
+`--handles <schema.gess>` declares the handle types of a schema source
+(`handle @Name of ...`, see the [handles guide](../../../docs/guide/Handles.md))
+to the compilation, so sources may use `@Name` in parameters, `is @Name` and handle
+fields. The option is repeatable and available for `compile`, `check` and `run`.
+File-name patterns expand as for sources. All given files are read once as one
+strict UTF-8 schema set before any source is compiled; a schema error is reported
+as `ges schema check` reports it, for example `catalog.gess(3,1): error schema.syntax: …`,
+and exits with code `1`. Without the option, a source naming a handle type fails with
+`validate.unknownHandleType`. The compiled Program records the HandleType imports,
+which `dump` lists.
 
 Options may appear before, between, or after source paths. Use `--` before a source
 name beginning with `-`, or prefix it with `./`. For output paths beginning with
@@ -151,6 +167,7 @@ dotnet ges check game.ges
 dotnet ges check handlers.ges definitions.ges
 dotnet ges check "scripts/*.ges" --verbose
 dotnet ges check game.ges --quiet
+dotnet ges check game.ges --handles catalog.gess
 dotnet ges check --help
 ```
 
@@ -160,14 +177,15 @@ validation, optimization, and Program validation. It does not encode or write a
 files remain untouched. This command accepts source text, not `.gesb` input.
 
 Source ordering, wildcard expansion, deduplication, strict UTF-8 decoding, source
-names, and compiler diagnostics follow `compile`. Multiple sources do not need an
+names, `--handles`, and compiler diagnostics follow `compile`. Multiple sources do not need an
 output path. `--output` and `--no-debug` are not check options. The default success
 report lists sources, module, and elapsed time; `--verbose` adds the same Program
 details as `compile`, and `--quiet` suppresses success output.
 
 Checking verifies the source and Program contract; it does not establish that a
 particular host can satisfy extension imports or runtime resource requirements.
-Like `compile`, it has no configurable external-type catalog. Use `run` to also
+Like `compile`, it has no configurable external-type catalog and resolves no
+handle state. Use `run` to also
 perform linking and execution in the CLI's host.
 
 ## Run a program
@@ -183,6 +201,7 @@ dotnet ges run script1.gesb script2.gesb
 dotnet ges run "programs/*.gesb" --arg hello
 dotnet ges run game.ges --scenario scenario.ges --seed 42
 dotnet ges run script1.gesb script2.gesb --scenario scenario.ges
+dotnet ges run game.ges --handles catalog.gess
 dotnet ges run --interactive --color
 dotnet ges run game.ges --interactive --color
 dotnet ges run script1.gesb script2.gesb --interactive --verbose
@@ -607,9 +626,17 @@ reports `cli.runtimeLimit` with the limit name and value and exits with code `1`
 The CLI does not automatically resume past a safety boundary or drain a cyclic
 message chain indefinitely. Already printed events are not rolled back.
 
-Only the three native CLI handlers are registered; no custom extensions or
-external types are registered. Programs requiring unavailable imports fail during
-linking with the existing `link.*` diagnostic. Diagnostics go to stderr with stable
+Only the three native CLI handlers are registered; no custom extensions,
+external types or handle resolvers are registered. Programs requiring unavailable
+imports fail during linking with the existing `link.*` diagnostic.
+
+`--handles <schema.gess>` (repeatable, see [Handle types](#handle-types)) declares
+handle types to every compilation of the session: the input sources, scenarios,
+interactive input, `:load`, `:reload` and the rebuilds of `:edit`. The files are
+read once at startup; `:reload` does not re-read them. Binary inputs already carry
+their HandleType imports and do not need the option. A Program may pass, compare
+and test handles, but one that reads handle state (fields of a handle, `exists`)
+fails to load with `link.missingHandleResolver`, because the CLI registers no resolver. Diagnostics go to stderr with stable
 codes and available source, Program, handler, symbol, or binary context. A runtime
 diagnostic makes the process fail even if the host subsequently becomes idle;
 normal host behavior may still execute sibling handlers before returning.

@@ -82,6 +82,10 @@
             case .network:
                 output += "network :\(declaration.name) as {\n"
                 for route in declaration.routes {
+                    if route.owns {
+                        output += "  \(route.server ? "server" : "client") owns @\(route.root)\n"
+                        continue
+                    }
                     output += "  \(route.server ? "server" : "client") \(route.publishes ? "publishes" : "sends") \(route.isMessage ? "" : ":")\(route.root) "
                     switch route.routeClass {
                     case .reliable: output += "reliable"
@@ -92,6 +96,25 @@
                     output += "\n"
                 }
                 output += "}\n"
+            case .handle:
+                output += "handle @\(declaration.name) of :\(declaration.state)"
+                if !declaration.root.isEmpty {
+                    output += " composite @\(declaration.root) as { part: "
+                    type(declaration.id!, &output, "")
+                    output += " }\n"
+                    break
+                }
+                output += " as { id: "
+                type(declaration.id!, &output, "")
+                output += ", version: "
+                switch declaration.version {
+                case .none: output += ":Nothing"
+                case .contentHash: output += ":ContentHash"
+                case .sha1: output += ":Hash(#sha1)"
+                case .sha256: output += ":Hash(#sha256)"
+                case .revision: type(declaration.revision!, &output, "")
+                }
+                output += " }\n"
             }
         }
         return output
@@ -375,6 +398,16 @@
             if let max = type.max { output += " max \(max)" } else if !type.maxName.isEmpty { output += " max \(type.maxName)" }
         case .reference:
             output += ":\(type.name)"
+            return
+        case .handle:
+            output += "@" + type.name
+            if type.versioned { output += "~" }
+            return
+        case .map where !type.key.isEmpty:
+            output += ":Map(@\(type.key) → "
+            union(type.element!, &output, indent)
+            output += ")"
+            if let max = type.max { output += " max \(max)" } else if !type.maxName.isEmpty { output += " max \(type.maxName)" }
             return
         default: output += ":\(type.kind.rawValue)"
         }

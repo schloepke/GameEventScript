@@ -506,7 +506,7 @@ steps:
 
 ## Test: names in backticks bind locals, parameters and labels
 
-This case verifies that a name in backticks is the plain name for local bindings, parameters, argument labels, map keys and reads, including keywords and a derivation suffix, and that a contextual word in backticks is a name rather than the word.
+This case verifies that a name in backticks is the plain name for local bindings, parameters, argument labels, map keys and reads, including keywords such as the reserved `cancel` and a derivation suffix, and that a contextual word in backticks is a name rather than the word.
 
 ### Case description
 
@@ -525,8 +525,9 @@ on Start {
   let `from` be 2
   let `strict` be '5'
   let x_1 be 4
+  let `cancel` be 6
   let keys be [`to`: 1, `empty`: 2]
-  emit Done(`if`: `if`, plain: scale(to: `if`, by: `x_1`), quoted: scale(`to`: `from`, `by`: x_1), parsed: parse `strict`, key: keys.`empty`)
+  emit Done(`if`: `if`, `cancel`: `cancel`, plain: scale(to: `if`, by: `x_1`), quoted: scale(`to`: `from`, `by`: x_1), parsed: parse `strict`, key: keys.`empty`)
 }
 ```
 
@@ -549,6 +550,8 @@ steps:
         args:
           - name: if
             value: { type: ":Number.int64", value: "3" }
+          - name: cancel
+            value: { type: ":Number.int64", value: "6" }
           - name: plain
             value: { type: ":Number.int64", value: "12" }
           - name: quoted

@@ -43,7 +43,7 @@ internal sealed class GesLinkedProgram
 
     internal IGesProgramProfiler? Profiler { get; set; }
 
-    internal GesLinkedProgram(GameEventScriptProgram program, IGesExtensionRegistry extensionRegistry, IGesExternalTypeRegistry typeRegistry)
+    internal GesLinkedProgram(GameEventScriptProgram program, IGesExtensionRegistry extensionRegistry, IGesExternalTypeRegistry typeRegistry, IReadOnlyDictionary<string, GesHandleBinding>? handleResolvers = null)
     {
         Program = program ?? throw new ArgumentNullException(nameof(program));
         GesProgramCallGraphValidator.Validate(program);
@@ -59,6 +59,8 @@ internal sealed class GesLinkedProgram
         OutboundMessageSignatures = BuildOutboundMessageSignatures(program);
         BoundExtensionCalls = BindExtensions(extensionRegistry ?? GesEmptyExtensionRegistry.Instance);
         BoundExternalTypeConstructors = BindExternalTypes(typeRegistry ?? GesEmptyExternalTypeRegistry.Instance);
+        HandleResolvers = handleResolvers;
+        HandleBindings = BindHandleTypes(handleResolvers);
         Handlers = BuildHandlers(program);
         RequiredRegisterCapacity = program.RequiredRegisterCount;
     }
@@ -99,6 +101,11 @@ internal sealed class GesLinkedProgram
     internal IGesExtensionFunction?[] BoundExtensionCalls { get; }
     internal IGesExternalTypeConstructor?[] BoundExternalTypeConstructors { get; }
     internal Handler[] Handlers { get; }
+    // The host's resolver of each handle type the Program imports, null for a type the host does not resolve.
+    internal Dictionary<string, GesHandleBinding?>? HandleBindings { get; }
+
+    // Every resolver of the host, so that a handle the Program does not name by type can still read state.
+    internal IReadOnlyDictionary<string, GesHandleBinding>? HandleResolvers { get; }
     internal int RequiredRegisterCapacity { get; }
 
     internal string FetchString(ushort index) => StringPool[index];
@@ -196,6 +203,36 @@ internal sealed class GesLinkedProgram
                     $"External type constructor registry returned :{constructor.Definition.SignatureId} for :{reference.SignatureId}",
                     reference.SignatureId, GesBytecodeOpCode.CreateExternalType, bindId);
             result[bindId] = constructor;
+        }
+
+        return result;
+    }
+
+    // Compares each imported handle type with the host's registration; a type whose state the Program reads needs one.
+    private Dictionary<string, GesHandleBinding?>? BindHandleTypes(IReadOnlyDictionary<string, GesHandleBinding>? resolvers)
+    {
+        Dictionary<string, GesHandleBinding?>? result = null;
+        foreach (var bind in Program.Bindings.Entries)
+        {
+            if (bind.Kind != HandleType) continue;
+            var name = FetchString(bind.Name);
+            GesHandleBinding? binding = null;
+            if (resolvers is not null && resolvers.TryGetValue(name, out var registered))
+            {
+                if (registered.Type.Hash != GesProgramDumper.HandleTypeHash(bind))
+                    throw LinkError(GesDiagnosticCodes.LinkMismatchedHandleType,
+                        $"The registered handle type @{name} differs from the one the Program was compiled with.", name);
+                binding = registered;
+            }
+            else if (bind.EntryAddress != ushort.MaxValue)
+            {
+                var message = $"No resolver reads the state of @{name}.";
+                throw GesSourceCallSites.LocateAddress(Program, bind.EntryAddress) is { } location
+                    ? new GesDynamicLinkException(new GesDiagnostic(GesDiagnosticPhase.Link, GesDiagnosticCodes.LinkMissingHandleResolver, message, name, SourceLocation: location, ProgramName: Program.ModuleName))
+                    : LinkError(GesDiagnosticCodes.LinkMissingHandleResolver, message, name);
+            }
+
+            (result ??= new Dictionary<string, GesHandleBinding?>(StringComparer.Ordinal))[name] = binding;
         }
 
         return result;

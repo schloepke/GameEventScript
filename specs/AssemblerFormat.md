@@ -137,9 +137,9 @@ label: .bind Kind id=(unsigned|none) name=TextLabel args=[TextLabel, ...]
        [tagAlternatives=[[TextLabel, ...], ...]] [excludedTags=[TextLabel, ...]]
 ```
 
-The `entry` field is present only when the bind has an entry address. Tag fields are emitted only when non-empty; `tagAlternatives` lists each alternative group in order. The trailing comment resolves the logical signature and tag constraints, writing each group as `#a | #b` inside the `matching` list.
+A `HandleType` bind writes `hash=0x…` with the type's 64-bit canonical hash in 16 hexadecimal digits instead of `args`, for example `HandleType_Drone: .bind HandleType id=none name=T_Drone hash=0x9478731644d8e1e5 // "@Drone"` (*Since: Unreleased*). The `entry` field is present only when the bind has an entry address. Tag fields are emitted only when non-empty; `tagAlternatives` lists each alternative group in order. The trailing comment resolves the logical signature and tag constraints, writing each group as `#a | #b` inside the `matching` list.
 
-Bind-label prefixes are `Handler`, `Function`, `Predicate`, `Extension`, `Outbound`, `Record`, and `ExternalType`. Unrecognized kinds use `Bind`. Labels derive from the binding name where possible and are made unique by numeric suffixes.
+Bind-label prefixes are `Handler`, `Function`, `Predicate`, `Extension`, `Outbound`, `Record`, `ExternalType`, and `HandleType`. Unrecognized kinds use `Bind`. Labels derive from the binding name where possible and are made unique by numeric suffixes.
 
 ## Code segment
 

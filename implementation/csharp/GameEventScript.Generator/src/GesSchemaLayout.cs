@@ -14,8 +14,9 @@ internal sealed class GesSchemaLayout
 {
     internal const int Version = 1;
 
-    internal GesSchemaLayout(List<string> roots, List<string> rootNames, List<GesLayoutParameter> parameters, List<GesLayoutType> types, List<GesLayoutNetwork> networks, List<GesSchemaSource> sources)
+    internal GesSchemaLayout(List<string> roots, List<string> rootNames, List<GesLayoutParameter> parameters, List<GesLayoutType> types, List<GesLayoutHandle> handles, List<GesLayoutNetwork> networks, List<GesSchemaSource> sources)
     {
+        Handles = handles;
         Roots = roots;
         RootNames = rootNames;
         Parameters = parameters;
@@ -35,6 +36,11 @@ internal sealed class GesSchemaLayout
     internal List<GesLayoutParameter> Parameters { get; }
 
     internal List<GesLayoutType> Types { get; }
+
+    // The handle types the roots reach, composite roots and network owners included, ordered by name.
+    internal List<GesLayoutHandle> Handles { get; }
+
+    internal GesLayoutHandle Handle(string name) => Handles.Find(handle => handle.Name == name) ?? throw new InvalidOperationException($"Handle '@{name}' is not in the layout.");
 
     // The networks among the roots, in root order.
     internal List<GesLayoutNetwork> Networks { get; }
@@ -59,13 +65,55 @@ internal sealed class GesSchemaLayout
 }
 
 // A network root: its hash bound with the layout's parameters and its routes in declared order.
-internal sealed class GesLayoutNetwork(string name, ulong hash, List<GesLayoutRoute> routes)
+internal sealed class GesLayoutNetwork(string name, ulong hash, List<GesLayoutRoute> routes, List<GesLayoutOwner> owners)
 {
+    // The `owns` routes in ascending scalar order of the handle type's name.
+    internal List<GesLayoutOwner> Owners { get; } = owners;
+
     internal string Name { get; } = name;
 
     internal ulong Hash { get; } = hash;
 
     internal List<GesLayoutRoute> Routes { get; } = routes;
+}
+
+// One `owns` route: the side, `client` or `server`, and the handle type's name without `@`.
+internal sealed class GesLayoutOwner(string side, string handle)
+{
+    internal string Side { get; } = side;
+
+    internal string Handle { get; } = handle;
+}
+
+// A handle type: its name without `@`, its handle hash, its state schema's type name and the encodings of its identity, an
+// `integer` or `text` id and its version, or for a composite the root's name and the part. A revision has its integer encoding.
+internal sealed class GesLayoutHandle
+{
+    internal string Name = "";
+    internal ulong Hash;
+    internal string State = "";
+    internal GesLayoutEncoding? Id;
+    internal GesHandleVersionKind Version;
+    internal GesLayoutEncoding? Revision;
+    internal string Root = "";
+    internal GesLayoutEncoding? Part;
+
+    // The form that the handle type `<Name>Handle` checks, shared with models.
+    internal GesModelHandle Model = new();
+
+    internal bool IsComposite => Root.Length > 0;
+
+    // A composite's id is its root's.
+    internal bool Versioned => Version != GesHandleVersionKind.None;
+
+    internal static string VersionName(GesHandleVersionKind kind) => kind switch
+    {
+        GesHandleVersionKind.Revision => "revision",
+        GesHandleVersionKind.Sha1 => "sha1",
+        GesHandleVersionKind.Sha256 => "sha256",
+        GesHandleVersionKind.ContentHash => "contentHash",
+        _ => "none"
+    };
 }
 
 // One route: its side `client` or `server`, its verb `sends` or `publishes`, its root, its class `reliable`, `latest` or
@@ -277,7 +325,9 @@ internal enum GesLayoutKind
     Union,
     Nothing,
     Flags,
-    Disc
+    Disc,
+    Handle,
+    HandleMap
 }
 
 internal sealed class GesLayoutEncoding
@@ -323,6 +373,10 @@ internal sealed class GesLayoutEncoding
     internal List<GesLayoutField> Corners = [];
     internal List<GesLayoutField> Alternatives = [];
     internal string Schema = "";
+
+    // A handle or a handle Map's key: the handle type's name without `@`, and whether a handle carries its version.
+    internal string Handle = "";
+    internal bool Versioned;
 }
 
 // Builds the layout from bound schemas. Each reached schema is bound on its own, and a nested schema appears in its parent
@@ -340,6 +394,7 @@ internal static class GesSchemaLayoutBuilder
         var rootNames = new List<string>();
         var parameterInfos = new SortedDictionary<string, GesSchemaParameterInfo>(StringComparer.Ordinal);
         var networks = new List<GesNetwork>();
+        var handles = new SortedDictionary<string, GesHandleType>(StringComparer.Ordinal);
         foreach (var root in roots)
         {
             if (FindNetwork(set, root) is { } network)
@@ -353,15 +408,17 @@ internal static class GesSchemaLayoutBuilder
                 foreach (var route in network.Routes)
                 {
                     AddRoot(set, route.Root, rootKeys, rootTypes, rootNames, messageSuffix);
-                    Root(route.Root, reached, parameterInfos);
+                    Root(route.Root, reached, handles, parameterInfos);
                 }
+
+                foreach (var owner in network.Owners) Reach(owner.Handle, reached, handles);
 
                 continue;
             }
 
             var schema = set.Schema(root);
             AddRoot(set, schema, rootKeys, rootTypes, rootNames, messageSuffix);
-            Root(schema, reached, parameterInfos);
+            Root(schema, reached, handles, parameterInfos);
         }
 
         var layoutParameters = new List<GesLayoutParameter>();
@@ -373,10 +430,12 @@ internal static class GesSchemaLayoutBuilder
 
         var types = new List<GesLayoutType>();
         foreach (var schema in reached.Values) types.Add(Type(set, schema, parameters, messageSuffix));
+        var layoutHandles = new List<GesLayoutHandle>();
+        foreach (var handle in handles.Values) layoutHandles.Add(Handle(handle));
         var layoutNetworks = networks.ConvertAll(network => Network(set, network, parameters, messageSuffix));
         var sources = new List<GesSchemaSource>();
         foreach (var source in set.Sources) sources.Add(new GesSchemaSource(source.Name.Substring(source.Name.LastIndexOfAny(['/', '\\']) + 1), source.Text));
-        return new GesSchemaLayout(rootTypes, rootNames, layoutParameters, types, layoutNetworks, sources);
+        return new GesSchemaLayout(rootTypes, rootNames, layoutParameters, types, layoutHandles, layoutNetworks, sources);
     }
 
     // A network named plainly or `:Name`; a plain name that a message shares is ambiguous.
@@ -408,9 +467,9 @@ internal static class GesSchemaLayoutBuilder
     // The generated type name: a message's name ends with the suffix.
     internal static string TypeName(GesSchema schema, string messageSuffix) => schema.Kind == GesSchemaKind.Message ? schema.Name + messageSuffix : schema.Name;
 
-    private static void Root(GesSchema schema, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesSchemaParameterInfo> parameterInfos)
+    private static void Root(GesSchema schema, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles, SortedDictionary<string, GesSchemaParameterInfo> parameterInfos)
     {
-        Reach(schema, reached);
+        Reach(schema, reached, handles);
         foreach (var parameter in schema.Parameters) parameterInfos[parameter.Name] = parameter;
     }
 
@@ -420,23 +479,78 @@ internal static class GesSchemaLayoutBuilder
         foreach (var route in network.Routes)
             routes.Add(new GesLayoutRoute(route.Index, route.Side == GesNetworkSide.Client ? "client" : "server", route.Verb == GesNetworkVerb.Sends ? "sends" : "publishes",
                 route.Root.Name, TypeName(route.Root, messageSuffix), set.RootName(route.Root), route.Root.Kind == GesSchemaKind.Schema, GesBoundNetwork.ClassName(route.DeliveryClass), route.RateMicroseconds));
-        return new GesLayoutNetwork(network.Name, network.Bind(parameters).Hash, routes);
+        var owners = new List<GesLayoutOwner>();
+        foreach (var owner in network.Owners) owners.Add(new GesLayoutOwner(owner.Side == GesNetworkSide.Client ? "client" : "server", owner.Handle.Name));
+        owners.Sort((first, second) => string.CompareOrdinal(first.Handle, second.Handle));
+        return new GesLayoutNetwork(network.Name, network.Bind(parameters).Hash, routes, owners);
     }
 
-    private static void Reach(GesSchema schema, SortedDictionary<string, GesSchema> reached)
+    private static void Reach(GesSchema schema, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
     {
         var key = Key(schema);
         if (reached.ContainsKey(key)) return;
         reached.Add(key, schema);
-        foreach (var member in schema.Members) Reach(member, reached);
+        foreach (var member in schema.Members) Reach(member, reached, handles);
         foreach (var field in schema.Fields)
-            foreach (var type in field.Alternatives) Reach(type, reached);
+            foreach (var type in field.Alternatives) Reach(type, reached, handles);
     }
 
-    private static void Reach(GesSchemaType type, SortedDictionary<string, GesSchema> reached)
+    private static void Reach(GesSchemaType type, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
     {
-        if (type.Schema is { } schema) Reach(schema, reached);
-        foreach (var element in type.Element) Reach(element, reached);
+        if (type.Schema is { } schema) Reach(schema, reached, handles);
+        if (type.HandleType is { } handle) Reach(handle, reached, handles);
+        foreach (var element in type.Element) Reach(element, reached, handles);
+    }
+
+    // A handle type brings a composite's root. Its state stays outside the layout: the wire carries only the identity, and a
+    // state, often a document, need not be encodable.
+    private static void Reach(GesHandleType handle, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
+    {
+        if (handles.ContainsKey(handle.Name)) return;
+        handles.Add(handle.Name, handle);
+        if (handle.Root is { } root) Reach(root, reached, handles);
+    }
+
+    // The encodings of a handle type's identity, from the nodes of the type on its own: the group, then the id, the version
+    // and a composite's part.
+    private static GesLayoutHandle Handle(GesHandleType type)
+    {
+        var resolved = type.Resolved;
+        var nodes = GesSchemaBinder.BindHandle(resolved);
+        var handle = new GesLayoutHandle { Name = type.Name, Hash = type.Hash, State = type.StateName, Version = type.Version, Model = GesModelHandle.Of(type) };
+        var index = 1;
+        if (type.Root is { } root)
+        {
+            handle.Root = root.Name;
+            index = nodes[index].Next;
+            if (type.Version != GesHandleVersionKind.None) index++;
+            handle.Part = Key(in nodes[index]);
+            return handle;
+        }
+
+        handle.Id = Key(in nodes[index]);
+        index = nodes[index].Next;
+        if (type.Version == GesHandleVersionKind.Revision)
+        {
+            handle.Revision = new GesLayoutEncoding();
+            Number(in nodes[index], GesSchemaTypeKind.Number, GesQuantityUnit.UnitNone, null, null, handle.Revision);
+        }
+
+        return handle;
+    }
+
+    private static GesLayoutEncoding Key(in GesSchemaNode node)
+    {
+        var encoding = new GesLayoutEncoding();
+        if (node.Kind == GesSchemaNodeKind.Text)
+        {
+            encoding.Kind = GesLayoutKind.Text;
+            encoding.MaxCount = node.MaxCount;
+            encoding.Width = node.Width;
+        }
+        else Number(in node, GesSchemaTypeKind.Number, GesQuantityUnit.UnitNone, null, null, encoding);
+
+        return encoding;
     }
 
     private static GesLayoutType Type(GesSchemaSet set, GesSchema schema, GesSchemaParameters parameters, string messageSuffix)
@@ -525,7 +639,7 @@ internal static class GesSchemaLayoutBuilder
         foreach (var alternative in alternatives)
         {
             var path = nodes[index].Path;
-            var label = alternative.Label.Length > 0 ? alternative.Label : path.Substring(path.LastIndexOf(':') + 1);
+            var label = alternative.Label.Length > 0 ? alternative.Label : path.Substring(path.LastIndexOf(':') + 1).TrimStart('@');
             var encoding = alternative.Kind == GesSchemaTypeKind.Nothing ? Nothing(ref index) : Encoding(nodes, ref index, alternative);
             union.Alternatives.Add(new GesLayoutField { Name = label, Path = path, Encoding = encoding });
         }
@@ -630,6 +744,22 @@ internal static class GesSchemaLayoutBuilder
                 encoding.Unit = UnitName(type.Kind, type.Unit);
                 index++;
                 encoding.Element = Corner(nodes, ref index, type);
+                return encoding;
+            case GesSchemaTypeKind.Handle:
+                encoding.Kind = GesLayoutKind.Handle;
+                encoding.Handle = type.HandleType!.Name;
+                encoding.Versioned = type.IsVersioned;
+                index = node.Next;
+                return encoding;
+            case GesSchemaTypeKind.Map when type.HandleType is { } key:
+                // The List node, then each entry's group of the key, a handle, and the value.
+                encoding.Kind = GesLayoutKind.HandleMap;
+                encoding.Handle = key.Name;
+                encoding.MaxCount = node.MaxCount;
+                encoding.Width = node.Width;
+                index += 2;
+                index = nodes[index].Next;
+                encoding.Element = Field(nodes, ref index, "[]", type.Element);
                 return encoding;
             case GesSchemaTypeKind.Reference:
                 encoding.Kind = GesLayoutKind.Schema;

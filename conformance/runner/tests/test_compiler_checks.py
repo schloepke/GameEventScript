@@ -28,9 +28,11 @@ class CompilerChecksTests(unittest.TestCase):
 
     def test_all_compiler_requests_exclude_expectations(self):
         request = requests(self.cases)
-        self.assertEqual(427, len(request['cases']))
+        self.assertEqual(439, len(request['cases']))
         for case in request['cases']:
-            self.assertEqual({'id', 'kind', 'sources', 'compile', 'requires'}, set(case))
+            self.assertEqual({'id', 'kind', 'sources', 'compile', 'requires'}, set(case) - {'handles'})
+            if 'handles' in case:
+                self.assertEqual([], case['handles']['answers'])
 
     def test_opcode_catalog_matches_normative_spec(self):
         names = re.findall(r'^\| 0x[0-9A-Fa-f]{2} \| `([^`]+)` \|',

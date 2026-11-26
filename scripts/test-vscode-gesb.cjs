@@ -375,6 +375,33 @@ test('an unknown binding kind stays visible', () => {
     assert.match(renderBody(program, null), /Other bindings/);
 });
 
+test('a handle type shows its 64-bit schema hash and no entry point', () => {
+    const strings = Buffer.concat([u32(2), text('m'), text('Ship')]);
+    // 0xfedcba9876543210, least significant word first; the words are no text indexes.
+    const lists = Buffer.concat([u32(1), u32(4), u16(0x3210), u16(0x7654), u16(0xBA98), u16(0xFEDC)]);
+    const metadata = Buffer.concat([u16(0), u16(1), u16(1), u16(0), Buffer.alloc(8)]);
+    const bindings = Buffer.concat([u32(1), binding(0x22, 0xFFFF, 1, 0, { entry: 3 })]);
+    const program = readGesb(file(section(0x0001, metadata), section(0x0002, strings), section(0x0003, lists), section(0x0004, bindings), section(0x0010, Buffer.concat([u32(4), Buffer.alloc(64)]))));
+    assert.deepEqual(program.problems, []);
+    const handle = program.bindings[0];
+    assert.equal(handle.kind, 'HandleType');
+    assert.equal(handle.name, 'Ship');
+    assert.equal(handle.id, null);
+    assert.equal(handle.hash, '0xfedcba9876543210');
+    assert.deepEqual(handle.arguments, []);
+    assert.equal(handle.entry, null);
+    assert.equal(handle.stateAddress, 3);
+    const html = renderBody(program, null);
+    assert.match(html, /<h2>Handle types /);
+    assert.match(html, /@Ship/);
+    assert.match(html, /0xfedcba9876543210/);
+    assert.doesNotMatch(html, /Other bindings/);
+    const short = Buffer.concat([u32(1), u32(2), u16(1), u16(2)]);
+    const cut = readGesb(file(section(0x0002, strings), section(0x0003, short), section(0x0004, bindings)));
+    assert.equal(cut.bindings[0].hash, null);
+    assert.match(cut.problems.map(item => item.message).join('\n'), /four words/);
+});
+
 test('every checked-in binary is readable', () => {
     const root = path.join(__dirname, '..');
     const directories = ['conformance/fixtures/GesbV1', 'conformance/fixtures/Release050', 'examples/cli-example', 'examples/compute-benchmark'];

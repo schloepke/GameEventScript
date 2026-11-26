@@ -3693,3 +3693,215 @@ document:
     line: 1
     column: 17
 ```
+
+---
+
+## Test: handles read as values and as Map keys
+
+This case checks the following contract: A value starting with `@` is a handle in its text form with an optional version or ref and part; a Map may mix Text keys with handle keys, which follow the Text keys in handle order; printing reads back to an equal document. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "handles"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "target: @Drone:7~120\nhome: @Base:'north'~#live/hangar\nplain: @Base:3\nseen: [@Drone:9: true, name: 'x', @Drone:7: false]\n"
+  print: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  value:
+    type: ":Map"
+    entries:
+      - key: "home"
+        value:
+          type: ":Handle"
+          value: "@Base:north~#live/hangar"
+      - key: "plain"
+        value:
+          type: ":Handle"
+          value: "@Base:3"
+      - key: "seen"
+        value:
+          type: ":Map"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "x"
+            - handle: "@Drone:7"
+              value:
+                type: ":Boolean"
+                value: false
+            - handle: "@Drone:9"
+              value:
+                type: ":Boolean"
+                value: true
+      - key: "target"
+        value:
+          type: ":Handle"
+          value: "@Drone:7~120"
+```
+
+---
+
+## Test: handle refs and quoted ids survive printing
+
+This case checks the following contract: A ref names a version through the owner with a tag (`~#live`) or a quoted Text (`~'1.0'`) and stays a ref when read; quoted ids and parts that need no quotes are written bare, and printing reads back to an equal document. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "handle-refs"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "pinned: @Unit:drone.gnabblo~'1.0'\nlive: @Unit:'drone.gnabblo'~#live\nquoted: @Unit:'One Two'~'it''s'\nslot: @UnitSlot:'a b'/'c'\n"
+  print: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  value:
+    type: ":Map"
+    entries:
+      - key: "live"
+        value:
+          type: ":Handle"
+          value: "@Unit:drone.gnabblo~#live"
+      - key: "pinned"
+        value:
+          type: ":Handle"
+          value: "@Unit:drone.gnabblo~'1.0'"
+      - key: "quoted"
+        value:
+          type: ":Handle"
+          value: "@Unit:'One Two'~'it''s'"
+      - key: "slot"
+        value:
+          type: ":Handle"
+          value: "@UnitSlot:'a b'/c"
+```
+
+---
+
+## Test: a malformed handle is an error
+
+This case checks the following contract: A value starting with `@` that is no well-formed handle is `document.invalidHandle` at the `@`. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "invalid-handle"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: 1\ntarget: @Drone:7~xyz\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidHandle"
+    line: 2
+    column: 9
+```
+
+---
+
+## Test: a handle key carries no version
+
+This case checks the following contract: Map keys compare by identity only, so a handle key with a version or a ref is `document.invalidHandle`. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "versioned-handle-key"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "seen: [@Drone:7~#live: true]"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidHandle"
+    line: 1
+    column: 8
+```
+
+---
+
+## Test: equal handle keys are duplicates
+
+This case checks the following contract: Handle keys compare by type, id and part, so an integer id and the same quoted id of another kind stay distinct while a repeated handle is `document.duplicateKey`. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "duplicate-handle-key"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "seen: [@Drone:7: 1, @Drone:'7': 2, @Drone:7: 3]"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "duplicateKey"
+    line: 1
+    column: 36
+```
+
+---
+
+## Test: a record root takes no handle keys
+
+This case checks the following contract: Under a type schema header the root entries are field names, so a root key starting with `@` is `document.invalidKey`. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "root-handle-key"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: ":Schema(:Fleet)\n@Drone:7: true"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidKey"
+    line: 2
+    column: 1
+```

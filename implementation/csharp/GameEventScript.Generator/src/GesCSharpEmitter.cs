@@ -59,6 +59,16 @@ internal static partial class GesCSharpEmitter
         var models = options.Models is { } shared ? "global::" + string.Concat(GesSchemaPlanner.Namespace(shared, Keywords).ConvertAll(part => part + ".")) : context.Global;
         foreach (var type in types)
             foreach (var field in type.Fields) GesSchemaPlanner.QualifyPacked(field.Value, models);
+        // Handle types are the models' where they share a namespace, else declared here.
+        var handles = options.Models is not null ? models : context.Global;
+        foreach (var type in types)
+            foreach (var field in type.Fields) GesSchemaPlanner.QualifyHandles(field.Value, handles);
+        if (options.Models is null)
+        {
+            var declared = layout.Handles.ConvertAll(handle => handle.Model);
+            foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => GesCSharpModelEmitter.Handle(code, declared, handle.Model, access)));
+        }
+
         if (modelLayout is not null) context.Models = new ModelConversion(modelLayout, models);
         foreach (var type in types)
         {
@@ -96,6 +106,8 @@ internal static partial class GesCSharpEmitter
             return new NetworkRoot((shared ? models : context.Global) + root, context.Global + root + (shared ? "Wire" : ""), type);
         })));
         context.TopLevel = GesSchemaPlanner.TopLevel(types, sets, layout.Networks);
+        if (options.Models is null)
+            foreach (var handle in layout.Handles) context.TopLevel.Add(GesModelPlanner.HandleName(handle.Name));
         if (options.Models is not null) GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
         schemaSet?.Reserve(context.TopLevel);
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: false);
@@ -291,6 +303,7 @@ internal static partial class GesCSharpEmitter
         GesLayoutKind.Vector => "GesVector",
         GesLayoutKind.Box => "GesBox",
         GesLayoutKind.Disc => "GesDisc",
+        GesLayoutKind.Handle => value.HandleType,
         GesLayoutKind.List => $"List<{ElementName(value)}>",
         _ => NestedName(value)
     };
@@ -771,10 +784,14 @@ internal static partial class GesCSharpEmitter
                 code.Line("writer.WriteBytes(text);");
                 code.Close();
                 break;
+            case GesLayoutKind.Handle:
+                WriteHandle(code, value, target);
+                break;
             case GesLayoutKind.List:
                 if (value.Depth > 0) OpenLevels(code, value, target + ".Count");
                 code.Line($"if ({target}.Count > {max}) {Throw("TooLong", value)}");
                 code.Line($"writer.Write((ulong){target}.Count, {width});");
+                if (value.HandleMap) code.Line($"for (var position = 1; position < {target}.Count; position++) if ({target}[position].Key.CompareTo({target}[position - 1].Key) <= 0) throw new GesWireException(GesWireException.InvalidKeyOrder, {HandleKeyPath(value)});");
                 code.Line($"foreach (var item in {target})");
                 code.Open("{");
                 if (value.Item is not null) code.Line($"item.__WriteFields(ref writer, paths, at + {value.Element!.Node.ToString(CultureInfo.InvariantCulture)}{ItemLevel(value.Element)});");
@@ -907,9 +924,13 @@ internal static partial class GesCSharpEmitter
                 else code.Line($"{name} item;");
                 if (value.Item is not null) code.Line($"item.__ReadFields(ref reader, paths, at + {element.Node.ToString(CultureInfo.InvariantCulture)}{ItemLevel(element)});");
                 else Read(code, element, "item");
+                if (value.HandleMap) code.Line($"if (position > 0 && item.Key.CompareTo({target}[position - 1].Key) <= 0) throw new GesWireException(GesWireException.InvalidKeyOrder, {HandleKeyPath(value)});");
                 code.Line($"{target}.Add(item);");
                 code.Close();
                 code.Close();
+                break;
+            case GesLayoutKind.Handle:
+                ReadHandle(code, value, target);
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Read(code, axis, target + "." + axis.Base);
@@ -964,6 +985,109 @@ internal static partial class GesCSharpEmitter
                 code.Close();
                 break;
         }
+    }
+
+    // The path of a handle map's key: the node after its entry's group.
+    private static string HandleKeyPath(GesPlanValue map) => $"paths[at + {(map.Element!.Node + 1).ToString(CultureInfo.InvariantCulture)}]";
+
+    // The plan values of a handle's id, its version where the field has one, and a composite's part, in node order.
+    internal static (GesPlanValue Id, GesPlanValue? Version, GesPlanValue? Part) HandleParts(GesPlanValue value)
+    {
+        var handle = value.Handle!;
+        var owner = value.HandleRoot ?? handle;
+        var node = value.Node + 1;
+        var id = new GesPlanValue { Base = "Id", Node = node++, Encoding = owner.Id! };
+        GesPlanValue? version = null;
+        if (value.Encoding.Versioned)
+            version = new GesPlanValue
+            {
+                Base = "Version",
+                Node = node++,
+                Encoding = owner.Version == GesHandleVersionKind.Revision ? owner.Revision! : new GesLayoutEncoding { Kind = GesLayoutKind.Bytes, MaxCount = owner.Version == GesHandleVersionKind.Sha1 ? 20 : 32 }
+            };
+        var part = handle.IsComposite ? new GesPlanValue { Base = "Part", Node = node, Encoding = handle.Part! } : null;
+        return (id, version, part);
+    }
+
+    // The type of a composite's root, beside the handle's own type.
+    internal static string HandleRootType(GesPlanValue value)
+        => value.HandleType.Substring(0, value.HandleType.Length - (value.Handle!.Name + "Handle").Length) + value.HandleRoot!.Name + "Handle";
+
+    // The version type of a hash: GesHash20 or GesHash32.
+    internal static string HashType(GesPlanValue version) => version.Encoding.MaxCount == 20 ? "GesHash20" : "GesHash32";
+
+    // Writes a handle's id, version and part; a field without a version leaves the handle's out.
+    private static void WriteHandle(GesSchemaPlanner.Code code, GesPlanValue value, string target)
+    {
+        var (id, version, part) = HandleParts(value);
+        code.Open("{");
+        WriteHandleKey(code, id, target + (value.HandleRoot is not null ? ".Root.Id" : ".Id"));
+        if (version is not null)
+        {
+            code.Line($"if ({target}.Version is not {{ }} version) {Throw("MissingVersion", version)}");
+            if (version.Encoding.Kind == GesLayoutKind.Bytes)
+            {
+                code.Line($"Span<byte> hash = stackalloc byte[{HashType(version)}.Length];");
+                code.Line("version.CopyTo(hash);");
+                code.Line("for (var index = 0; index < hash.Length; index++) writer.Write(hash[index], 8);");
+            }
+            else Write(code, version, "version");
+        }
+
+        if (part is not null) WriteHandleKey(code, part, target + ".Part");
+        code.Close();
+    }
+
+    private static void WriteHandleKey(GesSchemaPlanner.Code code, GesPlanValue key, string target)
+    {
+        if (key.Encoding.Kind != GesLayoutKind.Text)
+        {
+            Write(code, key, target);
+            return;
+        }
+
+        code.Line($"if ({target} is null) {Throw("TypeMismatch", key)}");
+        code.Line($"GesWireRules.WriteText(ref writer, {target}, {key.Encoding.Width.ToString(CultureInfo.InvariantCulture)}, {key.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}, {Path(key)});");
+    }
+
+    // Reads a handle into locals and builds it; a text id that equals the held one keeps its string.
+    private static void ReadHandle(GesSchemaPlanner.Code code, GesPlanValue value, string target)
+    {
+        var (id, version, part) = HandleParts(value);
+        code.Open("{");
+        ReadHandleKey(code, id, "id", target + (value.HandleRoot is not null ? ".Root.Id" : ".Id"));
+        if (version is not null)
+        {
+            if (version.Encoding.Kind == GesLayoutKind.Bytes)
+            {
+                code.Line($"Span<byte> hash = stackalloc byte[{HashType(version)}.Length];");
+                code.Line($"reader.Require(hash.Length * 8L, {Path(version)});");
+                code.Line($"for (var index = 0; index < hash.Length; index++) hash[index] = (byte)reader.Read(8, {Path(version)});");
+                code.Line($"var version = {HashType(version)}.FromBytes(hash);");
+            }
+            else
+            {
+                code.Line("long version;");
+                Read(code, version, "version");
+            }
+        }
+
+        if (part is not null) ReadHandleKey(code, part, "part", target + ".Part");
+        var arguments = "id" + (version is not null ? ", version" : "");
+        code.Line(value.HandleRoot is not null ? $"{target} = new {value.HandleType}(new {HandleRootType(value)}({arguments}), part);" : $"{target} = new {value.HandleType}({arguments});");
+        code.Close();
+    }
+
+    private static void ReadHandleKey(GesSchemaPlanner.Code code, GesPlanValue key, string local, string current)
+    {
+        if (key.Encoding.Kind == GesLayoutKind.Text)
+        {
+            code.Line($"var {local} = GesWireRules.ReadText(ref reader, {key.Encoding.Width.ToString(CultureInfo.InvariantCulture)}, {key.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}, {current}, {Path(key)});");
+            return;
+        }
+
+        code.Line($"long {local};");
+        Read(code, key, local);
     }
 
     private static void Declarations(GesSchemaPlanner.Code code, GesPlanValue value, string access, Context context)

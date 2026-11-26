@@ -36,14 +36,20 @@ final class RunWorkspace {
             return Draft(id: id, paths: paths, text: sources, baseline: bytes)
         }
 
-        func compile() throws -> GameEventScriptProgram {
-            let builder = GesProgramBuilder()
+        func compile(handles: [GesHandleType]) throws -> GameEventScriptProgram {
+            let builder = ToolFiles.builder(handles)
             for (path, value) in zip(paths, text) { builder.addScript(value, sourceName: path) }
             return try builder.compile()
         }
     }
 
     var drafts: [Int: Draft] = [:]
+    // The handle catalog of `--handles`, read once at startup and reused by every later compilation.
+    let handleTypes: [GesHandleType]
+
+    init(handleTypes: [GesHandleType] = []) {
+        self.handleTypes = handleTypes
+    }
 
     static func isScratch(_ selector: String) -> Bool { ["", "0", "@0"].contains(selector) }
 

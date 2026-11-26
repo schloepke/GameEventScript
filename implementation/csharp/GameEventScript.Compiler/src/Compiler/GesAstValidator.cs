@@ -71,9 +71,10 @@ internal static class GesAstValidator
     // The program-wide rules of every module; their own source rules are the Syntax validator's. The modules share one
     // result cache, because a callable's result depends only on the callee and holds for every caller.
     internal static void ValidateModules(IReadOnlyList<GesParsedScript> modules, IReadOnlyDictionary<string, GesCallableDefinition> definitions,
-        IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesExpressionNode> constants, GesValidationErrors errors)
+        IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesExpressionNode> constants,
+        IReadOnlyDictionary<string, GesHandleType> handleTypes, GesValidationErrors errors)
     {
-        var callables = new ValidationCallables(definitions);
+        var callables = new ValidationCallables(definitions, handleTypes);
         for (var index = 0; index < modules.Count; index++) ValidateModule(modules[index], callables, typeDefinitions, constants, errors);
     }
 
@@ -86,7 +87,9 @@ internal static class GesAstValidator
             for (var fieldIndex = 0; fieldIndex < typeDefinition.Fields.Count; fieldIndex++)
             {
                 var field = typeDefinition.Fields[fieldIndex];
-                if (!IsKnownType(field.TypeName, typeDefinitions))
+                if (GesHandleTypeNames.IsHandleType(field.TypeName))
+                    ValidateHandleTypeName(parsedScript, field.TypeName, callables.HandleTypes, errors, field);
+                else if (!IsKnownType(field.TypeName, typeDefinitions))
                     errors.Add(parsedScript, $"Field '{field.Name}' uses unknown type ':{field.TypeName}'", field.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, field);
 
                 if (field.MinimumExpression is not null) ValidateExpressionReferences(parsedScript, field.MinimumExpression, callables, typeDefinitions, errors, BuildDeclaredTypeMap([], constants));
@@ -100,7 +103,7 @@ internal static class GesAstValidator
         for (var predicateIndex = 0; predicateIndex < parsedScript.PredicateDefinitions.Count; predicateIndex++)
         {
             var predicateDefinition = parsedScript.PredicateDefinitions[predicateIndex];
-            ValidateParameterTypeHints(parsedScript, "Predicate", predicateDefinition.Name, predicateDefinition.ParameterList, typeDefinitions, errors);
+            ValidateParameterTypeHints(parsedScript, "Predicate", predicateDefinition.Name, predicateDefinition.ParameterList, typeDefinitions, callables.HandleTypes, errors);
             ValidateExpressionReferences(parsedScript, predicateDefinition.Expression, callables, typeDefinitions, errors, BuildDeclaredTypeMap(predicateDefinition.ParameterList, constants));
             ValidatePredicateResultExpression(parsedScript, predicateDefinition, callables, typeDefinitions, errors, constants);
         }
@@ -108,14 +111,14 @@ internal static class GesAstValidator
         for (var functionIndex = 0; functionIndex < parsedScript.FunctionDefinitions.Count; functionIndex++)
         {
             var functionDefinition = parsedScript.FunctionDefinitions[functionIndex];
-            ValidateParameterTypeHints(parsedScript, "Function", functionDefinition.Name, functionDefinition.ParameterList, typeDefinitions, errors);
+            ValidateParameterTypeHints(parsedScript, "Function", functionDefinition.Name, functionDefinition.ParameterList, typeDefinitions, callables.HandleTypes, errors);
             ValidateExpressionReferences(parsedScript, functionDefinition.Expression, callables, typeDefinitions, errors, BuildDeclaredTypeMap(functionDefinition.ParameterList, constants));
         }
 
         for (var handlerIndex = 0; handlerIndex < parsedScript.Handlers.Count; handlerIndex++)
         {
             var handler = parsedScript.Handlers[handlerIndex];
-            ValidateParameterTypeHints(parsedScript, "Handler", handler.Message, handler.ParameterList, typeDefinitions, errors);
+            ValidateParameterTypeHints(parsedScript, "Handler", handler.Message, handler.ParameterList, typeDefinitions, callables.HandleTypes, errors);
             var handlerScope = ValidationScope.Create(handler.ParameterList, constants);
             for (var statementIndex = 0; statementIndex < handler.Statements.Count; statementIndex++)
             {
@@ -208,11 +211,18 @@ internal static class GesAstValidator
         string declarationName,
         IReadOnlyList<GesParameterNode> parameters,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
+        IReadOnlyDictionary<string, GesHandleType> handleTypes,
         GesValidationErrors errors)
     {
         for (var index = 0; index < parameters.Count; index++)
         {
             var parameter = parameters[index];
+            if (GesHandleTypeNames.IsHandleType(parameter.DeclaredType))
+            {
+                ValidateHandleTypeName(parsedScriptContext, parameter.DeclaredType!, handleTypes, errors, parameter);
+                continue;
+            }
+
             if (string.IsNullOrEmpty(parameter.DeclaredType) ||
                 IsBuiltinConstructorType(parameter.DeclaredType!) ||
                 typeDefinitions.ContainsKey(parameter.DeclaredType!))
@@ -261,9 +271,12 @@ internal static class GesAstValidator
     // callable has its result. A call of a callable still on the stack is a cycle and stays unknown.
     // The callables of one compilation with the result types of those whose classification met no cycle. Such a result depends
     // only on the callee, so every later classification reuses it instead of classifying the callee again.
-    private sealed class ValidationCallables(IReadOnlyDictionary<string, GesCallableDefinition> definitions)
+    private sealed class ValidationCallables(IReadOnlyDictionary<string, GesCallableDefinition> definitions, IReadOnlyDictionary<string, GesHandleType>? handleTypes = null)
     {
         public IReadOnlyDictionary<string, GesCallableDefinition> Definitions { get; } = definitions;
+
+        // The handle catalog by name without `@`; the validator checks every `@Name` against it.
+        public IReadOnlyDictionary<string, GesHandleType> HandleTypes { get; } = handleTypes ?? NoHandleTypes;
 
         public Dictionary<string, StaticExpressionInfo> Results { get; } = new(StringComparer.Ordinal);
     }
@@ -569,6 +582,10 @@ internal static class GesAstValidator
         CallableResults callableResults)
     {
         var target = ClassifyExpression(memberAccess.Target, callables, typeDefinitions, declaredTypes, callableResults);
+        // `h.root` of composites with one root type is a handle of that root type.
+        if (memberAccess.Member == "root" && GesHandleTypeNames.IsHandleType(target.TypeName))
+            return GesHandleTypeNames.CommonRoot(target.TypeName!, callables.HandleTypes) is { } root ? StaticExpressionInfo.Other("@" + root.Name) : StaticExpressionInfo.Unknown;
+
         if (string.IsNullOrWhiteSpace(target.TypeName) ||
             !typeDefinitions.TryGetValue(target.TypeName!, out var typeDefinition))
         {
@@ -740,7 +757,7 @@ internal static class GesAstValidator
             : StaticExpressionInfo.Nothing;
     }
 
-    // A timer name is Text or Tag; a statically known other type is rejected like a send delay of another unit.
+    // A timer name is Text, Tag or a handle; a statically known other type is rejected like a send delay of another unit.
     private static void ValidateTimerName(
         GesParsedScript parsedScriptContext,
         GesExpressionNode name,
@@ -751,8 +768,9 @@ internal static class GesAstValidator
     {
         ValidateExpressionReferences(parsedScriptContext, name, callables, typeDefinitions, errors, declaredTypes);
         var nameType = ClassifyExpression(name, callables, typeDefinitions, declaredTypes ?? new Dictionary<string, string>(StringComparer.Ordinal), new CallableResults());
-        if (nameType.TypeName is not null && nameType.Kind is not (StaticExpressionKind.Unknown or StaticExpressionKind.Nothing) && nameType.TypeName is not ("text" or "tag"))
-            errors.Add(parsedScriptContext, "Timer name requires Text or Tag", "Text", GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, name);
+        if (nameType.TypeName is not null && nameType.Kind is not (StaticExpressionKind.Unknown or StaticExpressionKind.Nothing) && nameType.TypeName is not ("text" or "tag") &&
+            !GesHandleTypeNames.IsHandleType(nameType.TypeName))
+            errors.Add(parsedScriptContext, "Timer name requires Text, Tag or a handle", "Text", GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, name);
     }
 
     private static void ValidateExpressionReferences(
@@ -911,6 +929,7 @@ internal static class GesAstValidator
 
                 case GesTypeCheckExpressionNode typeCheck:
                     // A check may name a custom type bound only later, such as a record value that a message delivers.
+                    if (GesHandleTypeNames.IsHandleType(typeCheck.TypeName)) ValidateHandleTypeName(parsedScriptContext, typeCheck.TypeName, callables.HandleTypes, errors, typeCheck);
                     expression = typeCheck.Value;
                     continue;
 
@@ -919,10 +938,16 @@ internal static class GesAstValidator
                 case GesTypeCastExpressionNode typeCast:
                     if (typeCast.TypeName == "record")
                         errors.Add(parsedScriptContext, "':Record' is no cast target; use ':Record(type, fields)' to build a Record.", "record", GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, typeCast);
+                    // A handle has no constructor and no cast; only parameter and field types check handles (specs/Language.md#handles).
+                    if (GesHandleTypeNames.IsHandleType(typeCast.TypeName))
+                        errors.Add(parsedScriptContext, $"'as {typeCast.TypeName}' is only a parameter or field type; use 'is {typeCast.TypeName}' to test a value.", typeCast.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, typeCast);
                     expression = typeCast.Value;
                     continue;
 
                 case GesMemberAccessExpressionNode memberAccess:
+                    if (memberAccess.Member is "version" or "root" &&
+                        ClassifyExpression(memberAccess.Target, callables, typeDefinitions, declaredTypes, new CallableResults()).TypeName is { } targetType && GesHandleTypeNames.IsHandleType(targetType))
+                        ValidateHandleMember(parsedScriptContext, memberAccess, targetType, callables.HandleTypes, errors);
                     expression = memberAccess.Target;
                     continue;
 
@@ -1262,6 +1287,47 @@ internal static class GesAstValidator
 
         return -1;
     }
+
+    // Each alternative of a handle type or union is a declared `@Name`, and `@Name~` names a type with versions.
+    private static void ValidateHandleTypeName(GesParsedScript parsedScriptContext, string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes, GesValidationErrors errors, GesScriptNode node)
+    {
+        foreach (var alternative in typeName.Split('|'))
+        {
+            if (!GesHandleTypeNames.IsHandleType(alternative))
+            {
+                errors.Add(parsedScriptContext, $"A union is written only of handle types, not ':{alternative}'.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, node);
+                continue;
+            }
+
+            var (name, versioned) = GesHandleTypeNames.Split(alternative);
+            if (!handleTypes.TryGetValue(name, out var type))
+                errors.Add(parsedScriptContext, $"Handle type '@{name}' is not declared.", "@" + name, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateUnknownHandleType, node);
+            else if (versioned && type.Version == GesHandleVersionKind.None)
+                errors.Add(parsedScriptContext, $"'@{name}~' needs a handle type with versions.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, node);
+        }
+    }
+
+    // `h.version` needs a type with versions and `h.root` composites of one root type; other alternatives are not
+    // declared and already reported.
+    private static void ValidateHandleMember(GesParsedScript parsedScriptContext, GesMemberAccessExpressionNode memberAccess, string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes, GesValidationErrors errors)
+    {
+        var known = false;
+        var versioned = false;
+        foreach (var alternative in typeName.Split('|'))
+        {
+            if (!handleTypes.TryGetValue(GesHandleTypeNames.Split(alternative).Name, out var type)) return;
+            known = true;
+            versioned |= type.Version != GesHandleVersionKind.None;
+        }
+
+        if (!known) return;
+        if (memberAccess.Member == "version" && !versioned)
+            errors.Add(parsedScriptContext, $"'{typeName}' has no versions.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, memberAccess);
+        else if (memberAccess.Member == "root" && typeName.Contains('|') && GesHandleTypeNames.CommonRoot(typeName, handleTypes) is null)
+            errors.Add(parsedScriptContext, $"The alternatives of '{typeName}' have no common root type.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, memberAccess);
+    }
+
+    private static readonly Dictionary<string, GesHandleType> NoHandleTypes = new(StringComparer.Ordinal);
 
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or

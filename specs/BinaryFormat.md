@@ -194,6 +194,18 @@ suffix, which belongs to local variables only; a `MessageNameHandler` records
 exactly the single label `message` whatever its source binding is called, and
 any other argument-name list fails with `InvalidProgram`.
 
+> **Since: Unreleased** — handle types
+
+A `HandleType` entry (`0x22`) imports one handle type. Its name is the type name
+without `@` and unique among `HandleType` entries, which instructions name by text;
+its `Id` is the sentinel. `ArgumentNamesListIndex` names a
+list of exactly four elements, the type's 64-bit schema hash with the least
+significant 16 bits first. `EntryAddress` is the first instruction that reads the
+type's state, or the sentinel; it locates `link.missingHandleResolver` and is not an
+entry point. Its tag lists name empty lists, it has no tag alternatives, and its
+register count and call depth are `0`. Any other shape fails with `InvalidProgram`. See
+[Bytecode](Bytecode.md#top-level-artifact).
+
 Matching resource declarations alone do not establish validity. The independent
 code-derived bounds and frame/staging rules are defined in
 [Bytecode](Bytecode.md). Underdeclarations and inconsistent resource states are

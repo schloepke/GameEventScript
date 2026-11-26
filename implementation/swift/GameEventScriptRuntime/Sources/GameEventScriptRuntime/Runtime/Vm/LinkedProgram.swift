@@ -25,6 +25,10 @@ final class GesLinkedProgram {
     var constructors: [UInt16: any GesExternalTypeConstructor] = [:]
     var constructorBindings: [UInt16: GesBindingSegment.Entry] = [:]
     var outbound: [UInt16: GesMessageSignature] = [:]
+    // The host's resolvers by handle type name, which state reads use.
+    let handleResolvers: [String: GesHandleBinding]?
+    // Each imported handle type with the host's registration, nil when the host registered none.
+    private(set) var handleBindings: [String: GesHandleBinding?]?
     private var mapLayouts: [GesMapLayout?]
 
     private var dataPositions: [UInt32: [Int]?] = [:]
@@ -47,8 +51,9 @@ final class GesLinkedProgram {
         return layout
     }
 
-    init(_ program: GameEventScriptProgram, extensions: (any GesExtensionRegistry)?, types: (any GesExternalTypeRegistry)?) throws {
+    init(_ program: GameEventScriptProgram, extensions: (any GesExtensionRegistry)?, types: (any GesExternalTypeRegistry)?, handleResolvers: [String: GesHandleBinding]? = nil) throws {
         self.program = program
+        self.handleResolvers = handleResolvers
         textValues = program.stringConstants.map(GesValue.text)
         mapLayouts = .init(repeating: nil, count: program.uint16IndexLists.count)
         // Handlers whose entries share one group array (as the Program reader produces) share one resolved copy.
@@ -62,7 +67,8 @@ final class GesLinkedProgram {
             return names
         }
 
-        for binding in program.bindings {
+        // Handle type bindings keep field data in their argument list; bindHandleTypes reads them.
+        for binding in program.bindings where binding.kind != .handleType {
             let name = program.stringConstants[Int(binding.name)]
             let labels = binding.argumentNames.map { program.stringConstants[Int($0)] }
             switch binding.kind {
@@ -120,6 +126,42 @@ final class GesLinkedProgram {
                 constructorBindings[binding.id] = binding
             default: break
             }
+        }
+        try bindHandleTypes()
+    }
+
+    // Compares each imported handle type with the host's registration; a type whose state the Program reads needs one.
+    private func bindHandleTypes() throws {
+        for binding in program.bindings where binding.kind == .handleType {
+            let name = program.stringConstants[Int(binding.name)]
+            var bound: GesHandleBinding?
+            if let registered = handleResolvers?[name] {
+                if registered.type.hash != GesProgramDumper.handleTypeHash(binding) {
+                    throw GesDynamicLinkError(
+                        .init(
+                            phase: .link,
+                            code: GesDiagnosticCodes.linkMismatchedHandleType,
+                            message: "The registered handle type @\(name) differs from the one the Program was compiled with.",
+                            symbol: name,
+                            programName: program.moduleName
+                        )
+                    )
+                }
+                bound = registered
+            } else if binding.entryAddress != .max {
+                throw GesDynamicLinkError(
+                    .init(
+                        phase: .link,
+                        code: GesDiagnosticCodes.linkMissingHandleResolver,
+                        message: "No resolver reads the state of @\(name).",
+                        symbol: name,
+                        sourceLocation: GesSourceCallSites.locateAddress(program, binding.entryAddress),
+                        programName: program.moduleName
+                    )
+                )
+            }
+            if handleBindings == nil { handleBindings = [:] }
+            handleBindings![name] = .some(bound)
         }
     }
 }

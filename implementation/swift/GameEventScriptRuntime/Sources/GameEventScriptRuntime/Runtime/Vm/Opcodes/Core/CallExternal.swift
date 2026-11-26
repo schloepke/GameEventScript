@@ -27,6 +27,12 @@ extension GesVirtualMachine {
             raiseError("runtime.extensionCallFailed", symbol: text(binding.name), error: error)
             return
         }
+        if GesHandleStates.holdsRef(call.result) {
+            let name = text(binding.name)
+            setNothing(destination)
+            raiseError(.init(phase: .runtime, code: GesWireError.unresolvedRef, message: "Extension '\(name)' returned a handle with an unresolved ref.", symbol: name))
+            return
+        }
         setValue(destination, i.normalizeResultAsPredicate && call.result.kind != .boolean ? .nothing : call.result)
     }
 }

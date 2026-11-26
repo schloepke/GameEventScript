@@ -63,6 +63,9 @@ enum GesSwiftModelEmitter {
         for protocolType in layout.protocols {
             document.units.append(GesCodeUnit(owner: protocolType.name) { code in protocolDeclaration(&code, layout, protocolType, access) })
         }
+        for handle in layout.handles {
+            document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handle.name)) { code in self.handle(&code, layout.handles, handle, access) })
+        }
         for set in GesModelPlanner.tagSets(layout) {
             document.units.append(
                 GesCodeUnit(owner: set.name) { code in
@@ -80,7 +83,8 @@ enum GesSwiftModelEmitter {
         if let setName = schemaSet?.declared {
             document.units.append(GesCodeUnit(owner: "") { code in GesSchemaSetReference.writeSwift(&code, setName, access, layout.sources, [], networks: false) })
         }
-        if options.bindings || valued { document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support) }) }
+        let handleMaps = GesModelPlanner.usesHandleMaps(layout)
+        if options.bindings || valued { document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, handleMaps) }) }
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
             let values = options.bindings || valued || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
             let math = GesComputedEmitter.usesMath(layout.types.map(\.computed))
@@ -554,7 +558,7 @@ enum GesSwiftModelEmitter {
     }
 
     static func defaultValue(_ value: GesModelPlanValue) -> String {
-        value.nullable ? " = nil" : value.kind == .list || value.kind == .dice || value.kind == .bytes || value.kind == .flags ? " = []" : value.kind == .values ? " = .empty" : ""
+        value.nullable ? " = nil" : value.kind == .list || value.kind == .dice || value.kind == .bytes || value.kind == .flags ? " = []" : value.kind == .handleMap ? " = [:]" : value.kind == .values ? " = .empty" : ""
     }
 
     static func type(_ value: GesModelPlanValue) -> String { plain(value) + (value.nullable ? "?" : "") }
@@ -577,6 +581,8 @@ enum GesSwiftModelEmitter {
         case .disc: "GesDisc"
         case .schema: value.model.schema
         case .union, .nothing, .flags: value.nested
+        case .handle: GesModelPlanner.handleName(value.model.handle)
+        case .handleMap: "[\(plain(value.key!)): \(type(value.element!))]"
         }
     }
 
@@ -637,6 +643,8 @@ enum GesSwiftModelEmitter {
         case .point, .vector, .box, .poly, .disc: return "\(expression).value(unit: \(unit(value.model.unit)))"
         case .schema: return plain ? "\(expression).toValue()" : "\(expression).gesValue()"
         case .union, .nothing, .flags: return "\(helper).value(\(expression))"
+        case .handle: return "\(expression).toValue(versioned: \(value.model.versioned ? "true" : "false"))"
+        case .handleMap: return "\(support).handleMap(\(expression), { $0.toValue(versioned: false) }, { \(encode(value.element!, owner, "$0", helper, support, plain: plain)) })"
         }
     }
 
@@ -664,6 +672,9 @@ enum GesSwiftModelEmitter {
         case .disc: return "GesDisc(\(expression), unit: \(unit(value.model.unit)))"
         case .schema: return plain ? "\(helper).decode\(value.model.schema)(\(expression))" : "\(value.model.schema)(gesValue: \(expression))"
         case .union, .nothing, .flags: return "\(helper).decode\(owner)\(value.nested)(\(expression))"
+        case .handle: return "\(Self.plain(value)).read(\(expression), versioned: \(value.model.versioned ? "true" : "false"))"
+        case .handleMap:
+            return "\(support).handleMap(\(expression), { \(decode(value.key!, owner, "$0", helper, support, plain: plain)) }, { \(decode(value.element!, owner, "$0", helper, support, plain: plain)) })"
         }
     }
 
@@ -1002,11 +1013,12 @@ enum GesSwiftModelEmitter {
 
     // The conversions that the script bindings and the plain values share, named after the header so that two generated
     // files can share a module.
-    private static func supportType(_ code: inout Code, _ name: String) {
+    private static func supportType(_ code: inout Code, _ name: String, _ handleMaps: Bool) {
         code.blank()
         code.line("/// The GES value conversions of the models of this file.")
         code.open("enum \(name) {")
         helpers(&code)
+        if handleMaps { handleHelpers(&code) }
         code.close()
     }
 

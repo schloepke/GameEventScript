@@ -88,7 +88,7 @@ internal sealed class HostScenario(GameEventScriptHost host, IReadOnlyDictionary
         }, StringComparer.Ordinal);
         observation["pendingTimers"] = host.PendingTimers.Select(timer => new Dictionary<string, object>
         {
-            ["name"] = timer.Name,
+            ["name"] = RuntimeObservations.TimerName(timer.Name),
             ["deadline"] = timer.Deadline.ToString(CultureInfo.InvariantCulture),
             ["period"] = timer.Period.ToString(CultureInfo.InvariantCulture),
             ["message"] = timer.MessageName,

@@ -100,7 +100,7 @@ const handlerColumns = [
 
 function bindingGroups(allBindings) {
     const bindings = withSourceLabels(allBindings);
-    const known = ['MessageHandler', 'MessageNameHandler', 'OutboundMessage', 'Function', 'Predicate', 'Record', 'ExtensionCall', 'ExternalType'];
+    const known = ['MessageHandler', 'MessageNameHandler', 'OutboundMessage', 'Function', 'Predicate', 'Record', 'ExtensionCall', 'ExternalType', 'HandleType'];
     const groups = [
         ['Inbound messages', ['MessageHandler', 'MessageNameHandler'], [signatureColumn, { title: 'Tags', code: true, value: row => shortened(filter(row)) }, ...handlerColumns]],
         ['Outbound messages', ['OutboundMessage'], [signatureColumn, { title: 'Id', numeric: true, value: row => row.id ?? '' }]],
@@ -109,6 +109,10 @@ function bindingGroups(allBindings) {
         ['Records', ['Record'], [signatureColumn, ...executableColumns]],
         ['Extensions', ['ExtensionCall'], [signatureColumn]],
         ['External types', ['ExternalType'], [signatureColumn]],
+        ['Handle types', ['HandleType'], [
+            { title: 'Name', code: true, value: row => shortened('@' + row.name) },
+            { title: 'Schema hash', code: true, value: row => row.hash ?? '' },
+        ]],
     ];
     const sections = groups.map(([title, kinds, columns]) => {
         const rows = bindings.filter(binding => kinds.includes(binding.kind));

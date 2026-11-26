@@ -19,6 +19,12 @@ enum GesSourceCallSites {
         return ranges.compactMap { location(program, sourceMap, $0) }
     }
 
+    // The source range of one instruction, or nil when the SourceMap covers it nowhere.
+    static func locateAddress(_ program: GameEventScriptProgram, _ address: UInt16) -> GesSourceLocation? {
+        guard let sourceMap = program.sourceMap, let entry = innermost(sourceMap, UInt32(address)) else { return nil }
+        return location(program, sourceMap, entry)
+    }
+
     // The shortest entry that covers the address, the first one among equally long entries.
     static func innermost(_ sourceMap: GesSourceMapSegment, _ address: UInt32) -> GesSourceMapEntry? {
         var best: GesSourceMapEntry?

@@ -202,6 +202,8 @@ public sealed class GesSchemaType
         foreach (var axis in type.Axes ?? []) axes.Add(new GesSchemaAxisInfo(axis));
         Axes = new GesReadOnlyArray<GesSchemaAxisInfo>(axes);
         Schema = type.Reference?.Public;
+        HandleType = type.Handle?.Public;
+        IsVersioned = type.Versioned;
     }
 
     internal static GesSchemaBound? Bound(GesResolvedValue? value) => value is null ? null : new GesSchemaBound(value);
@@ -257,6 +259,13 @@ public sealed class GesSchemaType
 
     /// <summary>Gets the schema a <see cref="GesSchemaTypeKind.Reference"/> refers to.</summary>
     public GesSchema? Schema { get; }
+
+    /// <summary>Gets the handle type of a <see cref="GesSchemaTypeKind.Handle"/>, or the key type of a handle Map; null for
+    /// every other type.</summary>
+    public GesHandleType? HandleType { get; }
+
+    /// <summary>Gets whether a handle is written <c>@Name~</c> and carries its version.</summary>
+    public bool IsVersioned { get; }
 }
 
 /// <summary>A field of a schema or an argument of a message.</summary>

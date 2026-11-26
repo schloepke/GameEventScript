@@ -3,7 +3,8 @@
 
 extension GesVirtualMachine {
     func executeGreaterOrEqual(_ target: Int, _ x: Int, _ y: Int) {
-        if registers[x].isNothing || registers[y].isNothing { return registers[target].setNothing() }
+        // Handles have no numeric view, so ordering them gives nothing (specs/Language.md#handles).
+        if registers[x].isNothing || registers[y].isNothing || registers[x].kind == .handle || registers[y].kind == .handle { return registers[target].setNothing() }
         if !registers[x].isNumeric || !registers[y].isNumeric || registers[x].unit != registers[y].unit { return registers[target].setBoolean(false) }
         switch registers[x].kind {
         case .integer where registers[y].kind == .integer:

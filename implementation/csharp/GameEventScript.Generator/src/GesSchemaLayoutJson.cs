@@ -34,6 +34,44 @@ internal static class GesSchemaLayoutJson
         json.BeginArray("types");
         foreach (var type in layout.Types) Type(json, type);
         json.EndArray();
+        // Layouts without a handle type keep their form.
+        if (layout.Handles.Count > 0)
+        {
+            json.BeginArray("handles");
+            foreach (var handle in layout.Handles)
+            {
+                json.BeginObject();
+                json.String("name", handle.Name);
+                json.String("hash", Hex(handle.Hash));
+                json.String("state", handle.State);
+                if (handle.IsComposite)
+                {
+                    json.String("root", handle.Root);
+                    json.Key("part");
+                    Encoding(json, handle.Part!);
+                }
+                else
+                {
+                    json.Key("id");
+                    Encoding(json, handle.Id!);
+                    json.Key("version");
+                    json.BeginValueObject();
+                    json.String("kind", GesLayoutHandle.VersionName(handle.Version));
+                    if (handle.Revision is { } revision)
+                    {
+                        json.Key("encoding");
+                        Encoding(json, revision);
+                    }
+
+                    json.EndObject();
+                }
+
+                json.EndObject();
+            }
+
+            json.EndArray();
+        }
+
         // Layouts without a network keep their form.
         if (layout.Networks.Count > 0)
         {
@@ -57,6 +95,20 @@ internal static class GesSchemaLayoutJson
                 }
 
                 json.EndArray();
+                if (network.Owners.Count > 0)
+                {
+                    json.BeginArray("owners");
+                    foreach (var owner in network.Owners)
+                    {
+                        json.BeginObject();
+                        json.String("side", owner.Side);
+                        json.String("handle", owner.Handle);
+                        json.EndObject();
+                    }
+
+                    json.EndArray();
+                }
+
                 json.EndObject();
             }
 
@@ -294,6 +346,17 @@ internal static class GesSchemaLayoutJson
             case GesLayoutKind.Schema:
                 json.String("name", encoding.Schema);
                 break;
+            case GesLayoutKind.Handle:
+                json.String("name", encoding.Handle);
+                json.Boolean("versioned", encoding.Versioned);
+                break;
+            case GesLayoutKind.HandleMap:
+                json.String("key", encoding.Handle);
+                json.Number("maxCount", encoding.MaxCount);
+                json.Number("width", encoding.Width);
+                json.Key("value");
+                Field(json, encoding.Element!, member: false, value: true);
+                break;
             case GesLayoutKind.Union:
                 json.Number("width", encoding.Width);
                 json.BeginArray("alternatives");
@@ -322,6 +385,8 @@ internal static class GesSchemaLayoutJson
         GesLayoutKind.Disc => "disc",
         GesLayoutKind.Schema => "schema",
         GesLayoutKind.Union => "union",
+        GesLayoutKind.Handle => "handle",
+        GesLayoutKind.HandleMap => "handleMap",
         _ => "nothing"
     };
 

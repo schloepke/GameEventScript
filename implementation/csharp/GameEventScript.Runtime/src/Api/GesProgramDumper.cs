@@ -167,10 +167,18 @@ internal static class GesProgramDumper
                 .Append(" id=")
                 .Append(entry.Id == NoAddress ? "none" : entry.Id.ToString(CultureInfo.InvariantCulture))
                 .Append(" name=")
-                .Append(context.TextLabel(entry.Name))
-                .Append(" args=[");
-            AppendTextLabels(builder, context, entry.ArgumentNames);
-            builder.Append(']');
+                .Append(context.TextLabel(entry.Name));
+            // A handle type import keeps its schema hash, not text, in its argument list.
+            if (entry.Kind == GesBinaryBindKind.HandleType)
+            {
+                builder.Append(" hash=0x").Append(HandleTypeHash(entry).ToString("x16", CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                builder.Append(" args=[");
+                AppendTextLabels(builder, context, entry.ArgumentNames);
+                builder.Append(']');
+            }
 
             if (entry.EntryAddress != NoAddress)
             {
@@ -752,6 +760,14 @@ internal static class GesProgramDumper
         }
     }
 
+    // The 64-bit schema hash of a handle type import, stored as four 16-bit words with the least significant first.
+    internal static ulong HandleTypeHash(GesBindingSegment.Entry entry)
+    {
+        ulong hash = 0;
+        for (var index = 0; index < entry.ArgumentNames.Count && index < 4; index++) hash |= (ulong)entry.ArgumentNames[index] << (16 * index);
+        return hash;
+    }
+
     private static void AddBindSignatureComment(List<string> comments, DisassemblyContext context, GesBindingSegment.Entry entry)
     {
         comments.Add(FormatBindSignatureComment(context, entry));
@@ -761,6 +777,11 @@ internal static class GesProgramDumper
     {
         var name = Escape(context.ResolveText(entry.Name));
         string signature;
+        if (entry.Kind == GesBinaryBindKind.HandleType)
+        {
+            return "\"@" + name + "\"";
+        }
+
         if (entry.Kind == GesBinaryBindKind.MessageNameHandler)
         {
             signature = "\"" + name + " as message\"";
@@ -1397,6 +1418,7 @@ internal static class GesProgramDumper
                 GesBinaryBindKind.OutboundMessage => "Outbound",
                 GesBinaryBindKind.Record => "Record",
                 GesBinaryBindKind.ExternalType => "ExternalType",
+                GesBinaryBindKind.HandleType => "HandleType",
                 _ => "Bind"
             };
 

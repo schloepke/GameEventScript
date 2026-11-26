@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 using static GameEventScript.Api.GesBytecodeTypeKind;
 
@@ -17,6 +18,9 @@ internal partial class GesVirtualMachine
                 return;
             case Text or Tag:
                 ExecuteMemberAccess(destinationRegister, property.TextValue, in obj);
+                return;
+            case GesBytecodeTypeKind.Handle when property.ObjectValue is GesHandle handle && obj.ObjectValue is GesValueMap map && map.Get(handle) is { } value:
+                SetValue(destinationRegister, in value);
                 return;
             default:
                 SetNothing(destinationRegister);

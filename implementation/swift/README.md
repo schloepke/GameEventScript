@@ -290,7 +290,7 @@ func execute(_ bytes: [UInt8]) throws -> (start: GesStartResult, execution: GesE
     defer { instance.detach() }
     let startup = try host.start()
     guard host.isReady else { return (startup, nil) }
-    host.receive(try GameEventScriptMessage(name: "Start", arguments: [
+    try host.receive(GameEventScriptMessage(name: "Start", arguments: [
         GesMessageArgument(name: "value", value: .integer(42))
     ]))
     let result = try host.runToCompletion()

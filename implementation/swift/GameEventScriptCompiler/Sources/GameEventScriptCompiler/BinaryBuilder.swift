@@ -20,6 +20,9 @@ final class GesBinaryBuilder {
     // Operand slot layouts per opcode shape, shared by every routine of this compilation.
     var operandLayouts: [Int: OperandSlots] = [:]
     var sourcePositions: [UInt32: [UInt64: Int]] = [:]
+    // The handle types the Program names with their hash and state schema, and the type lists of state reads.
+    var handleTypes: [String: (hash: UInt64, stateName: String)] = [:]
+    var handleStateReads: [[String]] = []
 
     init(sources: [GesSource], options: GesCompileOptions, fallbackLocation: GesSourceLocation) {
         self.sources = sources
@@ -53,6 +56,19 @@ final class GesBinaryBuilder {
             return 0
         }
         let values = values.map { UInt16($0) }
+        if let i = listIDs[values] { return i }
+        guard lists.count < 65535 else {
+            numericLimitExceeded = true
+            return 0
+        }
+        let id = lists.count
+        lists.append(values)
+        listIDs[values] = id
+        return id
+    }
+
+    // A list of raw words, such as a handle type's hash, which may use every value.
+    func rawList(_ values: [UInt16]) -> Int {
         if let i = listIDs[values] { return i }
         guard lists.count < 65535 else {
             numericLimitExceeded = true
@@ -269,7 +285,8 @@ final class GesBinaryBuilder {
         let recordRoutines = routines.filter { $0.definition.kind == "record" }.sorted { $0.definition.name < $1.definition.name }
         for r in callables + recordRoutines + routines.filter({ $0.definition.kind.hasSuffix("andler") }) { symbols += routineSymbols[r.key, default: []] }
         try checkLimits()
-        let materialized = materialize(executable + bindings, code)
+        let handleTypeBinds = handleTypeBinds(&code)
+        let materialized = materialize(executable + bindings, code, handleTypes: handleTypeBinds)
         if moduleName.isEmpty { moduleName = anonymousName(materialized.0, materialized.1, maxRegs, maxDepth) }
         _ = text(moduleName)
         try checkLimits()

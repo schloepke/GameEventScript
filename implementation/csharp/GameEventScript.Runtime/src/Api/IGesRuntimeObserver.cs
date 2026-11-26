@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using GameEventScript.Runtime.Values;
+
 namespace GameEventScript.Api;
 
 /// <summary>
@@ -81,9 +83,9 @@ public interface IGesRuntimeObserver
     /// <param name="deadline">The absolute due time in whole microseconds on the host's monotonic clock, the clock
     /// <see cref="GameEventScriptHost.NextMessageDelay"/> uses; neither a relative delay nor wall-clock time.</param>
     /// <param name="publish">Whether the send is a publish rather than an emit.</param>
-    /// <param name="name">The timer name of a named send, or <see langword="null"/> for an unnamed delayed send.</param>
+    /// <param name="name">The timer name of a named send, a Text or a handle, or Nothing for an unnamed delayed send.</param>
     /// <param name="period">The repeat period of an <c>every</c> timer in whole microseconds, or 0.</param>
-    void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish, string? name, long period)
+    void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish, GesValue name, long period)
     {
     }
 

@@ -15,6 +15,7 @@ OUTPUT = ROOT / "artifacts/website/examples"
 CHECK = object()
 FRAGMENTS = object()
 SCHEMA_OUTPUT = "4 bytes: target 7, damage 25, critical True"
+HANDLE_OUTPUT = "Alpha @Target:3"
 
 
 def blocks(name, language):
@@ -89,7 +90,18 @@ def csharp():
         source = OUTPUT / f"schema-{index + 1}.gess"
         source.write_text(example)
         run(ges + ["schema", "check", str(source)])
-    print(f"C# embedding, bridge annotations, {len(examples)} language examples and the schema guide passed.")
+    (directory / "Program.cs").write_text(blocks("Handles.md", "csharp")[0])
+    run(["dotnet", "build", str(directory / "GuideExample.csproj"), "--configuration", "Release", "--nologo"])
+    if run(["dotnet", str(directory / "bin/Release/net8.0/GuideExample.dll")]) != HANDLE_OUTPUT:
+        raise RuntimeError("C# handle guide did not produce the documented output.")
+    catalog = OUTPUT / "handles.gess"
+    catalog.write_text(blocks("Handles.md", "gess")[0])
+    run(ges + ["schema", "check", str(catalog)])
+    for index, example in enumerate(blocks("Handles.md", "ges")):
+        source = OUTPUT / f"handles-{index + 1}.ges"
+        source.write_text(example)
+        run(ges + ["check", str(source), "--handles", str(catalog)])
+    print(f"C# embedding, bridge annotations, {len(examples)} language examples, the schema and the handle guide passed.")
 
 
 def swift():
@@ -114,7 +126,12 @@ def swift():
          "--disable-build-manifest-caching", "--configuration", "release"])
     if run([str(scratch / "release/GesExample")]) != SCHEMA_OUTPUT.replace("True", "true"):
         raise RuntimeError("Swift schema guide did not produce the documented output.")
-    print("Swift embedding, annotation and schema guide examples passed.")
+    (source / "main.swift").write_text(blocks("Handles.md", "swift")[0])
+    run(["swift", "build", "--package-path", str(directory), "--scratch-path", str(scratch),
+         "--disable-build-manifest-caching", "--configuration", "release"])
+    if run([str(scratch / "release/GesExample")]) != HANDLE_OUTPUT:
+        raise RuntimeError("Swift handle guide did not produce the documented output.")
+    print("Swift embedding, annotation, schema and handle guide examples passed.")
 
 
 if __name__ == "__main__":

@@ -83,7 +83,7 @@ final class LiteralStackDepthTests: XCTestCase {
             let host = try GameEventScriptHost.makeBuilder().withRuntimeObserver(recorder).build().startForTest()
             _ = try host.load(GesProgramBuilder().addScript("on Parse(_ text) { emit Out(parse strict text) }").compile())
             _ = try host.subscribeMessageName("Out", handler: recorder)
-            host.receive(try .init(name: "Parse", arguments: [.init(value: .text(text))]))
+            try host.receive(.init(name: "Parse", arguments: [.init(value: .text(text))]))
             _ = try host.runToCompletion()
             return recorder.outputs
         } catch {

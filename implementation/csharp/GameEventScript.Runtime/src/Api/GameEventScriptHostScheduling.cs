@@ -30,6 +30,8 @@ public sealed partial class GameEventScriptHost
 
     internal bool SendFromContext(GameEventScriptMessage message, bool publish, long microseconds)
     {
+        // Pumping already rejects Reset, so the hot path skips the guard.
+        if (_pumping) return SendFromContextCore(message, publish, microseconds);
         _callbackDepth++;
         try { return SendFromContextCore(message, publish, microseconds); }
         finally { _callbackDepth--; }
@@ -78,7 +80,7 @@ public sealed partial class GameEventScriptHost
         _delayed ??= new();
         _delayed.Add(in delayed);
         _idleSinceMicroseconds = null;
-        _observer?.MessageScheduled(message, delayed.Id, delayed.Deadline, publish, null, 0);
+        _observer?.MessageScheduled(message, delayed.Id, delayed.Deadline, publish, default, 0);
         if (publish)
         {
             _stepPublishedMessages++;

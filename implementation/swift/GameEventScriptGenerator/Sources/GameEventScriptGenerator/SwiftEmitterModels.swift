@@ -191,6 +191,8 @@ extension GesSwiftEmitter {
             case .poly: "GesPoly"
             case .disc: "GesDisc"
             case .schema: conversion.qualifier + value.model.schema
+            case .handle: conversion.qualifier + GesModelPlanner.handleName(value.model.handle)
+            case .handleMap: "[\(modelType(value.key!, owner, conversion)): \(modelType(value.element!, owner, conversion))]"
             default: modelNested(value, owner, conversion)
             }
         return value.nullable ? plain + "?" : plain
@@ -237,6 +239,8 @@ extension GesSwiftEmitter {
         switch value.encoding.kind {
         case .union:
             toModelUnion(&code, value, model, modelOwner, owner, wired, target, conversion)
+        case .list where value.handleMap:
+            toModelHandleMap(&code, value, model, modelOwner, wired, source, target, conversion)
         case .list where model.kind == .poly:
             code.line("\(target) = GesPoly(\(source))")
         case .list where model.kind == .dice:
@@ -312,6 +316,76 @@ extension GesSwiftEmitter {
         code.line("\(list).append(\(converted))")
         code.close()
         code.line("\(target) = \(list)")
+    }
+
+    // A handle Map: the wire entries, in key order, become a Dictionary of the same handle keys.
+    private static func toModelHandleMap(
+        _ code: inout Code,
+        _ value: GesPlanValue,
+        _ model: GesModelPlanValue,
+        _ modelOwner: String,
+        _ wired: String,
+        _ source: String,
+        _ target: String,
+        _ conversion: ModelConversion
+    ) {
+        let holder = value.item!
+        let element = model.element!
+        let type = modelType(element, modelOwner, conversion)
+        let map = conversion.local("map")
+        let item = conversion.local("item")
+        let converted = conversion.local("element")
+        var mapType = modelType(model, modelOwner, conversion)
+        while mapType.hasSuffix("?") { mapType.removeLast() }
+        code.line("var \(map): \(mapType) = [:]")
+        code.line("\(map).reserveCapacity(\(source).count)")
+        code.open("for \(item) in \(source) {")
+        code.line("let \(converted): \(type)")
+        toModel(&code, holder.fields[1].value, element, modelOwner, item, wired + holder.name + ".", wireMember(item, holder.fields[1].value), converted, conversion)
+        code.line("\(map)[\(wireMember(item, holder.fields[0].value))] = \(converted)")
+        code.close()
+        code.line("\(target) = \(map)")
+    }
+
+    // A handle Map: the Dictionary's entries, sorted by key as the wire requires.
+    private static func fromModelHandleMap(
+        _ code: inout Code,
+        _ value: GesPlanValue,
+        _ model: GesModelPlanValue,
+        _ modelOwner: String,
+        _ owner: String,
+        _ wired: String,
+        _ source: String,
+        _ pooled: Bool,
+        _ conversion: ModelConversion
+    ) {
+        let member = wireMember(owner, value)
+        let holder = value.item!
+        let keys = conversion.local("keys")
+        let index = conversion.local("index")
+        let target = conversion.local("target")
+        let wireType = wired + holder.name
+        code.line("let \(keys) = \(source).keys.sorted()")
+        var list = ""
+        if pooled {
+            code.line("\(owner).set\(value.base)Count(\(keys).count)")
+        } else {
+            list = conversion.local("list")
+            code.line("var \(list): [\(wireType)] = []")
+            code.line("\(list).reserveCapacity(\(keys).count)")
+        }
+        code.open("for \(index) in 0..<\(keys).count {")
+        code.line("\(value.element!.isClass ? "let" : "var") \(target) = \(pooled ? "\(member)[\(index)]" : "\(wireType)()")")
+        code.line("\(wireMember(target, holder.fields[0].value)) = \(keys)[\(index)]")
+        let inner = holder.fields[1]
+        fromModel(&code, inner.value, model.element!, modelOwner, target, wired + holder.name + ".", "\(source)[\(keys)[\(index)]]!", GesCSharpEmitter.isPooledList(inner), conversion)
+        if !pooled {
+            code.line("\(list).append(\(target))")
+        } else if !value.element!.isClass {
+            code.line("\(member)[\(index)] = \(target)")
+        }
+        code.close()
+        if !pooled { code.line("\(member) = \(list)") }
     }
 
     // Whether a wire element and a model element have the same type, so that a List of them is the same array.
@@ -392,6 +466,8 @@ extension GesSwiftEmitter {
         switch value.encoding.kind {
         case .union:
             fromModelUnion(&code, value, model, modelOwner, owner, wired, source, conversion)
+        case .list where value.handleMap:
+            fromModelHandleMap(&code, value, model, modelOwner, owner, wired, source, pooled, conversion)
         case .list where model.kind == .poly:
             code.line("\(member) = \(source).points")
         case .list where model.kind == .dice:

@@ -58,7 +58,7 @@ only trivia, with or without a schema header, is an empty root.
 ```text
 document   = [ header ] { entry }
 entry      = key ":" [ value ]
-key        = LowerName | quoted Text
+key        = LowerName | quoted Text | handle
 ```
 
 - Keys follow the Map literal rules of `parse`: a bare
@@ -93,6 +93,41 @@ Argument labels and Vector/Point component labels stay on the line of their
 `:`; a labeled argument's value may follow on a later line because argument
 lists have no key-only entries. The type name of a typed form follows its `:`
 directly, as in `:Vector(...)` or `:Record(...)`.
+
+### Handles
+
+> **Since: Unreleased**
+
+Documents also read [handles](Language.md#handles), which `parse` does not: a value or a Map key that starts with
+`@` is a handle in its [text form](Language.md#handle-text-form).
+
+```gesd
+:Schema(:Sighting)
+target: @Target:3
+seen: [@Target:3, @Target:17]
+unit: @Unit:drone.gnabblo~#live
+memory: [
+  @Target:3: [label: 'Alpha', strength: 42]
+]
+```
+
+```text
+handle     = "@" TypeName ":" id [ "~" ( version | ref ) ] [ "/" part ]
+id, part   = integer | bare | quoted Text
+ref        = Tag | quoted Text
+```
+
+- Reading uses no catalog. An id or part that is an optional `-` followed by decimal digits without a leading zero
+  reads as an integer, otherwise as Text; a Text that looks like an integer is therefore quoted, `@Unit:'7'`. A bare
+  id consists of ASCII letters, digits, `.`, `_` and `-`; a bare part also contains `/` and runs to the next
+  whitespace, comma, closing bracket or comment.
+- A version of exactly 40 or 64 hexadecimal digits is a hash and reads as its bytes; any other version is a decimal
+  revision within Int64. A ref, `~#live` or `~'1.0'`, names a version through the owner; the document keeps it as
+  written, and the host resolves it with `ResolveRef` before the value reaches a script.
+- A handle key carries neither a version nor a ref, because Map keys compare by identity only. A Map may mix Text and
+  handle keys; a Record root takes only field names.
+- Everything else about the handle, whether its type exists, its id fits and a version is required, is checked
+  against a schema; plain reading accepts any well-formed handle.
 
 ## Strictness
 
@@ -157,7 +192,7 @@ A schema is a declaration in a `.gess` file, written in the one schema language 
 to a file and its root schema. Plain reading stays as specified here; the separate
 operation [`CheckDocument`](Schemas.md#document-checking) of a schema set reports missing,
 unknown and mistyped fields and values out of range with their document positions, without
-implicit unit casts. A document never sets a schema's [computed fields](Schemas.md#computed-fields); one that does fails
+implicit unit casts. A handle whose type, id or version does not fit its field is `document.fieldType`. A document never sets a schema's [computed fields](Schemas.md#computed-fields); one that does fails
 with `document.unknownField`.
 
 ## Errors
@@ -187,6 +222,7 @@ order, which evaluates arguments before their form and siblings left to right.
 | `document.unclosedText` | the text ends inside quoted Text | the opening delimiter |
 | `document.invalidSchemaHeader` | the header has no, a non-schema or a labeled argument, or a built-in type name | start of the offending argument |
 | `document.misplacedSchemaHeader` | a header follows the first entry or another header | the `:` of that header |
+| `document.invalidHandle` | a value or key starting with `@` is not a well-formed handle, or a handle key has a version or ref | the `@` |
 | `document.limitExceeded` | a literal parsing limit is exceeded | see below |
 
 The token of `document.unquotedText`, `document.unknownUnit` and
@@ -261,6 +297,7 @@ Printed text must satisfy these rules so that every implementation can read it:
 - Keys that are `LowerName` are written bare; other keys are written as quoted
   Text. Text values are quoted with doubled delimiters. Text containing line
   breaks is written with its line breaks inside the quotes.
+- A handle is written in its text form; a ref is written as read. *Since: Unreleased.*
 - A Quantity may be written with a prefixed unit spelling only if reading that
   spelling yields exactly the same value; otherwise it uses the base symbol.
 
@@ -296,4 +333,4 @@ Printed text must satisfy these rules so that every implementation can read it:
 The same formatter is available for a single value. Its block form separates
 entries with commas as well as line breaks, so the result reads back with `parse`
 within the literal parsing limits; it is not a document unless the value is
-printed as a document.
+printed as a document. A value that contains [handles](#handles) reads back only as a document.

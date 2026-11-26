@@ -260,6 +260,7 @@ internal partial class GesVirtualMachine
         RandomGenerator = null!;
         ExtensionCall.EndCall();
         _externalTypeConstructorCall?.EndCall();
+        ClearHandleStates();
         ProcessingMessage = null;
         ActiveProgram = null;
         ActiveHandlerName = null;

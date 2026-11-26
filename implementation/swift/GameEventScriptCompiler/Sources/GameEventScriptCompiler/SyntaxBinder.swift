@@ -450,6 +450,21 @@ final class GesSyntaxBinder {
 
     func typeName(_ reference: GesSyntaxNode) throws -> String {
         var c = cursor(reference)
+        // A handle type keeps its `@` and `~`; a union joins its alternatives with `|`, such as `@Drone|:Number`.
+        if c.is(.handleTypeName) || c.peekSignificant(1).kind == .operatorCollectionUnion {
+            var alternatives = ""
+            while true {
+                if c.is(.handleTypeName) {
+                    alternatives += try c.advance().text
+                } else {
+                    let name = String(try c.expect(.typeName).text.dropFirst())
+                    alternatives += Self.builtinTypeNames.contains(name) ? name.lowercased() : name
+                }
+                if !(try c.match(.operatorCollectionUnion)) { return alternatives }
+                try c.newlines()
+                alternatives += "|"
+            }
+        }
         return try typeNameCore(&c)
     }
 

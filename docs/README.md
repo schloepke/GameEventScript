@@ -73,6 +73,7 @@ Guides explain usage and may simplify presentation. The linked normative specifi
 | [Swift embedding](guide/Swift.md) | Embed GES in a Swift application. |
 | [Schemas](guide/Schemas.md) | Describe data formats step by step, encode them compactly and check documents. |
 | [Network](guide/Network.md) | Connect a client and a server and exchange schema records over a session. |
+| [Handles](guide/Handles.md) | Refer to host objects from scripts, resolve their state in C# and Swift, and write them in documents. |
 | [Standalone CLI downloads](guide/distribution/Tools.md) | C# and Swift archives, installation, checksums and manual release workflow. |
 | [Editor packages and syntax highlighting](../tools/editors/README.md) | Editor integrations and downloadable JSON and classic XML grammars for `.ges` and `.gesa`. |
 | [C# implementation](../implementation/csharp/README.md) | Library boundaries, solution, toolchain, build/test commands and Compiler/Runtime integration. |

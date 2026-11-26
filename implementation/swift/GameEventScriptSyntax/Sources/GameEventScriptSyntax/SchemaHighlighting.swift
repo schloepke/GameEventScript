@@ -9,7 +9,7 @@ enum GesSchemaHighlighting {
         "abstract", "packed",
         "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of", "min", "clamp", "abs", "has",
         "sqrt", "cbrt", "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "hypot", "exp", "ln", "floor", "ceil", "truncate", "round", "rad", "deg",
-        "network", "client", "server", "sends", "publishes", "reliable", "latest", "bulk", "at", "most", "every",
+        "network", "client", "server", "sends", "publishes", "reliable", "latest", "bulk", "at", "most", "every", "handle", "composite", "owns",
     ]
 
     static func highlight(_ text: String, _ spans: inout GesSpanBuilder) -> [GesSpanBuilder.Diagnostic] {
@@ -30,6 +30,11 @@ enum GesSchemaHighlighting {
                 kind = .comment
             } else if byte == 58 && GesNames.upper(next) {
                 position = GesNames.upperNameEnd(bytes, wordEnd(bytes, position + 1))
+                kind = .type
+            } else if byte == 64 && GesNames.upper(next) {
+                // A handle type `@Name`, with a directly following `~` for its version.
+                position = GesNames.upperNameEnd(bytes, wordEnd(bytes, position + 1))
+                if position < bytes.count && bytes[position] == 126 { position += 1 }
                 kind = .type
             } else if byte == 35 && (GesNames.lower(next) || GesNames.upper(next)) {
                 position = wordEnd(bytes, position + 1)

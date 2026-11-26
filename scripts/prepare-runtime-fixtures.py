@@ -9,15 +9,30 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'conformance/runner'))
+from checks import handle_catalog
 from core.corpus import read_corpus
+
+
+def handle_schemas(case):
+    # The handle types the compiler knows; resolvers and answers stay with the executing adapter.
+    catalog = handle_catalog.prepare(case)
+    return catalog['schemas'] if catalog is not None else []
+
+
+def compiled_sources(case):
+    # Binary fixtures compile their sources only to compare runtime behaviour, as the runner sends them.
+    if case.kind == 'programBinary' and not case.metadata.get('binaryFixture', {}).get('compareCompiledRuntime', False):
+        return []
+    return [dict(source) for source in case.sources]
 
 
 def prepare(corpus):
     cases = read_corpus(sorted(Path(corpus).rglob('*.md')))
-    return [dict(id=case.id, sources=[dict(source) for source in case.sources],
+    return [dict(id=case.id, sources=compiled_sources(case),
                  debugInfo=list(case.metadata.get('compile', {}).get('debugInfo',
                                 ['debugSymbols', 'sourceMap', 'sourceArchive'])),
                  programVersion=case.metadata.get('binaryFixture', {}).get('programVersion', 0),
+                 handleSchemas=handle_schemas(case),
                  documentSha256=case.document.digest.upper())
             for case in cases if case.kind in
             {'scriptApi', 'loadError', 'performance', 'bytecodeSnapshot', 'programBinary'}]

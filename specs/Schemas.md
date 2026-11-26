@@ -71,7 +71,7 @@ messages Combat as (Hit, Died)
 ### Grammar
 
 ```text
-source      = { constant | parameter | tagsdecl | network | "abstract" schema | [ roles ] ( [ packed ] schema | message | messages ) }
+source      = { constant | parameter | tagsdecl | network | handle | "abstract" schema | [ roles ] ( [ packed ] schema | message | messages ) }
 packed      = "packed" [ "(" ( "8" | "16" | "32" | "64" ) ")" ]
 tagsdecl    = "tags" ":" TypeName "as" tagset
 roles       = role [ role ]
@@ -97,6 +97,8 @@ type        = ":Boolean"
             | ":List" [ "(" union ")" [ "max" maximum ] [ "depth" depth ] ]
             | ":" TypeName
             | ":Dice" [ "max" maximum ] constraints
+            | "@" TypeName [ "~" ]
+            | ":Map" "(" "@" TypeName ( "→" | "->" ) union ")" [ "max" maximum ]
             | ":Map" | ":Range" | ":Series" | ":Message" | ":Handler" | ":Nothing"
 numeric     = ( ":Number" | ":Percentage" | quantity ) constraints
 quantity    = ":Quantity" "(" unit ")"
@@ -115,8 +117,16 @@ record      = "[" ":" "]" | "[" entry { "," entry } "]"
 entry       = LowerName ":" ( literal | "$" ConstantName | "true" | "false" | "#" TagName | record )
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
 network     = "network" ":" TypeName "as" "{" route { route } "}"
-route       = ( "client" | "server" ) ( "sends" | "publishes" ) ( ":" TypeName | MessageName )
-              ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ]
+route       = ( "client" | "server" ) ( ( "sends" | "publishes" ) ( ":" TypeName | MessageName )
+              ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ] | "owns" "@" TypeName )
+handle      = "handle" "@" TypeName "of" ":" TypeName
+              ( "as" "{" "id" ":" handleid sep "version" ":" version [ sep ] "}"
+              | "composite" "@" TypeName "as" "{" "part" ":" handleid [ sep ] "}" )
+handleid    = ":Number" "integer" "between" bound "and" bound | ":Text" "max" integer
+version     = ":ContentHash" | ":Hash" "(" ( "#sha256" | "#sha1" ) ")"
+            | ":Number" "integer" [ "between" bound "and" bound ] | ":Nothing"
+bound       = literal | "$" ConstantName
+sep         = "," | line break
 
 expression  = fallen [ "when" fallen { "," fallen "when" fallen } [ "," ] "otherwise" fallen ]
 fallen      = disjunction { "default" disjunction }
@@ -153,7 +163,7 @@ line. A source may start with a BOM. Fields, lets, axes and routes are separated
 and repeated or trailing separators are allowed. Arguments, members and tags are separated by
 exactly one comma. A line break is allowed only in these places: between declarations, after
 `as`, inside the parentheses of an argument list, a member list, a tag set or a `:List`, inside
-the braces of a schema, an axis block or a network, and before or after each `|` of a union. Each field, with its type
+the braces of a schema, an axis block, a network or a handle, and before or after each `|` of a union. Each field, with its type
 and marker, and each route otherwise stays on one line.
 
 > **Since: 0.5.0** — unions across lines
@@ -245,9 +255,12 @@ A source is a sequence of declarations in any order; a reference may come before
 - **`network :Name as { ... }`** declares the routes between a client and a server: which side sends or publishes
   which wire root in which delivery class. [GES network](Network.md#declaration) owns its rules, errors, binding and
   hash. A network is no type; only code generation takes it as a root. *Since: 0.6.0.*
+- **`handle @Name of :State as { ... }`** declares a [handle type](#handles): a reference to an object that lives
+  outside the host, with the schema of its state. *Since: Unreleased.*
 
 Schemas, tag sets and networks share one namespace across all sources, the data namespace; messages and message sets
-share the other, the message namespace. `:Name` always names data and a plain name what is sent: a message set lists
+share the other, the message namespace. Handle types, always written with `@`, have a third, so `handle @Unit of :Unit`
+is valid. `:Name` always names data and a plain name what is sent: a message set lists
 messages and a [network route](Network.md#declaration) names a message or message set without `:`
 (`client sends Move reliable`), a schema with it. So a message or message set may take the name of a schema, tag set or
 network, but a message set and a message of the same name are `schema.duplicateName`, as is any name repeated within one
@@ -326,6 +339,8 @@ Types:
 | `:List(:Self) max n depth d` | a [recursive List](#recursion) of the schema that declares it, at most `d` records deep |
 | `:Dice max n between a and b`, `:Dice` | at most `n` rolls, each within the range, or any rolls |
 | `:Name` | a Record of the schema `Name` |
+| `@Name`, `@Name~` | a [handle](#handles) of the type `Name`, without or with its version |
+| `:Map(@Name → T) max n`, `:Map(@Name → T)` | a [handle Map](#handles) of at most `n` entries, or any number, from handles of `Name` to values of `T` |
 | `T \| U` | a value of one of the alternatives; see [rules](#rules) |
 | `:Nothing` | `nothing`, which is useful as an alternative |
 | `:Map`, `:Range`, `:Series`, `:Message`, `:Handler` | a value of that kind |
@@ -727,6 +742,104 @@ wire(map) model(map) schema :MapTrack as { points: :List(:MapPoint) max 1000000 
 Packed records exist for dense data such as maps of millions of points: [generated code](#tools) stores a `:List` of them as
 one array of words, which reads and writes a word at a time.
 
+### Handles
+
+> **Since: Unreleased**
+
+A handle refers to an object that lives outside the host, such as a drone in the simulation, a contact on the radar or
+a unit definition in a repository. A handle type names the schema of the object's state and the form of its identity:
+
+```gess
+schema :DroneState as { x: :Quantity(m) between -200m and 200m step 0.05m, y: :Quantity(m) between -200m and 200m step 0.05m }
+schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }
+schema :Composition as { name: :Text max 64, slots: :Number integer between 0 and 16 }
+schema :Source as { text: :Text }
+schema :UnitSlot as { weapon: :Text max 32 }
+
+handle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer }
+handle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }
+handle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }
+handle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }
+handle @UnitFile of :Composition composite @Repository as { part: :Text max 256 }
+handle @UnitSlot of :UnitSlot composite @Unit as { part: :Number integer between 0 and 15 }
+
+wire schema :Sighting as { target: @Target, seen: :List(@Target) max 16, unit: @Unit~ optional }
+model schema :Memory as { lastSeen: :Map(@Target → :Contact) max 64 }
+```
+
+**Identity.** A handle type has exactly the fields `id` and `version`, in this order, and a composite exactly `part`.
+An id is an `integer` Number with a closed range or a Text with `max`; its bounds are literals or file constants,
+never lets or parameters, since a handle type is no schema. Ids are unique per handle type, not across types: `@Drone`
+3 and `@Target` 3 are different handles.
+
+**Versions.** The version says which state of the object a handle means:
+
+| Version | Meaning | Value |
+| --- | --- | --- |
+| `:Nothing` | the type has no versions; every handle means the current state | none |
+| `:Number integer` with an optional range | a revision the owner counts, ascending with each change | a Number |
+| `:Hash(#sha256)`, `:Hash(#sha1)` | a hash the owner computes over its own representation, such as a Git commit | Bytes of 32 or 20 |
+| `:ContentHash` | the [content hash](#content-hash) that GES computes over the state | Bytes of 32 |
+
+A handle value carries a concrete version or none. A field, argument or element of type `@Name` carries the identity
+only; `@Name~` carries the identity and a version and exists only for a type with a version, otherwise it is
+`schema.invalidHandle`. `@Name~` is what a recording or a launch pins down; `@Name` follows the object.
+
+**Composites.** `handle @UnitFile of :Composition composite @Repository as { part: :Text max 256 }` declares a
+handle that addresses one part of a root object: a file in a repository, a slot of a unit. Its identity is the root's
+identity and the part; it has the root's version and no version of its own, so `@UnitFile~` exists exactly when
+`@Repository` has a version, and carries the root's version. A composite's root is a handle type that is not composite
+itself: composites have one level, and a composite of a composite is `schema.invalidHandle`.
+
+**State.** The state schema is a declared, non-abstract schema; it may be a field type elsewhere too. A state field
+named `id`, `version` or `root` would collide with the handle's members and is `schema.invalidHandle`. Handle types take
+no role; a handle type is reached by the schemas that name it. The state schema is not part of a handle's
+[canonical form](#canonical-form), so changing it does not change the hash of a wire schema that sends handles.
+
+**Uses.** A handle type may stand as a field, argument or List element type, as a union alternative
+(`subject: @Drone | @Target`) and as the key type of a Map, `:Map(@Name → T)`, whose values are of the union `T`.
+`@Name` beside `@Name~` in one union is `schema.invalidUnion`. A Map key is one handle type without `~`, else
+`schema.invalidHandle`. A handle field cannot be a `key`. A handle Map is encodable with `max`, which counts entries;
+without it, it is document-only.
+
+**Composites inside their root.** A composite field reached from the state schema of its own root, such as a
+`:List(@UnitSlot)` inside `:Composition`, would repeat the root's identity in every element. A relative encoding that
+sends only the parts is an open point; until it is specified, such a field is `schema.notEncodable`, while document
+checking accepts it.
+
+**Networks.** A [network](Network.md#declaration) names the side that owns the objects of a handle type with
+`server owns @Target`. At most one `owns` route names a type per network; a composite type has no route of its own,
+since its root's owner owns it.
+
+### Content hash
+
+> **Since: Unreleased**
+
+The content hash of a `:ContentHash` type is SHA-256 over the UTF-8 bytes of the compact
+[product JSON](MessageFormat.md#value-objects) value object of the state, normalized against the state schema:
+
+- defaults are applied, so a state that leaves out a field with a default equals one that writes the default;
+- optional fields that are absent or `nothing` are left out;
+- computed fields and keys the schema does not declare are dropped;
+- nested Records are normalized in the same way; Lists keep their order, and entries and properties are in scalar
+  key order, as product JSON writes them;
+- numbers are written as product JSON writes them, so `42`, `42.0` and `4.2e1` give the same hash and a Quantity
+  writes its canonical unit symbol;
+- Text is hashed as it is, without Unicode normalization, so precomposed and decomposed spellings differ.
+
+The state, and each value of a field that only takes Records, must be a Record or Map (`wire.typeMismatch` with its
+path), and a field without default that is not optional must be present (`wire.missingField`). Other kinds and ranges
+are not checked; the hash covers the values as given.
+
+The state `[label: "Alpha", strength: 42]` of `:Contact` is
+
+```text
+{"entries":[{"key":"label","value":{"type":"Text","value":"Alpha"}},{"key":"strength","value":{"type":"Number","unit":"","value":"42"}}],"name":"Contact","type":"Record"}
+```
+
+with the content hash `a2951261887894b7bc7f72d4af023c7b7576677f76283d8a524f2496b19cdc50`. The shared corpus holds
+further vectors for numbers, Text normalization, field order, defaults and absent optional fields.
+
 ### Constraints
 
 In this order, all optional:
@@ -811,8 +924,10 @@ be encoded; binding a schema that reaches another type for encoding fails with
 | `:Poly max n` | yes | yes |
 | `:Dice max n` | yes | yes |
 | `:TypeName` with only encodable fields | yes | yes |
+| `@Name`, `@Name~`, except a [composite reached from its root's state](#handles) | yes | yes |
+| `:Map(@Name → T) max n` with an encodable `T` | yes | yes |
 | A union of encodable alternatives, such as `:Text max 8 \| :Unit \| :Nothing` | yes | yes |
-| `:Tag`, `:Text`, `:Bytes`, `:List`, `:List(T)`, `:Dice`, `:Poly` without a set or `max` | no | yes |
+| `:Tag`, `:Text`, `:Bytes`, `:List`, `:List(T)`, `:Map(@Name → T)`, `:Dice`, `:Poly` without a set or `max` | no | yes |
 | `:Map`, `:Range`, `:Series`, `:Message`, `:Handler`, `:Nothing` outside a union | no | yes |
 
 ### Source errors
@@ -824,7 +939,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | --- | --- |
 | `schema.syntax` | the source does not match the grammar |
 | `schema.duplicateName` | a name repeats within its namespace, a message set and a message share a name, a set parameter is named `message`, or a schema, message or message set takes the name of a built-in type or `Record` |
-| `schema.unknownName` | a type, message, constant, let or parameter is not declared, a step, delta range or `max` names no let of its schema, or a default names neither a field nor a let |
+| `schema.unknownName` | a type, handle type, message, constant, let or parameter is not declared, a step, delta range or `max` names no let of its schema, or a default names neither a field nor a let |
 | `schema.ambiguousName` | a root named by the API or a tool is written plainly, but a message or message set and a schema or network both take the name |
 | `schema.cycle` | schema references form a cycle, references or `:List` types nest more than 32 levels, or sibling defaults form a cycle |
 | `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, a `max` names a let with a unit, or a computed expression combines units that have no result unit or gives another unit than its field, or a function, root or power reads a unit it does not take or a quantity's power has no literal exponent |
@@ -832,8 +947,8 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidStep` | a step is not positive, not exact, or a bound or delta range is no multiple of it |
 | `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field, a `max` that names a let other than a positive whole Number of at most 12 digits, a `depth` other than on a field's List of its own schema, a second `depth` in a schema, or a depth of 1 |
 | `schema.notEncodable` | encoding reaches a document-only type, also when the sources are read for a [wire root](#roles) |
-| `schema.invalidKey` | a `key` breaks the [key rules](#rules) |
-| `schema.invalidUnion` | a union alternative repeats a type name or has `delta within`, or a union with `:Nothing` is `optional` |
+| `schema.invalidKey` | a `key` breaks the [key rules](#rules), which a handle field does too |
+| `schema.invalidUnion` | a union alternative repeats a type name, also `@Name` beside `@Name~`, or has `delta within`, or a union with `:Nothing` is `optional` |
 | `schema.invalidBound` | an `integer` bound is fractional or outside Int64, or a Dice bound is outside `1` to `2^31 - 1` |
 | `schema.tooWide` | a quantized field exceeds the [limits](#quantization), a bound or default of a fractional field or a fractional let becomes infinite or zero in binary64, or Flags have more than 64 members |
 | `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows, or a [network](Network.md#declaration) has too many routes |
@@ -845,7 +960,8 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.computedMayBeAbsent` | a required [computed field](#computed-fields) reads an optional field that may be absent without `has value` or `default` |
 | `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name without backticks, an optional list in an aggregate), gives `hypot` or `atan2` another number of arguments, combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
 | `schema.invalidRoute` | a [network route](Network.md#declaration) breaks its rules |
-| `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root with the same side and verb |
+| `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root with the same side and verb, or a second `owns` names the same handle type |
+| `schema.invalidHandle` | a [handle declaration](#handles) has fields other than `id` and `version` or `part`, a bound that is no literal or constant, a state that is not a declared non-abstract schema or has a field named `id`, `version` or `root`, a composite root that is composite itself, or a role; a `~` on a type without a version; a Map key other than one handle type without `~`; an `owns` route of a composite type |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field or argument with a literal, is no literal on an argument, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
@@ -954,7 +1070,18 @@ argument <name or _ name> <type>
 messages <MessageName>
 argument <name or _ name> <type>
 member <MessageName>
+handle <HandleName>
+id <type>
+version <version>
+handle <HandleName> composite <HandleName>
+part <type>
 ```
+
+A [handle type](#handles) is a declaration reached like a schema: its `handle` line, then `id` and `version`, or for a
+composite `part` followed by its root's declaration when first reached. Its state schema is not written. `<version>` is
+`Nothing`, `ContentHash`, `Hash(#sha256)`, `Hash(#sha1)` or `Number integer` with an optional range. The *handle hash*
+of a type is FNV-1a 64 over `gess1` and its declarations, so the [network hash](Network.md#network-hash) can name it.
+*Since: Unreleased.*
 
 A message set writes one `argument` line per [parameter](#set-parameters) after its `messages` line, before its `member`
 lines; a set without parameters writes none, so its form stays that of 0.6.0.
@@ -991,6 +1118,8 @@ The variable of a projection is not written, so renaming it keeps the hash.
 | `:Dice max n between a and b`, `:Dice` | `Dice max <n> between <a> <b>`, each part only when written; `Dice` |
 | `:List(T) max n` | `List(<T>) max <n>`; `List(<T>)` and `List` without `max` or `T`; ` depth <d>` follows a [recursive List](#recursion) |
 | `:TypeName`, `:Map`, ... | `TypeName`, `Map`, ... |
+| `@Name`, `@Name~` | `@Name`, `@Name~` |
+| `:Map(@Name → T) max n` | `Map(@Name -> <T>) max <n>`; `Map(@Name -> <T>)` without `max` |
 
 A numeric type is followed by its constraints, and any field or argument then by its
 marker, in this order: `integer`, `between <a> <b>` or `wrapping between <a> <b>`,
@@ -1111,9 +1240,13 @@ caller owns the mapping from keys to objects. Message arguments have no key. A
 | union of `n` alternatives | index in declared order, `width(n)` bits, then the alternative |
 | `:Nothing` as an alternative | no bits |
 | `:TypeName` | its fields inline |
+| `@Name` | the id, as its `integer` or `:Text max n`; for a composite the root's id, then the part |
+| `@Name~` | the id, then the version: a `:Number integer` revision as such, a hash as its 160 or 256 bits, one byte after the other; for a composite the root's id and version, then the part |
+| `:Map(@Name → T) max n` | entry count, `width(n + 1)` bits, then for each entry in ascending [key order](Language.md#handles) the key as `@Name` and the value |
 
 `max` counts UTF-8 bytes for Text, characters for a Tag, which is ASCII, elements for a List,
-points for a Poly and rolls for a Dice. A range's index never
+points for a Poly, rolls for a Dice and entries for a handle Map. A handle on the wire is its identity, never its state;
+a handle with a version in an `@Name` field sends only the identity. A range's index never
 exceeds `n - 1`; a decoder rejects a larger bit pattern. Units come from the schema.
 
 A fractional field without a step stays at 64 bits, which is a deliberate choice in the
@@ -1452,6 +1585,7 @@ one record. Decoding fails without partial results for:
 | `wire.invalidNumber` | NaN or negative zero, or an infinity with a range |
 | `wire.outOfRange` | a fractional field without a step holds a finite binary64 outside its range, in a record or a raw delta value; the same code as when encoding it, since the pattern is a valid Number |
 | `wire.invalidPadding` | a padding bit is not zero |
+| `wire.invalidKeyOrder` | the keys of a handle Map are not strictly ascending *Since: Unreleased.* |
 | `wire.limitExceeded` | the record exceeds the caller's limit |
 | `wire.invalidDelta` | a delta is not [canonical](#canonical-delta-form), leaves its range, or its key differs from the baseline's |
 
@@ -1464,8 +1598,10 @@ complete:
 | `wire.notRepresentable` | an integer field receives a fractional value, or a value does not fit its stored form |
 | `wire.missingField` | a Record or Map has no key for a field that is neither `optional` nor has a `:Nothing` alternative, a Message lacks trailing arguments of its signature, or a typed writer leaves such a field unwritten or absent |
 | `wire.nothingValue` | a field, argument or list element is `nothing` without being `optional` or having a `:Nothing` alternative |
-| `wire.typeMismatch` | a value has another kind or unit than its field, a nonzero omitted axis, a Message whose labels differ from its signature, or a Map with a key that a union alternative does not have |
+| `wire.typeMismatch` | a value has another kind or unit than its field, a handle another handle type, a nonzero omitted axis, a Message whose labels differ from its signature, or a Map with a key that a union alternative does not have |
 | `wire.unknownTag` | a tag is not in its set |
+| `wire.missingVersion` | an `@Name~` field receives a handle without a version *Since: Unreleased.* |
+| `wire.unresolvedRef` | a handle that still holds a [ref](Language.md#handles) reaches the wire; only documents and the host API hold refs *Since: Unreleased.* |
 | `wire.invalidTag` | a typed writer gives a `:Tag max n` no valid tag name |
 | `wire.tooLong` | a Text, Bytes, Tag, List or Dice exceeds its `max` |
 | `wire.tooDeep` | a [recursive List](#recursion) holds a record at its depth; the message names the depth |
@@ -1498,6 +1634,8 @@ The convenient path converts between `GesValue` and the wire.
   leaves it unset. Another key is `wire.unknownTag`, a value that is no Boolean or a value that
   is no Map `wire.typeMismatch`. Decoding gives a Map of the set members, each `true`, in key
   order, so `[armed:]` from a script's [flag Map](Language.md#maps) round-trips.
+- A handle field takes a handle of its type, and decoding gives a handle without state; an `@Name~` field gives one
+  with its version. A handle Map takes and gives a Map with handle keys. *Since: Unreleased.*
 - A `:Box`, `:Poly` or `:Disc` field takes the library's external value of its unit, and decoding gives one; a Box orders
   its corners, and a Disc takes its radius's magnitude.
 - A value selects a union alternative by its kind, with unit, or for a Record by its type name, and for a Box, Poly or Disc by
@@ -1561,6 +1699,9 @@ facing: #north
   the same errors. Each corner, point or centre is a Point of the unit within the axes of the block; without a block a point
   or centre lies in the plane z = 0. A radius is a number of
   the unit whose magnitude, which the disc takes, lies within the block's `radius`, or zero when the block leaves it out.
+- A handle field accepts a [handle literal](Documents.md#handles) of its type, with a version or ref for `@Name~`;
+  an id outside its range or `max`, another type or a missing version is `document.fieldType` at the literal. A handle
+  Map accepts a Map whose keys are handle literals of its key type. *Since: Unreleased.*
 - A value outside a closed range is an error. A wrapping field accepts any finite
   value. `max` and `integer` are checked; `step` and `delta within` are not.
 - A bound that uses an unbound parameter is not checked. A value that is given must have the
@@ -1614,6 +1755,11 @@ var positionX = reader.ReadNumber(x);                             // double, wit
 - `BeginList` writes or reads the element count of a List, Dice or Poly, and the elements follow, each entered at
   the `[]` handle. `BeginNested` enters a nested schema, Point, Vector, Box, corner of a Box (`area.lower`) or point of
   a Poly. There is no end call: the cursor knows where a list or nesting ends.
+- A handle field is entered with `BeginNested`; its parts follow as `target.id`, `target.version` for `@Name~` (an
+  `Integer` revision or the hash as `Bytes` of exactly 20 or 32 bytes) and `target.part` for a composite, where `id` is
+  the root's id. A handle Map is a list whose element `lastSeen[]` is entered with `BeginNested` and holds
+  `lastSeen[].key`, a handle, and `lastSeen[].value`; the writer and reader leave the key order to the caller. A handle
+  alternative of a union is `subject:@Drone`. *Since: Unreleased.*
 - `WriteAbsent` marks an `optional` field as absent; any other write sets its presence bit.
   `ReadPresence` reads the bit, and a reader calls it before an `optional` field.
 - `SelectAlternative` writes the index of a union's alternative, in declared order, and `ReadAlternative`
@@ -2241,6 +2387,8 @@ needs no ranges, steps or parameters, and every reached schema becomes one type,
 | `:Box`, `:Poly`, `:Disc` | `GesBox`, `GesPoly`, `GesDisc` | `GesBox`, `GesPoly`, `GesDisc` |
 | `:Name` | the model type `Name` | the model type `Name` |
 | `:Map` | `GesDataMap` | `GesDataMap` |
+| `@Name`, `@Name~` | `NameHandle` | `NameHandle` |
+| `:Map(@Name → T)` | `[NameHandle: T]` | `Dictionary<NameHandle, T>` |
 | `:List` without an element type | `GesDataList` | `GesDataList` |
 | union | an enum `<Field>Alternative` with one case and value per alternative | an abstract class `<Field>Alternative` with one sealed subclass per alternative, named after it, holding `Value` |
 | `optional`, `:Nothing` alternative | `Optional`; `nil` is absent or `nothing` | nullable; `null` is absent or `nothing` |
@@ -2248,6 +2396,28 @@ needs no ranges, steps or parameters, and every reached schema becomes one type,
 A union with a `:Nothing` alternative becomes a nullable value without it, and when one alternative remains, that
 alternative's type. A list element type is named `<Field>Item`, so a closed Tag in a list is `<Field>ItemTag`. `:Range`,
 `:Series`, `:Message` and `:Handler` have no model type yet: `generate.unsupported`.
+
+**Handles.** *Since: Unreleased.* Every handle type a generation reaches becomes one value type `<Name>Handle`, in
+models and wire code alike, and the state schema becomes its model type as any schema does:
+
+| Handle type | Swift | C# |
+| --- | --- | --- |
+| `@Drone`, revision | `struct DroneHandle { let id: Int; let version: Int? }` | `readonly struct DroneHandle { long Id; long? Version }` |
+| `@Target`, no version | `struct TargetHandle { let id: Int }` | `readonly struct TargetHandle { long Id }` |
+| `@Unit`, content hash | `struct UnitHandle { let id: String; let version: GesHash32? }` | `readonly struct UnitHandle { string Id; GesHash32? Version }` |
+| `@Repository`, SHA-1 | `struct RepositoryHandle { let id: String; let version: GesHash20? }` | `readonly struct RepositoryHandle { string Id; GesHash20? Version }` |
+| `@UnitFile`, composite | `struct UnitFileHandle { let root: RepositoryHandle; let part: String; var version: GesHash20? }` | `readonly struct UnitFileHandle { RepositoryHandle Root; string Part; GesHash20? Version }` |
+
+A type without a version has no `version` property, and a composite's `version` reads its root's. Swift types are
+`Hashable`, `Comparable`, `Sendable` and `Codable`; C# types implement `IEquatable<T>`, `IComparable<T>`, `==` and `!=`.
+Equality, hashing and order use the identity only, as in [scripts](Language.md#handles), so two handles of one object
+with different versions are equal. A constructor checks the id against its range or `max` and fails like a packed
+field. An `@Name~` field reads a handle with its version and writing one without a version is `wire.missingVersion`;
+an `@Name` field reads one without a version and drops a version when writing. Wire records store a handle in the
+storage of its id type, a Text id as UTF-8, and a hash version inline, so reading one reuses storage as for any other
+field. `Codable` writes the [handle text form](Language.md#handles). With `--bindings`, a handle field converts to
+and from the Runtime's `GesHandle`; the bindings declare no resolver, which the host [registers](HostRuntime.md#handles).
+A generated name that collides with a type or tag set of the file is `generate.nameCollision`.
 
 A `:Map` and a `:List` without an element type hold free data as the Runtime's GES values, so a model carries data whose
 shape its schema leaves open. *Since: Unreleased.* Reading a value or document takes a Map, or a List, whose entries
@@ -2495,11 +2665,14 @@ protocols it refines) and `fields` (the shared fields it requires besides those)
 `name`, `path`, `optional`, `key`, `default` as in the generation layout when it has one, and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
 `tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max`, `depth` only for a [recursive List](#recursion), and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
-`vector` add `unit` and `axes` (the names of an axis block), so do `box` and `disc`, whose axes may name `radius`, `poly` adds `unit`, `axes` and `max`, `schema` adds `name`, and `union` adds `alternatives`;
+`vector` add `unit` and `axes` (the names of an axis block), so do `box` and `disc`, whose axes may name `radius`, `poly` adds `unit`, `axes` and `max`, `schema` adds `name`, `union` adds `alternatives`, `handle` adds `name` and `versioned`, and `handleMap` adds `key`, the
+handle type, `max` and `value`, a field named `[]` (*Since: Unreleased* — handles);
 `boolean`, `nothing`, `map` and `values`, a `:List` without an element type, have none. A missing `max` is `null`.
 A [model message](#model-message-sets) is a type with `kind` `message`, its arguments as `fields` and `tags`, and a model
 set one with `kind` `messages`, its parameters as `fields` when it has any and `members`; schema types have `kind`
-`schema`, which only a generation with a model set writes. *Since: Unreleased.*
+`schema`, which only a generation with a model set writes. *Since: Unreleased.* When a type reaches a handle type, the layout adds `handles` last, ordered by name, each with `name`, `hash`,
+`state`, `version` (`none`, `revision`, `sha1`, `sha256` or `contentHash`) and either `id` or, for a composite, `root`
+and `part`, a key with `kind` `integer` and `lower` and `upper` or `kind` `text` and `max`. *Since: Unreleased* — handles.
 
 ### Generation layout
 
@@ -2518,8 +2691,13 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
 `0x` and the 16 hexadecimal digits of its bit pattern.
 
 - The document has `layout` (the format version, 1), `roots` (the root names in the order
-  given, without repetition, each network followed by its route roots), `parameters`, `types` and, only with a network
-  root, `networks`.
+  given, without repetition, each network followed by its route roots), `parameters`, `types`, only when a handle type is
+  reached `handles`, and, only with a network root, `networks`.
+- Handles are ordered by name and have `name`, `hash` (the [handle hash](#canonical-form)), `state` (the state schema's
+  name; the state is a type of the layout only when a root reaches it otherwise, since the wire carries only the identity
+  and a state need not be encodable), `id` (an `integer` or `text` encoding) and `version` (`kind` `none`, `revision`
+  with the `integer` encoding, `sha1`, `sha256` or `contentHash`), or for a composite `root` and `part` instead of `id`
+  and `version`. *Since: Unreleased.*
 - A parameter has `name`, `type` (`Number`, `Quantity` or `Percentage`), `unit` (the portable
   unit name, or `none`) and `value`, the exact decimal of its value in base units as the binding
   hash spells it. Parameters are reached by any root and ordered by name.
@@ -2544,7 +2722,9 @@ any, then `members` and `memberWidth`; a schema
 - Networks are ordered as roots. A network has `name`, `hash` (its [network hash](Network.md#network-hash) with the
   given parameters) and `routes` in route order; a route has `index`, `side` (`client` or `server`), `verb` (`sends` or
   `publishes`), `root`, `class` (`reliable`, `latest` or `bulk`) and `rateMicroseconds`, the rounded `at most every`
-  interval or 0 without one. *Since: 0.6.0.*
+  interval or 0 without one. *Since: 0.6.0.* A network with `owns` routes adds `owners`, in ascending scalar order of the
+  handle type's name, each with `side` and `handle`, the handle type's name without `@`; they have no index.
+  *Since: Unreleased.*
 - An encoding has `kind` and the members of its kind:
   - `boolean`: none.
   - `integer`, `quantized` and `float`: `type`, `unit`, `range`; `integer` and `quantized` add
@@ -2565,6 +2745,8 @@ any, then `members` and `memberWidth`; a schema
     leaves it out.
   - `schema`: `name`, the type it refers to.
   - `union`: `width` and `alternatives`, in declared order.
+  - `handle`: `name`, the handle type, and `versioned`, whether the field carries the version. *Since: Unreleased.*
+  - `handleMap`: `key`, the handle type, `maxCount`, `width` and `value`, a field named `[]`. *Since: Unreleased.*
   - `nothing`: none.
 
 The `depends` lists are not used for generation today; they name the constants that a later

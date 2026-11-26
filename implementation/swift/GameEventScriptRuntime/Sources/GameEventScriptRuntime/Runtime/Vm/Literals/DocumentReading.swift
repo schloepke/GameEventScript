@@ -42,7 +42,7 @@ struct GesDocumentReading {
     // by their type stay forms; every position inside the result is that of the form.
     static func resolve(_ form: GesDocumentNode, start: Int) -> GesDocumentNode {
         var reading = Self()
-        let root = reading.value(.map(keys: ["v"], values: [form], keyOffsets: [0], valueOffsets: [0]))
+        let root = reading.value(.map(keys: ["v"], values: [form], keyOffsets: [0], valueOffsets: [0], handleKeys: []))
         guard let evaluated = try? GesLiteralEvaluation.evaluateDocument(root, nodes: reading.nodes), let fields = evaluated.value?.asMap else { return form }
         return fields.length == 0 ? .nothing : node(fields.value(at: 0), start)
     }
@@ -60,6 +60,7 @@ struct GesDocumentReading {
         case .point: return .spatial(point: true, x: value.x, y: value.y, z: value.z, unit: value.unit)
         case .dice: return .dice(value.asDice)
         case .bytes: return .bytes(value.asBytes)
+        case .handle: return .handle(value.handleValue!.description)
         case .list:
             let items = value.asList
             return .list(items.map { node($0, start) }, offsets: [Int](repeating: start, count: items.count))
@@ -78,7 +79,8 @@ struct GesDocumentReading {
             values.append(node(fields.value(at: index), start))
         }
         let offsets = [Int](repeating: start, count: keys.count)
-        return .map(keys: keys, values: values, keyOffsets: offsets, valueOffsets: offsets)
+        let handleKeys = fields.handleStorage.isEmpty ? [] : (0..<fields.length).map { $0 >= fields.textCount }
+        return .map(keys: keys, values: values, keyOffsets: offsets, valueOffsets: offsets, handleKeys: handleKeys)
     }
 
     // Scalars become values; Maps, forms and messages become literal nodes for document evaluation.
@@ -93,17 +95,24 @@ struct GesDocumentReading {
         case .dice(let rolls): return .dice(rolls)
         case .bytes(let values): return .bytes(values)
         case .list(let items, _): return .list(items.map { value($0) })
-        case .map(let keys, let values, _, _): return literal("@map", keys, values, offset: 0)
+        case .map(let keys, let values, _, _, let handleKeys): return literal("@map", keys, values, offset: 0, keys: Self.mapKeys(keys, handleKeys))
+        case .handle(let text): return (try? GesHandle(parsing: text)).map { .handle($0) } ?? .nothing
         case .form(let type, let labels, let arguments, let offset): return literal(type, labels, arguments, offset: offset)
         case .message(let name, let labels, let arguments, let offset): return literal("@message:" + name, labels, arguments, offset: offset)
         case .handler(let name, let labels): return (try? .handler(GesMessageSignature(name: name, parameters: labels))) ?? .nothing
         }
     }
 
-    private mutating func literal(_ type: String, _ labels: [String], _ arguments: [GesDocumentNode], offset: Int) -> GesValue {
+    // A Map with handle keys carries every key as a value: a handle for a handle key, a Text otherwise.
+    private static func mapKeys(_ keys: [String], _ handleKeys: [Bool]) -> [GesValue]? {
+        if handleKeys.isEmpty { return nil }
+        return keys.indices.map { index in handleKeys[index] ? (try? GesHandle(parsing: keys[index])).map { .handle($0) } ?? .nothing : .text(keys[index]) }
+    }
+
+    private mutating func literal(_ type: String, _ labels: [String], _ arguments: [GesDocumentNode], offset: Int, keys: [GesValue]? = nil) -> GesValue {
         let values = arguments.map { value($0) }
         let index = nodes.count
-        nodes.append(.init(type: type, labels: labels, arguments: values, constructor: nil, offset: offset))
+        nodes.append(.init(type: type, labels: labels, arguments: values, constructor: nil, offset: offset, keys: keys))
         return .record(typeName: "@literal", entries: [.init(key: "id", value: .integer(Int64(index)))])
     }
 }

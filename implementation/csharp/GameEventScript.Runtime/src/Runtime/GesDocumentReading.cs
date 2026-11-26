@@ -76,6 +76,7 @@ internal static class GesDocumentReading
             GesBytecodeTypeKind.Bytes => GesDocumentNode.BytesValue(value.AsBytes().ToArray()),
             GesBytecodeTypeKind.List => GesDocumentNode.List(Nodes(value.AsList(), start)),
             GesBytecodeTypeKind.Map => MapNode(value.AsMap()!, start),
+            GesBytecodeTypeKind.Handle => GesDocumentNode.Handle(value.Handle!.ToString()),
             GesBytecodeTypeKind.Custom when value.CustomTypeName is { } name => GesDocumentNode.Form("record", ["_", "_"], [GesDocumentNode.Text(name), MapNode(value.AsMap()!, start)], start),
             _ => GesDocumentNode.Form(value.ValueKind.ToString().ToLowerInvariant(), [], [], start)
         };
@@ -95,13 +96,15 @@ internal static class GesDocumentReading
         var keys = new string[fields.Length];
         var values = new GesDocumentNode[fields.Length];
         var offsets = new int[fields.Length];
+        var handleKeys = fields.HasHandleKeys ? new bool[fields.Length] : null;
         for (var i = 0; i < keys.Length; i++)
         {
             keys[i] = fields.KeyAt(i);
             values[i] = Node(fields.ValueAt(i), start);
             offsets[i] = start;
+            if (handleKeys is not null) handleKeys[i] = i >= fields.TextKeyCount;
         }
-        return GesDocumentNode.Map(keys, values, offsets);
+        return GesDocumentNode.Map(keys, values, offsets, handleKeys);
     }
 
     // Scalars become values; Maps, forms and messages become literal nodes for document evaluation.
@@ -134,11 +137,22 @@ internal static class GesDocumentReading
                 list.SetList(Values(node.Children));
                 return list;
             }
-            case GesDocumentNodeKind.Map: return new GesLiteralNode("@map", node.Labels, Values(node.Children)).Value;
+            case GesDocumentNodeKind.Map: return new GesLiteralNode("@map", node.Labels, Values(node.Children), Keys: MapKeys(node)).Value;
+            case GesDocumentNodeKind.Handle: return GesValue.GesHandle(GameEventScript.Api.GesHandle.Parse(node.Name));
             case GesDocumentNodeKind.Form: return new GesLiteralNode(node.Name, node.Labels, Values(node.Children), null, node.Offset).Value;
             case GesDocumentNodeKind.Message: return new GesLiteralNode("@message:" + node.Name, node.Labels, Values(node.Children), null, node.Offset).Value;
             default: return GesValue.GesHandler(GesMessageSignature.Create(node.Name, node.Labels));
         }
+    }
+
+    // The keys of a Map with handle keys as values, or null when every key is a Text.
+    private static GesValue[]? MapKeys(GesDocumentNode node)
+    {
+        if (node.HandleKeys.Length == 0) return null;
+        var keys = new GesValue[node.Labels.Length];
+        for (var i = 0; i < keys.Length; i++)
+            keys[i] = node.IsHandleKey(i) ? GesValue.GesHandle(GameEventScript.Api.GesHandle.Parse(node.Labels[i])) : GesValue.GesText(node.Labels[i]);
+        return keys;
     }
 
     private static GesValue[] Values(GesDocumentNode[] nodes)

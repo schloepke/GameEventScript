@@ -425,6 +425,8 @@ public enum GesSchemaValues {
             guard let poly = GesPoly(value, unit: info.unit) else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             try writer.beginList(field, count: poly.points.count)
             for point in poly.points { try encodePoint(&writer, schema, index + 1, point.x, point.y, point.z) }
+        case .list where info.valueKind == .map:
+            try encodeHandleMap(&writer, schema, index, value, strict: strict)
         case .list:
             guard value.valueKind == .list else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             let items = value.asList
@@ -515,6 +517,7 @@ public enum GesSchemaValues {
         case .disc: value.externalValue is GesGeometryLibrary.DiscValue
         case .percentage: value.valueKind == .percentage
         case .reference: value.customTypeName == candidate.schemaName
+        case .handle: value.handleValue?.typeName == candidate.schemaName
         default: (value.valueKind == .integer || value.valueKind == .float) && value.unit == candidate.unit
         }
     }
@@ -549,11 +552,84 @@ public enum GesSchemaValues {
             }
             return
         }
+        if info.valueKind == .handle {
+            try encodeHandle(&writer, schema, index, value)
+            return
+        }
         if let name = value.customTypeName, name != info.schemaName { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
         guard let fields = try value.materializedMap() else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
         if strict && value.customTypeName == nil && !hasEveryKey(schema, index, fields) { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
         try writer.beginNested(field)
         try encodeFields(&writer, schema, index + 1, node.next, fields, strict: strict)
+    }
+
+    // A handle sends its identity: the id, the version of an `@Name~` field and a composite's part; a version in an `@Name`
+    // field is dropped.
+    private static func encodeHandle(_ writer: inout GesSchemaWriter, _ schema: GesBoundSchema, _ index: Int, _ value: GesValue) throws {
+        let node = schema.nodes[index]
+        let info = schema.infos[index]
+        guard let handle = value.handleValue, handle.typeName == info.schemaName else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+        if !handle.ref.isNothing { throw GesWireError(code: GesWireError.unresolvedRef, path: info.path) }
+        try writer.beginNested(GesSchemaField(owner: schema, index: index))
+        var child = index + 1
+        try encodeNode(&writer, schema, child, handle.id, strict: false)
+        child = schema.nodes[child].next
+        if child < node.next && schema.infos[child].name == "version" {
+            if !handle.hasVersion { throw GesWireError(code: GesWireError.missingVersion, path: schema.infos[child].path) }
+            try encodeNode(&writer, schema, child, handle.version, strict: false)
+            child = schema.nodes[child].next
+        }
+        if child < node.next { try encodeNode(&writer, schema, child, handle.part, strict: false) }
+    }
+
+    // A handle Map sends its entries in ascending key order, which is the canonical order of its handle keys.
+    private static func encodeHandleMap(_ writer: inout GesSchemaWriter, _ schema: GesBoundSchema, _ index: Int, _ value: GesValue, strict: Bool) throws {
+        let info = schema.infos[index]
+        guard value.customTypeName == nil, let map = value.asMap, map.textCount == 0 else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+        try writer.beginList(GesSchemaField(owner: schema, index: index), count: map.length)
+        let entry = GesSchemaField(owner: schema, index: index + 1)
+        let key = index + 2
+        let element = schema.nodes[key].next
+        for position in 0..<map.length {
+            try writer.beginNested(entry)
+            try encodeNode(&writer, schema, key, map.keyValue(at: position), strict: strict)
+            try encodeNode(&writer, schema, element, map.value(at: position), strict: strict)
+        }
+    }
+
+    private static func decodeHandle(_ reader: inout GesSchemaReader, _ schema: GesBoundSchema, _ index: Int) throws -> GesHandle {
+        let node = schema.nodes[index]
+        try reader.beginNested(GesSchemaField(owner: schema, index: index))
+        var child = index + 1
+        let id = try decodeNode(&reader, schema, child)
+        child = schema.nodes[child].next
+        var version = GesValue.nothing
+        if child < node.next && schema.infos[child].name == "version" {
+            version = try decodeNode(&reader, schema, child)
+            child = schema.nodes[child].next
+        }
+        let composite = child < node.next
+        let part = composite ? try decodeNode(&reader, schema, child) : .nothing
+        return GesHandle.fromWire(typeName: schema.infos[index].schemaName, id: id, version: version, part: part, isComposite: composite)
+    }
+
+    private static func decodeHandleMap(_ reader: inout GesSchemaReader, _ schema: GesBoundSchema, _ index: Int) throws -> GesValue {
+        let count = try reader.beginList(GesSchemaField(owner: schema, index: index))
+        let entry = GesSchemaField(owner: schema, index: index + 1)
+        let key = index + 2
+        let element = schema.nodes[key].next
+        var keys: [GesHandle] = []
+        var values: [GesValue] = []
+        keys.reserveCapacity(min(count, 1024))
+        values.reserveCapacity(min(count, 1024))
+        for _ in 0..<count {
+            try reader.beginNested(entry)
+            let handle = try decodeHandle(&reader, schema, key)
+            if let last = keys.last, GesHandle.compare(last, handle) >= 0 { throw GesWireError(code: GesWireError.invalidKeyOrder, path: schema.infos[key].path) }
+            keys.append(handle)
+            values.append(try decodeNode(&reader, schema, element))
+        }
+        return .map(GesValueMap(canonicalKeys: [], handles: keys, values: values))
     }
 
     // A checked document writes a Box as the Map of its corners, a Poly as the List of its points and a Disc as the Map of its
@@ -751,6 +827,8 @@ public enum GesSchemaValues {
             points.reserveCapacity(min(count, 1024))
             for _ in 0..<count { points.append(try decodePoint(&reader, schema, index + 1)) }
             return GesPoly(points).value(unit: info.unit)
+        case .list where info.valueKind == .map:
+            return try decodeHandleMap(&reader, schema, index)
         case .list:
             let length = try reader.beginList(field)
             var items: [GesValue] = []
@@ -775,6 +853,8 @@ public enum GesSchemaValues {
             let center = try decodePoint(&reader, schema, index + 1)
             let radius = schema.nodes[index + 1].next
             return GesDisc(center: center, radius: radius < node.next ? try reader.readNumber(GesSchemaField(owner: schema, index: radius)) : 0).value(unit: info.unit)
+        case .group where info.valueKind == .handle:
+            return .handle(try decodeHandle(&reader, schema, index))
         case .group:
             try reader.beginNested(field)
             return try decodeRecord(&reader, schema, info.schemaName, index + 1, node.next)
@@ -790,6 +870,92 @@ public enum GesSchemaValues {
             if value == value.rounded(.down), value < 9_223_372_036_854_775_808, value >= -9_223_372_036_854_775_808 { return .integer(Int64(value), unit: info.unit) }
             return .float(value, unit: info.unit)
         }
+    }
+
+    /// Computes the content hash of a handle's state (specs/Schemas.md#content-hash): SHA-256 over its compact product JSON,
+    /// normalized against the state schema with defaults applied and absent or `nothing` optional fields, computed fields
+    /// and undeclared keys left out. It is the version of a ``GesHandleVersionKind/contentHash`` type and is available for
+    /// every handle type.
+    /// - Parameters:
+    ///   - handleType: The handle type whose state schema normalizes the state.
+    ///   - state: A Record or Map of the state schema; the kinds and ranges of other values are not checked.
+    /// - Returns: The content hash.
+    /// - Throws: `GesWireError` `wire.typeMismatch` with the path when the state, or a value of a field that only takes
+    ///   Records, is no Record or Map; `wire.missingField` with the path when a field without default is missing and not
+    ///   optional; `message.invalidJson` when the state holds a value product JSON cannot write, such as a handle.
+    public static func contentHash(_ handleType: GesHandleType, state: GesValue) throws -> GesHash32 {
+        let normalized = try normalizeState(handleType.resolved.state, state, "", handleType.declarations)
+        let json = try GesJson.write(try GesMessageJsonCodec().encode(normalized, 0))
+        return GesHash32(bytes: GesSha256.digest(Array(json.utf8)))!
+    }
+
+    /// The Record of a schema with defaults applied and absent or nothing optional fields, computed fields and undeclared
+    /// keys left out.
+    static func normalizeState(_ schema: GesResolvedDeclaration, _ value: GesValue, _ path: String, _ declarations: [String: GesResolvedDeclaration]) throws -> GesValue {
+        guard let fields = value.asMap else { throw GesWireError(code: GesWireError.typeMismatch, path: path) }
+        var keys: [String] = []
+        var values: [GesValue] = []
+        keys.reserveCapacity(schema.fields.count)
+        values.reserveCapacity(schema.fields.count)
+        for field in schema.fields {
+            let fieldPath = path.isEmpty ? field.name : path + "." + field.name
+            guard let held = heldState(schema, field, fields) else {
+                if field.marker == .optional { continue }
+                throw GesWireError(code: GesWireError.missingField, path: fieldPath)
+            }
+            if held.isNothing && field.marker == .optional { continue }
+            keys.append(field.name)
+            values.append(try stateElement(field.alternatives, held, fieldPath, declarations))
+        }
+        return .record(typeName: schema.name, keys: keys, values: values)
+    }
+
+    /// The value of a field, or else of its default: a literal, or the value of the sibling it names, whose own default
+    /// applies in turn.
+    private static func heldState(_ schema: GesResolvedDeclaration, _ start: GesResolvedField, _ fields: GesValueMap) -> GesValue? {
+        var field = start
+        for _ in 0...schema.fields.count {
+            if let given = fields.get(field.name) { return given }
+            guard let fallback = field.defaultValue else { return nil }
+            if fallback.kind != .field { return literal(field, fallback) }
+            guard let sibling = schema.fields.first(where: { $0.name == fallback.name }) else { return nil }
+            field = sibling
+        }
+        return nil
+    }
+
+    /// Nested Records normalize against their schema, chosen by the Record's name among the alternatives; Lists and Map
+    /// values normalize element by element.
+    private static func stateElement(_ alternatives: [GesResolvedType], _ value: GesValue, _ path: String, _ declarations: [String: GesResolvedDeclaration]) throws -> GesValue {
+        if value.isNothing { return value }
+        for type in alternatives {
+            switch type.kind {
+            case .reference:
+                guard let reference = type.reference, value.asMap != nil else { break }
+                var declaration = reference
+                if let name = value.customTypeName, name != reference.name, let named = declarations[name] { declaration = named }
+                if declaration.kind == .schema && !declaration.isAbstract { return try normalizeState(declaration, value, path, declarations) }
+            case .list:
+                guard let items = value.listValue else { break }
+                return .list(try items.map { try stateElement(type.element!, $0, path + "[]", declarations) })
+            case .map:
+                guard value.customTypeName == nil, let map = value.asMap else { break }
+                var keys: [GesValue] = []
+                var values: [GesValue] = []
+                keys.reserveCapacity(map.length)
+                values.reserveCapacity(map.length)
+                for index in 0..<map.length {
+                    keys.append(map.keyValue(at: index))
+                    values.append(try stateElement(type.element!, map.value(at: index), path + "[]", declarations))
+                }
+                return try .map(keyValues: keys, values: values)
+            default:
+                break
+            }
+        }
+        // A field that only takes Records accepts no other value; other values are hashed as they are.
+        if value.asMap == nil && alternatives.allSatisfy({ $0.kind == .reference }) { throw GesWireError(code: GesWireError.typeMismatch, path: path) }
+        return value
     }
 }
 

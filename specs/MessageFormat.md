@@ -62,13 +62,17 @@ There are no public Integer/Binary64 value tags.
 | `Series` | `kind`: `"fibonacci"` or `"factorial"`; `offset`: nonnegative Int64 numeric Text |
 | `Handler` | `name`: message name; `labels`: ordered argument labels |
 | `Message` | `value`: message object |
+| `Handle` | `name`: handle type name; `id`: a Number with integer storage and unit `""`, or a Text value object; for a composite instead `root`: the root's Handle object and `part`: like `id`; optionally `version`: a Number value object for a revision or a Bytes value object of 20 or 32 bytes; a composite's version is its root's. *Since: Unreleased* |
 
 Numeric decoding and normalization follow [Numbers](Semantics/Numbers.md).
 Number payloads do not embed units or percent suffixes. NaN is not a Number
 value; its canonical value representation is Nothing. Number infinities use
 `Infinity` and `-Infinity`. Percentage and Range components must be finite.
 Map/Record writers order entries by Unicode scalar key order; duplicate decoded
-keys are rejected. Scalar-distinct Unicode keys remain distinct.
+keys are rejected. A Map entry key may also be a Handle object without a version;
+such entries follow the Text keys in the [key order](Language.md#handles) of handles.
+*Since: Unreleased — handle keys.* Refs are never written: encoding a value that
+contains one fails with `message.invalidValue`. Scalar-distinct Unicode keys remain distinct.
 
 A Record contains immutable typed field data. Decoding never resolves a Record
 definition and never invokes its constructor. External values are exported as

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Runtime.Vm;
@@ -61,14 +62,31 @@ internal sealed class GesVmMapBuilder
     internal static Dictionary<string, int> CreateIndex(string[] keys, int count)
     {
         var index = new Dictionary<string, int>(count * 2, StringComparer.Ordinal);
-        for (var i = 0; i < count; i++) index[keys[i]] = i;
+        for (var i = 0; i < count; i++)
+            if (keys[i] is { } key) index[key] = i;
         return index;
+    }
+
+    // A Map of the Text keys and the handle keys of a builder; a slot whose handle is set holds no Text key.
+    internal static GesValueMap MapWithHandles(string[] keys, GesHandle?[] handles, GesValue[] values, int count)
+    {
+        var keyValues = new GesValue[count];
+        for (var i = 0; i < count; i++)
+        {
+            if (handles[i] is { } handle) keyValues[i].SetHandle(handle);
+            else keyValues[i].SetText(keys[i]);
+        }
+
+        return GesValueMap.FromKeyValues(keyValues, values.AsSpan(0, count))!;
     }
 
     private string[] _keys;
     private GesValue[] _values;
     private int _count;
     private Dictionary<string, int>? _index;
+    // Handle keys, which are rare: a slot with a handle holds no Text key.
+    private GesHandle?[]? _handles;
+    private Dictionary<GesHandle, int>? _handleIndex;
 
     internal GesVmMapBuilder(int capacity = 0)
     {
@@ -101,7 +119,32 @@ internal sealed class GesVmMapBuilder
             return;
         }
 
-        if (budget is not null && !budget.CheckGeneratedCollectionItemCountWithinLimit((long)_count + 1)) return;
+        if (!Append(value, budget)) return;
+        _keys[_count - 1] = key;
+        if (_index is not null) _index[key] = _count - 1;
+        else if (_count == GesVmMapBuilder.IndexThreshold) _index = GesVmMapBuilder.CreateIndex(_keys, _count);
+    }
+
+    // The last value and key of an equal handle win, as in GesValueMap.FromKeyValues.
+    internal void Set(GesHandle key, GesValue value, GesRuntimeBudget? budget = null)
+    {
+        _handleIndex ??= new Dictionary<GesHandle, int>();
+        if (_handleIndex.TryGetValue(key, out var existing))
+        {
+            _handles![existing] = key;
+            _values[existing] = value;
+            return;
+        }
+
+        if (!Append(value, budget)) return;
+        if (_handles is null || _handles.Length < _keys.Length) Array.Resize(ref _handles, _keys.Length);
+        _handles[_count - 1] = key;
+        _handleIndex[key] = _count - 1;
+    }
+
+    private bool Append(GesValue value, GesRuntimeBudget? budget)
+    {
+        if (budget is not null && !budget.CheckGeneratedCollectionItemCountWithinLimit((long)_count + 1)) return false;
 
         if (_count == _keys.Length)
         {
@@ -111,16 +154,15 @@ internal sealed class GesVmMapBuilder
             Array.Copy(_values, nextValues, _values.Length);
             _keys = nextKeys;
             _values = nextValues;
+            if (_handles is not null) Array.Resize(ref _handles, _keys.Length);
         }
 
-        _keys[_count] = key;
         _values[_count] = value;
         _count++;
-        if (_index is not null) _index[key] = _count - 1;
-        else if (_count == GesVmMapBuilder.IndexThreshold) _index = GesVmMapBuilder.CreateIndex(_keys, _count);
+        return true;
     }
 
-    internal GesValueMap ToMap() => new(_keys, _values, _count);
+    internal GesValueMap ToMap() => _handles is null ? new(_keys, _values, _count) : GesVmMapBuilder.MapWithHandles(_keys, _handles, _values, _count);
 }
 
 internal sealed class GesVmGroupBuilder
@@ -131,6 +173,8 @@ internal sealed class GesVmGroupBuilder
     private int[] _counts;
     private int _count;
     private Dictionary<string, int>? _index;
+    private GesHandle?[]? _handles;
+    private Dictionary<GesHandle, int>? _handleIndex;
 
     internal GesVmGroupBuilder(GesVirtualMachine state, int capacity = 0)
     {
@@ -139,6 +183,20 @@ internal sealed class GesVmGroupBuilder
         _keys = new string[size];
         _buckets = new GesValue[size][];
         _counts = new int[size];
+    }
+
+    internal void Add(GesHandle key, GesValue value, GesRuntimeBudget budget)
+    {
+        _handleIndex ??= new Dictionary<GesHandle, int>();
+        if (!_handleIndex.TryGetValue(key, out var groupIndex))
+        {
+            if (!AddGroup(budget, out groupIndex)) return;
+            if (_handles is null || _handles.Length < _keys.Length) Array.Resize(ref _handles, _keys.Length);
+            _handles[groupIndex] = key;
+            _handleIndex[key] = groupIndex;
+        }
+
+        AddItem(groupIndex, value, budget);
     }
 
     internal void Add(string key, GesValue value, GesRuntimeBudget budget)
@@ -160,28 +218,41 @@ internal sealed class GesVmGroupBuilder
 
         if (groupIndex < 0)
         {
-            if (!budget.CheckGeneratedCollectionItemCountWithinLimit((long)_count + 1)) return;
-            if (_count == _keys.Length)
-            {
-                var nextSize = _keys.Length << 1;
-                var nextKeys = new string[nextSize];
-                var nextBuckets = new GesValue[nextSize][];
-                var nextCounts = new int[nextSize];
-                Array.Copy(_keys, nextKeys, _keys.Length);
-                Array.Copy(_buckets, nextBuckets, _buckets.Length);
-                Array.Copy(_counts, nextCounts, _counts.Length);
-                _keys = nextKeys;
-                _buckets = nextBuckets;
-                _counts = nextCounts;
-            }
-
-            groupIndex = _count++;
+            if (!AddGroup(budget, out groupIndex)) return;
             _keys[groupIndex] = key;
-            _buckets[groupIndex] = new GesValue[4];
             if (_index is not null) _index[key] = groupIndex;
             else if (_count == GesVmMapBuilder.IndexThreshold) _index = GesVmMapBuilder.CreateIndex(_keys, _count);
         }
 
+        AddItem(groupIndex, value, budget);
+    }
+
+    private bool AddGroup(GesRuntimeBudget budget, out int groupIndex)
+    {
+        groupIndex = -1;
+        if (!budget.CheckGeneratedCollectionItemCountWithinLimit((long)_count + 1)) return false;
+        if (_count == _keys.Length)
+        {
+            var nextSize = _keys.Length << 1;
+            var nextKeys = new string[nextSize];
+            var nextBuckets = new GesValue[nextSize][];
+            var nextCounts = new int[nextSize];
+            Array.Copy(_keys, nextKeys, _keys.Length);
+            Array.Copy(_buckets, nextBuckets, _buckets.Length);
+            Array.Copy(_counts, nextCounts, _counts.Length);
+            _keys = nextKeys;
+            _buckets = nextBuckets;
+            _counts = nextCounts;
+            if (_handles is not null) Array.Resize(ref _handles, nextSize);
+        }
+
+        groupIndex = _count++;
+        _buckets[groupIndex] = new GesValue[4];
+        return true;
+    }
+
+    private void AddItem(int groupIndex, GesValue value, GesRuntimeBudget budget)
+    {
         var bucket = _buckets[groupIndex];
         var itemCount = _counts[groupIndex];
         if (!budget.CheckGeneratedCollectionItemCountWithinLimit((long)itemCount + 1)) return;
@@ -207,7 +278,8 @@ internal sealed class GesVmGroupBuilder
             for (var i = 0; i < itemCount; i++) groupedList[i] = _buckets[groupIndex][i];
             var groupedValue = new GesValue();
             groupedValue.SetList(groupedList);
-            map.Set(_keys[groupIndex], groupedValue);
+            if (_handles?[groupIndex] is { } handle) map.Set(handle, groupedValue);
+            else map.Set(_keys[groupIndex], groupedValue);
         }
 
         var result = new GesValue();

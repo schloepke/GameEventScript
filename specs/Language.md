@@ -618,8 +618,9 @@ time unit.
 and `publish every period named key ...` repeat the send every period until it is
 cancelled; `every` always requires `named`, otherwise the send is `parse.syntax`.
 The key uses unary precedence like the message operand and is evaluated after the
-duration and before tags and message arguments. It must be Text or a Tag; a Tag
-names the timer by its text, so `'beat'` and `#beat` are the same name. A
+duration and before tags and message arguments. It must be Text, a Tag or a
+[handle](#handles); a Tag names the timer by its text, so `'beat'` and `#beat` are the
+same name, and a handle names it by its type and identity. *Since: Unreleased — handle names.* A
 statically established other type is `validate.invalidTypeConstructor`; any other
 runtime value yields false without sending.
 
@@ -647,7 +648,8 @@ on Shutdown { cancel all }
 ```
 
 `cancel` is a reserved keyword: it always starts a cancel expression and cannot
-name a binding, function, predicate, parameter or argument label. `every`, `named`
+name a binding, function, predicate, parameter or argument label; in backticks,
+`` `cancel` `` is such a name, for example a message argument label. `every`, `named`
 and `all` are contextual words, not reserved keywords; `every` and `named` have
 their meaning only at their send positions. After `cancel`, the names `named` and
 `all` always select the modes, so a binding with one of those names is cancelled
@@ -1227,6 +1229,8 @@ The source language recognizes these built-in types:
 - `:Map`
 - `:Dice`
 - `:Bytes`
+
+[Handle types](#handles), written `@Name`, come from schema sources and are no built-in types. *Since: Unreleased.*
 
 ### Casts
 
@@ -2021,6 +2025,77 @@ Handler values are created with message-style parameter declarations:
 let callback be Done(value)
 ```
 
+### Handles
+
+> **Since: Unreleased**
+
+A handle refers to an object that lives outside the host: a drone of the simulation, a radar contact, a unit definition.
+Its type is declared in a schema source as a [handle type](Schemas.md#handles) and reaches the compiler through the
+[handle catalog](PublicApi.md#handle-api); scripts write it with `@`, in a namespace of its own beside `:Types` and
+messages. A handle holds the identity of its object and, optionally, a version. It is never a Record: a script has no
+handle literal, no constructor and no cast to `@Name`; handles arrive in messages, documents, state, extension results
+and Map keys.
+
+```ges
+on Spotted(target as @Target, by as @Drone | @Unit_Probe) {
+  let contact be target as :Contact
+  if target.strength > 50 { emit Track(target: target, label: contact.label) }
+  emit after 5s named target Forget(target: target)
+}
+```
+
+**Types.** `@Name` is a handle of that type, with or without a version; `@Name~` is one with a version and exists
+only for a type with versions. A record field may have a handle type, and a handler, function or predicate parameter
+may name one or a union of several, `name as @A | @B~`; a union is written only of handle types. A parameter or field
+type of handles checks without converting: a value that is no handle of one of the types, or lacks a version that
+`~` requires, binds `nothing`, as a failed cast does. `value is @Name` and `value is @Name~` test the same in any
+expression. `as @Name` outside a parameter or field declaration is `validate.invalidHandleUse`; a handle type the
+catalog does not declare is `validate.unknownHandleType`.
+
+**Members.** `h.id` is the identity: an integer Number or a Text. `h.version` is the version a handle carries, a Number
+for a revision or Bytes for a hash, and `nothing` without one; on a type without versions it is
+`validate.invalidHandleUse`. For a composite, `h.root` is the root's handle with the root's version, `h.id.root` the
+root's id, `h.id.part` the part, and `h.version` the root's version. These members need no state and never resolve.
+Every other member reads a field of the object's state, and `h as :State`, with the handle type's state schema, gives
+the whole state as a plain Record of that name. A missing object reads as `nothing`. `h as :Text` gives the
+[text form](#handle-text-form). Any other cast gives `nothing`. Resolution, caching and failures are owned by
+[Host runtime](HostRuntime.md#handles).
+
+**Equality and order.** Two handles are equal when they have the same type and identity; the version does not take
+part, so a handle with and one without a version of the same object are equal. A handle equals no other kind of value.
+Handles have no numeric view, so `<` and its relatives give `nothing`. Sorting, Map keys and grouping use the key order:
+Text keys first, then handles by type name in scalar order, then by identity, integer ids numerically and Text ids in
+scalar order, a composite by its root and then its part.
+
+**Map keys.** A Map key is a Text or a handle. `[:map x by key]` and `[:group by item => key]` keep a handle key as a
+handle instead of its text; `m[h]`, `h in m` and `m[:contains key h]` look one up. A Map literal and member syntax
+name only Text keys. `[:Map]` checks treat both alike.
+
+**Timers.** A [named timer](#named-timers-and-heartbeats) may be named by a handle, so `emit after 5s named target
+Forget(target: target)` keeps one timer per target. A handle name differs from every Text name.
+
+#### Handle text form
+
+A handle's text is `@Type:id`, followed by `~version` when it carries one and `/part` for a composite:
+
+| Text | Handle |
+| --- | --- |
+| `@Target:3` | `@Target` with the integer id 3 |
+| `@Unit:'One Two'`, `@Unit:drone.gnabblo` | `@Unit` with a quoted or bare Text id |
+| `@Drone:7~120` | `@Drone` 7 at revision 120 |
+| `@UnitFile:content~3f2a…/Units/Tier1/radar.basic.gesd` | the file of a repository at a commit |
+| `@UnitSlot:drone.gnabblo/1` | slot 1 of a unit, without a version |
+
+An integer id is a decimal with an optional `-` and no leading zero. A Text id is bare when it is not empty, consists
+of the ASCII letters, digits, `.`, `_` and `-` and does not read as an integer, and otherwise quoted with `'`, a quote
+inside doubled. A revision
+is decimal; a hash version is its bytes as lowercase hexadecimal, 40 digits for SHA-1 and 64 for SHA-256 and content
+hashes. A part follows the first `/` after the root and its version; a bare Text part also contains `/`. Writers use the
+bare form whenever it applies. `parse` does not recognize handles; [documents](Documents.md#handles) and the host's
+`GesHandle.Parse` do. A *ref*, `@Unit:drone.gnabblo~#live` or `~'1.0'`, names a version through the owner instead of
+stating it; refs exist only in documents and the host API, which [resolve](HostRuntime.md#handles) them before a value
+reaches a script.
+
 ### Presence and Emptiness
 
 `nothing` is the absence value. NaN is not a DSL value or special tag. If an
@@ -2732,7 +2807,7 @@ IntelliJ-based editors. A rule uses `::=`; adjacent expressions form a sequence;
 `|` separates alternatives; `[ X ]` is optional; and `( X )*` / `( X )+` mean
 zero-or-more / one-or-more repetitions. Quoted text is a terminal. Uppercase
 bare names such as `LOWER_NAME`, `VARIABLE_NAME`, `TYPE_TAG`, `MODULE_NAME`,
-`CONSTANT_REFERENCE`, `MESSAGE_NAME`, `NUMBER`, and `NL` are lexical token
+`CONSTANT_REFERENCE`, `MESSAGE_NAME`, `HANDLE_TYPE`, `NUMBER`, and `NL` are lexical token
 categories governed by the lexical rules above; `LOWER_NAME` and
 `VARIABLE_NAME` include a name in backticks; `UNIT_SYMBOL` is a unit symbol
 or ASCII spelling from [Quantities](#quantities).
@@ -2753,12 +2828,12 @@ constant_definition ::= 'constant' CONSTANT_REFERENCE 'be' scalar_literal
 
 record_definition ::= 'record' custom_type_tag 'as' '{' separators [record_field (record_field_separator record_field)*] separators '}'
 record_field_separator ::= ',' separators | separators
-record_field ::= ['_'] field_name ':' type_reference ['clamped' 'between' expression 'and' expression] ['computed' 'by' expression]
+record_field ::= ['_'] field_name ':' (type_reference | handle_union) ['clamped' 'between' expression 'and' expression] ['computed' 'by' expression]
 
 predicate_definition ::= 'predicate' LOWER_NAME definition_parameters 'be' expression
 function_definition ::= 'function' LOWER_NAME definition_parameters 'be' expression
 definition_parameters ::= '(' [parameter (',' parameter)*] ')'
-parameter ::= LOWER_NAME ['as' type_reference] | '_' VARIABLE_NAME ['as' type_reference]
+parameter ::= LOWER_NAME ['as' (type_reference | handle_union)] | '_' VARIABLE_NAME ['as' (type_reference | handle_union)]
 
 event_handler ::= 'on' handler_endpoint [handler_binding] handler_tag_filter* '{' separators [statement (statement_separator statement)*] separators '}'
 handler_endpoint ::= MESSAGE_NAME | 'initialization' | 'undeliverable'
@@ -2808,7 +2883,7 @@ membership_expression ::= type_operation_expression (membership_operator type_op
 membership_operator ::= 'in' | '∈' | '∉' | 'has' 'value' | 'in' 'values' 'of' | 'starts' 'with' | 'ends' 'with'
 type_operation_expression ::= relational_expression type_operation*
 type_operation ::= 'as' type_reference |
-                   'is' [not_operator] ('nothing' | type_reference | numeric_check | 'empty' | extension_reference | LOWER_NAME |
+                   'is' [not_operator] ('nothing' | type_reference | HANDLE_TYPE | numeric_check | 'empty' | extension_reference | LOWER_NAME |
                    'between' additive_expression 'and' additive_expression |
                    'at' ('least' | 'most') additive_expression | ('less' | 'more') 'than' additive_expression |
                    additive_expression ['or' ('less' | 'more')])
@@ -2924,6 +2999,7 @@ built_in_type_tag ::= ':Boolean' | ':Number' | ':Percentage' |
                       ':Series' | ':Range' | ':Message' | ':Handler' | ':Tag' |
                       ':Text' | ':List' | ':Map' | ':Dice' | ':Bytes' | ':Nothing'
 custom_type_tag ::= TYPE_TAG
+handle_union ::= HANDLE_TYPE ('|' HANDLE_TYPE)*
 unit_name ::= 'none' | 'meter' | 'second' | 'degree' | 'degree/s' | UNIT_SYMBOL
 numeric_check ::= 'numeric' | 'integer' | 'fractional'
 ```

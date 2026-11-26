@@ -85,7 +85,7 @@ guard try host.start().state == .ready else {
     fatalError("Host startup failed.")
 }
 
-host.receive(try GameEventScriptMessage(name: "Calculate", nativeArguments: [
+try host.receive(GameEventScriptMessage(name: "Calculate", nativeArguments: [
     ("base", 30),
     ("bonus", 12),
 ]))

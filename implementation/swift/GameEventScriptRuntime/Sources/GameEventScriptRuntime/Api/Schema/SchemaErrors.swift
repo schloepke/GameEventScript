@@ -40,6 +40,12 @@ public struct GesWireError: Error, Sendable, Equatable {
     public static let invalidNumber = "wire.invalidNumber"
     /// The code `wire.invalidPadding`: a padding bit is not zero.
     public static let invalidPadding = "wire.invalidPadding"
+    /// The code `wire.invalidKeyOrder`: the keys of a handle Map are not strictly ascending.
+    public static let invalidKeyOrder = "wire.invalidKeyOrder"
+    /// The code `wire.missingVersion`: an `@Name~` field receives a handle without a version.
+    public static let missingVersion = "wire.missingVersion"
+    /// The code `wire.unresolvedRef`: a handle that still holds a ref reaches the wire.
+    public static let unresolvedRef = "wire.unresolvedRef"
     /// The code `wire.limitExceeded`: the record exceeds the caller's byte limit.
     public static let limitExceeded = "wire.limitExceeded"
     /// The code `wire.outOfRange`: a value is outside its range, not finite in a quantized field, or more than 2^50 steps from zero.

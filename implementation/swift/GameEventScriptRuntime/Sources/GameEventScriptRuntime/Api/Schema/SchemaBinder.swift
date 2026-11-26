@@ -79,6 +79,8 @@ public final class GesSchemaParameters {
     @_spi(Generator) public var packed = false
     /// A `:Bytes max n`: a Text on the wire whose bytes need not be UTF-8.
     @_spi(Generator) public var isBytes = false
+    /// Bytes of exactly `maxCount` bytes without a count, such as the hash version of a handle; `width` is 0.
+    @_spi(Generator) public var fixed = false
     /// The `depth` of a recursive List at its deepest level, which holds no element; 0 otherwise.
     @_spi(Generator) public var depthLimit = 0
     @_spi(Generator) public var width = 0
@@ -507,6 +509,29 @@ enum GesSchemaBinder {
         }
     }
 
+    // The nodes of one handle type on its own, with its version when it has one: the group, the id or the root's id, the
+    // version and a composite's part, as a field of the type would hold them. Generation lays them out.
+    static func bindHandle(_ handle: GesResolvedHandle) throws -> (nodes: [GesSchemaNode], infos: [GesSchemaNodeInfo]) {
+        var build = Build(parameters: GesSchemaParameters())
+        let type = GesResolvedType(
+            kind: .handle,
+            unit: .none,
+            tags: nil,
+            max: nil,
+            element: nil,
+            constraints: GesResolvedConstraints(),
+            axes: nil,
+            reference: nil,
+            referenceName: handle.name,
+            offset: handle.offset
+        )
+        type.handle = handle
+        type.versioned = handle.versioned
+        try addType(&build, handle.scope, type, handle.name, "@" + handle.name, optional: false, key: false, 0)
+        seal(&build.nodes)
+        return (build.nodes, build.infos)
+    }
+
     private static func bindNodes(_ declaration: GesResolvedDeclaration, _ parameters: GesSchemaParameters, _ hash: UInt64, _ bindingHash: UInt64) throws -> GesBoundSchema {
         var build = Build(parameters: parameters)
         build.levels[ObjectIdentifier(declaration)] = 1
@@ -698,7 +723,13 @@ enum GesSchemaBinder {
         info.path = path
         build.infos.append(info)
         for alternative in alternatives {
-            let alternativePath = path + ":" + (alternative.kind == .reference ? alternative.referenceName : alternative.kind.rawValue)
+            let alternativeName =
+                switch alternative.kind {
+                case .reference: alternative.referenceName
+                case .handle: "@" + alternative.referenceName
+                default: alternative.kind.rawValue
+                }
+            let alternativePath = path + ":" + alternativeName
             if alternative.kind == .nothing {
                 try checkNodeCount(build, scope, alternative.offset)
                 var nothing = GesSchemaNode()
@@ -826,12 +857,88 @@ enum GesSchemaBinder {
             build.levels[ObjectIdentifier(reference)] = level + 1
             for field in reference.fields { try addField(&build, field.scope, field, path, lists, top: false) }
             build.levels[ObjectIdentifier(reference)] = level == 0 ? nil : level
+        case .handle:
+            // The identity: the id, or a composite's root id; the version for `~`; a composite's part.
+            let handle = type.handle!
+            try checkComposite(scope, handle, type.offset, build.levels)
+            node.kind = .group
+            info.schemaName = handle.name
+            let identity = handle.root ?? handle
+            try addType(&build, identity.scope, identity.id, "id", path + ".id", optional: false, key: false, lists)
+            if type.versioned { try addVersion(&build, identity, path + ".version", lists) }
+            if handle.root != nil { try addType(&build, handle.scope, handle.id, "part", path + ".part", optional: false, key: false, lists) }
+        case .map:
+            // Entries in ascending key order, each an entry group of the key and the value.
+            guard let mapKey = type.handle else {
+                throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")
+            }
+            guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A Map without max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+            node.kind = .list
+            node.maxCount = max
+            node.width = bitLength(UInt64(max))
+            node.positionWidth = bitLength(UInt64(max - 1))
+            try checkNodeCount(build, scope, type.offset)
+            let entry = build.nodes.count
+            var entryNode = GesSchemaNode()
+            entryNode.kind = .group
+            build.nodes.append(entryNode)
+            var entryInfo = GesSchemaNodeInfo()
+            entryInfo.name = "[]"
+            entryInfo.path = path + "[]"
+            entryInfo.valueKind = .map
+            build.infos.append(entryInfo)
+            let key = GesResolvedType(
+                kind: .handle,
+                unit: .none,
+                tags: nil,
+                max: nil,
+                element: nil,
+                constraints: GesResolvedConstraints(),
+                axes: nil,
+                reference: nil,
+                referenceName: mapKey.name,
+                offset: type.offset
+            )
+            key.handle = mapKey
+            try addType(&build, scope, key, "key", path + "[].key", optional: false, key: false, lists + 1)
+            try addUnion(&build, scope, type.element!, "value", path + "[].value", optional: false, key: false, lists + 1)
+            build.nodes[entry].next = build.nodes.count
         default:
             throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")
         }
         node.next = build.nodes.count
         build.nodes[index] = node
         build.infos[index] = info
+    }
+
+    // A handle's version: a revision as its integer, a hash as its bytes without a count.
+    private static func addVersion(_ build: inout Build, _ identity: GesResolvedHandle, _ path: String, _ lists: Int) throws {
+        if let revision = identity.revision {
+            try addType(&build, identity.scope, revision, "version", path, optional: false, key: false, lists)
+            return
+        }
+        try checkNodeCount(build, identity.scope, identity.offset)
+        var node = GesSchemaNode()
+        node.kind = .text
+        node.isBytes = true
+        node.fixed = true
+        node.maxCount = identity.versionKind == .sha1 ? 20 : 32
+        node.next = build.nodes.count + 1
+        build.nodes.append(node)
+        var info = GesSchemaNodeInfo()
+        info.name = "version"
+        info.path = path
+        info.valueKind = .bytes
+        build.infos.append(info)
+    }
+
+    // A composite reached from the state of its own root would repeat the root's identity in each element; a relative
+    // encoding is an open point.
+    private static func checkComposite(_ scope: GesFileScope, _ handle: GesResolvedHandle, _ offset: Int, _ levels: [ObjectIdentifier: Int]) throws {
+        if let root = handle.root, levels[ObjectIdentifier(root.state)] != nil {
+            throw scope.error(Code.notEncodable, offset, "'@\(handle.name)' inside the state of its root '@\(root.name)' has no encoding yet.")
+        }
     }
 
     // References expand into nodes, so a small source can ask for more than any encoding holds.
@@ -902,6 +1009,13 @@ enum GesSchemaBinder {
             if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
         case .reference:
             try checkEncodable(type.reference!, lists, &known, &levels)
+        case .handle:
+            try checkComposite(scope, type.handle!, type.offset, levels)
+        case .map where type.handle != nil:
+            if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Map without max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+            try checkComposite(scope, type.handle!, type.offset, levels)
+            for alternative in type.element! where alternative.kind != .nothing { try checkEncodable(scope, alternative, lists + 1, &known, &levels) }
         default:
             throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")
         }

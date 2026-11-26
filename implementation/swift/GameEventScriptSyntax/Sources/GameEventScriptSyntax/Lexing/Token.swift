@@ -11,6 +11,8 @@
     case message
     case identifier
     case typeName
+    // A handle type, `@Name` or `@Name~`.
+    case handleTypeName
     case constantReference
     case tag
     case selector

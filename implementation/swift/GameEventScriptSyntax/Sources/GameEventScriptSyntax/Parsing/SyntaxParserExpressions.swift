@@ -215,7 +215,7 @@ extension GesSyntaxParser {
         completedCeiling = op == .operatorPower ? 14 : precedence
         if op == .as {
             completedInfixKind = .typeOperationExpression
-            try typeName()
+            try typeName(allowHandle: true)
             return .complete(try ranged(left))
         }
         if op == .is { return .test }
@@ -308,8 +308,8 @@ extension GesSyntaxParser {
 
     // The test after `is` and an optional `not`; tests with a nested operand parse it in their own function.
     func isTest(_ input: Expression) throws -> Expression {
-        if currentKind == .typeName {
-            try typeName()
+        if currentKind == .typeName || currentKind == .handleTypeName {
+            try typeName(allowHandle: true)
             return try ranged(input)
         }
         if currentKind == .numeric || currentKind == .nothing || current.isIdentifier("integer") || current.isIdentifier("fractional") {

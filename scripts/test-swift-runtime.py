@@ -34,7 +34,8 @@ def foreign_inputs(cases, directory):
     inputs = {}
     for case in cases:
         groups = manifest.get(case.id)
-        wanted = list(dict.fromkeys(s['program'] for s in case.sources)) or ['']
+        compiled = case.kind != 'programBinary' or case.metadata.get('binaryFixture', {}).get('compareCompiledRuntime', False)
+        wanted = list(dict.fromkeys(s['program'] for s in case.sources if compiled)) or ['']
         if groups is None or list(groups) != wanted:
             raise ValueError('Missing or reordered runtime inputs: ' + case.id)
         inputs[case.id] = {}

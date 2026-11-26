@@ -16,10 +16,17 @@ struct GesSchemaLayout {
     var rootNames: [String]
     var parameters: [GesLayoutParameter]
     var types: [GesLayoutType]
+    // The handle types the roots reach, composite roots and network owners included, ordered by name.
+    var handles: [GesLayoutHandle] = []
     // The networks among the roots, in root order.
     var networks: [GesLayoutNetwork] = []
     // The sources the schemas come from, under their file names, which code that converts GES values embeds. Not part of the JSON.
     var sources: [GesSchemaSource]
+
+    func handle(_ name: String) -> GesLayoutHandle {
+        guard let handle = handles.first(where: { $0.name == name }) else { preconditionFailure("Handle '@\(name)' is not in the layout.") }
+        return handle
+    }
 }
 
 // A network root: its hash bound with the layout's parameters and its routes in declared order.
@@ -27,6 +34,46 @@ struct GesLayoutNetwork {
     var name: String
     var hash: UInt64
     var routes: [GesLayoutRoute]
+    // The `owns` routes in ascending scalar order of the handle type's name.
+    var owners: [GesLayoutOwner] = []
+}
+
+// One `owns` route: the side, `client` or `server`, and the handle type's name without `@`.
+struct GesLayoutOwner {
+    var side: String
+    var handle: String
+}
+
+// A handle type: its name without `@`, its handle hash, its state schema's type name and the encodings of its identity, an
+// `integer` or `text` id and its version, or for a composite the root's name and the part. A revision has its integer encoding.
+// A class, as the plan values of handles share it.
+final class GesLayoutHandle {
+    var name = ""
+    var hash: UInt64 = 0
+    var state = ""
+    var id: GesLayoutEncoding?
+    var version = GesHandleVersionKind.none
+    var revision: GesLayoutEncoding?
+    var root = ""
+    var part: GesLayoutEncoding?
+
+    // The form that the handle type `<Name>Handle` checks, shared with models.
+    var model = GesModelHandle()
+
+    var isComposite: Bool { !root.isEmpty }
+
+    // A composite's id is its root's.
+    var versioned: Bool { version != .none }
+
+    static func versionName(_ kind: GesHandleVersionKind) -> String {
+        switch kind {
+        case .revision: "revision"
+        case .sha1: "sha1"
+        case .sha256: "sha256"
+        case .contentHash: "contentHash"
+        default: "none"
+        }
+    }
 }
 
 // One route: its side `client` or `server`, its verb `sends` or `publishes`, its root, its class `reliable`, `latest` or
@@ -205,6 +252,8 @@ enum GesLayoutKind {
     case nothing
     case flags
     case disc
+    case handle
+    case handleMap
 }
 
 // A class, because a list's element and a union's alternatives nest encodings.
@@ -250,6 +299,10 @@ final class GesLayoutEncoding {
     var corners: [GesLayoutField] = []
     var alternatives: [GesLayoutField] = []
     var schema = ""
+
+    // A handle or a handle Map's key: the handle type's name without `@`, and whether a handle carries its version.
+    var handle = ""
+    var versioned = false
 }
 
 // Builds the layout from bound schemas. Each reached schema is bound on its own, and a nested schema appears in its parent
@@ -265,6 +318,7 @@ enum GesSchemaLayoutBuilder {
         var rootNames: [String] = []
         var parameterInfos: [String: GesSchemaParameterInfo] = [:]
         var networks: [GesNetwork] = []
+        var handles: [String: GesHandleType] = [:]
         for root in roots {
             if let network = try findNetwork(set, root) {
                 if rootKeys.contains(":" + network.name) { continue }
@@ -275,13 +329,14 @@ enum GesSchemaLayoutBuilder {
                 networks.append(network)
                 for route in network.routes {
                     addRoot(set, route.root, &rootKeys, &rootTypes, &rootNames, messageSuffix)
-                    self.root(route.root, &reached, &parameterInfos)
+                    self.root(route.root, &reached, &handles, &parameterInfos)
                 }
+                for owner in network.owners { reach(owner.handle, &reached, &handles) }
                 continue
             }
             let schema = try set.schema(root)
             addRoot(set, schema, &rootKeys, &rootTypes, &rootNames, messageSuffix)
-            self.root(schema, &reached, &parameterInfos)
+            self.root(schema, &reached, &handles, &parameterInfos)
         }
         var layoutParameters: [GesLayoutParameter] = []
         for name in parameterInfos.keys.sorted(by: ordinal) {
@@ -293,13 +348,15 @@ enum GesSchemaLayoutBuilder {
         }
         var types: [GesLayoutType] = []
         for name in reached.keys.sorted(by: ordinal) { types.append(try type(set, reached[name]!, parameters, messageSuffix)) }
+        var layoutHandles: [GesLayoutHandle] = []
+        for name in handles.keys.sorted(by: ordinal) { layoutHandles.append(try handle(handles[name]!)) }
         let layoutNetworks = try networks.map { try network(set, $0, parameters, messageSuffix) }
         let sources = set.sources.map { source in
             let scalars = source.name.unicodeScalars
             let start = scalars.lastIndex { $0 == "/" || $0 == "\\" }.map { scalars.index(after: $0) } ?? scalars.startIndex
             return GesSchemaSource(name: String(scalars[start...]), text: source.text)
         }
-        return GesSchemaLayout(roots: rootTypes, rootNames: rootNames, parameters: layoutParameters, types: types, networks: layoutNetworks, sources: sources)
+        return GesSchemaLayout(roots: rootTypes, rootNames: rootNames, parameters: layoutParameters, types: types, handles: layoutHandles, networks: layoutNetworks, sources: sources)
     }
 
     // A network named plainly or `:Name`; a plain name that a message shares is ambiguous.
@@ -324,8 +381,8 @@ enum GesSchemaLayoutBuilder {
     // The generated type name: a message's name ends with the suffix.
     static func typeName(_ schema: GesSchema, _ messageSuffix: String) -> String { schema.kind == .message ? schema.name + messageSuffix : schema.name }
 
-    private static func root(_ schema: GesSchema, _ reached: inout [String: GesSchema], _ parameterInfos: inout [String: GesSchemaParameterInfo]) {
-        reach(schema, &reached)
+    private static func root(_ schema: GesSchema, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType], _ parameterInfos: inout [String: GesSchemaParameterInfo]) {
+        reach(schema, &reached, &handles)
         for parameter in schema.parameters { parameterInfos[parameter.name] = parameter }
     }
 
@@ -343,25 +400,76 @@ enum GesSchemaLayoutBuilder {
                 rateMicroseconds: route.rateMicroseconds
             )
         }
-        return GesLayoutNetwork(name: network.name, hash: try network.bind(parameters: parameters).hash, routes: routes)
+        var owners = network.owners.map { GesLayoutOwner(side: $0.side == .client ? "client" : "server", handle: $0.handle.name) }
+        owners.sort { ordinal($0.handle, $1.handle) }
+        return GesLayoutNetwork(name: network.name, hash: try network.bind(parameters: parameters).hash, routes: routes, owners: owners)
     }
 
     // Names order by their UTF-16 code units, as the C# port's ordinal comparison does.
     static func ordinal(_ left: String, _ right: String) -> Bool { left.utf16.lexicographicallyPrecedes(right.utf16) }
 
-    private static func reach(_ schema: GesSchema, _ reached: inout [String: GesSchema]) {
+    private static func reach(_ schema: GesSchema, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) {
         let key = key(schema)
         if reached[key] != nil { return }
         reached[key] = schema
-        for member in schema.members { reach(member, &reached) }
+        for member in schema.members { reach(member, &reached, &handles) }
         for field in schema.fields {
-            for type in field.alternatives { reach(type, &reached) }
+            for type in field.alternatives { reach(type, &reached, &handles) }
         }
     }
 
-    private static func reach(_ type: GesSchemaType, _ reached: inout [String: GesSchema]) {
-        if let schema = type.schema { reach(schema, &reached) }
-        for element in type.element { reach(element, &reached) }
+    private static func reach(_ type: GesSchemaType, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) {
+        if let schema = type.schema { reach(schema, &reached, &handles) }
+        if let handle = type.handleType { reach(handle, &reached, &handles) }
+        for element in type.element { reach(element, &reached, &handles) }
+    }
+
+    // A handle type brings a composite's root. Its state stays outside the layout: the wire carries only the identity, and a
+    // state, often a document, need not be encodable.
+    private static func reach(_ handle: GesHandleType, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) {
+        if handles[handle.name] != nil { return }
+        handles[handle.name] = handle
+        if let root = handle.root { reach(root, &reached, &handles) }
+    }
+
+    // The encodings of a handle type's identity, from the nodes of the type on its own: the group, then the id, the version
+    // and a composite's part.
+    private static func handle(_ type: GesHandleType) throws -> GesLayoutHandle {
+        let nodes = try type.bindNodes().nodes
+        let handle = GesLayoutHandle()
+        handle.name = type.name
+        handle.hash = type.hash
+        handle.state = type.stateName
+        handle.version = type.version
+        handle.model = GesModelHandle.of(type)
+        var index = 1
+        if let root = type.root {
+            handle.root = root.name
+            index = nodes[index].next
+            if type.version != .none { index += 1 }
+            handle.part = key(nodes[index])
+            return handle
+        }
+        handle.id = key(nodes[index])
+        index = nodes[index].next
+        if type.version == .revision {
+            let revision = GesLayoutEncoding()
+            number(nodes[index], .number, .none, nil, nil, revision)
+            handle.revision = revision
+        }
+        return handle
+    }
+
+    private static func key(_ node: GesSchemaNode) -> GesLayoutEncoding {
+        let encoding = GesLayoutEncoding()
+        if node.kind == .text {
+            encoding.kind = .text
+            encoding.maxCount = node.maxCount
+            encoding.width = node.width
+        } else {
+            number(node, .number, .none, nil, nil, encoding)
+        }
+        return encoding
     }
 
     private static func type(_ set: GesSchemaSet, _ schema: GesSchema, _ parameters: GesSchemaParameters, _ messageSuffix: String) throws -> GesLayoutType {
@@ -434,7 +542,7 @@ enum GesSchemaLayoutBuilder {
         index += 1
         for alternative in alternatives {
             let path = bound.infos[index].path
-            let label = alternative.label.isEmpty ? String(path[path.index(after: path.lastIndex(of: ":")!)...]) : alternative.label
+            let label = alternative.label.isEmpty ? String(path[path.index(after: path.lastIndex(of: ":")!)...].drop { $0 == "@" }) : alternative.label
             let encoding: GesLayoutEncoding
             if alternative.kind == .nothing {
                 index += 1
@@ -527,6 +635,22 @@ enum GesSchemaLayoutBuilder {
             encoding.unit = unitName(type.kind, type.unit)
             index += 1
             encoding.element = corner(bound, &index, type)
+            return encoding
+        case .handle:
+            encoding.kind = .handle
+            encoding.handle = type.handleType!.name
+            encoding.versioned = type.isVersioned
+            index = node.next
+            return encoding
+        case .map where type.handleType != nil:
+            // The List node, then each entry's group of the key, a handle, and the value.
+            encoding.kind = .handleMap
+            encoding.handle = type.handleType!.name
+            encoding.maxCount = node.maxCount
+            encoding.width = node.width
+            index += 2
+            index = bound.nodes[index].next
+            encoding.element = field(bound, &index, "[]", type.element)
             return encoding
         case .reference:
             encoding.kind = .schema

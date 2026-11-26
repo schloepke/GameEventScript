@@ -92,7 +92,7 @@ try
                     var programId = source.GetProperty("program").GetString()!;
                     if (!programs.ContainsKey(programId)) programs.Add(programId, AdapterCompiler.Compile(test, programId: programId));
                 }
-                observations[id] = new { status = "ok", runtime = RuntimeObservations.Run(programs, test.GetProperty("runtime")) };
+                observations[id] = new { status = "ok", runtime = RuntimeObservations.Run(programs, test.GetProperty("runtime"), AdapterHandles.From(test)) };
                 continue;
             }
             observations[id] = CompilerObservations.Success(Text(test, "kind"), AdapterCompiler.Compile(test));
@@ -146,14 +146,23 @@ static void ValidateCase(JsonElement test, IReadOnlyCollection<string> capabilit
 {
     if (allocation && Text(test, "kind") != "scriptApi") throw new ArgumentException("Allocation mode requires script input.");
     var binary = Text(test, "kind") == "programBinary";
-    if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi" or "schemaApi" or "networkApi") Fields(test, "id", "kind", "sources", "compile", "requires", "api");
-    else if (binary) Fields(test, "id", "kind", "sources", "compile", "requires", "binary");
+    // A handle catalog is optional for compiler, loading and script cases.
+    var handles = test.TryGetProperty("handles", out var catalog);
+    if (handles)
+    {
+        if (allocation || Text(test, "kind") is not ("scriptApi" or "loadError" or "compileError" or "compileMetadata" or "bytecode" or "bytecodeSnapshot"))
+            throw new ArgumentException("Unexpected handle catalog.");
+        AdapterHandles.Validate(catalog);
+    }
+    void CaseFields(params string[] names) => Fields(test, handles ? [.. names, "handles"] : names);
+    if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi" or "schemaApi" or "networkApi") CaseFields("id", "kind", "sources", "compile", "requires", "api");
+    else if (binary) CaseFields("id", "kind", "sources", "compile", "requires", "binary");
     else if (Text(test, "kind") == "scriptApi")
     {
-        if (allocation) Fields(test, "id", "kind", "sources", "compile", "requires", "runtime", "measurement");
-        else Fields(test, "id", "kind", "sources", "compile", "requires", "runtime");
+        if (allocation) CaseFields("id", "kind", "sources", "compile", "requires", "runtime", "measurement");
+        else CaseFields("id", "kind", "sources", "compile", "requires", "runtime");
     }
-    else Fields(test, "id", "kind", "sources", "compile", "requires");
+    else CaseFields("id", "kind", "sources", "compile", "requires");
     _ = Text(test, "id");
     if (Text(test, "kind") is not ("bytecodeSnapshot" or "compileError" or "bytecode" or "compileMetadata" or "programBinary" or "scriptApi" or "loadError" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi" or "schemaApi" or "networkApi"))
         throw new ArgumentException("Unsupported test kind.");

@@ -64,6 +64,7 @@ internal static partial class GesCompiler
             EmitCallables(callables);
             EmitRecordConstructors(types);
             EmitHandlers();
+            AddHandleTypes();
             return _builder.Build();
         }
 
@@ -197,6 +198,7 @@ internal static partial class GesCompiler
                         : context.Declare(field.Name);
                     fieldRegisters[fieldIndex] = fieldRegister;
                     context.DeclareExisting(field.Name, fieldRegister);
+                    context.DeclareType(field.Name, field.TypeName);
                 }
 
                 var state = new ExpressionState(context.RegisterCount);
@@ -210,17 +212,17 @@ internal static partial class GesCompiler
                         var computed = fieldRegister;
                         if (field.ComputedExpression is GesAssemblyExpressionNode assembly) EmitAssembly(assembly.Block, fieldRegister, context);
                         else computed = EmitExpressionForRead(field.ComputedExpression, context, state);
-                        EmitCastInto(fieldRegister, computed, field.TypeName);
+                        EmitCastInto(fieldRegister, computed, field.TypeName, context);
                         continue;
                     }
 
-                    EmitCastInto(fieldRegister, fieldRegister, field.TypeName);
+                    EmitCastInto(fieldRegister, fieldRegister, field.TypeName, context);
                     if (field.MinimumExpression is not null && field.MaximumExpression is not null)
                     {
                         var minimum = EmitExpressionForRead(field.MinimumExpression, context, state);
                         var maximum = EmitExpressionForRead(field.MaximumExpression, context, state);
                         _builder.Clamp(fieldRegister, fieldRegister, minimum, maximum);
-                        EmitCastInto(fieldRegister, fieldRegister, field.TypeName);
+                        EmitCastInto(fieldRegister, fieldRegister, field.TypeName, context);
                     }
                 }
 
@@ -252,7 +254,8 @@ internal static partial class GesCompiler
                     for (var index = 0; index < handler.Parameters.Count; index++)
                     {
                         context.DeclareExisting(handler.Parameters[index], routine.Arguments[index]);
-                        if (!string.IsNullOrEmpty(handler.ParameterList[index].DeclaredType)) EmitCastInto(routine.Arguments[index], routine.Arguments[index], handler.ParameterList[index].DeclaredType);
+                        context.DeclareType(handler.Parameters[index], handler.ParameterList[index].DeclaredType);
+                        if (!string.IsNullOrEmpty(handler.ParameterList[index].DeclaredType)) EmitCastInto(routine.Arguments[index], routine.Arguments[index], handler.ParameterList[index].DeclaredType, context);
                     }
 
                     EmitStatements(handler.Statements, context);
@@ -272,7 +275,8 @@ internal static partial class GesCompiler
                 for (var index = 0; index < callable.Parameters.Count; index++)
                 {
                     context.DeclareExisting(callable.Parameters[index], routine.Arguments[index]);
-                    if (!string.IsNullOrEmpty(callable.ParameterList[index].DeclaredType)) EmitCastInto(routine.Arguments[index], routine.Arguments[index], callable.ParameterList[index].DeclaredType);
+                    context.DeclareType(callable.Parameters[index], callable.ParameterList[index].DeclaredType);
+                    if (!string.IsNullOrEmpty(callable.ParameterList[index].DeclaredType)) EmitCastInto(routine.Arguments[index], routine.Arguments[index], callable.ParameterList[index].DeclaredType, context);
                 }
 
                 var result = EmitExpressionForRead(callable.Expression, context, new ExpressionState(context.RegisterCount));
@@ -300,6 +304,7 @@ internal static partial class GesCompiler
                         }
 
                         if (IsKnownNonList(let.Expression, context)) _nonListBindings.Add(destination.Id);
+                        context.DeclareType(let.Identifier, StaticTypeName(let.Expression, context));
                         if (ClassifyHandlerSignature(let.Expression, context) is { } handlerSignature) context.DeclareHandlerSignature(let.Identifier, handlerSignature);
                         else context.ClearHandlerSignature(let.Identifier);
 
@@ -503,6 +508,7 @@ internal static partial class GesCompiler
                 case GesTypeCastExpressionNode cast:
                 {
                     var value = EmitExpressionForRead(cast.Value, context, state);
+                    NoteHandleStateCast(cast, context);
                     EmitCastInto(destination, value, cast.TypeName);
                     return true;
                 }
@@ -584,7 +590,7 @@ internal static partial class GesCompiler
                 case GesTypeCheckExpressionNode check: EmitCheckInto(destination, EmitExpressionForRead(check.Value, context, state), check.TypeName); return true;
                 case GesNothingCheckExpressionNode check: EmitCheckInto(destination, EmitExpressionForRead(check.Value, context, state), "nothing"); return true;
                 case GesTypeConstructorExpressionNode constructor: EmitTypeConstructorInto(constructor, destination, context, state); return true;
-                case GesMemberAccessExpressionNode member: _builder.MemberAccess(destination, member.Member, EmitExpressionForRead(member.Target, context, state)); return true;
+                case GesMemberAccessExpressionNode member: EmitMemberAccessInto(member, destination, context, state); return true;
                 case GesCombinedCollectionExpressionNode combined: EmitCombinedCollection(destination, combined, context, state); return true;
                 case GesCollectionAccessExpressionNode access: EmitCollectionAccessInto(access, destination, context, state); return true;
                 default: return false;
@@ -1952,9 +1958,14 @@ internal static partial class GesCompiler
             return true;
         }
 
-        private void EmitCastInto(GesRegisterRef destination, GesRegisterRef value, string? typeName)
+        private void EmitCastInto(GesRegisterRef destination, GesRegisterRef value, string? typeName, LoweringContext? context = null)
         {
             if (string.IsNullOrWhiteSpace(typeName)) throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, "GameEventScript binary compiler requires a type name.");
+            if (GesHandleTypeNames.IsHandleType(typeName))
+            {
+                EmitHandleTypeCast(destination, value, typeName!, context);
+                return;
+            }
 
             if (GetQuantityUnit(typeName) is { } unit) _builder.CastUnit(destination, value, unit);
             else if (GesQuantityUnits.IsQuantityTypeName(typeName)) throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support quantity type '{typeName}'.");
@@ -1966,6 +1977,11 @@ internal static partial class GesCompiler
         private void EmitCheckInto(GesRegisterRef destination, GesRegisterRef value, string? typeName)
         {
             if (string.IsNullOrWhiteSpace(typeName)) throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, "GameEventScript binary compiler requires a type name.");
+            if (GesHandleTypeNames.IsHandleType(typeName))
+            {
+                EmitHandleTypeCheck(destination, value, typeName!);
+                return;
+            }
 
             if (GetQuantityUnit(typeName) is { } unit) _builder.CheckUnit(destination, value, unit);
             else if (GesQuantityUnits.IsQuantityTypeName(typeName)) throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support quantity type '{typeName}'.");
@@ -2234,6 +2250,7 @@ internal static partial class GesCompiler
     private sealed class LoweringContext
     {
         private readonly Dictionary<string, GesRegisterRef> _registers;
+        private Dictionary<string, string>? _types;
         private readonly Dictionary<string, GesMessageSignature> _handlerSignatures;
         private readonly HashSet<string> _handlerSignatureShadows;
         private readonly LoweringContext? _parent;
@@ -2278,6 +2295,18 @@ internal static partial class GesCompiler
         }
 
         public bool Contains(string name) => _registers.ContainsKey(name) || _parent?.Contains(name) == true;
+
+        // The declared or static type of a binding, which handle lowering reads.
+        public void DeclareType(string name, string? typeName)
+        {
+            if (!string.IsNullOrEmpty(typeName)) (_types ??= new Dictionary<string, string>(StringComparer.Ordinal))[name] = typeName!;
+        }
+
+        public string? TypeOf(string name)
+        {
+            if (_types is not null && _types.TryGetValue(name, out var typeName)) return typeName;
+            return _registers.ContainsKey(name) ? null : _parent?.TypeOf(name);
+        }
 
         // An unknown name fails at the referencing identifier when its range is given, otherwise at the construct being lowered.
         public GesRegisterRef Require(string name, GesSourceLocation? location = null)

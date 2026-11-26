@@ -37,6 +37,9 @@ internal sealed class GesModelPlanValue
     // The label of a union alternative, its case or subclass.
     internal string Label = "";
     internal GesModelPlanValue? Element;
+
+    // The key of a Map with handle keys: a handle without its version.
+    internal GesModelPlanValue? Key;
     internal List<GesModelPlanValue> Alternatives = [];
 
     internal bool ClosedTag => Kind == GesModelKind.Tag && Model.Tags.Count > 0;
@@ -204,8 +207,18 @@ internal static class GesModelPlanner
 
         if (model.Kind == GesModelKind.Flags) value.Nested = name + "Flags";
         if (model.Kind == GesModelKind.List) value.Element = Value(model.Element!.Value, name + "Item", "");
+        if (model.Kind == GesModelKind.HandleMap)
+        {
+            value.Element = Value(model.Element!.Value, name + "Item", "");
+            var key = new GesModelValue { Kind = GesModelKind.Handle, Handle = model.Handle };
+            value.Key = new GesModelPlanValue { Kind = GesModelKind.Handle, Model = key };
+        }
+
         return value;
     }
+
+    // The model type of a handle type: `@Drone` becomes `DroneHandle`.
+    internal static string HandleName(string handle) => handle + "Handle";
 
     // The types in an order where each comes after the types it holds, for registration: by name, depth first.
     // The protocol (Swift) or interface (C#) of a schema that types take with `with`: an abstract schema's own name in Swift,
@@ -228,6 +241,7 @@ internal static class GesModelPlanner
         foreach (var type in layout.Types) names.Add(type.Name);
         foreach (var (name, _) in TagSets(layout)) names.Add(name);
         foreach (var protocol in layout.Protocols) names.Add(ProtocolName(layout, protocol.Name, swift));
+        foreach (var handle in layout.Handles) names.Add(HandleName(handle.Name));
         return names;
     }
 
@@ -238,6 +252,7 @@ internal static class GesModelPlanner
         foreach (var type in layout.Types) names.Add((type.Name, "the type " + type.Name));
         foreach (var (name, _) in TagSets(layout)) names.Add((name, "the tag set " + name));
         foreach (var protocol in layout.Protocols) names.Add((ProtocolName(layout, protocol.Name, swift), "the protocol of " + protocol.Name));
+        foreach (var handle in layout.Handles) names.Add((HandleName(handle.Name), "the handle type @" + handle.Name));
         GesSchemaPlanner.Unique("the generated file", names);
     }
 
@@ -308,7 +323,7 @@ internal static class GesModelPlanner
     internal static string DocumentType(GesModelLayout layout, List<string> space)
     {
         var name = space.Count > 0 ? "Document" : "ModelDocument";
-        if (layout.Types.Exists(type => type.Name == name) || layout.Protocols.Exists(protocol => protocol.Name == name) || TagSets(layout).Exists(set => set.Name == name))
+        if (layout.Types.Exists(type => type.Name == name) || layout.Protocols.Exists(protocol => protocol.Name == name) || TagSets(layout).Exists(set => set.Name == name) || layout.Handles.Exists(handle => HandleName(handle.Name) == name))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The document type '{name}' takes the name of a generated type; choose another namespace.");
         return name;
     }
@@ -318,6 +333,12 @@ internal static class GesModelPlanner
 
     private static bool UsesData(GesModelValue value)
         => value.Kind is GesModelKind.Map or GesModelKind.Values || (value.Element is { } element && UsesData(element.Value)) || value.Alternatives.Exists(alternative => UsesData(alternative.Value));
+
+    // Whether a model holds a Map with handle keys, whose comparisons and conversions the support class then holds.
+    internal static bool UsesHandleMaps(GesModelLayout layout) => layout.Types.Exists(type => type.Fields.Exists(field => UsesHandleMaps(field.Value)));
+
+    private static bool UsesHandleMaps(GesModelValue value)
+        => value.Kind == GesModelKind.HandleMap || (value.Element is { } element && UsesHandleMaps(element.Value)) || value.Alternatives.Exists(alternative => UsesHandleMaps(alternative.Value));
 
     // Whether a model holds a Box, a Poly or a Disc, whose conversions the support class then offers.
     internal static bool UsesGeometry(GesModelLayout layout) => layout.Types.Exists(type => type.Fields.Exists(field => UsesGeometry(field.Value)));
@@ -336,7 +357,7 @@ internal static class GesModelPlanner
         GesModelKind.Tag => ("Tag", "none", null),
         GesModelKind.Flags => ("Map", "none", null),
         GesModelKind.List or GesModelKind.Values => ("List", "none", null),
-        GesModelKind.Map => ("Map", "none", null),
+        GesModelKind.Map or GesModelKind.HandleMap => ("Map", "none", null),
         GesModelKind.Dice => ("Dice", "none", null),
         GesModelKind.Point => ("Point", value.Model.Unit, null),
         GesModelKind.Vector => ("Vector", value.Model.Unit, null),
@@ -426,6 +447,16 @@ internal static class GesModelPlanner
                 break;
             case GesModelKind.Map:
                 text.Append(":Map");
+                break;
+            case GesModelKind.Handle:
+                text.Append('@').Append(value.Handle);
+                if (value.Versioned) text.Append('~');
+                break;
+            case GesModelKind.HandleMap:
+                text.Append(":Map(@").Append(value.Handle).Append(" → ");
+                Describe(value.Element!.Value, text);
+                text.Append(')');
+                if (value.Max is { } handleMapMax) text.Append(" max ").Append(handleMapMax);
                 break;
             case GesModelKind.Dice:
                 text.Append(":Dice");

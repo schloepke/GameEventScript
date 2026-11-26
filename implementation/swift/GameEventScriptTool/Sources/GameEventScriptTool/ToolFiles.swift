@@ -47,17 +47,31 @@ enum ToolFiles {
         return text
     }
 
-    static func compile(_ paths: [String], debug: Bool = true) throws -> GameEventScriptProgram {
-        let builder = GesProgramBuilder().withDebugInfo(debug ? .all : .none)
+    // The handle catalog of `--handles`: every handle type that the given schema sources declare, read once as one
+    // schema set. The CLI registers no resolver, so only programs that do not read handle state can load.
+    static func handleTypes(_ arguments: [String]) throws -> [GesHandleType] {
+        if arguments.isEmpty { return [] }
+        let paths = try expand(arguments)
+        return try GesSchemaSet(sources: try paths.map { GesSchemaSource(name: $0, text: try source($0)) }).handleTypes
+    }
+
+    static func builder(_ handles: [GesHandleType]) -> GesProgramBuilder {
+        let builder = GesProgramBuilder()
+        if !handles.isEmpty { builder.withHandleTypes(handles) }
+        return builder
+    }
+
+    static func compile(_ paths: [String], handles: [GesHandleType] = [], debug: Bool = true) throws -> GameEventScriptProgram {
+        let builder = builder(handles).withDebugInfo(debug ? .all : .none)
         for path in paths { builder.addScript(try source(path), sourceName: path) }
         return try builder.compile()
     }
 
     static func isBinary(_ path: String) -> Bool { (path as NSString).pathExtension.lowercased() == "gesb" }
 
-    static func read(_ path: String) throws -> GameEventScriptProgram {
+    static func read(_ path: String, handles: [GesHandleType] = []) throws -> GameEventScriptProgram {
         if isBinary(path) { return try GameEventScriptProgram.read(Array(Data(contentsOf: URL(fileURLWithPath: path)))) }
-        return try compile([path])
+        return try compile([path], handles: handles)
     }
 
     static func ensureDistinct(_ output: String, from inputs: [String]) throws {

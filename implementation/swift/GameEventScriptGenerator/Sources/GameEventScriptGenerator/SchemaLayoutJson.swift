@@ -25,6 +25,34 @@ enum GesSchemaLayoutJson {
         json.beginArray("types")
         for type in layout.types { self.type(&json, type) }
         json.endArray()
+        // Layouts without a handle type keep their form.
+        if !layout.handles.isEmpty {
+            json.beginArray("handles")
+            for handle in layout.handles {
+                json.beginObject()
+                json.string("name", handle.name)
+                json.string("hash", hex(handle.hash))
+                json.string("state", handle.state)
+                if handle.isComposite {
+                    json.string("root", handle.root)
+                    json.key("part")
+                    encoding(&json, handle.part!)
+                } else {
+                    json.key("id")
+                    encoding(&json, handle.id!)
+                    json.key("version")
+                    json.beginValueObject()
+                    json.string("kind", GesLayoutHandle.versionName(handle.version))
+                    if let revision = handle.revision {
+                        json.key("encoding")
+                        encoding(&json, revision)
+                    }
+                    json.endObject()
+                }
+                json.endObject()
+            }
+            json.endArray()
+        }
         if !layout.networks.isEmpty {
             json.beginArray("networks")
             for network in layout.networks {
@@ -43,6 +71,16 @@ enum GesSchemaLayoutJson {
                     json.endObject()
                 }
                 json.endArray()
+                if !network.owners.isEmpty {
+                    json.beginArray("owners")
+                    for owner in network.owners {
+                        json.beginObject()
+                        json.string("side", owner.side)
+                        json.string("handle", owner.handle)
+                        json.endObject()
+                    }
+                    json.endArray()
+                }
                 json.endObject()
             }
             json.endArray()
@@ -229,6 +267,15 @@ enum GesSchemaLayoutJson {
             json.endArray()
         case .schema:
             json.string("name", encoding.schema)
+        case .handle:
+            json.string("name", encoding.handle)
+            json.boolean("versioned", encoding.versioned)
+        case .handleMap:
+            json.string("key", encoding.handle)
+            json.number("maxCount", encoding.maxCount)
+            json.number("width", Int64(encoding.width))
+            json.key("value")
+            field(&json, encoding.element!, member: false, value: true)
         case .union:
             json.number("width", Int64(encoding.width))
             json.beginArray("alternatives")
@@ -257,6 +304,8 @@ enum GesSchemaLayoutJson {
         case .disc: "disc"
         case .schema: "schema"
         case .union: "union"
+        case .handle: "handle"
+        case .handleMap: "handleMap"
         case .nothing: "nothing"
         }
     }

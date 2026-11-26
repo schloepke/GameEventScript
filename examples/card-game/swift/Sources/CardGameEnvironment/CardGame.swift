@@ -239,7 +239,7 @@ public final class CardGame {
     }
 
     private func receive(_ name: String, _ values: [(String, GesValue)]) throws {
-        guard host.receive(try message(name, values)) else { throw CardGameError("Host rejected incoming message") }
+        guard try host.receive(message(name, values)) else { throw CardGameError("Host rejected incoming message") }
     }
 
     private func pump() throws {

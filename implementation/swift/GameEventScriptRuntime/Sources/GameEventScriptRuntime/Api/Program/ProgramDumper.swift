@@ -7,6 +7,13 @@ enum GesProgramDumper {
     /// Renders a validated Program as deterministic GESA text, optionally including instruction addresses. Performs no
     /// execution or file I/O.
     static func dump(_ program: GameEventScriptProgram, includeInstructionAddresses: Bool = false) -> String { GesProgramDump(program).dump(addresses: includeInstructionAddresses) }
+
+    // The 64-bit schema hash of a handle type import, stored as four 16-bit words with the least significant first.
+    static func handleTypeHash(_ binding: GesBindingSegment.Entry) -> UInt64 {
+        var hash: UInt64 = 0
+        for (index, word) in binding.argumentNames.prefix(4).enumerated() { hash |= UInt64(word) << UInt64(16 * index) }
+        return hash
+    }
 }
 
 private final class GesProgramDump {
@@ -108,7 +115,13 @@ private final class GesProgramDump {
         endRegion("Lists")
         region("Bindings", segment: "bind")
         for (index, binding) in p.bindings.enumerated() {
-            output += aligned(bindLabels[index]) + ".bind " + enumName(binding.kind) + " id=" + (binding.id == .max ? "none" : String(binding.id)) + " name=" + textLabels[Int(binding.name)] + " args=" + texts(binding.argumentNames)
+            output += aligned(bindLabels[index]) + ".bind " + enumName(binding.kind) + " id=" + (binding.id == .max ? "none" : String(binding.id)) + " name=" + textLabels[Int(binding.name)]
+            // A handle type import keeps its schema hash, not text, in its argument list.
+            if binding.kind == .handleType {
+                output += " hash=0x" + GesProgramDump.hex16(GesProgramDumper.handleTypeHash(binding))
+            } else {
+                output += " args=" + texts(binding.argumentNames)
+            }
             if binding.entryAddress != .max { output += " entry=" + code(binding.entryAddress) }
             if !binding.requiredTags.isEmpty { output += " requiredTags=" + texts(binding.requiredTags) }
             if !binding.requiredTagAlternatives.isEmpty { output += " tagAlternatives=[" + binding.requiredTagAlternatives.map(texts).joined(separator: ", ") + "]" }
@@ -263,6 +276,7 @@ private final class GesProgramDump {
         func resolve(_ id: UInt16) -> String { escaped ? escape(text(id)) : text(id) }
 
         var result = resolve(binding.name)
+        if binding.kind == .handleType { return "@" + result }
         if binding.kind == .messageNameHandler { result += " as message" } else { result += "(" + binding.argumentNames.map(resolve).joined(separator: ", ") + ")" }
         if tags {
             let matching = binding.requiredTags.map { "#" + resolve($0) } + binding.requiredTagAlternatives.map { $0.map { "#" + resolve($0) }.joined(separator: " | ") }
@@ -273,6 +287,11 @@ private final class GesProgramDump {
     }
 
     func text(_ index: UInt16) -> String { p.stringConstants[Int(index)] }
+
+    static func hex16(_ value: UInt64) -> String {
+        let digits = String(value, radix: 16)
+        return String(repeating: "0", count: 16 - digits.count) + digits
+    }
 
     func texts(_ values: [UInt16]) -> String { "[" + values.map { textLabels[Int($0)] }.joined(separator: ", ") + "]" }
 

@@ -22,7 +22,7 @@ final class SystemEndpointTests: XCTestCase {
         var missing = false
         _ = try host.subscribe(.init(name: "Seen", parameters: ["missing"])) { message, _ in missing = message.arguments[0].asBoolean == true }
         _ = try host.load(program)
-        host.receive(try .init(name: "Start", arguments: [.init(name: "handler", value: .handler(try .init(name: "undeliverable", parameters: ["message"])))]))
+        try host.receive(.init(name: "Start", arguments: [.init(name: "handler", value: .handler(try .init(name: "undeliverable", parameters: ["message"])))]))
         XCTAssertEqual(try host.runToCompletion().state, .completed)
         XCTAssertTrue(missing)
     }

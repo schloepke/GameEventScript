@@ -18,7 +18,10 @@ SEED = 0x47455342
 MAX_BYTES = 32768
 FIXTURES = ('valid-runtime.gesb', 'valid-debug.gesb', 'valid-opaque.gesb',
             'valid-nested-call.gesb', 'valid-result-send.gesb', 'valid-parse-literal.gesb',
-            'valid-parse-literal-strict.gesb', 'tag-alternatives.gesb')
+            'valid-parse-literal-strict.gesb', 'tag-alternatives.gesb', 'handle-types.gesb',
+            'handle-type-duplicate-name.gesb')
+# Seeds the reader must reject unmutated; they still seed mutations near a validation rule.
+INVALID_FIXTURES = ('handle-type-duplicate-name.gesb',)
 
 
 def stream(seed):
@@ -40,7 +43,10 @@ def cases(seed, count):
     for name, data in fixtures:
         if len(data) > MAX_BYTES:
             raise ValueError('Fuzz seed exceeds configured input limit: ' + name)
-        yield {'name': name, 'operation': 'control-valid', 'expected': 'accept'}, data
+        if name in INVALID_FIXTURES:
+            yield {'name': name, 'operation': 'control-invalid-fixture', 'expected': 'reject'}, data
+        else:
+            yield {'name': name, 'operation': 'control-valid', 'expected': 'accept'}, data
     yield {'operation': 'control-invalid', 'expected': 'reject'}, b'broken'
     yield {'operation': 'control-limit', 'expected': 'reject'}, bytes(MAX_BYTES + 1)
     random = stream(seed)

@@ -32,6 +32,7 @@ public final class GesProgramBuilder {
     var sources: [GesSource] = []
     var options = GesCompileOptions()
     var catalog: (any GesExternalTypeCatalog)?
+    var handleTypes: [String: GesHandleType] = [:]
 
     /// Creates an empty source builder with default compile options. `GameEventScriptProgram.makeBuilder()` is
     /// equivalent.
@@ -64,6 +65,20 @@ public final class GesProgramBuilder {
         return self
     }
 
+    /// Declares the handle types the sources may name as `@Name`, usually from `GesSchemaSet.handleTypes`. A later
+    /// declaration of the same name replaces an earlier one; composite roots are known through `GesHandleType.root`
+    /// and need not be declared separately. Returns this builder.
+    @discardableResult public func withHandleTypes(_ types: some Sequence<GesHandleType>) -> Self {
+        for type in types {
+            var current: GesHandleType? = type
+            while let handle = current {
+                if handle === type || handleTypes[handle.name] == nil { handleTypes[handle.name] = handle }
+                current = handle.root
+            }
+        }
+        return self
+    }
+
     /// Compiles all accumulated sources into one immutable, validated Program. Explicit options override builder
     /// options for this call.
     ///
@@ -75,7 +90,7 @@ public final class GesProgramBuilder {
         // Each source's own rules report first, in source order; the program-wide rules follow.
         var sourceDiagnostics: [GesDiagnostic] = []
         let modules = try sources.map { try GesSyntaxBinder.parse($0, validation: &sourceDiagnostics) }
-        let validator = GesAstValidator(modules: modules, catalog: catalog, diagnostics: sourceDiagnostics)
+        let validator = GesAstValidator(modules: modules, catalog: catalog, handleTypes: handleTypes, diagnostics: sourceDiagnostics)
         try validator.validate()
         return try GesCompiler(validator, sources: sources, options: configuration).compile()
     }

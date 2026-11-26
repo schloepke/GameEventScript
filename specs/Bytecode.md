@@ -84,6 +84,19 @@ not serialized into the script binary. Export bind kinds occupy `0x10` through
 names are stored as `extension.function`; external-type import names
 are stored as the type name.
 
+**Since: Unreleased:** every [handle type](Language.md#handles) a Program names is a
+`HandleType` import (`0x22`) whose name is the handle type name without `@`. Its argument-name
+list holds the type's 64-bit [canonical hash](Schemas.md#canonical-form) as four `u16`
+elements, least significant first. Its `EntryAddress` is the first instruction that reads the
+type's state, a `MemberAccess` of another member than `id`, `version` and `root` or a
+`CastCustom` to its state schema, and `0xFFFF` when the Program reads none. Handle type names
+are unique among these imports. Instructions name handle types by text: `CheckCustomType` and
+`CastCustom` take `@Name` or `@Name~`, whose name must have a `HandleType` import; a
+`CastCustom` to `@Name` checks without converting and writes `nothing` on a mismatch. On a
+handle, `MemberAccess` reads `id` and `version` from the identity, `root` gives `nothing`, `@Root` (the
+root type's name with `@`, which needs a `HandleType` import) reads the root handle of a composite
+and `nothing` of another handle, and every other member reads the resolved state.
+
 Existing string and compact list pools remain important. Constants that fit the
 linear instruction shape are encoded directly in typed load instructions:
 booleans and `nothing` have dedicated opcodes; integer and float payloads use
@@ -619,6 +632,8 @@ for `pc`-based execution.
 
 `Cast` and `CheckType` use `TypeOperand` as `GesBytecodeTypeKind`. Bytes are
 kind `0x0B`; `Cast :Bytes` converts as [Bytes](Language.md#bytes) defines.
+Handles are kind `0x12` (*Since: Unreleased*); it is no `Cast` or `CheckType` operand, because
+handle types are checked by name with `CheckCustomType`.
 Built-in types are direct kind operands. Custom/external record types use
 `CastCustom`/`CheckCustomType` with `TypeOperand` as the type-name `StringPool` index.
 Units are not declared type kinds: unit casts and checks use
@@ -1762,7 +1777,7 @@ operand layout of `EmitAfter`/`PublishAfter`, plus `CU` as the timer-name
 register. They accept `Repeat` (0x20), `WithTags` (0x40) and `Indirect` (0x80);
 Repeat selects `every`, its absence a named `after`. Unit bits and `DU` must be
 zero. The VM reads the duration register, then the name register; a name that
-is neither Text nor Tag, an invalid duration, or a zero period with Repeat
+is neither Text, Tag nor handle, an invalid duration, or a zero period with Repeat
 yields `false` without sending.
 
 `CancelTimers` (0xE3) writes its Boolean result to the destination register. `AU`
@@ -1770,7 +1785,7 @@ selects the mode: 0 cancels the timer named by the Text or Tag in `XRegister`,
 1 cancels all named timers of the executing instance, and 2 additionally
 cancels its unnamed delayed sends. Modes 1 and 2 require a zero `XRegister`;
 `AU` above 2, unit/flag bits and nonzero `YRegister`, `BU`, `CU` or `DU` are
-invalid. A mode 0 key that is neither Text nor Tag yields `false`. Timer
+invalid. A mode 0 key that is neither Text, Tag nor handle yields `false`. Timer
 semantics are owned by [HostRuntime](HostRuntime.md#named-timers).
 
 ### Explicit data instruction validation

@@ -29,7 +29,7 @@ internal static class GesDocumentFormatter
         for (var i = 0; i < entries.Length; i++)
         {
             var start = builder.Length;
-            AppendKey(builder, entries.KeyAt(i));
+            AppendKey(builder, entries, i);
             builder.Append(": ");
             WriteValue(builder, entries.ValueAt(i), 0, ScalarLength(builder, start), format, commas: false);
             builder.Append('\n');
@@ -46,19 +46,19 @@ internal static class GesDocumentFormatter
     }
 
     // Values whose literal text reads back: no External values or Handlers of a system endpoint, positive Dice rolls
-    // and Record type names that follow the TypeName grammar, at every level.
-    internal static bool IsPrintable(in GesValue value)
+    // and Record type names that follow the TypeName grammar, at every level. Only documents read handles back.
+    internal static bool IsPrintable(in GesValue value, bool handles = false)
     {
         switch (value.Kind)
         {
             case List when value.ObjectValue is GesValue[] list:
                 foreach (var item in list)
-                    if (!IsPrintable(in item)) return false;
+                    if (!IsPrintable(in item, handles)) return false;
                 return true;
             case Map when value.ObjectValue is GesValueMap map:
-                return IsPrintable(map);
+                return IsPrintable(map, handles);
             case Custom:
-                return value.ObjectValue is GesCustomObject record && GesText.IsTypeName(record.TypeName) && IsPrintable(record.Map);
+                return value.ObjectValue is GesCustomObject record && GesText.IsTypeName(record.TypeName) && IsPrintable(record.Map, handles);
             case Dice:
                 if (value.ObjectValue is int[] rolls)
                     foreach (var roll in rolls)
@@ -66,11 +66,13 @@ internal static class GesDocumentFormatter
                 return true;
             case Message when value.ObjectValue is GameEventScriptMessage message:
                 for (var i = 0; i < message.Arguments.Count; i++)
-                    if (!IsPrintable(message.Arguments[i])) return false;
+                    if (!IsPrintable(message.Arguments[i], handles)) return false;
                 return true;
             case Nothing or GesBytecodeTypeKind.Boolean or Integer or Float or Percentage or Tag or Text or Bytes or Vector or Point
                 or GesBytecodeTypeKind.Range or Series:
                 return true;
+            case GesBytecodeTypeKind.Handle:
+                return handles;
             case Handler:
                 return value.ObjectValue is GesMessageSignature signature && !GesSystemEndpoints.IsSystemEndpointName(signature.Name);
             default:
@@ -78,12 +80,13 @@ internal static class GesDocumentFormatter
         }
     }
 
-    private static bool IsPrintable(GesValueMap map)
+    private static bool IsPrintable(GesValueMap map, bool handles)
     {
+        if (map.HasHandleKeys && !handles) return false;
         for (var i = 0; i < map.Length; i++)
         {
             var item = map.ValueAt(i);
-            if (!IsPrintable(in item)) return false;
+            if (!IsPrintable(in item, handles)) return false;
         }
         return true;
     }
@@ -141,7 +144,7 @@ internal static class GesDocumentFormatter
         {
             Indent(builder, level + 1, format);
             var start = builder.Length;
-            AppendKey(builder, map.KeyAt(i));
+            AppendKey(builder, map, i);
             builder.Append(": ");
             WriteValue(builder, map.ValueAt(i), level + 1, (level + 1) * format.Indentation + ScalarLength(builder, start), format, commas);
             if (commas && i < map.Length - 1) builder.Append(',');
@@ -222,7 +225,7 @@ internal static class GesDocumentFormatter
         for (var i = 0; i < map.Length; i++)
         {
             if (i > 0) builder.Append(", ");
-            AppendKey(builder, map.KeyAt(i));
+            AppendKey(builder, map, i);
             builder.Append(": ");
             var item = map.ValueAt(i);
             if (!AppendInline(builder, in item, format, stop)) return false;
@@ -231,9 +234,11 @@ internal static class GesDocumentFormatter
         return builder.Length <= stop;
     }
 
-    private static void AppendKey(StringBuilder builder, string key)
+    private static void AppendKey(StringBuilder builder, GesValueMap map, int index)
     {
-        if (GesText.IsFieldName(key)) builder.Append(key);
+        var key = map.KeyAt(index);
+        if (map.HandleKey(index) is not null) builder.Append(key);
+        else if (GesText.IsFieldName(key)) builder.Append(key);
         else GesTextLiteralReader.AppendQuoted(builder, key);
     }
 

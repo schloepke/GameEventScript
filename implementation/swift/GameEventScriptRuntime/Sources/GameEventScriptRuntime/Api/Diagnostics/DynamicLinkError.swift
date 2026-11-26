@@ -13,6 +13,8 @@ public struct GesDynamicLinkError: Error, Sendable {
 
     init(code: String, program: String, message: String) { diagnostics = [.init(phase: .link, code: code, message: message, programName: program)] }
 
+    init(_ diagnostic: GesDiagnostic) { diagnostics = [diagnostic] }
+
     /// A failure of an import that the source calls: one diagnostic per call site the SourceMap locates, or one without
     /// a location.
     init(code: String, program: GameEventScriptProgram, message: String, symbol: String, calls: (opcode: GesBytecodeOpCode, bindID: UInt16)) {

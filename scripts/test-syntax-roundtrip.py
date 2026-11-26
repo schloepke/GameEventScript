@@ -103,7 +103,7 @@ for _count in (10, 11, 15, 16):
 
 # Names and decoded Text carry their value in the token text; other kinds keep a per-port spelling, such as `\\n` or a
 # number without its `%`, and are compared by kind and offsets.
-VALUE_KINDS = {"Identifier", "Message", "TypeName", "ConstantReference", "Tag", "Selector", "Text"}
+VALUE_KINDS = {"Identifier", "Message", "TypeName", "HandleTypeName", "ConstantReference", "Tag", "Selector", "Text"}
 
 
 def comparable(stream):

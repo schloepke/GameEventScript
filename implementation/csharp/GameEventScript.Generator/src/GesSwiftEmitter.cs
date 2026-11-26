@@ -67,6 +67,15 @@ internal static partial class GesSwiftEmitter
         var models = modelSpace is null ? "" : string.Concat(modelSpace.ConvertAll(part => part + "."));
         foreach (var type in types)
             foreach (var field in type.Fields) GesSchemaPlanner.QualifyPacked(field.Value, models);
+        // Handle types are the models' where they share a namespace, else declared here.
+        foreach (var type in types)
+            foreach (var field in type.Fields) GesSchemaPlanner.QualifyHandles(field.Value, models);
+        if (options.Models is null)
+        {
+            var handles = layout.Handles.ConvertAll(handle => handle.Model);
+            foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => GesSwiftModelEmitter.Handle(code, handles, handle.Model, access)));
+        }
+
         var space = string.Concat(document.Space.ConvertAll(part => part + "."));
         var conversions = new List<(GesPlanType Type, GesModelType Model)>();
         if (modelLayout is not null)
@@ -108,6 +117,8 @@ internal static partial class GesSwiftEmitter
             return new NetworkRoot(type.Layout.PackedWidth > 0 && packed is null ? models + root : root, type.Layout.PackedWidth > 0 && packed is null ? root + "Wire" : null, type);
         })));
         context.TopLevel = GesSchemaPlanner.TopLevel(types, sets, layout.Networks);
+        if (options.Models is null)
+            foreach (var handle in layout.Handles) context.TopLevel.Add(GesModelPlanner.HandleName(handle.Name));
         if (modelSpace is not null)
         {
             GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
@@ -116,7 +127,7 @@ internal static partial class GesSwiftEmitter
             // Records and the `<Name>Wire` members name shared packed types inside the wire namespace, where the wire types are
             // in scope; a conversion extends its record at file scope, where only the record's nested types are, and names both
             // namespaces; the model's init(wire:) names the wire namespace beside the model's nested types.
-            if (modelsRoot is not null && types.Exists(type => type.Layout.PackedWidth > 0))
+            if (modelsRoot is not null && (types.Exists(type => type.Layout.PackedWidth > 0) || layout.Handles.Count > 0))
             {
                 GesSchemaPlanner.CheckModelsRoot(modelsRoot, declared!);
                 context.Inside.Add(modelsRoot);
@@ -342,6 +353,7 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Box => "GesBox",
         GesLayoutKind.Disc => "GesDisc",
         GesLayoutKind.List => $"[{ElementName(value)}]",
+        GesLayoutKind.Handle => value.HandleType,
         _ => NestedName(value)
     };
 
@@ -358,8 +370,13 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Box => "GesBox(GesPoint(), GesPoint())",
         GesLayoutKind.Disc => "GesDisc(radius: 0)",
         GesLayoutKind.Schema when value.Packed is not null => TypeName(value) + "(uncheckedRawValue: 0)",
+        GesLayoutKind.Handle when value.HandleRoot is not null => $"{value.HandleType}(root: {GesCSharpEmitter.HandleRootType(value)}(id: {KeyZero(value.HandleRoot.Model.Id)}), part: {KeyZero(value.Handle!.Model.Part)})",
+        GesLayoutKind.Handle => $"{value.HandleType}(id: {KeyZero(value.Handle!.Model.Id)})",
         _ => TypeName(value) + "()"
     };
+
+    // The smallest key of a handle: an empty Text or the minimum.
+    private static string KeyZero(GesHandleKey key) => key.IsText ? "\"\"" : Long(key.Minimum);
 
     // `var` for a local that later code assigns, `let` for one it only reads, so that Swift warns about neither.
     private static string Binding(bool assigned) => assigned ? "var" : "let";
@@ -795,6 +812,8 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.List:
                 if (value.Depth > 0) OpenLevels(code, value, target + ".count");
                 code.Line($"if {target}.count > {max} {{ {Throw("tooLong", value)} }}");
+                if (value.HandleMap)
+                    code.Line($"for position in {target}.indices.dropFirst() where !({target}[position - 1].{HandleKey(value)} < {target}[position].{HandleKey(value)}) {{ throw GesWireError(code: GesWireError.invalidKeyOrder, path: {HandleKeyPath(value)}) }}");
                 code.Line($"try writer.write(UInt64({target}.count), width: {width})");
                 code.Open($"for item in {target} {{");
                 if (value.Item is not null) code.Line($"try item.__writeFields(&writer, paths, at + {value.Element!.Node.ToString(CultureInfo.InvariantCulture)}{ItemLevel(value.Element)})");
@@ -818,6 +837,9 @@ internal static partial class GesSwiftEmitter
                 break;
             case GesLayoutKind.Schema:
                 code.Line($"try {target}.__writeFields(&writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)})");
+                break;
+            case GesLayoutKind.Handle:
+                WriteHandle(code, value, target);
                 break;
             case GesLayoutKind.Union:
                 code.Line($"switch {target} {{");
@@ -918,6 +940,8 @@ internal static partial class GesSwiftEmitter
                 else code.Line($"var item: {name} = {Zero(element)}");
                 if (value.Item is not null) code.Line($"try item.__readFields(&reader, paths, at + {element.Node.ToString(CultureInfo.InvariantCulture)}{ItemLevel(element)})");
                 else Read(code, element, "item");
+                if (value.HandleMap)
+                    code.Line($"if let previous = {target}.last, !(previous.{HandleKey(value)} < item.{HandleKey(value)}) {{ throw GesWireError(code: GesWireError.invalidKeyOrder, path: {HandleKeyPath(value)}) }}");
                 code.Line($"{target}.append(item)");
                 code.Close();
                 code.Close();
@@ -953,6 +977,9 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Schema:
                 code.Line($"try {target}.__readFields(&reader, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)})");
                 break;
+            case GesLayoutKind.Handle:
+                ReadHandle(code, value, target);
+                break;
             case GesLayoutKind.Union:
                 code.Open("do {");
                 code.Line($"let choice = try reader.read({width}, path: {Path(value)})");
@@ -974,6 +1001,73 @@ internal static partial class GesSwiftEmitter
                 code.Close();
                 break;
         }
+    }
+
+    // The key member of a handle map's items and the path of the key, where a key out of order is reported.
+    private static string HandleKey(GesPlanValue map) => Member(map.Item!.Fields[0].Base);
+
+    private static string HandleKeyPath(GesPlanValue map) => $"paths[at + {(map.Element!.Node + 1).ToString(CultureInfo.InvariantCulture)}]";
+
+    // Writes a handle's id, version and part; a field without a version leaves the handle's out.
+    private static void WriteHandle(GesSchemaPlanner.Code code, GesPlanValue value, string target)
+    {
+        var (id, version, part) = GesCSharpEmitter.HandleParts(value);
+        code.Open("do {");
+        WriteHandleKey(code, id, target + (value.HandleRoot is not null ? ".root.id" : ".id"));
+        if (version is not null)
+        {
+            code.Line($"guard let version = {target}.version else {{ {Throw("missingVersion", version)} }}");
+            if (version.Encoding.Kind == GesLayoutKind.Bytes) code.Line("try writer.writeBytes(version.bytes)");
+            else Write(code, version, "version");
+        }
+
+        if (part is not null) WriteHandleKey(code, part, target + ".part");
+        code.Close();
+    }
+
+    private static void WriteHandleKey(GesSchemaPlanner.Code code, GesPlanValue key, string target)
+    {
+        if (key.Encoding.Kind != GesLayoutKind.Text) Write(code, key, target);
+        else code.Line($"try GesWireRules.writeText(&writer, {target}, width: {key.Encoding.Width.ToString(CultureInfo.InvariantCulture)}, maxCount: {key.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}, path: {Path(key)})");
+    }
+
+    // Reads a handle into locals and builds it; a text id that equals the held one keeps its string.
+    private static void ReadHandle(GesSchemaPlanner.Code code, GesPlanValue value, string target)
+    {
+        var (id, version, part) = GesCSharpEmitter.HandleParts(value);
+        code.Open("do {");
+        ReadHandleKey(code, id, "id", target + (value.HandleRoot is not null ? ".root.id" : ".id"));
+        if (version is not null)
+        {
+            if (version.Encoding.Kind == GesLayoutKind.Bytes)
+            {
+                code.Line("var hash: [UInt8] = []");
+                code.Line($"try reader.readBytes({GesCSharpEmitter.HashType(version)}.length, into: &hash, path: {Path(version)})");
+                code.Line($"let version = {GesCSharpEmitter.HashType(version)}(bytes: hash)!");
+            }
+            else
+            {
+                code.Line("let version: Int64");
+                Read(code, version, "version");
+            }
+        }
+
+        if (part is not null) ReadHandleKey(code, part, "part", target + ".part");
+        var arguments = "id: id" + (version is not null ? ", version: version" : "");
+        code.Line(value.HandleRoot is not null ? $"{target} = {value.HandleType}(root: {GesCSharpEmitter.HandleRootType(value)}({arguments}), part: part)" : $"{target} = {value.HandleType}({arguments})");
+        code.Close();
+    }
+
+    private static void ReadHandleKey(GesSchemaPlanner.Code code, GesPlanValue key, string local, string current)
+    {
+        if (key.Encoding.Kind == GesLayoutKind.Text)
+        {
+            code.Line($"let {local} = try GesWireRules.readText(&reader, width: {key.Encoding.Width.ToString(CultureInfo.InvariantCulture)}, maxCount: {key.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}, current: {current}, path: {Path(key)})");
+            return;
+        }
+
+        code.Line($"let {local}: Int64");
+        Read(code, key, local);
     }
 
     private static void Declarations(GesSchemaPlanner.Code code, GesPlanValue value, string access, Context context)

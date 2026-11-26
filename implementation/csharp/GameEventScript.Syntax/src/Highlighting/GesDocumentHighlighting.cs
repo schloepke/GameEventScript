@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using System;
 using System.Collections.Generic;
 using Code = GameEventScript.Syntax.GesDocumentDiagnostic;
 
@@ -72,6 +73,11 @@ internal static class GesDocumentHighlighting
                     _ => Context.Form
                 };
             }
+            else if (c == '@' && position + 1 < text.Length && GesText.IsAsciiUpper(text[position + 1]))
+            {
+                position = HandleSpans(text, position, spans);
+                continue;
+            }
             else if (c is '[' or '(')
             {
                 position++;
@@ -127,6 +133,50 @@ internal static class GesDocumentHighlighting
         var syntax = GesDocumentReader.Read(text);
         if (syntax.Diagnostic is { } diagnostic)
             diagnostics.Add(new GesHighlightDiagnostic(diagnostic.Code, Code.Explain(diagnostic.Code, diagnostic.LimitName, diagnostic.LimitValue), diagnostic.Start, diagnostic.End - diagnostic.Start));
+    }
+
+    // A handle: `@Type` is Type; `:`, `~` and `/` are Symbol; a quoted id, part or ref is String, a ref `#name` Tag, an
+    // integer id, part or version and a hash Number, and other bare ids and parts Plain. Without a well-formed handle only
+    // `@Type` is a token. Returns the end.
+    private static int HandleSpans(string text, int start, GesSpanBuilder spans)
+    {
+        var typeEnd = NameEnd(text, start + 1);
+        spans.Add(start, typeEnd - start, GesSyntaxKind.Type);
+        var end = GesHandleLiteral.Read(text, start, out _, out _);
+        if (end < 0) return typeEnd;
+        var position = typeEnd;
+        var isPart = false;
+        while (position < end)
+        {
+            var c = text[position];
+            var tokenStart = position;
+            GesSyntaxKind kind;
+            if (c is ':' or '~' || c == '/' && !isPart)
+            {
+                isPart |= c == '/';
+                position++;
+                kind = GesSyntaxKind.Symbol;
+            }
+            else if (c == '\'')
+            {
+                position = QuotedEnd(text, position);
+                kind = GesSyntaxKind.String;
+            }
+            else if (c == '#')
+            {
+                position = NameEnd(text, position + 1);
+                kind = GesSyntaxKind.Tag;
+            }
+            else
+            {
+                while (position < end && text[position] is not (':' or '~' or '\'') && (isPart || text[position] != '/')) position++;
+                var word = text.AsSpan(tokenStart, position - tokenStart);
+                var afterTilde = tokenStart > 0 && text[tokenStart - 1] == '~';
+                kind = GesHandleLiteral.ReadsAsInteger(word) || afterTilde ? GesSyntaxKind.Number : GesSyntaxKind.Plain;
+            }
+            spans.Add(tokenStart, position - tokenStart, kind);
+        }
+        return end;
     }
 
     private static bool IsComment(string text, int position) => position + 1 < text.Length && text[position] == '/' && text[position + 1] == '/';

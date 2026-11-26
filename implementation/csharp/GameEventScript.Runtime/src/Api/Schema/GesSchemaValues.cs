@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Text;
 using GameEventScript.Runtime.Values;
 using GameEventScript.Syntax;
@@ -518,6 +519,9 @@ public static class GesSchemaValues
                 writer.BeginList(field, poly.Points.Count);
                 foreach (var point in poly.Points) EncodePoint(ref writer, schema, index + 1, point.X, point.Y, point.Z);
                 break;
+            case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Map:
+                EncodeHandleMap(ref writer, schema, index, value, strict);
+                break;
             case GesSchemaNodeKind.List:
                 if (value.ValueKind != GesBytecodeTypeKind.List) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
                 var items = value.AsList();
@@ -592,6 +596,7 @@ public static class GesSchemaValues
             case GesSchemaTypeKind.Disc: return value.ExternalValue is GesGeometryLibrary.DiscValue;
             case GesSchemaTypeKind.Percentage: return value.ValueKind == GesBytecodeTypeKind.Percentage;
             case GesSchemaTypeKind.Reference: return value.CustomTypeName == candidate.SchemaName;
+            case GesSchemaTypeKind.Handle: return value.Handle?.TypeName == candidate.SchemaName;
             default: return value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == candidate.Unit;
         }
     }
@@ -629,11 +634,95 @@ public static class GesSchemaValues
             return;
         }
 
+        if (node.ValueKind == GesSchemaTypeKind.Handle)
+        {
+            EncodeHandle(ref writer, schema, index, value);
+            return;
+        }
+
         if (value.CustomTypeName is { } name2 && name2 != node.SchemaName) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         var fields = value.MaterializedMap() ?? throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         if (strict && value.CustomTypeName is null && !HasEveryKey(schema, index, fields)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         writer.BeginNested(field);
         EncodeFields(ref writer, schema, index + 1, node.Next, fields, strict);
+    }
+
+    // A handle sends its identity: the id, the version of an `@Name~` field and a composite's part; a version in an `@Name`
+    // field is dropped.
+    private static void EncodeHandle(ref GesSchemaWriter writer, GesBoundSchema schema, int index, GesValue value)
+    {
+        ref readonly var node = ref schema.Nodes[index];
+        if (value.Handle is not { } handle || handle.TypeName != node.SchemaName) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        if (!handle.Ref.IsNothing) throw new GesWireException(GesWireException.UnresolvedRef, node.Path);
+        writer.BeginNested(new GesSchemaField(schema, index));
+        var child = index + 1;
+        EncodeNode(ref writer, schema, child, handle.Id, false);
+        child = schema.Nodes[child].Next;
+        if (child < node.Next && schema.Nodes[child].Name == "version")
+        {
+            if (!handle.HasVersion) throw new GesWireException(GesWireException.MissingVersion, schema.Nodes[child].Path);
+            EncodeNode(ref writer, schema, child, handle.Version, false);
+            child = schema.Nodes[child].Next;
+        }
+
+        if (child < node.Next) EncodeNode(ref writer, schema, child, handle.Part, false);
+    }
+
+    // A handle Map sends its entries in ascending key order, which is the canonical order of its handle keys.
+    private static void EncodeHandleMap(ref GesSchemaWriter writer, GesBoundSchema schema, int index, GesValue value, bool strict)
+    {
+        ref readonly var node = ref schema.Nodes[index];
+        if (value.CustomTypeName is not null || value.AsMap() is not { } map || map.TextKeyCount != 0) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        writer.BeginList(new GesSchemaField(schema, index), map.Length);
+        var entry = new GesSchemaField(schema, index + 1);
+        var key = index + 2;
+        var element = schema.Nodes[key].Next;
+        for (var position = 0; position < map.Length; position++)
+        {
+            writer.BeginNested(entry);
+            EncodeNode(ref writer, schema, key, map.KeyValueAt(position), strict);
+            EncodeNode(ref writer, schema, element, map.ValueAt(position), strict);
+        }
+    }
+
+    private static GesValue DecodeHandle(ref GesSchemaReader reader, GesBoundSchema schema, int index)
+    {
+        ref readonly var node = ref schema.Nodes[index];
+        reader.BeginNested(new GesSchemaField(schema, index));
+        var child = index + 1;
+        var id = DecodeNode(ref reader, schema, child);
+        child = schema.Nodes[child].Next;
+        var version = default(GesValue);
+        if (child < node.Next && schema.Nodes[child].Name == "version")
+        {
+            version = DecodeNode(ref reader, schema, child);
+            child = schema.Nodes[child].Next;
+        }
+
+        var composite = child < node.Next;
+        var part = composite ? DecodeNode(ref reader, schema, child) : default;
+        return GesValue.GesHandle(GesHandle.FromWire(node.SchemaName, id, version, part, composite));
+    }
+
+    private static GesValue DecodeHandleMap(ref GesSchemaReader reader, GesBoundSchema schema, int index)
+    {
+        ref readonly var node = ref schema.Nodes[index];
+        var count = reader.BeginList(new GesSchemaField(schema, index));
+        var entry = new GesSchemaField(schema, index + 1);
+        var key = index + 2;
+        var element = schema.Nodes[key].Next;
+        var keys = new List<GesHandle>(Math.Min(count, 1024));
+        var values = new List<GesValue>(Math.Min(count, 1024));
+        for (var position = 0; position < count; position++)
+        {
+            reader.BeginNested(entry);
+            var handle = DecodeHandle(ref reader, schema, key).Handle!;
+            if (keys.Count > 0 && keys[^1].CompareTo(handle) >= 0) throw new GesWireException(GesWireException.InvalidKeyOrder, schema.Nodes[key].Path);
+            keys.Add(handle);
+            values.Add(DecodeNode(ref reader, schema, element));
+        }
+
+        return GesValue.GesMap(new GesValueMap([], keys.ToArray(), values.ToArray()));
     }
 
     // A checked document writes a Box as the Map of its corners, a Poly as the List of its points and a Disc as the Map of its
@@ -873,6 +962,8 @@ public static class GesSchemaValues
                 var points = new List<GesPoint>(Math.Min(pointCount, 1024));
                 for (var point = 0; point < pointCount; point++) points.Add(DecodePoint(ref reader, schema, index + 1));
                 return new GesPoly(points).ToValue(node.Unit);
+            case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Map:
+                return DecodeHandleMap(ref reader, schema, index);
             case GesSchemaNodeKind.List:
                 var length = reader.BeginList(field);
                 var items = new List<GesValue>(Math.Min(length, 1024));
@@ -892,6 +983,8 @@ public static class GesSchemaValues
                 var center = DecodePoint(ref reader, schema, index + 1);
                 var radius = schema.Nodes[index + 1].Next;
                 return new GesDisc(center, radius < node.Next ? reader.ReadNumber(new GesSchemaField(schema, radius)) : 0).ToValue(node.Unit);
+            case GesSchemaNodeKind.Group when node.ValueKind == GesSchemaTypeKind.Handle:
+                return DecodeHandle(ref reader, schema, index);
             case GesSchemaNodeKind.Group:
                 reader.BeginNested(field);
                 return DecodeRecord(ref reader, schema, node.SchemaName, index + 1, node.Next);
@@ -927,6 +1020,139 @@ public static class GesSchemaValues
     {
         var value = new GesValue();
         value.SetBytes(bytes);
+        return value;
+    }
+
+    // Content hashes of handle states.
+    /// <summary>
+    /// Computes the content hash of a handle's state (specs/Schemas.md#content-hash): SHA-256 over its compact product JSON,
+    /// normalized against the state schema with defaults applied and absent or <c>nothing</c> optional fields, computed
+    /// fields and undeclared keys left out. It is the version of a <see cref="GesHandleVersionKind.ContentHash"/> type and is
+    /// available for every handle type.
+    /// </summary>
+    /// <param name="handleType">The handle type whose state schema normalizes the state.</param>
+    /// <param name="state">A Record or Map of the state schema; the kinds and ranges of other values are not checked.</param>
+    /// <returns>The content hash.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="handleType"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GesWireException"><c>wire.typeMismatch</c> with the path when the state, or a value of a field that
+    /// only takes Records, is no Record or Map; <c>wire.missingField</c> with the path when a field without default is missing and not optional.</exception>
+    public static GesHash32 ContentHash(GesHandleType handleType, GesValue state)
+    {
+        if (handleType is null) throw new ArgumentNullException(nameof(handleType));
+        var declarations = handleType.Declarations;
+        var normalized = NormalizeState(handleType.Resolved.State, state, "", declarations);
+        var json = GameEventScript.Runtime.GesJson.Write(new GameEventScript.Runtime.GesMessageJsonCodec().Encode(normalized, 0));
+        var bytes = Encoding.UTF8.GetBytes(json);
+        using var sha256 = SHA256.Create();
+        return GesHash32.FromBytes(sha256.ComputeHash(bytes));
+    }
+
+    // The Record of a schema with defaults applied and absent or nothing optional fields, computed fields and undeclared keys left out.
+    internal static GesValue NormalizeState(GesResolvedDeclaration schema, GesValue value, string path, IReadOnlyDictionary<string, GesResolvedDeclaration> declarations)
+    {
+        if (value.AsMap() is not { } fields) throw new GesWireException(GesWireException.TypeMismatch, path);
+        var keys = new List<string>(schema.Fields.Length);
+        var values = new List<GesValue>(schema.Fields.Length);
+        foreach (var field in schema.Fields)
+        {
+            var fieldPath = path.Length == 0 ? field.Name : path + "." + field.Name;
+            if (!HeldState(schema, field, fields, out var held))
+            {
+                if (field.Marker == GesSchemaFieldMarker.Optional) continue;
+                throw new GesWireException(GesWireException.MissingField, fieldPath);
+            }
+
+            if (held.Kind == GesBytecodeTypeKind.Nothing && field.Marker == GesSchemaFieldMarker.Optional) continue;
+            keys.Add(field.Name);
+            values.Add(StateElement(field.Alternatives, held, fieldPath, declarations));
+        }
+
+        return GesValue.GesRecord(schema.Name, keys.ToArray(), values.ToArray());
+    }
+
+    // The value of a field, or else of its default: a literal, or the value of the sibling it names, whose own default applies in turn.
+    private static bool HeldState(GesResolvedDeclaration schema, GesResolvedField field, GesValueMap fields, out GesValue value)
+    {
+        for (var depth = 0; depth <= schema.Fields.Length; depth++)
+        {
+            if (fields.Get(field.Name) is { } given)
+            {
+                value = given;
+                return true;
+            }
+
+            switch (field.Default)
+            {
+                case null:
+                    value = default;
+                    return false;
+                case { Kind: GesSchemaDefaultKind.Field } fallback:
+                    var sibling = Array.Find(schema.Fields, candidate => candidate.Name == fallback.Name);
+                    if (sibling is null) break;
+                    field = sibling;
+                    continue;
+                case var fallback:
+                    value = StateLiteral(field, fallback);
+                    return true;
+            }
+
+            break;
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static GesValue StateLiteral(GesResolvedField field, GesResolvedDefault fallback)
+    {
+        if (field.Alternatives.Length != 1) return Literal(fallback, false, false, default);
+        var type = field.Alternatives[0];
+        if (fallback.Kind == GesSchemaDefaultKind.Empty) return type.Kind == GesSchemaTypeKind.Map ? GesValue.GesMap([], []) : GesValue.GesList([]);
+        var number = type.Kind is GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity;
+        return Literal(fallback, number && type.Constraints.Integer && type.Constraints.Step is null, type.Kind == GesSchemaTypeKind.Percentage, type.Unit);
+    }
+
+    // Nested Records normalize against their schema, chosen by the Record's name among the alternatives; Lists and Map
+    // values normalize element by element.
+    private static GesValue StateElement(GesResolvedType[] alternatives, GesValue value, string path, IReadOnlyDictionary<string, GesResolvedDeclaration> declarations)
+    {
+        if (value.Kind == GesBytecodeTypeKind.Nothing) return value;
+        foreach (var type in alternatives)
+        {
+            switch (type.Kind)
+            {
+                case GesSchemaTypeKind.Reference when type.Reference is { } reference && value.AsMap() is not null:
+                {
+                    var declaration = reference;
+                    if (value.CustomTypeName is { } name && name != reference.Name && declarations.TryGetValue(name, out var named)) declaration = named;
+                    if (declaration.Kind == GesSchemaKind.Schema && !declaration.Abstract) return NormalizeState(declaration, value, path, declarations);
+                    break;
+                }
+                case GesSchemaTypeKind.List when value.Kind == GesBytecodeTypeKind.List && value.ObjectValue is GesValue[] items:
+                {
+                    var normalized = new GesValue[items.Length];
+                    for (var index = 0; index < items.Length; index++)
+                        normalized[index] = StateElement(type.Element!, items[index], path + "[]", declarations);
+                    return GesValue.GesList(normalized);
+                }
+                case GesSchemaTypeKind.Map when value.AsMap() is { } map && value.CustomTypeName is null:
+                {
+                    var keys = new GesValue[map.Length];
+                    var values = new GesValue[map.Length];
+                    for (var index = 0; index < map.Length; index++)
+                    {
+                        keys[index] = map.KeyValueAt(index);
+                        values[index] = StateElement(type.Element!, map.ValueAt(index), path + "[]", declarations);
+                    }
+
+                    return GesValue.GesMapOfKeys(keys, values);
+                }
+            }
+        }
+
+        // A field that only takes Records accepts no other value; other values are hashed as they are.
+        if (value.AsMap() is null && Array.TrueForAll(alternatives, type => type.Kind == GesSchemaTypeKind.Reference))
+            throw new GesWireException(GesWireException.TypeMismatch, path);
         return value;
     }
 }

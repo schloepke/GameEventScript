@@ -19,7 +19,7 @@ internal readonly record struct GesNumericWithUnit(double Value, GesQuantityUnit
 
 /// <summary>
 /// An immutable GES value: Nothing, a number with optional quantity unit, Boolean, Text, Tag, Vector, Point, Dice,
-/// Bytes, List, Map, Record, external value, Range, Series, Message or Handler. Equality is strict and structural.
+/// Bytes, List, Map, Record, external value, Range, Series, Message, Handler or handle. Equality is strict and structural.
 /// </summary>
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
@@ -220,6 +220,27 @@ public partial struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Creates a Map from parallel Text and handle keys and values in canonical key order, keeping the last value of a
+    /// duplicate key. Text keys come first in Unicode scalar order, then handle keys in handle order.
+    /// </summary>
+    /// <param name="keys">The keys, each a Text or a handle, paired by position with <paramref name="values"/>.</param>
+    /// <param name="values">The values, paired by position with <paramref name="keys"/>.</param>
+    /// <returns>The Map value.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when an array is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the arrays differ in length, or a key is neither a Text nor a
+    /// handle or is not valid Unicode.</exception>
+    public static GesValue GesMapOfKeys(GesValue[] keys, GesValue[] values)
+    {
+        if (keys is null) throw new ArgumentNullException(nameof(keys));
+        if (values is null) throw new ArgumentNullException(nameof(values));
+        if (keys.Length != values.Length) throw new ArgumentException("Keys and values differ in length.", nameof(values));
+        var map = GesValueMap.FromKeyValues(keys, values) ?? throw new ArgumentException("A Map key is a Text or a handle.", nameof(keys));
+        var value = new GesValue();
+        value.SetMap(map);
+        return value;
+    }
+
     // A Map that holds the entries of map without copying them; the stored fields of a Record become plain entries.
     internal static GesValue GesMap(GesValueMap map)
     {
@@ -399,6 +420,20 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
+    /// Wraps an immutable handle as a value without copying it.
+    /// </summary>
+    /// <param name="handle">The handle to wrap.</param>
+    /// <returns>The handle value.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
+    public static GesValue GesHandle(GameEventScript.Api.GesHandle handle)
+    {
+        if (handle is null) throw new ArgumentNullException(nameof(handle));
+        var value = new GesValue();
+        value.SetHandle(handle);
+        return value;
+    }
+
+    /// <summary>
     /// Wraps a message signature as a Handler value.
     /// </summary>
     /// <param name="signature">The handler's message signature.</param>
@@ -553,6 +588,11 @@ public partial struct GesValue : IEquatable<GesValue>
     /// Gets the wrapped Message of a Message value, otherwise <see langword="null"/>.
     /// </summary>
     public readonly GameEventScriptMessage? Message => ObjectValue as GameEventScriptMessage;
+
+    /// <summary>
+    /// Gets the wrapped handle of a handle value, otherwise <see langword="null"/>.
+    /// </summary>
+    public readonly GameEventScript.Api.GesHandle? Handle => ObjectValue as GameEventScript.Api.GesHandle;
 
     /// <summary>
     /// Gets the message signature of a Handler value, otherwise <see langword="null"/>.
@@ -988,6 +1028,15 @@ public partial struct GesValue : IEquatable<GesValue>
         ObjectValue = handler;
     }
 
+    internal void SetHandle(GameEventScript.Api.GesHandle handle)
+    {
+        Kind = GesBytecodeTypeKind.Handle;
+        Flags = StorageObjectFlag | HasValueFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = handle;
+    }
+
     internal void SetMessage(GameEventScriptMessage message)
     {
         Kind = GesBytecodeTypeKind.Message;
@@ -1123,7 +1172,7 @@ public partial struct GesValue : IEquatable<GesValue>
                 if (left.Length != right.Length) return false;
                 for (var i = 0; i < left.Length; i++)
                 {
-                    if (!string.Equals(left.KeyAt(i), right.KeyAt(i), StringComparison.Ordinal)) return false;
+                    if (!left.KeyEquals(i, right, i)) return false;
                     var leftValue = left.ValueAt(i);
                     var rightValue = right.ValueAt(i);
                     if (!leftValue.EqualsValue(in rightValue)) return false;
@@ -1151,6 +1200,8 @@ public partial struct GesValue : IEquatable<GesValue>
             case GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature left && other.ObjectValue is GesMessageSignature right:
                 return left.Equals(right);
             case GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage left && other.ObjectValue is GameEventScriptMessage right:
+                return left.Equals(right);
+            case GesBytecodeTypeKind.Handle when ObjectValue is GameEventScript.Api.GesHandle left && other.ObjectValue is GameEventScript.Api.GesHandle right:
                 return left.Equals(right);
             case Series when ObjectValue is GesSeriesValue left && other.ObjectValue is GesSeriesValue right:
                 return string.Equals(left.SignatureId, right.SignatureId, StringComparison.Ordinal) && left.Offset == right.Offset;
@@ -1197,7 +1248,7 @@ public partial struct GesValue : IEquatable<GesValue>
             case Map when ObjectValue is GesValueMap map:
                 for (var i = 0; i < map.Length; i++)
                 {
-                    hash.Add(map.KeyAt(i), StringComparer.Ordinal);
+                    map.AddKeyHash(ref hash, i);
                     var value = map.ValueAt(i);
                     hash.Add(value.GetValueHashCode());
                 }
@@ -1229,6 +1280,9 @@ public partial struct GesValue : IEquatable<GesValue>
                 break;
             case GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message:
                 hash.Add(message);
+                break;
+            case GesBytecodeTypeKind.Handle when ObjectValue is GameEventScript.Api.GesHandle handle:
+                hash.Add(handle);
                 break;
             case Series when ObjectValue is GesSeriesValue series:
                 hash.Add(series.SignatureId, StringComparer.Ordinal);
@@ -1291,6 +1345,7 @@ public partial struct GesValue : IEquatable<GesValue>
         Series when ObjectValue is GesSeriesValue series => $":Series({series.SignatureId}, offset: {series.Offset.ToString(CultureInfo.InvariantCulture)})",
         GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature signature => $":Handler({signature.SignatureId.Replace(",", ", ")})",
         GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message => FormatMessage(message),
+        GesBytecodeTypeKind.Handle when ObjectValue is GameEventScript.Api.GesHandle handle => handle.ToString(),
         _ => Kind.ToString()
     };
 
@@ -1338,7 +1393,7 @@ public partial struct GesValue : IEquatable<GesValue>
             if (!first) builder.Append(", ");
             first = false;
             var key = valueMap.KeyAt(i);
-            if (GameEventScript.Syntax.GesText.IsFieldName(key)) builder.Append(key);
+            if (valueMap.HandleKey(i) is not null || GameEventScript.Syntax.GesText.IsFieldName(key)) builder.Append(key);
             else GesTextLiteralReader.AppendQuoted(builder, key);
             builder.Append(": ");
             GesValue tempQualifier = valueMap.ValueAt(i);

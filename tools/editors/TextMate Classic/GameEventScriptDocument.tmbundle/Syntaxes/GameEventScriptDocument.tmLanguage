@@ -26,6 +26,10 @@
 		</dict>
 		<dict>
 			<key>include</key>
+			<string>#handles</string>
+		</dict>
+		<dict>
+			<key>include</key>
 			<string>#forms</string>
 		</dict>
 		<dict>
@@ -258,6 +262,54 @@
 					<string>[,:]</string>
 					<key>name</key>
 					<string>punctuation.separator.gameeventscript.document</string>
+				</dict>
+			</array>
+		</dict>
+		<key>handles</key>
+		<dict>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>match</key>
+					<string>(@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)(?:(:)('(?:[^']|'')*'|-?[A-Za-z0-9._-]+)(?:(~)(#[A-Za-z][A-Za-z0-9]*|'(?:[^']|'')*'|-?[0-9a-f]+))?(?:(/)('(?:[^']|'')*'|[A-Za-z0-9._/-]+))?)?</string>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>entity.name.type.handle.gameeventscript.document</string>
+						</dict>
+						<key>2</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.separator.handle.gameeventscript.document</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>constant.other.handle-id.gameeventscript.document</string>
+						</dict>
+						<key>4</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.separator.handle.gameeventscript.document</string>
+						</dict>
+						<key>5</key>
+						<dict>
+							<key>name</key>
+							<string>constant.numeric.handle-version.gameeventscript.document</string>
+						</dict>
+						<key>6</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.separator.handle.gameeventscript.document</string>
+						</dict>
+						<key>7</key>
+						<dict>
+							<key>name</key>
+							<string>constant.other.handle-part.gameeventscript.document</string>
+						</dict>
+					</dict>
 				</dict>
 			</array>
 		</dict>

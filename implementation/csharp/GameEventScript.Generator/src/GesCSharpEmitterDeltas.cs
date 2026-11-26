@@ -198,6 +198,100 @@ internal static partial class GesCSharpEmitter
 
     private static string Prefix(string target) => target.Contains('.') ? target.Substring(0, target.LastIndexOf('.') + 1) : "";
 
+    // The wire parts of a handle in node order, with their members in a and b: a composite's id is its root's, and a field
+    // without a version transmits none. A text id compares as a string, the same as its UTF-8 bytes apart from lone surrogates.
+    private static List<(GesPlanValue Part, string A, string B)> HandleMembers(GesPlanValue value, string a, string b)
+    {
+        var (id, version, part) = HandleParts(value);
+        var root = value.HandleRoot is not null ? ".Root" : "";
+        var members = new List<(GesPlanValue, string, string)> { (id, $"{a}{root}.Id", $"{b}{root}.Id") };
+        if (version is not null) members.Add((version, $"{a}.Version", $"{b}.Version"));
+        if (part is not null) members.Add((part, $"{a}.Part", $"{b}.Part"));
+        return members;
+    }
+
+    // A handle changes as a group: one change bit per part, then each changed part whole.
+    private static void HandleDelta(GesSchemaPlanner.Code code, GesPlanValue value, string a, string b, string set)
+    {
+        var node = N(value.Node);
+        var members = HandleMembers(value, a, b);
+        code.Open("{");
+        code.Line($"var first{node} = writer.BitPosition;");
+        code.Line($"writer.Write(0, {N(members.Count)});");
+        for (var index = 0; index < members.Count; index++)
+        {
+            var (part, first, second) = members[index];
+            var partNode = N(part.Node);
+            if (part.Base == "Version")
+            {
+                code.Line($"if ({first} is not {{ }} version{partNode}) {Throw("MissingVersion", part)}");
+                code.Line($"if (version{partNode} != {second})");
+                code.Open("{");
+                if (part.Encoding.Kind == GesLayoutKind.Bytes)
+                {
+                    code.Line($"Span<byte> hash{partNode} = stackalloc byte[{HashType(part)}.Length];");
+                    code.Line($"version{partNode}.CopyTo(hash{partNode});");
+                    code.Line($"for (var index = 0; index < hash{partNode}.Length; index++) writer.Write(hash{partNode}[index], 8);");
+                }
+                else Write(code, part, "version" + partNode);
+            }
+            else
+            {
+                code.Line(part.Encoding.Kind == GesLayoutKind.Text ? $"if (!string.Equals({first}, {second}, StringComparison.Ordinal))" : $"if ({first} != {second})");
+                code.Open("{");
+                if (part.Encoding.Kind == GesLayoutKind.Text)
+                {
+                    code.Line($"if ({first} is null) {Throw("TypeMismatch", part)}");
+                    code.Line($"GesWireRules.WriteText(ref writer, {first}, {part.Encoding.Width.ToString(CultureInfo.InvariantCulture)}, {part.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}, {Path(part)});");
+                }
+                else Write(code, part, first);
+            }
+
+            code.Line($"writer.SetBit(first{node} + {N(index)});");
+            code.Line($"{set} = true;");
+            code.Close();
+        }
+
+        code.Line($"if (!{set}) writer.Rewind(first{node});");
+        code.Close();
+    }
+
+    // Reads the changed parts of a handle, each different from the baseline's, and builds it from them and the baseline's.
+    private static void ReadHandleDelta(GesSchemaPlanner.Code code, GesPlanValue value, string a, string b)
+    {
+        var node = N(value.Node);
+        var members = HandleMembers(value, a, b);
+        code.Open("{");
+        // The change bits precede the payloads.
+        for (var index = 0; index < members.Count; index++) code.Line($"var set{N(members[index].Part.Node)} = reader.Read(1, {Path(value)}) == 1;");
+        code.Line($"if ({string.Join(" && ", members.ConvertAll(member => "!set" + N(member.Part.Node)))}) {Throw("InvalidDelta", value)}");
+        for (var index = 0; index < members.Count; index++)
+        {
+            var (part, first, second) = members[index];
+            var local = part.Base.ToLowerInvariant();
+            var type = part.Base == "Version" ? part.Encoding.Kind == GesLayoutKind.Bytes ? HashType(part) : "long" : part.Encoding.Kind == GesLayoutKind.Text ? "string" : "long";
+            code.Line(part.Base == "Version" ? $"var {local} = {second}.GetValueOrDefault();" : $"var {local} = {second};");
+            code.Line($"if (set{N(part.Node)})");
+            code.Open("{");
+            if (part.Base == "Version" && part.Encoding.Kind == GesLayoutKind.Bytes)
+            {
+                code.Line($"Span<byte> hash{N(part.Node)} = stackalloc byte[{type}.Length];");
+                code.Line($"reader.Require(hash{N(part.Node)}.Length * 8L, {Path(part)});");
+                code.Line($"for (var index = 0; index < hash{N(part.Node)}.Length; index++) hash{N(part.Node)}[index] = (byte)reader.Read(8, {Path(part)});");
+                code.Line($"{local} = {type}.FromBytes(hash{N(part.Node)});");
+            }
+            else if (part.Encoding.Kind == GesLayoutKind.Text)
+                code.Line($"{local} = GesWireRules.ReadText(ref reader, {part.Encoding.Width.ToString(CultureInfo.InvariantCulture)}, {part.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}, null, {Path(part)});");
+            else Read(code, part, local);
+            code.Line(part.Encoding.Kind == GesLayoutKind.Text ? $"if (string.Equals({local}, {second}, StringComparison.Ordinal)) {Throw("InvalidDelta", part)}" : $"if ({local} == {second}) {Throw("InvalidDelta", part)}");
+            code.Close();
+        }
+
+        var arguments = "id" + (members.Exists(member => member.Part.Base == "Version") ? ", version" : "");
+        code.Line(value.HandleRoot is not null ? $"{a} = new {value.HandleType}(new {HandleRootType(value)}({arguments}), part);" : $"{a} = new {value.HandleType}({arguments});");
+        code.Close();
+    }
+
     // Returns false from the enclosing method when the wire values of a and b differ.
     private static void Same(GesSchemaPlanner.Code code, GesPlanValue value, string a, string b)
     {
@@ -215,6 +309,9 @@ internal static partial class GesCSharpEmitter
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Same(code, axis, a + "." + axis.Base, b + "." + axis.Base);
+                break;
+            case GesLayoutKind.Handle:
+                foreach (var (part, first, second) in HandleMembers(value, a, b)) code.Line(part.Encoding.Kind == GesLayoutKind.Text ? $"if (!string.Equals({first}, {second}, StringComparison.Ordinal)) return false;" : $"if ({first} != {second}) return false;");
                 break;
             case GesLayoutKind.Box or GesLayoutKind.Disc:
                 foreach (var corner in value.Corners) Same(code, corner, a + "." + corner.Base, b + "." + corner.Base);
@@ -706,6 +803,9 @@ internal static partial class GesCSharpEmitter
                 code.Line($"{set} = true;");
                 code.Close();
                 break;
+            case GesLayoutKind.Handle:
+                HandleDelta(code, value, a, b, set);
+                break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 code.Open("{");
                 code.Line($"var first{node} = writer.BitPosition;");
@@ -856,6 +956,9 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List:
                 Read(code, value, a);
                 code.Line($"if (__Same{node}(baseline, paths, at{Level(value)})) {Throw("InvalidDelta", value)}");
+                break;
+            case GesLayoutKind.Handle:
+                ReadHandleDelta(code, value, a, b);
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 code.Open("{");

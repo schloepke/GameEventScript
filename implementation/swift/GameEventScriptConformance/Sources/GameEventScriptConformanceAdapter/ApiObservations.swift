@@ -36,7 +36,7 @@ enum ApiObservations {
                 return ["status": "ok", "externalType": ["error": "duplicateTypeName"]]
             }
         default:
-            let host = try HostScenario.makeHost(input, observer: nil, publishSink: nil)
+            let host = try HostScenario.makeHost(input, observer: nil, publishSink: nil, handles: AdapterHandles.from(test))
             do {
                 _ = try host.load(CompilerObservations.compile(test))
                 return ["status": "loaded", "diagnostics": []]

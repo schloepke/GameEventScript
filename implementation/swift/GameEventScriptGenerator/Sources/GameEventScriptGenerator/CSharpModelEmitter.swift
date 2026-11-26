@@ -90,6 +90,9 @@ enum GesCSharpModelEmitter {
         for protocolType in layout.protocols {
             document.units.append(GesCodeUnit(owner: protocolType.name) { code in interfaceDeclaration(&code, layout, protocolType, access) })
         }
+        for handleType in layout.handles {
+            document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handleType.name)) { code in handle(&code, layout.handles, handleType, access) })
+        }
         for set in GesModelPlanner.tagSets(layout) {
             document.units.append(
                 GesCodeUnit(owner: set.name) { code in
@@ -110,7 +113,8 @@ enum GesCSharpModelEmitter {
         let conversions = options.bindings || valued
         let geometry = GesModelPlanner.usesGeometry(layout)
         let data = GesModelPlanner.usesData(layout)
-        document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, conversions: conversions, geometry: geometry, data: data) })
+        let handleMaps = GesModelPlanner.usesHandleMaps(layout)
+        document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, conversions: conversions, geometry: geometry, data: data, handleMaps: handleMaps) })
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
             let values = options.bindings || valued || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
             let math = GesComputedEmitter.usesMath(layout.types.map(\.computed))
@@ -655,6 +659,8 @@ enum GesCSharpModelEmitter {
         case .disc: "GesDisc"
         case .map: "GesDataMap"
         case .values: "GesDataList"
+        case .handle: qualifier + GesModelPlanner.handleName(value.model.handle)
+        case .handleMap: "Dictionary<\(type(value.key!, qualifier, owner)), \(type(value.element!, qualifier, owner))>"
         case .schema: qualifier + value.model.schema
         case .union, .nothing, .flags: nested(value, qualifier, owner)
         }
@@ -662,7 +668,7 @@ enum GesCSharpModelEmitter {
 
     private static func isReference(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
-        case .text, .bytes, .list, .dice, .union, .poly: true
+        case .text, .bytes, .list, .dice, .union, .poly, .handleMap: true
         case .schema: !value.model.packed
         case .tag: !value.closedTag
         default: false
@@ -751,7 +757,7 @@ enum GesCSharpModelEmitter {
         if field.field.defaultValue != nil || field.value.nullable { return nil }
         if field.value.kind == .schema && field.value.model.packed { return nil }
         switch field.value.kind {
-        case .list, .dice, .schema, .union, .poly: return initial(field.value)
+        case .list, .dice, .schema, .union, .poly, .handleMap: return initial(field.value)
         default: return nil
         }
     }
@@ -764,7 +770,7 @@ enum GesCSharpModelEmitter {
         case .text: return "\"\""
         case .bytes: return "global::System.Array.Empty<byte>()"
         case .tag where !value.closedTag: return "\"\""
-        case .list, .dice: return "new \(plain(value))()"
+        case .list, .dice, .handleMap: return "new \(plain(value))()"
         case .schema where value.model.packed: return ""
         case .schema: return "new \(value.model.schema)()"
         case .union: return "new \(value.nested).\(value.alternatives[0].label)(\(zero(value.alternatives[0])))"
@@ -780,7 +786,7 @@ enum GesCSharpModelEmitter {
         case .number: return value.model.integer ? "0L" : "0d"
         case .tag where value.closedTag: return "default(\(value.nested))"
         case .flags: return "default(\(value.nested))"
-        case .point, .vector, .box, .disc, .map, .values: return "default(\(plain(value)))"
+        case .point, .vector, .box, .disc, .map, .values, .handle: return "default(\(plain(value)))"
         default: return initial(value)
         }
     }
@@ -788,6 +794,7 @@ enum GesCSharpModelEmitter {
     // Nested lists compare and hash through lambdas whose parameters are numbered by depth: x0 and y0, then x1 and y1.
     static func equal(_ value: GesModelPlanValue, _ left: String, _ right: String, _ support: String, _ depth: Int = 0, _ qualifier: String = "") -> String {
         if value.kind == .list || value.kind == .dice { return "\(support).ListEquals(\(left), \(right), \(comparer(value, support, depth, qualifier)))" }
+        if value.kind == .handleMap { return "\(support).MapEquals(\(left), \(right), \(comparer(value, support, depth, qualifier)))" }
         if value.kind == .bytes { return "\(support).BytesEquals(\(left), \(right))" }
         return "EqualityComparer<\(type(value, qualifier))>.Default.Equals(\(left), \(right))"
     }
@@ -800,6 +807,7 @@ enum GesCSharpModelEmitter {
 
     static func hash(_ value: GesModelPlanValue, _ expression: String, _ support: String, _ depth: Int = 0) -> String {
         if value.kind == .list || value.kind == .dice { return "\(support).ListHash(\(expression), \(elementHash(value, support, depth)))" }
+        if value.kind == .handleMap { return "\(support).MapHash(\(expression), \(elementHash(value, support, depth)))" }
         if value.kind == .bytes { return "\(support).BytesHash(\(expression))" }
         if value.kind == .number && !value.model.integer { return "\(support).Hash(\(expression))" }
         if isReference(value) || value.nullable { return "(\(expression)?.GetHashCode() ?? 0)" }
@@ -892,7 +900,7 @@ enum GesCSharpModelEmitter {
 
     // Equality and hashing helpers of the file, named after its header so that two generated files can share a namespace, and
     // the conversions that the script bindings and the plain values share.
-    private static func supportType(_ code: inout Code, _ name: String, conversions: Bool, geometry: Bool, data: Bool) {
+    private static func supportType(_ code: inout Code, _ name: String, conversions: Bool, geometry: Bool, data: Bool, handleMaps: Bool) {
         code.line("/// <summary>Value equality of lists and numbers\(conversions ? " and GES value conversions" : "") for the models of this file.</summary>")
         code.line("internal static class \(name)")
         code.open("{")
@@ -958,6 +966,8 @@ enum GesCSharpModelEmitter {
             code.line("return result is not null;")
             code.close()
         }
+
+        if handleMaps { handleHelpers(&code, conversions) }
         code.close()
     }
 
@@ -981,7 +991,7 @@ enum GesCSharpModelEmitter {
 
     private static func isValueType(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
-        case .boolean, .number, .point, .vector, .box, .disc, .flags, .map, .values: true
+        case .boolean, .number, .handle, .point, .vector, .box, .disc, .flags, .map, .values: true
         default: value.closedTag || (value.kind == .schema && value.model.packed)
         }
     }
@@ -1019,6 +1029,9 @@ enum GesCSharpModelEmitter {
         case .tag: return "\(support).Tag(\(expression))"
         case .list: return "\(support).List(\(expression), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, support, depth + 1, plain: plain, pattern: pattern)))"
         case .dice: return "\(support).Dice(\(expression))"
+        case .handle: return "\(expression).ToValue(\(value.model.versioned ? "true" : "false"))"
+        case .handleMap:
+            return "\(support).HandleMap(\(expression), k\(depth) => k\(depth).ToValue(false), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, support, depth + 1, plain: plain, pattern: pattern)))"
         case .map, .values: return "\(expression).ToValue()"
         case .point, .vector, .box, .poly, .disc: return "\(expression).ToValue(\(unitName(value.model.unit)))"
         case .schema: return plain ? "\(expression).ToValue()" : "\(expression).ToGesValue()"
@@ -1054,6 +1067,13 @@ enum GesCSharpModelEmitter {
             let element = value.element!
             return "\(support).List(\(expression), (in GesValue x\(depth), out \(type(element, qualifier, owner)) y\(depth)) => \(decode(element, owner, "x\(depth)", "out y\(depth)", qualifier, support, depth + 1)), \(target))"
         case .dice: return "\(support).Dice(\(expression), \(target))"
+        case .handle: return "\(plain(value, qualifier, owner)).Read(\(expression), \(value.model.versioned ? "true" : "false"), \(target))"
+        case .handleMap:
+            let key = value.key!
+            let element = value.element!
+            let keys = "(in GesValue k\(depth), out \(type(key, qualifier, owner)) h\(depth)) => \(decode(key, owner, "k\(depth)", "out h\(depth)", qualifier, support, depth + 1))"
+            let elements = "(in GesValue x\(depth), out \(type(element, qualifier, owner)) y\(depth)) => \(decode(element, owner, "x\(depth)", "out y\(depth)", qualifier, support, depth + 1))"
+            return "\(support).HandleMap(\(expression), \(keys), \(elements), \(target))"
         case .map: return "\(support).Map(\(expression), \(target))"
         case .values: return "\(support).Values(\(expression), \(target))"
         case .point: return "\(support).Point(\(expression), \(unitName(value.model.unit)), \(target))"

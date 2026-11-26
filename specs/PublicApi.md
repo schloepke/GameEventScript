@@ -226,6 +226,7 @@ It owns snapshots of all inputs needed after an operation returns.
 | `WithDebugInfo(options)` | Replaces the debug emission mask. `None`, `DebugSymbols`, `SourceMap`, and `SourceArchive` are independent flags; `All` is their union. |
 | `WithProgramVersion(version)` | Sets the exact unsigned 64-bit application program version; zero means development/unspecified. |
 | `WithExternalTypeCatalog(catalog)` | Sets the immutable declarative catalog used for compile-time resolution. The catalog is required when configured and contains no runtime callbacks. |
+| `WithHandleTypes(types)` | Declares the [handle types](#handle-api) the sources may name. *Since: Unreleased.* |
 | `Compile(options)` | Parses all added sources as one compilation, validates, optimizes, materializes an immutable Program, and validates that Program before returning it. Sources retain their AddScript order and source IDs. |
 
 `CompileOptions` is an immutable or snapshot-at-call value containing
@@ -495,6 +496,7 @@ struct or another compact representation. Public factory operations create:
 - immutable List and Map;
 - Handler signature and Message;
 - immutable Record by type name and ordered fields;
+- [handles](#handle-api) (*Since: Unreleased*);
 - External values through the external-type boundary.
 
 Factory operations snapshot mutable arrays/maps before returning. The portable
@@ -528,6 +530,15 @@ the member read never run host code.
 
 A `ValueMap` can be traversed in canonical key order; `Length`, `Key(index)` and
 `Value(index)` are its minimal form.
+
+> **Since: Unreleased** — handle keys
+
+A Map key is a Text or a [handle](#handle-api). Handle keys follow every Text key, in handle order. `Key(index)` of a
+handle key is the handle's text form; `HandleKey(index)` (Swift `handleKey(at:)`) returns the handle and null for a
+Text key, and `Get(handle)` and `ContainsKey(handle)` look one up by type and identity. `GesValue.GesMapOfKeys(GesValue[]
+keys, GesValue[] values)` (Swift `GesValue.map(keyValues:values:)`) creates a Map whose keys are Text or handle values;
+another key kind or a length mismatch is an `ArgumentException` (Swift `GesApiError.invalidArgument`), and the last
+entry of an equal key wins. A handle key keeps the version it was created with; equal keys compare without it.
 
 #### Free data
 
@@ -572,12 +583,12 @@ The language text is the representation of `as :Text`, the same as `ToString()` 
 these reads; `ValueUnit` reports them. A read that must not convert checks the kind first: Swift offers kind-strict
 optionals (`integerValue`, `floatValue`, `textValue`, `listValue`, `bytesValue`, `diceRolls`, `integerRangeValue`,
 `floatRangeValue`), and C# compares `ValueKind` before calling an `As...` read or uses the nullable views
-(`IntegerRange`, `FloatRange`, `ExternalValue`, `Message`, `Handler`), since GES has no public `Try...` contracts.
+(`IntegerRange`, `FloatRange`, `ExternalValue`, `Message`, `Handler`, `Handle`), since GES has no public `Try...` contracts.
 
 `ValueKind` uses the bytecode type kinds of [Bytecode](Bytecode.md) on purpose: the language's `is` checks, casts and the
 `.gesb` type operands use the same numbering, so a host compares a value's kind with the same constants as a Program.
 A host observes only Nothing, Boolean, Integer, Float, Percentage, Text, Tag, Vector, Point, Range, Dice, Bytes, List,
-Map, Handler, Message and Custom; the builder and iterator kinds exist only inside the VM's registers and never reach a
+Map, Handler, Message, Handle and Custom; the builder and iterator kinds exist only inside the VM's registers and never reach a
 value a host receives. Range covers both range storages and Custom both Records and external values, as the language
 does; `IntegerRange` / `integerRangeValue` and `FloatRange` / `floatRangeValue` tell the ranges apart, and
 `ExternalValue` / `externalValue` tells an external value from a Record. Renumbering these kinds is therefore a
@@ -776,7 +787,7 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 | wire error | `GesWireException(code, path)` and `GesWireException(code, path, detail)` with `Code`, `Path`, `Detail` (informative, empty unless a code gives one, such as `deeper than depth 3` for `wire.tooDeep`) and a public constant per `wire.*` code | `GesWireError(code:path:)` and `GesWireError(code:path:detail:)` with `code`, `path`, `detail` and a static constant per code |
 | bit writer | `ref struct GesBitWriter(Span<byte>)`, `GesBitWriter.Counting()`: `BitPosition`, `RequiredByteCount`, `Write(value, width)`, `WriteBytes`, `SetBit`, `Rewind`, `Finish` | `struct GesBitWriter(into:)`, `GesBitWriter.counting()`: `bitPosition`, `requiredByteCount`, `write(_:width:)`, `writeBytes(_:)` over a raw buffer or a `[UInt8]`, `setBit(_:)`, `rewind(to:)`, `finish()` |
 | bit reader | `ref struct GesBitReader(ReadOnlySpan<byte>, byteLimit)`: `BitPosition`, `RemainingBits`, `Read(width, path)`, `ReadBytes`, `Require`, `Seek`, `Finish` | `struct GesBitReader(data:byteLimit:)`: `bitPosition`, `remainingBits`, `read(_:path:)`, `readBytes(into:path:)`, `readBytes(_:into:path:)` into a `[UInt8]` that keeps its capacity, `require(_:path:)`, `seek(to:)`, `finish()` |
-| wire rules | `static class GesWireRules`: `IsValidUtf8`, `IsTagName`, `QuantizedIndex`, `WrappedQuantizedIndex`, `QuantizedValue`, `WrappedIndex`, `WriteDeltaRange`, `ReadDeltaRange` | `enum GesWireRules`: `isValidUTF8(_:)`, `isTagName(_:)`, `quantizedIndex(_:lowerValue:upperValue:tenPower:numerator:lower:path:)`, `wrappedQuantizedIndex(_:tenPower:numerator:lower:period:path:)`, `quantizedValue(_:lower:numerator:tenPower:)`, `wrappedIndex(_:lower:period:)`, `writeDeltaRange(_:index:held:maxIndex:wrapping:deltaRange:deltaWidth:width:)`, `readDeltaRange(_:held:maxIndex:wrapping:deltaRange:deltaWidth:width:path:)` |
+| wire rules | `static class GesWireRules`: `IsValidUtf8`, `IsTagName`, `QuantizedIndex`, `WrappedQuantizedIndex`, `QuantizedValue`, `WrappedIndex`, `WriteDeltaRange`, `ReadDeltaRange`, `WriteText`, `ReadText` | `enum GesWireRules`: `isValidUTF8(_:)`, `isTagName(_:)`, `quantizedIndex(_:lowerValue:upperValue:tenPower:numerator:lower:path:)`, `wrappedQuantizedIndex(_:tenPower:numerator:lower:period:path:)`, `quantizedValue(_:lower:numerator:tenPower:)`, `wrappedIndex(_:lower:period:)`, `writeDeltaRange(_:index:held:maxIndex:wrapping:deltaRange:deltaWidth:width:)`, `readDeltaRange(_:held:maxIndex:wrapping:deltaRange:deltaWidth:width:path:)`, `writeText(_:_:width:maxCount:path:)`, `readText(_:width:maxCount:current:path:)` |
 | deltas | `static GesSchemaDelta.Encode(schema, record, baseline, buffer)`, `Decode(schema, delta, baseline, buffer, byteLimit)` returning `GesSchemaDeltaDecoded` with `ByteCount`, `DeltaByteCount` | `GesSchemaDelta.encode(_:record:baseline:into:)`, `decode(_:delta:baseline:into:byteLimit:)` returning `GesSchemaDeltaDecoded` with `byteCount`, `deltaByteCount` |
 | value path (Runtime) | `static GesSchemaValues.Encode`, `Decode` returning `GesSchemaDecoded`, `ReadKey`, each `Encode` and `Decode` also with a baseline value, and the [lenient read](Schemas.md#lenient-read) `CompleteMessage(schema, message)` for a `GesSchema` or a `GesBoundSchema` | `GesSchemaValues.encode`, `decode` returning `GesSchemaDecoded`, `readKey`, each `encode` and `decode` also with `baseline:`, and `completeMessage(_:_:)` for both |
 | dump | `static GesSchemaDump.Read(schema, data)`, also with a baseline record | `GesSchemaDump.read(_:data:)`, also with `baseline:` |
@@ -851,7 +862,8 @@ The optional Sockets package (C# `GameEventScript.Network.Sockets`, .NET 8; Swif
 
 | Concept | C# | Swift |
 | --- | --- | --- |
-| declaration | `GesSchemaSet.Network(name)` returning `sealed class GesNetwork` with `Name`, `Routes`, `Bind(parameters)` | `network(_:)` (throwing) returning `final class GesNetwork` with `name`, `routes`, `bind(parameters:)` |
+| declaration | `GesSchemaSet.Network(name)` returning `sealed class GesNetwork` with `Name`, `Routes`, `Owners`, `Bind(parameters)` | `network(_:)` (throwing) returning `final class GesNetwork` with `name`, `routes`, `owners`, `bind(parameters:)` |
+| owner *(Since: Unreleased)* | `sealed class GesNetworkOwner` with `Side`, `Handle` (`GesHandleType`) | `final class GesNetworkOwner` with `side`, `handle` |
 | route | `sealed class GesNetworkRoute` with `Index`, `Channel`, `Side`, `Verb`, `Root`, `DeliveryClass`, `RateMicroseconds` | `final class GesNetworkRoute` with the same properties in lower camel case |
 | route enums | `GesNetworkSide`, `GesNetworkVerb`, `GesNetworkClass` | the same enums |
 | bound network | `sealed class GesBoundNetwork` with `Network`, `Roots`, `CanonicalForm`, `Hash` | `final class GesBoundNetwork` with `network`, `roots`, `canonicalForm`, `hash` |
@@ -905,6 +917,7 @@ reentrancy requirements of those callbacks.
 | `WithRandomSequence(values, fallbackSeed?)` | Copies a finite Binary64 start sequence, optionally selects a deterministic fallback seed, and clears a prior direct seed. Exhaustion continues with the private fallback generator. |
 | `WithExtensionRegistry(registry)` | Selects the extension registry. Absence is represented by an empty registry, not null. |
 | `WithExternalTypeRegistry(registry)` | Selects the runtime external-constructor registry. |
+| `WithHandleResolver(type, resolver)` | Registers the resolver of one [handle type](#handle-api). *Since: Unreleased.* |
 | `WithPublishSink(sink)` | Selects the single outbound sink. Not calling it means no sink. |
 | `WithProfiler(profiler)` | Selects optional synchronous opcode instrumentation; omission disables it. See [opcode instrumentation](#opcode-instrumentation). |
 | `WithRuntimeObserver(observer)` | Selects the single observer. Not calling it means no observer. |
@@ -966,6 +979,7 @@ rules are in [Host runtime](HostRuntime.md).
 | `IsIdle` | True only when no active message/handler and no queued logical message exists. |
 | `IdleDurationMicroseconds` | Optional Int64 idle duration on a ready Host; see [idle observation](HostRuntime.md#idle-duration-observation). |
 | `PendingMessageCount` | Number of queued logical messages according to HostRuntime; it never counts handler invocations. |
+| `ResolveRef(handle)` | Returns the handle with its ref resolved to a version; see [Handle API](#handle-api). *Since: Unreleased.* |
 | `PendingTimers` | A new snapshot list of `TimerInfo` values for the registered named timers, ordered by deadline and then send ID; reading never pumps. |
 
 Equal priority uses stable registration order. A logical message completes all
@@ -989,7 +1003,7 @@ and a stable non-reused host-local registration ID, not a closure.
 > **Since: Unreleased** — `Reset`, `PendingTimers` and `TimerInfo`
 
 `TimerInfo` (C# and Swift `GesTimerInfo`) is an immutable snapshot of one named
-timer with `Name` (the key as Text), `Deadline` (the current firing's absolute
+timer with `Name` (the key as a Text or handle value), `Deadline` (the current firing's absolute
 deadline in whole microseconds on the Host clock), `Period` (whole microseconds,
 0 for a one-shot `after` timer), `MessageName`, the sending `Instance` and
 `Publish`. Their meaning is defined in [Named timers](HostRuntime.md#named-timers).
@@ -1062,8 +1076,8 @@ RuntimeObserver receives synchronous callbacks in exact dispatch order:
 - `RuntimeError(diagnostic)` for a runtime diagnostic;
 - `MessageScheduled(message, id, deadline, publish, name, period)` once when a
   delayed Emit or Publish is accepted, before that Emit's `MessageEmitted`, and
-  for each re-arming of a repeating named timer; `name` is absent and `period` 0
-  for an unnamed send;
+  for each re-arming of a repeating named timer; `name` is the timer's Text or
+  handle value, `nothing` and `period` 0 for an unnamed send;
 - `MessageDiscarded(id)` once for each message removed before it was dispatched;
 - `HostReset()` once for each successful `Reset()`, which reports no individual discards.
 
@@ -1299,6 +1313,55 @@ getter and no other, and each conversion to Map, JSON or schema encoding runs al
 them again, in declaration order. The first failing declared field therefore decides the
 failure, and a field without a value is left out. Platform object identity, reflection, and lifetime management are adapter
 responsibilities.
+
+## Handle API
+
+> **Since: Unreleased**
+
+[Handles](Language.md#handles) refer to objects outside the host. Their types come from schema sources; the compiler
+receives the declarations, the host one resolver per type that reads state. Contract:
+[Host runtime](HostRuntime.md#handles).
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| handle value | `sealed class GesHandle` with `TypeName`, `Id`, `Version`, `Ref`, `Part`, `IsComposite`, `HasVersion`, `static Create(typeName, id)`, `Create(typeName, id, version)`, `CreateComposite(typeName, root, part)`, `WithVersion(version)`, `static Parse(text)`, `ToString()`; `IEquatable<GesHandle>`, `IComparable<GesHandle>` | `final class GesHandle` with `typeName`, `id`, `version`, `ref`, `part`, `isComposite`, `hasVersion`, `init(typeName:id:version:)`, `init(typeName:root:part:)`, `withVersion(_:)`, `init(parsing:) throws`, `description`; `Hashable`, `Comparable`, `Sendable` |
+| value | `GesValue.GesHandle(handle)`, `ValueKind == GesBytecodeTypeKind.Handle`, `Handle` (null for another kind) | `GesValue.handle(_:)`, `kind == .handle`, `handleValue` |
+| fixed hashes | `readonly struct GesHash20`, `GesHash32` with `static Parse(hex)`, `FromBytes(span)`, `CopyTo(span)`, `ToString()` (lowercase hex), equality and order by bytes | `struct GesHash20`, `GesHash32` with `init?(hex:)`, `init?(bytes:)`, `bytes`, `description`, `Hashable`, `Comparable`, `Sendable`, `Codable` |
+| handle type | `sealed class GesHandleType` with `Name`, `StateName`, `Id` and `Part` (`GesHandleKey` or null), `Version` (`GesHandleVersionKind`), `Root` (`GesHandleType` or null), `Hash`, `CanonicalForm` | `final class GesHandleType` with `name`, `stateName`, `id`, `part`, `version`, `root`, `hash`, `canonicalForm` |
+| key description | `readonly struct GesHandleKey` with `IsText`, `Minimum`, `Maximum` (integer) or `MaxLength` (Text) | `struct GesHandleKey` with `isText`, `minimum`, `maximum`, `maxLength` |
+| version kinds | `enum GesHandleVersionKind { None, Revision, Sha1, Sha256, ContentHash }` | `enum GesHandleVersionKind` with the same cases |
+| from schemas | `GesSchemaSet.HandleTypes`, `HandleType(name)` | `GesSchemaSet.handleTypes`, `handleType(_:)` |
+| compiler | `GesProgramBuilder.WithHandleTypes(types)` | `withHandleTypes(_:)` |
+| resolver | `interface IGesHandleResolver` with `Resolve(GesHandleResolveCall call)` and `ResolveRef(GesHandle handle)` returning a version `GesValue` | `protocol GesHandleResolver` with `resolve(_:) throws` and `resolveRef(_:) throws -> GesValue` |
+| resolve call | `sealed class GesHandleResolveCall` with `Handle`, `HandleType`, `SetState(record)`, `SetState(record, version)`, `SetDocument(text)`, `SetDocument(text, version)`, `SetMissing()` | `final class GesHandleResolveCall` with `handle`, `handleType`, `setState(_:version:)`, `setDocument(_:version:)`, `setMissing()` |
+| host builder | `WithHandleResolver(type, resolver)` | `withHandleResolver(_:for:)` |
+| refs | `GameEventScriptHost.ResolveRef(handle)` | `GameEventScriptHost.resolveRef(_:) throws` |
+| content hash | `static GesSchemaValues.ContentHash(handleType, state)` returning `GesHash32`; throws `GesWireException` (`wire.typeMismatch`, `wire.missingField`) for a state the state schema does not accept | `GesSchemaValues.contentHash(_:state:) throws` returning `GesHash32` |
+
+- `GesHandle` is immutable. `Id` and `Part` are an integer Number or a Text; `Version` is an integer Number for a
+  revision, Bytes for a hash, and Nothing without one; `Ref` is a Tag or Text from a document, otherwise Nothing; a
+  handle carries at most one of version and ref. A composite's `Id`, `Version` and `Ref` are its root's and `Part` is
+  its part; `CreateComposite` takes them from a root handle. A handle names no root type, because its text form does
+  not: the compiler supplies the root type of `h.root` from the catalog. The factories check the text form's rules, that an integer id fits Int64,
+  and that a version is an integer or 20 or 32 bytes; they do not consult a catalog. Equality, hashing and order
+  follow [Language](Language.md#handles) and ignore version and ref.
+- `Parse` reads the [text form](Language.md#handle-text-form), refs included, and throws `ArgumentException`
+  (Swift `GesApiError.invalidArgument`) for anything else; `ToString` writes the canonical form.
+- `GesHandleType` is the declarative description of one `handle` declaration of a schema set; `Hash` is its
+  [canonical hash](Schemas.md#canonical-form). `WithHandleTypes` makes their names and state schemas known to the
+  compiler; a name the compilation uses that none declares is `validate.unknownHandleType`. The Program keeps only
+  the name and hash.
+- `WithHandleResolver` registers one resolver per type and replaces an earlier one for the same name. Load links
+  against these registrations as [Host runtime](HostRuntime.md#handles) describes. A resolver call is synchronous, and
+  neither the call nor its arguments may be retained. `SetState` takes a Record of the state schema, `SetDocument`
+  `.gesd` text; the version is an integer Number or Bytes. Not calling any of the three, calling two of them, or
+  throwing ends the read as `runtime.invalidHandleState` or `runtime.handleResolveFailed`.
+- `ResolveRef` returns the handle with the version the type's resolver returns for its ref, and the handle itself if it
+  carries none. A type without a resolver, a resolver result that is not a valid version, and a resolver failure throw
+  `GesHandleException` (Swift `GesHandleError`) with the stable code `runtime.handleResolveFailed`.
+- `Receive` and a native handler's `Emit` and `Publish` throw `GesWireException` (Swift: the methods are
+  `throws(GesWireError)`) with `wire.unresolvedRef` and the path `Message.label` (the index for an unlabeled argument)
+  for a message whose argument holds a handle with a ref, as [Host runtime](HostRuntime.md#handles) requires.
 
 ## Diagnostics and failure transport
 

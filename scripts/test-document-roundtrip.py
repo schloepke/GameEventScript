@@ -192,6 +192,38 @@ def edge_documents():
     ordered = sorted(entries.items(), key=lambda item: scalar_order(item[0]))
     yield ("quantities", "\n".join(lines) + "\n", {"type": ":Map", "entries": [{"key": k, "value": e} for k, e in ordered]},
            {"kind": "file", "name": "schemas/edges.gess"})
+    yield handle_document()
+
+
+# Handle values in written and canonical text form: integer, bare and quoted Text ids, revisions, hash versions, refs
+# (`~#tag`, `~'text'`) and composite parts. Writers use the bare form whenever it applies.
+SHA1 = "3f2a" + "0" * 34 + "01"
+SHA256 = "ab" * 32
+HANDLES = [("@Target:3", "@Target:3"), ("@Target:-12", "@Target:-12"), ("@Unit:drone.gnabblo", "@Unit:drone.gnabblo"),
+           ("@Unit:'plain'", "@Unit:plain"), ("@Unit:'One Two'", "@Unit:'One Two'"), ("@Unit:'it''s'", "@Unit:'it''s'"),
+           ("@Unit:'7'", "@Unit:'7'"), ("@Unit:'Grüße'", "@Unit:'Grüße'"), ("@Drone:7~120", "@Drone:7~120"),
+           (f"@Repository:main~{SHA1}", f"@Repository:main~{SHA1}"), (f"@Unit:x~{SHA256}", f"@Unit:x~{SHA256}"),
+           ("@Base:'north'~#live/hangar", "@Base:north~#live/hangar"), ("@Unit:drone.gnabblo~'1.0'", "@Unit:drone.gnabblo~'1.0'"),
+           ("@Unit:x~'it''s'", "@Unit:x~'it''s'"), (f"@UnitFile:content~{SHA1}/Units/radar.gesd", f"@UnitFile:content~{SHA1}/Units/radar.gesd"),
+           ("@UnitSlot:drone.gnabblo/1", "@UnitSlot:drone.gnabblo/1"), ("@UnitSlot:'a b'/'c d'", "@UnitSlot:'a b'/'c d'")]
+# Map keys in key order: Text keys, then handles by type name, integer ids numerically, Text ids in scalar order.
+HANDLE_KEYS = [("@Unit:b", "@Unit:b"), ("@Target:3", "@Target:3"), ("@Unit:'A B'", "@Unit:'A B'"), ("@Target:-1", "@Target:-1"),
+               ("@UnitSlot:x/2", "@UnitSlot:x/2"), ("@UnitSlot:x/10", "@UnitSlot:x/10")]
+HANDLE_KEY_ORDER = ["@Target:-1", "@Target:3", "@Unit:'A B'", "@Unit:b", "@UnitSlot:x/2", "@UnitSlot:x/10"]
+
+
+def handle_document():
+    lines, entries = ["// handle values and handle Map keys"], {}
+    for index, (text, canonical) in enumerate(HANDLES):
+        lines.append(f"h{index}: {text}")
+        entries[f"h{index}"] = {"type": ":Handle", "value": canonical}
+    keyed = ", ".join(f"{text}: {index}" for index, (text, _) in enumerate(HANDLE_KEYS))
+    lines.append(f"keys: [{keyed}, text: true]")
+    values = {canonical: index for index, (_, canonical) in enumerate(HANDLE_KEYS)}
+    entries["keys"] = {"type": ":Map", "entries": [{"key": "text", "value": {"type": ":Boolean", "value": "true"}}]
+                       + [{"handle": key, "value": {"type": ":Number.int64", "value": str(values[key])}} for key in HANDLE_KEY_ORDER]}
+    ordered = sorted(entries.items(), key=lambda item: scalar_order(item[0]))
+    return ("handles", "\n".join(lines) + "\n", {"type": ":Map", "entries": [{"key": k, "value": e} for k, e in ordered]}, None)
 
 
 def request(texts, printing):

@@ -23,6 +23,10 @@ Execution mode:
   --scenario <file.ges>  Run a separate scenario instead of Main. Repeat for combined sources.
   --interactive         Open the event console instead of Main. Initial files are optional.
 
+Compilation:
+  --handles <schema.gess> Declare the handle types of a schema source to every compilation,
+                        including scenarios, :load, :reload, :edit and console input. Repeatable.
+
 Main arguments (always Text, in command-line order):
   --arg <text>          Append exactly one value, even if it looks like an option.
   --args <text> ...     Append values until the next option. Negative numbers are values.
@@ -68,8 +72,9 @@ ErrorCode(code: 0..255) sets the script exit code; nothing resets it to 0.
 All initial Programs load before execution. Sources compile together; binaries
 load independently in input order. Sources and binaries cannot be mixed in one run.
 --scenario and --interactive are mutually exclusive and accept no Main arguments.
-Use './-file.ges' for a program path starting with '-'. No custom extensions or
-external types are registered. Runtime errors/limits exit with 1; usage errors with 2.
+Use './-file.ges' for a program path starting with '-'. No custom extensions,
+external types or handle resolvers are registered; a program that reads handle
+state fails to load. Runtime errors/limits exit with 1; usage errors with 2.
 """;
 
     internal static int Run(string[] arguments)
@@ -83,6 +88,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         using var errorColors = new RunErrorColors();
         var inputs = new List<string>();
         var scenarios = new List<string>();
+        var handleArguments = new List<string>();
         var mainArguments = new List<GesValue>();
         var suppliedOptions = new HashSet<string>(StringComparer.Ordinal);
         string? profilePath = null;
@@ -128,6 +134,12 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
             {
                 Console.WriteLine(HelpText);
                 return 0;
+            }
+            else if (argument == ToolHandles.Option)
+            {
+                if (index + 1 == arguments.Length || arguments[index + 1].StartsWith('-') || string.IsNullOrWhiteSpace(arguments[index + 1]))
+                    return UsageError("Specify a schema path after --handles; prefix a path starting with '-' with './'.");
+                handleArguments.Add(arguments[++index]);
             }
             else if (argument is "--scenario" or "--arg" or "--seed" or "--max-messages" or "--max-steps" or "--profile")
             {
@@ -183,6 +195,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         string? activePath = null;
         try
         {
+            var handleTypes = ToolHandles.Load(handleArguments, ref activePath);
             var paths = CompileSources.Expand(inputs);
             var binaryCount = paths.Count(path => string.Equals(Path.GetExtension(path), ".gesb", StringComparison.OrdinalIgnoreCase));
             if (binaryCount > 0 && binaryCount != paths.Count) return UsageError("Run accepts either source files compiled together or binary files loaded separately; inputs cannot be mixed.");
@@ -195,10 +208,10 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
                     programs.Add(GameEventScriptProgram.Read(File.ReadAllBytes(path)));
                 }
             }
-            else if (paths.Count > 0) programs.Add(RunProgramFiles.Compile(paths, ref activePath));
+            else if (paths.Count > 0) programs.Add(RunProgramFiles.Compile(paths, handleTypes, ref activePath));
 
             IReadOnlyList<string> scenarioPaths = scenarios.Count == 0 ? [] : CompileSources.Expand(scenarios);
-            var scenario = scenarioPaths.Count == 0 ? null : RunProgramFiles.Compile(scenarioPaths, ref activePath);
+            var scenario = scenarioPaths.Count == 0 ? null : RunProgramFiles.Compile(scenarioPaths, handleTypes, ref activePath);
             if (profilePath is not null)
             {
                 profilePath = Path.GetFullPath(profilePath);
@@ -209,7 +222,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
             try
             {
                 color = color && !PrettyPrompt.PromptConfiguration.HasUserOptedOutFromColor;
-                var session = new RunSession(seed, new GesRuntimeLimits { MaxProcessedMessagesPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, profiler: profiler);
+                var session = new RunSession(seed, new GesRuntimeLimits { MaxProcessedMessagesPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, workspace: new RunWorkspace { HandleTypes = handleTypes }, profiler: profiler);
                 for (var index = 0; index < programs.Count; index++) session.Inventory.Load(programs[index], binaryCount > 0 ? [paths[index]] : paths);
                 if (scenario is not null) session.Inventory.Load(scenario, scenarioPaths);
                 var runMain = scenario is null && !interactive;
@@ -259,6 +272,11 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         catch (GesDynamicLinkException exception)
         {
             foreach (var diagnostic in exception.Diagnostics) RunObserver.WriteDiagnostic(diagnostic, "link");
+            return 1;
+        }
+        catch (GesSchemaException exception)
+        {
+            ToolHandles.Report(exception);
             return 1;
         }
         catch (DecoderFallbackException exception)

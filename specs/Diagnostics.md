@@ -49,7 +49,11 @@ Validation uses the following semantic codes:
   `validate.invalidTypeConstructor`, `validate.invalidTag` (the literal `nothing` or a
   constant with that value in a tag clause; **Since: 0.5.0**),
   `validate.invalidTagFilter` (a `|` alternative inside a `without` filter;
-  **Since: 0.6.0**).
+  **Since: 0.6.0**);
+- `validate.unknownHandleType` (an `@Name` no [handle type](Language.md#handles) of the
+  compilation declares) and `validate.invalidHandleUse` (`as @Name` outside a parameter or
+  field, `@Name~` or `h.version` of a type without versions, a union mixing handle and other
+  types); **Since: Unreleased**.
 
 Compiler lowering/resource analysis uses `compile.unsupportedConstruct`,
 `compile.invalidArity`, `compile.unresolvedSymbol`,
@@ -123,7 +127,10 @@ Linking uses `link.requiredRegisterCountExceeded`,
 `link.requiredCallStackDepthExceeded`, `link.invalidExtensionReference`,
 `link.missingExtension`, `link.missingExternalTypeConstructor`,
 `link.mismatchedExternalTypeConstructor`, `link.cyclicCallGraph`, and
-`link.invalidProgram`. `link.initializationQueueFull` rejects loading when the
+`link.invalidProgram`; **Since: Unreleased:** `link.missingHandleResolver` (the
+Program reads the state of a handle type without a registered resolver) and
+`link.mismatchedHandleType` (the registered handle type's hash differs from the
+Program's), both with the handle type name in `symbol`. `link.initializationQueueFull` rejects loading when the
 host cannot enqueue the instance's initialization snapshot. It carries the
 Program's module name in `programName`; its atomicity and retry rules are defined
 in [Host runtime](HostRuntime.md#loading-and-startup).
@@ -146,7 +153,9 @@ length. The location takes its source name, source ID, line and end line from
 the SourceMap and its Unicode-scalar columns from the SourceArchive; without a
 SourceArchive the columns are absent. Without a SourceMap, or when no
 instruction maps to the source, the failure has a single diagnostic without
-location. Every other link failure has a single diagnostic without location.
+location. `link.missingHandleResolver` has one diagnostic located at the first
+instruction that reads the type's state, found the same way. Every other link
+failure has a single diagnostic without location.
 The message names the import, for example
 `Unknown extension :navigation.nope(x)`.
 
@@ -162,7 +171,12 @@ Runtime uses these stable codes:
 - `runtime.unhandledFailure`, `runtime.nativeHandlerFailure`, and
   `runtime.publishSinkFailure`;
 - `runtime.extensionCallFailed`, `runtime.externalConstructorFailed`, and
-  `runtime.externalFieldAccessFailed`.
+  `runtime.externalFieldAccessFailed`;
+- `runtime.handleResolveFailed` (a handle resolver threw or reported failure, or a
+  state read of a type without resolver), `runtime.invalidHandleState` (its answer
+  does not fit the state schema) and `runtime.handleVersionMismatch` (a passed or
+  computed version differs from the carried one), each with the handle's text form in
+  `symbol`; **Since: Unreleased**.
 
 `runtime.randomStackUnderflow` reports an attempted pop across an active runtime
 boundary, while `runtime.randomScopeImbalance` reports scopes left open by a

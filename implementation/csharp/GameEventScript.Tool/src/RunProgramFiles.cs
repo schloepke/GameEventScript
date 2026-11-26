@@ -10,9 +10,9 @@ internal static class RunProgramFiles
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
-    internal static GameEventScriptProgram Compile(IReadOnlyList<string> paths, ref string? activePath)
+    internal static GameEventScriptProgram Compile(IReadOnlyList<string> paths, IReadOnlyList<GesHandleType> handleTypes, ref string? activePath)
     {
-        var builder = new GesProgramBuilder();
+        var builder = ToolHandles.Builder(handleTypes);
         foreach (var path in paths)
         {
             activePath = path;
@@ -21,10 +21,10 @@ internal static class RunProgramFiles
         return builder.Compile();
     }
 
-    internal static GameEventScriptProgram ReadOne(string path)
+    internal static GameEventScriptProgram ReadOne(string path, IReadOnlyList<GesHandleType> handleTypes)
     {
         if (string.Equals(Path.GetExtension(path), ".gesb", StringComparison.OrdinalIgnoreCase)) return GameEventScriptProgram.Read(File.ReadAllBytes(path));
         string? activePath = path;
-        return Compile([path], ref activePath);
+        return Compile([path], handleTypes, ref activePath);
     }
 }

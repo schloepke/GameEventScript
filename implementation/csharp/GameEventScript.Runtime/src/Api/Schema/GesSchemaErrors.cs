@@ -59,6 +59,15 @@ public sealed class GesWireException : Exception
     /// <summary>The code <c>wire.invalidPadding</c>: a padding bit is not zero.</summary>
     public const string InvalidPadding = "wire.invalidPadding";
 
+    /// <summary>The code <c>wire.invalidKeyOrder</c>: the keys of a handle Map are not strictly ascending.</summary>
+    public const string InvalidKeyOrder = "wire.invalidKeyOrder";
+
+    /// <summary>The code <c>wire.missingVersion</c>: an <c>@Name~</c> field receives a handle without a version.</summary>
+    public const string MissingVersion = "wire.missingVersion";
+
+    /// <summary>The code <c>wire.unresolvedRef</c>: a handle that still holds a ref reaches the wire.</summary>
+    public const string UnresolvedRef = "wire.unresolvedRef";
+
     /// <summary>The code <c>wire.limitExceeded</c>: the record exceeds the caller's byte limit.</summary>
     public const string LimitExceeded = "wire.limitExceeded";
 

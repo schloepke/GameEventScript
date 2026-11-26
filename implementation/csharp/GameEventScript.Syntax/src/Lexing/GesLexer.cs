@@ -15,6 +15,8 @@ internal enum GesTokenKind
     Message,
     Identifier,
     TypeName,
+    // A handle type, `@Name` or `@Name~`.
+    HandleTypeName,
     ConstantReference,
     Tag,
     // A `:word` that is not a selector keyword, such as an extension namespace or a pipeline selector name.
@@ -249,6 +251,7 @@ internal sealed class GesLexer
                 case '\'':
                 case '"': return ReadTextToken(startLine, startColumn);
                 case ':' when GesText.IsAsciiUpper(Peek()): return ReadTypeToken(startLine, startColumn);
+                case '@' when GesText.IsAsciiUpper(Peek()): return ReadHandleTypeToken(startLine, startColumn);
                 case ':' when GesText.IsAsciiLower(Peek()): return ReadSelectorToken(startLine, startColumn);
                 case '#' when GesText.IsAsciiLower(Peek()): return ReadTagToken(startLine, startColumn);
                 case '$' when GesText.IsAsciiLower(Peek()): return ReadConstantReferenceToken(startLine, startColumn);
@@ -588,6 +591,20 @@ internal sealed class GesLexer
         ReadUpperNameSegments();
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
             return CreateToken(GesTokenKind.TypeName, _input[start.._index], line, column);
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
+        return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+    }
+
+    // `@Name` with an attached `~` for a handle type with a version.
+    private GesToken ReadHandleTypeToken(int line, int column)
+    {
+        var start = _index;
+        Advance();
+        ReadWordName();
+        ReadUpperNameSegments();
+        if (!IsAtEnd && Current == '~') Advance();
+        if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
+            return CreateToken(GesTokenKind.HandleTypeName, _input[start.._index], line, column);
         while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }

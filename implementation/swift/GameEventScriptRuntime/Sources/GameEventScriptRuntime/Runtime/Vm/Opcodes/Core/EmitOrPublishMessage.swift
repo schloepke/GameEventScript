@@ -17,6 +17,6 @@ extension GesVirtualMachine {
             guard let taggedMessage = try? Self.tagged(message, values(valueMessage ? i.word2 : i.word1)) else { return }
             message = taggedMessage
         }
-        if [.publishMessage, .publishMessageWithTags, .publishMessageValue, .publishMessageValueWithTags].contains(i.opcode) { c.publish(message) } else { c.emit(message) }
+        if [.publishMessage, .publishMessageWithTags, .publishMessageValue, .publishMessageValueWithTags].contains(i.opcode) { _ = c.publishUnchecked(message) } else { _ = c.emitUnchecked(message) }
     }
 }

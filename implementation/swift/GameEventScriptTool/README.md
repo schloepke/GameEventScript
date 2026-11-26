@@ -86,6 +86,7 @@ ges schema generate world.gess --root Bot --param worldWidth=2000m --language sw
 ges run game.ges --args 12 Hello 34
 ges run first.gesb second.gesb -- 12 Hello --color
 ges run game.ges --scenario scenario.ges --seed 42
+ges run game.ges --handles catalog.gess
 ges run --interactive --color
 ```
 
@@ -116,6 +117,17 @@ Compilation/check reports and ordinary dumps go to stdout.
 `path(line,column): error document.code: message`; `document format` prints a
 document in the recommended layout or writes it with `-o`. Both behave like the
 C# commands documented in the C# CLI README.
+
+### Handle types
+
+> **Since: Unreleased**
+
+`--handles <schema.gess>` declares the handle types of schema sources to `compile`, `check` and `run`, as the
+[C# CLI's handle types](../../csharp/GameEventScript.Tool/README.md#handle-types) describe: it is repeatable, expands
+file-name patterns, reads all files once as one schema set and reports schema errors in the `schema check` format.
+`run` passes the types to every compilation of the session (scenarios, console input, `:load`, `:reload`, `:edit`)
+without re-reading the files. The CLI registers no handle resolver, so a Program that reads handle state fails to load
+with `link.missingHandleResolver`.
 
 ## Event console
 

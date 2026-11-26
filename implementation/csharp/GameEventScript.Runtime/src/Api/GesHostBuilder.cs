@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using GameEventScript.Runtime.Vm;
 
 namespace GameEventScript.Api;
 
@@ -136,6 +137,25 @@ public sealed class GesHostBuilder
         return this;
     }
 
+    private Dictionary<string, GesHandleBinding>? _handleResolvers;
+
+    /// <summary>
+    /// Registers the resolver that reads the state of one handle type's objects, replacing an earlier one for the same
+    /// type name. Loading compares the type's hash with each Program that names it.
+    /// </summary>
+    /// <param name="type">The handle type, from a schema set.</param>
+    /// <param name="resolver">The resolver. It is shared by every host this builder builds afterwards.</param>
+    /// <returns>This builder.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="type"/> or <paramref name="resolver"/> is <see langword="null"/>.</exception>
+    public GesHostBuilder WithHandleResolver(GesHandleType type, IGesHandleResolver resolver)
+    {
+        if (type is null) throw new ArgumentNullException(nameof(type));
+        if (resolver is null) throw new ArgumentNullException(nameof(resolver));
+        _handleResolvers ??= new Dictionary<string, GesHandleBinding>(StringComparer.Ordinal);
+        _handleResolvers[type.Name] = new GesHandleBinding(type, resolver);
+        return this;
+    }
+
     /// <summary>
     /// Configures the immutable safety limits copied into subsequently built hosts.
     /// </summary>
@@ -162,6 +182,8 @@ public sealed class GesHostBuilder
         else
             random = GesRandomGenerator.CreateForHost(maxRandomScopeDepth);
 
-        return new GameEventScriptHost(random, _observer, _extensionRegistry, _externalTypeRegistry, _limits, _publishSink, _clock, _profiler);
+        var host = new GameEventScriptHost(random, _observer, _extensionRegistry, _externalTypeRegistry, _limits, _publishSink, _clock, _profiler);
+        if (_handleResolvers is { } resolvers) host.HandleResolvers = new Dictionary<string, GesHandleBinding>(resolvers, StringComparer.Ordinal);
+        return host;
     }
 }

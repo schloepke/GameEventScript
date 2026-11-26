@@ -87,6 +87,13 @@ starts with a digit, or with a sign or `.` before a digit, and `Infinity` and
 `NaN` are Number, also with an unknown unit. Brackets, parentheses, commas and
 colons are Symbol. Other words, such as unquoted Text, are Plain.
 
+In a handle, such as `@Drone:7~120/arm`, the `@Type` is Type and the `:`, `~`
+and `/` that follow it are Symbol; a quoted id, part or ref is String, a ref
+`#name` is Tag, an integer id or part and a version are Number, and other bare
+ids and parts are Plain. When the text after `@Type` is no well-formed handle,
+only `@Type` is categorized as a handle and the rest as other tokens. *Since:
+Unreleased — handles.*
+
 The diagnostics hold the document's first reading error, with the code and
 position [Documents](Documents.md#errors) defines. Its range covers the token
 of `document.unquotedText`, `document.unknownUnit` and a token's
@@ -109,8 +116,9 @@ Number that runs up to whitespace, a line break, `,`, a parenthesis, a brace, `|
 one Number. A word of ASCII letters and digits is Keyword when it is one of `schema`, `message`, `messages`, `constant`,
 `parameter`, `as`, `be`, `between`, `and`, `wrapping`, `step`, `delta`, `within`, `integer`, `optional`, `key`, `max`,
 `depth`, `tags`, `wire`, `model`, `let`, `default`, `true`, `false`, `abstract`, `with`, `all`, `without`, `computed`,
-`by`, `when`, `otherwise`, `or`, `not`, `of`, `min`, `clamp`, `abs` and `has`; otherwise a word that starts with an
-uppercase letter, joined like a Type, is Message, and any other word is Identifier.
+`by`, `when`, `otherwise`, `or`, `not`, `of`, `min`, `clamp`, `abs`, `has`, `handle`, `composite` and `owns`; otherwise a word that starts with an
+uppercase letter, joined like a Type, is Message, and any other word is Identifier. `@` before an uppercase letter
+starts a Type joined the same way, including a directly following `~`. *Since: Unreleased — handles.*
 
 The diagnostics hold the first error of reading the source, with the code and position [Schemas](Schemas.md) defines.
 Its range covers the scalar at the position, both UTF-16 units of one outside the BMP, or has length zero at the end
@@ -128,7 +136,7 @@ Constant, Number, String, Comment, Symbol, Function, Module, Label and Register.
 | Builtin | intrinsics, selectors, `:namespace.name` extension names, units of `:Quantity(...)`, inline-assembly opcodes | — | `fibonacci` and `factorial` of `:Series` | — |
 | Identifier | variables, bindings, parameters, fields, members, argument labels, map keys | attribute names before `=` | keys, labels, handler parameters | other words starting in lowercase, such as field and parameter names |
 | Message | message and handler names | — | message names of `:Message` and `:Handler` | other words starting in uppercase |
-| Type | type names such as `:Number` and record types | capitalized words that name no label | `:Name` of typed forms and the schema type | `:Name` |
+| Type | type names such as `:Number` and record types, handle types such as `@Target~` | capitalized words that name no label | `:Name` of typed forms and the schema type, the `@Type` of a handle | `:Name`, `@Name` and `@Name~` |
 | Tag | tags | segment names, units after `unit:` | tags | `#name` |
 | Constant | `$constant` references | — | — | `$name` |
 | Number | numeric literals with their whole unit spelling, such as `2m²`, `2m^2` and `4/s`, compact dice such as `2d6`, math constants | numbers, `#` immediates | numbers with units, `Infinity`, `NaN` | numbers with their unit spelling |

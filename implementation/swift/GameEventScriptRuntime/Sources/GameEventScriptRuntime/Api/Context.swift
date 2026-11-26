@@ -13,11 +13,12 @@ public final class GesContext {
 
     func send(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64) -> Bool { host?.send(message, publish: publish, microseconds: microseconds) ?? false }
 
-    func sendNamed(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64, name: String, repeats: Bool) -> Bool {
+    // The timer name is a Text or a handle; a handle name differs from every Text name.
+    func sendNamed(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64, name: GesValue, repeats: Bool) -> Bool {
         host?.sendNamed(message, publish: publish, microseconds: microseconds, name: name, repeats: repeats) ?? false
     }
 
-    func cancelTimers(mode: Int, name: String?) -> Bool { host?.cancelTimers(mode: mode, name: name) ?? false }
+    func cancelTimers(mode: Int, name: GesValue?) -> Bool { host?.cancelTimers(mode: mode, name: name) ?? false }
 
     let observer: (any GesRuntimeObserver)?
     lazy var budget = GesRuntimeBudget(context: self)
@@ -37,19 +38,34 @@ public final class GesContext {
 
     /// Enqueues local delivery without pumping. Returns false if the host no longer exists or rejects the message. The
     /// name overload validates message arguments and may throw.
-    @discardableResult public func emit(_ message: GameEventScriptMessage) -> Bool { host?.emit(message) ?? false }
+    ///
+    /// - Throws: `GesWireError` with `wire.unresolvedRef` when an argument contains a handle that carries a ref.
+    @discardableResult public func emit(_ message: GameEventScriptMessage) throws(GesWireError) -> Bool {
+        try GameEventScriptHost.rejectRefs(message)
+        return emitUnchecked(message)
+    }
+
+    // Script sends: the VM never holds a ref, so they skip the check.
+    func emitUnchecked(_ message: GameEventScriptMessage) -> Bool { host?.emit(message) ?? false }
+
+    func publishUnchecked(_ message: GameEventScriptMessage) -> GesPublishResult { host?.publish(message) ?? .init(localAccepted: false, outboundAttempted: false, outboundAccepted: false) }
 
     /// Enqueues local delivery and attempts outbound delivery, or stages publication during initialization. Returns
     /// separate acceptance flags. The name overload validates the message and may throw.
-    @discardableResult public func publish(_ message: GameEventScriptMessage) -> GesPublishResult { host?.publish(message) ?? .init(localAccepted: false, outboundAttempted: false, outboundAccepted: false) }
+    ///
+    /// - Throws: `GesWireError` with `wire.unresolvedRef` when an argument contains a handle that carries a ref.
+    @discardableResult public func publish(_ message: GameEventScriptMessage) throws(GesWireError) -> GesPublishResult {
+        try GameEventScriptHost.rejectRefs(message)
+        return publishUnchecked(message)
+    }
 
     /// Enqueues local delivery without pumping. Returns false if the host no longer exists or rejects the message. The
     /// name overload validates message arguments and may throw.
-    @discardableResult public func emit(_ name: String, arguments: [GesMessageArgument] = []) throws -> Bool { emit(try .init(name: name, arguments: arguments)) }
+    @discardableResult public func emit(_ name: String, arguments: [GesMessageArgument] = []) throws -> Bool { try emit(try .init(name: name, arguments: arguments)) }
 
     /// Enqueues local delivery and attempts outbound delivery, or stages publication during initialization. Returns
     /// separate acceptance flags. The name overload validates the message and may throw.
-    @discardableResult public func publish(_ name: String, arguments: [GesMessageArgument] = []) throws -> GesPublishResult { publish(try .init(name: name, arguments: arguments)) }
+    @discardableResult public func publish(_ name: String, arguments: [GesMessageArgument] = []) throws -> GesPublishResult { try publish(try .init(name: name, arguments: arguments)) }
 
     func beginHandler() -> Int {
         budget.reset()

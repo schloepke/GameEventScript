@@ -10,6 +10,7 @@ internal static class AdapterCompiler
     {
         var builder = new GesProgramBuilder();
         if (test.GetProperty("kind").GetString() is "scriptApi" or "loadError") builder.WithExternalTypeCatalog(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Catalog);
+        if (AdapterHandles.From(test) is { } handles) builder.WithHandleTypes(handles.CompilerTypes);
         foreach (var source in test.GetProperty("sources").EnumerateArray())
             if (programId is null || source.GetProperty("program").GetString() == programId) builder.AddScript(source.GetProperty("text").GetString()!, source.GetProperty("name").GetString()!);
         var options = test.GetProperty("compile");

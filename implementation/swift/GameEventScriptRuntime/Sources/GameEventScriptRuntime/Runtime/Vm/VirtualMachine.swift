@@ -34,6 +34,9 @@ final class GesVirtualMachine {
     private var maxValueDepth: Int64 = .max
     let extensionCall = GesExtensionCall()
     lazy var constructorCall = GesExternalTypeConstructorCall()
+    // The states the running handler invocation has read; it survives pauses and ends with the invocation.
+    var handleStates: [HandleStateKey: GesHandleState] = [:]
+    lazy var handleResolveCall = GesHandleResolveCall()
 
     init(maxRegisters: Int, maxCallDepth: Int) {
         self.maxRegisters = maxRegisters
@@ -354,6 +357,7 @@ final class GesVirtualMachine {
         depth = 0
         extensionCall.end()
         constructorCall.end()
+        clearHandleStates()
         if pendingCapacity > 0 {
             ensureRegisterCapacity(pendingCapacity)
             registersInUse = 0

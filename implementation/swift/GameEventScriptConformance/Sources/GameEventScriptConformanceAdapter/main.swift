@@ -69,7 +69,7 @@ do {
                         let name = try source.text("program")
                         if !programs.contains(where: { $0.id == name }) { programs.append((name, try CompilerObservations.compile(test, programID: name))) }
                     }
-                    observations[id] = try ["status": "ok", "runtime": runtime(programs, test.required("runtime"))]
+                    observations[id] = try ["status": "ok", "runtime": runtime(programs, test.required("runtime"), handles: AdapterHandles.from(test))]
                 } else {
                     observations[id] = try CompilerObservations.observe(kind, CompilerObservations.compile(test))
                 }

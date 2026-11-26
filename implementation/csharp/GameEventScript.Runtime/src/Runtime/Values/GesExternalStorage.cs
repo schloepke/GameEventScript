@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using GameEventScript.Api;
+using GameEventScript.Runtime.Vm;
 
 namespace GameEventScript.Runtime.Values;
 
@@ -90,6 +91,8 @@ internal sealed class GesExternalStorage
                 symbol: Definition.Name + "." + field.Name, exception);
         }
 
-        return sourceValue.HasValue ? GesExternalTypeValueConverter.CoerceToDeclaredType(sourceValue.Value, field) : null;
+        if (!sourceValue.HasValue) return null;
+        if (GesHandleStates.HoldsRef(sourceValue.Value)) throw GesHandleStates.UnresolvedRefFault(Definition.Name + "." + field.Name);
+        return GesExternalTypeValueConverter.CoerceToDeclaredType(sourceValue.Value, field);
     }
 }

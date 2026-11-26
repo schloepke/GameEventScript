@@ -40,6 +40,10 @@ public enum GesBinaryBindKind : byte
     /// </summary>
     OutboundMessage = 0x21,
     /// <summary>
+    /// Handle type the Program names, with its schema hash; its entry address is the first instruction that reads the type's state.
+    /// </summary>
+    HandleType = 0x22,
+    /// <summary>
     /// Script record constructor.
     /// </summary>
     Record = 0x30,
@@ -134,6 +138,10 @@ public enum GesBytecodeTypeKind : byte
     /// Message signature, arguments and tags.
     /// </summary>
     Message = 0x11,
+    /// <summary>
+    /// Handle of an object outside the host: type, identity and optional version.
+    /// </summary>
+    Handle = 0x12,
 
     /// <summary>
     /// Ordered immutable value collection.

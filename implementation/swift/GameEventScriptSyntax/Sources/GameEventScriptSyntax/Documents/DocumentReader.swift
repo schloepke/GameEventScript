@@ -40,15 +40,19 @@
         var values: [GesDocumentNode] = []
         var keyOffsets: [Int] = []
         var valueOffsets: [Int] = []
+        var handleKeys: [Bool] = []
         var seen: Set<[Unicode.Scalar]> = []
         while position < bytes.count {
             let entryStart = position
             if isSchemaHeader() { return (fail(Code.misplacedSchemaHeader, entryStart), schema) }
             if items >= 65536 { return (setLimit("MaxLiteralItems", 65536, entryStart), schema) }
             items += 1
-            guard let key = key() else { return (fail(bytes[entryStart] == 34 || bytes[entryStart] == 39 ? Code.unclosedText : Code.invalidKey, entryStart), schema) }
+            if record && bytes[entryStart] == 64 { return (fail(Code.invalidKey, entryStart), schema) }
+            let entryKey = entryKey()
+            if error != nil { return (nil, schema) }
+            guard let (key, isHandle, identity) = entryKey else { return (fail(bytes[entryStart] == 34 || bytes[entryStart] == 39 ? Code.unclosedText : Code.invalidKey, entryStart), schema) }
             if record && !GesNames.plain(key) { return (fail(Code.invalidKey, entryStart), schema) }
-            if !seen.insert(Array(key.unicodeScalars)).inserted { return (fail(Code.duplicateKey, entryStart), schema) }
+            if !seen.insert(identity).inserted { return (fail(Code.duplicateKey, entryStart), schema) }
             spacesAndComments()
             if !consume(58) { return (fail(Code.missingColon, position), schema) }
             let implied = keyOnly()
@@ -57,6 +61,7 @@
             guard let entry = implied ? .boolean(true) : value(depth: 0) else { return (nil, schema) }
             keys.append(key)
             keyOffsets.append(entryStart)
+            handleKeys.append(isHandle)
             valueOffsets.append(valueStart)
             values.append(entry)
             spacesAndComments()
@@ -65,7 +70,34 @@
             whitespace()
             if position < bytes.count && bytes[position] == 44 { return (fail(Code.unexpectedToken, position), schema) }
         }
-        return (.map(keys: keys, values: values, keyOffsets: keyOffsets, valueOffsets: valueOffsets), schema)
+        return (.map(keys: keys, values: values, keyOffsets: keyOffsets, valueOffsets: valueOffsets, handleKeys: Self.handleKeyFlags(handleKeys)), schema)
+    }
+
+    private static func handleKeyFlags(_ flags: [Bool]) -> [Bool] { flags.contains(true) ? flags : [] }
+
+    // A Map key: a Text key, or a handle without a version or ref. `identity` compares keys; a handle's never equals a
+    // Text's. A malformed handle records its error.
+    private mutating func entryKey() -> (key: String, isHandle: Bool, identity: [Unicode.Scalar])? {
+        whitespace()
+        guard position < bytes.count, bytes[position] == 64 else {
+            guard let key = key() else { return nil }
+            return (key, false, ["t"] + Array(key.unicodeScalars))
+        }
+        let start = position
+        guard let handle = GesHandleLiteral.read(bytes, start), !handle.versioned else {
+            let end = GesHandleLiteral.read(bytes, start)?.end ?? start + 1
+            fail(Code.invalidHandle, start, end: end)
+            return nil
+        }
+        position = handle.end
+        return (String(decoding: bytes[start..<handle.end], as: UTF8.self), true, ["h"] + handle.identity)
+    }
+
+    private mutating func handle() -> GesDocumentNode? {
+        let start = position
+        guard let handle = GesHandleLiteral.read(bytes, start) else { return fail(Code.invalidHandle, start, end: start + 1) }
+        position = handle.end
+        return .handle(String(decoding: bytes[start..<handle.end], as: UTF8.self))
     }
 
     // A value starts after whitespace; a key-only entry has none.
@@ -154,6 +186,7 @@
     private mutating func leaf(depth: Int) -> GesDocumentNode? {
         if position == bytes.count { return fail(Code.unexpectedToken, position) }
         if bytes[position] == 34 || bytes[position] == 39 { return quotedValue() }
+        if bytes[position] == 64 { return handle() }
         if starts(":Bytes") { return dice(depth: depth, bytes: true) }
         return starts(":Dice") ? dice(depth: depth, bytes: false) : scalar()
     }
@@ -495,7 +528,7 @@
         let open = position
         switch collectionStart() {
         case 0: return .list([], offsets: [])
-        case 1: return .map(keys: [], values: [], keyOffsets: [], valueOffsets: [])
+        case 1: return .map(keys: [], values: [], keyOffsets: [], valueOffsets: [], handleKeys: [])
         case 2: return list(depth: depth, open: open)
         case 3: return map(depth: depth, open: open)
         default: return nil
@@ -519,9 +552,17 @@
             return -1
         }
         let saved = position
-        let firstKey = key()
-        spacesAndComments()
-        let isMap = firstKey != nil && consume(58)
+        let isMap: Bool
+        if bytes[position] == 64 {
+            let end = GesHandleLiteral.read(bytes, position)?.end
+            if let end { position = end }
+            spacesAndComments()
+            isMap = end != nil && consume(58)
+        } else {
+            let firstKey = key()
+            spacesAndComments()
+            isMap = firstKey != nil && consume(58)
+        }
         position = saved
         return isMap ? 3 : 2
     }
@@ -547,36 +588,40 @@
         var values: [GesDocumentNode] = []
         var keyOffsets: [Int] = []
         var valueOffsets: [Int] = []
+        var handleKeys: [Bool] = []
         var seen: Set<[Unicode.Scalar]> = []
         while position < bytes.count {
             if !item() { return nil }
             whitespace()
             let keyStart = position
-            guard let key = mapKey(&seen) else { return nil }
+            guard let (key, isHandle) = mapKey(&seen) else { return nil }
             let implied = keyOnly()
             whitespaceBeforeValue(implied)
             let valueStart = position
             guard let parsed = implied ? .boolean(true) : value(depth: depth) else { return nil }
             keys.append(key)
             keyOffsets.append(keyStart)
+            handleKeys.append(isHandle)
             valueOffsets.append(valueStart)
             values.append(parsed)
             let next = separator(93, open)
             if next < 0 { return nil }
-            if next > 0 { return .map(keys: keys, values: values, keyOffsets: keyOffsets, valueOffsets: valueOffsets) }
+            if next > 0 { return .map(keys: keys, values: values, keyOffsets: keyOffsets, valueOffsets: valueOffsets, handleKeys: Self.handleKeyFlags(handleKeys)) }
         }
         return nil
     }
 
     // A Map entry key and its colon; nil after a failure.
-    private mutating func mapKey(_ seen: inout Set<[Unicode.Scalar]>) -> String? {
+    private mutating func mapKey(_ seen: inout Set<[Unicode.Scalar]>) -> (String, Bool)? {
         whitespace()
         let keyStart = position
-        guard let key = key() else {
+        let entryKey = entryKey()
+        if error != nil { return nil }
+        guard let (key, isHandle, identity) = entryKey else {
             fail(keyStart < bytes.count && (bytes[keyStart] == 34 || bytes[keyStart] == 39) ? Code.unclosedText : Code.invalidKey, keyStart)
             return nil
         }
-        if !seen.insert(Array(key.unicodeScalars)).inserted {
+        if !seen.insert(identity).inserted {
             fail(Code.duplicateKey, keyStart)
             return nil
         }
@@ -585,7 +630,7 @@
             fail(Code.missingColon, position)
             return nil
         }
-        return key
+        return (key, isHandle)
     }
 
     private mutating func key() -> String? {

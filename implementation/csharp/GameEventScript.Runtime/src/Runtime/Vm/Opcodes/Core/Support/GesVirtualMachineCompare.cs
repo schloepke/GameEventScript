@@ -40,6 +40,9 @@ internal partial class GesVirtualMachine
                 return ab.AsSpan().SequenceEqual(bb);
             case Handler when b.Kind is Handler && a.ObjectValue is GesMessageSignature asig && b.ObjectValue is GesMessageSignature bsig:
                 return asig.Equals(bsig);
+            // Handles are equal by type and identity; the version takes no part.
+            case Handle when b.Kind is Handle && a.ObjectValue is GesHandle ah && b.ObjectValue is GesHandle bh:
+                return ah.Equals(bh);
             case Message when b.Kind is Message && a.ObjectValue is GameEventScriptMessage amsg && b.ObjectValue is GameEventScriptMessage bmsg:
                 return amsg.Equals(bmsg);
             case List when b.Kind is List && a.ObjectValue is GesValue[] av && b.ObjectValue is GesValue[] bv:

@@ -257,6 +257,8 @@ public ref struct GesSchemaWriter
         ref readonly var node = ref Current(field);
         if (node.Kind != GesSchemaNodeKind.Text || !node.IsBytes) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         if (bytes.Length > node.MaxCount) throw new GesWireException(GesWireException.TooLong, node.Path);
+        // A hash has exactly its length; one of another algorithm is another type.
+        if (node.Fixed && bytes.Length != node.MaxCount) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         Presence(in node);
         Put((ulong)bytes.Length, node.Width);
         _bits.WriteBytes(bytes);
@@ -541,7 +543,7 @@ public ref struct GesSchemaReader
     {
         ref readonly var node = ref Enter(field, GesSchemaNodeKind.Text);
         if (!node.IsBytes) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
-        var count = Get(node.Width, node.Path);
+        var count = node.Fixed ? (ulong)node.MaxCount : Get(node.Width, node.Path);
         if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
         if ((long)count > destination.Length) throw new GesWireException(GesWireException.BufferTooSmall, node.Path);
         _bits.Require((long)count * 8, node.Path);
@@ -554,7 +556,7 @@ public ref struct GesSchemaReader
     internal byte[] ReadBytesValue(GesSchemaField field)
     {
         ref readonly var node = ref Enter(field, GesSchemaNodeKind.Text);
-        var count = Get(node.Width, node.Path);
+        var count = node.Fixed ? (ulong)node.MaxCount : Get(node.Width, node.Path);
         if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
         _bits.Require((long)count * 8, node.Path);
         var bytes = new byte[(int)count];

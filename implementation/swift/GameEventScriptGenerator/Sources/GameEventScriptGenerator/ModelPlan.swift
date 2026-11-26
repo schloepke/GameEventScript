@@ -27,6 +27,9 @@ final class GesModelPlanValue {
     // The label of a union alternative, its case or subclass.
     var label = ""
     var element: GesModelPlanValue?
+
+    // The key of a Map with handle keys: a handle without its version.
+    var key: GesModelPlanValue?
     var alternatives: [GesModelPlanValue] = []
 
     var closedTag: Bool { kind == .tag && !model.tags.isEmpty }
@@ -103,8 +106,21 @@ enum GesModelPlanner {
         }
         if model.kind == .flags { value.nested = name + "Flags" }
         if model.kind == .list { value.element = self.value(model.element!.value, name + "Item", "") }
+        if model.kind == .handleMap {
+            value.element = self.value(model.element!.value, name + "Item", "")
+            let key = GesModelValue()
+            key.kind = .handle
+            key.handle = model.handle
+            let keyValue = GesModelPlanValue()
+            keyValue.kind = .handle
+            keyValue.model = key
+            value.key = keyValue
+        }
         return value
     }
+
+    // The model type of a handle type: `@Drone` becomes `DroneHandle`.
+    static func handleName(_ handle: String) -> String { handle + "Handle" }
 
     // The protocol (Swift) or interface (C#) of a schema that types take with `with`: an abstract schema's own name in Swift,
     // since no type takes it, `<Name>Fields` beside a type of that name, and `I<Name>` in C#.
@@ -125,6 +141,7 @@ enum GesModelPlanner {
         var names = Set(layout.types.map(\.name))
         for set in tagSets(layout) { names.insert(set.name) }
         for protocolType in layout.protocols { names.insert(protocolName(layout, protocolType.name, swift: swift)) }
+        for handle in layout.handles { names.insert(handleName(handle.name)) }
         return names
     }
 
@@ -133,6 +150,7 @@ enum GesModelPlanner {
         var names: [(name: String, origin: String)] = layout.types.map { ($0.name, "the type " + $0.name) }
         for set in tagSets(layout) { names.append((set.name, "the tag set " + set.name)) }
         for protocolType in layout.protocols { names.append((protocolName(layout, protocolType.name, swift: swift), "the protocol of " + protocolType.name)) }
+        for handle in layout.handles { names.append((handleName(handle.name), "the handle type @" + handle.name)) }
         try GesSchemaPlanner.unique("the generated file", names)
     }
 
@@ -195,7 +213,9 @@ enum GesModelPlanner {
     // ModelDocument without one, where Document would collide too easily. It must not take the name of a generated type.
     static func documentType(_ layout: GesModelLayout, _ space: [String]) throws(GesGeneratorError) -> String {
         let name = space.isEmpty ? "ModelDocument" : "Document"
-        if layout.types.contains(where: { $0.name == name }) || layout.protocols.contains(where: { $0.name == name }) || tagSets(layout).contains(where: { $0.name == name }) {
+        if layout.types.contains(where: { $0.name == name }) || layout.protocols.contains(where: { $0.name == name }) || tagSets(layout).contains(where: { $0.name == name })
+            || layout.handles.contains(where: { handleName($0.name) == name })
+        {
             throw GesGeneratorError(GesGeneratorError.nameCollision, "The document type '\(name)' takes the name of a generated type; choose another namespace.")
         }
         return name
@@ -206,6 +226,13 @@ enum GesModelPlanner {
 
     private static func usesData(_ value: GesModelValue) -> Bool {
         value.kind == .map || value.kind == .values || (value.element.map { usesData($0.value) } ?? false) || value.alternatives.contains { usesData($0.value) }
+    }
+
+    // Whether a model holds a Map with handle keys, whose comparisons and conversions the support type then holds.
+    static func usesHandleMaps(_ layout: GesModelLayout) -> Bool { layout.types.contains { $0.fields.contains { usesHandleMaps($0.value) } } }
+
+    private static func usesHandleMaps(_ value: GesModelValue) -> Bool {
+        value.kind == .handleMap || (value.element.map { usesHandleMaps($0.value) } ?? false) || value.alternatives.contains { usesHandleMaps($0.value) }
     }
 
     // Whether a model holds a Box, a Poly or a Disc, whose conversions the support type then offers.
@@ -226,7 +253,7 @@ enum GesModelPlanner {
         case .tag: ("Tag", "none", nil)
         case .flags: ("Map", "none", nil)
         case .list, .values: ("List", "none", nil)
-        case .map: ("Map", "none", nil)
+        case .map, .handleMap: ("Map", "none", nil)
         case .dice: ("Dice", "none", nil)
         case .point: ("Point", value.model.unit, nil)
         case .vector: ("Vector", value.model.unit, nil)
@@ -234,7 +261,7 @@ enum GesModelPlanner {
         case .poly: (nil, "none", "Poly")
         case .disc: (nil, "none", "Disc")
         case .schema: (nil, "none", value.model.schema)
-        case .union, .nothing: (nil, "none", "Value")
+        case .union, .nothing, .handle: (nil, "none", "Value")
         }
     }
 
@@ -308,6 +335,14 @@ enum GesModelPlanner {
             text += ":List"
         case .map:
             text += ":Map"
+        case .handle:
+            text += "@" + value.handle
+            if value.versioned { text += "~" }
+        case .handleMap:
+            text += ":Map(@" + value.handle + " → "
+            describe(value.element!.value, &text)
+            text += ")"
+            if let max = value.max { text += " max \(max)" }
         case .dice:
             text += ":Dice"
             if let max = value.max { text += " max \(max)" }

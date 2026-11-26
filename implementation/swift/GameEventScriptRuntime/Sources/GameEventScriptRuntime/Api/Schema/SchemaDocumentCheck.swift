@@ -92,7 +92,7 @@ struct GesSchemaDocumentCheck {
         if let parameters { try GesSchemaBinder.checkParameters(schema, parameters) }
         let check = Self(parameters: parameters)
         do {
-            guard case .map(let keys, let values, let keyOffsets, let valueOffsets)? = syntax.root else { return (nil, [:]) }
+            guard case .map(let keys, let values, let keyOffsets, let valueOffsets, _)? = syntax.root else { return (nil, [:]) }
             try check.fields(keys, values, keyOffsets, valueOffsets, start: 0, schema)
             return (nil, check.attempts.chosen)
         } catch let failure as Failure {
@@ -212,7 +212,7 @@ struct GesSchemaDocumentCheck {
                 else { return try require(false) }
                 fields = arguments[fieldsIndex]
             }
-            guard case .map(let keys, let values, let keyOffsets, let valueOffsets) = Self.resolved(fields, start) else { return try require(false) }
+            guard case .map(let keys, let values, let keyOffsets, let valueOffsets, _) = Self.resolved(fields, start) else { return try require(false) }
             var seen = 0
             for (index, key) in keys.enumerated() {
                 let corner = key == "lower" ? 1 : key == "upper" ? 2 : 0
@@ -230,7 +230,7 @@ struct GesSchemaDocumentCheck {
                 else { return try require(false) }
                 fields = arguments[fieldsIndex]
             }
-            guard case .map(let keys, let values, let keyOffsets, let valueOffsets) = Self.resolved(fields, start) else { return try require(false) }
+            guard case .map(let keys, let values, let keyOffsets, let valueOffsets, _) = Self.resolved(fields, start) else { return try require(false) }
             var seen = 0
             for (index, key) in keys.enumerated() {
                 let part = key == "center" ? 1 : key == "radius" ? 2 : 0
@@ -258,7 +258,7 @@ struct GesSchemaDocumentCheck {
             if let max = type.max, text.utf8.count > max { throw fail(Self.outOfRange, start) }
         case .flags:
             // Each key names a member and each value is a Boolean.
-            guard case .map(let keys, let values, let keyOffsets, let valueOffsets) = value else { return try require(false) }
+            guard case .map(let keys, let values, let keyOffsets, let valueOffsets, _) = value else { return try require(false) }
             for (index, key) in keys.enumerated() {
                 if !(type.tags ?? []).contains(where: { GesText.scalarEqual($0, key) }) { throw fail(Self.fieldType, keyOffsets[index]) }
                 guard case .boolean = Self.resolved(values[index], valueOffsets[index]) else { throw fail(Self.fieldType, valueOffsets[index]) }
@@ -284,9 +284,10 @@ struct GesSchemaDocumentCheck {
                 else { return try require(false) }
                 fields = arguments[fieldsIndex]
             }
-            guard case .map(let keys, let values, let keyOffsets, let valueOffsets) = Self.resolved(fields, start) else { return try require(false) }
+            guard case .map(let keys, let values, let keyOffsets, let valueOffsets, _) = Self.resolved(fields, start) else { return try require(false) }
             try self.fields(keys, values, keyOffsets, valueOffsets, start: start, type.reference!)
         case .map:
+            if let key = type.handle { return try handleMap(type, key, value, start) }
             if case .map = value { return }
             try require(false)
         case .range:
@@ -307,9 +308,60 @@ struct GesSchemaDocumentCheck {
             if case .handler = value { return }
             if case .form("handler", _, _, _) = value { return }
             try require(false)
+        case .handle:
+            guard case .handle(let text) = value else { return try require(false) }
+            try handle(type.handle!, versioned: type.versioned, text, start)
         case .nothing:
             if case .nothing = value { return }
             try require(false)
+        }
+    }
+
+    // A handle of the field's type whose id, part and version have the declared forms. An `@Name~` field takes a version
+    // or a ref; an `@Name` field also takes one, which the wire drops.
+    private func handle(_ type: GesResolvedHandle, versioned: Bool, _ text: String, _ start: Int) throws {
+        guard let handle = try? GesHandle(parsing: text), handle.typeName == type.name, handle.isComposite == (type.root != nil) else { throw fail(Self.fieldType, start) }
+        let identity = type.root ?? type
+        try handleKey(identity.id, handle, part: false, start)
+        if handle.isComposite { try handleKey(type.id, handle, part: true, start) }
+        if handle.hasVersion {
+            if identity.versionKind == .none { throw fail(Self.fieldType, start) }
+            if let revision = identity.revision {
+                guard let number = handle.version.integerValue else { throw fail(Self.fieldType, start) }
+                try numeric(revision.constraints, true, number, Double(number), start)
+            } else if handle.version.bytesValue?.count != (identity.versionKind == .sha1 ? 20 : 32) {
+                throw fail(Self.fieldType, start)
+            }
+        } else if !handle.ref.isNothing {
+            if identity.versionKind == .none { throw fail(Self.fieldType, start) }
+        } else if versioned {
+            throw fail(Self.fieldType, start)
+        }
+    }
+
+    // The id of a handle, or its part, against the declared key type.
+    private func handleKey(_ type: GesResolvedType, _ handle: GesHandle, part: Bool, _ start: Int) throws {
+        let key = part ? handle.part : handle.id
+        if type.kind == .text {
+            guard let text = key.textValue else { throw fail(Self.fieldType, start) }
+            if let max = type.max, text.utf8.count > max { throw fail(Self.outOfRange, start) }
+            return
+        }
+        guard let integer = key.integerValue else { throw fail(Self.fieldType, start) }
+        try numeric(type.constraints, true, integer, Double(integer), start)
+    }
+
+    // A handle Map: handle keys of the key type, within the maximum count, and values of the element union.
+    private func handleMap(_ type: GesResolvedType, _ key: GesResolvedHandle, _ value: GesDocumentNode, _ start: Int) throws {
+        guard case .map(let keys, let values, let keyOffsets, let valueOffsets, let handleKeys) = value else { throw fail(Self.fieldType, start) }
+        if let max = type.max, keys.count > max { throw fail(Self.outOfRange, start) }
+        for index in keys.indices {
+            let offset = index < keyOffsets.count ? keyOffsets[index] : start
+            if index >= handleKeys.count || !handleKeys[index] { throw fail(Self.fieldType, offset) }
+            try under("[]", index: index) {
+                try under("key") { try handle(key, versioned: false, keys[index], offset) }
+                try under("value") { try union(type.element!, values[index], valueOffsets[index]) }
+            }
         }
     }
 

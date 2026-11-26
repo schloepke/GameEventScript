@@ -131,7 +131,7 @@ private struct GesJsonTree: Codable {
     }
 }
 
-private final class GesMessageJsonCodec {
+final class GesMessageJsonCodec {
     var items = 0
 
     func enter(_ depth: Int) throws {
@@ -250,6 +250,7 @@ private final class GesMessageJsonCodec {
             _ = try Self.messageName(.text(signature.name))
             return Self.typed("Handler", [("name", .text(signature.name)), ("labels", .list(signature.parameters.map(GesValue.text)))])
         case .message: return Self.typed("Message", [("value", try encodeMessage(value.messageValue!, depth + 1))])
+        case .handle: throw GesJson.error()
         }
     }
 

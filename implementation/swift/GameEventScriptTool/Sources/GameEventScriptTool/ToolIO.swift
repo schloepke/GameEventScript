@@ -63,6 +63,9 @@ final class ToolIO {
             if let offset = error.byteOffset { line("  byteOffset=\(offset)", toError: true) }
             if let section = error.sectionType { line(String(format: "  sectionType=0x%04X", section), toError: true) }
             if let entry = error.entryIndex { line("  entryIndex=\(entry)", toError: true) }
+        case let error as GesSchemaError:
+            // Reported as `ges schema check` reports it.
+            line("\(error.line > 0 ? "\(error.sourceName)(\(error.line),\(error.column))" : "schema"): error \(error.code): \(error.message)", toError: true)
         case ToolError.usage(let message): line("error \(argumentCode): \(message)", toError: true)
         case ToolError.encoding(let path): line("\(path): error cli.invalidEncoding: Expected valid UTF-8.", toError: true)
         case ToolError.io(let message): line("error cli.io: \(message)", toError: true)

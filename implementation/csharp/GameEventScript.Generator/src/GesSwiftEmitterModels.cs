@@ -204,6 +204,8 @@ internal static partial class GesSwiftEmitter
             GesModelKind.Poly => "GesPoly",
             GesModelKind.Disc => "GesDisc",
             GesModelKind.Schema => conversion.Qualifier + value.Model.Schema,
+            GesModelKind.Handle => conversion.Qualifier + GesModelPlanner.HandleName(value.Model.Handle),
+            GesModelKind.HandleMap => $"[{ModelType(value.Key!, owner, conversion)}: {ModelType(value.Element!, owner, conversion)}]",
             _ => ModelNested(value, owner, conversion)
         };
         return value.Nullable ? plain + "?" : plain;
@@ -237,6 +239,9 @@ internal static partial class GesSwiftEmitter
         {
             case GesLayoutKind.Union:
                 ToModelUnion(code, value, model, modelOwner, owner, wired, target, conversion);
+                return;
+            case GesLayoutKind.List when value.HandleMap:
+                ToModelHandleMap(code, value, model, modelOwner, wired, source, target, conversion);
                 return;
             case GesLayoutKind.List when model.Kind == GesModelKind.Poly:
                 code.Line($"{target} = GesPoly({source})");
@@ -305,6 +310,55 @@ internal static partial class GesSwiftEmitter
         code.Line($"{target} = {list}");
     }
 
+    // A handle Map: the wire entries, in key order, become a Dictionary of the same handle keys.
+    private static void ToModelHandleMap(GesSchemaPlanner.Code code, GesPlanValue value, GesModelPlanValue model, string modelOwner, string wired, string source, string target, ModelConversion conversion)
+    {
+        var holder = value.Item!;
+        var element = model.Element!;
+        var type = ModelType(element, modelOwner, conversion);
+        var map = conversion.Local("map");
+        var item = conversion.Local("item");
+        var converted = conversion.Local("element");
+        code.Line($"var {map}: {ModelType(model, modelOwner, conversion).TrimEnd('?')} = [:]");
+        code.Line($"{map}.reserveCapacity({source}.count)");
+        code.Open($"for {item} in {source} {{");
+        code.Line($"let {converted}: {type}");
+        ToModel(code, holder.Fields[1].Value, element, modelOwner, item, wired + holder.Name + ".", WireMember(item, holder.Fields[1].Value), converted, conversion);
+        code.Line($"{map}[{WireMember(item, holder.Fields[0].Value)}] = {converted}");
+        code.Close();
+        code.Line($"{target} = {map}");
+    }
+
+    // A handle Map: the Dictionary's entries, sorted by key as the wire requires.
+    private static void FromModelHandleMap(GesSchemaPlanner.Code code, GesPlanValue value, GesModelPlanValue model, string modelOwner, string owner, string wired, string source, bool pooled, ModelConversion conversion)
+    {
+        var member = WireMember(owner, value);
+        var holder = value.Item!;
+        var keys = conversion.Local("keys");
+        var index = conversion.Local("index");
+        var target = conversion.Local("target");
+        var wireType = wired + holder.Name;
+        code.Line($"let {keys} = {source}.keys.sorted()");
+        string list = "";
+        if (pooled) code.Line($"{owner}.set{value.Base}Count({keys}.count)");
+        else
+        {
+            list = conversion.Local("list");
+            code.Line($"var {list}: [{wireType}] = []");
+            code.Line($"{list}.reserveCapacity({keys}.count)");
+        }
+
+        code.Open($"for {index} in 0..<{keys}.count {{");
+        code.Line($"{(value.Element!.IsClass ? "let" : "var")} {target} = {(pooled ? $"{member}[{index}]" : $"{wireType}()")}");
+        code.Line($"{WireMember(target, holder.Fields[0].Value)} = {keys}[{index}]");
+        var inner = holder.Fields[1];
+        FromModel(code, inner.Value, model.Element!, modelOwner, target, wired + holder.Name + ".", $"{source}[{keys}[{index}]]!", GesCSharpEmitter.IsPooledList(inner), conversion);
+        if (!pooled) code.Line($"{list}.append({target})");
+        else if (!value.Element!.IsClass) code.Line($"{member}[{index}] = {target}");
+        code.Close();
+        if (!pooled) code.Line($"{member} = {list}");
+    }
+
     // Whether a wire element and a model element have the same type, so that a List of them is the same array.
     private static bool Same(GesPlanValue value, GesModelPlanValue model) => value.Encoding.Kind switch
     {
@@ -363,6 +417,9 @@ internal static partial class GesSwiftEmitter
         {
             case GesLayoutKind.Union:
                 FromModelUnion(code, value, model, modelOwner, owner, wired, source, conversion);
+                return;
+            case GesLayoutKind.List when value.HandleMap:
+                FromModelHandleMap(code, value, model, modelOwner, owner, wired, source, pooled, conversion);
                 return;
             case GesLayoutKind.List when model.Kind == GesModelKind.Poly:
                 code.Line($"{member} = {source}.points");

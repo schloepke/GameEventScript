@@ -54,6 +54,9 @@ enum GesDocumentHighlighting {
                 case "Series": pending = .seriesForm
                 default: pending = .form
                 }
+            } else if c == 64 && position + 1 < bytes.count && GesNames.upper(bytes[position + 1]) {
+                position = handleSpans(bytes, position, &spans)
+                continue
             } else if c == 91 || c == 40 {
                 position += 1
                 kind = .symbol
@@ -100,6 +103,39 @@ enum GesDocumentHighlighting {
 
         guard let diagnostic = GesDocumentReader.read(text).diagnostic else { return [] }
         return [GesSpanBuilder.Diagnostic(code: diagnostic.code, message: GesDocumentDiagnostic.explain(diagnostic.code, limitName: diagnostic.limitName, limitValue: diagnostic.limitValue), start: diagnostic.start, end: diagnostic.end)]
+    }
+
+    // A handle: `@Type` is Type; `:`, `~` and `/` are Symbol; a quoted id, part or ref is String, a ref `#name` Tag, an
+    // integer id, part or version and a hash Number, and other bare ids and parts Plain. Without a well-formed handle
+    // only `@Type` is a token. Returns the end.
+    private static func handleSpans(_ bytes: [UInt8], _ start: Int, _ spans: inout GesSpanBuilder) -> Int {
+        let typeEnd = nameEnd(bytes, start + 1)
+        spans.add(start, typeEnd, .type)
+        guard let end = GesHandleLiteral.read(bytes, start)?.end else { return typeEnd }
+        var position = typeEnd
+        var isPart = false
+        while position < end {
+            let c = bytes[position]
+            let tokenStart = position
+            let kind: GesSyntaxKind
+            if c == 58 || c == 126 || (c == 47 && !isPart) {
+                isPart = isPart || c == 47
+                position += 1
+                kind = .symbol
+            } else if c == 39 {
+                position = quotedEnd(bytes, position)
+                kind = .string
+            } else if c == 35 {
+                position = nameEnd(bytes, position + 1)
+                kind = .tag
+            } else {
+                while position < end && bytes[position] != 58 && bytes[position] != 126 && bytes[position] != 39 && (isPart || bytes[position] != 47) { position += 1 }
+                let afterTilde = tokenStart > 0 && bytes[tokenStart - 1] == 126
+                kind = GesHandleLiteral.readsAsInteger(bytes[tokenStart..<position]) || afterTilde ? .number : .plain
+            }
+            spans.add(tokenStart, position, kind)
+        }
+        return end
     }
 
     private static func isSpace(_ c: UInt8) -> Bool { c == 32 || c == 9 || c == 10 || c == 13 }

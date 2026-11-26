@@ -59,6 +59,7 @@ internal static partial class GesSwiftModelEmitter
                 else Record(code, layout, type, access, options.Bindings, valued ? values : null, computed, plain.Roots.Contains(type.Name) ? documents : null);
             }));
         foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Protocol(code, layout, protocol, access)));
+        foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => Handle(code, layout.Handles, handle, access)));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.")));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, plain, access, support, computed)));
@@ -72,7 +73,8 @@ internal static partial class GesSwiftModelEmitter
 
         if (schemaSet?.Declared is { } setName)
             document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteSwift(code, setName, access, layout.Sources, [], networks: false)));
-        if (options.Bindings || valued) document.Units.Add(new GesCodeUnit("", code => Support(code, support)));
+        var handleMaps = GesModelPlanner.UsesHandleMaps(layout);
+        if (options.Bindings || valued) document.Units.Add(new GesCodeUnit("", code => Support(code, support, handleMaps)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: true, options.Bindings || valued || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)), GesComputedEmitter.UsesSpatial(layout.Types.ConvertAll(type => type.Computed)))));
         return document;
@@ -532,7 +534,7 @@ internal static partial class GesSwiftModelEmitter
         code.Blank();
     }
 
-    private static string Default(GesModelPlanValue value) => value.Nullable ? " = nil" : value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Bytes or GesModelKind.Flags ? " = []" : value.Kind == GesModelKind.Values ? " = .empty" : "";
+    private static string Default(GesModelPlanValue value) => value.Nullable ? " = nil" : value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Bytes or GesModelKind.Flags ? " = []" : value.Kind == GesModelKind.HandleMap ? " = [:]" : value.Kind == GesModelKind.Values ? " = .empty" : "";
 
     internal static string Type(GesModelPlanValue value) => Plain(value) + (value.Nullable ? "?" : "");
 
@@ -553,6 +555,8 @@ internal static partial class GesSwiftModelEmitter
         GesModelKind.Poly => "GesPoly",
         GesModelKind.Disc => "GesDisc",
         GesModelKind.Schema => value.Model.Schema,
+        GesModelKind.Handle => GesModelPlanner.HandleName(value.Model.Handle),
+        GesModelKind.HandleMap => $"[{Plain(value.Key!)}: {Type(value.Element!)}]",
         _ => value.Nested
     };
 
@@ -624,6 +628,8 @@ internal static partial class GesSwiftModelEmitter
             GesModelKind.Values or GesModelKind.Map => $"{expression}.toValue()",
             GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly or GesModelKind.Disc => $"{expression}.value(unit: {Unit(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{expression}.toValue()" : $"{expression}.gesValue()",
+            GesModelKind.Handle => $"{expression}.toValue(versioned: {(value.Model.Versioned ? "true" : "false")})",
+            GesModelKind.HandleMap => $"{support}.handleMap({expression}, {{ $0.toValue(versioned: false) }}, {{ {Encode(value.Element!, owner, "$0", helper, support, plain: plain)} }})",
             _ => $"{helper}.value({expression})"
         };
     }
@@ -652,6 +658,8 @@ internal static partial class GesSwiftModelEmitter
             GesModelKind.Poly => $"GesPoly({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Disc => $"GesDisc({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{helper}.decode{value.Model.Schema}({expression})" : $"{value.Model.Schema}(gesValue: {expression})",
+            GesModelKind.Handle => $"{Plain(value)}.read({expression}, versioned: {(value.Model.Versioned ? "true" : "false")})",
+            GesModelKind.HandleMap => $"{support}.handleMap({expression}, {{ {Decode(value.Key!, owner, "$0", helper, support, plain: plain)} }}, {{ {Decode(value.Element!, owner, "$0", helper, support, plain: plain)} }})",
             _ => $"{helper}.decode{owner}{value.Nested}({expression})"
         };
     }
@@ -1029,12 +1037,13 @@ internal static partial class GesSwiftModelEmitter
 
     // The conversions that the script bindings and the plain values share, named after the header so that two generated
     // files can share a module.
-    private static void Support(GesSchemaPlanner.Code code, string name)
+    private static void Support(GesSchemaPlanner.Code code, string name, bool handleMaps)
     {
         code.Blank();
         code.Line("/// The GES value conversions of the models of this file.");
         code.Open($"enum {name} {{");
         Helpers(code);
+        if (handleMaps) HandleHelpers(code);
         code.Close();
     }
 

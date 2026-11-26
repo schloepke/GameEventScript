@@ -23,7 +23,9 @@ internal enum GesDocumentNodeKind : byte
     Form,
     // The message of `:Message(Done(v: 1))` before its tags.
     Message,
-    Handler
+    Handler,
+    // A handle in its text form, built by Runtime.
+    Handle
 }
 
 /// <summary>
@@ -67,6 +69,9 @@ internal sealed class GesDocumentNode
 
     internal int[] KeyOffsets { get; private init; } = [];
 
+    // Whether each Map key is a handle in its text form rather than a Text; empty when no key is.
+    internal bool[] HandleKeys { get; private init; } = [];
+
     // The UTF-16 offset of a form's `:`, where construction errors point.
     internal int Offset { get; private init; }
 
@@ -82,7 +87,12 @@ internal sealed class GesDocumentNode
 
     internal static GesDocumentNode List(GesDocumentNode[] items) => new(GesDocumentNodeKind.List) { Children = items };
 
-    internal static GesDocumentNode Map(string[] keys, GesDocumentNode[] values, int[]? keyOffsets = null) => new(GesDocumentNodeKind.Map) { KeyOffsets = keyOffsets ?? [], Labels = keys, Children = values };
+    internal static GesDocumentNode Map(string[] keys, GesDocumentNode[] values, int[]? keyOffsets = null, bool[]? handleKeys = null)
+        => new(GesDocumentNodeKind.Map) { KeyOffsets = keyOffsets ?? [], Labels = keys, Children = values, HandleKeys = handleKeys ?? [] };
+
+    internal static GesDocumentNode Handle(string text) => new(GesDocumentNodeKind.Handle) { Name = text };
+
+    internal bool IsHandleKey(int index) => HandleKeys.Length > 0 && HandleKeys[index];
 
     internal static GesDocumentNode Dice(int[] rolls) => new(GesDocumentNodeKind.Dice) { Rolls = rolls };
 
@@ -128,6 +138,7 @@ internal sealed record GesDocumentDiagnostic(string Code, int Start, int End, st
     internal const string InvalidSchemaHeader = "document.invalidSchemaHeader";
     internal const string MisplacedSchemaHeader = "document.misplacedSchemaHeader";
     internal const string LimitExceeded = "document.limitExceeded";
+    internal const string InvalidHandle = "document.invalidHandle";
 
     // The English explanation of an error code for highlighters and tools; it is not part of the contract.
     internal static string Explain(string code, string? limitName, int limitValue) => code switch
@@ -144,6 +155,7 @@ internal sealed record GesDocumentDiagnostic(string Code, int Start, int End, st
         UnclosedText => "This Text is never closed.",
         InvalidSchemaHeader => "A schema header names one record type or a schema file.",
         MisplacedSchemaHeader => "The schema header must come before the first entry.",
+        InvalidHandle => "This is not a handle, or a handle key has a version.",
         LimitExceeded => $"The document exceeds {limitName ?? "a limit"} ({limitValue}).",
         _ => "This is not a valid document."
     };

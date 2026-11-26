@@ -29,7 +29,7 @@ extension GesVirtualMachine {
     }
 
     func executeCancelTimers(_ i: GesBytecodeInstruction, _ c: GesContext) {
-        var name: String?
+        var name: GesValue?
         if i.a == 0 {
             name = readTimerName(i.word1)
             if name == nil {
@@ -40,7 +40,15 @@ extension GesVirtualMachine {
         setBoolean(Int(i.word0), c.cancelTimers(mode: Int(i.a), name: name))
     }
 
-    private func readTimerName(_ register: UInt16) -> String? { registers[frameStart + Int(register)].textValue }
+    // A Text or Tag names a timer by its text, a handle by itself (specs/HostRuntime.md#named-timers).
+    private func readTimerName(_ register: UInt16) -> GesValue? {
+        let index = frameStart + Int(register)
+        switch registers[index].kind {
+        case .text, .handle: return registers[index].registerValue
+        case .tag: return .text(registers[index].textValue!)
+        default: return nil
+        }
+    }
 
     // A delay is a seconds Quantity rounded up to whole microseconds; negative or unrepresentable delays fail.
     private func readDelay(_ register: UInt16) -> Int64? {
@@ -57,7 +65,7 @@ extension GesVirtualMachine {
         return Int64(rounded)
     }
 
-    private func sendResolved(_ i: GesBytecodeInstruction, publish: Bool, _ c: GesContext, delay: Int64?, name: String?, repeats: Bool) -> Bool {
+    private func sendResolved(_ i: GesBytecodeInstruction, publish: Bool, _ c: GesContext, delay: Int64?, name: GesValue?, repeats: Bool) -> Bool {
         let message: GameEventScriptMessage?
         if i.unitAndFlags & 0x80 != 0 { message = value(Int(i.word1)).messageValue } else { message = linked!.outbound[i.word1]?.makeMessage(values(i.word2)) }
         guard var message else { return false }

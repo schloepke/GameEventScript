@@ -28,16 +28,23 @@ internal partial class GesVirtualMachine
 
     private bool ExecuteCancelTimers(GesBytecodeInstruction instruction, GesContext context)
     {
-        string? name = null;
+        object? name = null;
         if (instruction.AU == 0 && !TryReadTimerName(instruction.XRegister, out name)) return false;
         return context.CancelTimers(instruction.AU, name);
     }
 
-    private bool TryReadTimerName(ushort register, out string name)
+    // A Text or Tag names a timer by its text, a handle by itself (specs/HostRuntime.md#named-timers).
+    private bool TryReadTimerName(ushort register, out object name)
     {
         ref readonly var key = ref Register(register);
-        name = key.Kind is Text or Tag ? key.TextValue : "";
-        return key.Kind is Text or Tag;
+        if (key.Kind is Text or Tag)
+        {
+            name = key.TextValue;
+            return true;
+        }
+
+        name = key.ObjectValue as GesHandle ?? (object)"";
+        return key.Kind is Handle && key.ObjectValue is GesHandle;
     }
 
     // A delay is a seconds Quantity rounded up to whole microseconds; negative or unrepresentable delays fail.
@@ -58,7 +65,7 @@ internal partial class GesVirtualMachine
         return true;
     }
 
-    private bool SendResolved(GesBytecodeInstruction instruction, bool publish, GesContext context, long? delay, string? name, bool repeat)
+    private bool SendResolved(GesBytecodeInstruction instruction, bool publish, GesContext context, long? delay, object? name, bool repeat)
     {
         var tags = (instruction.InstructionFlags & GesInstructionFlag.WithTags) != 0;
         try
@@ -75,12 +82,12 @@ internal partial class GesVirtualMachine
         catch (ArgumentException) { return false; }
     }
 
-    private static bool Deliver(GameEventScriptMessage message, bool publish, GesContext context, long? delay, string? name, bool repeat)
+    private static bool Deliver(GameEventScriptMessage message, bool publish, GesContext context, long? delay, object? name, bool repeat)
         => name is not null ? context.SendNamed(message, publish, delay ?? 0, name, repeat)
             : delay is { } microseconds ? context.Send(message, publish, microseconds)
-            : publish ? context.Publish(message).AnyAccepted : context.Emit(message);
+            : publish ? context.PublishUnchecked(message).AnyAccepted : context.EmitUnchecked(message);
 
-    private bool EmitOrPublishMessage(ushort outboundMessageSignatureIndex, GesUInt16IndexList argumentRegisters, bool publish, GesContext context, long? delay = null, string? name = null, bool repeat = false)
+    private bool EmitOrPublishMessage(ushort outboundMessageSignatureIndex, GesUInt16IndexList argumentRegisters, bool publish, GesContext context, long? delay = null, object? name = null, bool repeat = false)
     {
         if (outboundMessageSignatureIndex >= OutboundMessageSignatures.Length) return false;
         var signature = OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -118,7 +125,7 @@ internal partial class GesVirtualMachine
         GesUInt16IndexList argumentRegisters,
         GesUInt16IndexList tagRegisters,
         bool publish,
-        GesContext context, long? delay = null, string? name = null, bool repeat = false)
+        GesContext context, long? delay = null, object? name = null, bool repeat = false)
     {
         if (outboundMessageSignatureIndex >= OutboundMessageSignatures.Length) return false;
         var signature = OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -157,7 +164,7 @@ internal partial class GesVirtualMachine
         }
     }
 
-    private bool EmitOrPublishMessageValue(in GesValue messageValue, bool publish, GesContext context, long? delay = null, string? name = null, bool repeat = false)
+    private bool EmitOrPublishMessageValue(in GesValue messageValue, bool publish, GesContext context, long? delay = null, object? name = null, bool repeat = false)
     {
         if (messageValue.Kind is Message && messageValue.ObjectValue is GameEventScriptMessage msg)
         {
@@ -166,7 +173,7 @@ internal partial class GesVirtualMachine
         return false;
     }
 
-    private bool EmitOrPublishMessageValueWithTags(in GesValue messageValue, GesUInt16IndexList tagRegisters, bool publish, GesContext context, long? delay = null, string? name = null, bool repeat = false)
+    private bool EmitOrPublishMessageValueWithTags(in GesValue messageValue, GesUInt16IndexList tagRegisters, bool publish, GesContext context, long? delay = null, object? name = null, bool repeat = false)
     {
         if (messageValue.Kind is not Message || messageValue.ObjectValue is not GameEventScriptMessage msg) return false;
         try

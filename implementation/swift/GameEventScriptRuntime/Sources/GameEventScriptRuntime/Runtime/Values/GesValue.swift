@@ -39,6 +39,8 @@ enum GesValueKind: Hashable {
     case floatRange
     /// Message signature, arguments and tags.
     case message
+    /// A reference to an object outside the host.
+    case handle
     /// Message-handler signature.
     case handler
     /// Lazy built-in numeric series.
@@ -166,6 +168,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .record, .external: .custom
         case .integerRange, .floatRange: .range
         case .message: .message
+        case .handle: .handle
         case .handler: .handler
         case .series: .series
         }
@@ -357,6 +360,8 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     mutating func setHandler(_ value: GesMessageSignature) { setObject(.handler, value.storage) }
 
+    mutating func setHandle(_ value: GesHandle) { setObject(.handle, value) }
+
     mutating func setSeries(_ value: GesSeriesValue) { setObject(.series, GesValueObject(value)) }
 
     mutating func setExternal(_ value: any GesExternalValue) {
@@ -473,6 +478,16 @@ public struct GesValue: Hashable, CustomStringConvertible {
     /// Creates a map from ordered entries in scalar key order, keeping the last value for duplicate keys.
     public static func map(_ entries: [(key: String, value: GesValue)]) -> Self { map(entries.map { GesMapEntry(key: $0.key, value: $0.value) }) }
 
+    /// Creates a map whose keys are Text or handle values, in any order; the last value of an equal key wins. Text keys
+    /// come first in scalar order, then handle keys in handle order.
+    ///
+    /// - Throws: `GesApiError.invalidArgument` when the counts differ or a key is neither a Text nor a handle.
+    public static func map(keyValues keys: [GesValue], values: [GesValue]) throws(GesApiError) -> Self {
+        guard keys.count == values.count else { throw .invalidArgument("Keys and values differ in length.") }
+        guard let map = GesValueMap.fromKeyValues(keys, values) else { throw .invalidArgument("A Map key is a Text or a handle.") }
+        return .map(map)
+    }
+
     static func map(_ entries: [GesMapEntry]) -> Self {
         var result = Self()
         result.setMap(entries)
@@ -528,6 +543,13 @@ public struct GesValue: Hashable, CustomStringConvertible {
     public static func message(_ value: GameEventScriptMessage) -> Self {
         var result = Self()
         result.setMessage(value)
+        return result
+    }
+
+    /// Wraps a handle as a value.
+    public static func handle(_ value: GesHandle) -> Self {
+        var result = Self()
+        result.setHandle(value)
         return result
     }
 
@@ -671,6 +693,8 @@ public struct GesValue: Hashable, CustomStringConvertible {
     public var floatRangeValue: GesFloatRange? { kind == .floatRange ? payload(GesFloatRange.self) : nil }
     /// Stored Message, or nil for other kinds.
     public var messageValue: GameEventScriptMessage? { kind == .message ? .init(storage: unsafeDowncast(object!, to: GesMessageStorage.self)) : nil }
+    /// Stored handle, or nil for other kinds.
+    public var handleValue: GesHandle? { kind == .handle ? unsafeDowncast(object!, to: GesHandle.self) : nil }
     /// Stored Handler signature, or nil for other kinds.
     public var signatureValue: GesMessageSignature? { kind == .handler ? .init(storage: unsafeDowncast(object!, to: GesSignatureStorage.self)) : nil }
     /// Stored series descriptor, or nil for other kinds.
@@ -692,6 +716,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .integerRange: return a.integerRangeValue == b.integerRangeValue
         case .floatRange: return a.floatRangeValue == b.floatRangeValue
         case .message: return a.messageValue == b.messageValue
+        case .handle: return a.handleValue! == b.handleValue!
         case .handler: return a.signatureValue == b.signatureValue
         case .series: return a.seriesValue == b.seriesValue
         case .external: return a.externalStorage == b.externalStorage
@@ -717,6 +742,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .integerRange: hasher.combine(integerRangeValue!)
         case .floatRange: hasher.combine(floatRangeValue!)
         case .message: hasher.combine(messageValue!)
+        case .handle: hasher.combine(handleValue!)
         case .handler: hasher.combine(signatureValue!)
         case .series: hasher.combine(seriesValue!)
         case .external: hasher.combine(externalStorage!)
@@ -766,7 +792,11 @@ public struct GesValue: Hashable, CustomStringConvertible {
             return "[" + values.map(\.nestedText).joined(separator: ", ") + "]"
         case .map:
             let map = asMap!
-            return (map.length == 0 ? "[:" : "[") + map.entries.map { (GesText.isLowerName($0.key) ? $0.key : GesText.quoted($0.key)) + ": " + $0.value.nestedText }.joined(separator: ", ") + "]"
+            return (map.length == 0 ? "[:" : "[")
+                + (0..<map.length).map { index in
+                    let key = map.key(at: index)
+                    return (map.handleKey(at: index) != nil || GesText.isLowerName(key) ? key : GesText.quoted(key)) + ": " + map.value(at: index).nestedText
+                }.joined(separator: ", ") + "]"
         case .record:
             let name = customTypeName!
             let map = asMap!
@@ -786,6 +816,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
             }.joined(separator: ", ")
             let tags = value.tags.isEmpty ? "" : " with " + value.tags.map { "#" + $0 }.joined(separator: ", ")
             return ":Message(" + value.name + "(" + arguments + ")" + tags + ")"
+        case .handle: return handleValue!.description
         case .handler:
             let value = signatureValue!
             return ":Handler(" + value.signatureId.split(separator: ",", omittingEmptySubsequences: false).joined(separator: ", ") + ")"

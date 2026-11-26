@@ -125,7 +125,7 @@ final class ConformancePerformanceExecution {
         var counts = ConformanceWorkCounters()
         for _ in 0..<iterations {
             for index in workload.inputs.indices {
-                guard host.receive(workload.inputs[index]) else { throw ConformanceExecutionError.invalidInput("Rejected measured input") }
+                guard try host.receive(workload.inputs[index]) else { throw ConformanceExecutionError.invalidInput("Rejected measured input") }
                 var frames = 0
                 while true {
                     let result = try workload.budgets[index].map { try host.executeFrame(opcodeBudget: $0) } ?? host.runToCompletion()

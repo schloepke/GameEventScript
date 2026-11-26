@@ -59,16 +59,32 @@ public final class GesNetworkRoute: @unchecked Sendable {
     public var channel: Int { index + 1 }
 }
 
+/// An `owns` route of a network: the side that owns the objects of a handle type. Immutable.
+public final class GesNetworkOwner: @unchecked Sendable {
+    /// The side that owns the objects and can resolve their handles.
+    public let side: GesNetworkSide
+    /// The owned handle type, which is never composite.
+    public let handle: GesHandleType
+
+    init(side: GesNetworkSide, handle: GesHandleType) {
+        self.side = side
+        self.handle = handle
+    }
+}
+
 /// A network declaration: the routes of one client–server pair. Immutable; it can be bound any number of times.
 public final class GesNetwork: @unchecked Sendable {
     /// The declared name without the leading `:`.
     public let name: String
     /// The routes in declared order; a route's position is its index.
     public let routes: [GesNetworkRoute]
+    /// The `owns` routes in ascending scalar order of the handle type's name; they have no route index.
+    public let owners: [GesNetworkOwner]
 
-    init(name: String, routes: [GesNetworkRoute]) {
+    init(name: String, routes: [GesNetworkRoute], owners: [GesNetworkOwner]) {
         self.name = name
         self.routes = routes
+        self.owners = owners
     }
 
     /// Binds every route root with the same parameter values.
@@ -99,6 +115,10 @@ public final class GesBoundNetwork: @unchecked Sendable {
             text += "route \(route.side == .client ? "client" : "server") \(route.verb == .sends ? "sends" : "publishes") \(route.root.name) "
             text += "\(Self.className(route.deliveryClass)) \(route.rateMicroseconds) \(GesSchemaCanonical.hex(roots[index].bindingHash))\n"
         }
+        for owner in network.owners {
+            text += "owns \(owner.side == .client ? "client" : "server") \(owner.handle.name) \(GesSchemaCanonical.hex(owner.handle.hash)) "
+            text += "\(GesSchemaCanonical.hex(owner.handle.resolved.state.schema!.hash))\n"
+        }
         canonicalForm = text
         hash = GesSchemaCanonical.hash(text)
     }
@@ -121,8 +141,19 @@ extension GesFileScope {
     func resolveNetworks(_ all: [String: GesResolvedDeclaration], _ messages: [String: GesResolvedDeclaration], _ networks: inout [GesNetwork]) throws {
         for syntax in networkSyntaxes {
             var routes: [GesNetworkRoute] = []
+            var owners: [GesNetworkOwner] = []
             var seen: Set<String> = []
-            for (index, route) in syntax.routes.enumerated() {
+            for route in syntax.routes {
+                if route.owns {
+                    let handle = try handle(route.root, route.rootOffset)
+                    if handle.root != nil { throw error(Code.invalidHandle, route.rootOffset, "'@\(route.root)' is composite; its root's owner owns it.") }
+                    if owners.contains(where: { $0.handle.name == route.root }) {
+                        throw error(Code.duplicateRoute, route.offset, "The network names '@\(route.root)' in two owns routes.")
+                    }
+                    owners.append(GesNetworkOwner(side: route.server ? .server : .client, handle: handle.publicType!))
+                    continue
+                }
+                let index = routes.count
                 // A route names a message or message set without a colon and a schema with one.
                 guard let root = (route.isMessage ? messages : all)[route.root] else {
                     let message =
@@ -167,7 +198,8 @@ extension GesFileScope {
                     )
                 )
             }
-            networks.append(GesNetwork(name: syntax.name, routes: routes))
+            owners.sort { Array($0.handle.name.utf8).lexicographicallyPrecedes(Array($1.handle.name.utf8)) }
+            networks.append(GesNetwork(name: syntax.name, routes: routes, owners: owners))
         }
     }
 

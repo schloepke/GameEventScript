@@ -183,6 +183,134 @@ public static class GesWireRules
         return maxIndex + 1 - (backward - held);
     }
 
+    /// <summary>
+    /// Writes Text from a string as its UTF-8 byte count in <paramref name="width"/> bits followed by the bytes; a lone surrogate
+    /// becomes U+FFFD, as with <see cref="System.Text.Encoding.UTF8"/>. Generated code writes the text id of a handle with it.
+    /// </summary>
+    /// <param name="writer">The writer.</param>
+    /// <param name="text">The text.</param>
+    /// <param name="width">The width of the count.</param>
+    /// <param name="maxCount">The largest byte count.</param>
+    /// <param name="path">The field path for an error.</param>
+    /// <exception cref="GesWireException"><c>wire.tooLong</c> when the text has more bytes, or <c>wire.bufferTooSmall</c>.</exception>
+    public static void WriteText(ref GesBitWriter writer, string text, int width, int maxCount, string path)
+    {
+        var count = 0L;
+        for (var index = 0; index < text.Length; index++)
+        {
+            var unit = text[index];
+            if (unit < 0x80) count += 1;
+            else if (unit < 0x800) count += 2;
+            else if (char.IsHighSurrogate(unit) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]))
+            {
+                count += 4;
+                index++;
+            }
+            else count += 3;
+        }
+
+        if (count > maxCount) throw new GesWireException(GesWireException.TooLong, path);
+        writer.Write((ulong)count, width);
+        for (var index = 0; index < text.Length; index++)
+        {
+            int scalar = text[index];
+            if (char.IsHighSurrogate(text[index]) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]))
+            {
+                scalar = char.ConvertToUtf32(text[index], text[index + 1]);
+                index++;
+            }
+            else if (char.IsSurrogate(text[index])) scalar = 0xFFFD;
+
+            if (scalar < 0x80) writer.Write((ulong)scalar, 8);
+            else if (scalar < 0x800)
+            {
+                writer.Write((ulong)(0xC0 | (scalar >> 6)), 8);
+                writer.Write((ulong)(0x80 | (scalar & 0x3F)), 8);
+            }
+            else if (scalar < 0x10000)
+            {
+                writer.Write((ulong)(0xE0 | (scalar >> 12)), 8);
+                writer.Write((ulong)(0x80 | ((scalar >> 6) & 0x3F)), 8);
+                writer.Write((ulong)(0x80 | (scalar & 0x3F)), 8);
+            }
+            else
+            {
+                writer.Write((ulong)(0xF0 | (scalar >> 18)), 8);
+                writer.Write((ulong)(0x80 | ((scalar >> 12) & 0x3F)), 8);
+                writer.Write((ulong)(0x80 | ((scalar >> 6) & 0x3F)), 8);
+                writer.Write((ulong)(0x80 | (scalar & 0x3F)), 8);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads Text written by <see cref="WriteText"/> into a string. When <paramref name="current"/> holds the same bytes it is
+    /// returned unchanged, so reading an unchanged value does not allocate.
+    /// </summary>
+    /// <param name="reader">The reader.</param>
+    /// <param name="width">The width of the count.</param>
+    /// <param name="maxCount">The largest byte count.</param>
+    /// <param name="current">The string held so far, or <see langword="null"/>.</param>
+    /// <param name="path">The field path for an error.</param>
+    /// <returns>The text.</returns>
+    /// <exception cref="GesWireException">The data ends early, the count is larger (<c>wire.invalidCount</c>) or the bytes
+    /// are not valid UTF-8 (<c>wire.invalidText</c>).</exception>
+    public static string ReadText(ref GesBitReader reader, int width, int maxCount, string? current, string path)
+    {
+        var count = reader.Read(width, path);
+        if (count > (ulong)maxCount) throw new GesWireException(GesWireException.InvalidCount, path);
+        reader.Require((long)count * 8L, path);
+        Span<byte> bytes = count <= 256 ? stackalloc byte[(int)count] : new byte[count];
+        for (var index = 0; index < bytes.Length; index++) bytes[index] = (byte)reader.Read(8, path);
+        if (!IsValidUtf8(bytes)) throw new GesWireException(GesWireException.InvalidText, path);
+        if (current is not null && SameUtf8(current, bytes)) return current;
+        return System.Text.Encoding.UTF8.GetString(bytes);
+    }
+
+    // Whether a string's UTF-8 form equals valid UTF-8 bytes, without allocating.
+    private static bool SameUtf8(string text, ReadOnlySpan<byte> bytes)
+    {
+        var at = 0;
+        for (var index = 0; index < text.Length; index++)
+        {
+            int scalar = text[index];
+            if (char.IsHighSurrogate(text[index]) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]))
+            {
+                scalar = char.ConvertToUtf32(text[index], text[index + 1]);
+                index++;
+            }
+            else if (char.IsSurrogate(text[index])) return false;
+
+            if (at >= bytes.Length) return false;
+            int decoded;
+            var first = bytes[at];
+            if (first < 0x80)
+            {
+                decoded = first;
+                at += 1;
+            }
+            else if (first < 0xE0)
+            {
+                decoded = ((first & 0x1F) << 6) | (bytes[at + 1] & 0x3F);
+                at += 2;
+            }
+            else if (first < 0xF0)
+            {
+                decoded = ((first & 0x0F) << 12) | ((bytes[at + 1] & 0x3F) << 6) | (bytes[at + 2] & 0x3F);
+                at += 3;
+            }
+            else
+            {
+                decoded = ((first & 0x07) << 18) | ((bytes[at + 1] & 0x3F) << 12) | ((bytes[at + 2] & 0x3F) << 6) | (bytes[at + 3] & 0x3F);
+                at += 4;
+            }
+
+            if (decoded != scalar) return false;
+        }
+
+        return at == bytes.Length;
+    }
+
     // The difference of two indices without overflow; a wrapping field takes the shorter way, and an exact half period is negative.
     internal static ulong Difference(ulong index, ulong baseline, ulong maxIndex, bool wrapping, out bool negative)
     {

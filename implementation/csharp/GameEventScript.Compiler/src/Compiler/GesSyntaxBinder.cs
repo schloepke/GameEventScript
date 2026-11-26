@@ -597,6 +597,19 @@ internal sealed partial class GesSyntaxBinder
     private string BindTypeName(GesSyntaxNode node)
     {
         var c = new Cursor(this, node);
+        // A handle type keeps its `@` and `~`; a union joins its alternatives with `|`, such as `@Drone|:Number`.
+        if (c.Is(HandleTypeName) || c.PeekSignificant(1).Kind == OperatorCollectionUnion)
+        {
+            var alternatives = new StringBuilder();
+            while (true)
+            {
+                alternatives.Append(c.Is(HandleTypeName) ? c.Advance().Text : CanonicalTypeName(c.Expect(TypeName).Text[1..]));
+                if (!c.Match(OperatorCollectionUnion)) return alternatives.ToString();
+                c.SkipNewLines();
+                alternatives.Append('|');
+            }
+        }
+
         var typeName = c.Expect(TypeName).Text[1..];
         if (!c.Is(LeftParen)) return CanonicalTypeName(typeName);
 

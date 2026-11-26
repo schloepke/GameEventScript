@@ -351,6 +351,8 @@ internal partial class GesVirtualMachine
                 return a.IsTrue.CompareTo(b.IsTrue);
             case Bytes when b.Kind is Bytes && a.ObjectValue is byte[] leftBytes && b.ObjectValue is byte[] rightBytes:
                 return Math.Sign(leftBytes.AsSpan().SequenceCompareTo(rightBytes));
+            case GesBytecodeTypeKind.Handle when a.ObjectValue is GesHandle leftHandle && b.ObjectValue is GesHandle rightHandle:
+                return Math.Sign(leftHandle.CompareTo(rightHandle));
             default:
                 return 0;
         }

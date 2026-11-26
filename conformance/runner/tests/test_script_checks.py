@@ -19,9 +19,11 @@ class ScriptChecksTests(unittest.TestCase):
 
     def test_request_separates_expectations_and_explains_pending_cases(self):
         selected = [case for case in self.cases if supported(case)]
-        self.assertEqual(1529, len(selected))
+        self.assertEqual(1547, len(selected))
         for request in requests(selected)['cases']:
-            self.assertEqual({'id', 'kind', 'sources', 'compile', 'requires', 'runtime'}, set(request))
+            self.assertEqual({'id', 'kind', 'sources', 'compile', 'requires', 'runtime'}, set(request) - {'handles'})
+            if 'handles' in request:
+                self.assertEqual({'schemas', 'hostSchemas', 'resolvers', 'answers'}, set(request['handles']))
             self.assertEqual({'limits', 'steps', 'random', 'hostCount', 'nativeHandlers', 'stepActions', 'deferredPrograms', 'initializationPump', 'publishSink'}, set(request['runtime']))
         self.assertEqual(len(self.cases), len(selected))
         rejected = copy.deepcopy(self.cases[0])

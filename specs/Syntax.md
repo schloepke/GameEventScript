@@ -51,6 +51,12 @@ its line is an illegal token of that backtick alone. The parser compares
 contextual words such as `from`, `where` or `strict` with identifiers whose
 spelling is their value, so a name in backticks never matches one.
 
+> **Since: Unreleased** — handle types
+
+`@` directly followed by an ASCII uppercase letter starts one handle-type token over
+the name, joined like a type name, and a directly following `~`, as in `@Unit~`.
+`@` before anything else keeps its existing meaning.
+
 Offsets are indices of the port's string storage; lines and columns are
 one-based and columns count Unicode scalars. Numeric token values are read by
 the Compiler, not the lexer.

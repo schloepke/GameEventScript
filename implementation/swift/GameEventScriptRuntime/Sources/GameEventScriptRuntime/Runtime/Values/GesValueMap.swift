@@ -17,12 +17,16 @@ struct GesMapEntry: Hashable {
     }
 }
 
-/// An immutable map in ascending Unicode scalar key order with last-entry-wins duplicates.
+/// An immutable map in ascending Unicode scalar key order with last-entry-wins duplicates. Handle keys follow every
+/// Text key, in handle order.
 public struct GesValueMap: Hashable {
     // Canonical keys in ascending Unicode scalar order and their values at the same positions. Maps built from
-    // one constant key layout share its key array.
+    // one constant key layout share its key array. Handle keys follow the Text keys; keyStorage holds their text forms.
     let keyStorage: [String]
     let valueStorage: [GesValue]
+    // The handle keys after the first textCount Text keys; empty without handle keys.
+    let handleStorage: [GesHandle]
+    let textCount: Int
 
     // Sorts entries by scalar-exact keys and keeps the last input value for each duplicate key.
     init(_ entries: [GesMapEntry]) {
@@ -44,29 +48,71 @@ public struct GesValueMap: Hashable {
         }
         keyStorage = keys
         valueStorage = values
+        handleStorage = []
+        textCount = keys.count
     }
 
     // Trusted entries already in canonical order without duplicate keys.
     init(canonical entries: [GesMapEntry]) {
         keyStorage = entries.map(\.key)
         valueStorage = entries.map(\.value)
+        handleStorage = []
+        textCount = keyStorage.count
     }
 
     // Trusted canonical keys (shared layout) and values at the same positions.
     init(canonicalKeys: [String], values: [GesValue]) {
         keyStorage = canonicalKeys
         valueStorage = values
+        handleStorage = []
+        textCount = canonicalKeys.count
+    }
+
+    // Trusted canonical keys with handle keys: unique Text keys in scalar order, then unique handles in handle order,
+    // whose values follow those of the Text keys.
+    init(canonicalKeys: [String], handles: [GesHandle], values: [GesValue]) {
+        keyStorage = handles.isEmpty ? canonicalKeys : canonicalKeys + handles.map(\.description)
+        valueStorage = values
+        handleStorage = handles
+        textCount = canonicalKeys.count
+    }
+
+    // A map of Text and handle keys in any order; the last value of an equal key wins. Nil when a key is neither a
+    // Text nor a handle.
+    static func fromKeyValues(_ keys: [GesValue], _ values: [GesValue]) -> GesValueMap? {
+        var texts: [GesMapEntry] = []
+        var handles: [GesHandle: (key: GesHandle, value: GesValue)] = [:]
+        for index in keys.indices {
+            let key = keys[index]
+            if key.valueKind == .text {
+                texts.append(GesMapEntry(key: key.textValue!, value: values[index]))
+            } else if let handle = key.handleValue {
+                handles[handle] = (handle, values[index])
+            } else {
+                return nil
+            }
+        }
+        let textMap = GesValueMap(texts)
+        let handleKeys = handles.keys.sorted()
+        return GesValueMap(
+            canonicalKeys: textMap.keyStorage,
+            handles: handleKeys.map { handles[$0]!.key },
+            values: textMap.valueStorage + handleKeys.map { handles[$0]!.value }
+        )
     }
 
     /// Maps are equal when their keys match by exact Unicode scalar sequence and their values are equal in order.
+    /// Handle keys are equal by type and identity.
     public static func == (left: Self, right: Self) -> Bool {
-        left.keyStorage.count == right.keyStorage.count && left.valueStorage == right.valueStorage
-            && zip(left.keyStorage, right.keyStorage).allSatisfy { GesText.scalarEqual($0, $1) }
+        left.keyStorage.count == right.keyStorage.count && left.textCount == right.textCount && left.valueStorage == right.valueStorage
+            && zip(left.keyStorage[..<left.textCount], right.keyStorage[..<right.textCount]).allSatisfy { GesText.scalarEqual($0, $1) }
+            && left.handleStorage == right.handleStorage
     }
 
-    /// Hashes keys by Unicode scalar sequence and values in key order, consistent with `==`.
+    /// Hashes keys by Unicode scalar sequence or handle identity and values in key order, consistent with `==`.
     public func hash(into hasher: inout Hasher) {
-        for key in keyStorage { GesText.hashScalars(key, into: &hasher) }
+        for key in keyStorage[..<textCount] { GesText.hashScalars(key, into: &hasher) }
+        for handle in handleStorage { hasher.combine(handle) }
         hasher.combine(valueStorage)
     }
 
@@ -75,14 +121,17 @@ public struct GesValueMap: Hashable {
 
     var entries: [GesMapEntry] { zip(keyStorage, valueStorage).map { GesMapEntry(key: $0, value: $1) } }
 
-    var keys: [GesValue] { keyStorage.map { .text($0) } }
+    var keys: [GesValue] { keyStorage.indices.map(keyValue(at:)) }
+
+    // The key at a position as a value: a Text or a handle.
+    func keyValue(at index: Int) -> GesValue { index < textCount ? .text(keyStorage[index]) : .handle(handleStorage[index - textCount]) }
 
     var values: [GesValue] { valueStorage }
 
-    /// Looks up an exact scalar key, distinguishing absence from a stored Nothing.
+    /// Looks up an exact scalar Text key, distinguishing absence from a stored Nothing.
     public func get(_ key: String) -> GesValue? {
         var low = 0
-        var high = keyStorage.count
+        var high = textCount
         while low < high {
             let middle = low + (high - low) / 2
             let candidate = keyStorage[middle]
@@ -95,9 +144,32 @@ public struct GesValueMap: Hashable {
     /// Tests whether a scalar-exact key is present, including keys storing Nothing.
     public func containsKey(_ key: String) -> Bool { get(key) != nil }
 
+    /// Looks up a handle key by type and identity, ignoring its version; nil when absent.
+    public func get(_ key: GesHandle) -> GesValue? {
+        var low = 0
+        var high = handleStorage.count
+        while low < high {
+            let middle = low + (high - low) / 2
+            let comparison = GesHandle.compare(handleStorage[middle], key)
+            if comparison == 0 { return valueStorage[textCount + middle] }
+            if comparison < 0 { low = middle + 1 } else { high = middle }
+        }
+        return nil
+    }
+
+    /// Tests whether a handle key is present by type and identity, including keys storing Nothing.
+    public func containsKey(_ key: GesHandle) -> Bool { get(key) != nil }
+
+    /// The handle key at a zero-based index, or nil for a Text key. Invalid indices are caller errors.
+    public func handleKey(at index: Int) -> GesHandle? {
+        precondition(index >= 0 && index < keyStorage.count, "Map index out of range.")
+        return index < textCount ? nil : handleStorage[index - textCount]
+    }
+
     subscript(index: Int) -> GesMapEntry { GesMapEntry(key: keyStorage[index], value: valueStorage[index]) }
 
-    /// The key at a zero-based index in ascending Unicode scalar key order. Invalid indices are caller errors.
+    /// The key at a zero-based index in canonical key order; a handle key is its text form. Invalid indices are caller
+    /// errors.
     public func key(at index: Int) -> String { keyStorage[index] }
 
     /// The value at a zero-based index, in the same order as `key(at:)`. Invalid indices are caller errors.

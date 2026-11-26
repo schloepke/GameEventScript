@@ -12,7 +12,7 @@ FLAGS = {'isNumeric', 'hasValue', 'isNothing', 'hasUnit', 'asBoolean', 'equal', 
 def input_value(raw):
     normalized = value(raw)
     if 'entries' in raw:
-        normalized['entries'] = [{'key': e['key'], 'value': input_value(e['value'])} for e in raw['entries']]
+        normalized['entries'] = [{**({'handle': e['handle']} if 'handle' in e else {'key': e['key']}), 'value': input_value(e['value'])} for e in raw['entries']]
     if raw['type'] == ':List':
         normalized['items'] = [input_value(item) for item in raw['items']]
     if raw['type'] == ':Message':

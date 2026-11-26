@@ -12,9 +12,9 @@ Game Event Script CLI
 
 Usage:
   dotnet ges [--help | --version]
-  dotnet ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--no-debug] [-v | -q]
-  dotnet ges check <source.ges> [more.ges ...] [-v | -q]
-  dotnet ges run <source.ges> [more.ges ...] [--scenario <scenario.ges>] [--seed <integer>]
+  dotnet ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--handles <schema.gess>] [--no-debug] [-v | -q]
+  dotnet ges check <source.ges> [more.ges ...] [--handles <schema.gess>] [-v | -q]
+  dotnet ges run <source.ges> [more.ges ...] [--handles <schema.gess>] [--scenario <scenario.ges>] [--seed <integer>]
   dotnet ges run <program.gesb> [more.gesb ...] [--args <text> ...] [--seed <integer>]
   dotnet ges run <program files ...> [--color] -- <text> ...
   dotnet ges run --interactive [--color] [program files ...]

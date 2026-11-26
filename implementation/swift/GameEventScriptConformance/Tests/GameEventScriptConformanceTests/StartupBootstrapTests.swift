@@ -22,7 +22,7 @@ final class StartupBootstrapTests: XCTestCase {
         let instance = try host.load(GesProgramBuilder().addScript("on initialization { emit Tick() }").compile())
         XCTAssertFalse(host.isReady)
         XCTAssertNil(instance.startResult)
-        XCTAssertFalse(host.receive(try .init(name: "Tick")))
+        XCTAssertFalse(try host.receive(.init(name: "Tick")))
         XCTAssertThrowsError(try host.runToCompletion())
         let start = try host.start()
         XCTAssertEqual(start.state, .ready)

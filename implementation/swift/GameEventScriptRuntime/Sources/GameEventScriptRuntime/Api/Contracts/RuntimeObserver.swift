@@ -35,9 +35,9 @@ public protocol GesRuntimeObserver {
     /// or found no recipient. `id` is the send ID that later emit, publish and dispatch callbacks of this message repeat.
     /// `deadline` is the absolute due time in whole microseconds on the host's monotonic clock, the clock
     /// `nextMessageDelay` uses; it is neither a relative delay nor wall-clock time. `publish` distinguishes a publish
-    /// from an emit. `name` is the timer name of a named send, or nil for an unnamed delayed send; `period` is the
+    /// from an emit. `name` is the timer name of a named send, a Text or a handle, or Nothing for an unnamed delayed send; `period` is the
     /// repeat period of an `every` timer in whole microseconds, or 0. The default implementation does nothing.
-    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: String?, period: Int64)
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: GesValue, period: Int64)
 
     /// Observes one `GameEventScriptHost.reset()`, after the host discarded its queued, delayed and active work without
     /// reporting those entries individually. The default implementation does nothing.
@@ -70,7 +70,7 @@ extension GesRuntimeObserver {
     public func runtimeError(_ diagnostic: GesDiagnostic) {}
 
     /// Observes acceptance of one delayed send or arming of an `every` timer; the default implementation does nothing.
-    public func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: String?, period: Int64) {}
+    public func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: GesValue, period: Int64) {}
 
     /// Observes one host reset; the default implementation does nothing.
     public func hostReset() {}

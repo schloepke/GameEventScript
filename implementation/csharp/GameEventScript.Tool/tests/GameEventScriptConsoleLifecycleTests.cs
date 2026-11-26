@@ -75,7 +75,7 @@ public sealed class GameEventScriptConsoleLifecycleTests
         var second = Write("second.ges", "module duo\non Start { emit ErrorCode(value()) }");
         var session = Session();
         string? activePath = null;
-        var instance = session.Inventory.Load(RunProgramFiles.Compile([first, second], ref activePath), [first, second]);
+        var instance = session.Inventory.Load(RunProgramFiles.Compile([first, second], [], ref activePath), [first, second]);
         Assert.IsTrue(session.Pump());
         Deliver(session, "Start");
         Assert.AreEqual(7, session.Observer.ScriptExitCode);
@@ -98,7 +98,7 @@ public sealed class GameEventScriptConsoleLifecycleTests
     {
         var path = Binary("one.gesb", "on Start { emit ErrorCode(7) }");
         var session = Session();
-        session.Inventory.Load(RunProgramFiles.ReadOne(path), [path]);
+        session.Inventory.Load(RunProgramFiles.ReadOne(path, []), [path]);
         Assert.IsTrue(session.Pump());
         Binary("one.gesb", "on Start { emit ErrorCode(12) }");
         string? activePath = null;
@@ -119,8 +119,8 @@ public sealed class GameEventScriptConsoleLifecycleTests
         var first = Write("one.ges", "module one\non Start { emit ErrorCode(7) }");
         var second = failure == "decode" ? Binary("two.gesb", "module two\non Other {}") : Write("two.ges", "module two\non Other {}");
         var session = Session();
-        session.Inventory.Load(RunProgramFiles.ReadOne(first), [first]);
-        session.Inventory.Load(RunProgramFiles.ReadOne(second), [second]);
+        session.Inventory.Load(RunProgramFiles.ReadOne(first, []), [first]);
+        session.Inventory.Load(RunProgramFiles.ReadOne(second, []), [second]);
         Assert.IsTrue(session.Pump());
         Deliver(session, "Start");
         var oldHost = session.Host;
@@ -152,7 +152,7 @@ public sealed class GameEventScriptConsoleLifecycleTests
     {
         var path = Write("random.ges", "on Draw { emit ErrorCode(random from 1 to 255) }");
         var session = Session();
-        session.Inventory.Load(RunProgramFiles.ReadOne(path), [path]);
+        session.Inventory.Load(RunProgramFiles.ReadOne(path, []), [path]);
         Assert.IsTrue(session.Pump());
         Deliver(session, "Draw");
         var first = session.Observer.ScriptExitCode;
@@ -175,7 +175,7 @@ public sealed class GameEventScriptConsoleLifecycleTests
     {
         var path = Write("init.ges", "on initialization {}");
         var session = Session();
-        session.Inventory.Load(RunProgramFiles.ReadOne(path), [path]);
+        session.Inventory.Load(RunProgramFiles.ReadOne(path, []), [path]);
         Assert.IsTrue(session.Pump());
         Write("init.ges", "on initialization { " + body + " }\non Tick { emit Tick }");
         string? activePath = null;

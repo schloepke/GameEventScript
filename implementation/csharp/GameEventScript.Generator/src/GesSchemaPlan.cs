@@ -146,6 +146,14 @@ internal sealed class GesPlanValue
 
     // How an emitter spells the type of a Tag of a named tag set, which is declared once beside the records.
     internal string TagType = "";
+
+    // A handle: its type and, for a composite, its root's type; an emitter spells the type `<Name>Handle` with HandleType.
+    internal GesLayoutHandle? Handle;
+    internal GesLayoutHandle? HandleRoot;
+    internal string HandleType = "";
+
+    // Whether the value is a Map with handle keys, planned as a List of entries with a Key and a Value in key order.
+    internal bool HandleMap;
 }
 
 internal static class GesSchemaPlanner
@@ -428,6 +436,25 @@ internal static class GesSchemaPlanner
                 }
 
                 break;
+            case GesLayoutKind.Handle:
+                value.Handle = context.Layout.Handle(encoding.Handle);
+                value.HandleType = value.Handle.Name + "Handle";
+                if (value.Handle.IsComposite) value.HandleRoot = context.Layout.Handle(value.Handle.Root);
+                break;
+            case GesLayoutKind.HandleMap:
+                // The List node, each entry's group, the key and its nodes, then the value; an entry's fields count from its group.
+                var list = new GesLayoutEncoding { Kind = GesLayoutKind.List, MaxCount = encoding.MaxCount, Width = encoding.Width, Element = encoding.Element };
+                var key = new GesLayoutEncoding { Kind = GesLayoutKind.Handle, Handle = encoding.Handle };
+                var keyNodes = Count(context.Layout, key, context.Counts);
+                var entry = new GesPlanType { Name = name + "Entry", Kind = GesSchemaKind.Schema, IsItem = true, IsClass = HoldsStorage(context, encoding.Element!.Encoding) };
+                entry.Fields.Add(new GesPlanField { Layout = new GesLayoutField { Name = "key", Path = encoding.Element.Path.Substring(0, encoding.Element.Path.Length - ".value".Length) + ".key", Encoding = key }, Base = "Key", Value = Value(context, key, "Key", "", 1) });
+                entry.Fields.Add(new GesPlanField { Layout = encoding.Element, Base = "Value", Value = Value(context, encoding.Element.Encoding, "Value", "", 1 + keyNodes) });
+                value.Encoding = list;
+                value.HandleMap = true;
+                value.IsClass = true;
+                value.Item = entry;
+                value.Element = new GesPlanValue { Base = name + "Entry", Node = node + 1, Encoding = new GesLayoutEncoding { Kind = GesLayoutKind.Schema, Schema = name + "Entry" }, IsClass = entry.IsClass };
+                break;
             case GesLayoutKind.List:
                 var element = encoding.Element!.Encoding;
                 if (element.Kind is GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List)
@@ -449,7 +476,7 @@ internal static class GesSchemaPlanner
     // Whether values of an encoding need storage that grows, so that their type is a class.
     private static bool HoldsStorage(Context context, GesLayoutEncoding encoding) => encoding.Kind switch
     {
-        GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List => true,
+        GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List or GesLayoutKind.HandleMap => true,
         GesLayoutKind.Schema => IsClass(context, encoding.Schema),
         GesLayoutKind.Union => encoding.Alternatives.Exists(alternative => HoldsStorage(context, alternative.Encoding)),
         _ => false
@@ -522,6 +549,11 @@ internal static class GesSchemaPlanner
                 return 1 + 2 * (1 + encoding.Corners[0].Encoding.Axes.Count);
             case GesLayoutKind.Disc:
                 return encoding.Corners.Count + 1 + encoding.Corners[0].Encoding.Axes.Count;
+            case GesLayoutKind.Handle:
+                var handle = layout.Handle(encoding.Handle);
+                return 2 + (encoding.Versioned ? 1 : 0) + (handle.IsComposite ? 1 : 0);
+            case GesLayoutKind.HandleMap:
+                return 2 + Count(layout, new GesLayoutEncoding { Kind = GesLayoutKind.Handle, Handle = encoding.Handle }, counts) + Count(layout, encoding.Element!.Encoding, counts);
             case GesLayoutKind.Union:
                 var total = 1;
                 foreach (var alternative in encoding.Alternatives) total += Count(layout, alternative.Encoding, counts);
@@ -612,6 +644,16 @@ internal static class GesSchemaPlanner
             case GesLayoutKind.Schema:
                 foreach (var nested in Paths(layout, layout.Type(encoding.Schema), cache)) paths.Add(path + "." + nested);
                 break;
+            case GesLayoutKind.Handle:
+                paths.Add(path + ".id");
+                if (encoding.Versioned) paths.Add(path + ".version");
+                if (layout.Handle(encoding.Handle).IsComposite) paths.Add(path + ".part");
+                break;
+            case GesLayoutKind.HandleMap:
+                paths.Add(encoding.Element!.Path.Substring(0, encoding.Element.Path.Length - ".value".Length));
+                Paths(layout, encoding.Element.Path.Substring(0, encoding.Element.Path.Length - ".value".Length) + ".key", new GesLayoutEncoding { Kind = GesLayoutKind.Handle, Handle = encoding.Handle }, paths, cache);
+                Paths(layout, encoding.Element.Path, encoding.Element.Encoding, paths, cache);
+                break;
         }
     }
 
@@ -623,6 +665,16 @@ internal static class GesSchemaPlanner
     internal static string Camel(string name) => name.Length == 0 ? name : char.ToLowerInvariant(name[0]) + name.Substring(1);
 
     // Qualifies the packed types that values refer to, everywhere below them.
+    // Qualifies the handle types of a value with the namespace that declares them.
+    internal static void QualifyHandles(GesPlanValue value, string qualifier)
+    {
+        if (value.Handle is not null && value.HandleType.IndexOf('.') < 0) value.HandleType = qualifier + value.HandleType;
+        if (value.Element is not null) QualifyHandles(value.Element, qualifier);
+        if (value.Item is not null)
+            foreach (var field in value.Item.Fields) QualifyHandles(field.Value, qualifier);
+        foreach (var alternative in value.Alternatives) QualifyHandles(alternative, qualifier);
+    }
+
     internal static void QualifyPacked(GesPlanValue value, string qualifier)
     {
         if (value.Packed is { } word && word.Type.IndexOf('.') < 0) word.Type = qualifier + word.Type;

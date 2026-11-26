@@ -25,6 +25,9 @@ internal partial class GesVirtualMachine
             case Vector or Point when obj.ObjectValue is GesSpatialValue vp && vp.GetComponent(key) is { } value:
                 SetFloat(destinationRegister, value, obj.Unit);
                 return;
+            case GesBytecodeTypeKind.Handle when obj.ObjectValue is GesHandle handle:
+                ReadHandleMember(destinationRegister, key, handle);
+                return;
             case Message when obj.ObjectValue is GameEventScriptMessage message:
                 switch (key)
                 {

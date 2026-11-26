@@ -14,7 +14,8 @@ public sealed class GesProgramEnumValidationTests
         Verify<GesBytecodeOpCode>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
         Verify<GesBinaryBindKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
         Verify<GesQuantityUnit>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
-        Verify<GesBytecodeTypeKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
+        // Handles are a value kind only; Programs check handle types by name, never by kind operand.
+        Verify<GesBytecodeTypeKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined, GesBytecodeTypeKind.Handle);
         Verify<GesBytecodePatternKind>(ushort.MaxValue, GesProgramEnumValidation.IsDefined);
         Verify<GesBytecodeSeriesKind>(ushort.MaxValue, GesProgramEnumValidation.IsDefined);
         Verify<GesDebugSymbolKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
@@ -46,9 +47,9 @@ public sealed class GesProgramEnumValidationTests
         Assert.AreEqual(0L, allocated);
     }
 
-    private static void Verify<T>(int maximum, Func<T, bool> isDefined) where T : struct, Enum
+    private static void Verify<T>(int maximum, Func<T, bool> isDefined, params T[] valueOnly) where T : struct, Enum
     {
-        var declared = Enum.GetValues<T>().ToHashSet();
+        var declared = Enum.GetValues<T>().Except(valueOnly).ToHashSet();
         for (var raw = 0; raw <= maximum; raw++)
         {
             var value = (T)Enum.ToObject(typeof(T), raw);

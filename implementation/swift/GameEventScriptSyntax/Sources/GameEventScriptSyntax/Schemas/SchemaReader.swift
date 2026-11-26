@@ -104,13 +104,16 @@
             if written != "schema" { throw Failure(offset: wordOffset, message: "Expected 'schema' after 'packed'.") }
         }
         if wire != nil || model != nil {
+            if written == "handle" {
+                throw Failure(offset: offset, message: "A handle type takes no role; the schemas that name it reach it.", code: Code.invalidHandle)
+            }
             if written == "constant" || written == "parameter" || written == "tags" || written == "network" {
                 throw Failure(offset: offset, message: "Only a schema, message or message set can be a root.", code: Code.invalidRole)
             }
             if model != nil && written == "message" {
                 throw Failure(offset: offset, message: "A model root is a schema or message set.", code: Code.invalidRole)
             }
-        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags", "network"].contains(written) && atRoleEnd() {
+        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags", "network", "handle"].contains(written) && atRoleEnd() {
             throw Failure(offset: offset, message: "'\(written)' is no role; a root is marked wire or model.", code: Code.invalidRole)
         }
         var result = try declaration(offset: offset, wordOffset: wordOffset, word: written)
@@ -254,16 +257,152 @@
             try expect(123)
             skipSeparators()
             if position < bytes.count && bytes[position] == 125 { throw failure("A network has at least one route.") }
+            // Owns routes carry no payload and do not count towards the route limit.
+            var carrying = 0
             while !consume(125) {
-                if result.routes.count == Self.maximumRoutes { throw Failure(offset: position, message: "A network has at most 64 routes.", code: Code.tooLarge) }
-                result.routes.append(try route())
+                let routeOffset = position
+                let route = try route()
+                if !route.owns {
+                    carrying += 1
+                    if carrying > Self.maximumRoutes { throw Failure(offset: routeOffset, message: "A network has at most 64 routes.", code: Code.tooLarge) }
+                }
+                result.routes.append(route)
                 try endEntry(125)
                 skipSeparators()
             }
+            if carrying == 0 { throw Failure(offset: offset, message: "A network has at least one route that sends or publishes.") }
+        case "handle":
+            return try handle(offset)
         default:
-            throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message, messages or network.")
+            throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message, messages, network or handle.")
         }
         return result
+    }
+
+    /// `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`.
+    private mutating func handle(_ offset: Int) throws -> GesSchemaDeclarationSyntax {
+        var result = GesSchemaDeclarationSyntax()
+        result.kind = .handle
+        result.offset = offset
+        skipSpaces()
+        result.name = try handleName()
+        skipSpaces()
+        try expectWord("of")
+        skipSpaces()
+        result.stateOffset = position
+        result.state = try typeName()
+        skipSpaces()
+        if atWord("composite") {
+            _ = word()
+            skipSpaces()
+            result.rootOffset = position
+            result.root = try handleName()
+            skipSpaces()
+        }
+        try expectWord("as")
+        skipTrivia()
+        try expect(123)
+        skipSeparators()
+        if !result.root.isEmpty {
+            result.id = try handleField("part")
+        } else {
+            result.id = try handleField("id")
+            try endEntry(125)
+            skipSeparators()
+            result.versionOffset = position
+            if word() != "version" {
+                throw Failure(offset: result.versionOffset, message: "A handle type has exactly the fields id and version.", code: Code.invalidHandle)
+            }
+            skipSpaces()
+            try expect(58)
+            skipSpaces()
+            result.versionOffset = position
+            try expect(58)
+            let typeName = try name(GesNames.type, "version type")
+            skipSpaces()
+            switch typeName {
+            case "Nothing":
+                break
+            case "ContentHash":
+                result.version = .contentHash
+            case "Hash":
+                let algorithmOffset = position
+                let algorithms = try tagSet()
+                if algorithms == ["sha256"] {
+                    result.version = .sha256
+                } else if algorithms == ["sha1"] {
+                    result.version = .sha1
+                } else {
+                    throw Failure(offset: algorithmOffset, message: "A hash version is :Hash(#sha256) or :Hash(#sha1).", code: Code.invalidHandle)
+                }
+                skipSpaces()
+            case "Number":
+                result.version = .revision
+                var revision = GesSchemaTypeSyntax()
+                revision.kind = .number
+                revision.offset = result.versionOffset
+                revision.constraints = try constraints()
+                let constraints = revision.constraints
+                if !constraints.integer || constraints.wrapping || constraints.step != nil || constraints.delta != nil || !(constraints.lower?.name.isEmpty ?? true)
+                    || !(constraints.upper?.name.isEmpty ?? true)
+                {
+                    throw Failure(offset: result.versionOffset, message: "A revision is :Number integer with an optional range.", code: Code.invalidHandle)
+                }
+                result.revision = revision
+            default:
+                throw Failure(
+                    offset: result.versionOffset,
+                    message: "A version is :Nothing, :Number integer, :Hash(#sha256), :Hash(#sha1) or :ContentHash.",
+                    code: Code.invalidHandle
+                )
+            }
+        }
+        try endEntry(125)
+        skipSeparators()
+        if !consume(125) {
+            let message = result.root.isEmpty ? "A handle type has exactly the fields id and version." : "A composite handle type has exactly the field part."
+            throw Failure(offset: position, message: message, code: Code.invalidHandle)
+        }
+        return result
+    }
+
+    /// `id: :Number integer between a and b` or `id: :Text max n`, and `part` alike; the bounds' values are checked on loading.
+    private mutating func handleField(_ expected: String) throws -> GesSchemaTypeSyntax {
+        let offset = position
+        if word() != expected {
+            let message = expected == "part" ? "A composite handle type has exactly the field part." : "A handle type has exactly the fields id and version."
+            throw Failure(offset: offset, message: message, code: Code.invalidHandle)
+        }
+        skipSpaces()
+        try expect(58)
+        skipSpaces()
+        let start = position
+        if position >= bytes.count || bytes[position] != 58 { throw failure("Expected ':'.") }
+        let type = try type()
+        let valid: Bool
+        switch type.kind {
+        case .number:
+            let constraints = type.constraints
+            valid =
+                constraints.integer && !constraints.wrapping && constraints.lower != nil && constraints.step == nil && constraints.delta == nil
+                && constraints.lower!.name.isEmpty && constraints.upper!.name.isEmpty
+        case .text: valid = type.max != nil
+        default: valid = false
+        }
+        if !valid {
+            throw Failure(
+                offset: start,
+                message: "An \(expected) is :Number integer between two literals or constants, or :Text max with a number.",
+                code: Code.invalidHandle
+            )
+        }
+        return type
+    }
+
+    /// `@Name` of a handle type, returned without `@`.
+    private mutating func handleName() throws -> String {
+        if !consume(64) { throw failure("Expected '@' and a handle type name.") }
+        return try name(GesNames.type, "handle type name")
     }
 
     /// `client|server sends|publishes :Root|Message reliable|latest|bulk [at most every value]` on one line.
@@ -275,7 +414,16 @@
         skipSpaces()
         let verbOffset = position
         let verb = word()
-        if verb != "sends" && verb != "publishes" { throw Failure(offset: verbOffset, message: "Expected 'sends' or 'publishes'.") }
+        if verb == "owns" {
+            skipSpaces()
+            result.rootOffset = position
+            result.root = try handleName()
+            skipSpaces()
+            result.server = side == "server"
+            result.owns = true
+            return result
+        }
+        if verb != "sends" && verb != "publishes" { throw Failure(offset: verbOffset, message: "Expected 'sends', 'publishes' or 'owns'.") }
         skipSpaces()
         result.rootOffset = position
         result.isMessage = position < bytes.count && bytes[position] != 58
@@ -482,6 +630,13 @@
     private mutating func type() throws -> GesSchemaTypeSyntax {
         var result = GesSchemaTypeSyntax()
         result.offset = position
+        if consume(64) {
+            result.kind = .handle
+            result.name = try name(GesNames.type, "handle type name")
+            result.versioned = consume(126)
+            skipSpaces()
+            return result
+        }
         try expect(58)
         let written = try name(GesNames.type, "type name")
         skipSpaces()
@@ -559,7 +714,33 @@
                 try maximum(&result)
                 try depth(&result)
             }
-        case .map: result.kind = .map
+        case .map:
+            result.kind = .map
+            if consume(40) {
+                // `:Map(@Name → T) max n`: a Map from handles of one type to values of the union T.
+                typeNesting += 1
+                if typeNesting > Self.maximumTypeNesting { throw Failure(offset: result.offset, message: "Map types nest at most \(Self.maximumTypeNesting) levels.", code: Code.cycle) }
+                skipTrivia()
+                result.keyOffset = position
+                if position >= bytes.count || bytes[position] != 64 { throw Failure(offset: result.keyOffset, message: "A Map key is one handle type.", code: Code.invalidHandle) }
+                let key = try type()
+                if key.versioned { throw Failure(offset: result.keyOffset, message: "A Map key is a handle type without '~'.", code: Code.invalidHandle) }
+                result.key = key.name
+                skipTrivia()
+                // `→` is E2 86 92.
+                if position + 2 < bytes.count && bytes[position] == 0xE2 && bytes[position + 1] == 0x86 && bytes[position + 2] == 0x92 {
+                    position += 3
+                } else if !(consume(45) && consume(62)) {
+                    throw failure("Expected '→' or '->'.")
+                }
+                skipTrivia()
+                result.element = try union()
+                skipTrivia()
+                try expect(41)
+                typeNesting -= 1
+                skipSpaces()
+                try maximum(&result)
+            }
         case .range: result.kind = .range
         case .series: result.kind = .series
         case .dice:

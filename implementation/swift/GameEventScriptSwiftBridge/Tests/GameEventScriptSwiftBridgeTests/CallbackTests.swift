@@ -15,12 +15,12 @@ final class CallbackTests: XCTestCase {
         let low = try host.subscribe(signature) { message, _ in received.append("low:\(message.arguments[0])") }
         _ = try host.subscribe(signature, matchingTags: ["ready"], withoutTags: ["skip"], priority: 5) { _, _ in received.append("high") }
         _ = try host.subscribeMessageName("Start", priority: -1) { _, _ in received.append("name") }
-        host.receive(try .init(name: "Start", nativeArguments: [("value", 42)], tags: ["ready"]))
+        try host.receive(.init(name: "Start", nativeArguments: [("value", 42)], tags: ["ready"]))
         XCTAssertTrue(low.unsubscribe())
         XCTAssertEqual(try host.runToCompletion().state, .completed)
         XCTAssertEqual(received, ["high", "low:42", "name"])
         received.removeAll()
-        host.receive(try .init(name: "Start", nativeArguments: [("value", 43)], tags: ["skip"]))
+        try host.receive(.init(name: "Start", nativeArguments: [("value", 43)], tags: ["skip"]))
         _ = try host.runToCompletion()
         XCTAssertEqual(received, ["name"])
     }
@@ -32,7 +32,7 @@ final class CallbackTests: XCTestCase {
                 if explicit { throw try GesExtensionFaultError(code: "app.failed", message: "Failed") }
                 throw Failure.unexpected
             }
-            host.receive(try .init(name: "Start"))
+            try host.receive(.init(name: "Start"))
             let result = try host.runToCompletion()
             XCTAssertEqual(result.state, .runtimeError)
             XCTAssertEqual(result.diagnostic?.phase, .runtime)
@@ -70,7 +70,7 @@ final class CallbackTests: XCTestCase {
             XCTAssertTrue(result.localAccepted)
             XCTAssertTrue(result.outboundAccepted)
         }
-        host.receive(try .init(name: "Start"))
+        try host.receive(.init(name: "Start"))
         XCTAssertEqual(try host.runToCompletion().state, .completed)
         XCTAssertEqual(local.count, 2)
         XCTAssertEqual(outbound, [local[1]])

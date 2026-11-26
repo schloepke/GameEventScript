@@ -11,8 +11,11 @@
     case number(GesNumberLiteral)
     /// A List with the UTF-8 offset of each item, which schema checks report.
     case list([GesDocumentNode], offsets: [Int])
-    /// A Map with the UTF-8 offsets of its keys and values, which schema checks report.
-    case map(keys: [String], values: [GesDocumentNode], keyOffsets: [Int], valueOffsets: [Int])
+    /// A Map with the UTF-8 offsets of its keys and values, which schema checks report. `handleKeys` marks the keys
+    /// written as handles, whose text form is the key; it is empty when no key is a handle.
+    case map(keys: [String], values: [GesDocumentNode], keyOffsets: [Int], valueOffsets: [Int], handleKeys: [Bool])
+    /// A handle such as `@Drone:7~120` in its text form as written; Runtime parses it.
+    case handle(String)
     case dice([Int32])
     case bytes([UInt8])
     case spatial(point: Bool, x: Double, y: Double, z: Double, unit: GesQuantityUnit)
@@ -63,6 +66,7 @@
     @_spi(Syntax) public static let invalidSchemaHeader = "document.invalidSchemaHeader"
     @_spi(Syntax) public static let misplacedSchemaHeader = "document.misplacedSchemaHeader"
     @_spi(Syntax) public static let limitExceeded = "document.limitExceeded"
+    @_spi(Syntax) public static let invalidHandle = "document.invalidHandle"
 
     // The English explanation of an error code for highlighters and tools; it is not part of the contract.
     @_spi(Syntax) public static func explain(_ code: String, limitName: String?, limitValue: Int) -> String {
@@ -79,6 +83,7 @@
         case unclosedText: return "This Text is never closed."
         case invalidSchemaHeader: return "A schema header names one record type or a schema file."
         case misplacedSchemaHeader: return "The schema header must come before the first entry."
+        case invalidHandle: return "This is not a handle, or a handle key has a version."
         case limitExceeded: return "The document exceeds \(limitName ?? "a limit") (\(limitValue))."
         default: return "This is not a valid document."
         }

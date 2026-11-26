@@ -71,7 +71,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         var result: GameEventScriptMessage?
         _ = try host.subscribe(.init(name: "Done", parameters: ["name", "score"])) { message, _ in result = message }
         _ = try host.load(program)
-        host.receive(try .init(name: "Start"))
+        try host.receive(.init(name: "Start"))
         let execution = try host.runToCompletion()
         XCTAssertEqual(execution.state, .completed, "\(String(describing: execution.diagnostic))")
         XCTAssertEqual(result?.arguments[0], .text("Ada"))
@@ -100,7 +100,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
                 let program = try GesProgramBuilder().withExternalTypeCatalog(types).addScript("on Start() { emit Done(\(expression)) }").compile()
                 let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withExtensionRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
                 _ = try host.load(program)
-                host.receive(try .init(name: "Start"))
+                try host.receive(.init(name: "Start"))
                 let result = try host.runToCompletion()
                 XCTAssertEqual(result.state, .runtimeError)
                 XCTAssertEqual(result.diagnostic?.code, explicit ? "app.failure" : unexpected)
@@ -134,7 +134,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
             let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withExtensionRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
             _ = try host.subscribe(.init(name: "Native")) { _, _ in throw own }
             _ = try host.load(program)
-            host.receive(try .init(name: "Start"))
+            try host.receive(.init(name: "Start"))
             let result = try host.runToCompletion()
             XCTAssertEqual(result.state, .runtimeError, source)
             XCTAssertEqual(result.diagnostic?.code, "app.own", source)

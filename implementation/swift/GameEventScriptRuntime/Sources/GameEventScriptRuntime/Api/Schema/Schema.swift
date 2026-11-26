@@ -102,6 +102,10 @@ public struct GesSchemaType: Sendable {
     public let axes: [GesSchemaAxisInfo]
     /// The schema a `.reference` refers to.
     public let schema: GesSchema?
+    /// The handle type of a `.handle`, or the key type of a handle Map; nil for every other type.
+    public let handleType: GesHandleType?
+    /// Whether a handle is written `@Name~` and carries its version.
+    public let isVersioned: Bool
 
     init(_ type: GesResolvedType) {
         kind = type.kind
@@ -121,6 +125,8 @@ public struct GesSchemaType: Sendable {
         depth = type.depth
         axes = (type.axes ?? []).map(GesSchemaAxisInfo.init)
         schema = type.reference?.schema
+        handleType = type.handle?.publicType
+        isVersioned = type.versioned
     }
 }
 

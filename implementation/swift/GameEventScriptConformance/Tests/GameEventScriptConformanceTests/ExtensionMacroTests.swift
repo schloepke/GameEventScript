@@ -95,7 +95,7 @@ final class ExtensionMacroTests: XCTestCase {
         var seen: GameEventScriptMessage?
         _ = try host.subscribe(.init(name: "Seen", parameters: ["a", "b", "c", "d"])) { message, _ in seen = message }
         _ = try host.startForTest()
-        XCTAssertTrue(host.receive(try .init(name: "Start")))
+        XCTAssertTrue(try host.receive(.init(name: "Start")))
         let result = try host.runToCompletion()
         return (seen, result)
     }

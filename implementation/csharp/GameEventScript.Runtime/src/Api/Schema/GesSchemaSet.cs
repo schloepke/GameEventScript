@@ -48,6 +48,9 @@ public sealed class GesSchemaSet
     private readonly Dictionary<string, string> _tagSetSources = new(StringComparer.Ordinal);
     private readonly Dictionary<string, GesNetwork> _networks = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _networkSources = new(StringComparer.Ordinal);
+    // Handle types, always written with `@`, have a namespace of their own.
+    private readonly Dictionary<string, GesResolvedHandle> _handles = new(StringComparer.Ordinal);
+    private readonly List<GesResolvedHandle> _orderedHandles = [];
 
     private GesSchemaSet(List<GesSchemaSource> sources) => _sources = sources;
 
@@ -102,6 +105,28 @@ public sealed class GesSchemaSet
         return _networks.TryGetValue(name, out var network) ? network
             : throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"Network '{name}' is not declared.");
     }
+
+    /// <summary>Gets the handle types, in source order.</summary>
+    public GesReadOnlyArray<GesHandleType> HandleTypes { get; private set; }
+
+    /// <summary>Gets a handle type by its exact name, compared ordinally.</summary>
+    /// <param name="name">The handle type's name, with or without the leading <c>@</c>.</param>
+    /// <returns>Its description.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GesSchemaException">No handle type has that name (<c>schema.unknownName</c>).</exception>
+    public GesHandleType HandleType(string name)
+    {
+        if (name is null) throw new ArgumentNullException(nameof(name));
+        var plain = name.StartsWith("@", StringComparison.Ordinal) ? name.Substring(1) : name;
+        return _handles.TryGetValue(plain, out var handle) ? handle.Public
+            : throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"Handle type '@{plain}' is not declared.");
+    }
+
+    // A handle type by its name without `@`, or null.
+    internal GesResolvedHandle? FindHandle(string name) => _handles.TryGetValue(name, out var handle) ? handle : null;
+
+    // The name of the source that declares a handle type.
+    internal string HandleSourceName(string name) => _handles[name].Scope.SourceName;
 
     /// <summary>
     /// Checks a GES document against the schema of its header: a type name, or for a file name the one schema of the source
@@ -237,15 +262,25 @@ public sealed class GesSchemaSet
         var networkNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in files)
         {
-            file.DeclareNames(_declarations, _messages, _ordered, tagSets, networkNames);
+            file.DeclareNames(_declarations, _messages, _ordered, tagSets, networkNames, _handles, _orderedHandles);
             foreach (var name in tagSets.Keys) _tagSetSources.TryAdd(name, file.SourceName);
         }
+        foreach (var file in files) file.ResolveHandles(_declarations);
+        var handleTypes = new List<GesHandleType>();
+        foreach (var handle in _orderedHandles)
+        {
+            handle.Public = new GesHandleType(handle, _declarations);
+            handleTypes.Add(handle.Public);
+        }
+
+        HandleTypes = new GesReadOnlyArray<GesHandleType>(handleTypes);
         foreach (var file in files) file.Resolve(_declarations, _messages);
         var composed = new HashSet<GesResolvedDeclaration>();
         foreach (var declaration in _ordered)
             if (declaration.Kind == GesSchemaKind.Schema) Compose(declaration, [], composed);
         var visited = new Dictionary<GesResolvedDeclaration, int>();
         foreach (var declaration in _ordered) CheckNesting(declaration, [], visited);
+        foreach (var handle in _orderedHandles) handle.Scope.CheckHandleState(handle);
         foreach (var file in files) file.ResolveRecordDefaults();
         foreach (var declaration in _ordered)
             if (declaration.Packed) GesSchemaBinder.CheckPacked(declaration);
@@ -397,6 +432,12 @@ internal sealed class GesResolvedType
 
     internal GesResolvedDeclaration? Reference { get; set; }
 
+    // The handle type of a handle, or the key type of a handle Map.
+    internal GesResolvedHandle? Handle { get; init; }
+
+    // A handle written `@Name~`, which carries its version.
+    internal bool Versioned { get; init; }
+
     internal string ReferenceName { get; init; } = "";
 
     // The named tag set a Tag takes its members from, or empty.
@@ -503,6 +544,8 @@ internal sealed partial class GesFileScope
     private readonly List<GesResolvedDeclaration> _own = [];
     private Dictionary<string, GesSchemaDeclarationSyntax> _tagSets = new(StringComparer.Ordinal);
     private readonly List<GesSchemaDeclarationSyntax> _networks = [];
+    private readonly List<GesResolvedHandle> _ownHandles = [];
+    private Dictionary<string, GesResolvedHandle> _handles = new(StringComparer.Ordinal);
 
     // The lets of the schema being resolved, which its fields can name.
     private readonly Dictionary<string, GesResolvedLet> _lets = new(StringComparer.Ordinal);
@@ -526,9 +569,10 @@ internal sealed partial class GesFileScope
         return new GesSchemaException(code, _source.Name, line, column, message);
     }
 
-    internal void DeclareNames(Dictionary<string, GesResolvedDeclaration> all, Dictionary<string, GesResolvedDeclaration> messages, List<GesResolvedDeclaration> ordered, Dictionary<string, GesSchemaDeclarationSyntax> tagSets, HashSet<string> networks)
+    internal void DeclareNames(Dictionary<string, GesResolvedDeclaration> all, Dictionary<string, GesResolvedDeclaration> messages, List<GesResolvedDeclaration> ordered, Dictionary<string, GesSchemaDeclarationSyntax> tagSets, HashSet<string> networks, Dictionary<string, GesResolvedHandle> handles, List<GesResolvedHandle> orderedHandles)
     {
         _tagSets = tagSets;
+        _handles = handles;
         foreach (var declaration in _syntax.Declarations)
         {
             switch (declaration.Kind)
@@ -551,6 +595,14 @@ internal sealed partial class GesFileScope
                         throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is declared twice.");
                     _networks.Add(declaration);
                     break;
+                case GesSchemaDeclarationKind.Handle:
+                {
+                    var handle = new GesResolvedHandle { Name = declaration.Name, Offset = declaration.Offset, Scope = this, Syntax = declaration };
+                    if (!handles.TryAdd(declaration.Name, handle)) throw Error(Code.DuplicateName, declaration.Offset, $"Handle type '@{declaration.Name}' is declared twice.");
+                    orderedHandles.Add(handle);
+                    _ownHandles.Add(handle);
+                    break;
+                }
                 case GesSchemaDeclarationKind.Constant:
                     if (!_constants.TryAdd(declaration.Name, declaration.Value!)) throw Error(Code.DuplicateName, declaration.Offset, $"Constant '{declaration.Name}' is declared twice.");
                     break;
@@ -585,6 +637,47 @@ internal sealed partial class GesFileScope
             }
         }
     }
+
+    // A handle type's state is a declared, non-abstract schema, a composite's root a handle type that is not composite
+    // itself; its id, part and revision are resolved like field types, without lets.
+    internal void ResolveHandles(Dictionary<string, GesResolvedDeclaration> all)
+    {
+        _lets.Clear();
+        foreach (var handle in _ownHandles)
+        {
+            var syntax = handle.Syntax;
+            if (!all.TryGetValue(syntax.State, out var state) || state.Kind != GesSchemaKind.Schema)
+                throw Error(Code.InvalidHandle, syntax.StateOffset, $"The state of '@{handle.Name}', ':{syntax.State}', is no declared schema.");
+            if (state.Abstract) throw Error(Code.InvalidHandle, syntax.StateOffset, $"The state of '@{handle.Name}', ':{syntax.State}', is abstract.");
+            handle.State = state;
+            if (syntax.Root.Length > 0)
+            {
+                var root = Handle(syntax.Root, syntax.RootOffset);
+                if (root.Syntax.Root.Length > 0)
+                    throw Error(Code.InvalidHandle, syntax.RootOffset, $"'@{syntax.Root}' is composite itself; composites have one level.");
+                handle.Root = root;
+            }
+
+            handle.Id = ResolveType(syntax.Id!, all);
+            if (handle.Id.Kind == GesSchemaTypeKind.Number)
+                foreach (var bound in new[] { handle.Id.Constraints.Lower!, handle.Id.Constraints.Upper! })
+                    if (bound.IsParameter) throw Error(Code.InvalidHandle, bound.Offset, "A handle type's bounds are literals or constants, never parameters.");
+                    else if (bound.Value.Exponent + Digits(Math.Abs(bound.Value.Significand)) > 18)
+                        throw Error(Code.InvalidHandle, bound.Offset, "An integer id or part lies within 18 digits.");
+            if (syntax.Revision is { } revision) handle.Revision = ResolveType(revision, all);
+        }
+    }
+
+    // A state field named `id`, `version` or `root` would collide with the handle's members.
+    internal void CheckHandleState(GesResolvedHandle handle)
+    {
+        foreach (var name in new[] { "id", "version", "root" })
+            if (Array.Exists(handle.State.Fields, field => field.Name == name) || Array.Exists(handle.State.Computed, field => field.Name == name))
+                throw Error(Code.InvalidHandle, handle.Syntax.StateOffset, $"The state ':{handle.State.Name}' of '@{handle.Name}' has a field '{name}', which collides with the handle's members.");
+    }
+
+    private GesResolvedHandle Handle(string name, int offset)
+        => _handles.TryGetValue(name, out var handle) ? handle : throw Error(Code.UnknownName, offset, $"Handle type '@{name}' is not declared.");
 
     internal void Resolve(Dictionary<string, GesResolvedDeclaration> all, Dictionary<string, GesResolvedDeclaration> messages)
     {
@@ -975,12 +1068,18 @@ internal sealed partial class GesFileScope
 
             if (alternatives.Length == 1) continue;
             // The type name decides: a unit does not distinguish alternatives, and a named tag set is a Tag.
-            var name = result[index].Kind == GesSchemaTypeKind.Reference ? ":" + alternative.Name : result[index].Kind.ToString();
+            // `@Name` and `@Name~` share their name, so one union never holds both.
+            var name = result[index].Kind switch
+            {
+                GesSchemaTypeKind.Reference => ":" + alternative.Name,
+                GesSchemaTypeKind.Handle => "@" + alternative.Name,
+                _ => result[index].Kind.ToString()
+            };
             if (!seen.Add(name)) throw Error(Code.InvalidUnion, alternative.Offset, "A union repeats a type name; a unit does not distinguish alternatives.");
             if (alternative.Constraints.Delta is not null) throw Error(Code.InvalidUnion, alternative.Offset, "A union alternative has no delta within.");
             // Generated code names an alternative after its label or its type, so both must stay apart.
             var label = alternative.Label.Length > 0 ? char.ToUpperInvariant(alternative.Label[0]) + alternative.Label.Substring(1)
-                : result[index].Kind == GesSchemaTypeKind.Reference ? alternative.Name : result[index].Kind.ToString();
+                : result[index].Kind is GesSchemaTypeKind.Reference or GesSchemaTypeKind.Handle ? alternative.Name : result[index].Kind.ToString();
             if (!labels.Add(label)) throw Error(Code.DuplicateName, alternative.Label.Length > 0 ? alternative.LabelOffset : alternative.Offset, $"Two alternatives are both named '{label}'.");
         }
 
@@ -989,6 +1088,14 @@ internal sealed partial class GesFileScope
 
     private GesResolvedType ResolveType(GesSchemaTypeSyntax type, Dictionary<string, GesResolvedDeclaration> all)
     {
+        if (type.Kind == GesSchemaTypeKind.Handle)
+        {
+            var handle = Handle(type.Name, type.Offset);
+            if (type.Versioned && !handle.Versioned)
+                throw Error(Code.InvalidHandle, type.Offset, $"'@{type.Name}' has no version, so '@{type.Name}~' does not exist.");
+            return new GesResolvedType { Kind = GesSchemaTypeKind.Handle, Handle = handle, Versioned = type.Versioned, ReferenceName = type.Name, Offset = type.Offset };
+        }
+
         // A named tag set stands for a Tag with its members; only its name differs, which belongs to no hash.
         if (type.Kind == GesSchemaTypeKind.Reference && _tagSets.TryGetValue(type.Name, out var tagSet))
             return new GesResolvedType { Kind = GesSchemaTypeKind.Tag, Tags = tagSet.Tags, TagSet = tagSet.Name, Offset = type.Offset };
@@ -1037,6 +1144,7 @@ internal sealed partial class GesFileScope
             Axes = axes,
             Reference = reference,
             ReferenceName = type.Name,
+            Handle = type.Key.Length > 0 ? Handle(type.Key, type.KeyOffset) : null,
             Offset = type.Offset
         };
     }
@@ -1127,35 +1235,75 @@ internal static class GesSchemaCanonical
 
     internal static string Form(GesResolvedDeclaration root)
     {
-        var declarations = new List<GesResolvedDeclaration>();
         var parameters = new SortedDictionary<string, GesSchemaTypeSyntax>(StringComparer.Ordinal);
-        Reach(root, declarations, parameters);
+        var reach = new Reached([], parameters, []);
+        Reach(root, reach);
         var builder = new StringBuilder("gess1\n");
         foreach (var parameter in parameters) builder.Append("parameter ").Append(parameter.Key).Append(' ').Append(ParameterKind(parameter.Value)).Append('\n');
-        foreach (var declaration in declarations) Write(declaration, builder);
+        foreach (var declaration in reach.Order!)
+        {
+            if (declaration is GesResolvedHandle handle) handle.WriteCanonical(builder);
+            else Write((GesResolvedDeclaration)declaration, builder);
+        }
+
         return builder.ToString();
     }
 
-    internal static void Reach(GesResolvedDeclaration declaration, List<GesResolvedDeclaration> declarations, SortedDictionary<string, GesSchemaTypeSyntax> parameters)
-        => Reach(declaration, new HashSet<GesResolvedDeclaration>(), declarations, parameters);
-
-    private static void Reach(GesResolvedDeclaration declaration, HashSet<GesResolvedDeclaration> seen, List<GesResolvedDeclaration> declarations, SortedDictionary<string, GesSchemaTypeSyntax> parameters)
+    // The form a handle hash runs over: the handle type's declaration and, for a composite, its root's. A handle type has
+    // no parameters and never reaches its state.
+    internal static string HandleForm(GesResolvedHandle handle)
     {
-        if (!seen.Add(declaration)) return;
-        declarations.Add(declaration);
-        foreach (var field in declaration.Fields)
-            foreach (var type in field.Alternatives) Reach(type, field.Scope, seen, declarations, parameters);
-        foreach (var member in declaration.Members) Reach(member, seen, declarations, parameters);
+        var builder = new StringBuilder("gess1\n");
+        handle.WriteCanonical(builder);
+        handle.Root?.WriteCanonical(builder);
+        return builder.ToString();
     }
 
-    private static void Reach(GesResolvedType type, GesFileScope scope, HashSet<GesResolvedDeclaration> seen, List<GesResolvedDeclaration> declarations, SortedDictionary<string, GesSchemaTypeSyntax> parameters)
+    // An id, part or revision type: `Number` with its constraints or `Text max n`.
+    internal static void WriteHandleType(GesResolvedType type, StringBuilder builder) => WriteType(type, builder);
+
+    internal static void Reach(GesResolvedDeclaration declaration, List<GesResolvedDeclaration> declarations, SortedDictionary<string, GesSchemaTypeSyntax> parameters)
+        => Reach(declaration, new Reached(declarations, parameters, null));
+
+    // The schemas, parameters and, for a canonical form, the declarations of schemas and handle types in reach order.
+    private sealed class Reached(List<GesResolvedDeclaration> declarations, SortedDictionary<string, GesSchemaTypeSyntax> parameters, List<object>? order)
     {
-        ReachValues(type.Constraints, scope, parameters);
+        internal HashSet<object> Seen { get; } = [];
+
+        internal List<GesResolvedDeclaration> Declarations { get; } = declarations;
+
+        internal SortedDictionary<string, GesSchemaTypeSyntax> Parameters { get; } = parameters;
+
+        internal List<object>? Order { get; } = order;
+    }
+
+    private static void Reach(GesResolvedDeclaration declaration, Reached reach)
+    {
+        if (!reach.Seen.Add(declaration)) return;
+        reach.Declarations.Add(declaration);
+        reach.Order?.Add(declaration);
+        foreach (var field in declaration.Fields)
+            foreach (var type in field.Alternatives) Reach(type, field.Scope, reach);
+        foreach (var member in declaration.Members) Reach(member, reach);
+    }
+
+    // A handle type is written where it is first reached, followed by its root; its state is not reached.
+    private static void Reach(GesResolvedHandle handle, Reached reach)
+    {
+        if (reach.Order is null || !reach.Seen.Add(handle)) return;
+        reach.Order.Add(handle);
+        if (handle.Root is { } root) Reach(root, reach);
+    }
+
+    private static void Reach(GesResolvedType type, GesFileScope scope, Reached reach)
+    {
+        ReachValues(type.Constraints, scope, reach.Parameters);
         if (type.Axes is { } axes)
-            foreach (var axis in axes) ReachValues(axis.Constraints, scope, parameters);
+            foreach (var axis in axes) ReachValues(axis.Constraints, scope, reach.Parameters);
+        if (type.Handle is { } handle) Reach(handle, reach);
         if (type.Element is { } element)
-            foreach (var alternative in element) Reach(alternative, scope, seen, declarations, parameters);
-        if (type.Reference is { } reference) Reach(reference, seen, declarations, parameters);
+            foreach (var alternative in element) Reach(alternative, scope, reach);
+        if (type.Reference is { } reference) Reach(reference, reach);
     }
 
     private static void ReachValues(GesResolvedConstraints constraints, GesFileScope scope, SortedDictionary<string, GesSchemaTypeSyntax> parameters)
@@ -1419,6 +1567,16 @@ internal static class GesSchemaCanonical
                 break;
             case GesSchemaTypeKind.Reference:
                 builder.Append(type.ReferenceName);
+                break;
+            case GesSchemaTypeKind.Handle:
+                builder.Append('@').Append(type.Handle!.Name);
+                if (type.Versioned) builder.Append('~');
+                break;
+            case GesSchemaTypeKind.Map when type.Handle is { } key:
+                builder.Append("Map(@").Append(key.Name).Append(" -> ");
+                WriteUnion(type.Element!, builder);
+                builder.Append(')');
+                if (type.Max is { } mapMax) builder.Append(" max ").Append(mapMax);
                 break;
             default:
                 builder.Append(type.Kind.ToString());

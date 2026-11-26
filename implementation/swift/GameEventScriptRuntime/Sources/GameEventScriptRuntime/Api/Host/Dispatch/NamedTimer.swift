@@ -13,7 +13,8 @@ enum GesNamedTimerState {
 /// detaches; an `every` timer re-arms when each logical message it sent completes.
 final class GesNamedTimer {
     let instance: GesProgramInstance
-    let name: String
+    // The Text name or the handle that names the timer.
+    let name: GesValue
     /// The repeat period in whole microseconds, or 0 for a one-shot `after` timer.
     let period: Int64
     let publish: Bool
@@ -28,7 +29,7 @@ final class GesNamedTimer {
     /// Whether the host's registry still maps the instance and name to this timer.
     var registered = false
 
-    init(instance: GesProgramInstance, name: String, period: Int64, publish: Bool, message: GameEventScriptMessage, owner: GesProgramInstance?) {
+    init(instance: GesProgramInstance, name: GesValue, period: Int64, publish: Bool, message: GameEventScriptMessage, owner: GesProgramInstance?) {
         self.instance = instance
         self.name = name
         self.period = period
@@ -44,6 +45,6 @@ final class GesNamedTimer {
     /// The registry key of a named timer: the sending instance's registration ID and the name.
     struct Key: Hashable {
         let instance: Int64
-        let name: String
+        let name: GesValue
     }
 }

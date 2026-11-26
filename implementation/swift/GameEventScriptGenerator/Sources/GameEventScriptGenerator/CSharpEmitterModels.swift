@@ -195,6 +195,8 @@ extension GesCSharpEmitter {
             code.line("var \(dice) = new List<int>(\(source).Count);")
             code.line("foreach (var \(face) in \(source)) \(dice).Add(checked((int)\(face)));")
             code.line("\(target) = \(dice);")
+        case .list where value.handleMap:
+            toModelHandleMap(&code, value, model, modelOwner, wired, source, target, conversion)
         case .list:
             toModelList(&code, value, model, modelOwner, wired, source, target, conversion)
         case .schema where value.packed == nil:
@@ -261,6 +263,31 @@ extension GesCSharpEmitter {
         code.line("\(list).Add(\(converted));")
         code.close()
         code.line("\(target) = \(list);")
+    }
+
+    // A handle Map: the wire entries, in key order, become a Dictionary of the same handle keys.
+    private static func toModelHandleMap(
+        _ code: inout Code,
+        _ value: GesPlanValue,
+        _ model: GesModelPlanValue,
+        _ modelOwner: String,
+        _ wired: String,
+        _ source: String,
+        _ target: String,
+        _ conversion: ModelConversion
+    ) {
+        let holder = value.item!
+        let element = model.element!
+        let map = conversion.local("map")
+        let item = conversion.local("item")
+        let converted = conversion.local("element")
+        code.line("var \(map) = new \(trimmed(GesCSharpModelEmitter.type(model, conversion.qualifier, modelOwner)))(\(source).Count);")
+        block(&code, "foreach (var \(item) in \(source))")
+        code.line("\(GesCSharpModelEmitter.type(element, conversion.qualifier, modelOwner)) \(converted);")
+        toModel(&code, holder.fields[1].value, element, modelOwner, item, wired + holder.name + ".", "\(item).\(holder.fields[1].value.base)", converted, conversion)
+        code.line("\(map).Add(\(item).Key, \(converted));")
+        code.close()
+        code.line("\(target) = \(map);")
     }
 
     // Whether a wire element and a model element have the same type, so that a List of them copies as a block.
@@ -356,6 +383,8 @@ extension GesCSharpEmitter {
             let face = conversion.local("face")
             code.line("\(member).Clear();")
             code.line("foreach (var \(face) in \(source)) \(member).Add(\(face));")
+        case .list where value.handleMap:
+            fromModelHandleMap(&code, value, model, modelOwner, owner, wired, source, pooled, conversion)
         case .list:
             fromModelList(&code, value, model, modelOwner, owner, wired, source, pooled, conversion)
         case .schema where value.packed == nil:
@@ -408,6 +437,35 @@ extension GesCSharpEmitter {
         } else {
             code.line("\(member).Add(\(converted(value.element!, element, modelOwner, from, toModel: false, wired, conversion)));")
         }
+        code.close()
+    }
+
+    // A handle Map: the Dictionary's entries, sorted by key as the wire requires.
+    private static func fromModelHandleMap(
+        _ code: inout Code,
+        _ value: GesPlanValue,
+        _ model: GesModelPlanValue,
+        _ modelOwner: String,
+        _ owner: String,
+        _ wired: String,
+        _ source: String,
+        _ pooled: Bool,
+        _ conversion: ModelConversion
+    ) {
+        let member = "\(owner).\(value.base)"
+        let holder = value.item!
+        let keys = conversion.local("keys")
+        let index = conversion.local("index")
+        let target = conversion.local("target")
+        code.line("var \(keys) = new List<\(GesCSharpModelEmitter.type(model.key!, conversion.qualifier, modelOwner))>(\(source).Keys);")
+        code.line("\(keys).Sort();")
+        if pooled { code.line("\(owner).Set\(value.base)Count(\(keys).Count);") } else { code.line("\(member).Clear();") }
+        block(&code, "for (var \(index) = 0; \(index) < \(keys).Count; \(index)++)")
+        code.line(pooled ? "var \(target) = \(member)[\(index)];" : "var \(target) = new \(wired + holder.name)();")
+        code.line("\(target).Key = \(keys)[\(index)];")
+        let inner = holder.fields[1]
+        fromModel(&code, inner.value, model.element!, modelOwner, target, wired + holder.name + ".", "\(source)[\(keys)[\(index)]]", pooled: isPooledList(inner), conversion)
+        if !pooled { code.line("\(member).Add(\(target));") }
         code.close()
     }
 

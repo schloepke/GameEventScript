@@ -361,7 +361,7 @@ internal sealed partial class GesSyntaxParser
         Role(isUnlabeledConstructorParameter ? GesSyntaxRole.UnlabeledField : GesSyntaxRole.Field);
         Expect(Colon);
         SkipNewLines();
-        ParseTypeName();
+        ParseTypeName(allowHandle: true, allowUnion: true);
         SkipNewLines();
 
         if (MatchWord("clamped"))
@@ -425,7 +425,7 @@ internal sealed partial class GesSyntaxParser
         if (!Match(As)) return;
 
         SkipNewLines();
-        ParseTypeName();
+        ParseTypeName(allowHandle: true, allowUnion: true);
     }
 
     private void ParseEventHandler()
@@ -843,12 +843,30 @@ internal sealed partial class GesSyntaxParser
         ParseStatement();
     }
 
-    // The type name without its colon, such as `Number` or `Quantity`.
-    private string ParseTypeName()
+    // The type name without its colon, such as `Number` or `Quantity`. A handle type keeps its `@` and `~`, and a union of
+    // parameter and field types joins further alternatives with `|`; a union without any handle alternative is no type.
+    private string ParseTypeName(bool allowHandle = false, bool allowUnion = false)
     {
         ThrowIfIllegalToken();
         _tree.StartNode(GesSyntaxNodeKind.TypeReference);
-        return FinishNode(ParseTypeNameCore());
+        var first = Current;
+        var name = allowHandle && Is(HandleTypeName) ? Advance().Text : ParseTypeNameCore();
+        if (!allowUnion || !Is(OperatorCollectionUnion)) return FinishNode(name);
+        var handles = name[0] == '@';
+        while (Match(OperatorCollectionUnion))
+        {
+            SkipNewLines();
+            ThrowIfIllegalToken();
+            if (Is(HandleTypeName))
+            {
+                handles = true;
+                Advance();
+            }
+            else ParseTypeNameCore();
+        }
+
+        if (!handles) throw new ParseException("A type union is written only of handle types", first);
+        return FinishNode(name);
     }
 
     private string ParseTypeNameCore()

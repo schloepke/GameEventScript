@@ -80,6 +80,13 @@ public static class GesDiagnosticCodes
     /// A <c>without</c> tag filter uses <c>|</c> alternatives, which only <c>matching</c> filters allow.
     /// </summary>
     public const string ValidateInvalidTagFilter = "validate.invalidTagFilter";
+    /// <summary>An <c>@Name</c> names no handle type of the compilation's handle catalog.</summary>
+    public const string ValidateUnknownHandleType = "validate.unknownHandleType";
+    /// <summary>
+    /// A handle type is used where it is not allowed: <c>as @Name</c> outside a parameter or field, <c>@Name~</c> or
+    /// <c>h.version</c> of a type without versions, or a union mixing handle and other types.
+    /// </summary>
+    public const string ValidateInvalidHandleUse = "validate.invalidHandleUse";
     /// <summary>The compiler cannot lower a construct to bytecode.</summary>
     public const string CompileUnsupportedConstruct = "compile.unsupportedConstruct";
     /// <summary>A lowered intrinsic or handler form has the wrong number of arguments or parameters.</summary>
@@ -110,6 +117,10 @@ public static class GesDiagnosticCodes
     public const string LinkMissingExternalTypeConstructor = "link.missingExternalTypeConstructor";
     /// <summary>A registered external type constructor does not match the referenced signature.</summary>
     public const string LinkMismatchedExternalTypeConstructor = "link.mismatchedExternalTypeConstructor";
+    /// <summary>The Program reads the state of a handle type that has no registered resolver.</summary>
+    public const string LinkMissingHandleResolver = "link.missingHandleResolver";
+    /// <summary>The handle type registered with a resolver has another schema hash than the Program's.</summary>
+    public const string LinkMismatchedHandleType = "link.mismatchedHandleType";
     /// <summary>The Program's synchronous call graph contains a cycle.</summary>
     public const string LinkCyclicCallGraph = "link.cyclicCallGraph";
     /// <summary>The Program violates a call-graph or binding invariant that linking requires.</summary>
@@ -161,6 +172,12 @@ public static class GesDiagnosticCodes
     /// other than a deliberately reported <see cref="GesExtensionFaultException"/>.
     /// </summary>
     public const string RuntimeExternalFieldAccessFailed = "runtime.externalFieldAccessFailed";
+    /// <summary>A handle resolver threw or reported a failure, or a state read found no resolver for its type.</summary>
+    public const string RuntimeHandleResolveFailed = "runtime.handleResolveFailed";
+    /// <summary>A handle resolver answered without a result, with two results, or with a state that does not fit the state schema.</summary>
+    public const string RuntimeInvalidHandleState = "runtime.invalidHandleState";
+    /// <summary>A passed or computed handle version differs from the version the handle carries or from the content hash.</summary>
+    public const string RuntimeHandleVersionMismatch = "runtime.handleVersionMismatch";
 
     /// <summary>
     /// The reserved code prefix for internally raised runtime diagnostics. Codes

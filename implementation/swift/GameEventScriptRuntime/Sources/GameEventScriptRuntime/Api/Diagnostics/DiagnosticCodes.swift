@@ -73,6 +73,13 @@ public enum GesDiagnosticCodes {
     /// A `without` tag filter uses `|` alternatives, which only `matching` filters allow.
     public static let validateInvalidTagFilter = "validate.invalidTagFilter"
 
+    /// An `@Name` names no handle type of the compilation's handle catalog.
+    public static let validateUnknownHandleType = "validate.unknownHandleType"
+
+    /// A handle type is used where it is not allowed: `as @Name` outside a parameter or field, `@Name~` or `h.version`
+    /// of a type without versions, or a union mixing handle and other types.
+    public static let validateInvalidHandleUse = "validate.invalidHandleUse"
+
     /// Defines the compile unsupported construct value.
     public static let compileUnsupportedConstruct = "compile.unsupportedConstruct"
 
@@ -114,6 +121,12 @@ public enum GesDiagnosticCodes {
 
     /// Defines the link mismatched external type constructor value.
     public static let linkMismatchedExternalTypeConstructor = "link.mismatchedExternalTypeConstructor"
+
+    /// The Program reads the state of a handle type that has no registered resolver.
+    public static let linkMissingHandleResolver = "link.missingHandleResolver"
+
+    /// The handle type registered with a resolver has another schema hash than the Program's.
+    public static let linkMismatchedHandleType = "link.mismatchedHandleType"
 
     /// Defines the link cyclic call graph value.
     public static let linkCyclicCallGraph = "link.cyclicCallGraph"
@@ -177,4 +190,14 @@ public enum GesDiagnosticCodes {
 
     /// An <see cref="IGesExternalValue"/> field access threw an exception other than a deliberately reported <see cref="GesExtensionFaultException"/>.
     public static let runtimeExternalFieldAccessFailed = "runtime.externalFieldAccessFailed"
+
+    /// A handle resolver threw or reported a failure, or a state read found no resolver for its type.
+    public static let runtimeHandleResolveFailed = "runtime.handleResolveFailed"
+
+    /// A handle resolver answered without a result, with two results, or with a state that does not fit the state
+    /// schema.
+    public static let runtimeInvalidHandleState = "runtime.invalidHandleState"
+
+    /// A passed or computed handle version differs from the version the handle carries or from the content hash.
+    public static let runtimeHandleVersionMismatch = "runtime.handleVersionMismatch"
 }

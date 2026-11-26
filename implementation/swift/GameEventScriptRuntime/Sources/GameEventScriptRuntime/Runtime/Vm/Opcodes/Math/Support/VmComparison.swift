@@ -49,6 +49,7 @@ enum GesComparison {
             for (x, y) in [(av.x, bv.x), (av.y, bv.y), (av.z, bv.z)] { if x != y { return x < y ? -1 : 1 } }
         }
         if let av = a.bytesValue, let bv = b.bytesValue { return av == bv ? 0 : av.lexicographicallyPrecedes(bv) ? -1 : 1 }
+        if let av = a.handleValue, let bv = b.handleValue { return GesHandle.compare(av, bv).signum() }
         return 0
     }
 

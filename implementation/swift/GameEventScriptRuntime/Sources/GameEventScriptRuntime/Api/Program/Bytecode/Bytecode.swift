@@ -43,6 +43,9 @@ public enum GesBinaryBindKind: UInt8, Sendable, CaseIterable {
     case `extensionCall` = 0x20
     /// Message signature used by emit or publish instructions.
     case `outboundMessage` = 0x21
+    /// Handle type the Program names, with its schema hash; its entry address is the first instruction that reads the
+    /// type's state.
+    case `handleType` = 0x22
     /// Script record constructor.
     case `record` = 0x30
     /// Import resolved against the host external-type registry.
@@ -529,6 +532,8 @@ public enum GesBytecodeTypeKind: UInt16, Sendable, CaseIterable {
     case `handler` = 0x10
     /// Message signature, arguments and tags.
     case `message` = 0x11
+    /// Handle of an object outside the host: type, identity and optional version.
+    case `handle` = 0x12
     /// Ordered immutable value collection.
     case `list` = 0x20
     /// Descending Int32 dice rolls.

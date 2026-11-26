@@ -71,6 +71,7 @@ internal static partial class GesCSharpModelEmitter
                 else Record(code, layout, type, access, support, qualifier, options.Bindings, valued ? values : null, computed, plain.Roots.Contains(type.Name) ? documents : null);
             }));
         foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Interface(code, layout, protocol, access)));
+        foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => Handle(code, layout.Handles, handle, access)));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>")));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, plain, access, qualifier, support, computed)));
@@ -86,7 +87,8 @@ internal static partial class GesCSharpModelEmitter
             document.Units.Add(new GesCodeUnit("", code => GesSchemaSetReference.WriteCSharp(code, setName, access, layout.Sources, [], networks: false)));
         var geometry = GesModelPlanner.UsesGeometry(layout);
         var data = GesModelPlanner.UsesData(layout);
-        document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || valued, geometry, data)));
+        var handleMaps = GesModelPlanner.UsesHandleMaps(layout);
+        document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || valued, geometry, data, handleMaps)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: false, options.Bindings || valued || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)), GesComputedEmitter.UsesSpatial(layout.Types.ConvertAll(type => type.Computed)))));
         return document;
@@ -636,6 +638,8 @@ internal static partial class GesCSharpModelEmitter
         GesModelKind.Disc => "GesDisc",
         GesModelKind.Map => "GesDataMap",
         GesModelKind.Values => "GesDataList",
+        GesModelKind.Handle => qualifier + GesModelPlanner.HandleName(value.Model.Handle),
+        GesModelKind.HandleMap => $"Dictionary<{Type(value.Key!, qualifier, owner)}, {Type(value.Element!, qualifier, owner)}>",
         GesModelKind.Schema => qualifier + value.Model.Schema,
         _ => Nested(value, qualifier, owner)
     };
@@ -643,7 +647,7 @@ internal static partial class GesCSharpModelEmitter
     private static string Nested(GesModelPlanValue value, string? qualifier, string? owner)
         => value.TagSet.Length > 0 ? qualifier + value.TagSet : owner is null ? value.Nested : qualifier + owner + "." + value.Nested;
 
-    private static bool IsReference(GesModelPlanValue value) => value.Kind is GesModelKind.Text or GesModelKind.Bytes or GesModelKind.List or GesModelKind.Dice or GesModelKind.Union or GesModelKind.Poly
+    private static bool IsReference(GesModelPlanValue value) => value.Kind is GesModelKind.Text or GesModelKind.Bytes or GesModelKind.List or GesModelKind.Dice or GesModelKind.Union or GesModelKind.Poly or GesModelKind.HandleMap
         || (value.Kind == GesModelKind.Schema && !value.Model.Packed) || (value.Kind == GesModelKind.Tag && !value.ClosedTag);
 
     // A literal default as a native constant; a record calls the constructor of its model.
@@ -728,7 +732,7 @@ internal static partial class GesCSharpModelEmitter
         if (field.Field.Default is { Kind: GesSchemaDefaultKind.Record or GesSchemaDefaultKind.Empty } fallback) return Native(layout, field.Value, fallback);
         if (field.Field.Default is not null || field.Value.Nullable) return null;
         if (field.Value.Kind == GesModelKind.Schema && field.Value.Model.Packed) return null;
-        return field.Value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union or GesModelKind.Poly ? Initial(field.Value) : null;
+        return field.Value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union or GesModelKind.Poly or GesModelKind.HandleMap ? Initial(field.Value) : null;
     }
 
     // The zero value of a property that the type's default would not give: empty texts and lists, new records, the first
@@ -740,7 +744,7 @@ internal static partial class GesCSharpModelEmitter
         {
             GesModelKind.Text or GesModelKind.Tag when !value.ClosedTag => "\"\"",
             GesModelKind.Bytes => "global::System.Array.Empty<byte>()",
-            GesModelKind.List or GesModelKind.Dice => $"new {Plain(value)}()",
+            GesModelKind.List or GesModelKind.Dice or GesModelKind.HandleMap => $"new {Plain(value)}()",
             GesModelKind.Schema when value.Model.Packed => "",
             GesModelKind.Schema => $"new {value.Model.Schema}()",
             GesModelKind.Union => $"new {value.Nested}.{value.Alternatives[0].Label}({Zero(value.Alternatives[0])})",
@@ -758,7 +762,7 @@ internal static partial class GesCSharpModelEmitter
             GesModelKind.Number => value.Model.Integer ? "0L" : "0d",
             GesModelKind.Tag when value.ClosedTag => $"default({value.Nested})",
             GesModelKind.Flags => $"default({value.Nested})",
-            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc or GesModelKind.Map or GesModelKind.Values => $"default({Plain(value)})",
+            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc or GesModelKind.Map or GesModelKind.Values or GesModelKind.Handle => $"default({Plain(value)})",
             _ => Initial(value)
         };
     }
@@ -768,6 +772,8 @@ internal static partial class GesCSharpModelEmitter
     {
         if (value.Kind is GesModelKind.List or GesModelKind.Dice)
             return $"{support}.ListEquals({left}, {right}, {Comparer(value, support, depth, qualifier)})";
+        if (value.Kind == GesModelKind.HandleMap)
+            return $"{support}.MapEquals({left}, {right}, {Comparer(value, support, depth, qualifier)})";
         if (value.Kind == GesModelKind.Bytes) return $"{support}.BytesEquals({left}, {right})";
         return $"EqualityComparer<{Type(value, qualifier)}>.Default.Equals({left}, {right})";
     }
@@ -782,6 +788,7 @@ internal static partial class GesCSharpModelEmitter
     private static string Hash(GesModelPlanValue value, string expression, string support, int depth = 0) => value.Kind switch
     {
         GesModelKind.List or GesModelKind.Dice => $"{support}.ListHash({expression}, {ElementHash(value, support, depth)})",
+        GesModelKind.HandleMap => $"{support}.MapHash({expression}, {ElementHash(value, support, depth)})",
         GesModelKind.Bytes => $"{support}.BytesHash({expression})",
         GesModelKind.Number when !value.Model.Integer => $"{support}.Hash({expression})",
         _ when IsReference(value) || value.Nullable => $"({expression}?.GetHashCode() ?? 0)",
@@ -889,7 +896,7 @@ internal static partial class GesCSharpModelEmitter
 
     // Equality and hashing helpers of the file, named after its header so that two generated files can share a namespace, and
     // the conversions that the script bindings and the plain values share.
-    private static void Support(GesSchemaPlanner.Code code, string name, bool conversions, bool geometry, bool data)
+    private static void Support(GesSchemaPlanner.Code code, string name, bool conversions, bool geometry, bool data, bool handleMaps)
     {
         code.Line($"/// <summary>Value equality of lists and numbers{(conversions ? " and GES value conversions" : "")} for the models of this file.</summary>");
         code.Line($"internal static class {name}");
@@ -960,12 +967,13 @@ internal static partial class GesCSharpModelEmitter
             code.Close();
         }
 
+        if (handleMaps) HandleHelpers(code, conversions);
         code.Close();
     }
 
     private static string UnitName(string unit) => "GesQuantityUnit.Unit" + GesSchemaPlanner.Pascal(unit);
 
-    private static bool IsValueType(GesModelPlanValue value) => value.Kind is GesModelKind.Boolean or GesModelKind.Number or GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc or GesModelKind.Flags
+    private static bool IsValueType(GesModelPlanValue value) => value.Kind is GesModelKind.Boolean or GesModelKind.Number or GesModelKind.Handle or GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc or GesModelKind.Flags
         || IsData(value) || value.ClosedTag || (value.Kind == GesModelKind.Schema && value.Model.Packed);
 
     // Free data: a Map or an untyped List of GES values, held by the struct GesDataMap or GesDataList.
@@ -992,6 +1000,8 @@ internal static partial class GesCSharpModelEmitter
             GesModelKind.Tag => $"{support}.Tag({expression})",
             GesModelKind.List => $"{support}.List({expression}, x{Depth(depth)} => {Encode(value.Element!, owner, "x" + Depth(depth), qualifier, support, depth + 1, plain: plain, pattern: pattern)})",
             GesModelKind.Dice => $"{support}.Dice({expression})",
+            GesModelKind.Handle => $"{expression}.ToValue({(value.Model.Versioned ? "true" : "false")})",
+            GesModelKind.HandleMap => $"{support}.HandleMap({expression}, k{Depth(depth)} => k{Depth(depth)}.ToValue(false), x{Depth(depth)} => {Encode(value.Element!, owner, "x" + Depth(depth), qualifier, support, depth + 1, plain: plain, pattern: pattern)})",
             GesModelKind.Map or GesModelKind.Values => $"{expression}.ToValue()",
             GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly or GesModelKind.Disc => $"{expression}.ToValue({UnitName(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{expression}.ToValue()" : $"{expression}.ToGesValue()",
@@ -1020,6 +1030,8 @@ internal static partial class GesCSharpModelEmitter
             GesModelKind.Tag => $"{support}.Tag({expression}, {target})",
             GesModelKind.List => $"{support}.List({expression}, (in GesValue x{Depth(depth)}, out {Type(value.Element!, qualifier, owner)} y{Depth(depth)}) => {Decode(value.Element!, owner, "x" + Depth(depth), "out y" + Depth(depth), qualifier, support, depth + 1)}, {target})",
             GesModelKind.Dice => $"{support}.Dice({expression}, {target})",
+            GesModelKind.Handle => $"{Plain(value, qualifier, owner)}.Read({expression}, {(value.Model.Versioned ? "true" : "false")}, {target})",
+            GesModelKind.HandleMap => $"{support}.HandleMap({expression}, (in GesValue k{Depth(depth)}, out {Type(value.Key!, qualifier, owner)} h{Depth(depth)}) => {Decode(value.Key!, owner, "k" + Depth(depth), "out h" + Depth(depth), qualifier, support, depth + 1)}, (in GesValue x{Depth(depth)}, out {Type(value.Element!, qualifier, owner)} y{Depth(depth)}) => {Decode(value.Element!, owner, "x" + Depth(depth), "out y" + Depth(depth), qualifier, support, depth + 1)}, {target})",
             GesModelKind.Map => $"{support}.Map({expression}, {target})",
             GesModelKind.Values => $"{support}.Values({expression}, {target})",
             GesModelKind.Point => $"{support}.Point({expression}, {UnitName(value.Model.Unit)}, {target})",

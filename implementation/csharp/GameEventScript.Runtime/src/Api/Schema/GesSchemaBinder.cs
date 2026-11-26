@@ -113,6 +113,8 @@ internal struct GesSchemaNode
     internal bool Packed;
     // A :Bytes max n: a Text on the wire whose bytes need not be UTF-8.
     internal bool IsBytes;
+    // Bytes of exactly MaxCount bytes without a count, such as the hash version of a handle; Width is 0.
+    internal bool Fixed;
     // The `depth` of a recursive List at its deepest level, which holds no element; 0 otherwise.
     internal int DepthLimit;
     internal int Width;
@@ -566,6 +568,18 @@ internal static class GesSchemaBinder
         return BindNodes(root, parameters, hash, bindingHash);
     }
 
+    // The nodes of one handle type on its own, with its version when it has one: the group, the id or the root's id, the
+    // version and a composite's part, as a field of the type would hold them. Generation lays them out.
+    internal static GesSchemaNode[] BindHandle(GesResolvedHandle handle)
+    {
+        var build = new Build(new GesSchemaParameters());
+        var type = new GesResolvedType { Kind = GesSchemaTypeKind.Handle, Handle = handle, Versioned = handle.Versioned, ReferenceName = handle.Name, Offset = handle.Offset };
+        AddType(build, handle.Scope, type, handle.Name, "@" + handle.Name, false, false, 0);
+        var nodes = build.Nodes.ToArray();
+        Seal(nodes);
+        return nodes;
+    }
+
     private static GesBoundSchema BindNodes(GesResolvedDeclaration declaration, GesSchemaParameters parameters, ulong hash, ulong bindingHash)
     {
         var inner = new Build(parameters);
@@ -746,7 +760,12 @@ internal static class GesSchemaBinder
         build.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Union, Name = name, Path = path, Optional = optional, MaxIndex = maxIndex, Width = BitLength(maxIndex), SchemaName = "" });
         foreach (var alternative in alternatives)
         {
-            var alternativePath = path + ":" + (alternative.Kind == GesSchemaTypeKind.Reference ? alternative.ReferenceName : alternative.Kind.ToString());
+            var alternativePath = path + ":" + (alternative.Kind switch
+            {
+                GesSchemaTypeKind.Reference => alternative.ReferenceName,
+                GesSchemaTypeKind.Handle => "@" + alternative.ReferenceName,
+                _ => alternative.Kind.ToString()
+            });
             if (alternative.Kind == GesSchemaTypeKind.Nothing)
             {
                 CheckNodeCount(build, scope, alternative.Offset);
@@ -881,6 +900,36 @@ internal static class GesSchemaBinder
                 if (level == 0) build.Levels.Remove(reference);
                 else build.Levels[reference] = level;
                 break;
+            case GesSchemaTypeKind.Handle:
+                // The identity: the id, or a composite's root id; the version for `~`; a composite's part.
+                var handle = type.Handle!;
+                CheckComposite(scope, handle, type.Offset, build.Levels.ContainsKey);
+                node.Kind = GesSchemaNodeKind.Group;
+                node.SchemaName = handle.Name;
+                build.Nodes.Add(node);
+                var identity = handle.Root ?? handle;
+                AddType(build, identity.Scope, identity.Id, "id", path + ".id", false, false, lists);
+                if (type.Versioned) AddVersion(build, identity, path + ".version", lists);
+                if (handle.Root is not null) AddType(build, handle.Scope, handle.Id, "part", path + ".part", false, false, lists);
+                break;
+            case GesSchemaTypeKind.Map when type.Handle is { } mapKey:
+                // Entries in ascending key order, each an entry group of the key and the value.
+                if (type.Max is not { } mapMax) throw scope.Error(Code.NotEncodable, type.Offset, "A Map without max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                node.Kind = GesSchemaNodeKind.List;
+                node.MaxCount = mapMax;
+                node.Width = BitLength((ulong)mapMax);
+                node.PositionWidth = BitLength((ulong)mapMax - 1);
+                build.Nodes.Add(node);
+                CheckNodeCount(build, scope, type.Offset);
+                var entry = build.Nodes.Count;
+                build.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Group, Name = "[]", Path = path + "[]", ValueKind = GesSchemaTypeKind.Map, SchemaName = "" });
+                AddType(build, scope, new GesResolvedType { Kind = GesSchemaTypeKind.Handle, Handle = mapKey, ReferenceName = mapKey.Name, Offset = type.Offset }, "key", path + "[].key", false, false, lists + 1);
+                AddUnion(build, scope, type.Element!, "value", path + "[].value", false, false, lists + 1);
+                var entryNode = build.Nodes[entry];
+                entryNode.Next = build.Nodes.Count;
+                build.Nodes[entry] = entryNode;
+                break;
             default:
                 throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} has no width and is only for documents.");
         }
@@ -889,6 +938,28 @@ internal static class GesSchemaBinder
         var added = build.Nodes[index];
         added.Next = build.Nodes.Count;
         build.Nodes[index] = added;
+    }
+
+    // A handle's version: a revision as its integer, a hash as its bytes without a count.
+    private static void AddVersion(Build build, GesResolvedHandle identity, string path, int lists)
+    {
+        if (identity.Revision is { } revision)
+        {
+            AddType(build, identity.Scope, revision, "version", path, false, false, lists);
+            return;
+        }
+
+        CheckNodeCount(build, identity.Scope, identity.Offset);
+        var length = identity.VersionKind == GesHandleVersionKind.Sha1 ? 20 : 32;
+        build.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Text, IsBytes = true, Fixed = true, MaxCount = length, Name = "version", Path = path, ValueKind = GesSchemaTypeKind.Bytes, SchemaName = "", Next = build.Nodes.Count + 1 });
+    }
+
+    // A composite reached from the state of its own root would repeat the root's identity in each element; a relative
+    // encoding is an open point.
+    private static void CheckComposite(GesFileScope scope, GesResolvedHandle handle, int offset, Func<GesResolvedDeclaration, bool> enclosing)
+    {
+        if (handle.Root is { } root && enclosing(root.State))
+            throw scope.Error(Code.NotEncodable, offset, $"'@{handle.Name}' inside the state of its root '@{root.Name}' has no encoding yet.");
     }
 
     // The encodability of a wire root as far as it is known without parameter values: the same conditions as binding, in
@@ -970,6 +1041,16 @@ internal static class GesSchemaBinder
                 break;
             case GesSchemaTypeKind.Reference:
                 CheckEncodable(type.Reference!, lists, known, levels);
+                break;
+            case GesSchemaTypeKind.Handle:
+                CheckComposite(scope, type.Handle!, type.Offset, levels.ContainsKey);
+                break;
+            case GesSchemaTypeKind.Map when type.Handle is { } mapKey:
+                if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Map without max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                CheckComposite(scope, mapKey, type.Offset, levels.ContainsKey);
+                foreach (var alternative in type.Element!)
+                    if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(scope, alternative, lists + 1, known, levels);
                 break;
             default:
                 throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} has no width and is only for documents.");

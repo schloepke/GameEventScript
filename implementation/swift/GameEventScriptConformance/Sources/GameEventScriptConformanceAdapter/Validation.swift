@@ -39,6 +39,12 @@ enum Validation {
             let kind = try test.text("kind")
             try require(kinds.contains(kind) && (!measuring || kind == "scriptApi"))
             var fields = ["id", "kind", "sources", "compile", "requires"]
+            // A handle catalog is optional for compiler, loading and script cases.
+            if let catalog = test["handles"] {
+                try require(!measuring && ["scriptApi", "loadError", "compileError", "compileMetadata", "bytecode", "bytecodeSnapshot"].contains(kind))
+                try AdapterHandles.validate(catalog)
+                fields.append("handles")
+            }
             if ["loadError", "messageApi", "valueApi", "externalTypeApi", "documentApi", "schemaApi", "networkApi"].contains(kind) { fields.append("api") }
             if kind == "scriptApi" { fields.append("runtime") }
             if kind == "programBinary" { fields.append("binary") }
@@ -84,9 +90,10 @@ enum Validation {
                             "complete",
                             "dump", "dumpBaseline",
                             "deltaEncode",
-                            "deltaDecode", "describe", "document", "readDocument", "network",
+                            "deltaDecode", "describe", "document", "readDocument", "network", "handle", "contentHash",
                         ]
                     )
+                    if api["contentHash"] != nil && api["contentHash"] != .null { try value(api.required("contentHash")) }
                 case "networkApi":
                     try require(try array(test.required("sources")).isEmpty)
                     try NetworkApiObservations.validate(api)
@@ -274,10 +281,19 @@ enum Validation {
                 try require(type.first == ":" && type.dropFirst().first?.isUppercase == true)
                 try fields(input, ["type", "entries"])
                 for entry in try array(input.required("entries")) {
+                    if type == ":Map" && entry["handle"] != nil {
+                        try fields(entry, ["handle", "value"])
+                        try RuntimeValues.checkHandle(entry.text("handle"))
+                        try value(entry.required("value"))
+                        continue
+                    }
                     try fields(entry, ["key", "value"])
                     try require(entry["key"]?.stringValue != nil)
                     try value(entry.required("value"))
                 }
+            } else if type == ":Handle" {
+                try fields(input, ["type", "value"])
+                try RuntimeValues.checkHandle(input.text("value"))
             } else if type == ":Message" {
                 try fields(input, ["type", "message"])
                 try message(input.required("message"))

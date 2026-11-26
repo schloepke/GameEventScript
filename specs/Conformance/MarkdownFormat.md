@@ -269,6 +269,7 @@ discriminator is `gesBlock: case`. It supports:
 | `hostCount` | positive integer | no | run the same compiled Programs and expectations independently in this many Hosts; default `1` |
 | `deferredPrograms` | ID sequence | no | source-program groups loaded only by a native host action |
 | `nativeHandlers` | sequence | no | declarative portable native handlers |
+| `handles` | mapping | no | [handle catalog](#handle-catalogs) and scripted resolver answers |
 | `stepActions` | mapping | no | ordered host actions performed immediately before a named step's Receive |
 | `messageApi` | mapping | `messageApi` only | signature and message input |
 | `valueApi` | mapping | `valueApi` only | portable value construction, comparison, copy or literal parsing input |
@@ -677,6 +678,45 @@ ordered list of the host's pending named timers. Each entry has exactly the
 fields `name`, `deadline` and `period` (decimal microsecond text; period `"0"`
 for a one-shot timer), `message` (the message name), `program` (a loaded program
 ID) and Boolean `publish`. Omission makes no assertion.
+A handle-named timer's `name` is the handle's text form, so this list does not distinguish it from a
+Text name with the same spelling.
+
+### Handle catalogs
+
+> **Since: Unreleased**
+
+A `handles` mapping declares the [handle types](../Language.md#handles) of a `scriptApi`, `compileError`,
+`loadError`, `compileMetadata`, `bytecode` or `bytecodeSnapshot` case and how the host resolves their state:
+
+```yaml
+handles:
+  schemas: ["schema :DroneState as { altitude: :Number integer between 0 and 1000 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  resolvers: [Drone]
+  answers:
+    - handle: "@Drone:7"
+      document: "{ altitude: 120 }"
+    - handle: "@Drone:7"
+      record: ":DroneState(altitude: 130)"
+    - handle: "@Drone:8"
+      missing: true
+    - handle: "@Drone:9"
+      fail: true
+```
+
+| Field | Value | Required | Meaning |
+| --- | --- | --- | --- |
+| `schemas` | non-empty sequence of strings | yes | [Schema](../Schemas.md) sources whose handle types the compiler knows |
+| `hostSchemas` | non-empty sequence of strings | no | sources of the host's handle types; default `schemas` |
+| `resolvers` | sequence of distinct type names without `@` | no | host types that get a resolver; omitted means every host type, `[]` none |
+| `answers` | sequence | no | scripted resolver answers; only `scriptApi` cases |
+
+Each answer names one object by the handle's text form and has exactly one of `document` (GES document text, read
+against the state schema), `record` (a data literal of the state record), `missing: true` (the object does not
+exist) and `fail: true` (the resolver throws). A `document` or `record` answer may pass a `version` in the
+[portable value shape](#portable-message-and-value-shape), a `:Number.int64` or `:Bytes`; `fail` has none. The
+answers of one object are used in authored order, one per resolve call, and the last one repeats; a read of an
+object without an answer fails like `fail`. Refs are not scripted: every resolver rejects a ref resolution, so
+cases cannot observe refs or `wire.unresolvedRef`, which native tests cover.
 
 ## Portable message and value shape
 

@@ -20,8 +20,14 @@ enum GesProgramValidator {
         var validatedAlternatives: Set<UnsafeRawPointer> = []
         var maxRegisters: UInt16 = 0
         var maxDepth: UInt16 = 0
+        var handleTypeNames: Set<String> = []
         for (index, binding) in p.bindings.enumerated() {
             let stringCount = p.stringConstants.count
+            if binding.kind == .handleType {
+                if Int(binding.name) >= stringCount { throw failure(.invalidStringIndex, 4, index) }
+                try validateHandleTypeBinding(p, binding, index, &handleTypeNames)
+                continue
+            }
             let textIndices = [binding.name] + binding.argumentNames + binding.requiredTags + binding.excludedTags
             if textIndices.contains(where: { Int($0) >= stringCount }) { throw failure(.invalidStringIndex, 4, index) }
             // A group set shared with an earlier handler already passed these checks.
@@ -38,6 +44,7 @@ enum GesProgramValidator {
             case .function, .predicate: valid = GesNames.plain(name)
             case .record, .externalType: valid = GesNames.type(name)
             case .extensionCall: valid = GesNames.extensionName(name)
+            case .handleType: valid = false
             }
             if !valid { throw failure(.invalidProgram, 4, index) }
             var names: Set<String> = []
@@ -76,7 +83,7 @@ enum GesProgramValidator {
         var validatedLists: [Int: Set<UInt16>?] = [:]
         // A tag or type name shared by many instructions is checked once, so that a long name cannot make validation quadratic.
         var validatedNames: Set<Int> = []
-        for (index, instruction) in p.code.enumerated() { try validateInstruction(p, instruction, index, ids, &validatedLists, &validatedNames) }
+        for (index, instruction) in p.code.enumerated() { try validateInstruction(p, instruction, index, ids, handleTypeNames, &validatedLists, &validatedNames) }
         try GesProgramDebugValidator.validate(p)
         try GesProgramDebugValidator.validateOpaque(p)
         try GesProgramCallGraphValidator.validate(p)
@@ -99,6 +106,26 @@ enum GesProgramValidator {
         }
     }
 
+    // A handle type import: a unique type name, its four-word schema hash, the first state read or the sentinel, and no
+    // ID, tags or resources (specs/BinaryFormat.md#bindings).
+    private static func validateHandleTypeBinding(_ p: GameEventScriptProgram, _ binding: GesBindingSegment.Entry, _ index: Int, _ names: inout Set<String>) throws {
+        let name = p.stringConstants[Int(binding.name)]
+        if !GesNames.type(name) || binding.argumentNames.count != 4 || binding.id != .max || !binding.requiredTags.isEmpty || !binding.excludedTags.isEmpty
+            || !binding.requiredTagAlternatives.isEmpty || binding.requiredRegisterCount != 0 || binding.requiredCallStackDepth != 0
+        {
+            throw failure(.invalidProgram, 4, index)
+        }
+        if binding.entryAddress != .max && Int(binding.entryAddress) >= p.code.count { throw failure(.invalidEntryAddress, 4, index) }
+        if !names.insert(name).inserted { throw failure(.invalidProgram, 4, index) }
+    }
+
+    // Whether an `@Name` or `@Name~` type operand names a handle type binding; nil for any other type name.
+    private static func isHandleTypeOperand(_ text: String, _ handleTypeNames: Set<String>) -> Bool? {
+        guard text.utf8.first == UInt8(ascii: "@") else { return nil }
+        let name = text.utf8.last == UInt8(ascii: "~") ? String(text.dropFirst().dropLast()) : String(text.dropFirst())
+        return handleTypeNames.contains(name)
+    }
+
     static func failure(_ code: GesProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil) -> GesProgramFormatError { .init(code, sectionType: section, entryIndex: entry) }
 
     static func validateInstruction(
@@ -106,6 +133,7 @@ enum GesProgramValidator {
         _ i: GesBytecodeInstruction,
         _ index: Int,
         _ ids: Set<UInt64>,
+        _ handleTypeNames: Set<String>,
         _ validatedLists: inout [Int: Set<UInt16>?],
         _ validatedNames: inout Set<Int>
     ) throws {
@@ -138,6 +166,16 @@ enum GesProgramValidator {
             } else if operand.isString {
                 let stringIndex = operand == .customTypeName ? i.word2 : i.word1
                 if Int(stringIndex) >= p.stringConstants.count { throw failure(.invalidStringIndex, 16, index) }
+                // Casts and checks name handle types as `@Name` or `@Name~`, which need a handle type binding of that name.
+                if operand == .customTypeName, i.opcode == .castCustom || i.opcode == .checkCustomType, let known = isHandleTypeOperand(p.stringConstants[Int(stringIndex)], handleTypeNames) {
+                    if !known { throw failure(.invalidOperand, 16, index) }
+                    continue
+                }
+                // `h.root` of a composite names its root type as the member `@Root`, which needs a handle type binding.
+                if operand == .memberName, i.opcode == .memberAccess, let known = isHandleTypeOperand(p.stringConstants[Int(stringIndex)], handleTypeNames) {
+                    if !known || p.stringConstants[Int(stringIndex)].utf8.last == UInt8(ascii: "~") { throw failure(.invalidOperand, 16, index) }
+                    continue
+                }
                 if operand == .tag || operand == .customTypeName {
                     let checked = Int(stringIndex) << 1 | (operand == .tag ? 0 : 1)
                     if !validatedNames.contains(checked) {
@@ -181,7 +219,8 @@ enum GesProgramValidator {
                 }
             } else {
                 switch operand {
-                case .typeKind: if GesBytecodeTypeKind(rawValue: i.word2) == nil { throw failure(.invalidOperand, 16, index) }
+                // Handles are a value kind only; Programs check handle types by name, never by kind operand.
+                case .typeKind: if GesBytecodeTypeKind(rawValue: i.word2) == nil || i.word2 == GesBytecodeTypeKind.handle.rawValue { throw failure(.invalidOperand, 16, index) }
                 case .patternKind: if GesBytecodePatternKind(rawValue: i.a) == nil { throw failure(.invalidOperand, 16, index) }
                 case .seriesKind: if GesBytecodeSeriesKind(rawValue: i.word2) == nil { throw failure(.invalidOperand, 16, index) }
                 case .outboundMessage, .recordReference, .externalReference:

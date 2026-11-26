@@ -48,13 +48,13 @@ internal sealed class RunSession
         foreach (var entry in Inventory.ActivePrograms())
         {
             activePath = entry.Paths[0];
-            var program = Workspace.Drafts.TryGetValue(entry.Id, out var draft) ? Prepare(draft).Compile() : fromMemory ? entry.Instance.Program : entry.Paths.Length == 1
-                ? RunProgramFiles.ReadOne(activePath)
-                : RunProgramFiles.Compile(entry.Paths, ref activePath);
+            var program = Workspace.Drafts.TryGetValue(entry.Id, out var draft) ? Prepare(draft).Compile(Workspace.HandleTypes) : fromMemory ? entry.Instance.Program : entry.Paths.Length == 1
+                ? RunProgramFiles.ReadOne(activePath, Workspace.HandleTypes)
+                : RunProgramFiles.Compile(entry.Paths, Workspace.HandleTypes, ref activePath);
             replacement.Inventory.Load(program, entry.Paths, entry.Id);
         }
         foreach (var draft in Workspace.Drafts.Values.Where(d => !Inventory.ActivePrograms().Any(e => e.Id == d.Id) && (d.Id != 0 || d.Dirty)))
-            replacement.Inventory.Load(Prepare(draft).Compile(), draft.Paths, draft.Id);
+            replacement.Inventory.Load(Prepare(draft).Compile(Workspace.HandleTypes), draft.Paths, draft.Id);
         if (!replacement.Pump()) return false;
         foreach (var (id, draft) in refreshed) Workspace.Drafts[id] = draft;
         foreach (var draft in Workspace.Drafts.Values.Where(d => replacement.Inventory.ActivePrograms().Any(e => e.Id == d.Id))) draft.Applied = [.. draft.Text];

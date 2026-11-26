@@ -9,6 +9,6 @@ extension GesVirtualMachine {
         let x = frameStart + sourceRegister
         guard let map = try registers[x].asMap ?? registers[x].externalMap() else { return setNothing(destination) }
 
-        return setList(destination, zip(map.keyStorage, map.valueStorage).map { .map(GesValueMap(canonicalKeys: Self.entryKeys, values: [.text($0), $1])) })
+        return setList(destination, map.keyStorage.indices.map { .map(GesValueMap(canonicalKeys: Self.entryKeys, values: [map.keyValue(at: $0), map.valueStorage[$0]])) })
     }
 }

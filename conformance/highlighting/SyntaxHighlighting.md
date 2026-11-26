@@ -54,6 +54,10 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"named timers and cancel","language":"ges","source":"on Start { emit every 1s named 'beat' Beat(); let gone be cancel 'beat'; let some be cancel named; let any be cancel all }\non Beat(`cancel`) { let `cancel` be 1 }","expect":[{"text":"every","kind":"keyword"},{"text":"1s","kind":"number"},{"text":"named","kind":"keyword"},{"text":"'beat'","kind":"string"},{"text":"cancel","kind":"keyword"},{"text":"named","kind":"keyword","occurrence":1},{"text":"cancel","kind":"keyword","occurrence":2},{"text":"all","kind":"keyword"},{"text":"`cancel`","kind":"identifier"},{"text":"`cancel`","kind":"identifier","occurrence":1}]}
+```
+
+```highlight
 {"name":"zero-width end and embedded block","language":"gesa","source":".segment source \"bot.ges\"\nlet x be 42\n.region-end \"source\"\n.segment code\nLoadInteger r1, #42\n","expect":[{"text":".segment","kind":"keyword"},{"text":"let","kind":"keyword"},{"text":"42","kind":"number"},{"text":"LoadInteger","kind":"keyword"},{"text":"r1","kind":"register"},{"text":"#42","kind":"number"}]}
 ```
 
@@ -291,6 +295,14 @@ and ANSI text preservation.
 
 ```highlight
 {"name": "document unclosed text runs to the end", "language": "gesd", "source": "\ufeffname: 'open\nnext: 1\n", "expect": [{"text": "'open\nnext: 1\n", "kind": "string"}], "diagnostics": [{"code": "document.unclosedText", "text": "'"}]}
+```
+
+```highlight
+{"name": "document handles", "language": "gesd", "source": "target: @Drone:7~120\nhome: @Base:'north'~#live/hangar\nseen: [@Drone:7: true]\n", "expect": [{"text": "@Drone", "kind": "type"}, {"text": ":", "kind": "symbol", "occurrence": 1}, {"text": "7", "kind": "number"}, {"text": "~", "kind": "symbol"}, {"text": "120", "kind": "number"}, {"text": "@Base", "kind": "type"}, {"text": "'north'", "kind": "string"}, {"text": "#live", "kind": "tag"}, {"text": "/", "kind": "symbol"}, {"text": "hangar", "kind": "plain"}, {"text": "@Drone", "kind": "type", "occurrence": 1}, {"text": "true", "kind": "keyword"}], "diagnostics": []}
+```
+
+```highlight
+{"name": "document handle key with a version", "language": "gesd", "source": "seen: [@Drone:7~3: true]\n", "expect": [{"text": "@Drone", "kind": "type"}, {"text": "3", "kind": "number"}], "diagnostics": [{"code": "document.invalidHandle", "text": "@Drone:7~3"}]}
 ```
 
 ```highlight

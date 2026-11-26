@@ -12,7 +12,7 @@ enum GesDocumentFormatter {
         }
         let entries = document.entries
         for index in 0..<entries.length {
-            let key = keyText(entries.key(at: index)) + ": "
+            let key = keyText(entries, index) + ": "
             output += key
             write(&output, entries.value(at: index), level: 0, column: key.unicodeScalars.count, format, commas: false)
             output += "\n"
@@ -28,20 +28,26 @@ enum GesDocumentFormatter {
     }
 
     // Values whose literal text reads back: no External values or Handlers of a system endpoint, positive Dice rolls
-    // and Record type names that follow the TypeName grammar, at every level.
-    static func isPrintable(_ value: GesValue) -> Bool {
+    // and Record type names that follow the TypeName grammar, at every level. Only documents read handles back.
+    static func isPrintable(_ value: GesValue, handles: Bool = false) -> Bool {
         switch value.kind {
-        case .list: return value.listValue!.allSatisfy(isPrintable)
-        case .map: return value.asMap!.values.allSatisfy(isPrintable)
-        case .record: return GesNames.type(value.customTypeName!) && value.asMap!.values.allSatisfy(isPrintable)
+        case .list: return value.listValue!.allSatisfy { isPrintable($0, handles: handles) }
+        case .map: return isPrintable(value.asMap!, handles: handles)
+        case .record: return GesNames.type(value.customTypeName!) && isPrintable(value.asMap!, handles: handles)
         case .dice: return value.diceRolls!.allSatisfy { $0 > 0 }
         case .message:
             let message = value.messageValue!
-            return (0..<message.arguments.count).allSatisfy { isPrintable(message.arguments[$0]) }
+            return (0..<message.arguments.count).allSatisfy { isPrintable(message.arguments[$0], handles: handles) }
         case .handler: return !GesNames.systemEndpoint(value.signatureValue!.name)
+        case .handle: return handles
         case .external: return false
         default: return true
         }
+    }
+
+    // Only documents read handles back, as values and as Map keys.
+    private static func isPrintable(_ map: GesValueMap, handles: Bool) -> Bool {
+        (handles || map.handleStorage.isEmpty) && map.values.allSatisfy { isPrintable($0, handles: handles) }
     }
 
     // Writes a value inline when it fits from the current column, otherwise a non-empty container in block form.
@@ -80,7 +86,7 @@ enum GesDocumentFormatter {
     private static func writeMapBlock(_ output: inout String, _ map: GesValueMap, level: Int, _ format: GesDocumentFormat, commas: Bool) {
         output += "[\n"
         for index in 0..<map.length {
-            let key = keyText(map.key(at: index)) + ": "
+            let key = keyText(map, index) + ": "
             output += indent(level + 1, format) + key
             write(&output, map.value(at: index), level: level + 1, column: (level + 1) * spaces(format) + key.unicodeScalars.count, format, commas: commas)
             output += commas && index < map.length - 1 ? ",\n" : "\n"
@@ -141,14 +147,18 @@ enum GesDocumentFormatter {
         output += "["
         for index in 0..<map.length {
             if index > 0 { output += ", " }
-            output += keyText(map.key(at: index)) + ": "
+            output += keyText(map, index) + ": "
             if !inline(&output, map.value(at: index), format, stop: stop) { return false }
         }
         output += "]"
         return stop == .max || output.unicodeScalars.count <= stop
     }
 
-    private static func keyText(_ key: String) -> String { GesText.isLowerName(key) ? key : GesText.quoted(key) }
+    // A handle key is written in its text form.
+    private static func keyText(_ map: GesValueMap, _ index: Int) -> String {
+        let key = map.key(at: index)
+        return index >= map.textCount || GesText.isLowerName(key) ? key : GesText.quoted(key)
+    }
 
     // Writes a scalar quantity with the exact prefixed spelling whose magnitude is closest to [1, 1000).
     private static func quantity(_ value: GesValue) -> String {

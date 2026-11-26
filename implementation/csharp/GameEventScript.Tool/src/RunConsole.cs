@@ -117,14 +117,14 @@ internal static class RunConsole
                 if (command == ":load")
                 {
                     activePath = LoadPath(commandArgument);
-                    session.Inventory.Load(RunProgramFiles.ReadOne(activePath), [activePath]);
+                    session.Inventory.Load(RunProgramFiles.ReadOne(activePath, session.Workspace.HandleTypes), [activePath]);
                     if (!session.Pump()) return false;
                     if (!quiet) Console.Error.WriteLine($"Loaded {activePath}; initialization completed. Handlers remain active.");
                     continue;
                 }
                 var sourceName = $"<interactive:{lineNumber}>";
                 var source = "on initialization {\n" + line + "\n}\n";
-                var program = new GesProgramBuilder().AddScript(source, sourceName).Compile();
+                var program = ToolHandles.Builder(session.Workspace.HandleTypes).AddScript(source, sourceName).Compile();
                 var handlers = program.Bindings.Entries.Where(binding => binding.Kind is GesBinaryBindKind.MessageHandler or GesBinaryBindKind.MessageNameHandler).ToArray();
                 if (handlers.Length != 1 || program.StringConstants.Resolve(handlers[0].Name) != "initialization")
                 {

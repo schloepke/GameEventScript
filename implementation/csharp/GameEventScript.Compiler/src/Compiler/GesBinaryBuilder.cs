@@ -15,6 +15,7 @@ internal sealed partial class GesBinaryBuilder
     private readonly List<LabelSymbol> _labels = [];
     private readonly List<PlanItem> _rootItems = [];
     private readonly List<BindPlan> _binds = [];
+    private readonly Dictionary<string, (ulong Hash, string StateName)> _handleTypes = new(StringComparer.Ordinal);
     private PlanItem[]? _rewrittenItems;
     private ushort _version = 1;
     private string _moduleName = "Unknown";
@@ -145,6 +146,18 @@ internal sealed partial class GesBinaryBuilder
         return new GesBindRef(bind.Index);
     }
 
+    // A handle type the Program names; its binding locates the first instruction that reads the type's state.
+    public void AddHandleType(string name, ulong hash, string stateName) => _handleTypes[name] = (hash, stateName);
+
+    // `h.member` of a statically typed handle reads the state of one of the named types (specs/Bytecode.md#handles).
+    public GesBinaryBuilder HandleStateRead(GesRegisterRef destination, string memberName, GesRegisterRef target, string[] typeNames)
+    {
+        AppendPlanItem(PlanItem.ForInstruction(new InstructionPlan(CurrentRoutineId, GesBytecodeOpCode.MemberAccess, GesQuantityUnit.UnitNone, GesInstructionFlag.None, GesOperand.Register(destination),
+            GesOperand.Text(memberName), GesOperand.Register(target), default, default, default, default, default, null, null, null)
+        { HandleStateTypes = typeNames }, CurrentSourceRange));
+        return this;
+    }
+
     internal GesBinaryBuilder AddOpcode(
         GesBytecodeOpCode opcode,
         GesQuantityUnit unit = GesQuantityUnit.UnitNone,
@@ -192,6 +205,7 @@ internal sealed partial class GesBinaryBuilder
             .WithDebugSegments(debugSegments.Symbols, debugSegments.SourceMap, debugSegments.SourceArchive);
 
         var bindIds = ResolveBinds(builder, builder.AddText, labelAddresses, resourceAnalysis);
+        AddHandleTypeBinds(builder, items);
         var resolver = new OperandResolver(registerMap, labelAddresses, bindIds, builder);
         foreach (var item in items)
             if (item.Instruction is { } instruction)
@@ -238,6 +252,42 @@ internal sealed partial class GesBinaryBuilder
         }
 
         return result;
+    }
+
+    // Handle type imports follow all other bindings in ordinal name order, each with its hash as four raw words, least
+    // significant first, and the address of the first state read or the sentinel (specs/BinaryFormat.md#bindings).
+    private void AddHandleTypeBinds(BinaryMaterializer builder, IReadOnlyList<PlanItem> items)
+    {
+        if (_handleTypes.Count == 0) return;
+        var firstReads = new Dictionary<string, ushort>(StringComparer.Ordinal);
+        var address = 0;
+        foreach (var item in items)
+        {
+            if (item.Instruction is not { } instruction) continue;
+            if (instruction.HandleStateTypes is { } typeNames)
+            {
+                for (var index = 0; index < typeNames.Length; index++) firstReads.TryAdd(typeNames[index], checked((ushort)address));
+            }
+            else if (instruction.OpCode == GesBytecodeOpCode.CastCustom && instruction.Y.TextValue is { } castName)
+            {
+                foreach (var pair in _handleTypes)
+                    if (string.Equals(pair.Value.StateName, castName, StringComparison.Ordinal)) firstReads.TryAdd(pair.Key, checked((ushort)address));
+            }
+
+            address++;
+        }
+
+        string[] names = [.. _handleTypes.Keys];
+        Array.Sort(names, StringComparer.Ordinal);
+        foreach (var name in names)
+        {
+            var hash = _handleTypes[name].Hash;
+            ushort[] words = [(ushort)hash, (ushort)(hash >> 16), (ushort)(hash >> 32), (ushort)(hash >> 48)];
+            builder.AddUInt16Slice(words);
+            builder.AddUInt16Slice([]);
+            var entryAddress = firstReads.TryGetValue(name, out var read) ? read : ushort.MaxValue;
+            builder.AddBind(new GesBindingSegment.Entry(GesBinaryBindKind.HandleType, builder.AddText(name), words, entryAddress, ushort.MaxValue, [], [], 0, 0, null));
+        }
     }
 
     private sealed class BinaryMaterializer
@@ -474,6 +524,7 @@ internal sealed partial class GesBinaryBuilder
             GesBinaryBindKind.OutboundMessage => 4,
             GesBinaryBindKind.ExtensionCall => 5,
             GesBinaryBindKind.ExternalType => 6,
+            GesBinaryBindKind.HandleType => 7,
             _ => 7
         };
 
@@ -861,6 +912,9 @@ internal sealed partial class GesBinaryBuilder
     internal sealed record InstructionPlan(int RoutineId, GesBytecodeOpCode OpCode, GesQuantityUnit Unit, GesInstructionFlag Flags, GesOperand Destination, GesOperand X, GesOperand Y, GesOperand A, GesOperand B,
         GesOperand C, GesOperand D, GesOperand SecondaryList, short? Count, long? I64, double? F64)
     {
+        // The handle types a state-reading MemberAccess may read, which their bindings locate.
+        public string[]? HandleStateTypes { get; init; }
+
         public InstructionPlan WithDestination(GesOperand destination) => this with { Destination = destination };
 
         public bool ReadsRegister(GesRegisterRef register)

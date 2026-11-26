@@ -46,6 +46,7 @@ export default defineConfig({
         { label: 'Embed in C#', slug: 'docs/learn/csharp' },
         { label: 'Embed in Swift', slug: 'docs/learn/swift' },
         { label: 'Schemas', slug: 'docs/learn/schemas' },
+        { label: 'Handles', slug: 'docs/learn/handles' },
       ] },
       { label: 'Tools', items: [
         'docs/tools/downloads', 'docs/tools/csharp-cli', 'docs/tools/swift-cli',

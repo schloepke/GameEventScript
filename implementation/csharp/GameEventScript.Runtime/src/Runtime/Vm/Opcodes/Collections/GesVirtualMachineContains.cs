@@ -69,6 +69,12 @@ internal partial class GesVirtualMachine
                                 Array.IndexOf(bytes, (byte)a.IntegerValue) >= 0);
                 return;
             case Map when b.ObjectValue is GesValueMap map:
+                if (a.ObjectValue is GesHandle handle)
+                {
+                    SetBoolean(dst, map.ContainsKey(handle));
+                    return;
+                }
+
                 if (a.Kind is not (Text or Tag))
                 {
                     SetBoolean(dst, false);

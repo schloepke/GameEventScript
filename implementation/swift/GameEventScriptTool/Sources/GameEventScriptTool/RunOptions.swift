@@ -5,7 +5,7 @@ import Foundation
 import GameEventScriptRuntime
 
 struct RunOptions {
-    var inputs: [String] = [], scenarios: [String] = [], arguments: [GesValue] = []
+    var inputs: [String] = [], scenarios: [String] = [], handles: [String] = [], arguments: [GesValue] = []
     var profilePath: String?
     var seed: Int64?
     var limits = GesRuntimeLimits()
@@ -43,6 +43,14 @@ struct RunOptions {
             if ["--help", "-h"].contains(argument) {
                 help = true
                 return
+            }
+            if argument == "--handles" {
+                guard index + 1 < args.count, !args[index + 1].hasPrefix("-"), !args[index + 1].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    throw ToolError.usage("Specify a schema path after --handles; prefix a path starting with '-' with './'.")
+                }
+                index += 1
+                handles.append(args[index])
+                continue
             }
             if ["--scenario", "--arg", "--seed", "--max-messages", "--max-steps", "--profile"].contains(argument) {
                 guard index + 1 < args.count else { throw ToolError.usage("Specify a value after \(argument).") }
@@ -107,6 +115,7 @@ extension Tool {
             io.line(ToolHelp.run)
             return 0
         }
+        let handles = try ToolFiles.handleTypes(options.handles)
         let paths = try ToolFiles.expand(options.inputs)
         let binaries = paths.filter(ToolFiles.isBinary).count
         guard binaries == 0 || binaries == paths.count else { throw ToolError.usage("Run accepts either sources compiled together or binaries loaded separately; inputs cannot be mixed.") }
@@ -119,10 +128,10 @@ extension Tool {
                 }
             }
         } else if !paths.isEmpty {
-            programs.append(try ToolFiles.compile(paths))
+            programs.append(try ToolFiles.compile(paths, handles: handles))
         }
         let scenarios = try ToolFiles.expand(options.scenarios)
-        let scenario = scenarios.isEmpty ? nil : try ToolFiles.compile(scenarios)
+        let scenario = scenarios.isEmpty ? nil : try ToolFiles.compile(scenarios, handles: handles)
         options.color = options.color && !io.noColor
         if let profilePath = options.profilePath {
             let output = URL(fileURLWithPath: try ToolFiles.fullPath(profilePath)).resolvingSymlinksInPath().path
@@ -133,7 +142,16 @@ extension Tool {
         let profiler = options.profilePath == nil ? nil : RunProfiler()
         let result: Int
         do {
-            result = try executePrograms(options, paths: paths, binaries: binaries, programs: programs, scenarios: scenarios, scenario: scenario, profiler: profiler)
+            result = try executePrograms(
+                options,
+                handles: handles,
+                paths: paths,
+                binaries: binaries,
+                programs: programs,
+                scenarios: scenarios,
+                scenario: scenario,
+                profiler: profiler
+            )
         } catch {
             if let profiler, let path = options.profilePath { try profiler.write(path) }
             throw error
@@ -144,6 +162,7 @@ extension Tool {
 
     private func executePrograms(
         _ options: RunOptions,
+        handles: [GesHandleType],
         paths: [String],
         binaries: Int,
         programs: [GameEventScriptProgram],
@@ -151,7 +170,7 @@ extension Tool {
         scenario: GameEventScriptProgram?,
         profiler: RunProfiler?
     ) throws -> Int {
-        let session = try RunSession(options: options, io: io, profiler: profiler)
+        let session = try RunSession(options: options, io: io, workspace: RunWorkspace(handleTypes: handles), profiler: profiler)
         for (index, program) in programs.enumerated() { try session.inventory.load(program, paths: binaries > 0 ? [paths[index]] : paths) }
         if let scenario { try session.inventory.load(scenario, paths: scenarios) }
         let main = scenario == nil && !options.interactive
@@ -162,7 +181,7 @@ extension Tool {
         guard try session.pump() else { return 1 }
         if main {
             let message = try GameEventScriptMessage(name: "Main", arguments: [.init(name: "args", value: .list(options.arguments))])
-            guard session.host.receive(message) else {
+            guard try session.host.receive(message) else {
                 io.line("error cli.mainRejected: The host rejected Main(args).", toError: true)
                 return 1
             }

@@ -4078,3 +4078,95 @@ binary:
   outcome: validationError
   errorCode: InvalidProgram
 ```
+
+---
+
+## Test: Canonical handle type imports read and rewrite
+
+> **Since: Unreleased**
+
+Each handle type the Program names is a `HandleType` binding (`0x22`) with the sentinel ID, its four-word hash and, for a type whose state is read, the first read as its entry address; the Program rewrites byte for byte.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: handle-types
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-handle-types
+  resourceId: gesb-v1.handle-types
+  relativePath: GesbV1/handle-types.gesb
+  sha256: CDFDBA45F2E9D5A30E9215DEC25434CDB2669E6BEE690DEABCCECE0DF7E45FE0
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+```
+
+### Source code under test
+
+```ges
+module handles
+on Seen(file as @RepoFile, other) {
+  emit Out(root: file.root, label: file.label, drone: other is @Drone~)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: CDFDBA45F2E9D5A30E9215DEC25434CDB2669E6BEE690DEABCCECE0DF7E45FE0
+  moduleName: handles
+  opaqueSectionCount: 0
+```
+
+---
+
+## Test: Two handle type imports of one name are a validation error
+
+> **Since: Unreleased**
+
+Handle type names are unique among `HandleType` bindings, because instructions name the types by text.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: handle-type-duplicate-name
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-handle-type-duplicate-name
+  resourceId: gesb-v1.handle-type-duplicate-name
+  relativePath: GesbV1/handle-type-duplicate-name.gesb
+  sha256: CA995A6CD8EC52B2F3C0D7283182154932E0FD29A3D990BD6F62535CD20378DB
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the name string index of the fifth binding (`Repository`, 9) with the index of `Drone` (7) at file byte offset 387; retain all other bytes"
+```
+
+### Source code under test
+
+```ges
+module handles
+on Seen(file as @RepoFile, other) {
+  emit Out(root: file.root, label: file.label, drone: other is @Drone~)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 4
+```

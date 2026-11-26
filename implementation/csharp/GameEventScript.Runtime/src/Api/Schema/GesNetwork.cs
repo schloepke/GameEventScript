@@ -78,13 +78,30 @@ public sealed class GesNetworkRoute
     public long RateMicroseconds { get; }
 }
 
+/// <summary>An <c>owns</c> route of a network: the side that owns the objects of a handle type. Immutable.</summary>
+public sealed class GesNetworkOwner
+{
+    internal GesNetworkOwner(GesNetworkSide side, GesHandleType handle)
+    {
+        Side = side;
+        Handle = handle;
+    }
+
+    /// <summary>Gets the side that owns the objects and can resolve their handles.</summary>
+    public GesNetworkSide Side { get; }
+
+    /// <summary>Gets the owned handle type, which is never composite.</summary>
+    public GesHandleType Handle { get; }
+}
+
 /// <summary>A network declaration: the routes of one client–server pair. Immutable; it can be bound any number of times.</summary>
 public sealed class GesNetwork
 {
-    internal GesNetwork(string name, GesNetworkRoute[] routes)
+    internal GesNetwork(string name, GesNetworkRoute[] routes, GesNetworkOwner[] owners)
     {
         Name = name;
         Routes = new GesReadOnlyArray<GesNetworkRoute>(routes);
+        Owners = new GesReadOnlyArray<GesNetworkOwner>(owners);
     }
 
     /// <summary>Gets the declared name without the leading <c>:</c>.</summary>
@@ -92,6 +109,9 @@ public sealed class GesNetwork
 
     /// <summary>Gets the routes in declared order; a route's position is its index.</summary>
     public GesReadOnlyArray<GesNetworkRoute> Routes { get; }
+
+    /// <summary>Gets the <c>owns</c> routes in ascending scalar order of the handle type's name; they have no route index.</summary>
+    public GesReadOnlyArray<GesNetworkOwner> Owners { get; }
 
     /// <summary>Binds every route root with the same parameter values.</summary>
     /// <param name="parameters">The values of the parameters the roots reach, if they reach any.</param>
@@ -145,6 +165,15 @@ public sealed class GesBoundNetwork
                 .Append(GesSchemaCanonical.Hex(roots[index].BindingHash)).Append('\n');
         }
 
+        foreach (var owner in network.Owners)
+        {
+            text.Append("owns ")
+                .Append(owner.Side == GesNetworkSide.Client ? "client" : "server").Append(' ')
+                .Append(owner.Handle.Name).Append(' ')
+                .Append(GesSchemaCanonical.Hex(owner.Handle.Hash)).Append(' ')
+                .Append(GesSchemaCanonical.Hex(owner.Handle.Resolved.State.Public.Hash)).Append('\n');
+        }
+
         return text.ToString();
     }
 
@@ -166,11 +195,23 @@ internal sealed partial class GesFileScope
     {
         foreach (var syntax in _networks)
         {
-            var routes = new GesNetworkRoute[syntax.Routes.Length];
+            var routes = new List<GesNetworkRoute>(syntax.Routes.Length);
+            var owners = new List<GesNetworkOwner>();
             var seen = new HashSet<(bool, bool, GesResolvedDeclaration)>();
-            for (var index = 0; index < routes.Length; index++)
+            foreach (var route in syntax.Routes)
             {
-                var route = syntax.Routes[index];
+                if (route.Owns)
+                {
+                    var handle = Handle(route.Root, route.RootOffset);
+                    if (handle.Root is not null)
+                        throw Error(Code.InvalidHandle, route.RootOffset, $"'@{route.Root}' is composite; its root's owner owns it.");
+                    if (owners.Exists(owner => owner.Handle.Name == route.Root))
+                        throw Error(Code.DuplicateRoute, route.Offset, $"The network names '@{route.Root}' in two owns routes.");
+                    owners.Add(new GesNetworkOwner(route.Server ? GesNetworkSide.Server : GesNetworkSide.Client, handle.Public));
+                    continue;
+                }
+
+                var index = routes.Count;
                 // A route names a message or message set without a colon and a schema with one.
                 if (!(route.IsMessage ? messages : all).TryGetValue(route.Root, out var root))
                     throw Error(Code.UnknownName, route.RootOffset, route.IsMessage ? $"Message or message set '{route.Root}' is not declared."
@@ -199,11 +240,12 @@ internal sealed partial class GesFileScope
 
                 if (!seen.Add((route.Server, route.Publishes, root)))
                     throw Error(Code.DuplicateRoute, route.Offset, $"The {(route.Server ? "server" : "client")} {(route.Publishes ? "publishes" : "sends")} '{route.Root}' twice.");
-                routes[index] = new GesNetworkRoute(index, route.Server ? GesNetworkSide.Server : GesNetworkSide.Client,
-                    route.Publishes ? GesNetworkVerb.Publishes : GesNetworkVerb.Sends, root.Public, deliveryClass, rate);
+                routes.Add(new GesNetworkRoute(index, route.Server ? GesNetworkSide.Server : GesNetworkSide.Client,
+                    route.Publishes ? GesNetworkVerb.Publishes : GesNetworkVerb.Sends, root.Public, deliveryClass, rate));
             }
 
-            networks.Add(new GesNetwork(syntax.Name, routes));
+            owners.Sort((left, right) => string.CompareOrdinal(left.Handle.Name, right.Handle.Name));
+            networks.Add(new GesNetwork(syntax.Name, routes.ToArray(), owners.ToArray()));
         }
     }
 

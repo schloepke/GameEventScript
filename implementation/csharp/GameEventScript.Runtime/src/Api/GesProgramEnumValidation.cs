@@ -19,6 +19,7 @@ internal static class GesProgramEnumValidation
             or GesBinaryBindKind.Predicate
             or GesBinaryBindKind.ExtensionCall
             or GesBinaryBindKind.OutboundMessage
+            or GesBinaryBindKind.HandleType
             or GesBinaryBindKind.Record
             or GesBinaryBindKind.ExternalType;
 

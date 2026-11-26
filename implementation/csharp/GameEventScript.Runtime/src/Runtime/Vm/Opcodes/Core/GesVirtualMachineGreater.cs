@@ -22,7 +22,8 @@ internal partial class GesVirtualMachine
                 SetBoolean(destinationRegister, a.Unit == b.Unit && a.FloatValue > b.FloatValue);
                 return;
             default:
-                if (b.Kind is Nothing)
+                // Handles have no numeric view, so ordering them gives nothing (specs/Language.md#handles).
+                if (b.Kind is Nothing or Handle || a.Kind is Handle)
                 {
                     SetNothing(destinationRegister);
                     return;

@@ -42,7 +42,7 @@ final class GeneratedBindingTests: XCTestCase {
         )
         bot.units = [.text("a")]
         let view = RolesBound.WorldView(tick: 1, time: 0, arena: GesVector(), bots: [bot])
-        XCTAssertTrue(host.receive(try .init(name: "Start", arguments: [try .init(name: "view", value: view.gesValue())])))
+        XCTAssertTrue(try host.receive(.init(name: "Start", arguments: [try .init(name: "view", value: view.gesValue())])))
         XCTAssertEqual(try host.runToCompletion().state, .completed)
         let arguments = try XCTUnwrap(seen).arguments
         XCTAssertEqual(arguments[0].textValue, "Ada")

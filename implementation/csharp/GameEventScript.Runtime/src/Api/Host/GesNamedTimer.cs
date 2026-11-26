@@ -16,10 +16,11 @@ internal enum GesNamedTimerState
 /// registered under the instance and the name until it fires once (<c>after</c>), is cancelled or replaced, or its
 /// instance detaches; an <c>every</c> timer re-arms when each logical message it sent completes.
 /// </summary>
-internal sealed class GesNamedTimer(GesProgramInstance instance, string name, long period, bool publish, GameEventScriptMessage message, GesProgramInstance? owner)
+internal sealed class GesNamedTimer(GesProgramInstance instance, object name, long period, bool publish, GameEventScriptMessage message, GesProgramInstance? owner)
 {
     internal GesProgramInstance Instance { get; } = instance;
-    internal string Name { get; } = name;
+    // The Text name as a string or the handle name as a GesHandle.
+    internal object Name { get; } = name;
     /// <summary>Gets the repeat period in whole microseconds, or 0 for a one-shot <c>after</c> timer.</summary>
     internal long Period { get; } = period;
     internal bool Publish { get; } = publish;

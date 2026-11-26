@@ -159,7 +159,7 @@ public static class GesSchemaDelta
     // The bytes need not start at a byte boundary, so they are checked as they pass, without a buffer.
     private static void FullText(ref GesSchemaReader source, in GesSchemaNode node, ref GesSchemaWriter target, bool write)
     {
-        var count = source.GetBits(node.Width, node.Path);
+        var count = node.Fixed ? (ulong)node.MaxCount : source.GetBits(node.Width, node.Path);
         if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
         source.Require((long)count * 8, node.Path);
         if (write) target.PutBits(count, node.Width);
@@ -253,7 +253,7 @@ public static class GesSchemaDelta
         switch (node.Kind)
         {
             case GesSchemaNodeKind.Text:
-                var length = source.GetBits(node.Width, node.Path);
+                var length = node.Fixed ? (ulong)node.MaxCount : source.GetBits(node.Width, node.Path);
                 source.Seek(source.BitPosition + ((long)length * 8));
                 break;
             case GesSchemaNodeKind.List:

@@ -73,11 +73,11 @@ extension GesMessageSignature {
 extension GesContext {
     /// Enqueues local delivery without pumping. Returns false if the host no longer exists or rejects the message. The
     /// name overload validates message arguments and may throw.
-    @discardableResult public func emit(_ name: String, nativeArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws -> Bool { emit(try .init(name: name, nativeArguments: nativeArguments, tags: tags)) }
+    @discardableResult public func emit(_ name: String, nativeArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws -> Bool { try emit(.init(name: name, nativeArguments: nativeArguments, tags: tags)) }
 
     /// Enqueues local delivery and attempts outbound delivery, or stages publication during initialization. Returns
     /// separate acceptance flags. The name overload validates the message and may throw.
     @discardableResult public func publish(_ name: String, nativeArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws -> GesPublishResult {
-        publish(try .init(name: name, nativeArguments: nativeArguments, tags: tags))
+        try publish(.init(name: name, nativeArguments: nativeArguments, tags: tags))
     }
 }

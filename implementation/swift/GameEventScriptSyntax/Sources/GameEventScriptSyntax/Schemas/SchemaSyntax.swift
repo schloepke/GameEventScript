@@ -47,6 +47,22 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case poly = "Poly"
     /// A filled circle in the plane z = 0: a centre Point and a radius.
     case disc = "Disc"
+    /// A handle of a handle type, an identity of an object outside the host.
+    case handle = "Handle"
+}
+
+/// The kind of version a handle type declares.
+public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
+    /// The type has no versions; every handle means the current state.
+    case none
+    /// An integer revision the owner counts, ascending with each change.
+    case revision
+    /// A SHA-1 hash of 20 bytes the owner computes over its own representation.
+    case sha1
+    /// A SHA-256 hash of 32 bytes the owner computes over its own representation.
+    case sha256
+    /// The content hash of 32 bytes that GES computes over the state.
+    case contentHash
 }
 
 @_spi(Syntax) public enum GesSchemaTypeNames {
@@ -96,6 +112,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case messages
     case tagSet
     case network
+    case handle
 }
 
 @_spi(Syntax) public enum GesSchemaRouteClass: Sendable, Equatable {
@@ -117,6 +134,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var classOffset = 0
     /// The interval of `at most every`, a literal or a constant; nil without one.
     @_spi(Syntax) public var rate: GesSchemaValueSyntax?
+    /// `server owns @Target`: the root names the handle type, and the route has no class or rate.
+    @_spi(Syntax) public var owns = false
     @_spi(Syntax) public var offset = 0
 }
 
@@ -173,8 +192,13 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
 @_spi(Syntax) public struct GesSchemaTypeSyntax: Sendable {
     @_spi(Syntax) public var kind = GesSchemaTypeKind.nothing
     @_spi(Syntax) public var unit = GesQuantityUnit.none
-    /// The referenced schema's name.
+    /// The referenced schema's name, or a handle type's name without `@`.
     @_spi(Syntax) public var name = ""
+    /// A handle type written `@Name~`, with its version.
+    @_spi(Syntax) public var versioned = false
+    /// The key handle type of a handle Map `:Map(@Name → T)`, empty for any other type, and where it starts.
+    @_spi(Syntax) public var key = ""
+    @_spi(Syntax) public var keyOffset = 0
     @_spi(Syntax) public var tags: [String]?
     /// The written maximum of Text and List, or the let that holds it, and where that name starts.
     @_spi(Syntax) public var max: Int64?
@@ -388,6 +412,16 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var memberOffsets: [Int] = []
     /// The routes of a network in declared order.
     @_spi(Syntax) public var routes: [GesSchemaRouteSyntax] = []
+    /// A handle declaration: its state schema, the composite root without `@`, the id or part type, the version form and the
+    /// revision's type, each with where it starts.
+    @_spi(Syntax) public var state = ""
+    @_spi(Syntax) public var stateOffset = 0
+    @_spi(Syntax) public var root = ""
+    @_spi(Syntax) public var rootOffset = 0
+    @_spi(Syntax) public var id: GesSchemaTypeSyntax?
+    @_spi(Syntax) public var version = GesHandleVersionKind.none
+    @_spi(Syntax) public var revision: GesSchemaTypeSyntax?
+    @_spi(Syntax) public var versionOffset = 0
     /// The group of a wire or model root, or nil when the declaration has no such role.
     @_spi(Syntax) public var wireGroup: String?
     @_spi(Syntax) public var modelGroup: String?
@@ -419,6 +453,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public static let computedMayBeAbsent = "schema.computedMayBeAbsent"
     @_spi(Syntax) public static let invalidRoute = "schema.invalidRoute"
     @_spi(Syntax) public static let duplicateRoute = "schema.duplicateRoute"
+    @_spi(Syntax) public static let invalidHandle = "schema.invalidHandle"
 
     @_spi(Syntax) public let code: String
     /// The UTF-8 offset of the error.

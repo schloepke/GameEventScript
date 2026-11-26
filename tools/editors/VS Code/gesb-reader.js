@@ -33,6 +33,10 @@ const SECTION_NAMES = new Map([
     [0xFFFE, 'NamedCustomSection'],
 ]);
 
+// A HandleType entry's list holds its 64-bit schema hash as four words, least
+// significant first, and its entry address locates state reads instead of a routine.
+const HANDLE_TYPE = 0x22;
+
 const BINDING_KINDS = new Map([
     [0x10, 'MessageHandler'],
     [0x11, 'MessageNameHandler'],
@@ -40,6 +44,7 @@ const BINDING_KINDS = new Map([
     [0x13, 'Predicate'],
     [0x20, 'ExtensionCall'],
     [0x21, 'OutboundMessage'],
+    [0x22, 'HandleType'],
     [0x30, 'Record'],
     [0x31, 'ExternalType'],
 ]);
@@ -308,6 +313,18 @@ function readGesb(bytes) {
         }
         return groups;
     };
+    const handleTypeHash = entry => {
+        if (entry.argumentsList >= lists.length) {
+            problem(`A reference names list ${entry.argumentsList}, which does not exist.`);
+            return null;
+        }
+        const words = lists[entry.argumentsList];
+        if (words.length !== 4) {
+            problem(`Handle type hash list ${entry.argumentsList} does not hold four words.`);
+            return null;
+        }
+        return '0x' + words.map(word => word.toString(16).padStart(4, '0')).reverse().join('');
+    };
     const metadata = contents.get(0x0001);
     if (metadata) {
         program.module = text(metadata.moduleNameIndex);
@@ -321,17 +338,30 @@ function readGesb(bytes) {
     const sourceMap = contents.get(0x0021) ?? null;
 
     const entries = contents.get(0x0004) ?? [];
-    const addresses = [...new Set(entries.map(entry => entry.entry).filter(address => address !== NO_INDEX))].sort((a, b) => a - b);
+    const routines = entries.filter(entry => entry.kind !== HANDLE_TYPE);
+    const addresses = [...new Set(routines.map(entry => entry.entry).filter(address => address !== NO_INDEX))].sort((a, b) => a - b);
     const nextAddresses = new Map(addresses.map((address, index) => [address, addresses[index + 1] ?? Infinity]));
-    program.bindings = entries.map(entry => ({
-        kind: BINDING_KINDS.get(entry.kind) ?? `0x${entry.kind.toString(16).padStart(2, '0')}`,
-        id: entry.id === NO_INDEX ? null : entry.id,
-        name: text(entry.nameIndex), arguments: textList(entry.argumentsList),
-        requiredTags: textList(entry.requiredList), tagAlternatives: alternatives(entry),
-        excludedTags: textList(entry.excludedList), entry: entry.entry === NO_INDEX ? null : entry.entry,
-        registers: entry.registers, callDepth: entry.callDepth,
-        location: locate(entry.entry, nextAddresses.get(entry.entry), sourceMap),
-    }));
+    program.bindings = entries.map(entry => {
+        if (entry.kind === HANDLE_TYPE) {
+            return {
+                kind: BINDING_KINDS.get(entry.kind), id: entry.id === NO_INDEX ? null : entry.id,
+                name: text(entry.nameIndex), arguments: [], hash: handleTypeHash(entry),
+                requiredTags: textList(entry.requiredList), tagAlternatives: alternatives(entry),
+                excludedTags: textList(entry.excludedList), entry: null,
+                stateAddress: entry.entry === NO_INDEX ? null : entry.entry,
+                registers: entry.registers, callDepth: entry.callDepth, location: null,
+            };
+        }
+        return {
+            kind: BINDING_KINDS.get(entry.kind) ?? `0x${entry.kind.toString(16).padStart(2, '0')}`,
+            id: entry.id === NO_INDEX ? null : entry.id,
+            name: text(entry.nameIndex), arguments: textList(entry.argumentsList),
+            requiredTags: textList(entry.requiredList), tagAlternatives: alternatives(entry),
+            excludedTags: textList(entry.excludedList), entry: entry.entry === NO_INDEX ? null : entry.entry,
+            registers: entry.registers, callDepth: entry.callDepth,
+            location: locate(entry.entry, nextAddresses.get(entry.entry), sourceMap),
+        };
+    });
 
     // A file without an archive can still name its sources through the map, whose
     // table index is the SourceId.

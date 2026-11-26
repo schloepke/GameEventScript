@@ -604,6 +604,11 @@
         {
           "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*(?=$|[^A-Za-z0-9_])",
           "name": "entity.name.type.custom.gameeventscript"
+        },
+        {
+          "comment": "Handle types such as @Unit and versioned @Unit~; | between them stays a collection operator.",
+          "match": "@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*~?(?![A-Za-z0-9_])",
+          "name": "entity.name.type.custom.gameeventscript"
         }
       ]
     },

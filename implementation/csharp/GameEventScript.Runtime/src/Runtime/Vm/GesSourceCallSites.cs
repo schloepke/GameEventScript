@@ -35,6 +35,13 @@ internal static class GesSourceCallSites
         return result;
     }
 
+    // The source range of one instruction, or null when the SourceMap covers it nowhere.
+    internal static GesSourceLocation? LocateAddress(GameEventScriptProgram program, ushort address)
+    {
+        if (program.SourceMap is not { } sourceMap) return null;
+        return Innermost(sourceMap, address) is { } entry ? Location(program, sourceMap, entry) : null;
+    }
+
     // The shortest entry that covers the address, the first one among equally long entries.
     private static GesSourceMapEntry? Innermost(GesSourceMapSegment sourceMap, uint address)
     {

@@ -148,7 +148,6 @@ only	csharp	Runtime	GesForwardIntegerSeries
 only	csharp	Runtime	GesInstructionFlag
 only	csharp	Runtime	GesIteratorResult
 only	csharp	Runtime	GesMathConstants
-only	csharp	Runtime	GesMessageJsonCodec
 only	csharp	Runtime	GesNumericWithUnit
 only	csharp	Runtime	GesOpcodePrinter
 only	csharp	Runtime	GesProgramEnumValidation

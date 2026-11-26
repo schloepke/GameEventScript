@@ -126,7 +126,7 @@ final class RunnerTests: XCTestCase {
             trace.append(1)
             throw try GesExtensionFaultError(code: "app.runner", message: "Failed")
         }
-        host.receive(try .init(name: "Start"))
+        try host.receive(.init(name: "Start"))
         let runner = GesBridgeHostRunner(host)
         waitForAutomaticDrain(runner)
         XCTAssertEqual(runner.lastResult?.diagnostic?.code, "app.runner")

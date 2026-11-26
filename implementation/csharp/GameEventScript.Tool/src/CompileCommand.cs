@@ -13,9 +13,10 @@ internal static class CompileCommand
 
     private const string CheckHelpText = """
 Usage:
-  dotnet ges check <source.ges> [more.ges ...] [-v | -q]
+  dotnet ges check <source.ges> [more.ges ...] [--handles <schema.gess> ...] [-v | -q]
 
 Options:
+  --handles <schema.gess> Declare the handle types of a schema source. Repeat for more files.
   -v, --verbose       Include bindings, dependencies, bytecode size, and resource requirements.
   -q, --quiet         Suppress success output. Errors are still reported.
   -h, --help          Show this help.
@@ -23,15 +24,16 @@ Options:
 
 Sources are compiled and validated together without writing a binary or executing
 handlers. Source order, UTF-8 decoding, and file-name patterns match 'dotnet ges compile'.
-Checking does not resolve host extensions or external types against a runtime registry.
+Checking does not resolve host extensions, external types or handle resolvers against a runtime registry.
 """;
 
     private const string HelpText = """
 Usage:
-  dotnet ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--no-debug] [-v | -q]
+  dotnet ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--handles <schema.gess> ...] [--no-debug] [-v | -q]
 
 Options:
   -o, --output <path>  Output file. Required for multiple sources; otherwise defaults to source.gesb.
+  --handles <schema.gess> Declare the handle types of a schema source. Repeat for more files.
   --no-debug          Omit debug symbols, source map, and source archive.
   -v, --verbose       Include bindings, dependencies, bytecode size, and resource requirements.
   -q, --quiet         Suppress successful compilation output. Errors are still reported.
@@ -43,6 +45,7 @@ Sources are compiled together in argument order. File-name patterns such as
 Repeated paths are included once, keeping their first position.
 Output directories are created as needed. Existing output is replaced after
 successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
+The schema files of --handles are read together; file-name patterns expand as for sources.
 """;
 
     internal static int Run(string[] arguments, bool checkOnly = false)
@@ -54,6 +57,7 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
         }
 
         var sourceArguments = new List<string>();
+        var handleArguments = new List<string>();
         string? outputPath = null;
         var debugInfo = GesDebugInfoOptions.All;
         var verbose = false;
@@ -71,6 +75,12 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
                 if (outputPath is not null || index + 1 == arguments.Length || arguments[index + 1].StartsWith('-'))
                     return UsageError("Specify one output path after -o or --output. Prefix a path starting with '-' with './'.");
                 outputPath = arguments[++index];
+            }
+            else if (parseOptions && argument == ToolHandles.Option)
+            {
+                if (index + 1 == arguments.Length || arguments[index + 1].StartsWith('-') || string.IsNullOrWhiteSpace(arguments[index + 1]))
+                    return UsageError("Specify a schema path after --handles; prefix a path starting with '-' with './'.");
+                handleArguments.Add(arguments[++index]);
             }
             else if (!checkOnly && parseOptions && argument == "--no-debug")
             {
@@ -113,7 +123,8 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
                     if (string.Equals(Path.GetFullPath(sourcePath), outputPath, outputPathComparison)) return UsageError("Source and output must be different files.");
             }
 
-            var builder = new GesProgramBuilder().WithDebugInfo(debugInfo);
+            var handleTypes = ToolHandles.Load(handleArguments, ref activeSourcePath);
+            var builder = ToolHandles.Builder(handleTypes).WithDebugInfo(debugInfo);
             foreach (var sourcePath in sourcePaths)
             {
                 activeSourcePath = sourcePath;
@@ -141,6 +152,11 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
                 if (location?.Line is { } line) prefix += $"({line},{location.Column ?? 1})";
                 Console.Error.WriteLine($"{prefix}: error {diagnostic.Code}: {diagnostic.Message}");
             }
+            return 1;
+        }
+        catch (GesSchemaException exception)
+        {
+            ToolHandles.Report(exception);
             return 1;
         }
         catch (DecoderFallbackException exception)

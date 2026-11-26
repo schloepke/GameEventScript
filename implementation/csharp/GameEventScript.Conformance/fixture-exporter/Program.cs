@@ -41,6 +41,8 @@ foreach (var testCase in requests.RootElement.EnumerateArray())
     {
         var builder = new GesProgramBuilder().WithExternalTypeCatalog(GameEventScriptConformanceExternalTypes.Catalog);
         foreach (var source in group) builder.AddScript(source.GetProperty("text").GetString()!, source.GetProperty("name").GetString()!);
+        var handleSchemas = testCase.GetProperty("handleSchemas").EnumerateArray().Select((text, index) => new GesSchemaSource($"handles-{index + 1}.gess", text.GetString()!)).ToArray();
+        if (handleSchemas.Length > 0) builder.WithHandleTypes(GesSchemaSet.Parse(handleSchemas).HandleTypes);
         var debug = GesDebugInfoOptions.None;
         foreach (var option in testCase.GetProperty("debugInfo").EnumerateArray())
             debug |= option.GetString() switch

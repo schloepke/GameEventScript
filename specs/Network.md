@@ -53,8 +53,8 @@ The [schema grammar](Schemas.md#grammar) reads it:
 
 ```text
 network = "network" ":" TypeName "as" "{" route { route } "}"
-route   = ( "client" | "server" ) ( "sends" | "publishes" ) ( ":" TypeName | MessageName )
-          ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ]
+route   = ( "client" | "server" ) ( ( "sends" | "publishes" ) ( ":" TypeName | MessageName )
+          ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ] | "owns" "@" TypeName )
 ```
 
 Routes are separated by commas or line breaks; repeated and trailing separators are
@@ -75,9 +75,15 @@ allowed. Each route stays on one line.
   or a constant, greater than zero and at most `3600s`. It is rounded up to whole
   microseconds. The session itself does not enforce it; generated code exposes it as a
   [constant](Schemas.md#network-constants).
+- **`owns`** names a [handle type](Schemas.md#handles) whose objects that side owns: `server owns @Target`. Its
+  handles cross the network as identities; the owner is the side that can resolve them. A network names a handle type
+  in at most one `owns` route, and a composite type in none, since its root's owner owns it. An `owns` route carries no
+  payload, has no class, rate, route index or channel and does not count towards the route limit. Resolving a handle
+  across the network is not part of this version. *Since: Unreleased.*
 - A side names a root at most once per verb.
-- A network holds 1 to 64 routes. The position of a route, counting from 0, is its
-  route index; its channel on the wire is the index plus 1.
+- A network holds 1 to 64 routes that send or publish. The position of a route, counting from 0, is its
+  route index; its channel on the wire is the index plus 1. A network without such a route, even with `owns` routes, is `schema.syntax`, like an
+  empty one.
 
 A network shares the namespace of schemas and tag sets. It is no
 type: a field or another route cannot name it. Code generation alone accepts it as a root and
@@ -86,9 +92,10 @@ nowhere in a network.
 
 | Code | Condition |
 | --- | --- |
-| `schema.unknownName` | a route names no declared message or message set without `:`, no declared schema with it, or a rate names no constant of its file; a set named with `:`, the spelling of 0.6.0, adds a hint to the spelling without it |
+| `schema.unknownName` | a route names no declared handle type with `@`, no declared message or message set without `:`, no declared schema with it, or a rate names no constant of its file; a set named with `:`, the spelling of 0.6.0, adds a hint to the spelling without it |
 | `schema.invalidRoute` | a route names a declaration of the wrong kind or without a `wire` role, an abstract schema, a class its verb does not take, a rate on `sends`, or a rate that is no time, not positive or above `3600s` |
-| `schema.duplicateRoute` | a side names the same root twice with the same verb |
+| `schema.duplicateRoute` | a side names the same root twice with the same verb, or two `owns` routes name the same handle type |
+| `schema.invalidHandle` | an `owns` route names a composite handle type |
 | `schema.tooLarge` | a network has more than 64 routes |
 
 ### Binding
@@ -110,7 +117,18 @@ network <TypeName>
 route <client|server> <sends|publishes> <RootName> <class> <rate> <binding hash>
 ```
 
-One `route` line follows per route in route order. `<class>` is `reliable`, `latest` or
+One `route` line follows per route in route order, then one `owns` line per `owns` route in ascending scalar order of
+the handle type's name *(Since: Unreleased)*:
+
+```text
+owns <client|server> <HandleName> <handle hash> <state hash>
+```
+
+`<handle hash>` is the [handle hash](Schemas.md#canonical-form) and `<state hash>` the schema hash of the state schema,
+each as 16 lowercase hexadecimal digits, so both sides agree on the identity and the state of each owned type.
+A network without `owns` routes keeps its hash.
+
+ `<class>` is `reliable`, `latest` or
 `bulk`; `<rate>` is the interval in microseconds as a decimal integer, `0` without a
 rate; `<binding hash>` is the root's [binding hash](Schemas.md#binding-hash) as 16
 lowercase hexadecimal digits. Classes, rates, order, names and parameter values thus all

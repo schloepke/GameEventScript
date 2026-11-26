@@ -193,6 +193,9 @@ internal static partial class GesCSharpEmitter
                 code.Line($"foreach (var {face} in {source}) {dice}.Add(checked((int){face}));");
                 code.Line($"{target} = {dice};");
                 return;
+            case GesLayoutKind.List when value.HandleMap:
+                ToModelHandleMap(code, value, model, modelOwner, wired, source, target, conversion);
+                return;
             case GesLayoutKind.List:
                 ToModelList(code, value, model, modelOwner, wired, source, target, conversion);
                 return;
@@ -248,6 +251,23 @@ internal static partial class GesCSharpEmitter
         code.Line($"{list}.Add({converted});");
         code.Close();
         code.Line($"{target} = {list};");
+    }
+
+    // A handle Map: the wire entries, in key order, become a Dictionary of the same handle keys.
+    private static void ToModelHandleMap(GesSchemaPlanner.Code code, GesPlanValue value, GesModelPlanValue model, string modelOwner, string wired, string source, string target, ModelConversion conversion)
+    {
+        var holder = value.Item!;
+        var element = model.Element!;
+        var map = conversion.Local("map");
+        var item = conversion.Local("item");
+        var converted = conversion.Local("element");
+        code.Line($"var {map} = new {GesCSharpModelEmitter.Type(model, conversion.Qualifier, modelOwner).TrimEnd('?')}({source}.Count);");
+        Block(code, $"foreach (var {item} in {source})");
+        code.Line($"{GesCSharpModelEmitter.Type(element, conversion.Qualifier, modelOwner)} {converted};");
+        ToModel(code, holder.Fields[1].Value, element, modelOwner, item, wired + holder.Name + ".", $"{item}.{holder.Fields[1].Value.Base}", converted, conversion);
+        code.Line($"{map}.Add({item}.Key, {converted});");
+        code.Close();
+        code.Line($"{target} = {map};");
     }
 
     // Whether a wire element and a model element have the same type, so that a List of them copies as a block.
@@ -325,6 +345,9 @@ internal static partial class GesCSharpEmitter
                 code.Line($"{member}.Clear();");
                 code.Line($"foreach (var {face} in {source}) {member}.Add({face});");
                 return;
+            case GesLayoutKind.List when value.HandleMap:
+                FromModelHandleMap(code, value, model, modelOwner, owner, wired, source, pooled, conversion);
+                return;
             case GesLayoutKind.List:
                 FromModelList(code, value, model, modelOwner, owner, wired, source, pooled, conversion);
                 return;
@@ -381,6 +404,27 @@ internal static partial class GesCSharpEmitter
         }
         else code.Line($"{member}.Add({Converted(value.Element!, element, modelOwner, from, toModel: false, wired, conversion)});");
 
+        code.Close();
+    }
+
+    // A handle Map: the Dictionary's entries, sorted by key as the wire requires.
+    private static void FromModelHandleMap(GesSchemaPlanner.Code code, GesPlanValue value, GesModelPlanValue model, string modelOwner, string owner, string wired, string source, bool pooled, ModelConversion conversion)
+    {
+        var member = $"{owner}.{value.Base}";
+        var holder = value.Item!;
+        var keys = conversion.Local("keys");
+        var index = conversion.Local("index");
+        var target = conversion.Local("target");
+        code.Line($"var {keys} = new List<{GesCSharpModelEmitter.Type(model.Key!, conversion.Qualifier, modelOwner)}>({source}.Keys);");
+        code.Line($"{keys}.Sort();");
+        if (pooled) code.Line($"{owner}.Set{value.Base}Count({keys}.Count);");
+        else code.Line($"{member}.Clear();");
+        Block(code, $"for (var {index} = 0; {index} < {keys}.Count; {index}++)");
+        code.Line(pooled ? $"var {target} = {member}[{index}];" : $"var {target} = new {wired + holder.Name}();");
+        code.Line($"{target}.Key = {keys}[{index}];");
+        var inner = holder.Fields[1];
+        FromModel(code, inner.Value, model.Element!, modelOwner, target, wired + holder.Name + ".", $"{source}[{keys}[{index}]]", pooled: IsPooledList(inner), conversion);
+        if (!pooled) code.Line($"{member}.Add({target});");
         code.Close();
     }
 

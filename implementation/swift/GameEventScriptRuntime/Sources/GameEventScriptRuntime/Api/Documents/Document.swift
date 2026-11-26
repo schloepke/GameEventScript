@@ -33,7 +33,7 @@ public struct GesDocument: Hashable {
         default:
             throw GesApiError.invalidArgument("A document root must be a Map or a Record.")
         }
-        guard GesDocumentFormatter.isPrintable(value) else { throw GesApiError.invalidArgument("A document cannot contain External values, Dice rolls below 1, Handlers of a system endpoint or Records without a type name.") }
+        guard GesDocumentFormatter.isPrintable(value, handles: true) else { throw GesApiError.invalidArgument("A document cannot contain External values, Dice rolls below 1, Handlers of a system endpoint or Records without a type name.") }
         self.value = value
     }
 

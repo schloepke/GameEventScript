@@ -135,6 +135,7 @@ extension GesCompiler {
         scope.values[name] = d
         _ = try expression(value, r, scope, destination: d)
         if knownNonList(value, r, scope) { r.nonListBindings.insert(d) }
+        if let type = staticTypeName(value, scope) { scope.types[name] = type }
         // As C# ClassifyHandlerSignature: a Handler literal or an alias of a binding with a known signature.
         switch value.kind {
         case .handler(_, let parameters): scope.handlers[name] = parameters.map(\.label)
@@ -306,7 +307,10 @@ extension GesCompiler {
 
     func castExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         switch e.kind {
-        case .cast(let value, let type): try cast(d, expression(value, r, scope), type, r)
+        case .cast(let value, let type):
+            let source = try expression(value, r, scope)
+            noteHandleStateCast(value, type, scope)
+            try cast(d, source, type, r)
         case .check(let value, let type): try cast(d, expression(value, r, scope), type, r, check: true)
         default: preconditionFailure()
         }
@@ -423,7 +427,7 @@ extension GesCompiler {
     func memberExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         guard case .member(let value, let name) = e.kind else { preconditionFailure() }
         let a = try expression(value, r, scope)
-        r.emit(.memberAccess, d, builder.text(name), a)
+        try handleMemberAccess(value, name, d, a, r, scope)
     }
 
     func combinedExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {

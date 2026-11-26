@@ -4,6 +4,10 @@
 # Module: GameEventScriptSyntax
 # Update explicitly with: python3 scripts/verify-swift-api.py --update
 
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHandleVersionKind :: enum GesHandleVersionKind","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHandleVersionKind :: enum GesHandleVersionKind","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHandleVersionKind :: enum GesHandleVersionKind","target":"Swift.RawRepresentable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHandleVersionKind :: enum GesHandleVersionKind","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightDiagnostic :: struct GesHighlightDiagnostic","target":"Swift.Equatable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightDiagnostic :: struct GesHighlightDiagnostic","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightResult :: struct GesHighlightResult","target":"Swift.Sendable"}
@@ -38,6 +42,7 @@ symbol {"access":"public","declaration":"case builtin","kind":"swift.enum.case",
 symbol {"access":"public","declaration":"case bytes","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.bytes"}
 symbol {"access":"public","declaration":"case comment","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.comment"}
 symbol {"access":"public","declaration":"case constant","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.constant"}
+symbol {"access":"public","declaration":"case contentHash","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHandleVersionKind.contentHash"}
 symbol {"access":"public","declaration":"case coulomb","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.coulomb"}
 symbol {"access":"public","declaration":"case cubicMeter","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.cubicMeter"}
 symbol {"access":"public","declaration":"case decibel","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.decibel"}
@@ -52,6 +57,7 @@ symbol {"access":"public","declaration":"case ges","kind":"swift.enum.case","pat
 symbol {"access":"public","declaration":"case gesa","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.gesa"}
 symbol {"access":"public","declaration":"case gesd","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.gesd"}
 symbol {"access":"public","declaration":"case gess","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.gess"}
+symbol {"access":"public","declaration":"case handle","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.handle"}
 symbol {"access":"public","declaration":"case handler","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.handler"}
 symbol {"access":"public","declaration":"case hertz","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.hertz"}
 symbol {"access":"public","declaration":"case identifier","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.identifier"}
@@ -79,6 +85,7 @@ symbol {"access":"public","declaration":"case meterPerSecondSquared","kind":"swi
 symbol {"access":"public","declaration":"case module","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.module"}
 symbol {"access":"public","declaration":"case newton","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.newton"}
 symbol {"access":"public","declaration":"case newtonMeter","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.newtonMeter"}
+symbol {"access":"public","declaration":"case none","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHandleVersionKind.none"}
 symbol {"access":"public","declaration":"case none","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.none"}
 symbol {"access":"public","declaration":"case nothing","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.nothing"}
 symbol {"access":"public","declaration":"case number","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.number"}
@@ -93,8 +100,11 @@ symbol {"access":"public","declaration":"case quantity","kind":"swift.enum.case"
 symbol {"access":"public","declaration":"case range","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.range"}
 symbol {"access":"public","declaration":"case reference","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.reference"}
 symbol {"access":"public","declaration":"case register","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.register"}
+symbol {"access":"public","declaration":"case revision","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHandleVersionKind.revision"}
 symbol {"access":"public","declaration":"case second","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.second"}
 symbol {"access":"public","declaration":"case series","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.series"}
+symbol {"access":"public","declaration":"case sha1","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHandleVersionKind.sha1"}
+symbol {"access":"public","declaration":"case sha256","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHandleVersionKind.sha256"}
 symbol {"access":"public","declaration":"case squareMeter","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.squareMeter"}
 symbol {"access":"public","declaration":"case string","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.string"}
 symbol {"access":"public","declaration":"case symbol","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.symbol"}
@@ -108,6 +118,7 @@ symbol {"access":"public","declaration":"case watt","kind":"swift.enum.case","pa
 symbol {"access":"public","declaration":"case wattPerKelvin","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.wattPerKelvin"}
 symbol {"access":"public","declaration":"case wattPerSquareMeter","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.wattPerSquareMeter"}
 symbol {"access":"public","declaration":"enum GesAnsiRenderer","kind":"swift.enum","path":"GameEventScriptSyntax.GesAnsiRenderer"}
+symbol {"access":"public","declaration":"enum GesHandleVersionKind","kind":"swift.enum","path":"GameEventScriptSyntax.GesHandleVersionKind"}
 symbol {"access":"public","declaration":"enum GesHighlightingError","kind":"swift.enum","path":"GameEventScriptSyntax.GesHighlightingError"}
 symbol {"access":"public","declaration":"enum GesQuantityUnit","kind":"swift.enum","path":"GameEventScriptSyntax.GesQuantityUnit"}
 symbol {"access":"public","declaration":"enum GesSchemaTypeKind","kind":"swift.enum","path":"GameEventScriptSyntax.GesSchemaTypeKind"}
@@ -120,6 +131,7 @@ symbol {"access":"public","declaration":"init?(rawValue: String)","kind":"swift.
 symbol {"access":"public","declaration":"init?(rawValue: String)","kind":"swift.init","path":"GameEventScriptSyntax.GesSchemaTypeKind.init(rawValue:)"}
 symbol {"access":"public","declaration":"init?(rawValue: String)","kind":"swift.init","path":"GameEventScriptSyntax.GesSyntaxKind.init(rawValue:)"}
 symbol {"access":"public","declaration":"init?(rawValue: String)","kind":"swift.init","path":"GameEventScriptSyntax.GesSyntaxLanguage.init(rawValue:)"}
+symbol {"access":"public","declaration":"init?(rawValue: UInt8)","kind":"swift.init","path":"GameEventScriptSyntax.GesHandleVersionKind.init(rawValue:)"}
 symbol {"access":"public","declaration":"let code: String","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightDiagnostic.code"}
 symbol {"access":"public","declaration":"let diagnostics: [GesHighlightDiagnostic]","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightResult.diagnostics"}
 symbol {"access":"public","declaration":"let diagnostics: [GesHighlightDiagnostic]","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightSpan.diagnostics"}

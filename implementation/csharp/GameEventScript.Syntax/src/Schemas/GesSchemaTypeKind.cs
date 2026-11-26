@@ -70,7 +70,10 @@ public enum GesSchemaTypeKind : byte
     Poly,
 
     /// <summary>A filled circle in the plane z = 0: a centre Point and a radius.</summary>
-    Disc
+    Disc,
+
+    /// <summary>A handle of a handle type, an identity of an object outside the host.</summary>
+    Handle
 }
 
 internal static class GesSchemaTypeNames

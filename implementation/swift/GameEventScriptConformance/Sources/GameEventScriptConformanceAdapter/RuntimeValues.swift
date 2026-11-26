@@ -65,6 +65,9 @@ enum RuntimeValues {
         }
     }
 
+    // Validation reads handle text without importing the Runtime.
+    static func checkHandle(_ text: String) throws { _ = try GesHandle(parsing: text) }
+
     static func decode(_ node: Input, mutateSource: Bool = false) throws -> GesValue {
         let type = try node.text("type")
         let unit = try unit(node)
@@ -76,6 +79,7 @@ enum RuntimeValues {
         case ":Percentage": return try .percentage(parseNumber(node.text("value")))
         case ":Text": return try .text(node.text("value"))
         case ":Tag": return try .tag(node.text("value"))
+        case ":Handle": return .handle(try GesHandle(parsing: node.text("value")))
         case ":Vector": return try .vector(x: parseNumber(node.text("x")), y: parseNumber(node.text("y")), z: parseNumber(node.text("z")), unit: unit)
         case ":Point": return try .point(x: parseNumber(node.text("x")), y: parseNumber(node.text("y")), z: parseNumber(node.text("z")), unit: unit)
         case ":List":
@@ -105,6 +109,17 @@ enum RuntimeValues {
             return GesPoly(try node.values("points").map(unitlessPoint)).value(unit: unit)
         case ":Disc" where node["entries"] == nil:
             return GesDisc(center: try unitlessPoint(node.required("center")), radius: try parseNumber(node.text("radius"))).value(unit: unit)
+        case ":Map" where node.values("entries").contains(where: { $0["handle"] != nil }):
+            // A Map with handle keys; Text keys may accompany them.
+            let nodes = node.values("entries")
+            var handles = Set<GesHandle>()
+            let keys = try nodes.map { entry -> GesValue in
+                guard let text = entry["handle"]?.stringValue else { return .text(try entry.text("key")) }
+                let handle = try GesHandle(parsing: text)
+                guard handles.insert(handle).inserted else { throw ConformanceExecutionError.invalidInput("Duplicate map key") }
+                return .handle(handle)
+            }
+            return try .map(keyValues: keys, values: nodes.map { try decode($0.required("value")) })
         default:
             let nodes = node.values("entries")
             var keys = try nodes.map { try $0.text("key") }
@@ -163,6 +178,7 @@ extension RuntimeValues {
         case .nothing: return ["type": ":Nothing"]
         case .boolean: return ["type": ":Boolean", "value": value.asBoolean ? "true" : "false"]
         case .text, .tag: return ["type": value.valueKind == .text ? ":Text" : ":Tag", "value": value.textValue ?? ""]
+        case .handle: return ["type": ":Handle", "value": value.handleValue!.description]
         case .integer, .float:
             result = ["type": (value.unit == .none ? ":Number." : ":Quantity.") + (value.valueKind == .integer ? "int64" : "binary64"), "value": value.valueKind == .integer ? String(value.integerValue!) : numberText(value.asNumber)]
         case .percentage: return ["type": ":Percentage", "value": numberText(value.asNumber)]
@@ -182,7 +198,12 @@ extension RuntimeValues {
         default:
             return [
                 "type": value.valueKind == .map ? ":Map" : ":" + (value.customTypeName ?? ""),
-                "entries": try value.materializedMap().map { map in try (0..<map.length).map { ["key": map.key(at: $0), "value": try encode(map.value(at: $0))] as [String: Any] } } ?? [],
+                "entries": try value.materializedMap().map { map in
+                    try (0..<map.length).map { index -> [String: Any] in
+                        if let handle = map.handleKey(at: index) { return ["handle": handle.description, "value": try encode(map.value(at: index))] }
+                        return ["key": map.key(at: index), "value": try encode(map.value(at: index))]
+                    }
+                } ?? [],
             ]
         }
         if value.unit != .none { result["unit"] = ":" + String(describing: value.unit) }

@@ -353,6 +353,9 @@
     -
       "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*(?=$|[^A-Za-z0-9_])"
       "scope": "entity.name.type.custom.gameeventscript"
+    -
+      "match": "@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*~?(?![A-Za-z0-9_])"
+      "scope": "entity.name.type.custom.gameeventscript"
   "strings":
     -
       "match": "'"

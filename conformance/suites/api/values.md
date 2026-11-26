@@ -750,6 +750,60 @@ literal:
 
 ---
 
+## Test: literal parsing does not recognize a handle
+
+The data-only literal parser has no handle form: a handle's text stays Text, as for every unrecognized input. Only documents and `GesHandle.Parse` read handles ([Handle text form](../../../specs/Language.md#handle-text-form)). *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-handle-text
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "@Drone:7~120"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Text", value: "@Drone:7~120" }
+```
+
+---
+
+## Test: strict literal parsing rejects a handle
+
+`ParseLiteralStrict` reports a handle's text as unrecognized instead of reading a handle. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-handle
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "@Target:3"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  unrecognized: true
+```
+
+---
+
 ## Test: strict literal parsing rejects empty input
 
 This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.

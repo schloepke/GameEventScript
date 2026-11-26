@@ -81,10 +81,24 @@ internal static class RuntimeValues
         if (type == ":Map")
         {
             var keys = new HashSet<string>(StringComparer.Ordinal);
+            var handles = new HashSet<GesHandle>();
             foreach (var entry in value.GetProperty("entries").EnumerateArray())
             {
+                if (entry.TryGetProperty("handle", out var handle))
+                {
+                    Fields(entry, "handle", "value");
+                    if (!handles.Add(GesHandle.Parse(handle.GetString() ?? throw new ArgumentException("Handle key required.")))) throw new ArgumentException("Duplicate map key.");
+                    continue;
+                }
                 Fields(entry, "key", "value");
                 if (!keys.Add(entry.GetProperty("key").GetString() ?? throw new ArgumentException("Map key required."))) throw new ArgumentException("Duplicate map key.");
+            }
+            if (handles.Count > 0)
+            {
+                var entries = value.GetProperty("entries").EnumerateArray().ToArray();
+                return GesValue.GesMapOfKeys(
+                    entries.Select(item => item.TryGetProperty("handle", out var key) ? GesValue.GesHandle(GesHandle.Parse(key.GetString()!)) : GesValue.GesText(item.GetProperty("key").GetString()!)).ToArray(),
+                    entries.Select(item => Decode(item.GetProperty("value"))).ToArray());
             }
         }
         var unit = type is ":Quantity.int64" or ":Quantity.binary64" ? ReadUnit(value) : GesQuantityUnit.UnitNone;
@@ -103,6 +117,7 @@ internal static class RuntimeValues
             ":Percentage" => GesValue.GesPercentage(ParseNumber(value.GetProperty("value").GetString()!)),
             ":List" => GesValue.GesList(value.GetProperty("items").EnumerateArray().Select(Decode).ToArray()),
             ":Tag" => GesValue.GesTag(value.GetProperty("value").GetString() ?? throw new ArgumentException("Tag value required.")),
+            ":Handle" => GesValue.GesHandle(GesHandle.Parse(value.GetProperty("value").GetString() ?? throw new ArgumentException("Handle text required."))),
             ":Bytes" => GesValue.GesBytes(Convert.FromHexString(value.GetProperty("value").GetString() ?? throw new ArgumentException("Bytes value required."))),
             ":Dice" => GesValue.GesDice(value.GetProperty("rolls").EnumerateArray().Select(roll => roll.GetInt32() > 0 ? roll.GetInt32() : throw new ArgumentException("Positive roll required.")).ToArray()),
             ":Map" => GesValue.GesMap(value.GetProperty("entries").EnumerateArray().Select(item => item.GetProperty("key").GetString()!).ToArray(),
@@ -128,6 +143,7 @@ internal static class RuntimeValues
             case GesBytecodeTypeKind.Text: return new { type = ":Text", value = value.AsText() };
             case GesBytecodeTypeKind.Tag: return new { type = ":Tag", value = value.AsText() };
             case GesBytecodeTypeKind.Dice: return new { type = ":Dice", rolls = value.AsDice().ToArray() };
+            case GesBytecodeTypeKind.Handle: return new { type = ":Handle", value = value.Handle!.ToString() };
             case GesBytecodeTypeKind.Bytes: return new { type = ":Bytes", value = Convert.ToHexString(value.AsBytes()).ToLowerInvariant() };
             case GesBytecodeTypeKind.Integer: return Numeric(value, "int64", value.AsInteger().ToString(CultureInfo.InvariantCulture));
             case GesBytecodeTypeKind.Float: return Numeric(value, "binary64", value.AsNumber().ToString("R", CultureInfo.InvariantCulture));
@@ -170,7 +186,9 @@ internal static class RuntimeValues
                 return new
                 {
                     type = value.ValueKind == GesBytecodeTypeKind.Map ? ":Map" : ":" + value.CustomTypeName,
-                    entries = Enumerable.Range(0, map.Length).Select(index => new { key = map.KeyAt(index), value = Encode(map.ValueAt(index)) }).ToArray()
+                    entries = Enumerable.Range(0, map.Length).Select(index => map.HandleKey(index) is { } handle
+                        ? (object)new { handle = handle.ToString(), value = Encode(map.ValueAt(index)) }
+                        : new { key = map.KeyAt(index), value = Encode(map.ValueAt(index)) }).ToArray()
                 };
             default: throw new ArgumentException("Unsupported observed runtime value kind: " + value.ValueKind);
         }

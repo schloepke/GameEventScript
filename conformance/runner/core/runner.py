@@ -9,6 +9,7 @@ from checks.compiler_checks import SUPPORTED as COMPILER_KINDS, expectation, com
 from checks import binary_checks
 from checks import script_checks
 from checks import api_checks
+from checks import handle_catalog
 from checks.numeric_checks import validate_authored
 
 SUPPORTED = COMPILER_KINDS | {'programBinary', 'scriptApi'} | api_checks.KINDS
@@ -72,7 +73,8 @@ def case_request(case, fixtures):
         raise InvalidDocument('Invalid compiler source/expectation shape: ' + case.id)
     if runtime is None and case.sources and len({source['program'] for source in case.sources}) != 1:
         raise InvalidDocument('Compiler case requires one Program: ' + case.id)
-    fields = {'gesBlock', 'id', 'kind', 'level', 'categories', 'tags', 'requires', 'sources', 'compile'}
+    handles = handle_catalog.prepare(case)
+    fields = {'gesBlock', 'id', 'kind', 'level', 'categories', 'tags', 'requires', 'sources', 'compile', 'handles'}
     if runtime is not None:
         fields.update({'runtimeLimits', 'comparison', 'random', 'hostCount', 'nativeHandlers', 'stepActions', 'deferredPrograms', 'publishSink'})
     if case.kind == 'loadError':
@@ -126,6 +128,8 @@ def case_request(case, fixtures):
         result['runtime'] = runtime
     if binary is not None:
         result['binary'] = binary
+    if handles is not None:
+        result['handles'] = handles
     return result
 
 

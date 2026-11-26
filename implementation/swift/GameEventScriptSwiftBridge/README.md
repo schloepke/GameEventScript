@@ -101,7 +101,7 @@ let subscription = try host.subscribe(done) { message, context in
     print(value)
 }
 guard try host.start().state == .ready else { fatalError("Host startup failed") }
-host.receive(try GameEventScriptMessage(name: "Done", nativeArguments: [("value", 42)]))
+try host.receive(GameEventScriptMessage(name: "Done", nativeArguments: [("value", 42)]))
 let result = try host.runToCompletion()
 subscription.unsubscribe()
 ```

@@ -36,6 +36,11 @@ enum SchemaApiObservations {
                 let network = try set.network(name).bind(parameters: parameters)
                 result["network"] = ["canonical": network.canonicalForm, "hash": hex(network.hash)]
             }
+            if let name = input["handle"]?.stringValue {
+                let handle = try set.handleType(name)
+                result["handle"] = ["canonical": handle.canonicalForm, "hash": hex(handle.hash)]
+                if let state = input["contentHash"], state != .null { result["contentHash"] = try contentHash(handle, state) }
+            }
             if let document = input["document"]?.stringValue { result["document"] = check(set, document, root, parameters) }
             if let read = input["readDocument"], read != .null { result["readDocument"] = try readDocument(set, read) }
             if input["bind"]?.boolValue == true, let root {
@@ -189,6 +194,14 @@ enum SchemaApiObservations {
             return ["error": ["code": error.code, "line": error.line, "column": error.column]]
         } catch {
             return ["error": ["code": "\(error)", "line": 0, "column": 0]]
+        }
+    }
+
+    private static func contentHash(_ handle: GesHandleType, _ state: Input) throws -> Any {
+        do {
+            return try GesSchemaValues.contentHash(handle, state: RuntimeValues.decode(state)).description
+        } catch let error as GesWireError {
+            return ["error": ["code": error.code, "path": error.path]]
         }
     }
 

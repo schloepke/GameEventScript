@@ -21,9 +21,10 @@ class FuzzControls(unittest.TestCase):
         first = list(fuzz.cases(fuzz.SEED, 128))
         self.assertEqual(first, list(fuzz.cases(fuzz.SEED, 128)))
         self.assertNotEqual(first, list(fuzz.cases(fuzz.SEED + 1, 128)))
-        self.assertEqual(138, len(first))
+        self.assertEqual(140, len(first))
         self.assertTrue(all(len(data) <= fuzz.MAX_BYTES + 1 for _, data in first))
-        self.assertEqual(set(range(7)), {meta['operation'] for meta, _ in first[10:]})
+        self.assertEqual(set(range(7)), {meta['operation'] for meta, _ in first[12:]})
+        self.assertEqual(['control-invalid-fixture'], [meta['operation'] for meta, _ in first if meta.get('name') in fuzz.INVALID_FIXTURES])
 
     def test_reject_all_accept_all_and_missing_output_fail_controls(self):
         rows = [({'expected': 'accept'}, b'valid'), ({'expected': 'reject'}, b'bad')]

@@ -11,11 +11,26 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Added
+- Handles refer to objects outside the host: `handle @Drone of :DroneState as { id: :Number integer between 0 and 255,
+  version: :Number integer }` in a schema source declares a handle type with a bounded id, an optional version
+  (revision, `:Hash(#sha1)`, `:Hash(#sha256)` or `:ContentHash`, which GES computes) and the schema of its state;
+  `composite @Unit as { part: ... }` adds one level of parts (specs/Schemas.md#handles). Scripts name them `@Drone`
+  and `@Drone~`, read `h.id`, `h.version`, `h.root` and the state's fields, which a host resolver delivers lazily per
+  handler, compare them by type and identity, test them with `is`, and use them as Map keys and timer names
+  (specs/Language.md#handles, specs/HostRuntime.md#handles). Text form `@Drone:7~120`, document literals with refs
+  (`~#live`), product JSON `Handle` objects, wire encodings of ids and versions, network `owns` routes, generated
+  `<Name>Handle` model types, `GesHandle`, `GesHash20`/`GesHash32`, `WithHandleTypes`, `WithHandleResolver`,
+  `ResolveRef` and the `HandleType` import (0x22) (specs/PublicApi.md#handle-api).
+- Both CLIs take `--handles <schema.gess>` (repeatable, with file-name patterns) for `compile`, `check` and `run`: the
+  handle types the schema sources declare reach every compilation, including scenarios, console input, `:load`,
+  `:reload` and `:edit`. The CLI registers no resolver, so a Program that reads handle state fails to load with
+  `link.missingHandleResolver`. The guide [Refer to host objects with handles](docs/guide/Handles.md) walks through
+  schema, script, resolvers in C# and Swift, text form, documents and refs.
 - Named timers and heartbeats: `emit after 30s named 'timeout' GiveUp()` names a delayed send so that a later send
   of the same name replaces it, and `emit every 1s named 'beat' Heartbeat()` (also `publish`) repeats one period after
   each completed firing. `cancel key`, `cancel named` and `cancel all` remove timers of the executing Program instance
   and yield whether anything was removed; `cancel` is a reserved keyword and can no longer name a function, predicate,
-  binding or argument label (specs/Language.md#named-timers-and-heartbeats,
+  binding or argument label except in backticks (`` `cancel` ``) (specs/Language.md#named-timers-and-heartbeats,
   specs/HostRuntime.md#named-timers). New opcodes `EmitNamed` (0xE1, with the `Repeat` flag 0x20), `PublishNamed`
   (0xE2) and `CancelTimers` (0xE3); `RuntimeLimits.MaxNamedTimers`; `Host.PendingTimers` with `GesTimerInfo`; observer
   `MessageScheduled` reports the timer name and period.
@@ -69,6 +84,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   with a hint. A set without parameters keeps its canonical form, hash and bytes (specs/Schemas.md#declarations).
 - A network route that names a single message drops the `:` (`client sends Move reliable`); `:Name` in a route names
   only a schema, so the former `client sends :Move` is now `schema.unknownName`.
+- `Receive` and a native handler's `Emit` and `Publish` reject a message whose argument holds a handle with a ref
+  with `wire.unresolvedRef`; in Swift `receive(_:)`, `GesContext.emit(_:)` and `GesContext.publish(_:)` are now
+  `throws(GesWireError)`, so callers add `try` (specs/PublicApi.md#handle-api).
 
 ### Fixed
 - The TextMate, Sublime Text and VS Code grammars highlight `between`, `step`, `ascending`/`descending`,

@@ -77,7 +77,12 @@ extension GesVirtualMachine {
                 case .castCustom:
                     let value = self.value(x)
                     let type = text(instruction.word2)
-                    if value.customTypeName == type {
+                    // A handle type checks without converting; a handle casts only to its type's state schema.
+                    if type.utf8.first == UInt8(ascii: "@") {
+                        if Self.isHandleType(value, type) { setValue(d, value) } else { setNothing(d) }
+                    } else if let handle = value.handleValue {
+                        if try !tryCastHandleState(d, handle, type) { setNothing(d) }
+                    } else if value.customTypeName == type {
                         setValue(d, value)
                     } else if value.kind == .map, let binding = linked!.recordsByName[type] {
                         clearStage()
@@ -97,7 +102,9 @@ extension GesVirtualMachine {
                 case .splitText: GesTextSplit.split(value(x), value(y), whitespace: instruction.a == 1, sink: output(d))
                 case .parseLiteral: try GesLiteralParser.evaluate(value(x), strict: instruction.unitAndFlags & 64 != 0, context: context, state: self, destination: d)
                 case .checkType: setBoolean(d, GesCasts.check(value(x), GesBytecodeTypeKind(rawValue: instruction.word2)!))
-                case .checkCustomType: setBoolean(d, value(x).customTypeName == text(instruction.word2))
+                case .checkCustomType:
+                    let type = text(instruction.word2)
+                    setBoolean(d, type.utf8.count > 1 && type.utf8.first == UInt8(ascii: "@") ? Self.isHandleType(value(x), type) : value(x).customTypeName == type)
                 case .checkUnit:
                     let value = self.value(x)
                     setBoolean(d, ((value.kind == .integer || value.kind == .float) || value.spatialValue != nil) && value.unit == instruction.decodedUnit)
@@ -111,12 +118,22 @@ extension GesVirtualMachine {
                     setBoolean(d, v.isNumeric && n.isFinite && n != n.rounded(.towardZero))
                 case .move:
                     if instruction.unitAndFlags & 0x40 != 0 { numericCopy(d, x) } else { move(d, x) }
-                case .memberAccess: try value(y).member(text(instruction.word1), sink: output(d))
+                case .memberAccess:
+                    let value = self.value(y)
+                    if let handle = value.handleValue { try readHandleMember(d, text(instruction.word1), handle) } else { try value.member(text(instruction.word1), sink: output(d)) }
                 case .indexAccess: value(y).index(Int64(instruction.word1), sink: output(d))
                 case .propertyAccess:
                     let key = value(x)
                     let value = self.value(y)
-                    if let integer = key.integerValue { value.index(integer, sink: output(d)) } else if let text = key.textValue { try value.member(text, sink: output(d)) } else { setNothing(d) }
+                    if let integer = key.integerValue {
+                        value.index(integer, sink: output(d))
+                    } else if let text = key.textValue {
+                        if let handle = value.handleValue { try readHandleMember(d, text, handle) } else { try value.member(text, sink: output(d)) }
+                    } else if let handle = key.handleValue, value.kind == .map, let field = value.asMap!.get(handle) {
+                        setValue(d, field)
+                    } else {
+                        setNothing(d)
+                    }
                 case .bindHandler: if let message = value(x).signatureValue?.makeMessage(values(instruction.word2)) { setMessage(d, message) } else { setNothing(d) }
                 case .loadNothing: setNothing(d)
                 case .loadTrue: setBoolean(d, true)

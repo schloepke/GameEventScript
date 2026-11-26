@@ -126,6 +126,14 @@ final class GesPlanValue {
     // How an emitter spells the type of a Tag of a named tag set, which is declared once beside the records.
     var tagType = ""
 
+    // A handle: its type and, for a composite, its root's type; an emitter spells the type `<Name>Handle` with handleType.
+    var handle: GesLayoutHandle?
+    var handleRoot: GesLayoutHandle?
+    var handleType = ""
+
+    // Whether the value is a Map with handle keys, planned as a List of entries with a Key and a Value in key order.
+    var handleMap = false
+
     init(base: String = "", label: String = "", node: Int = 0, encoding: GesLayoutEncoding = GesLayoutEncoding(), isClass: Bool = false) {
         self.base = base
         self.label = label
@@ -305,6 +313,39 @@ enum GesSchemaPlanner {
                 value.alternatives.append(self.value(context, alternative.encoding, name + pascal(alternative.name), pascal(alternative.name), alternativeNode))
                 alternativeNode += count(context.layout, alternative.encoding, &context.counts)
             }
+        case .handle:
+            let handle = context.layout.handle(encoding.handle)
+            value.handle = handle
+            value.handleType = handle.name + "Handle"
+            if handle.isComposite { value.handleRoot = context.layout.handle(handle.root) }
+        case .handleMap:
+            // The List node, each entry's group, the key and its nodes, then the value; an entry's fields count from its group.
+            let list = GesLayoutEncoding()
+            list.kind = .list
+            list.maxCount = encoding.maxCount
+            list.width = encoding.width
+            list.element = encoding.element
+            let key = GesLayoutEncoding()
+            key.kind = .handle
+            key.handle = encoding.handle
+            let keyNodes = count(context.layout, key, &context.counts)
+            let element = encoding.element!
+            let entryPath = String(element.path.dropLast(".value".count))
+            let entry = GesPlanType()
+            entry.name = name + "Entry"
+            entry.kind = .schema
+            entry.isItem = true
+            entry.isClass = holdsStorage(context, element.encoding)
+            entry.fields.append(GesPlanField(layout: GesLayoutField(name: "key", path: entryPath + ".key", encoding: key), base: "Key", value: self.value(context, key, "Key", "", 1)))
+            entry.fields.append(GesPlanField(layout: element, base: "Value", value: self.value(context, element.encoding, "Value", "", 1 + keyNodes)))
+            value.encoding = list
+            value.handleMap = true
+            value.isClass = true
+            value.item = entry
+            let entryEncoding = GesLayoutEncoding()
+            entryEncoding.kind = .schema
+            entryEncoding.schema = name + "Entry"
+            value.element = GesPlanValue(base: name + "Entry", node: node + 1, encoding: entryEncoding, isClass: entry.isClass)
         case .list:
             let element = encoding.element!.encoding
             if element.kind == .union || element.kind == .text || element.kind == .bytes || element.kind == .list {
@@ -328,7 +369,7 @@ enum GesSchemaPlanner {
     // Whether values of an encoding need storage that grows, so that their type is a class.
     private static func holdsStorage(_ context: Context, _ encoding: GesLayoutEncoding) -> Bool {
         switch encoding.kind {
-        case .text, .bytes, .list: true
+        case .text, .bytes, .list, .handleMap: true
         case .schema: isClass(context, encoding.schema)
         case .union: encoding.alternatives.contains { holdsStorage(context, $0.encoding) }
         default: false
@@ -395,6 +436,14 @@ enum GesSchemaPlanner {
             return 1 + 2 * (1 + encoding.corners[0].encoding.axes.count)
         case .disc:
             return encoding.corners.count + 1 + encoding.corners[0].encoding.axes.count
+        case .handle:
+            let handle = layout.handle(encoding.handle)
+            return 2 + (encoding.versioned ? 1 : 0) + (handle.isComposite ? 1 : 0)
+        case .handleMap:
+            let key = GesLayoutEncoding()
+            key.kind = .handle
+            key.handle = encoding.handle
+            return 2 + count(layout, key, &counts) + count(layout, encoding.element!.encoding, &counts)
         case .union:
             var total = 1
             for alternative in encoding.alternatives { total += count(layout, alternative.encoding, &counts) }
@@ -465,6 +514,19 @@ enum GesSchemaPlanner {
             for alternative in encoding.alternatives { self.paths(layout, alternative.path, alternative.encoding, &paths, &cache) }
         case .schema:
             for nested in self.paths(layout, layout.type(encoding.schema), &cache) { paths.append(path + "." + nested) }
+        case .handle:
+            paths.append(path + ".id")
+            if encoding.versioned { paths.append(path + ".version") }
+            if layout.handle(encoding.handle).isComposite { paths.append(path + ".part") }
+        case .handleMap:
+            let element = encoding.element!
+            let entryPath = String(element.path.dropLast(".value".count))
+            paths.append(entryPath)
+            let key = GesLayoutEncoding()
+            key.kind = .handle
+            key.handle = encoding.handle
+            self.paths(layout, entryPath + ".key", key, &paths, &cache)
+            self.paths(layout, element.path, element.encoding, &paths, &cache)
         default:
             break
         }
@@ -545,6 +607,16 @@ enum GesSchemaPlanner {
     static func pascal(_ name: String) -> String { name.isEmpty ? name : name.prefix(1).uppercased() + name.dropFirst() }
 
     static func camel(_ name: String) -> String { name.isEmpty ? name : name.prefix(1).lowercased() + name.dropFirst() }
+
+    // Qualifies the handle types of a value with the namespace that declares them.
+    static func qualifyHandles(_ value: GesPlanValue, _ qualifier: String) {
+        if value.handle != nil && !value.handleType.contains(".") { value.handleType = qualifier + value.handleType }
+        if let element = value.element { qualifyHandles(element, qualifier) }
+        if let item = value.item {
+            for field in item.fields { qualifyHandles(field.value, qualifier) }
+        }
+        for alternative in value.alternatives { qualifyHandles(alternative, qualifier) }
+    }
 
     // Qualifies the packed types that values refer to, everywhere below them.
     static func qualifyPacked(_ value: GesPlanValue, _ qualifier: String) {

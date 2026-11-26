@@ -62,8 +62,8 @@ final class DelayedObservationTests: XCTestCase {
         callbacks.host = host
         _ = try host.subscribe(.init(name: "Capture"), handler: callbacks)
         let instance = try host.load(GesProgramBuilder().addScript("on Start { emit every 1s named 'beat' Beat() }\non Beat { }").compile())
-        host.receive(try .init(name: "Capture"))
-        host.receive(try .init(name: "Start"))
+        try host.receive(.init(name: "Capture"))
+        try host.receive(.init(name: "Start"))
         _ = try host.runToCompletion()
 
         try callbacks.captured?.publish("Out")
@@ -83,7 +83,7 @@ final class DelayedObservationTests: XCTestCase {
         _ = try host.load(GesProgramBuilder().addScript("on Work { emit after 1s Later(); publish after 2s Out(); emit after 1s Later() }").compile())
         _ = try host.subscribe(.init(name: "Later"), handler: recorder)
 
-        host.receive(try .init(name: "Work"))
+        try host.receive(.init(name: "Work"))
         _ = try host.runToCompletion()
         recorder.events.append("delay \(host.nextMessageDelay.map(String.init) ?? "none")")
         clock.elapsedMicroseconds = 1_000_000

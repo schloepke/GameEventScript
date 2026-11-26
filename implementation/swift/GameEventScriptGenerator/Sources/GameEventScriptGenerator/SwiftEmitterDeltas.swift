@@ -164,6 +164,86 @@ extension GesSwiftEmitter {
     // The UTF-8 storage of a Text in `owner`, "self" or another record.
     private static func bytes(_ value: GesPlanValue, _ owner: String) -> String { storage(value, owner) }
 
+    // The wire parts of a handle in node order, with their members in a and b: a composite's id is its root's, and a field
+    // without a version transmits none. A text id compares by its UTF-8 bytes, which String's equality would not.
+    private static func handleMembers(_ value: GesPlanValue, _ a: String, _ b: String) -> [(part: GesPlanValue, a: String, b: String)] {
+        let (id, version, part) = GesCSharpEmitter.handleParts(value)
+        let root = value.handleRoot != nil ? ".root" : ""
+        var members: [(part: GesPlanValue, a: String, b: String)] = [(id, "\(a)\(root).id", "\(b)\(root).id")]
+        if let version { members.append((version, "\(a).version", "\(b).version")) }
+        if let part { members.append((part, "\(a).part", "\(b).part")) }
+        return members
+    }
+
+    // A handle changes as a group: one change bit per part, then each changed part whole.
+    private static func handleDelta(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String, _ set: String) {
+        let node = value.node
+        let members = handleMembers(value, a, b)
+        code.open("do {")
+        code.line("let first\(node) = writer.bitPosition")
+        code.line("try writer.write(0, width: \(members.count))")
+        for (index, (part, first, second)) in members.enumerated() {
+            let partNode = part.node
+            if part.base == "Version" {
+                code.line("guard let version\(partNode) = \(first) else { \(fail("missingVersion", part)) }")
+                code.open("if version\(partNode) != \(second) {")
+                if part.encoding.kind == .bytes { code.line("try writer.writeBytes(version\(partNode).bytes)") } else { write(&code, part, "version" + String(partNode)) }
+            } else {
+                code.open(part.encoding.kind == .text ? "if !\(first).utf8.elementsEqual(\(second).utf8) {" : "if \(first) != \(second) {")
+                if part.encoding.kind == .text {
+                    code.line("try GesWireRules.writeText(&writer, \(first), width: \(part.encoding.width), maxCount: \(part.encoding.maxCount), path: \(path(part)))")
+                } else {
+                    write(&code, part, first)
+                }
+            }
+            code.line("writer.setBit(first\(node) + \(index))")
+            code.line("\(set) = true")
+            code.close()
+        }
+        code.line("if !\(set) { writer.rewind(to: first\(node)) }")
+        code.close()
+    }
+
+    // Reads the changed parts of a handle, each different from the baseline's, and builds it from them and the baseline's.
+    private static func readHandleDelta(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String) {
+        let members = handleMembers(value, a, b)
+        code.open("do {")
+        // The change bits precede the payloads.
+        for member in members { code.line("let set\(member.part.node) = try reader.read(1, path: \(path(value))) == 1") }
+        code.line("if \(members.map { "!set\($0.part.node)" }.joined(separator: " && ")) { \(fail("invalidDelta", value)) }")
+        for (part, _, second) in members {
+            let partNode = part.node
+            let local = part.base.lowercased()
+            code.line("var \(local) = \(second)")
+            code.open("if set\(partNode) {")
+            if part.base == "Version" && part.encoding.kind == .bytes {
+                let type = GesCSharpEmitter.hashType(part)
+                code.line("var hash\(partNode): [UInt8] = []")
+                code.line("try reader.readBytes(\(type).length, into: &hash\(partNode), path: \(path(part)))")
+                code.line("\(local) = \(type)(bytes: hash\(partNode))!")
+            } else if part.encoding.kind == .text {
+                code.line("\(local) = try GesWireRules.readText(&reader, width: \(part.encoding.width), maxCount: \(part.encoding.maxCount), current: nil, path: \(path(part)))")
+            } else if part.base == "Version" {
+                code.line("let read\(partNode): Int64")
+                read(&code, part, "read" + String(partNode))
+                code.line("\(local) = read\(partNode)")
+            } else {
+                read(&code, part, local)
+            }
+            code.line(
+                part.encoding.kind == .text
+                    ? "if \(local).utf8.elementsEqual(\(second).utf8) { \(fail("invalidDelta", part)) }" : "if \(local) == \(second) { \(fail("invalidDelta", part)) }"
+            )
+            code.close()
+        }
+        let arguments = "id: id" + (members.contains { $0.part.base == "Version" } ? ", version: version" : "")
+        code.line(
+            value.handleRoot != nil
+                ? "\(a) = \(value.handleType)(root: \(GesCSharpEmitter.handleRootType(value))(\(arguments)), part: part)" : "\(a) = \(value.handleType)(\(arguments))"
+        )
+        code.close()
+    }
+
     // Returns false from the enclosing function when the wire values of a and b differ.
     private static func same(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String, _ ownerA: String, _ ownerB: String) {
         let node = String(value.node)
@@ -207,7 +287,11 @@ extension GesSwiftEmitter {
                 code.close("")
             }
             code.line("}")
-        case .nothing:
+        case .handle:
+            for (part, first, second) in handleMembers(value, a, b) {
+                code.line(part.encoding.kind == .text ? "if !\(first).utf8.elementsEqual(\(second).utf8) { return false }" : "if \(first) != \(second) { return false }")
+            }
+        case .handleMap, .nothing:
             break
         }
     }
@@ -654,7 +738,9 @@ extension GesSwiftEmitter {
             code.line("}")
             code.line("if !\(set) { writer.rewind(to: entry\(node)) }")
             code.close("}")
-        case .nothing:
+        case .handle:
+            handleDelta(&code, value, a, b, set)
+        case .handleMap, .nothing:
             break
         }
     }
@@ -799,7 +885,9 @@ extension GesSwiftEmitter {
             }
             code.line("}")
             code.close()
-        case .nothing:
+        case .handle:
+            readHandleDelta(&code, value, a, b)
+        case .handleMap, .nothing:
             break
         }
     }

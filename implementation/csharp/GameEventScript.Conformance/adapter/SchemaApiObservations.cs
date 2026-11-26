@@ -10,10 +10,11 @@ internal static class SchemaApiObservations
 {
     internal static void Validate(JsonElement input)
     {
-        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "complete", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument", "network");
+        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "complete", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument", "network", "handle", "contentHash");
         if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("encode"));
         if (input.GetProperty("baseline").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("baseline"));
         if (input.GetProperty("complete").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("complete"));
+        if (input.GetProperty("contentHash").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("contentHash"));
     }
 
     internal static object Run(JsonElement input)
@@ -50,6 +51,13 @@ internal static class SchemaApiObservations
             {
                 var network = set.Network(networkName).Bind(parameters);
                 result["network"] = new { canonical = network.CanonicalForm, hash = network.Hash.ToString("x16") };
+            }
+
+            if (input.GetProperty("handle").GetString() is { } handleName)
+            {
+                var handle = set.HandleType(handleName);
+                result["handle"] = new { canonical = handle.CanonicalForm, hash = handle.Hash.ToString("x16") };
+                if (input.GetProperty("contentHash").ValueKind != JsonValueKind.Null) result["contentHash"] = ContentHash(handle, input.GetProperty("contentHash"));
             }
 
             if (input.GetProperty("document").GetString() is { } document) result["document"] = Check(set, document, root, parameters);
@@ -263,6 +271,18 @@ internal static class SchemaApiObservations
         {
             var decoded = GesSchemaDelta.Decode(bound, Convert.FromHexString(input.GetProperty("delta").GetString()!), Convert.FromHexString(input.GetProperty("baseline").GetString()!), buffer);
             return new { record = Convert.ToHexString(buffer, 0, decoded.ByteCount).ToLowerInvariant(), deltaByteCount = decoded.DeltaByteCount };
+        }
+        catch (GesWireException exception)
+        {
+            return new { error = new { code = exception.Code, path = exception.Path } };
+        }
+    }
+
+    private static object ContentHash(GesHandleType handle, JsonElement input)
+    {
+        try
+        {
+            return GesSchemaValues.ContentHash(handle, ValueApiObservations.Construct(input)).ToString();
         }
         catch (GesWireException exception)
         {

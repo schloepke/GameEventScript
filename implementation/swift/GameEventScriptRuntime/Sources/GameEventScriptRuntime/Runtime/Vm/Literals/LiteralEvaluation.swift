@@ -8,6 +8,8 @@ struct GesLiteralNode {
     var constructor: GesBindingSegment.Entry?
     // Source position of a typed form, reported by document limit errors.
     var offset = 0
+    // A Map node with handle keys carries every key as a value; labels then stay unused.
+    var keys: [GesValue]? = nil
 }
 
 final class GesLiteralEvaluation {
@@ -73,7 +75,10 @@ final class GesLiteralEvaluation {
     private func node(_ value: GesValue) -> GesLiteralNode {
         if value.customTypeName == "@literal", let id = value.asMap?.get("id")?.integerValue, id >= 0, id < nodes.count { return nodes[Int(id)] }
         if let list = value.listValue { return .init(type: "@list", labels: [], arguments: list) }
-        if value.kind == .map, let map = value.asMap { return .init(type: "@map", labels: map.keyStorage, arguments: map.valueStorage) }
+        if value.kind == .map, let map = value.asMap {
+            let keys = map.handleStorage.isEmpty ? nil : (0..<map.length).map { map.keyValue(at: $0) }
+            return .init(type: "@map", labels: map.keyStorage, arguments: map.valueStorage, keys: keys)
+        }
         return .init(type: "@value", labels: [], arguments: [value])
     }
 
@@ -127,7 +132,13 @@ final class GesLiteralEvaluation {
             switch node.type {
             case "@value": result = node.arguments[0]
             case "@list": result = .list(args)
-            case "@map": result = .map(zip(node.labels, args).map { .init(key: $0.0, value: $0.1) })
+            case "@map":
+                if let keys = node.keys {
+                    // Keys come from a read handle or an existing Map, so each is a Text or a handle.
+                    result = GesValueMap.fromKeyValues(keys, args).map { .map($0) } ?? .nothing
+                } else {
+                    result = .map(zip(node.labels, args).map { .init(key: $0.0, value: $0.1) })
+                }
             default:
                 if node.type.hasPrefix("@message:") {
                     result = .message(try .init(name: String(node.type.dropFirst(9)), arguments: try zip(node.labels, args).map { try .init(name: $0.0, value: $0.1) }))

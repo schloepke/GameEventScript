@@ -124,7 +124,7 @@ public sealed partial class GameEventScriptHost
                 program);
         }
 
-        var linked = new GesLinkedProgram(program, _extensionRegistry, _externalTypeRegistry);
+        var linked = new GesLinkedProgram(program, _extensionRegistry, _externalTypeRegistry, HandleResolvers);
         if (IsMessageQueueFull)
         {
             for (var index = 0; index < linked.Handlers.Length; index++)
@@ -262,11 +262,42 @@ public sealed partial class GameEventScriptHost
     /// <returns><see langword="true"/> when the host queue accepted the message; otherwise <see langword="false"/>.</returns>
     /// <remarks>The matching handler snapshot is captured when the message is enqueued. This method never invokes the publish sink or pumps the host.</remarks>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GesWireException">An argument contains a handle that carries a ref (<c>wire.unresolvedRef</c>).</exception>
     public bool Receive(GameEventScriptMessage message)
     {
         _ = message ?? throw new ArgumentNullException(nameof(message));
+        RejectRefs(message);
         if (!IsReady || message.Name.Length == 0 || GesSystemEndpoints.IsInitializationName(message.Name)) return false;
         return EnqueueMessage(message) != 0;
+    }
+
+    /// <summary>
+    /// Turns the ref a handle read from a document carries into a version through the resolver of its type.
+    /// </summary>
+    /// <param name="handle">The handle; one without a ref is returned unchanged.</param>
+    /// <returns>The handle carrying the version its resolver named for the ref.</returns>
+    /// <remarks>Messages and values passed to the host must not contain refs; see specs/HostRuntime.md#handles.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GesHandleException">No resolver is registered for the type, the resolver failed, or it returned no valid version.</exception>
+    public GesHandle ResolveRef(GesHandle handle)
+    {
+        _ = handle ?? throw new ArgumentNullException(nameof(handle));
+        if (handle.Ref.IsNothing) return handle;
+        GesHandleBinding? binding = null;
+        HandleResolvers?.TryGetValue(handle.TypeName, out binding);
+        return GesHandleStates.ResolveRef(binding, handle);
+    }
+
+    // The resolvers the builder registered, by handle type name.
+    internal Dictionary<string, GesHandleBinding>? HandleResolvers { get; set; }
+
+    // A ref never reaches the VM; the check runs before anything is enqueued.
+    internal static void RejectRefs(GameEventScriptMessage message)
+    {
+        var index = GesHandleStates.RefArgument(message);
+        if (index < 0) return;
+        var label = message.Arguments.NameAt(index);
+        throw GesHandleStates.UnresolvedRef(message.Name + "." + (label.Length > 0 ? label : index.ToString(System.Globalization.CultureInfo.InvariantCulture)));
     }
 
     /// <summary>
@@ -436,6 +467,8 @@ public sealed partial class GameEventScriptHost
 
     internal bool EmitFromContext(GameEventScriptMessage message)
     {
+        // Pumping already rejects Reset, so the hot path skips the guard.
+        if (_pumping) return EmitFromContextCore(message);
         _callbackDepth++;
         try { return EmitFromContextCore(message); }
         finally { _callbackDepth--; }
@@ -452,6 +485,8 @@ public sealed partial class GameEventScriptHost
 
     internal GesPublishResult PublishFromContext(GameEventScriptMessage message)
     {
+        // Pumping already rejects Reset, so the hot path skips the guard.
+        if (_pumping) return PublishFromContextCore(message);
         _callbackDepth++;
         try { return PublishFromContextCore(message); }
         finally { _callbackDepth--; }

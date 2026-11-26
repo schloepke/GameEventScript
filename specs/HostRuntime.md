@@ -286,6 +286,58 @@ and constructor invocation remain entirely inside `CSharpBridge`. Portable JSON
 conformance uses a manual catalog, constructor registry, and value
 implementation and therefore does not depend on C# reflection.
 
+## Handles
+
+> **Since: Unreleased**
+
+A [handle](Language.md#handles) refers to an object outside the host. Like external types, handles use two separate
+inputs: compilation receives the declarative [handle catalog](PublicApi.md#handle-api), and the host receives one
+resolver per handle type that reads state. GES never owns, stores or changes the objects; it reads them.
+
+**Program and link.** A Program records every handle type it names, with the declaration the compiler used and
+whether the Program reads state of that type: a member other than `id`, `version` and `root`, or a cast to the state
+schema. Load compares each recorded declaration with the host's catalog, if one is configured, and fails with
+`link.mismatchedHandleType` on a difference. A type whose state the Program reads needs a resolver, otherwise Load
+fails with `link.missingHandleResolver`, located at the first instruction that reads the type's state as
+[link call sites](Diagnostics.md#link-call-sites) describe. Comparing, `is`, Map keys, timer names and passing a handle on
+need no resolver.
+
+**Resolution.** Reading state resolves the whole object lazily, the first time a handler reads it. The resolver
+receives the handle, with its version if it carries one, and answers synchronously with exactly one of:
+
+- the state as a Record of the state schema, optionally with the object's version;
+- the state as `.gesd` document text, whose [schema header](Documents.md#schema-header) must name the state schema,
+  optionally with the version;
+- *missing*: the object does not exist, so every state read gives `nothing` and `h as :State` gives `nothing`.
+
+The host checks the answer against the state schema as [document checking](Schemas.md#document-checking) does, with
+defaults applied. A state that does not fit, a document that does not read or names another schema, and an answer
+without a result fail with `runtime.invalidHandleState`. A resolver that throws or reports a failure fails with
+`runtime.handleResolveFailed`. Both stop the handler like an extension fault. A composite is resolved by its own type's resolver alone; when the
+handle carries no root version, the resolver may pass the root's version it delivered.
+
+**Versions.** For a `:ContentHash` type GES computes the [content hash](Schemas.md#content-hash) of the resolved
+state; a resolver need not pass one. For every other versioned type the resolver passes the version it delivered.
+A passed version that differs from the computed hash, or from the version the handle carries, fails with
+`runtime.handleVersionMismatch`. A resolver of an unversioned type passes none. A handle read without a version
+picks up the resolved version for `as :State` and later reads in the same handler, but `h.version` keeps
+reporting the version the value itself carries.
+
+**Cache.** Each handler invocation owns one cache keyed by handle type, identity and carried version. Every state
+read of the same object in that invocation, including across pauses, uses the first answer, so a handler sees one
+consistent state per object. The cache ends with the invocation; nothing is shared between handlers or hosts.
+Resolvers are called only from script execution on the host's serial path, never from loading or the pump itself.
+Pausing resolvers are not part of this version; a later version may let resolution pause the handler like a frame.
+
+**Refs.** A handle read from a document may carry a ref instead of a version. `ResolveRef` (Swift `resolveRef`)
+asks the type's resolver to turn it into a version and returns the handle with that version; a handle without a ref
+returns unchanged. A ref never reaches the VM: `Receive`, `Emit`, `Publish`, extension results and external field
+values reject a value that contains one with `wire.unresolvedRef`, before anything is enqueued.
+
+**Wire.** A schema-encoded handle carries its identity and, for `@Name~`, its version; the state never travels.
+Network routes `owns` declare which side holds the objects of a type ([Network](Network.md)); resolving over the
+network is not part of this version.
+
 ## Message Semantics
 
 - Message arguments are ordered `GesMessageArgument` name/value
@@ -697,7 +749,8 @@ Bridges and command-line adapters own timers and serialize all Host access.
 
 A named send (`emit|publish after|every duration named key`,
 [Language](Language.md#named-timers-and-heartbeats)) registers a named timer under
-the sending Program instance and the key's text. Each instance has one namespace
+the sending Program instance and the key's text, or the key itself when it is a
+[handle](#handles). Each instance has one namespace
 for emit and publish; instances never see each other's names. A timer has one
 current firing at a time, which is an ordinary delayed entry with its own send ID
 and follows [Delayed dispatch](#delayed-dispatch) unless stated here. Only script
@@ -756,7 +809,8 @@ handler with that limit before the send is observed, like a delayed send on a fu
 queue.
 
 **Observation.** `PendingTimers` (Swift `pendingTimers`) is a snapshot of all
-registered timers, ordered by deadline and then by send ID, with name, deadline of
+registered timers, ordered by deadline and then by send ID, with name (a Text or
+handle value), deadline of
 the current firing in whole microseconds on the Host clock, period in whole
 microseconds (0 for `after`), message name, sending instance and publish flag.
 Reading it never pumps. Every arming of a timer reports `MessageScheduled` with

@@ -80,7 +80,8 @@ def value(raw):
 
     field = {':Nothing': None, ':Text': 'value', ':Boolean': 'value', ':Number.int64': 'value',
              ':List': 'items', ':Map': 'entries', ':Tag': 'value', ':Dice': 'rolls', ':Bytes': 'value',
-             ':Number.binary64': 'value', ':Quantity.int64': 'value', ':Quantity.binary64': 'value', ':Percentage': 'value'}.get(kind, 'unsupported')
+             ':Number.binary64': 'value', ':Quantity.int64': 'value', ':Quantity.binary64': 'value', ':Percentage': 'value',
+             ':Handle': 'value'}.get(kind, 'unsupported')
     if field == 'unsupported':
         raise InvalidDocument('Unsupported runtime value type: ' + str(kind))
     fields = ({'type', field} if field else {'type'}) | ({'unit'} if kind.startswith(':Quantity.') else set())
@@ -103,6 +104,10 @@ def value(raw):
     elif kind in (':Text', ':Tag', ':Boolean'):
         if not isinstance(raw['value'], str) or (kind == ':Boolean' and raw['value'] not in ('true', 'false')):
             raise InvalidDocument('Invalid scalar transport')
+    elif kind == ':Handle':
+        # The canonical text form. Document values keep a ref (~#tag, ~'text') as read; the host boundary rejects it.
+        if not isinstance(raw['value'], str) or not re.fullmatch(r'@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*:.+', raw['value'], re.S):
+            raise InvalidDocument('Invalid handle transport')
     elif kind == ':Bytes':
         if not isinstance(raw['value'], str) or not re.fullmatch(r'(?:[0-9a-f]{2})*', raw['value']):
             raise InvalidDocument('Invalid bytes transport')
@@ -117,13 +122,21 @@ def value(raw):
         if not isinstance(raw['entries'], list):
             raise InvalidDocument('Invalid map transport')
         entries = {}
+        handles = []
         for item in raw['entries']:
-            closed(item, {'key', 'value'}, 'map entry')
+            closed(item, {'key', 'handle', 'value'}, 'map entry')
+            if 'handle' in item:
+                # A handle key, in its text form; expectations write handle keys in handle order after the Text keys.
+                if 'key' in item:
+                    raise InvalidDocument('A map entry has a key or a handle')
+                key = value({'type': ':Handle', 'value': item['handle']})['value']
+                handles.append({'handle': key, 'value': value(item.get('value'))})
+                continue
             key = item.get('key')
             if not isinstance(key, str):
                 raise InvalidDocument('Invalid map key')
             entries[key] = value(item.get('value'))
-        result['entries'] = [{'key': key, 'value': entries[key]} for key in sorted(entries)]
+        result['entries'] = [{'key': key, 'value': entries[key]} for key in sorted(entries)] + handles
     return result
 
 

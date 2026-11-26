@@ -30,6 +30,8 @@ consult the [changelog](../../CHANGELOG.md) when targeting a published release.
   steps, messages and message sets, binding, the hash and document checks.
 - [Connect a client and a server](Network.md) declares a `network`, connects two sides in one
   process and over TCP or WebSocket, and sends records between them.
+- [Refer to host objects with handles](Handles.md) (**Since: Unreleased**) declares handle types in a schema, uses
+  them in scripts, resolves their state in C# and Swift, and writes them in documents and with refs.
 
 ## Instruction-level experiments
 

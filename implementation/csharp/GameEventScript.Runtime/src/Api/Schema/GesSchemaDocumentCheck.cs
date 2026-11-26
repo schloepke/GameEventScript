@@ -282,6 +282,13 @@ internal sealed class GesSchemaDocumentCheck
             case GesSchemaTypeKind.Reference:
                 Reference(type, value);
                 break;
+            case GesSchemaTypeKind.Handle:
+                Require(value, value.Kind == GesDocumentNodeKind.Handle);
+                Handle(type.Handle!, type.Versioned, value.Name, value.Start);
+                break;
+            case GesSchemaTypeKind.Map when type.Handle is { } key:
+                HandleMap(type, key, value);
+                break;
             case GesSchemaTypeKind.Map: Require(value, value.Kind == GesDocumentNodeKind.Map); break;
             case GesSchemaTypeKind.Flags:
                 // Each key names a member and each value is a Boolean.
@@ -298,7 +305,7 @@ internal sealed class GesSchemaDocumentCheck
             case GesSchemaTypeKind.Dice:
                 Require(value, value.Kind == GesDocumentNodeKind.Dice);
                 if (type.Max is { } diceMax && value.Rolls.Length > diceMax) throw Fail(OutOfRange, value.Start);
-                foreach (var roll in value.Rolls) Numeric(type.Constraints, true, roll, roll, value);
+                foreach (var roll in value.Rolls) Numeric(type.Constraints, true, roll, roll, value.Start);
                 break;
             case GesSchemaTypeKind.Message: Require(value, value.Kind == GesDocumentNodeKind.Message || IsForm(value, "message")); break;
             case GesSchemaTypeKind.Handler: Require(value, value.Kind == GesDocumentNodeKind.Handler || IsForm(value, "handler")); break;
@@ -324,13 +331,75 @@ internal sealed class GesSchemaDocumentCheck
         Fields(fields, type.Reference!, value.Start);
     }
 
+    // A handle of the field's type whose id, part and version have the declared forms. An `@Name~` field takes a version or
+    // a ref; an `@Name` field also takes one, which the wire drops.
+    private void Handle(GesResolvedHandle type, bool versioned, string text, int start)
+    {
+        var handle = GesHandle.Parse(text);
+        if (handle.TypeName != type.Name || handle.IsComposite != (type.Root is not null)) throw Fail(FieldType, start);
+        var identity = type.Root ?? type;
+        HandleKey(identity.Id, handle, false, start);
+        if (handle.IsComposite) HandleKey(type.Id, handle, true, start);
+        if (handle.HasVersion)
+        {
+            if (identity.VersionKind == GesHandleVersionKind.None) throw Fail(FieldType, start);
+            if (identity.Revision is { } revision)
+            {
+                if (handle.Version.ValueKind != GesBytecodeTypeKind.Integer) throw Fail(FieldType, start);
+                var number = handle.Version.AsInteger();
+                Numeric(revision.Constraints, true, number, number, start);
+            }
+            else if (handle.Version.ValueKind != GesBytecodeTypeKind.Bytes || handle.Version.AsBytes().Length != (identity.VersionKind == GesHandleVersionKind.Sha1 ? 20 : 32))
+                throw Fail(FieldType, start);
+        }
+        else if (!handle.Ref.IsNothing)
+        {
+            if (identity.VersionKind == GesHandleVersionKind.None) throw Fail(FieldType, start);
+        }
+        else if (versioned) throw Fail(FieldType, start);
+    }
+
+    // The id of a handle, or its part, against the declared key type.
+    private void HandleKey(GesResolvedType type, GesHandle handle, bool part, int start)
+    {
+        var key = part ? handle.Part : handle.Id;
+        if (type.Kind == GesSchemaTypeKind.Text)
+        {
+            if (key.ValueKind != GesBytecodeTypeKind.Text) throw Fail(FieldType, start);
+            if (type.Max is { } max && Encoding.UTF8.GetByteCount(key.AsText()) > max) throw Fail(OutOfRange, start);
+            return;
+        }
+
+        if (key.ValueKind != GesBytecodeTypeKind.Integer) throw Fail(FieldType, start);
+        Numeric(type.Constraints, true, key.AsInteger(), key.AsInteger(), start);
+    }
+
+    // A handle Map: handle keys of the key type, within the maximum count, and values of the element union.
+    private void HandleMap(GesResolvedType type, GesResolvedHandle key, GesDocumentNode value)
+    {
+        Require(value, value.Kind == GesDocumentNodeKind.Map);
+        if (type.Max is { } max && value.Labels.Length > max) throw Fail(OutOfRange, value.Start);
+        for (var index = 0; index < value.Labels.Length; index++)
+        {
+            var offset = value.KeyOffsets.Length > index ? value.KeyOffsets[index] : value.Start;
+            if (!value.IsHandleKey(index)) throw Fail(FieldType, offset);
+            var label = value.Labels[index];
+            var child = value.Children[index];
+            Under("[]", () =>
+            {
+                Under("key", () => Handle(key, false, label, offset));
+                Under("value", () => Union(type.Element!, child));
+            }, index);
+        }
+    }
+
     private void Number(GesResolvedType type, GesDocumentNode value)
     {
         Require(value, value.Kind == GesDocumentNodeKind.Number);
         var number = value.Number;
         var percent = number.Kind == GesNumberLiteralKind.Percentage;
         Require(value, percent == (type.Kind == GesSchemaTypeKind.Percentage) && number.Unit == type.Unit);
-        Numeric(type.Constraints, number.Kind == GesNumberLiteralKind.Integer, number.IntegerValue, number.FloatValue, value);
+        Numeric(type.Constraints, number.Kind == GesNumberLiteralKind.Integer, number.IntegerValue, number.FloatValue, value.Start);
     }
 
     // A document has no geometry literal: a Box is the Map of its corners, as Points, or a Record "Box" of them.
@@ -402,7 +471,7 @@ internal sealed class GesSchemaDocumentCheck
         var whole = integer ? Math.Abs(number.IntegerValue) : 0;
         var fraction = Math.Abs(integer ? number.IntegerValue : number.Kind == GesNumberLiteralKind.Integer ? (double)number.IntegerValue : number.FloatValue);
         if (declared is null) Require(value, integer ? whole == 0 : fraction == 0);
-        else Numeric(declared.Constraints, integer, whole, fraction, value);
+        else Numeric(declared.Constraints, integer, whole, fraction, value.Start);
     }
 
     private void Spatial(GesResolvedType type, GesDocumentNode value, GesDocumentNodeKind kind)
@@ -421,27 +490,27 @@ internal sealed class GesSchemaDocumentCheck
             var component = axis == "x" ? value.X : axis == "y" ? value.Y : value.Z;
             var declared = Array.Find(axes, candidate => candidate.Axis == axis);
             if (declared is null) Require(value, component == 0);
-            else Numeric(declared.Constraints, false, 0, component, value);
+            else Numeric(declared.Constraints, false, 0, component, value.Start);
         }
     }
 
-    private void Numeric(GesResolvedConstraints constraints, bool isInteger, long integer, double number, GesDocumentNode value)
+    private void Numeric(GesResolvedConstraints constraints, bool isInteger, long integer, double number, int start)
     {
         if (constraints.Integer)
         {
-            if (!isInteger && (number != Math.Floor(number) || number >= 9223372036854775808d || number < -9223372036854775808d)) throw Fail(FieldType, value.Start);
+            if (!isInteger && (number != Math.Floor(number) || number >= 9223372036854775808d || number < -9223372036854775808d)) throw Fail(FieldType, start);
             if (!isInteger) integer = (long)number;
             isInteger = true;
         }
 
         if (constraints.Wrapping)
         {
-            if (!isInteger && (double.IsNaN(number) || double.IsInfinity(number))) throw Fail(OutOfRange, value.Start);
+            if (!isInteger && (double.IsNaN(number) || double.IsInfinity(number))) throw Fail(OutOfRange, start);
             return;
         }
 
-        if (Bound(constraints.Lower) is { } lower && Below(isInteger, integer, number, lower)) throw Fail(OutOfRange, value.Start);
-        if (Bound(constraints.Upper) is { } upper && Above(isInteger, integer, number, upper)) throw Fail(OutOfRange, value.Start);
+        if (Bound(constraints.Lower) is { } lower && Below(isInteger, integer, number, lower)) throw Fail(OutOfRange, start);
+        if (Bound(constraints.Upper) is { } upper && Above(isInteger, integer, number, upper)) throw Fail(OutOfRange, start);
     }
 
     private static bool Below(bool isInteger, long integer, double number, GesSchemaDecimal bound)

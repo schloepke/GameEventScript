@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using GameEventScript.Runtime.Values;
+
 namespace GameEventScript.Api;
 
 /// <summary>
@@ -9,7 +11,7 @@ namespace GameEventScript.Api;
 /// </summary>
 public sealed class GesTimerInfo
 {
-    internal GesTimerInfo(string name, long deadline, long period, string messageName, GesProgramInstance instance, bool publish)
+    internal GesTimerInfo(GesValue name, long deadline, long period, string messageName, GesProgramInstance instance, bool publish)
     {
         Name = name;
         Deadline = deadline;
@@ -19,8 +21,8 @@ public sealed class GesTimerInfo
         Publish = publish;
     }
 
-    /// <summary>Gets the timer name: the Text or Tag key of the named send, as Text.</summary>
-    public string Name { get; }
+    /// <summary>Gets the timer name: the Text or Tag key of the named send as Text, or the handle that names it.</summary>
+    public GesValue Name { get; }
 
     /// <summary>
     /// Gets the absolute deadline of the current firing in whole microseconds on the host's monotonic clock. For a firing

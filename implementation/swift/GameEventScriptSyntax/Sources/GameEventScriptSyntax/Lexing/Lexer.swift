@@ -268,6 +268,22 @@
             return token(.newLine, "\n")
         }
         let first = current
+        // A handle type `@Name`, with an attached `~` for a handle type with a version.
+        if first == "@" && Self.upper(peek()) {
+            advance()
+            while Self.letter(current) || Self.digit(current) { advance() }
+            while current == "_" && Self.upper(peek()) {
+                advance()
+                while Self.letter(current) || Self.digit(current) { advance() }
+            }
+            if current == "~" { advance() }
+            let attachedIllegal = current == "&" && peek() == "&" || current == "|" && peek() == "|" || current == "^" && ["&", "|", "^"].contains(peek())
+            if attachedIllegal || (index < scalars.count && !Self.space(current) && !Self.boundaries.contains(current)) {
+                while index < scalars.count && !Self.space(current) { advance() }
+                return token(.illegal, slice(start))
+            }
+            return token(.handleTypeName, slice(start))
+        }
         if Self.letter(first) || ((first == ":" || first == "#" || first == "$") && Self.letter(peek())) {
             if !Self.letter(first) {
                 if (first == "#" || first == "$") && !Self.lower(peek()) {

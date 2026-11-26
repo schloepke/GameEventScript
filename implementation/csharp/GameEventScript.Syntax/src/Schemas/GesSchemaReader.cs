@@ -119,10 +119,11 @@ internal sealed partial class GesSchemaSourceReader
 
         if (wire is not null || model is not null)
         {
+            if (word == "handle") throw new SyntaxFailure(offset, "A handle type takes no role; the schemas that name it reach it.", Code.InvalidHandle);
             if (word is "constant" or "parameter" or "tags" or "network") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
             if (model is not null && word is "message") throw new SyntaxFailure(offset, "A model root is a schema or message set.", Code.InvalidRole);
         }
-        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages" or "tags" or "network") && AtRoleEnd())
+        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages" or "tags" or "network" or "handle") && AtRoleEnd())
             throw new SyntaxFailure(offset, $"'{word}' is no role; a root is marked wire or model.", Code.InvalidRole);
 
         var declaration = ReadDeclaration(offset, wordOffset, word);
@@ -305,19 +306,155 @@ internal sealed partial class GesSchemaSourceReader
                 var routes = new List<GesSchemaRouteSyntax>();
                 SkipSeparators();
                 if (_position < _text.Length && _text[_position] == '}') throw Failure("A network has at least one route.");
+                // Owns routes carry no payload and do not count towards the route limit.
+                var carrying = 0;
                 while (!Consume('}'))
                 {
-                    if (routes.Count == MaximumRoutes) throw new SyntaxFailure(_position, "A network has at most 64 routes.", Code.TooLarge);
-                    routes.Add(ReadRoute());
+                    var routeOffset = _position;
+                    var route = ReadRoute();
+                    if (!route.Owns && ++carrying > MaximumRoutes) throw new SyntaxFailure(routeOffset, "A network has at most 64 routes.", Code.TooLarge);
+                    routes.Add(route);
                     EndEntry('}');
                     SkipSeparators();
                 }
 
+                if (carrying == 0) throw new SyntaxFailure(offset, "A network has at least one route that sends or publishes.");
+
                 return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Network, Name = name, Offset = offset, Routes = routes.ToArray() };
             }
+            case "handle":
+                return ReadHandle(offset);
             default:
-                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, tags, schema, message, messages or network.");
+                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, tags, schema, message, messages, network or handle.");
         }
+    }
+
+    // `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`.
+    private GesSchemaDeclarationSyntax ReadHandle(int offset)
+    {
+        SkipSpaces();
+        var name = ReadHandleName();
+        SkipSpaces();
+        ExpectWord("of");
+        SkipSpaces();
+        var stateOffset = _position;
+        var state = ReadTypeName();
+        SkipSpaces();
+        var root = "";
+        var rootOffset = 0;
+        if (AtWord("composite"))
+        {
+            ReadWord();
+            SkipSpaces();
+            rootOffset = _position;
+            root = ReadHandleName();
+            SkipSpaces();
+        }
+
+        ExpectWord("as");
+        SkipTrivia();
+        Expect('{');
+        SkipSeparators();
+        GesSchemaTypeSyntax id;
+        var version = GesHandleVersionKind.None;
+        GesSchemaTypeSyntax? revision = null;
+        var versionOffset = 0;
+        if (root.Length > 0)
+        {
+            id = ReadHandleField("part");
+        }
+        else
+        {
+            id = ReadHandleField("id");
+            EndEntry('}');
+            SkipSeparators();
+            versionOffset = _position;
+            var field = ReadWord();
+            if (field != "version") throw new SyntaxFailure(versionOffset, "A handle type has exactly the fields id and version.", Code.InvalidHandle);
+            SkipSpaces();
+            Expect(':');
+            SkipSpaces();
+            versionOffset = _position;
+            Expect(':');
+            var typeName = ReadName(GesText.IsTypeName, "version type");
+            SkipSpaces();
+            switch (typeName)
+            {
+                case "Nothing":
+                    break;
+                case "ContentHash":
+                    version = GesHandleVersionKind.ContentHash;
+                    break;
+                case "Hash":
+                {
+                    var algorithmOffset = _position;
+                    var algorithms = ReadTagSet();
+                    version = algorithms is ["sha256"] ? GesHandleVersionKind.Sha256 : algorithms is ["sha1"] ? GesHandleVersionKind.Sha1
+                        : throw new SyntaxFailure(algorithmOffset, "A hash version is :Hash(#sha256) or :Hash(#sha1).", Code.InvalidHandle);
+                    SkipSpaces();
+                    break;
+                }
+                case "Number":
+                    version = GesHandleVersionKind.Revision;
+                    revision = new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Number, Offset = versionOffset, Constraints = ReadConstraints() };
+                    var constraints = revision.Constraints;
+                    if (!constraints.Integer || constraints.Wrapping || constraints.Step is not null || constraints.Delta is not null || constraints.Lower?.Name.Length > 0 || constraints.Upper?.Name.Length > 0)
+                        throw new SyntaxFailure(versionOffset, "A revision is :Number integer with an optional range.", Code.InvalidHandle);
+                    break;
+                default:
+                    throw new SyntaxFailure(versionOffset, "A version is :Nothing, :Number integer, :Hash(#sha256), :Hash(#sha1) or :ContentHash.", Code.InvalidHandle);
+            }
+        }
+
+        EndEntry('}');
+        SkipSeparators();
+        if (!Consume('}'))
+            throw new SyntaxFailure(_position, root.Length > 0 ? "A composite handle type has exactly the field part." : "A handle type has exactly the fields id and version.", Code.InvalidHandle);
+        return new GesSchemaDeclarationSyntax
+        {
+            Kind = GesSchemaDeclarationKind.Handle,
+            Name = name,
+            Offset = offset,
+            State = state,
+            StateOffset = stateOffset,
+            Root = root,
+            RootOffset = rootOffset,
+            Id = id,
+            Version = version,
+            Revision = revision,
+            VersionOffset = versionOffset
+        };
+    }
+
+    // `id: :Number integer between a and b` or `id: :Text max n`, and `part` alike; the bounds' values are checked on loading.
+    private GesSchemaTypeSyntax ReadHandleField(string expected)
+    {
+        var offset = _position;
+        var field = ReadWord();
+        if (field != expected)
+            throw new SyntaxFailure(offset, expected == "part" ? "A composite handle type has exactly the field part." : "A handle type has exactly the fields id and version.", Code.InvalidHandle);
+        SkipSpaces();
+        Expect(':');
+        SkipSpaces();
+        var start = _position;
+        if (_position >= _text.Length || _text[_position] != ':') throw Failure("Expected ':'.");
+        var type = ReadType();
+        var valid = type.Kind switch
+        {
+            GesSchemaTypeKind.Number => type.Constraints is { Integer: true, Wrapping: false, Lower: not null, Step: null, Delta: null }
+                && type.Constraints.Lower.Name.Length == 0 && type.Constraints.Upper!.Name.Length == 0,
+            GesSchemaTypeKind.Text => type.Max is not null,
+            _ => false
+        };
+        if (!valid) throw new SyntaxFailure(start, $"An {expected} is :Number integer between two literals or constants, or :Text max with a number.", Code.InvalidHandle);
+        return type;
+    }
+
+    // `@Name` of a handle type, returned without `@`.
+    private string ReadHandleName()
+    {
+        if (!Consume('@')) throw Failure("Expected '@' and a handle type name.");
+        return ReadName(GesText.IsTypeName, "handle type name");
     }
 
     // `client|server sends|publishes :Root|Message reliable|latest|bulk [at most every value]` on one line.
@@ -329,7 +466,16 @@ internal sealed partial class GesSchemaSourceReader
         SkipSpaces();
         var verbOffset = _position;
         var verb = ReadWord();
-        if (verb is not ("sends" or "publishes")) throw new SyntaxFailure(verbOffset, "Expected 'sends' or 'publishes'.");
+        if (verb == "owns")
+        {
+            SkipSpaces();
+            var handleOffset = _position;
+            var handle = ReadHandleName();
+            SkipSpaces();
+            return new GesSchemaRouteSyntax { Server = side == "server", Owns = true, Root = handle, RootOffset = handleOffset, Offset = offset };
+        }
+
+        if (verb is not ("sends" or "publishes")) throw new SyntaxFailure(verbOffset, "Expected 'sends', 'publishes' or 'owns'.");
         SkipSpaces();
         var rootOffset = _position;
         var isMessage = _position < _text.Length && _text[_position] != ':';
@@ -575,6 +721,14 @@ internal sealed partial class GesSchemaSourceReader
     private GesSchemaTypeSyntax ReadType()
     {
         var offset = _position;
+        if (Consume('@'))
+        {
+            var handle = ReadName(GesText.IsTypeName, "handle type name");
+            var versioned = Consume('~');
+            SkipSpaces();
+            return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Handle, Name = handle, Versioned = versioned, Offset = offset };
+        }
+
         Expect(':');
         var name = ReadName(GesText.IsTypeName, "type name");
         SkipSpaces();
@@ -653,7 +807,31 @@ internal sealed partial class GesSchemaSourceReader
                     Offset = offset
                 };
             }
-            case GesSchemaTypeKind.Map: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Map, Offset = offset };
+            case GesSchemaTypeKind.Map:
+            {
+                if (!Consume('(')) return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Map, Offset = offset };
+                // `:Map(@Name → T) max n`: a Map from handles of one type to values of the union T.
+                if (++_typeNesting > MaximumTypeNesting) throw new SyntaxFailure(offset, $"Map types nest at most {MaximumTypeNesting} levels.", Code.Cycle);
+                SkipTrivia();
+                var keyOffset = _position;
+                if (_position >= _text.Length || _text[_position] != '@') throw new SyntaxFailure(keyOffset, "A Map key is one handle type.", Code.InvalidHandle);
+                var key = ReadType();
+                if (key.Versioned) throw new SyntaxFailure(keyOffset, "A Map key is a handle type without '~'.", Code.InvalidHandle);
+                SkipTrivia();
+                if (!Consume('→'))
+                {
+                    if (!(Consume('-') && Consume('>'))) throw Failure("Expected '→' or '->'.");
+                }
+
+                SkipTrivia();
+                var values = ReadUnion();
+                SkipTrivia();
+                Expect(')');
+                _typeNesting--;
+                SkipSpaces();
+                var max = ReadMax();
+                return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Map, Key = key.Name, KeyOffset = keyOffset, Element = values, Max = max.Value, MaxName = max.Name, MaxOffset = max.Offset, Offset = offset };
+            }
             case GesSchemaTypeKind.Range: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Range, Offset = offset };
             case GesSchemaTypeKind.Series: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Series, Offset = offset };
             case GesSchemaTypeKind.Dice:

@@ -4,7 +4,11 @@
 @_spi(Compiler) import GameEventScriptRuntime
 
 extension GesBinaryBuilder {
-    func materialize(_ sourceBindings: [GesBindingSegment.Entry], _ sourceCode: [GesBytecodeInstruction]) -> ([GesBindingSegment.Entry], [GesBytecodeInstruction]) {
+    func materialize(
+        _ sourceBindings: [GesBindingSegment.Entry],
+        _ sourceCode: [GesBytecodeInstruction],
+        handleTypes: [(name: String, words: [UInt16], entryAddress: UInt16)] = []
+    ) -> ([GesBindingSegment.Entry], [GesBytecodeInstruction]) {
         let oldStrings = strings
         let oldLists = lists
         strings = []
@@ -20,7 +24,7 @@ extension GesBinaryBuilder {
             let bk = order[b.element.kind]!
             return ak == bk ? a.offset < b.offset : ak < bk
         }.map(\.element)
-        let bindings = ordered.map { binding in
+        var bindings = ordered.map { binding in
             let args = binding.argumentNames.map(resolve)
             let required = binding.requiredTags.map(resolve)
             let excluded = binding.excludedTags.map(resolve)
@@ -42,6 +46,12 @@ extension GesBinaryBuilder {
                 requiredCallStackDepth: binding.requiredCallStackDepth,
                 requiredTagAlternatives: alternatives
             )
+        }
+        // Handle type imports follow all other bindings; their arguments are the raw hash words, not texts.
+        for handle in handleTypes {
+            _ = rawList(handle.words)
+            _ = rawList([])
+            bindings.append(.init(kind: .handleType, name: UInt16(truncatingIfNeeded: text(handle.name)), argumentNames: handle.words, entryAddress: handle.entryAddress, id: 0xFFFF))
         }
         let instructions = sourceCode.map { instruction in
             var fields = instruction.fields

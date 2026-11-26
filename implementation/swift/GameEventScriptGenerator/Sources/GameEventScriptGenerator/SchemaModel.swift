@@ -15,6 +15,8 @@ struct GesModelLayout {
     var protocols: [GesModelProtocol] = []
     /// The schema sources, with their file names only, which generated code that reads documents embeds.
     var sources: [GesSchemaSource] = []
+    // The handle types the types reach, ordered by name, each with its composite root.
+    var handles: [GesModelHandle] = []
 
     func type(_ name: String) -> GesModelType { types.first { $0.name == name }! }
 }
@@ -39,6 +41,28 @@ struct GesModelType {
 
     // The wire layout of a packed schema, whose fields' encodings place them in its word; nil for other types.
     var packed: GesSchemaLayout?
+}
+
+// A handle type: its identity's form, which a model type `<Name>Handle` checks, and the state schema, a type of the layout.
+struct GesModelHandle {
+    var name = ""
+    var hash: UInt64 = 0
+    var state = ""
+    var version = GesHandleVersionKind.none
+
+    // The id of a plain handle type, or the part and the root's name of a composite.
+    var id: GesHandleKey?
+    var root: String?
+    var part: GesHandleKey?
+
+    var isComposite: Bool { root != nil }
+
+    // The key that a composite's equality compares after its root's id: its part; the id for any other.
+    var key: GesHandleKey { (isComposite ? part : id)! }
+
+    static func of(_ handle: GesHandleType) -> GesModelHandle {
+        GesModelHandle(name: handle.name, hash: handle.hash, state: handle.stateName, version: handle.version, id: handle.id, root: handle.root?.name, part: handle.part)
+    }
 }
 
 /// A schema that types take with `with`: generated as a protocol (Swift) or interface (C#) with read-only properties. It
@@ -71,6 +95,8 @@ enum GesModelKind {
     case boolean, number, tag, text, bytes, list, dice, point, vector, schema, union, nothing, flags, box, poly, disc
     // Free data: a Map of any values, and a List without an element type, whose elements are any values.
     case map, values
+    // A handle, and a Map from handles of one type to values, whose value is its element.
+    case handle, handleMap
 }
 
 final class GesModelValue {
@@ -97,12 +123,17 @@ final class GesModelValue {
 
     // Whether the schema is packed, so that its type is a value type over one word.
     var packed = false
+
+    // The handle type of a handle or a handle Map's key, and whether a handle carries its version.
+    var handle = ""
+    var versioned = false
 }
 
 enum GesModelLayoutBuilder {
     static func build(_ set: GesSchemaSet, roots: [String]) throws -> GesModelLayout {
         guard !roots.isEmpty else { throw GesGeneratorError(GesGeneratorError.usage, "Specify at least one root.") }
         var reached: [String: GesSchema] = [:]
+        var handles: [String: GesHandleType] = [:]
         var rootNames: [String] = []
         for root in roots {
             let schema = try set.schema(root)
@@ -114,7 +145,7 @@ enum GesModelLayoutBuilder {
                 throw GesGeneratorError(GesGeneratorError.usage, "The model root '\(root)' is abstract; only its protocol is generated, where a model takes it.")
             }
             rootNames.append(schema.name)
-            try reach(schema, &reached)
+            try reach(set, schema, &reached, &handles)
         }
         var types: [GesModelType] = []
         for name in reached.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) {
@@ -136,6 +167,7 @@ enum GesModelLayoutBuilder {
             types.append(type)
         }
         var layout = GesModelLayout(roots: rootNames, types: types)
+        for name in handles.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) { layout.handles.append(GesModelHandle.of(handles[name]!)) }
         layout.sources = set.sources.map { source in
             let scalars = source.name.unicodeScalars
             let start = scalars.lastIndex { $0 == "/" || $0 == "\\" }.map { scalars.index(after: $0) } ?? scalars.startIndex
@@ -207,7 +239,7 @@ enum GesModelLayoutBuilder {
         }
     }
 
-    private static func reach(_ schema: GesSchema, _ reached: inout [String: GesSchema]) throws {
+    private static func reach(_ set: GesSchemaSet, _ schema: GesSchema, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) throws {
         if let known = reached[schema.name] {
             // Model types share one namespace: a message beside a schema of its name has no second type name.
             if known === schema { return }
@@ -218,9 +250,9 @@ enum GesModelLayoutBuilder {
         }
         reached[schema.name] = schema
         for field in schema.fields {
-            for type in field.alternatives { try reach(type, &reached) }
+            for type in field.alternatives { try reach(set, type, &reached, &handles) }
         }
-        for member in schema.members { try reach(member, &reached) }
+        for member in schema.members { try reach(set, member, &reached, &handles) }
     }
 
     // The models that wire code generated with `--models` converts to. Each model group is generated with `--model` like any
@@ -235,11 +267,12 @@ enum GesModelLayoutBuilder {
         }
         var types: [String: GesModelType] = [:]
         var protocols: [String: GesModelProtocol] = [:]
+        var handles: [String: GesModelHandle] = [:]
         var owners: [String: String] = [:]
         for group in groups {
             let roots = GesSchemaGenerator.modelRoots(set, group: group)
             var seen: [ObjectIdentifier: GesSchema] = [:]
-            for root in roots { collect(try set.schema(root), &seen) }
+            for root in roots { try collect(set, try set.schema(root), &seen) }
             guard seen.values.contains(where: { wanted.contains(set.rootName(of: $0)) }) else { continue }
             let layout = try build(set, roots: roots)
             for type in layout.types {
@@ -255,25 +288,31 @@ enum GesModelLayoutBuilder {
                 owners[type.name] = group
             }
             for protocolType in layout.protocols where protocols[protocolType.name] == nil { protocols[protocolType.name] = protocolType }
+            for handle in layout.handles where handles[handle.name] == nil { handles[handle.name] = handle }
         }
         if types.isEmpty { return nil }
         var converted = GesModelLayout(roots: [], types: types.keys.sorted(by: GesSchemaLayoutBuilder.ordinal).map { types[$0]! })
         converted.protocols = protocols.keys.sorted(by: GesSchemaLayoutBuilder.ordinal).map { protocols[$0]! }
+        converted.handles = handles.keys.sorted(by: GesSchemaLayoutBuilder.ordinal).map { handles[$0]! }
         return converted
     }
 
     // Every schema that a model of the schema names, as reach finds them, without the check of their names.
-    private static func collect(_ schema: GesSchema, _ seen: inout [ObjectIdentifier: GesSchema]) {
+    private static func collect(_ set: GesSchemaSet, _ schema: GesSchema, _ seen: inout [ObjectIdentifier: GesSchema]) throws {
         if seen.updateValue(schema, forKey: ObjectIdentifier(schema)) != nil { return }
         for field in schema.fields {
-            for type in field.alternatives { collect(type, &seen) }
+            for type in field.alternatives { try collect(set, type, &seen) }
         }
-        for member in schema.members { collect(member, &seen) }
+        for member in schema.members { try collect(set, member, &seen) }
     }
 
-    private static func collect(_ type: GesSchemaType, _ seen: inout [ObjectIdentifier: GesSchema]) {
-        if let schema = type.schema { collect(schema, &seen) }
-        for element in type.element { collect(element, &seen) }
+    private static func collect(_ set: GesSchemaSet, _ type: GesSchemaType, _ seen: inout [ObjectIdentifier: GesSchema]) throws {
+        if let schema = type.schema { try collect(set, schema, &seen) }
+        if let handle = type.handleType {
+            if let root = handle.root { try collect(set, try set.schema(root.stateName), &seen) }
+            try collect(set, try set.schema(handle.stateName), &seen)
+        }
+        for element in type.element { try collect(set, element, &seen) }
     }
 
     private static func describe(_ schema: GesSchema) -> String {
@@ -284,9 +323,18 @@ enum GesModelLayoutBuilder {
         }
     }
 
-    private static func reach(_ type: GesSchemaType, _ reached: inout [String: GesSchema]) throws {
-        if let schema = type.schema { try reach(schema, &reached) }
-        for element in type.element { try reach(element, &reached) }
+    private static func reach(_ set: GesSchemaSet, _ type: GesSchemaType, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) throws {
+        if let schema = type.schema { try reach(set, schema, &reached, &handles) }
+        if let handle = type.handleType { try reach(set, handle, &reached, &handles) }
+        for element in type.element { try reach(set, element, &reached, &handles) }
+    }
+
+    // A handle type brings its composite root and its state schema, whose model holds a resolved object.
+    private static func reach(_ set: GesSchemaSet, _ handle: GesHandleType, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) throws {
+        if handles[handle.name] != nil { return }
+        handles[handle.name] = handle
+        if let root = handle.root { try reach(set, root, &reached, &handles) }
+        try reach(set, try set.schema(handle.stateName), &reached, &handles)
     }
 
     private static func field(_ name: String, _ path: String, _ alternatives: [GesSchemaType]) throws -> GesModelField {
@@ -299,9 +347,14 @@ enum GesModelLayoutBuilder {
         }
         field.value.kind = .union
         for alternative in alternatives {
-            let type = alternative.kind == .reference ? alternative.schema!.name : alternative.kind.rawValue
+            let type =
+                switch alternative.kind {
+                case .reference: alternative.schema!.name
+                case .handle: "@" + alternative.handleType!.name
+                default: alternative.kind.rawValue
+                }
             let item = GesModelField()
-            item.name = alternative.label.isEmpty ? type : alternative.label
+            item.name = alternative.label.isEmpty ? String(type.drop { $0 == "@" }) : alternative.label
             item.path = path + ":" + type
             item.value = try value(alternative, item.path)
             field.value.alternatives.append(item)
@@ -344,8 +397,17 @@ enum GesModelLayoutBuilder {
             value.element = try field("[]", path + "[]", type.element)
         case .list:
             value.kind = .values
+        case .map where type.handleType != nil:
+            value.kind = .handleMap
+            value.handle = type.handleType!.name
+            value.max = type.max
+            value.element = try field("[]", path + "[].value", type.element)
         case .map:
             value.kind = .map
+        case .handle:
+            value.kind = .handle
+            value.handle = type.handleType!.name
+            value.versioned = type.isVersioned
         case .dice:
             value.kind = .dice
             value.max = type.max
@@ -420,8 +482,42 @@ enum GesModelLayoutJson {
             }
             json.endArray()
         }
+        // Only a model that reaches handle types names them, so that other layouts stay unchanged.
+        if !layout.handles.isEmpty {
+            json.beginArray("handles")
+            for handle in layout.handles {
+                json.beginObject()
+                json.string("name", handle.name)
+                json.string("hash", GesSchemaLayoutJson.hex(handle.hash))
+                json.string("state", handle.state)
+                json.string("version", GesLayoutHandle.versionName(handle.version))
+                if let root = handle.root {
+                    json.string("root", root)
+                    json.key("part")
+                    key(&json, handle.part!)
+                } else {
+                    json.key("id")
+                    key(&json, handle.id!)
+                }
+                json.endObject()
+            }
+            json.endArray()
+        }
         json.endObject()
         return json.text + "\n"
+    }
+
+    private static func key(_ json: inout GesSchemaLayoutJson.Writer, _ key: GesHandleKey) {
+        json.beginValueObject()
+        if key.isText {
+            json.string("kind", "text")
+            json.number("max", key.maxLength)
+        } else {
+            json.string("kind", "integer")
+            json.number("lower", key.minimum)
+            json.number("upper", key.maximum)
+        }
+        json.endObject()
     }
 
     private static func field(_ json: inout GesSchemaLayoutJson.Writer, _ field: GesModelField, member: Bool, value: Bool = false) {
@@ -481,6 +577,14 @@ enum GesModelLayoutJson {
             json.beginArray("alternatives")
             for alternative in value.alternatives { field(&json, alternative, member: false) }
             json.endArray()
+        case .handle:
+            json.string("name", value.handle)
+            json.boolean("versioned", value.versioned)
+        case .handleMap:
+            json.string("key", value.handle)
+            optional(&json, "max", value.max)
+            json.key("value")
+            field(&json, value.element!, member: false, value: true)
         case .boolean, .nothing, .map, .values:
             break
         }
@@ -514,6 +618,8 @@ enum GesModelLayoutJson {
         case .union: "union"
         case .map: "map"
         case .values: "values"
+        case .handle: "handle"
+        case .handleMap: "handleMap"
         case .nothing: "nothing"
         }
     }

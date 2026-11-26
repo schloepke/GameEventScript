@@ -21,7 +21,8 @@ internal sealed class GesSyntaxTreeModule
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, IReadOnlyList<GesEventHandlerNode>> handlers,
         IGesExternalTypeCatalog? externalTypeDefinitions = null,
-        IReadOnlyList<GesSourceDocument>? sources = null)
+        IReadOnlyList<GesSourceDocument>? sources = null,
+        IReadOnlyDictionary<string, GesHandleType>? handleTypes = null)
     {
         ModuleName = moduleName ?? throw new ArgumentNullException(nameof(moduleName));
         Constants = constants ?? throw new ArgumentNullException(nameof(constants));
@@ -30,7 +31,10 @@ internal sealed class GesSyntaxTreeModule
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
         ExternalTypeDefinitions = externalTypeDefinitions ?? GesEmptyExternalTypeCatalog.Instance;
         Sources = sources ?? [];
+        HandleTypes = handleTypes ?? NoHandleTypes;
     }
+
+    private static readonly Dictionary<string, GesHandleType> NoHandleTypes = new(StringComparer.Ordinal);
 
     internal string ModuleName { get; }
 
@@ -45,6 +49,9 @@ internal sealed class GesSyntaxTreeModule
     internal IReadOnlyDictionary<string, IReadOnlyList<GesEventHandlerNode>> Handlers { get; }
 
     internal IReadOnlyList<GesSourceDocument> Sources { get; }
+
+    // The handle catalog by type name without `@` (specs/Language.md#handles).
+    internal IReadOnlyDictionary<string, GesHandleType> HandleTypes { get; }
 }
 
 internal sealed record GesSourceDocument(uint SourceId, string SourceName, string Text);

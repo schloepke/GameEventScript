@@ -9,7 +9,8 @@ using static GameEventScript.Api.GesBindingSegment;
 namespace GameEventScript.Runtime;
 // Parser-private nodes never escape into a public value or a Program.
 // Offset is the source position of a typed form, reported by document limit errors.
-internal sealed record GesLiteralNode(string Type, string[] Labels, GesValue[] Arguments, GesBindingSegment.Entry? Constructor = null, int Offset = 0)
+// A Map node with handle keys carries every key as a value in Keys; Labels then stays unused.
+internal sealed record GesLiteralNode(string Type, string[] Labels, GesValue[] Arguments, GesBindingSegment.Entry? Constructor = null, int Offset = 0, GesValue[]? Keys = null)
 {
     internal GesValue Value => new()
     {
@@ -107,13 +108,15 @@ internal sealed class GesLiteralEvaluation
         {
             var keys = new string[map.Length];
             var values = new GesValue[map.Length];
+            var handleKeys = map.HasHandleKeys ? new GesValue[map.Length] : null;
             for (var i = 0; i < map.Length; i++)
             {
                 keys[i] = map.KeyAt(i);
                 values[i] = map.ValueAt(i);
+                if (handleKeys is not null) handleKeys[i] = map.KeyValueAt(i);
             }
 
-            node = new("@map", keys, values);
+            node = new("@map", keys, values, Keys: handleKeys);
         }
         else
             node = new("@value", [], [value]);
@@ -193,6 +196,11 @@ internal sealed class GesLiteralEvaluation
             {
                 result = new();
                 result.SetList(args);
+            }
+            else if (node.Type == "@map" && node.Keys is not null)
+            {
+                result = new();
+                result.SetMap(GesValueMap.FromKeyValues(node.Keys, args)!);
             }
             else if (node.Type == "@map")
             {

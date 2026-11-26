@@ -56,7 +56,15 @@ enum GesCSharpEmitter {
         for type in types {
             for field in type.fields { GesSchemaPlanner.qualifyPacked(field.value, models) }
         }
+        // Handle types are the models' where they share a namespace, else declared here.
+        let handles = options.models != nil ? models : global
+        for type in types {
+            for field in type.fields { GesSchemaPlanner.qualifyHandles(field.value, handles) }
+        }
         var topLevel = GesSchemaPlanner.topLevel(types, sets, layout.networks)
+        if options.models == nil {
+            for handle in layout.handles { topLevel.insert(GesModelPlanner.handleName(handle.name)) }
+        }
         if options.models != nil { try GesSchemaPlanner.reserveSharedRoots(layout, types, &topLevel) }
         try schemaSet?.reserve(&topLevel)
         let context = Context(
@@ -70,6 +78,12 @@ enum GesCSharpEmitter {
             models: modelLayout.map { ModelConversion($0, models) }
         )
         var document = GesCodeDocument(header: header, prologue: prologue.text, space: space, parameters: !layout.parameters.isEmpty)
+        if options.models == nil {
+            let declared = layout.handles.map(\.model)
+            for handle in layout.handles {
+                document.units.append(GesCodeUnit(owner: GesModelPlanner.handleName(handle.name)) { code in GesCSharpModelEmitter.handle(&code, declared, handle.model, access) })
+            }
+        }
         for type in types {
             if type.layout.packedWidth > 0 {
                 let root = layout.roots.contains(type.name)
@@ -295,6 +309,7 @@ enum GesCSharpEmitter {
         case .vector: "GesVector"
         case .box: "GesBox"
         case .disc: "GesDisc"
+        case .handle: value.handleType
         case .list: "List<\(elementName(value))>"
         default: nestedName(value)
         }
@@ -773,6 +788,11 @@ enum GesCSharpEmitter {
             if value.depth > 0 { openLevels(&code, value, target + ".Count") }
             code.line("if (\(target).Count > \(max)) \(fail("TooLong", value))")
             code.line("writer.Write((ulong)\(target).Count, \(width));")
+            if value.handleMap {
+                code.line(
+                    "for (var position = 1; position < \(target).Count; position++) if (\(target)[position].Key.CompareTo(\(target)[position - 1].Key) <= 0) throw new GesWireException(GesWireException.InvalidKeyOrder, \(handleKeyPath(value)));"
+                )
+            }
             code.line("foreach (var item in \(target))")
             code.open("{")
             if value.item != nil {
@@ -782,6 +802,8 @@ enum GesCSharpEmitter {
             }
             code.close()
             if value.depth > 0 { code.close() }
+        case .handle:
+            writeHandle(&code, value, target)
         case .point, .vector:
             for axis in value.axes { write(&code, axis, target + "." + axis.base) }
             for axis in GesSchemaPlanner.omitted(value) { code.line("if (\(target).\(axis) != 0) \(fail("TypeMismatch", value))") }
@@ -810,7 +832,7 @@ enum GesCSharpEmitter {
             code.line(fail("OutOfRange", value))
             code.close()
             code.close()
-        case .nothing:
+        case .nothing, .handleMap:
             break
         }
     }
@@ -892,9 +914,14 @@ enum GesCSharpEmitter {
             } else {
                 read(&code, element, "item")
             }
+            if value.handleMap {
+                code.line("if (position > 0 && item.Key.CompareTo(\(target)[position - 1].Key) <= 0) throw new GesWireException(GesWireException.InvalidKeyOrder, \(handleKeyPath(value)));")
+            }
             code.line("\(target).Add(item);")
             code.close()
             code.close()
+        case .handle:
+            readHandle(&code, value, target)
         case .point, .vector:
             for axis in value.axes { read(&code, axis, target + "." + axis.base) }
             for axis in GesSchemaPlanner.omitted(value) { code.line("\(target).\(axis) = 0;") }
@@ -936,9 +963,102 @@ enum GesCSharpEmitter {
             }
             code.close()
             code.close()
-        case .nothing:
+        case .nothing, .handleMap:
             break
         }
+    }
+
+    // The path of a handle map's key: the node after its entry's group.
+    private static func handleKeyPath(_ map: GesPlanValue) -> String { "paths[at + \(map.element!.node + 1)]" }
+
+    // The plan values of a handle's id, its version where the field has one, and a composite's part, in node order.
+    static func handleParts(_ value: GesPlanValue) -> (id: GesPlanValue, version: GesPlanValue?, part: GesPlanValue?) {
+        let handle = value.handle!
+        let owner = value.handleRoot ?? handle
+        var node = value.node + 1
+        let id = GesPlanValue(base: "Id", node: node, encoding: owner.id!)
+        node += 1
+        var version: GesPlanValue?
+        if value.encoding.versioned {
+            var encoding = owner.revision
+            if owner.version != .revision {
+                let hash = GesLayoutEncoding()
+                hash.kind = .bytes
+                hash.maxCount = owner.version == .sha1 ? 20 : 32
+                encoding = hash
+            }
+            version = GesPlanValue(base: "Version", node: node, encoding: encoding!)
+            node += 1
+        }
+        let part = handle.isComposite ? GesPlanValue(base: "Part", node: node, encoding: handle.part!) : nil
+        return (id, version, part)
+    }
+
+    // The type of a composite's root, beside the handle's own type.
+    static func handleRootType(_ value: GesPlanValue) -> String {
+        String(value.handleType.dropLast((value.handle!.name + "Handle").count)) + value.handleRoot!.name + "Handle"
+    }
+
+    // The version type of a hash: GesHash20 or GesHash32.
+    static func hashType(_ version: GesPlanValue) -> String { version.encoding.maxCount == 20 ? "GesHash20" : "GesHash32" }
+
+    // Writes a handle's id, version and part; a field without a version leaves the handle's out.
+    private static func writeHandle(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
+        let (id, version, part) = handleParts(value)
+        code.open("{")
+        writeHandleKey(&code, id, target + (value.handleRoot != nil ? ".Root.Id" : ".Id"))
+        if let version {
+            code.line("if (\(target).Version is not { } version) \(fail("MissingVersion", version))")
+            if version.encoding.kind == .bytes {
+                code.line("Span<byte> hash = stackalloc byte[\(hashType(version)).Length];")
+                code.line("version.CopyTo(hash);")
+                code.line("for (var index = 0; index < hash.Length; index++) writer.Write(hash[index], 8);")
+            } else {
+                write(&code, version, "version")
+            }
+        }
+        if let part { writeHandleKey(&code, part, target + ".Part") }
+        code.close()
+    }
+
+    private static func writeHandleKey(_ code: inout Code, _ key: GesPlanValue, _ target: String) {
+        if key.encoding.kind != .text {
+            write(&code, key, target)
+            return
+        }
+        code.line("if (\(target) is null) \(fail("TypeMismatch", key))")
+        code.line("GesWireRules.WriteText(ref writer, \(target), \(key.encoding.width), \(key.encoding.maxCount), \(path(key)));")
+    }
+
+    // Reads a handle into locals and builds it; a text id that equals the held one keeps its string.
+    private static func readHandle(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
+        let (id, version, part) = handleParts(value)
+        code.open("{")
+        readHandleKey(&code, id, "id", target + (value.handleRoot != nil ? ".Root.Id" : ".Id"))
+        if let version {
+            if version.encoding.kind == .bytes {
+                code.line("Span<byte> hash = stackalloc byte[\(hashType(version)).Length];")
+                code.line("reader.Require(hash.Length * 8L, \(path(version)));")
+                code.line("for (var index = 0; index < hash.Length; index++) hash[index] = (byte)reader.Read(8, \(path(version)));")
+                code.line("var version = \(hashType(version)).FromBytes(hash);")
+            } else {
+                code.line("long version;")
+                read(&code, version, "version")
+            }
+        }
+        if let part { readHandleKey(&code, part, "part", target + ".Part") }
+        let arguments = "id" + (version != nil ? ", version" : "")
+        code.line(value.handleRoot != nil ? "\(target) = new \(value.handleType)(new \(handleRootType(value))(\(arguments)), part);" : "\(target) = new \(value.handleType)(\(arguments));")
+        code.close()
+    }
+
+    private static func readHandleKey(_ code: inout Code, _ key: GesPlanValue, _ local: String, _ current: String) {
+        if key.encoding.kind == .text {
+            code.line("var \(local) = GesWireRules.ReadText(ref reader, \(key.encoding.width), \(key.encoding.maxCount), \(current), \(path(key)));")
+            return
+        }
+        code.line("long \(local);")
+        read(&code, key, local)
     }
 
     static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String, _ context: Context) throws(GesGeneratorError) {

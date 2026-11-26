@@ -27,6 +27,7 @@ public final class GesHostBuilder {
     private var extensions: (any GesExtensionRegistry)?
     private var externalTypes: (any GesExternalTypeRegistry)?
     private var sink: (any GesPublishSink)?
+    private var handleResolvers: [String: GesHandleBinding]?
 
     /// Creates a builder with default limits and no native registries, observer or publish sink.
     public init() {}
@@ -84,9 +85,25 @@ public final class GesHostBuilder {
         return self
     }
 
+    /// Registers the resolver that reads the state of one handle type's objects, replacing an earlier one for the same
+    /// type name. Loading compares the type's hash with each Program that names it. Returns this builder.
+    ///
+    /// - Parameters:
+    ///   - resolver: The resolver. It is shared by every host this builder builds afterwards.
+    ///   - type: The handle type, from a schema set.
+    @discardableResult public func withHandleResolver(_ resolver: any GesHandleResolver, for type: GesHandleType) -> Self {
+        if handleResolvers == nil { handleResolvers = [:] }
+        handleResolvers![type.name] = GesHandleBinding(type: type, resolver: resolver)
+        return self
+    }
+
     /// Creates an independent loading host without executing initialization. Load all initial Programs, then call
     /// `start()`.
     ///
     /// - Throws: An API error for invalid host configuration.
-    public func build() throws -> GameEventScriptHost { try .init(seed: seed, sequence: sequence, limits: limits, observer: observer, extensions: extensions, externalTypes: externalTypes, publishSink: sink, clock: clock, profiler: profiler) }
+    public func build() throws -> GameEventScriptHost {
+        let host = try GameEventScriptHost(seed: seed, sequence: sequence, limits: limits, observer: observer, extensions: extensions, externalTypes: externalTypes, publishSink: sink, clock: clock, profiler: profiler)
+        host.handleResolvers = handleResolvers
+        return host
+    }
 }

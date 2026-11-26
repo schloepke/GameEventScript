@@ -66,7 +66,18 @@ internal partial class GesVirtualMachine
 
             // The result is written once after the callback returns, so an argument register that is also the
             // destination keeps its value while the extension reads it, as in Swift.
-            if (call.HasResult) SetValue(destinationRegister, call.Result);
+            if (call.HasResult)
+            {
+                if (GesHandleStates.HoldsRef(call.Result))
+                {
+                    var name = FetchStringByPointer(bind.Name);
+                    SetNothing(destinationRegister);
+                    RaiseError(GesWireException.UnresolvedRef, $"Extension '{name}' returned a handle with an unresolved ref.", symbol: name);
+                    return;
+                }
+
+                SetValue(destinationRegister, call.Result);
+            }
             else SetNothing(destinationRegister);
 
             ref readonly var dst = ref Register(destinationRegister);

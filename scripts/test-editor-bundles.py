@@ -230,7 +230,8 @@ class EditorTests(unittest.TestCase):
             self.assertIn('gesa', languages)
             self.assertIn('gesd', languages)
             examples = {
-                'ges': 'module test.bot\n// comment\non Main(args) { emit ConsoleOut("Hello ""pilot""", 20%) with #ready }\n',
+                'ges': 'module test.bot\n// comment\non Main(args) { emit ConsoleOut("Hello ""pilot""", 20%) with #ready }\n'
+                       'on Hit(target: @Unit|@Building~) { if target is @Unit~ { emit ConsoleOut(target as @Unit) } }\n',
                 'gesa': '.segment source "bot.ges"\non Main(args) { emit ConsoleOut("hello", 20%) }\n.segment code\n.source-line "bot.ges" 1 | let x be 2\n',
                 'gesd': ":Schema(:DriveUnit)\n// comment\nid: 'drive', kind: #drive\nspeed: 10m/s\ndone: :Message(Done(v: 1) with #a)\n",
             }

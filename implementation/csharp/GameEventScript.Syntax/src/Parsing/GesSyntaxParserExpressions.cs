@@ -354,7 +354,7 @@ internal sealed partial class GesSyntaxParser
                 _tree.StartNodeAt(start, GesSyntaxNodeKind.TypeOperationExpression);
                 Advance();
                 SkipNewLines();
-                ParseTypeName();
+                ParseTypeName(allowHandle: true);
                 expression = FinishNode(Merged(expression.Depth, expression));
             }
             else return expression;
@@ -374,9 +374,9 @@ internal sealed partial class GesSyntaxParser
         }
 
         if (Match(Numeric) || MatchWord("integer") || MatchWord("fractional") || Match(Nothing)) return Merged(subject.Depth, subject);
-        if (Is(TypeName))
+        if (Is(TypeName) || Is(HandleTypeName))
         {
-            ParseTypeName();
+            ParseTypeName(allowHandle: true);
             return Merged(subject.Depth, subject);
         }
 

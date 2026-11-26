@@ -7,9 +7,9 @@ enum ToolHelp {
 
         Usage:
           ges [--help | --version]
-          ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--no-debug] [-v | -q]
-          ges check <source.ges> [more.ges ...] [-v | -q]
-          ges run <source.ges> [more.ges ...] [--scenario <scenario.ges>] [--seed <integer>]
+          ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--handles <schema.gess>] [--no-debug] [-v | -q]
+          ges check <source.ges> [more.ges ...] [--handles <schema.gess>] [-v | -q]
+          ges run <source.ges> [more.ges ...] [--handles <schema.gess>] [--scenario <scenario.ges>] [--seed <integer>]
           ges run <program.gesb> [more.gesb ...] [--args <text> ...] [--seed <integer>]
           ges run <program files ...> [--color] -- <text> ...
           ges run --interactive [--color] [program files ...]
@@ -57,10 +57,11 @@ enum ToolHelp {
         """#
     static let compile = #"""
         Usage:
-          ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--no-debug] [-v | -q]
+          ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--handles <schema.gess> ...] [--no-debug] [-v | -q]
 
         Options:
           -o, --output <path>  Output file. Required for multiple sources; otherwise defaults to source.gesb.
+          --handles <schema.gess> Declare the handle types of a schema source. Repeat for more files.
           --no-debug          Omit debug symbols, source map, and source archive.
           -v, --verbose       Include bindings, dependencies, bytecode size, and resource requirements.
           -q, --quiet         Suppress successful compilation output. Errors are still reported.
@@ -72,12 +73,14 @@ enum ToolHelp {
         Repeated paths are included once, keeping their first position.
         Output directories are created as needed. Existing output is replaced after
         successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
+        The schema files of --handles are read together; file-name patterns expand as for sources.
         """#
     static let check = #"""
         Usage:
-          ges check <source.ges> [more.ges ...] [-v | -q]
+          ges check <source.ges> [more.ges ...] [--handles <schema.gess> ...] [-v | -q]
 
         Options:
+          --handles <schema.gess> Declare the handle types of a schema source. Repeat for more files.
           -v, --verbose       Include bindings, dependencies, bytecode size, and resource requirements.
           -q, --quiet         Suppress success output. Errors are still reported.
           -h, --help          Show this help.
@@ -85,7 +88,7 @@ enum ToolHelp {
 
         Sources are compiled and validated together without writing a binary or executing
         handlers. Source order, UTF-8 decoding, and file-name patterns match 'ges compile'.
-        Checking does not resolve host extensions or external types against a runtime registry.
+        Checking does not resolve host extensions, external types or handle resolvers against a runtime registry.
         """#
     static let dump = #"""
         Usage:
@@ -115,6 +118,10 @@ enum ToolHelp {
           (default)              Finish initialization, then send Main(args) once.
           --scenario <file.ges>  Run a separate scenario instead of Main. Repeat for combined sources.
           --interactive         Open the event console instead of Main. Initial files are optional.
+
+        Compilation:
+          --handles <schema.gess> Declare the handle types of a schema source to every compilation,
+                                including scenarios, :load, :reload, :edit and console input. Repeatable.
 
         Main arguments (always Text, in command-line order):
           --arg <text>          Append exactly one value, even if it looks like an option.
@@ -161,8 +168,9 @@ enum ToolHelp {
         All initial Programs load before execution. Sources compile together; binaries
         load independently in input order. Sources and binaries cannot be mixed in one run.
         --scenario and --interactive are mutually exclusive and accept no Main arguments.
-        Use './-file.ges' for a program path starting with '-'. No custom extensions or
-        external types are registered. Runtime errors/limits exit with 1; usage errors with 2.
+        Use './-file.ges' for a program path starting with '-'. No custom extensions,
+        external types or handle resolvers are registered; a program that reads handle
+        state fails to load. Runtime errors/limits exit with 1; usage errors with 2.
         """#
     static let console = #"""
         GES event console

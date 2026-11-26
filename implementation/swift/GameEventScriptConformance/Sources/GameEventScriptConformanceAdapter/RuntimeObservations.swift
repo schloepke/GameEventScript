@@ -26,14 +26,14 @@ final class HostScenario {
     var subscriptions: [String: GesSubscription] = [:]
     var path = "initialization"
 
-    init(_ test: Input, programs: [(id: String, program: GameEventScriptProgram)]) throws {
+    init(_ test: Input, programs: [(id: String, program: GameEventScriptProgram)], handles: AdapterHandles? = nil) throws {
         self.test = test
         self.programs = programs
         collector = RuntimeObservations(sink: test["publishSink"]?.stringValue ?? "accept")
-        host = try Self.makeHost(test, observer: collector, publishSink: collector.sink == "absent" ? nil : collector, clock: clock)
+        host = try Self.makeHost(test, observer: collector, publishSink: collector.sink == "absent" ? nil : collector, clock: clock, handles: handles)
     }
 
-    static func makeHost(_ test: Input, observer: (any GesRuntimeObserver)?, publishSink: (any GesPublishSink)?, clock: (any GesClock)? = nil) throws -> GameEventScriptHost {
+    static func makeHost(_ test: Input, observer: (any GesRuntimeObserver)?, publishSink: (any GesPublishSink)?, clock: (any GesClock)? = nil, handles: AdapterHandles? = nil) throws -> GameEventScriptHost {
         var limits = GesRuntimeLimits()
         let setters: [String: WritableKeyPath<GesRuntimeLimits, Int>] = [
             "maxProcessedMessagesPerRun": \.maxProcessedMessagesPerRun, "maxQueuedMessages": \.maxQueuedMessages, "maxExecutionSteps": \.maxExecutionSteps, "maxRegisterValues": \.maxRegisterValues, "maxLoopIterations": \.maxLoopIterations,
@@ -65,6 +65,7 @@ final class HostScenario {
         }
         if let publishSink { builder.withPublishSink(publishSink) }
         if let clock { builder.withClock(clock) }
+        try handles?.register(builder)
         return try builder.build()
     }
 
@@ -86,7 +87,7 @@ final class HostScenario {
             let id = try step.text("id")
             path = "step/" + id
             try actions(test["stepActions"]?[id]?.arrayValue ?? [], path: path)
-            let accepted = host.receive(try RuntimeValues.decodeMessage(step.required("input")))
+            let accepted = try host.receive(RuntimeValues.decodeMessage(step.required("input")))
             var paused = false
             var waiting = false
             switch host.isReady ? step["pump"]?.stringValue : "enqueue" {
@@ -152,7 +153,7 @@ final class HostScenario {
         result["programStarts"] = instances.mapValues { $0.startResult.map { String(describing: $0.state) } ?? "pending" }
         result["pendingTimers"] = host.pendingTimers.map { timer -> [String: Any] in
             [
-                "name": timer.name, "deadline": String(timer.deadline), "period": String(timer.period), "message": timer.messageName,
+                "name": RuntimeObservations.timerName(timer.name), "deadline": String(timer.deadline), "period": String(timer.period), "message": timer.messageName,
                 "program": instances.first(where: { $0.value === timer.instance })!.key, "publish": timer.publish,
             ]
         }
@@ -227,9 +228,9 @@ private final class RuntimeNativeHandler: GesNativeMessageHandler {
         for emit in definition.values("emit") {
             if emit["forwardArguments"]?.boolValue == true {
                 let arguments = try (0..<message.arguments.count).map { try GesMessageArgument(name: message.arguments.nameAt($0), value: message.arguments[$0]) }
-                context.emit(try .init(name: emit.required("message").text("name"), arguments: arguments))
+                _ = try context.emit(.init(name: emit.required("message").text("name"), arguments: arguments))
             } else {
-                context.emit(try RuntimeValues.decodeMessage(emit.required("message")))
+                _ = try context.emit(RuntimeValues.decodeMessage(emit.required("message")))
             }
         }
     }
@@ -303,9 +304,12 @@ final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
     }
 
     // Only named sends report their name and period, so unnamed traces stay unchanged.
-    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: String?, period: Int64) {
-        trace.append(.init(kind: "scheduled", message: message, id: id, deadline: deadline, publish: publish, name: name, period: name == nil ? nil : period))
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: GesValue, period: Int64) {
+        trace.append(.init(kind: "scheduled", message: message, id: id, deadline: deadline, publish: publish, name: name.isNothing ? nil : Self.timerName(name), period: name.isNothing ? nil : period))
     }
+
+    // A Text timer name as its text, a handle name as its text form, which starts with @.
+    static func timerName(_ name: GesValue) -> String { name.handleValue?.description ?? name.asText }
 
     func hostReset() { trace.append(.init(kind: "reset")) }
 
@@ -336,6 +340,6 @@ extension RuntimeObservations {
     }
 }
 
-func runtime(_ programs: [(id: String, program: GameEventScriptProgram)], _ input: Input) throws -> [String: Any] {
-    try ["hosts": (0..<(input["hostCount"]?.integerValue ?? 1)).map { _ in try HostScenario(input, programs: programs).run() }]
+func runtime(_ programs: [(id: String, program: GameEventScriptProgram)], _ input: Input, handles: AdapterHandles? = nil) throws -> [String: Any] {
+    try ["hosts": (0..<(input["hostCount"]?.integerValue ?? 1)).map { _ in try HostScenario(input, programs: programs, handles: handles).run() }]
 }

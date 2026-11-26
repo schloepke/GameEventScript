@@ -241,6 +241,8 @@ public struct GesSchemaWriter {
         let node = schema.nodes[field.index]
         if node.kind != .text || !node.isBytes { throw GesWireError(GesWireError.typeMismatch, field.path) }
         if Int64(bytes.count) > node.maxCount { throw GesWireError(GesWireError.tooLong, field.path) }
+        // A hash has exactly its length; one of another algorithm is another type.
+        if node.fixed && Int64(bytes.count) != node.maxCount { throw GesWireError(GesWireError.typeMismatch, field.path) }
         try presence(node)
         try put(UInt64(bytes.count), node.width)
         try bits.writeBytes(bytes)
@@ -508,7 +510,7 @@ public struct GesSchemaReader {
         try enter(field, .text)
         let node = schema.nodes[field.index]
         if !node.isBytes { throw GesWireError(GesWireError.typeMismatch, field.path) }
-        let count = try get(node.width, field.index)
+        let count = node.fixed ? UInt64(node.maxCount) : try get(node.width, field.index)
         if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, field.path) }
         if count > UInt64(destination.count) { throw GesWireError(GesWireError.bufferTooSmall, field.path) }
         try bits.readBytes(into: UnsafeMutableRawBufferPointer(rebasing: destination[0..<Int(count)]), path: field.path)
@@ -520,7 +522,7 @@ public struct GesSchemaReader {
     mutating func readBytesValue(_ field: GesSchemaField) throws(GesWireError) -> [UInt8] {
         try enter(field, .text)
         let node = schema.nodes[field.index]
-        let count = try get(node.width, field.index)
+        let count = node.fixed ? UInt64(node.maxCount) : try get(node.width, field.index)
         if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, field.path) }
         try bits.require(Int(count) * 8, path: field.path)
         var bytes = [UInt8](repeating: 0, count: Int(count))

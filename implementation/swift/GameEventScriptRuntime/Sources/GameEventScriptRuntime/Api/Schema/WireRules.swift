@@ -199,6 +199,67 @@ public enum GesWireRules {
         return maxIndex + 1 - (backward - held)
     }
 
+    /// Writes Text from a string as its UTF-8 byte count in `width` bits followed by the bytes. Generated code writes the text id
+    /// of a handle with it.
+    /// - Parameters:
+    ///   - writer: The writer.
+    ///   - text: The text.
+    ///   - width: The width of the count.
+    ///   - maxCount: The largest byte count.
+    ///   - path: The field path for an error, evaluated only then.
+    /// - Throws: `GesWireError` with `wire.tooLong` when the text has more bytes, or `wire.bufferTooSmall` when the buffer is
+    ///   full.
+    public static func writeText(
+        _ writer: inout GesBitWriter,
+        _ text: String,
+        width: Int,
+        maxCount: Int,
+        path: @autoclosure () -> String
+    ) throws(GesWireError) {
+        let count = text.utf8.count
+        if count > maxCount { throw GesWireError(GesWireError.tooLong, path()) }
+        try writer.write(UInt64(count), width: width)
+        for byte in text.utf8 { try writer.write(UInt64(byte), width: 8) }
+    }
+
+    /// Reads Text written by ``writeText(_:_:width:maxCount:path:)`` into a string. When `current` holds the same bytes it is
+    /// returned unchanged, so reading an unchanged value does not allocate.
+    /// - Parameters:
+    ///   - reader: The reader.
+    ///   - width: The width of the count.
+    ///   - maxCount: The largest byte count.
+    ///   - current: The string held so far, or `nil`.
+    ///   - path: The field path for an error, evaluated only then.
+    /// - Returns: The text.
+    /// - Throws: `GesWireError` when the data ends early, the count is larger (`wire.invalidCount`) or the bytes are not valid
+    ///   UTF-8 (`wire.invalidText`).
+    public static func readText(
+        _ reader: inout GesBitReader,
+        width: Int,
+        maxCount: Int,
+        current: String?,
+        path: @autoclosure () -> String
+    ) throws(GesWireError) -> String {
+        let count = try reader.read(width, path: path())
+        if count > UInt64(maxCount) { throw GesWireError(GesWireError.invalidCount, path()) }
+        let byteCount = Int(count)
+        try reader.require(byteCount * 8, path: path())
+        let text: String? = withUnsafeTemporaryAllocation(byteCount: byteCount, alignment: 1) { buffer -> String? in
+            var index = 0
+            while index < byteCount {
+                // The bits are present, as required above, so the read cannot fail.
+                buffer[index] = UInt8(truncatingIfNeeded: (try? reader.read(8, path: "")) ?? 0)
+                index += 1
+            }
+            let bytes = UnsafeRawBufferPointer(buffer)
+            if !isValidUTF8(bytes) { return nil }
+            if let current, current.utf8.elementsEqual(bytes) { return current }
+            return String(decoding: bytes, as: UTF8.self)
+        }
+        guard let text else { throw GesWireError(GesWireError.invalidText, path()) }
+        return text
+    }
+
     // The difference of two indices without overflow; a wrapping field takes the shorter way, and an exact half period is negative.
     static func difference(_ index: UInt64, _ baseline: UInt64, _ maxIndex: UInt64, _ wrapping: Bool) -> (magnitude: UInt64, negative: Bool) {
         if !wrapping { return index < baseline ? (baseline - index, true) : (index - baseline, false) }

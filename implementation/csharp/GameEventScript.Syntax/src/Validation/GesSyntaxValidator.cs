@@ -745,7 +745,7 @@ internal static class GesSyntaxValidator
                     var name = Text(target);
                     if (!GesText.IsCallableName(name)) Report(InvalidIdentifierCase, $"Predicate test target '{name}' must use identifier casing (start lowercase)", name, GesSyntaxSymbolKind.Predicate, Range(node));
                 }
-                else if (Child(node, NodeKind.TypeReference) is { } type)
+                else if (Child(node, NodeKind.TypeReference) is { } type && Text(type.FirstToken)[0] == ':')
                 {
                     RemovedType(GesText.CanonicalTypeName(Text(type.FirstToken)[1..]), Range(node));
                 }

@@ -321,10 +321,27 @@
 
     static let quantityUnitKinds: Set<GesTokenKind> = [.identifier, .message, .operatorDivide, .operatorMultiply, .operatorPower, .superscriptInteger, .float]
 
-    @discardableResult func typeName() throws -> String {
-        guard currentKind == .typeName else { throw failure("Expected a type name.") }
+    // A handle type keeps its `@` and `~`, and a union of parameter and field types joins further alternatives with `|`; a
+    // union without any handle alternative is no type.
+    @discardableResult func typeName(allowHandle: Bool = false, allowUnion: Bool = false) throws -> String {
+        guard currentKind == .typeName || allowHandle && currentKind == .handleTypeName else { throw failure("Expected a type name.") }
         startNode(.typeReference)
-        return finishNode(try typeNameCore())
+        let first = current
+        let name = currentKind == .handleTypeName ? advance().text : try typeNameCore()
+        guard allowUnion && currentKind == .operatorCollectionUnion else { return finishNode(name) }
+        var handles = name.unicodeScalars.first == "@"
+        while match(.operatorCollectionUnion) {
+            newlines()
+            if currentKind == .handleTypeName {
+                handles = true
+                advance()
+            } else {
+                guard currentKind == .typeName else { throw failure("Expected a type name.") }
+                _ = try typeNameCore()
+            }
+        }
+        if !handles { throw failure("A type union is written only of handle types.", first) }
+        return finishNode(name)
     }
 
     // The canonical type name: built-in types are lowercase, a quantity type names its unit.
@@ -384,7 +401,7 @@
             newlines()
             if allowType && match(.`as`) {
                 newlines()
-                try typeName()
+                try typeName(allowHandle: true, allowUnion: true)
                 newlines()
             }
             finishNode()
@@ -540,7 +557,7 @@
         role(unlabeled ? .unlabeledField : .field)
         try expect(.colon)
         newlines()
-        try typeName()
+        try typeName(allowHandle: true, allowUnion: true)
         newlines()
         if matchWord("clamped") {
             try expectWord("between")

@@ -35,8 +35,8 @@ internal static class GesProgramValidator
 
         ValidateStrings(program.StringConstants);
         ValidateLists(program.UInt16IndexLists);
-        var indexedBindingIds = ValidateBindings(program);
-        ValidateCode(program, indexedBindingIds);
+        var indexedBindingIds = ValidateBindings(program, out var handleTypeNames);
+        ValidateCode(program, indexedBindingIds, handleTypeNames);
         GesProgramDebugValidator.Validate(program);
         GesProgramDebugValidator.ValidateOpaque(program);
 
@@ -82,8 +82,9 @@ internal static class GesProgramValidator
         }
     }
 
-    private static HashSet<ulong> ValidateBindings(GameEventScriptProgram program)
+    private static HashSet<ulong> ValidateBindings(GameEventScriptProgram program, out HashSet<string>? handleTypeNames)
     {
+        handleTypeNames = null;
         if (program.Bindings.Entries.Count > ushort.MaxValue) Throw(GesProgramFormatErrorCode.TooManyEntries, "BindingSegment exceeds 65535 entries.");
         var maxRegisters = 0;
         var maxDepth = 0;
@@ -101,6 +102,12 @@ internal static class GesProgramValidator
                 Throw(GesProgramFormatErrorCode.InvalidBindingKind, $"Unknown binding kind 0x{(byte)bind.Kind:X2}.", (ushort)GesSectionType.Bindings, index);
             if (bind.Name >= program.StringConstants.Slices.Count)
                 Throw(GesProgramFormatErrorCode.InvalidStringIndex, "Binding name references a missing string.", (ushort)GesSectionType.Bindings, index);
+            if (bind.Kind == HandleType)
+            {
+                ValidateHandleTypeBinding(program, bind, index, ref handleTypeNames);
+                continue;
+            }
+
             ValidateTextIndexes(bind.ArgumentNames, program.StringConstants.Slices.Count, index);
             ValidateTextIndexes(bind.RequiredTags, program.StringConstants.Slices.Count, index);
             ValidateTextIndexes(bind.ExcludedTags, program.StringConstants.Slices.Count, index);
@@ -162,6 +169,30 @@ internal static class GesProgramValidator
         return bindingIds;
     }
 
+    // A handle type import: a unique type name, its four-word schema hash, the first state read or the sentinel, and no
+    // ID, tags or resources (specs/BinaryFormat.md#bindings).
+    private static void ValidateHandleTypeBinding(GameEventScriptProgram program, GesBindingSegment.Entry bind, int index, ref HashSet<string>? names)
+    {
+        if (!IsPortableTypeName(program.StringConstants, bind.Name) || bind.ArgumentNames.Count != 4 || bind.Id != ushort.MaxValue
+            || bind.RequiredTags.Count != 0 || bind.ExcludedTags.Count != 0 || bind.RequiredTagAlternatives.Count != 0
+            || bind.RequiredRegisterCount != 0 || bind.RequiredCallStackDepth != 0)
+            Throw(GesProgramFormatErrorCode.InvalidProgram, "A handle type binding needs a type name, a four-word hash, no ID, no tags and no resources.", (ushort)GesSectionType.Bindings, index);
+        if (bind.EntryAddress != ushort.MaxValue && bind.EntryAddress >= program.Code.Count)
+            Throw(GesProgramFormatErrorCode.InvalidEntryAddress, "A handle type binding locates a state read outside CodeSegment.", (ushort)GesSectionType.Bindings, index);
+        names ??= new HashSet<string>(StringComparer.Ordinal);
+        if (!names.Add(program.StringConstants.Resolve(bind.Name)))
+            Throw(GesProgramFormatErrorCode.InvalidProgram, "Handle type binding names must be unique.", (ushort)GesSectionType.Bindings, index);
+    }
+
+    // Whether an `@Name` or `@Name~` type operand names a handle type binding; null for any other type name.
+    private static bool? IsHandleTypeOperand(GameEventScriptProgram program, ushort stringIndex, HashSet<string>? handleTypeNames)
+    {
+        var text = program.StringConstants.Resolve(stringIndex);
+        if (text.Length == 0 || text[0] != '@') return null;
+        var name = text.EndsWith("~", StringComparison.Ordinal) ? text[1..^1] : text[1..];
+        return handleTypeNames is not null && handleTypeNames.Contains(name);
+    }
+
     private static string BuildCallableSignature(GameEventScriptProgram program, GesBindingSegment.Entry bind, string name)
     {
         var builder = new StringBuilder(name).Append('(');
@@ -173,7 +204,7 @@ internal static class GesProgramValidator
         return builder.Append(')').ToString();
     }
 
-    private static void ValidateCode(GameEventScriptProgram program, HashSet<ulong> indexedBindingIds)
+    private static void ValidateCode(GameEventScriptProgram program, HashSet<ulong> indexedBindingIds, HashSet<string>? handleTypeNames)
     {
         if (program.Code.Count > ushort.MaxValue) Throw(GesProgramFormatErrorCode.TooManyEntries, "CodeSegment exceeds 65535 instructions.");
         var lists = new Dictionary<int, HashSet<ushort>?>();
@@ -184,11 +215,11 @@ internal static class GesProgramValidator
             var instruction = program.Code[index];
             if (!GesProgramEnumValidation.IsDefined(instruction.OpCode))
                 Throw(GesProgramFormatErrorCode.InvalidOpcode, $"Unknown opcode 0x{(byte)instruction.OpCode:X2}.", (ushort)GesSectionType.Code, index);
-            ValidateInstructionOperands(program, indexedBindingIds, instruction, index, lists, checkedNames);
+            ValidateInstructionOperands(program, indexedBindingIds, handleTypeNames, instruction, index, lists, checkedNames);
         }
     }
 
-    private static void ValidateInstructionOperands(GameEventScriptProgram program, HashSet<ulong> indexedBindingIds, GesBytecodeInstruction instruction, int instructionIndex, Dictionary<int, HashSet<ushort>?> lists, HashSet<int> checkedNames)
+    private static void ValidateInstructionOperands(GameEventScriptProgram program, HashSet<ulong> indexedBindingIds, HashSet<string>? handleTypeNames, GesBytecodeInstruction instruction, int instructionIndex, Dictionary<int, HashSet<ushort>?> lists, HashSet<int> checkedNames)
     {
         var encodedUnit = instruction.UnitAndFlags & 0x1F;
         var encodedFlags = instruction.UnitAndFlags & 0xE0;
@@ -260,6 +291,23 @@ internal static class GesProgramValidator
             {
                 var stringIndex = operand == GesOpcodePrinter.OperandPart.CustomTypeName ? instruction.SecondaryStringIndex : instruction.StringIndex;
                 if (stringIndex >= program.StringConstants.Slices.Count) Throw(GesProgramFormatErrorCode.InvalidStringIndex, "Instruction references a missing string.", (ushort)GesSectionType.Code, instructionIndex);
+                // Casts and checks name handle types as `@Name` or `@Name~`, which need a handle type binding of that name.
+                if (operand == GesOpcodePrinter.OperandPart.CustomTypeName && instruction.OpCode is GesBytecodeOpCode.CastCustom or GesBytecodeOpCode.CheckCustomType
+                    && IsHandleTypeOperand(program, stringIndex, handleTypeNames) is { } known)
+                {
+                    if (!known) InvalidOperand("A handle type operand needs a handle type binding of its name.", instructionIndex);
+                    continue;
+                }
+
+                // `h.root` of a composite names its root type as the member `@Root`, which needs a handle type binding.
+                if (operand == GesOpcodePrinter.OperandPart.MemberName && instruction.OpCode == GesBytecodeOpCode.MemberAccess
+                    && IsHandleTypeOperand(program, stringIndex, handleTypeNames) is { } knownRoot)
+                {
+                    if (!knownRoot || program.StringConstants.Resolve(stringIndex).EndsWith("~", StringComparison.Ordinal))
+                        InvalidOperand("A root member names a handle type binding as `@Name`.", instructionIndex);
+                    continue;
+                }
+
                 var checkedName = stringIndex << 1 | (operand == GesOpcodePrinter.OperandPart.Tag ? 0 : 1);
                 if (operand is GesOpcodePrinter.OperandPart.Tag or GesOpcodePrinter.OperandPart.CustomTypeName && checkedNames.Contains(checkedName)) continue;
                 if (operand == GesOpcodePrinter.OperandPart.Tag && !IsPortablePlainName(program.StringConstants, stringIndex)) InvalidOperand("Tag constants must use the portable lowercase ASCII name grammar.", instructionIndex);

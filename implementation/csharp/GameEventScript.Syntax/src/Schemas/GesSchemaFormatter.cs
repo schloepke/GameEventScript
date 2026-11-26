@@ -84,6 +84,12 @@ internal static class GesSchemaFormatter
                     builder.Append("network :").Append(declaration.Name).Append(" as {\n");
                     foreach (var route in declaration.Routes)
                     {
+                        if (route.Owns)
+                        {
+                            builder.Append("  ").Append(route.Server ? "server" : "client").Append(" owns @").Append(route.Root).Append('\n');
+                            continue;
+                        }
+
                         builder.Append("  ").Append(route.Server ? "server " : "client ").Append(route.Publishes ? "publishes " : "sends ").Append(route.IsMessage ? "" : ":").Append(route.Root).Append(' ');
                         builder.Append(route.Class switch { GesSchemaRouteClass.Reliable => "reliable", GesSchemaRouteClass.Latest => "latest", _ => "bulk" });
                         if (route.Rate is { } rate) builder.Append(" at most every ").Append(Value(rate));
@@ -91,6 +97,30 @@ internal static class GesSchemaFormatter
                     }
 
                     builder.Append("}\n");
+                    break;
+                case GesSchemaDeclarationKind.Handle:
+                    builder.Append("handle @").Append(declaration.Name).Append(" of :").Append(declaration.State);
+                    if (declaration.Root.Length > 0)
+                    {
+                        builder.Append(" composite @").Append(declaration.Root).Append(" as { part: ");
+                        Type(declaration.Id!, builder, "");
+                        builder.Append(" }\n");
+                        break;
+                    }
+
+                    builder.Append(" as { id: ");
+                    Type(declaration.Id!, builder, "");
+                    builder.Append(", version: ");
+                    switch (declaration.Version)
+                    {
+                        case GesHandleVersionKind.None: builder.Append(":Nothing"); break;
+                        case GesHandleVersionKind.ContentHash: builder.Append(":ContentHash"); break;
+                        case GesHandleVersionKind.Sha1: builder.Append(":Hash(#sha1)"); break;
+                        case GesHandleVersionKind.Sha256: builder.Append(":Hash(#sha256)"); break;
+                        default: Type(declaration.Revision!, builder, ""); break;
+                    }
+
+                    builder.Append(" }\n");
                     break;
                 case GesSchemaDeclarationKind.Messages:
                     builder.Append("messages ").Append(declaration.Name);
@@ -489,6 +519,17 @@ internal static class GesSchemaFormatter
                 break;
             case GesSchemaTypeKind.Reference:
                 builder.Append(':').Append(type.Name);
+                return;
+            case GesSchemaTypeKind.Handle:
+                builder.Append('@').Append(type.Name);
+                if (type.Versioned) builder.Append('~');
+                return;
+            case GesSchemaTypeKind.Map when type.Key.Length > 0:
+                builder.Append(":Map(@").Append(type.Key).Append(" → ");
+                Union(type.Element!, builder, indent);
+                builder.Append(')');
+                if (type.Max is { } mapMax) builder.Append(" max ").Append(mapMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
                 return;
             default:
                 builder.Append(':').Append(type.Kind.ToString());

@@ -14,6 +14,20 @@ internal partial class GesVirtualMachine
     {
         var dst = new GesValue();
         var typeName = FetchStringByPointer(typeTextPointer);
+        // A handle type checks without converting; a handle casts only to its type's state schema.
+        if (typeName.Length > 0 && typeName[0] == '@')
+        {
+            if (IsHandleType(in xValue, typeName)) SetValue(destinationRegister, in xValue);
+            else SetNothing(destinationRegister);
+            return;
+        }
+
+        if (xValue.ObjectValue is GesHandle handle)
+        {
+            if (!TryCastHandleState(destinationRegister, handle, typeName)) SetNothing(destinationRegister);
+            return;
+        }
+
         if (IsCustomType(in xValue, typeName))
         {
             if (xValue.Kind is Custom)

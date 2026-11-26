@@ -20,6 +20,7 @@ public sealed class GesProgramBuilder
     private readonly List<SourceInput> _sources = [];
     private GesCompileOptions _options = new();
     private IGesExternalTypeCatalog _externalTypeCatalog = GesEmptyExternalTypeCatalog.Instance;
+    private readonly Dictionary<string, GesHandleType> _handleTypes = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Creates an empty source builder with default compile options.
@@ -65,6 +66,26 @@ public sealed class GesProgramBuilder
     public GesProgramBuilder WithExternalTypeCatalog(IGesExternalTypeCatalog catalog)
     {
         _externalTypeCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        return this;
+    }
+
+    /// <summary>
+    /// Declares the handle types the sources may name as <c>@Name</c>, usually from
+    /// <see cref="GesSchemaSet.HandleTypes"/>. A later declaration of the same name replaces an earlier one; composite
+    /// roots are known through <see cref="GesHandleType.Root"/> and need not be declared separately.
+    /// </summary>
+    /// <param name="types">The handle type declarations.</param>
+    /// <returns>The current builder instance.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="types"/> or one of its elements is <see langword="null"/>.</exception>
+    public GesProgramBuilder WithHandleTypes(IEnumerable<GesHandleType> types)
+    {
+        _ = types ?? throw new ArgumentNullException(nameof(types));
+        foreach (var type in types)
+        {
+            for (var current = type ?? throw new ArgumentNullException(nameof(types)); current is not null; current = current.Root)
+                if (ReferenceEquals(current, type) || !_handleTypes.ContainsKey(current.Name)) _handleTypes[current.Name] = current;
+        }
+
         return this;
     }
 
@@ -147,7 +168,7 @@ public sealed class GesProgramBuilder
             errors.Add(conflictModule, $"Name '{conflictName}' is declared as both a predicate and a function", conflictName, GlobalDefinition, ValidatePredicateFunctionConflict, conflictNode);
         }
 
-        GesAstValidator.ValidateModules(modules, callables, validationTypeDefinitions, constants, errors);
+        GesAstValidator.ValidateModules(modules, callables, validationTypeDefinitions, constants, _handleTypes, errors);
 
         errors.ThrowIfAny();
 
@@ -157,7 +178,7 @@ public sealed class GesProgramBuilder
             var source = _sources[index];
             sourceDocuments[index] = new GesSourceDocument(checked((uint)index), string.IsNullOrEmpty(source.SourceName) ? "UnknownSource" : source.SourceName!, source.Text);
         }
-        var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules, errors), constants, typeDefinitions, callables, handlers, _externalTypeCatalog, sourceDocuments);
+        var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules, errors), constants, typeDefinitions, callables, handlers, _externalTypeCatalog, sourceDocuments, new Dictionary<string, GesHandleType>(_handleTypes, StringComparer.Ordinal));
         errors.ThrowIfAny();
         return GesAstOptimizer.Optimize(moduleResult);
     }

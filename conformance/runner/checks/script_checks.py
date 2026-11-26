@@ -7,7 +7,7 @@ from checks import runtime_checks
 
 def prepare(case):
     closed(case.metadata, {'gesBlock', 'id', 'kind', 'level', 'categories', 'tags', 'requires',
-                           'sources', 'compile', 'runtimeLimits', 'comparison', 'random', 'hostCount', 'nativeHandlers', 'stepActions', 'deferredPrograms', 'publishSink'}, 'supported script metadata')
+                           'sources', 'compile', 'runtimeLimits', 'comparison', 'random', 'hostCount', 'nativeHandlers', 'stepActions', 'deferredPrograms', 'publishSink', 'handles'}, 'supported script metadata')
     closed(case.expected, {'gesBlock', 'steps', 'initialization'}, 'supported script expectation')
     if (not case.sources and not case.metadata.get('nativeHandlers')):
         raise InvalidDocument('Script execution requires source Programs or native handlers')

@@ -21,7 +21,8 @@ internal enum GesSchemaDeclarationKind : byte
     Message,
     Messages,
     TagSet,
-    Network
+    Network,
+    Handle
 }
 
 internal enum GesSchemaRouteClass : byte
@@ -52,6 +53,9 @@ internal sealed class GesSchemaRouteSyntax
 
     // The interval of `at most every`, a literal or a constant; null without one.
     internal GesSchemaValueSyntax? Rate { get; init; }
+
+    // `server owns @Target`: Root names the handle type, and the route has no class or rate.
+    internal bool Owns { get; init; }
 
     internal int Offset { get; init; }
 }
@@ -137,8 +141,16 @@ internal sealed class GesSchemaTypeSyntax
 
     internal GesQuantityUnit Unit { get; init; }
 
-    // The referenced schema's name, or for a Quantity and a spatial type whether a unit was written.
+    // The referenced schema's name, a handle type's name without `@`, or for a Quantity and a spatial type whether a unit was written.
     internal string Name { get; init; } = "";
+
+    // A handle type written `@Name~`, with its version.
+    internal bool Versioned { get; init; }
+
+    // The key handle type of a handle Map `:Map(@Name → T)`, empty for any other type, and where it starts.
+    internal string Key { get; init; } = "";
+
+    internal int KeyOffset { get; init; }
 
     internal string[]? Tags { get; init; }
 
@@ -361,6 +373,24 @@ internal sealed class GesSchemaDeclarationSyntax
     // The routes of a network in declared order.
     internal GesSchemaRouteSyntax[] Routes { get; init; } = [];
 
+    // A handle declaration: its state schema, the composite root without `@`, the id or part type, the version form and the
+    // revision's type, each with where it starts.
+    internal string State { get; init; } = "";
+
+    internal int StateOffset { get; init; }
+
+    internal string Root { get; init; } = "";
+
+    internal int RootOffset { get; init; }
+
+    internal GesSchemaTypeSyntax? Id { get; init; }
+
+    internal GesHandleVersionKind Version { get; init; }
+
+    internal GesSchemaTypeSyntax? Revision { get; init; }
+
+    internal int VersionOffset { get; init; }
+
     // The group of a wire or model root, or null when the declaration has no such role.
     internal string? WireGroup { get; set; }
 
@@ -394,6 +424,7 @@ internal sealed class GesSchemaDiagnostic
     internal const string ComputedMayBeAbsent = "schema.computedMayBeAbsent";
     internal const string InvalidRoute = "schema.invalidRoute";
     internal const string DuplicateRoute = "schema.duplicateRoute";
+    internal const string InvalidHandle = "schema.invalidHandle";
 
     internal GesSchemaDiagnostic(string code, string text, int offset, string message)
     {

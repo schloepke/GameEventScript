@@ -207,7 +207,7 @@ internal static class GesSourceHighlighting
             GesTokenKind.Illegal => text.Length > 0 && text[0] is '\'' or '"' ? GesSyntaxKind.String : GesSyntaxKind.Plain,
             GesTokenKind.Identifier => GesSyntaxKind.Identifier,
             GesTokenKind.Message => GesSyntaxKind.Message,
-            GesTokenKind.TypeName => GesSyntaxKind.Type,
+            GesTokenKind.TypeName or GesTokenKind.HandleTypeName => GesSyntaxKind.Type,
             GesTokenKind.ConstantReference => GesSyntaxKind.Constant,
             GesTokenKind.Tag => GesSyntaxKind.Tag,
             GesTokenKind.Float or GesTokenKind.Percentage or GesTokenKind.UnitNumber

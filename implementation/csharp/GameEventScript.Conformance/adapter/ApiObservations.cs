@@ -35,6 +35,7 @@ internal static class ApiObservations
             case "environment": builder.WithExternalTypeRegistry(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Registry); break;
             case "mismatch": builder.WithExternalTypeRegistry(new MismatchRegistry()); break;
         }
+        AdapterHandles.From(test)?.Register(builder);
         var host = builder.Build();
         try
         {

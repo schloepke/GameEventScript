@@ -50,6 +50,7 @@ internal sealed class GesDocumentReader
         var record = schema == GesDocumentSchemaSyntax.Type;
         var keys = new List<string>();
         var keyOffsets = new List<int>();
+        var handleKeys = new List<bool>();
         var values = new List<GesDocumentNode>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         while (_position < _text.Length)
@@ -58,15 +59,18 @@ internal sealed class GesDocumentReader
             if (IsSchemaHeader()) return Fail(Code.MisplacedSchemaHeader, entryStart);
             if (_items >= MaximumItems) return Limit("MaxLiteralItems", MaximumItems, entryStart);
             _items++;
-            var key = ReadKey();
+            if (record && _text[entryStart] == '@') return Fail(Code.InvalidKey, entryStart);
+            var key = ReadEntryKey(out var isHandle, out var identity);
+            if (_error is not null) return null;
             if (key is null) return Fail(_text[entryStart] is '\'' or '"' ? Code.UnclosedText : Code.InvalidKey, entryStart);
             if (record && !GesText.IsFieldName(key)) return Fail(Code.InvalidKey, entryStart);
-            if (!seen.Add(key)) return Fail(Code.DuplicateKey, entryStart);
+            if (!seen.Add(identity)) return Fail(Code.DuplicateKey, entryStart);
             SkipSpacesAndComments();
             if (!Consume(':')) return Fail(Code.MissingColon, _position);
             if (ReadEntryValue(0) is not { } value) return null;
             keys.Add(key);
             keyOffsets.Add(entryStart);
+            handleKeys.Add(isHandle);
             values.Add(value);
             SkipSpacesAndComments();
             if (_position == _text.Length) break;
@@ -74,7 +78,42 @@ internal sealed class GesDocumentReader
             SkipWhitespace();
             if (_position < _text.Length && _text[_position] == ',') return Fail(Code.UnexpectedToken, _position);
         }
-        return GesDocumentNode.Map(keys.ToArray(), values.ToArray(), keyOffsets.ToArray());
+        return GesDocumentNode.Map(keys.ToArray(), values.ToArray(), keyOffsets.ToArray(), HandleKeyFlags(handleKeys));
+    }
+
+    private static bool[]? HandleKeyFlags(List<bool> flags) => flags.Contains(true) ? flags.ToArray() : null;
+
+    // A Map key: a Text key, or a handle without a version or ref. `identity` compares keys; a handle's never equals a
+    // Text's. A malformed handle records its error.
+    private string? ReadEntryKey(out bool isHandle, out string identity)
+    {
+        SkipWhitespace();
+        isHandle = _position < _text.Length && _text[_position] == '@';
+        if (!isHandle)
+        {
+            var key = ReadKey();
+            identity = "t" + key;
+            return key;
+        }
+        var start = _position;
+        var end = GesHandleLiteral.Read(_text, start, out identity, out var versioned);
+        if (end < 0 || versioned)
+        {
+            Fail(Code.InvalidHandle, start, end < 0 ? start + 1 : end);
+            return null;
+        }
+        identity = "h" + identity;
+        _position = end;
+        return _text.Substring(start, end - start);
+    }
+
+    private GesDocumentNode? ReadHandle()
+    {
+        var start = _position;
+        var end = GesHandleLiteral.Read(_text, start, out _, out _);
+        if (end < 0) return Fail(Code.InvalidHandle, start, start + 1);
+        _position = end;
+        return GesDocumentNode.Handle(_text.Substring(start, end - start));
     }
 
     private bool IsSchemaHeader() => StartsWord(":Schema");
@@ -150,6 +189,7 @@ internal sealed class GesDocumentReader
             var text = GesTextLiteralReader.Read(_text, ref _position);
             return text is null ? Fail(Code.UnclosedText, valueStart) : GesDocumentNode.Text(text);
         }
+        if (_text[_position] == '@') return ReadHandle();
         if (_text[_position] == ':')
         {
             if (StartsWord(":Vector")) return ReadSpatial(depth, point: false);
@@ -460,12 +500,24 @@ internal sealed class GesDocumentReader
         if (_position == _text.Length) return Fail(Code.UnclosedBracket, open);
 
         var saved = _position;
-        var key = ReadKey();
-        SkipSpacesAndComments();
-        var isMap = key is not null && Consume(':');
+        bool isMap;
+        if (_text[_position] == '@')
+        {
+            var end = GesHandleLiteral.Read(_text, _position, out _, out _);
+            if (end >= 0) _position = end;
+            SkipSpacesAndComments();
+            isMap = end >= 0 && Consume(':');
+        }
+        else
+        {
+            var key = ReadKey();
+            SkipSpacesAndComments();
+            isMap = key is not null && Consume(':');
+        }
         _position = saved;
         var keys = isMap ? new List<string>() : null;
         var keyOffsets = isMap ? new List<int>() : null;
+        var handleKeys = isMap ? new List<bool>() : null;
         var seen = isMap ? new HashSet<string>(StringComparer.Ordinal) : null;
         var values = new List<GesDocumentNode>();
         while (_position < _text.Length)
@@ -476,14 +528,16 @@ internal sealed class GesDocumentReader
             {
                 SkipWhitespace();
                 var keyStart = _position;
-                key = ReadKey();
+                var key = ReadEntryKey(out var isHandle, out var identity);
+                if (_error is not null) return null;
                 if (key is null) return Fail(keyStart < _text.Length && _text[keyStart] is '\'' or '"' ? Code.UnclosedText : Code.InvalidKey, keyStart);
-                if (!seen!.Add(key)) return Fail(Code.DuplicateKey, keyStart);
+                if (!seen!.Add(identity)) return Fail(Code.DuplicateKey, keyStart);
                 SkipSpacesAndComments();
                 if (!Consume(':')) return Fail(Code.MissingColon, _position);
                 if (ReadEntryValue(depth) is not { } entry) return null;
                 keys!.Add(key);
                 keyOffsets!.Add(keyStart);
+                handleKeys!.Add(isHandle);
                 values.Add(entry);
             }
             else
@@ -493,7 +547,7 @@ internal sealed class GesDocumentReader
             }
             var separator = Separator(']', open);
             if (separator < 0) return null;
-            if (separator > 0) return isMap ? GesDocumentNode.Map(keys!.ToArray(), values.ToArray(), keyOffsets!.ToArray()) : GesDocumentNode.List(values.ToArray());
+            if (separator > 0) return isMap ? GesDocumentNode.Map(keys!.ToArray(), values.ToArray(), keyOffsets!.ToArray(), HandleKeyFlags(handleKeys!)) : GesDocumentNode.List(values.ToArray());
         }
         return null;
     }

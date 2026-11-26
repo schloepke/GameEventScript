@@ -49,10 +49,16 @@ public sealed class GesContext
     internal GesRuntimeBudget RuntimeBudget { get; }
     internal bool Send(GameEventScriptMessage message, bool publish, long microseconds) => _host.SendFromContext(message, publish, microseconds);
 
-    internal bool SendNamed(GameEventScriptMessage message, bool publish, long microseconds, string name, bool repeat)
+    // The timer name is a string or a GesHandle; a handle name differs from every Text name.
+    internal bool SendNamed(GameEventScriptMessage message, bool publish, long microseconds, object name, bool repeat)
         => _host.SendNamedFromContext(message, publish, microseconds, name, repeat);
 
-    internal bool CancelTimers(int mode, string? name) => _host.CancelFromContext(mode, name);
+    internal bool CancelTimers(int mode, object? name) => _host.CancelFromContext(mode, name);
+
+    // Script sends hold no refs, so they skip the check of the public entry points.
+    internal bool EmitUnchecked(GameEventScriptMessage message) => !string.IsNullOrWhiteSpace(message.Name) && _host.EmitFromContext(message);
+
+    internal GesPublishResult PublishUnchecked(GameEventScriptMessage message) => string.IsNullOrWhiteSpace(message.Name) ? default : _host.PublishFromContext(message);
 
     /// <summary>
     /// Enqueues a message for local host dispatch without invoking the publish sink.
@@ -60,10 +66,12 @@ public sealed class GesContext
     /// <param name="message">The immutable message to enqueue.</param>
     /// <returns><see langword="true"/> when the local queue accepted the message; otherwise <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GesWireException">An argument contains a handle that carries a ref (<c>wire.unresolvedRef</c>).</exception>
     public bool Emit(GameEventScriptMessage message)
     {
         _ = message ?? throw new ArgumentNullException(nameof(message));
-        return !string.IsNullOrWhiteSpace(message.Name) && _host.EmitFromContext(message);
+        GameEventScriptHost.RejectRefs(message);
+        return EmitUnchecked(message);
     }
 
     /// <summary>
@@ -87,10 +95,12 @@ public sealed class GesContext
     /// <returns>The independent local and outbound acceptance result.</returns>
     /// <remarks>A sink rejection or exception never rolls back successful local enqueue.</remarks>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GesWireException">An argument contains a handle that carries a ref (<c>wire.unresolvedRef</c>).</exception>
     public GesPublishResult Publish(GameEventScriptMessage message)
     {
         _ = message ?? throw new ArgumentNullException(nameof(message));
-        return string.IsNullOrWhiteSpace(message.Name) ? default : _host.PublishFromContext(message);
+        GameEventScriptHost.RejectRefs(message);
+        return PublishUnchecked(message);
     }
 
     /// <summary>

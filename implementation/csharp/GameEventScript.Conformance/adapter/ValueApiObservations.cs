@@ -218,7 +218,7 @@ internal static class ValueApiObservations
             if (mutate && rolls.Length > 0) rolls[0] = int.MinValue;
             return result;
         }
-        if (input.TryGetProperty("entries", out var entries))
+        if (input.TryGetProperty("entries", out var entries) && !(type == ":Map" && entries.EnumerateArray().Any(entry => entry.TryGetProperty("handle", out _))))
         {
             RuntimeValues.Fields(input, "type", "entries");
             if (type is null || !Regex.IsMatch(type, @"\A:[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\z")) throw new ArgumentException("Invalid collection type.");

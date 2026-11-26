@@ -125,9 +125,10 @@ SWIFT_TYPE = re.compile(
 )
 CSHARP_NAMESPACE = re.compile(r"^\s*namespace\s+([\w.]+)", re.M)
 CSHARP_EXTENSION_HANDLER = re.compile(r"static\s+void\s+(?P<name>\w+)\s*\(\s*this\s+GesVirtualMachine\b")
-# Any return type counts, so a value-returning handler cannot escape the rule; statement keywords are no type.
+# Any return type counts, including nested generics and tuples, so a value-returning handler cannot escape the rule;
+# statement keywords are no type.
 CSHARP_EXECUTE = re.compile(
-    r"^\s*(?P<mods>(?:\w+\s+)*?)(?!(?:return|await|throw|else|new|yield)\b)[\w.]+(?:<[^>()]*>)?\??(?:\[\])?\s+(?P<name>Execute[A-Z]\w*)\s*\(",
+    r"^\s*(?P<mods>(?:\w+\s+)*?)(?:\([^()]*\)|(?!(?:return|await|throw|else|new|yield)\b)[\w.]+(?:<(?:[^<>()]|<(?:[^<>()]|<[^<>()]*>)*>)*>)?)\??(?:\[\])*\s+(?P<name>Execute[A-Z]\w*)\s*\(",
     re.M,
 )
 SWIFT_EXECUTE_DECL = re.compile(r"\bfunc\s+(?P<name>execute[A-Z]\w*)\s*[(<]")

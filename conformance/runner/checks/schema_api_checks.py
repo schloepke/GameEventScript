@@ -9,6 +9,7 @@ from checks import numeric_checks
 
 HEX = re.compile(r'(?:[0-9a-f]{2})*')
 HASH = re.compile(r'[0-9a-f]{16}')
+CONTENT_HASH = re.compile(r'[0-9a-f]{64}')
 SCHEMA_CODE = re.compile(r'schema\.[a-zA-Z]+')
 WIRE_CODE = re.compile(r'wire\.[a-zA-Z]+')
 DOCUMENT_CODE = re.compile(r'(document|schema)\.[a-zA-Z]+')
@@ -92,7 +93,7 @@ def prepare(case):
         raise InvalidDocument('Schema API requires no GES source, Steps or assembler')
     numeric_checks.options(case)
     raw = case.metadata.get('schemaApi')
-    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeExternal', 'baselineExternal', 'externalFields', 'failingField', 'baselineFailingField', 'failingCode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'complete', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document', 'readDocument', 'network'}, 'schema API input')
+    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeExternal', 'baselineExternal', 'externalFields', 'failingField', 'baselineFailingField', 'failingCode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'complete', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document', 'readDocument', 'network', 'handle', 'contentHash'}, 'schema API input')
     sources = raw.get('sources')
     if not isinstance(sources, list) or not sources or any(not isinstance(s, str) for s in sources):
         raise InvalidDocument('Schema API requires source texts')
@@ -113,6 +114,8 @@ def prepare(case):
         raise InvalidDocument('A baseline requires encoding or decoding')
     if 'dumpBaseline' in raw and 'dump' not in raw:
         raise InvalidDocument('A dump baseline requires a dump')
+    if 'contentHash' in raw and 'handle' not in raw:
+        raise InvalidDocument('A content hash requires a handle type')
     request = {
         'sources': sources,
         'root': text(raw['root'], 'root') if 'root' in raw else None,
@@ -139,10 +142,12 @@ def prepare(case):
         'document': text(raw['document'], 'document') if 'document' in raw else None,
         'readDocument': read_document(raw['readDocument']) if 'readDocument' in raw else None,
         'network': text(raw['network'], 'network') if 'network' in raw else None,
+        'handle': text(raw['handle'], 'handle') if 'handle' in raw else None,
+        'contentHash': input_value(raw['contentHash']) if 'contentHash' in raw else None,
     }
     closed(case.expected, {'gesBlock', 'schema'}, 'schema expectation')
     expected = case.expected.get('schema')
-    closed(expected, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'completed', 'dump', 'description', 'document', 'readDocument', 'network'}, 'schema result')
+    closed(expected, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'completed', 'dump', 'description', 'document', 'readDocument', 'network', 'handle', 'contentHash'}, 'schema result')
     if not expected:
         raise InvalidDocument('Schema expectation requires a result')
     if 'error' in expected:
@@ -160,6 +165,23 @@ def prepare(case):
         text(expected['network']['canonical'], 'network canonical')
         if not isinstance(expected['network']['hash'], str) or not HASH.fullmatch(expected['network']['hash']):
             raise InvalidDocument('Invalid hash')
+    if 'handle' in expected:
+        if request['handle'] is None:
+            raise InvalidDocument('A handle expectation requires a handle type')
+        if not isinstance(expected['handle'], dict) or set(expected['handle']) != {'canonical', 'hash'}:
+            raise InvalidDocument('A handle result has a canonical form and a hash')
+        text(expected['handle']['canonical'], 'handle canonical')
+        if not isinstance(expected['handle']['hash'], str) or not HASH.fullmatch(expected['handle']['hash']):
+            raise InvalidDocument('Invalid hash')
+    if 'contentHash' in expected:
+        if request['contentHash'] is None:
+            raise InvalidDocument('A content hash expectation requires a state')
+        wanted = expected['contentHash']
+        if isinstance(wanted, dict):
+            closed(wanted, {'error'}, 'content hash result')
+            wire_error(wanted['error'])
+        elif not isinstance(wanted, str) or not CONTENT_HASH.fullmatch(wanted):
+            raise InvalidDocument('A content hash is 64 lowercase hexadecimal digits or an error')
     for key in ('hash', 'bindingHash'):
         if key in expected and (not isinstance(expected[key], str) or not HASH.fullmatch(expected[key])):
             raise InvalidDocument('Invalid hash')
@@ -283,7 +305,7 @@ def compare(case, observed):
     if set(observed) != {'status', 'schema'} or observed['status'] != 'ok':
         raise InvalidDocument('Invalid schema API outcome')
     actual = observed['schema']
-    closed(actual, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'completed', 'dump', 'description', 'document', 'readDocument', 'network'}, 'schema observation')
+    closed(actual, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'completed', 'dump', 'description', 'document', 'readDocument', 'network', 'handle', 'contentHash'}, 'schema observation')
     expected = case.expected['schema']
     differences = []
     def differ(path, wanted, seen):
@@ -295,9 +317,17 @@ def compare(case, observed):
     if 'error' in actual:
         differ('error', None, actual['error'])
         return 'failed', differences
-    for key in ('canonical', 'hash', 'bindingHash', 'maxByteCount', 'key', 'dump', 'description', 'network'):
+    for key in ('canonical', 'hash', 'bindingHash', 'maxByteCount', 'key', 'dump', 'description', 'network', 'handle'):
         if key in expected and actual.get(key) != expected[key]:
             differ(key, expected[key], actual.get(key))
+    if 'contentHash' in expected:
+        seen = actual.get('contentHash')
+        wanted = expected['contentHash']
+        if isinstance(wanted, dict):
+            if not isinstance(seen, dict) or not contains(wanted['error'], seen.get('error')):
+                differ('contentHash', wanted, seen)
+        elif seen != wanted:
+            differ('contentHash', wanted, seen)
     for key in ('encoded', 'deltaEncoded', 'deltaDecoded'):
         if key not in expected:
             continue

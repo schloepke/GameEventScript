@@ -40,10 +40,11 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive, Ru
     }
 
     /// <inheritdoc />
-    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish, string? name, long period)
+    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish, GesValue name, long period)
     {
         if (!verbose) return;
-        var timer = name is null ? "" : period > 0 ? $" named {name} every {period}us" : $" named {name}";
+        var label = name.Handle?.ToString() ?? name.AsText();
+        var timer = name.IsNothing ? "" : period > 0 ? $" named {label} every {period}us" : $" named {label}";
         WriteTrace($"schedule #{id} {(publish ? "publish" : "emit")}{timer} {Format(message)} at {clock.FormatDeadline(deadline)}");
     }
 

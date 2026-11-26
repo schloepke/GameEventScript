@@ -39,13 +39,21 @@ final class RunSession {
         }
 
         // Link the complete group before initialization; preparation failures leave this session intact.
+        let handles = workspace.handleTypes
         for entry in inventory.activePrograms {
             activePath = entry.paths[0]
-            let program = try workspace.drafts[entry.id].map { try prepare($0).compile() } ?? (fromMemory ? entry.instance.program : entry.paths.count == 1 ? ToolFiles.read(entry.paths[0]) : ToolFiles.compile(entry.paths))
+            let program: GameEventScriptProgram
+            if let draft = workspace.drafts[entry.id] {
+                program = try prepare(draft).compile(handles: handles)
+            } else if fromMemory {
+                program = entry.instance.program
+            } else {
+                program = try entry.paths.count == 1 ? ToolFiles.read(entry.paths[0], handles: handles) : ToolFiles.compile(entry.paths, handles: handles)
+            }
             try replacement.inventory.load(program, paths: entry.paths, id: entry.id)
         }
         for draft in workspace.drafts.values.sorted(by: { $0.id < $1.id }) where !inventory.activePrograms.contains(where: { $0.id == draft.id }) && (draft.id != 0 || draft.dirty) {
-            try replacement.inventory.load(prepare(draft).compile(), paths: draft.paths, id: draft.id)
+            try replacement.inventory.load(prepare(draft).compile(handles: handles), paths: draft.paths, id: draft.id)
         }
         guard try replacement.pump() else { return false }
         for (id, draft) in refreshed { workspace.drafts[id] = draft }
@@ -134,8 +142,9 @@ final class RunObserver: GesRuntimeObserver {
 
     func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String) { writeTrace("dispatch #\(id) \(signatureID) <- " + format(message)) }
 
-    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: String?, period: Int64) {
-        let timer = name.map { period > 0 ? " named \($0) every \(period)us" : " named \($0)" } ?? ""
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: GesValue, period: Int64) {
+        let label = name.handleValue?.description ?? name.asText
+        let timer = name.isNothing ? "" : period > 0 ? " named \(label) every \(period)us" : " named \(label)"
         writeTrace("schedule #\(id) \(publish ? "publish" : "emit")\(timer) " + format(message) + " at " + clock.formatDeadline(deadline))
     }
 

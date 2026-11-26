@@ -61,7 +61,7 @@ enum NumberTextProbe {
             }
             capture.message = nil
             capture.count = 0
-            host.receive(try .init(name: "Probe", arguments: [.init(name: "value", value: value), .init(name: "text", value: .text(row.text ?? "nothing"))]))
+            try host.receive(.init(name: "Probe", arguments: [.init(name: "value", value: value), .init(name: "text", value: .text(row.text ?? "nothing"))]))
             guard try host.runToCompletion().state == .completed, capture.count == 1, let result = capture.message else { throw ToolError.invalidFixture("Probe did not produce exactly one result") }
             responses.append(try Response(source: describe(value), text: result.arguments[0].asText, number: describe(result.arguments[1]), percentage: describe(result.arguments[2])))
         }

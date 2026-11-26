@@ -149,6 +149,8 @@ class PortNameTests(unittest.TestCase):
                               "    private void ExecuteFloorDivide(ushort d) { }\n"
                               "    private void ExecuteAddition(ushort d) { }\n"
                               "    internal bool ExecuteCompare(ushort d) { return ExecuteAdd(d); }\n"
+                              "    internal Dictionary<string, List<int>> ExecuteLookup(ushort d) => new();\n"
+                              "    internal (bool, int) ExecutePair(ushort d) => default;\n"
                               "}\n"
                               "internal static class GesVmRegisterMath\n{\n"
                               "    internal static void AddRegisters(this GesVirtualMachine vm, ushort d) { }\n"
@@ -160,6 +162,10 @@ class PortNameTests(unittest.TestCase):
             ("handler", "csharp", "Runtime", "ExecuteAddition"),
             ("handler", "csharp", "Runtime", "ExecuteCompare"),
             ("handler", "csharp", "Runtime", "ExecuteCompare (not private)"),
+            ("handler", "csharp", "Runtime", "ExecuteLookup"),
+            ("handler", "csharp", "Runtime", "ExecuteLookup (not private)"),
+            ("handler", "csharp", "Runtime", "ExecutePair"),
+            ("handler", "csharp", "Runtime", "ExecutePair (not private)"),
             ("handler", "csharp", "Runtime", "AddRegisters (extension method)"),
         }, handlers)
 

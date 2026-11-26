@@ -82,7 +82,7 @@
         @discardableResult public func receive(_ message: sending GameEventScriptMessage) throws -> Bool {
             try locked {
                 let host = try activeHost()
-                let accepted = host.receive(message)
+                let accepted = try host.receive(message)
                 if accepted { schedule() }
                 return accepted
             }

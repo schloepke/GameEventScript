@@ -646,3 +646,142 @@ schemaApi:
 gesBlock: expect
 schema: {"error": {"code": "schema.unknownName", "line": 3, "column": 16}}
 ```
+
+
+---
+
+## Test: owns routes after the routes
+
+Each `owns` route writes one line after the routes, in ascending order of the handle type, with the side, the handle type's hash and its state schema's hash; it has no index.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns
+schemaApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit\n  client owns @Target\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 777b346c4d18936f\nowns client Target dd9da4ea4ed63220 5d824ec98db00017\nowns server Unit 84dc8d47579275f1 a40cb19f52bc920b\n", "hash": "87c04ab685dd8d0d"}}
+```
+
+---
+
+## Test: the state schema is part of the network hash
+
+Another state schema changes the `owns` line and the network hash; compare the previous case.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-state
+schemaApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 32 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit\n  client owns @Target\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 777b346c4d18936f\nowns client Target dd9da4ea4ed63220 6f41f8c997dc4e29\nowns server Unit 84dc8d47579275f1 a40cb19f52bc920b\n", "hash": "5a21ea8473a6b7d9"}}
+```
+
+---
+
+## Test: a composite has no owner of its own
+
+An `owns` route of a composite type is `schema.invalidHandle`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-composite
+schemaApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @UnitSlot\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidHandle", "line": 9, "column": 15}}
+```
+
+---
+
+## Test: a type owned twice
+
+A second `owns` of the same type is `schema.duplicateRoute`, even from the other side.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-twice
+schemaApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Target\n  client owns @Target\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.duplicateRoute", "line": 10, "column": 3}}
+```
+
+---
+
+## Test: an owned type that is not declared
+
+The handle type must be declared.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-unknown
+schemaApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Missing\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.unknownName", "line": 9, "column": 15}}
+```
+
+---
+
+## Test: a network of owns routes alone
+
+A network needs at least one route that sends or publishes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-only
+schemaApi:
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server owns @Target\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.syntax", "line": 7, "column": 1}}
+```

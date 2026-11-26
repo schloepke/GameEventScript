@@ -92,12 +92,12 @@ extension Tool {
                 }
                 if command == ":load" {
                     path = try Self.loadPath(argument)
-                    try session.inventory.load(ToolFiles.read(path), paths: [path])
+                    try session.inventory.load(ToolFiles.read(path, handles: session.workspace.handleTypes), paths: [path])
                     guard try session.pump() else { return false }
                     if !options.quiet { io.line("Loaded \(path); initialization completed. Handlers remain active.", toError: true) }
                     continue
                 }
-                let program = try GesProgramBuilder().addScript("on initialization {\n" + line + "\n}\n", sourceName: path).compile()
+                let program = try ToolFiles.builder(session.workspace.handleTypes).addScript("on initialization {\n" + line + "\n}\n", sourceName: path).compile()
                 let handlers = program.bindings.filter(isHandler)
                 guard handlers.count == 1, program.stringConstants[Int(handlers[0].name)] == "initialization" else {
                     io.line("error cli.interactiveInput: Enter handler-body statements, not additional handler declarations.", toError: true)

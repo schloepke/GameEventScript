@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Runtime;
+using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Api;
 
@@ -12,7 +13,7 @@ public sealed partial class GameEventScriptHost
     // Named timers of all instances, keyed by the sending instance's registration ID and the name
     // (specs/HostRuntime.md#named-timers). A one-shot timer leaves the registry when its firing starts dispatch; a
     // repeating one stays until it is cancelled, replaced or its sender is detached.
-    private Dictionary<(long Instance, string Name), GesNamedTimer>? _timers;
+    private Dictionary<(long Instance, object Name), GesNamedTimer>? _timers;
 
     /// <summary>
     /// Gets a snapshot of the pending named timers of all instances, ordered by deadline and then by send order.
@@ -32,7 +33,7 @@ public sealed partial class GameEventScriptHost
             for (var index = 0; index < result.Length; index++)
             {
                 var timer = ordered[index];
-                result[index] = new(timer.Name, timer.Deadline, timer.Period, timer.Message.Name, timer.Instance, timer.Publish);
+                result[index] = new(TimerName(timer.Name), timer.Deadline, timer.Period, timer.Message.Name, timer.Instance, timer.Publish);
             }
 
             return result;
@@ -95,7 +96,7 @@ public sealed partial class GameEventScriptHost
         _observer?.HostReset();
     }
 
-    internal bool SendNamedFromContext(GameEventScriptMessage message, bool publish, long microseconds, string name, bool repeat)
+    internal bool SendNamedFromContext(GameEventScriptMessage message, bool publish, long microseconds, object name, bool repeat)
     {
         if (_random.HasActiveScopeFault || _activeHandler?.Instance is not { } sender) return false;
         if (repeat ? microseconds <= 0 : microseconds < 0) return false;
@@ -150,7 +151,7 @@ public sealed partial class GameEventScriptHost
         _delayed ??= new();
         _delayed.Add(new GesDelayedMessage(timer.Deadline, pending, publish, _initializationInstance, sender, timer));
         _idleSinceMicroseconds = null;
-        _observer?.MessageScheduled(message, timer.Id, timer.Deadline, publish, name, timer.Period);
+        _observer?.MessageScheduled(message, timer.Id, timer.Deadline, publish, TimerName(name), timer.Period);
         if (publish)
         {
             _stepPublishedMessages++;
@@ -167,7 +168,7 @@ public sealed partial class GameEventScriptHost
     }
 
     // Mode 0 cancels one name, mode 1 every named timer and mode 2 also the unnamed delayed sends of the active instance.
-    internal bool CancelFromContext(int mode, string? name)
+    internal bool CancelFromContext(int mode, object? name)
     {
         if (_activeHandler?.Instance is not { } sender) return false;
         var timers = new List<GesNamedTimer>();
@@ -304,7 +305,7 @@ public sealed partial class GameEventScriptHost
         _delayed ??= new();
         _delayed.Add(new GesDelayedMessage(timer.Deadline, new GesPendingMessage(timer.Message, [], [], timer.Id, timer: timer), timer.Publish, timer.Owner, timer.Instance, timer));
         _idleSinceMicroseconds = null;
-        _observer?.MessageScheduled(timer.Message, timer.Id, timer.Deadline, timer.Publish, timer.Name, timer.Period);
+        _observer?.MessageScheduled(timer.Message, timer.Id, timer.Deadline, timer.Publish, TimerName(timer.Name), timer.Period);
     }
 
     // A one-shot firing releases its name when its dispatch starts; a repeating one marks itself as running.
@@ -337,4 +338,7 @@ public sealed partial class GameEventScriptHost
             else UnregisterTimer(timer);
         }
     }
+
+    // A timer name as the reported value: Text for a Text or Tag name, the handle itself for a handle name.
+    private static GesValue TimerName(object name) => name is GesHandle handle ? GesValue.GesHandle(handle) : GesValue.GesText((string)name);
 }

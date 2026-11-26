@@ -41,7 +41,7 @@ public sealed class GesDocument : IEquatable<GesDocument>
             schema = own;
         }
         else throw new ArgumentException("A document root must be a Map or a Record.", nameof(value));
-        if (!GesDocumentFormatter.IsPrintable(in value))
+        if (!GesDocumentFormatter.IsPrintable(in value, handles: true))
             throw new ArgumentException("A document cannot contain External values, Dice rolls below 1, Records without a type name or Handlers of a system endpoint.", nameof(value));
         Value = value;
         Schema = schema;

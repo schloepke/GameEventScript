@@ -204,7 +204,7 @@ enum GesSourceHighlighting {
         case .illegal: return token.text.utf8.first == 0x27 || token.text.utf8.first == 0x22 ? .string : .plain
         case .identifier: return .identifier
         case .message: return .message
-        case .typeName: return .type
+        case .typeName, .handleTypeName: return .type
         case .constantReference: return .constant
         case .tag: return .tag
         case .float, .percentage, .unitNumber, .mathConstantPi, .mathConstantE, .mathConstantTau, .mathConstantInfinity: return .number

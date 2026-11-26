@@ -21,7 +21,7 @@ final class ProfilerTests: XCTestCase {
         _ = try host.load(program)
         _ = try host.start()
         XCTAssertEqual(now, 0)
-        host.receive(try .init(name: "Tick"))
+        try host.receive(.init(name: "Tick"))
         var executed = 0
         while !host.isIdle {
             executed += try host.executeFrame(opcodeBudget: 1).executedOpcodes
@@ -77,7 +77,7 @@ final class ProfilerTests: XCTestCase {
         let host = try GameEventScriptHost.makeBuilder().withProfiler(profiler).build()
         _ = try host.load(program)
         _ = try host.start()
-        host.receive(try .init(name: "Tick"))
+        try host.receive(.init(name: "Tick"))
         _ = try host.runToCompletion()
         XCTAssertTrue(profiler.markdown().contains("[unmapped]"))
         XCTAssertTrue(profiler.markdown().contains("EmitMessage"))

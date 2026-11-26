@@ -296,7 +296,8 @@ portable heterogeneous rank is:
 There is intentionally no rank 7 in the V1 contract. When same-rank supported
 values have no finer ordering, their comparison is equal and stable source
 order is retained. Bytes order lexicographically by unsigned byte, and a
-shorter prefix comes first.
+shorter prefix comes first. **Since: Unreleased:** handles take rank 8 and order
+among themselves by the [handle key order](../Language.md#handles).
 
 ### Highest/lowest slicing
 

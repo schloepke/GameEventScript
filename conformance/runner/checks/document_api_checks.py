@@ -8,7 +8,7 @@ from checks import numeric_checks
 
 CODES = {'invalidKey', 'missingColon', 'duplicateKey', 'unquotedText', 'unknownUnit', 'invalidLiteral', 'unknownType',
          'unexpectedToken', 'unclosedBracket', 'unclosedText', 'invalidSchemaHeader', 'misplacedSchemaHeader',
-         'limitExceeded'}
+         'limitExceeded', 'invalidHandle'}
 LIMITS = {'MaxLiteralInputScalars', 'MaxLiteralDepth', 'MaxLiteralItems', 'MaxRangeItems'}
 FORMAT = {'indentation', 'lineWidth', 'prefixedUnits'}
 

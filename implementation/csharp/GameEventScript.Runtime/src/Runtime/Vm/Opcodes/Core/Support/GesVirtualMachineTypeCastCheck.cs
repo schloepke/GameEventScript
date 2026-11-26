@@ -521,6 +521,7 @@ internal partial class GesVirtualMachine
 
     private static bool IsCustomType(in GesValue value, string typeName)
     {
+        if (typeName.Length > 1 && typeName[0] == '@') return IsHandleType(in value, typeName);
         if (value.ObjectValue is GesExternalStorage externalValue) return string.Equals(externalValue.CustomTypeName, typeName, StringComparison.Ordinal);
         return value.Kind switch
         {

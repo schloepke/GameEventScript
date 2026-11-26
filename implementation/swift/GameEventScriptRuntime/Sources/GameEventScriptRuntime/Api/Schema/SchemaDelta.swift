@@ -145,7 +145,7 @@ private struct GesSchemaFullCopy {
     // The bytes need not start at a byte boundary, so they are checked as they pass, without a buffer.
     private func fullText(_ source: inout GesSchemaReader, _ index: Int, _ target: inout GesSchemaWriter, write: Bool) throws(GesWireError) {
         let node = nodes[index]
-        let count = try source.getBits(node.width, index)
+        let count = node.fixed ? UInt64(node.maxCount) : try source.getBits(node.width, index)
         if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, path(index)) }
         try source.require(Int(count) * 8, index)
         if write { try target.putBits(count, node.width) }
@@ -254,7 +254,7 @@ private struct GesSchemaFullCopy {
         let node = nodes[index]
         switch node.kind {
         case .text:
-            let length = try source.getBits(node.width, index)
+            let length = node.fixed ? UInt64(node.maxCount) : try source.getBits(node.width, index)
             source.seek(source.bitPosition + Int(length) * 8)
         case .list:
             let count = try source.getBits(node.width, index)

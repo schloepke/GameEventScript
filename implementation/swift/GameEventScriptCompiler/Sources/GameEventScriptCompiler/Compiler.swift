@@ -132,6 +132,8 @@ final class GesRoutine {
 final class GesScope {
     var values: [String: Int] = [:]
     var handlers: [String: [String]] = [:]
+    // The declared or static types of bindings, which handle lowering reads.
+    var types: [String: String] = [:]
     let parent: GesScope?
 
     init(_ parent: GesScope? = nil) { self.parent = parent }
@@ -139,12 +141,21 @@ final class GesScope {
     func get(_ name: String) -> Int? { values[name] ?? parent?.get(name) }
 
     func handler(_ name: String) -> [String]? { handlers[name] ?? parent?.handler(name) }
+
+    // The type of a binding; a binding of this scope without one hides the types of outer scopes, as in C#.
+    func type(_ name: String) -> String? {
+        if let type = types[name] { return type }
+        return values[name] == nil ? parent?.type(name) : nil
+    }
 }
 
 final class GesCompiler {
     var modules: [GesModule]
     let sources: [GesSource], options: GesCompileOptions
     let catalog: (any GesExternalTypeCatalog)?
+    // The handle catalog by name without `@`, and the handle types the Program names, imported as HandleType bindings.
+    let handleTypes: [String: GesHandleType]
+    var namedHandleTypes: Set<String> = []
     var moduleName: String
     let constants: [String: GesExpression]
     var definitions: [String: GesDefinition], records: [String: GesRecord]
@@ -156,6 +167,7 @@ final class GesCompiler {
     init(_ validated: GesAstValidator, sources: [GesSource], options: GesCompileOptions) {
         modules = validated.modules
         catalog = validated.catalog
+        handleTypes = validated.handleTypes
         moduleName = validated.moduleName
         constants = validated.constants
         definitions = validated.definitions
@@ -186,6 +198,8 @@ final class GesCompiler {
             return ak == bk ? a.offset < b.offset : ak < bk
         }.map(\.element)
         builder.routines = routines
+        // The validator reported every undeclared type before lowering.
+        for name in namedHandleTypes { builder.handleTypes[name] = (handleTypes[name]!.hash, handleTypes[name]!.stateName) }
         return try builder.build(moduleName: moduleName)
     }
 
@@ -196,7 +210,10 @@ final class GesCompiler {
         for (i, parameter) in definition.parameters.enumerated() {
             scope.values[parameter.name] = i
             r.symbols.append((definition.argumentName(parameter), i, true))
-            if let type = parameter.type { try cast(i, i, type, r) }
+            if let type = parameter.type {
+                scope.types[parameter.name] = type
+                try cast(i, i, type, r)
+            }
         }
         if let value = definition.expression {
             let result = try expression(value, r, scope)
@@ -224,6 +241,7 @@ final class GesCompiler {
             scope.values[field.name] = reg
             r.symbols.append((field.name, reg, false))
         }
+        for field in record.fields { scope.types[field.name] = field.type }
         for field in record.fields {
             r.location = field.location
             let reg = scope.get(field.name)!
@@ -306,6 +324,10 @@ final class GesCompiler {
     }
 
     func cast(_ d: Int, _ value: Int, _ type: String, _ r: GesRoutine, check: Bool = false) throws {
+        if GesHandleTypeNames.isHandleType(type) {
+            if check { handleTypeCheck(d, value, type, r) } else { handleTypeCast(d, value, type, r) }
+            return
+        }
         if ["number", "numeric"].contains(type) {
             r.emit(check ? .checkNumeric : .castNumeric, d, value)
             return

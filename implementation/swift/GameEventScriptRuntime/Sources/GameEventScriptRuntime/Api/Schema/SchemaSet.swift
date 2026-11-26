@@ -36,6 +36,8 @@ public final class GesSchemaSet: @unchecked Sendable {
     private var tagSetSources: [String: String] = [:]
     private var networkSources: [String: String] = [:]
     private var networksByName: [String: GesNetwork] = [:]
+    // Handle types, always written with `@`, have a namespace of their own.
+    private var handles: [String: GesResolvedHandle] = [:]
 
     /// The sources as given, which generated code embeds to convert to and from GES values.
     @_spi(Generator) public let sources: [GesSchemaSource]
@@ -52,10 +54,19 @@ public final class GesSchemaSet: @unchecked Sendable {
         }
         var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
         var networkNames: Set<String> = []
+        var orderedHandles: [GesResolvedHandle] = []
         for file in files {
-            try file.declareNames(&declarations, &messages, &ordered, &tagSets, &networkNames)
+            try file.declareNames(&declarations, &messages, &ordered, &tagSets, &networkNames, &handles, &orderedHandles)
             for name in tagSets.keys where tagSetSources[name] == nil { tagSetSources[name] = file.sourceName }
         }
+        for file in files { try file.resolveHandles(declarations, handles) }
+        let handleTypes = orderedHandles.map { handle in
+            let type = GesHandleType(handle, declarations)
+            handle.publicType = type
+            return type
+        }
+        for type in handleTypes { type.root = type.resolved.root?.publicType }
+        self.handleTypes = handleTypes
         for file in files { try file.resolve(declarations, messages, tagSets) }
         var composed: Set<ObjectIdentifier> = []
         for declaration in ordered where declaration.kind == .schema {
@@ -67,6 +78,7 @@ public final class GesSchemaSet: @unchecked Sendable {
             var path: [GesResolvedDeclaration] = []
             try Self.checkNesting(declaration, &path, &visited)
         }
+        for handle in orderedHandles { try handle.scope.checkHandleState(handle) }
         for file in files { try file.resolveRecordDefaults() }
         for declaration in ordered where declaration.isPacked { try GesSchemaBinder.checkPacked(declaration) }
         for declaration in ordered where declaration.syntax.wireGroup != nil { try GesSchemaBinder.checkEncodable(declaration) }
@@ -130,6 +142,26 @@ public final class GesSchemaSet: @unchecked Sendable {
         }
         return network
     }
+
+    /// The handle types, in source order.
+    public private(set) var handleTypes: [GesHandleType] = []
+
+    /// A handle type by its exact name, compared by Unicode scalars.
+    /// - Parameter name: The handle type's name, with or without the leading `@`.
+    /// - Throws: `GesSchemaError` with `schema.unknownName` when no handle type has that name.
+    public func handleType(_ name: String) throws -> GesHandleType {
+        let plain = name.hasPrefix("@") ? String(name.unicodeScalars.dropFirst()) : name
+        guard let handle = handles[plain], let type = handle.publicType else {
+            throw GesSchemaError(code: Code.unknownName, sourceName: "", line: 0, column: 0, message: "Handle type '@\(plain)' is not declared.")
+        }
+        return type
+    }
+
+    // A handle type by its name without `@`, or nil.
+    func findHandle(_ name: String) -> GesResolvedHandle? { handles[name] }
+
+    // The name of the source that declares a handle type.
+    func handleSourceName(_ name: String) -> String { handles[name]!.scope.sourceName }
 
     /// Checks a GES document against the schema of its header: a type name, or for a file name the one schema of the source
     /// with that name that no other schema of it refers to. `GesSchema.checkDocument` ignores the header.
@@ -330,6 +362,10 @@ final class GesResolvedType {
     // The named tag set a Tag takes its members from, or empty.
     let tagSet: String
     let offset: Int
+    // The handle type of a handle, or the key type of a handle Map.
+    var handle: GesResolvedHandle?
+    // A handle written `@Name~`, which carries its version.
+    var versioned = false
     // The label of a union alternative, or empty.
     var label = ""
     // The `depth` of a List whose element is the schema that declares it: how many records of it nest; 0 without one.
@@ -432,6 +468,8 @@ final class GesFileScope {
     private(set) var constants: [String: GesSchemaValueSyntax] = [:]
     private var own: [GesResolvedDeclaration] = []
     private var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
+    private var ownHandles: [GesResolvedHandle] = []
+    private var handles: [String: GesResolvedHandle] = [:]
     /// The network declarations of this source, resolved once every declaration has its public description.
     private(set) var networkSyntaxes: [GesSchemaDeclarationSyntax] = []
     /// The lets of the schema being resolved, which its fields can name.
@@ -456,7 +494,9 @@ final class GesFileScope {
         _ messages: inout [String: GesResolvedDeclaration],
         _ ordered: inout [GesResolvedDeclaration],
         _ tagSets: inout [String: GesSchemaDeclarationSyntax],
-        _ networks: inout Set<String>
+        _ networks: inout Set<String>,
+        _ handles: inout [String: GesResolvedHandle],
+        _ orderedHandles: inout [GesResolvedHandle]
     ) throws {
         for declaration in syntax.declarations {
             switch declaration.kind {
@@ -480,6 +520,12 @@ final class GesFileScope {
                     throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.")
                 }
                 networkSyntaxes.append(declaration)
+            case .handle:
+                let handle = GesResolvedHandle(name: declaration.name, offset: declaration.offset, scope: self, syntax: declaration)
+                if handles[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "Handle type '@\(declaration.name)' is declared twice.") }
+                handles[declaration.name] = handle
+                orderedHandles.append(handle)
+                ownHandles.append(handle)
             case .constant:
                 if constants[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "Constant '\(declaration.name)' is declared twice.") }
                 constants[declaration.name] = declaration.value
@@ -508,6 +554,55 @@ final class GesFileScope {
                 own.append(resolved)
             }
         }
+    }
+
+    // A handle type's state is a declared, non-abstract schema, a composite's root a handle type that is not composite
+    // itself; its id, part and revision are resolved like field types, without lets.
+    func resolveHandles(_ all: [String: GesResolvedDeclaration], _ handles: [String: GesResolvedHandle]) throws {
+        self.handles = handles
+        lets.removeAll()
+        for handle in ownHandles {
+            let syntax = handle.syntax
+            guard let state = all[syntax.state], state.kind == .schema else {
+                throw error(Code.invalidHandle, syntax.stateOffset, "The state of '@\(handle.name)', ':\(syntax.state)', is no declared schema.")
+            }
+            if state.isAbstract { throw error(Code.invalidHandle, syntax.stateOffset, "The state of '@\(handle.name)', ':\(syntax.state)', is abstract.") }
+            handle.state = state
+            if !syntax.root.isEmpty {
+                let root = try self.handle(syntax.root, syntax.rootOffset)
+                if !root.syntax.root.isEmpty {
+                    throw error(Code.invalidHandle, syntax.rootOffset, "'@\(syntax.root)' is composite itself; composites have one level.")
+                }
+                handle.root = root
+            }
+            let id = try resolveType(syntax.id!, all)
+            handle.id = id
+            if id.kind == .number {
+                for bound in [id.constraints.lower!, id.constraints.upper!] {
+                    if bound.isParameter { throw error(Code.invalidHandle, bound.offset, "A handle type's bounds are literals or constants, never parameters.") }
+                    if bound.value.exponent + String(bound.value.significand.magnitude).count > 18 {
+                        throw error(Code.invalidHandle, bound.offset, "An integer id or part lies within 18 digits.")
+                    }
+                }
+            }
+            if let revision = syntax.revision { handle.revision = try resolveType(revision, all) }
+        }
+    }
+
+    // A state field named `id`, `version` or `root` would collide with the handle's members.
+    func checkHandleState(_ handle: GesResolvedHandle) throws {
+        for name in ["id", "version", "root"] where handle.state.fields.contains(where: { $0.name == name }) || handle.state.computed.contains(where: { $0.name == name }) {
+            throw error(
+                Code.invalidHandle,
+                handle.syntax.stateOffset,
+                "The state ':\(handle.state.name)' of '@\(handle.name)' has a field '\(name)', which collides with the handle's members."
+            )
+        }
+    }
+
+    func handle(_ name: String, _ offset: Int) throws -> GesResolvedHandle {
+        guard let handle = handles[name] else { throw error(Code.unknownName, offset, "Handle type '@\(name)' is not declared.") }
+        return handle
     }
 
     func resolve(_ all: [String: GesResolvedDeclaration], _ messages: [String: GesResolvedDeclaration], _ tagSets: [String: GesSchemaDeclarationSyntax]) throws {
@@ -843,11 +938,12 @@ final class GesFileScope {
             }
             if alternatives.count == 1 { continue }
             // The type name decides: a unit does not distinguish alternatives, and a named tag set is a Tag.
-            let name = resolved.kind == .reference ? ":" + alternative.name : resolved.kind.rawValue
+            // `@Name` and `@Name~` share their name, so one union never holds both.
+            let name = resolved.kind == .reference ? ":" + alternative.name : resolved.kind == .handle ? "@" + alternative.name : resolved.kind.rawValue
             if !seen.insert(name).inserted { throw error(Code.invalidUnion, alternative.offset, "A union repeats a type name; a unit does not distinguish alternatives.") }
             if alternative.constraints.delta != nil { throw error(Code.invalidUnion, alternative.offset, "A union alternative has no delta within.") }
             // Generated code names an alternative after its label or its type, so both must stay apart.
-            var label = resolved.kind == .reference ? alternative.name : resolved.kind.rawValue
+            var label = resolved.kind == .reference || resolved.kind == .handle ? alternative.name : resolved.kind.rawValue
             if !alternative.label.isEmpty { label = alternative.label.prefix(1).uppercased() + alternative.label.dropFirst() }
             if !labels.insert(label).inserted {
                 throw error(Code.duplicateName, alternative.label.isEmpty ? alternative.offset : alternative.labelOffset, "Two alternatives are both named '\(label)'.")
@@ -857,6 +953,27 @@ final class GesFileScope {
     }
 
     private func resolveType(_ type: GesSchemaTypeSyntax, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedType {
+        if type.kind == .handle {
+            let handle = try self.handle(type.name, type.offset)
+            if type.versioned && !handle.versioned {
+                throw error(Code.invalidHandle, type.offset, "'@\(type.name)' has no version, so '@\(type.name)~' does not exist.")
+            }
+            let resolved = GesResolvedType(
+                kind: .handle,
+                unit: .none,
+                tags: nil,
+                max: nil,
+                element: nil,
+                constraints: GesResolvedConstraints(),
+                axes: nil,
+                reference: nil,
+                referenceName: type.name,
+                offset: type.offset
+            )
+            resolved.handle = handle
+            resolved.versioned = type.versioned
+            return resolved
+        }
         // A named tag set stands for a Tag with its members; only its name differs, which belongs to no hash.
         if type.kind == .reference, let tagSet = tagSets[type.name] {
             return GesResolvedType(
@@ -916,6 +1033,7 @@ final class GesFileScope {
             offset: type.offset
         )
         resolved.depth = type.depth
+        if !type.key.isEmpty { resolved.handle = try handle(type.key, type.keyOffset) }
         return resolved
     }
 
@@ -1020,34 +1138,76 @@ enum GesSchemaCanonical {
     }
 
     static func form(_ root: GesResolvedDeclaration) throws -> String {
-        var declarations: [GesResolvedDeclaration] = []
-        var parameters: [String: GesSchemaTypeSyntax] = [:]
-        try reach(root, &declarations, &parameters)
+        var reached = Reached(order: [])
+        try reach(root, &reached)
         var output = "gess1\n"
+        let parameters = reached.parameters
         for name in parameters.keys.sorted(by: { Array($0.utf8).lexicographicallyPrecedes(Array($1.utf8)) }) { output += "parameter \(name) \(parameterKind(parameters[name]!))\n" }
-        for declaration in declarations { write(declaration, &output) }
+        for declaration in reached.order! {
+            switch declaration {
+            case .schema(let schema): write(schema, &output)
+            case .handle(let handle): handle.writeCanonical(&output)
+            }
+        }
         return output
     }
 
+    // The form a handle hash runs over: the handle type's declaration and, for a composite, its root's. A handle type has
+    // no parameters and never reaches its state.
+    static func handleForm(_ handle: GesResolvedHandle) -> String {
+        var output = "gess1\n"
+        handle.writeCanonical(&output)
+        handle.root?.writeCanonical(&output)
+        return output
+    }
+
+    // An id, part or revision type: `Number` with its constraints or `Text max n`.
+    static func writeHandleType(_ type: GesResolvedType, _ output: inout String) { writeType(type, &output) }
+
     static func reach(_ declaration: GesResolvedDeclaration, _ declarations: inout [GesResolvedDeclaration], _ parameters: inout [String: GesSchemaTypeSyntax]) throws {
+        var reached = Reached(declarations: declarations, parameters: parameters, order: nil)
+        try reach(declaration, &reached)
+        declarations = reached.declarations
+        parameters = reached.parameters
+    }
+
+    // A declaration of a canonical form: a schema, message or message set, or a handle type.
+    private enum Reachable {
+        case schema(GesResolvedDeclaration)
+        case handle(GesResolvedHandle)
+    }
+
+    // The schemas, parameters and, for a canonical form, the declarations of schemas and handle types in reach order.
+    private struct Reached {
         var seen: Set<ObjectIdentifier> = []
-        try reach(declaration, &seen, &declarations, &parameters)
+        var declarations: [GesResolvedDeclaration] = []
+        var parameters: [String: GesSchemaTypeSyntax] = [:]
+        var order: [Reachable]?
     }
 
-    private static func reach(_ declaration: GesResolvedDeclaration, _ seen: inout Set<ObjectIdentifier>, _ declarations: inout [GesResolvedDeclaration], _ parameters: inout [String: GesSchemaTypeSyntax]) throws {
-        if !seen.insert(ObjectIdentifier(declaration)).inserted { return }
-        declarations.append(declaration)
+    private static func reach(_ declaration: GesResolvedDeclaration, _ reached: inout Reached) throws {
+        if !reached.seen.insert(ObjectIdentifier(declaration)).inserted { return }
+        reached.declarations.append(declaration)
+        reached.order?.append(.schema(declaration))
         for field in declaration.fields {
-            for type in field.alternatives { try reach(type, field.scope, &seen, &declarations, &parameters) }
+            for type in field.alternatives { try reach(type, field.scope, &reached) }
         }
-        for member in declaration.members { try reach(member, &seen, &declarations, &parameters) }
+        for member in declaration.members { try reach(member, &reached) }
     }
 
-    private static func reach(_ type: GesResolvedType, _ scope: GesFileScope, _ seen: inout Set<ObjectIdentifier>, _ declarations: inout [GesResolvedDeclaration], _ parameters: inout [String: GesSchemaTypeSyntax]) throws {
-        try reachValues(type.constraints, scope, &parameters)
-        for axis in type.axes ?? [] { try reachValues(axis.constraints, scope, &parameters) }
-        for alternative in type.element ?? [] { try reach(alternative, scope, &seen, &declarations, &parameters) }
-        if let reference = type.reference { try reach(reference, &seen, &declarations, &parameters) }
+    // A handle type is written where it is first reached, followed by its root; its state is not reached.
+    private static func reach(_ handle: GesResolvedHandle, _ reached: inout Reached) {
+        if reached.order == nil || !reached.seen.insert(ObjectIdentifier(handle)).inserted { return }
+        reached.order!.append(.handle(handle))
+        if let root = handle.root { reach(root, &reached) }
+    }
+
+    private static func reach(_ type: GesResolvedType, _ scope: GesFileScope, _ reached: inout Reached) throws {
+        try reachValues(type.constraints, scope, &reached.parameters)
+        for axis in type.axes ?? [] { try reachValues(axis.constraints, scope, &reached.parameters) }
+        if let handle = type.handle { reach(handle, &reached) }
+        for alternative in type.element ?? [] { try reach(alternative, scope, &reached) }
+        if let reference = type.reference { try reach(reference, &reached) }
     }
 
     private static func reachValues(_ constraints: GesResolvedConstraints, _ scope: GesFileScope, _ parameters: inout [String: GesSchemaTypeSyntax]) throws {
@@ -1246,6 +1406,18 @@ enum GesSchemaCanonical {
             if let max = type.max { output += " max \(max)" }
             if type.depth > 0 { output += " depth \(type.depth)" }
         case .reference: output += type.referenceName
+        case .handle:
+            output += "@" + type.handle!.name
+            if type.versioned { output += "~" }
+        case .map:
+            guard let key = type.handle else {
+                output += type.kind.rawValue
+                break
+            }
+            output += "Map(@\(key.name) -> "
+            writeUnion(type.element!, &output)
+            output += ")"
+            if let max = type.max { output += " max \(max)" }
         default: output += type.kind.rawValue
         }
     }

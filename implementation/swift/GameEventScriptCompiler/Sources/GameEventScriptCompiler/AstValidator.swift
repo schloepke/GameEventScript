@@ -12,6 +12,8 @@
 final class GesAstValidator {
     let modules: [GesModule]
     let catalog: (any GesExternalTypeCatalog)?
+    // The handle catalog by name without `@`; the validator checks every `@Name` against it.
+    let handleTypes: [String: GesHandleType]
     private(set) var moduleName = ""
     private(set) var constants: [String: GesExpression] = [:]
     // Callables by signature; a predicate wins over a function of the same signature, as in C#.
@@ -22,9 +24,10 @@ final class GesAstValidator {
     // later inference reuses it instead of inferring the callee again; see CallableResults.
     var callResults: [String: String] = [:]
 
-    init(modules: [GesModule], catalog: (any GesExternalTypeCatalog)?, diagnostics: [GesDiagnostic] = []) {
+    init(modules: [GesModule], catalog: (any GesExternalTypeCatalog)?, handleTypes: [String: GesHandleType] = [:], diagnostics: [GesDiagnostic] = []) {
         self.modules = modules
         self.catalog = catalog
+        self.handleTypes = handleTypes
         self.diagnostics = diagnostics
     }
 
@@ -110,7 +113,11 @@ final class GesAstValidator {
     private func validate(_ module: GesModule) {
         for record in module.records {
             for field in record.fields {
-                if !knownType(field.type) { report("validate.invalidTypeConstructor", field.location, symbol: field.type, kind: .type, message: "Unknown type ':\(field.type)' in this program.") }
+                if GesHandleTypeNames.isHandleType(field.type) {
+                    handleTypeName(field.type, field.location)
+                } else if !knownType(field.type) {
+                    report("validate.invalidTypeConstructor", field.location, symbol: field.type, kind: .type, message: "Unknown type ':\(field.type)' in this program.")
+                }
                 for value in [field.minimum, field.maximum, field.computed].compactMap({ $0 }) { expression(value, [:]) }
             }
         }
@@ -135,7 +142,11 @@ final class GesAstValidator {
 
     private func parameterTypeHints(_ d: GesDefinition) {
         for p in d.parameters {
-            if let type = p.type, !parameterType(type) { report("validate.invalidTypeConstructor", p.location, symbol: type, kind: .type, message: "Unknown type ':\(type)' in this program.") }
+            if let type = p.type, GesHandleTypeNames.isHandleType(type) {
+                handleTypeName(type, p.location)
+            } else if let type = p.type, !parameterType(type) {
+                report("validate.invalidTypeConstructor", p.location, symbol: type, kind: .type, message: "Unknown type ':\(type)' in this program.")
+            }
         }
     }
 
@@ -269,7 +280,9 @@ final class GesAstValidator {
     private func namedReferences(_ e: GesExpression, _ types: [String: String]) {
         switch e.kind {
         case .name, .handler: break
-        case .member(let target, _): expression(target, types)
+        case .member(let target, let member):
+            if member == "version" || member == "root", case let type = infer(target, types), GesHandleTypeNames.isHandleType(type) { handleMember(e, member, type) }
+            expression(target, types)
         case .map(let entries): for (_, value) in entries { expression(value, types) }
         case .generated(_, _, let source, _, let predicate, let projection):
             expression(source, types)
@@ -315,9 +328,15 @@ final class GesAstValidator {
             validateSeed(seed, types)
             expression(body, types)
         // A cast or check may name a custom type that is bound only later, such as a record value a message delivers.
-        case .check(let value, _): expression(value, types)
+        case .check(let value, let type):
+            if GesHandleTypeNames.isHandleType(type) { handleTypeName(type, e.location) }
+            expression(value, types)
         case .cast(let value, let type):
             if type == "record" { report("validate.invalidTypeConstructor", e.location, symbol: "record", kind: .type, message: "':Record' is no cast target; use ':Record(type, fields)' to build a Record.") }
+            // A handle has no constructor and no cast; only parameter and field types check handles (specs/Language.md#handles).
+            if GesHandleTypeNames.isHandleType(type) {
+                report("validate.invalidHandleUse", e.location, symbol: type, kind: .type, message: "'as \(type)' is only a parameter or field type; use 'is \(type)' to test a value.")
+            }
             expression(value, types)
         default: preconditionFailure()
         }
@@ -354,12 +373,43 @@ final class GesAstValidator {
         }
     }
 
-    // A timer name is Text or a Tag; statically unknown names are checked at runtime.
+    // A timer name is Text, a Tag or a handle; statically unknown names are checked at runtime.
     private func timerName(_ name: GesExpression, _ types: [String: String]) {
         expression(name, types)
         let type = infer(name, types)
-        if !["text", "tag", "unknown", "other", "nothing"].contains(type) {
-            report("validate.invalidTypeConstructor", name.location, symbol: "Text", kind: .type, message: "Timer name requires Text or Tag.")
+        if !["text", "tag", "unknown", "other", "nothing"].contains(type) && !GesHandleTypeNames.isHandleType(type) {
+            report("validate.invalidTypeConstructor", name.location, symbol: "Text", kind: .type, message: "Timer name requires Text, Tag or a handle.")
+        }
+    }
+
+    // Each alternative of a handle type or union is a declared `@Name`, and `@Name~` names a type with versions.
+    private func handleTypeName(_ typeName: String, _ location: GesSourceLocation) {
+        for alternative in GesHandleTypeNames.alternatives(typeName) {
+            guard GesHandleTypeNames.isHandleType(alternative) else {
+                report("validate.invalidHandleUse", location, symbol: alternative, kind: .type, message: "A union is written only of handle types, not ':\(alternative)'.")
+                continue
+            }
+            let (name, versioned) = GesHandleTypeNames.split(alternative)
+            if let type = handleTypes[name] {
+                if versioned && type.version == .none { report("validate.invalidHandleUse", location, symbol: alternative, kind: .type, message: "'@\(name)~' needs a handle type with versions.") }
+            } else {
+                report("validate.unknownHandleType", location, symbol: "@" + name, kind: .type, message: "Handle type '@\(name)' is not declared.")
+            }
+        }
+    }
+
+    // `h.version` needs a type with versions and `h.root` composites of one root type; other alternatives are not
+    // declared and already reported.
+    private func handleMember(_ e: GesExpression, _ member: String, _ typeName: String) {
+        var versioned = false
+        for alternative in GesHandleTypeNames.alternatives(typeName) {
+            guard let type = handleTypes[GesHandleTypeNames.split(alternative).name] else { return }
+            versioned = versioned || type.version != .none
+        }
+        if member == "version" && !versioned {
+            report("validate.invalidHandleUse", e.location, symbol: typeName, kind: .type, message: "'\(typeName)' has no versions.")
+        } else if member == "root" && typeName.unicodeScalars.contains("|") && GesHandleTypeNames.commonRoot(typeName, handleTypes) == nil {
+            report("validate.invalidHandleUse", e.location, symbol: typeName, kind: .type, message: "The alternatives of '\(typeName)' have no common root type.")
         }
     }
 

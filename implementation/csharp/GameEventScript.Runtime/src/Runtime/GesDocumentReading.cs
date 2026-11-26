@@ -12,9 +12,12 @@ namespace GameEventScript.Runtime;
 internal static class GesDocumentReading
 {
     /// <exception cref="GesDocumentException">The text is not a valid document or exceeds a literal parsing limit.</exception>
-    internal static GesValue Read(string text, out GesDocumentSchema? schema)
+    internal static GesValue Read(string text, out GesDocumentSchema? schema) => Read(text, GesDocumentReader.Read(text), out schema);
+
+    /// <summary>Builds the value of a document whose text the Syntax reader has already read into <paramref name="syntax"/>.</summary>
+    /// <exception cref="GesDocumentException">The text is not a valid document or exceeds a literal parsing limit.</exception>
+    internal static GesValue Read(string text, GesDocumentSyntax syntax, out GesDocumentSchema? schema)
     {
-        var syntax = GesDocumentReader.Read(text);
         if (syntax.Diagnostic is { } diagnostic)
             throw Error(text, diagnostic.Code, diagnostic.Start, diagnostic.LimitName, diagnostic.LimitName is null ? null : diagnostic.LimitValue);
         schema = syntax.Schema switch

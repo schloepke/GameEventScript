@@ -59,11 +59,12 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
     {
         _names = names;
         _values = values;
-        NestingDepth = GesValue.ContainerDepth(values);
+        ContainerWord = GesValue.ContainerDepth(values);
     }
 
-    // A Message is one level deeper than its deepest argument (specs/HostRuntime.md#value-nesting).
-    internal long NestingDepth { get; }
+    // The numeric word of a Message value: one level deeper than its deepest argument
+    // (specs/HostRuntime.md#value-nesting), with GesValue.HoldsHandleBit when an argument holds a handle.
+    internal long ContainerWord { get; }
 
     /// <summary>
     /// Gets the number of positional and named arguments.

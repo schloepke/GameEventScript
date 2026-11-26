@@ -136,8 +136,8 @@ enum GesHandleStates {
     private static func checkedState(_ type: GesHandleType, _ text: String, _ symbol: String) throws -> GesValue {
         let declaration: GesResolvedDeclaration = type.resolved.state
         do {
-            let value = try GesDocumentReading.read(text).0
             let syntax = GesDocumentReader.read(text)
+            let value = try GesDocumentReading.read(syntax).0
             var named: String?
             if case .type(let name) = syntax.schema { named = name }
             guard let named, GesText.scalarEqual(named, type.stateName) else {
@@ -157,24 +157,56 @@ enum GesHandleStates {
         GesRuntimeError(diagnostic: .init(phase: .runtime, code: code, message: message, symbol: symbol, technicalDetails: inner.map { String(describing: $0) }))
     }
 
-    // Values that hold a handle with a ref, which never enter the VM.
-    static func holdsRef(_ value: GesValue) -> Bool { holdsRef(value, 0) }
+    // Values that hold a handle with a ref, which never enter the VM. The walk enters only containers that hold a handle;
+    // beyond recursionDepth levels it continues on an explicit stack, so no nesting escapes the check.
+    static func holdsRef(_ value: GesValue) -> Bool {
+        var none: [GesValue]?
+        return value.mayHoldHandle && holdsRef(value, 0, &none)
+    }
 
-    private static func holdsRef(_ value: GesValue, _ depth: Int) -> Bool {
+    private static let recursionDepth = 256
+
+    // Checks the value and its children at once, or pushes the children onto `deep` when it is given.
+    private static func holdsRef(_ value: GesValue, _ depth: Int, _ deep: inout [GesValue]?) -> Bool {
         switch value.kind {
         case .handle:
             return !value.handleValue!.ref.isNothing
-        case .list where depth < 256:
-            return value.asList.contains { holdsRef($0, depth + 1) }
-        case .message where depth < 256:
-            return value.messageValue!.arguments.values.contains { holdsRef($0, depth + 1) }
-        case .map where depth < 256, .record where depth < 256:
+        case .list:
+            for item in value.asList where childHoldsRef(item, depth, &deep) { return true }
+            return false
+        case .message:
+            for argument in value.messageValue!.arguments.values where childHoldsRef(argument, depth, &deep) { return true }
+            return false
+        case .map, .record:
             let map = value.asMap!
-            for index in 0..<map.length where map.handleKey(at: index).map({ !$0.ref.isNothing }) == true || holdsRef(map.value(at: index), depth + 1) { return true }
+            for index in 0..<map.length where map.handleKey(at: index).map({ !$0.ref.isNothing }) == true || childHoldsRef(map.value(at: index), depth, &deep) {
+                return true
+            }
             return false
         default:
             return false
         }
+    }
+
+    private static func childHoldsRef(_ child: GesValue, _ depth: Int, _ deep: inout [GesValue]?) -> Bool {
+        if !child.mayHoldHandle { return false }
+        if deep != nil {
+            deep!.append(child)
+            return false
+        }
+        if depth + 1 < recursionDepth {
+            var none: [GesValue]?
+            return holdsRef(child, depth + 1, &none)
+        }
+        return deepHoldsRef(child)
+    }
+
+    private static func deepHoldsRef(_ value: GesValue) -> Bool {
+        var pending: [GesValue]? = [value]
+        while let current = pending!.popLast() {
+            if holdsRef(current, 0, &pending) { return true }
+        }
+        return false
     }
 
     // The first message argument that holds a ref, or -1.

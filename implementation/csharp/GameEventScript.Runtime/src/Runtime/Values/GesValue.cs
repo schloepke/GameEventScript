@@ -916,18 +916,34 @@ public partial struct GesValue : IEquatable<GesValue>
 
     // Lists, Maps, Records and Messages keep their nesting depth in the numeric word, which they use for nothing else, so
     // the depth of a new container follows from its items without walking them (specs/HostRuntime.md#value-nesting).
-    internal readonly long NestingDepth => Kind is List or Map or Custom or GesBytecodeTypeKind.Message ? IntegerValue : 0;
+    // HoldsHandleBit of that word marks a container with a handle anywhere inside, so the check for handle refs skips all
+    // others without walking them.
+    internal const long HoldsHandleBit = 1L << 62;
 
-    internal static long ContainerDepth(GesValue[] items)
+    internal readonly long NestingDepth => Kind is List or Map or Custom or GesBytecodeTypeKind.Message ? IntegerValue & ~HoldsHandleBit : 0;
+
+    // Whether the value is a handle or a container with a handle inside.
+    internal readonly bool MayHoldHandle => HandleBits != 0;
+
+    private readonly long HandleBits => Kind switch
+    {
+        GesBytecodeTypeKind.Handle => HoldsHandleBit,
+        List or Map or Custom or GesBytecodeTypeKind.Message => IntegerValue & HoldsHandleBit,
+        _ => 0,
+    };
+
+    internal static long ContainerDepth(GesValue[] items, bool handleKeys = false)
     {
         long deepest = 0;
+        var handles = handleKeys ? HoldsHandleBit : 0;
         for (var i = 0; i < items.Length; i++)
         {
             var depth = items[i].NestingDepth;
             if (depth > deepest) deepest = depth;
+            handles |= items[i].HandleBits;
         }
 
-        return deepest + 1;
+        return (deepest + 1) | handles;
     }
 
     internal void SetList(GesValue[] list)
@@ -944,7 +960,7 @@ public partial struct GesValue : IEquatable<GesValue>
         Kind = Map;
         Flags = valueMap.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
-        IntegerValue = ContainerDepth(valueMap.ValueList);
+        IntegerValue = ContainerDepth(valueMap.ValueList, valueMap.HasHandleKeys);
         ObjectValue = valueMap;
     }
 
@@ -953,7 +969,7 @@ public partial struct GesValue : IEquatable<GesValue>
         Kind = Custom;
         Flags = record.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
-        IntegerValue = ContainerDepth(record.ValueList);
+        IntegerValue = ContainerDepth(record.ValueList, record.HasHandleKeys);
         ObjectValue = new GesCustomObject(typeName, record);
     }
 
@@ -1042,7 +1058,7 @@ public partial struct GesValue : IEquatable<GesValue>
         Kind = GesBytecodeTypeKind.Message;
         Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
-        IntegerValue = message.Arguments.NestingDepth;
+        IntegerValue = message.Arguments.ContainerWord;
         ObjectValue = message;
     }
 

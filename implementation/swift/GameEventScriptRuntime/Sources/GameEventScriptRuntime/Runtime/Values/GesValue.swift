@@ -292,20 +292,37 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     // Lists, Maps, Records and Messages keep their nesting depth in the numeric word, which they use for nothing else, so
     // the depth of a new container follows from its items without walking them (specs/HostRuntime.md#value-nesting).
+    // holdsHandleBit of that word marks a container with a handle anywhere inside, so the check for handle refs skips all
+    // others without walking them.
+    static let holdsHandleBit: UInt64 = 1 << 62
+
     var nestingDepth: Int64 {
         switch storageKind {
-        case .list, .map, .record, .message: return Int64(bitPattern: numericBits)
+        case .list, .map, .record, .message: return Int64(bitPattern: numericBits & ~Self.holdsHandleBit)
         default: return 0
         }
     }
 
-    static func containerDepth(_ items: [GesValue]) -> Int64 {
+    // Whether the value is a handle or a container with a handle inside.
+    var mayHoldHandle: Bool { handleBits != 0 }
+
+    private var handleBits: UInt64 {
+        switch storageKind {
+        case .handle: return Self.holdsHandleBit
+        case .list, .map, .record, .message: return numericBits & Self.holdsHandleBit
+        default: return 0
+        }
+    }
+
+    static func containerDepth(_ items: [GesValue], handleKeys: Bool = false) -> Int64 {
         var deepest: Int64 = 0
+        var handles = handleKeys ? holdsHandleBit : 0
         for item in items {
             let depth = item.nestingDepth
             if depth > deepest { deepest = depth }
+            handles |= item.handleBits
         }
-        return deepest + 1
+        return Int64(bitPattern: UInt64(bitPattern: deepest + 1) | handles)
     }
 
     mutating func setList(_ value: [GesValue]) {
@@ -317,7 +334,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     mutating func setMap(_ map: GesValueMap) {
         setObject(.map, GesValueObject(map), hasValue: map.length != 0)
-        numericBits = UInt64(bitPattern: Self.containerDepth(map.values))
+        numericBits = UInt64(bitPattern: Self.containerDepth(map.values, handleKeys: !map.handleStorage.isEmpty))
     }
 
     mutating func setRecord(typeName: String, entries: [GesMapEntry]) {
@@ -326,7 +343,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     mutating func setRecord(typeName: String, fields: GesValueMap) {
         setObject(.record, GesValueObject(GesRecordPayload(name: typeName, fields: fields)), hasValue: fields.length != 0)
-        numericBits = UInt64(bitPattern: Self.containerDepth(fields.values))
+        numericBits = UInt64(bitPattern: Self.containerDepth(fields.values, handleKeys: !fields.handleStorage.isEmpty))
     }
 
     mutating func setIntegerRange(from: Int64, to: Int64, step: Int64 = 1) {
@@ -355,7 +372,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     mutating func setMessage(_ value: GameEventScriptMessage) {
         setObject(.message, value.storage)
-        numericBits = UInt64(bitPattern: value.storage.nestingDepth)
+        numericBits = UInt64(bitPattern: value.storage.containerWord)
     }
 
     mutating func setHandler(_ value: GesMessageSignature) { setObject(.handler, value.storage) }

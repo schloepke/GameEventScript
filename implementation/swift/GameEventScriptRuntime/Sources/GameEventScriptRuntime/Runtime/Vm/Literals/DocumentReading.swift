@@ -8,8 +8,10 @@ struct GesDocumentReading {
     private var nodes: [GesLiteralNode] = []
 
     /// Throws GesDocumentError for invalid text or an exceeded literal parsing limit.
-    static func read(_ text: String) throws -> (GesValue, GesDocumentSchema?) {
-        let syntax = GesDocumentReader.read(text)
+    static func read(_ text: String) throws -> (GesValue, GesDocumentSchema?) { try read(GesDocumentReader.read(text)) }
+
+    /// Builds the value of a document whose text the Syntax reader has already read; throws as `read(_:)`.
+    static func read(_ syntax: GesDocumentSyntax) throws -> (GesValue, GesDocumentSchema?) {
         if let diagnostic = syntax.diagnostic {
             throw error(syntax, diagnostic.code, diagnostic.start, limitName: diagnostic.limitName, limit: diagnostic.limitName == nil ? nil : diagnostic.limitValue)
         }

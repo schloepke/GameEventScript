@@ -160,8 +160,8 @@ internal static class GesHandleStates
         var declaration = type.Resolved.State;
         try
         {
-            var value = GesDocumentReading.Read(text, out _);
             var syntax = GesDocumentReader.Read(text);
+            var value = GesDocumentReading.Read(text, syntax, out _);
             var named = syntax.Schema == GesDocumentSchemaSyntax.Type ? syntax.SchemaName : null;
             if (!string.Equals(named, type.StateName, StringComparison.Ordinal))
                 throw Fault(GesDiagnosticCodes.RuntimeInvalidHandleState, $"The state document of {symbol} does not name :{type.StateName}.", symbol);
@@ -183,36 +183,61 @@ internal static class GesHandleStates
         => new(new GesDiagnostic(GesDiagnosticPhase.Runtime, code, message, Symbol: symbol,
             TechnicalDetails: inner is null ? null : GesRuntimeExceptionText.Describe(inner)), inner);
 
-    // Values that hold a handle with a ref, which never enter the VM.
-    internal static bool HoldsRef(GesValue value) => HoldsRef(value, 0);
+    // Values that hold a handle with a ref, which never enter the VM. The walk enters only containers that hold a handle;
+    // beyond RecursionDepth levels it continues on an explicit stack, so no nesting escapes the check.
+    internal static bool HoldsRef(GesValue value) => value.MayHoldHandle && HoldsRef(value, 0, null);
 
-    private static bool HoldsRef(GesValue value, int depth)
+    private const int RecursionDepth = 256;
+
+    // Checks the value and its children at once, or pushes the children onto `deep` when it is given.
+    private static bool HoldsRef(GesValue value, int depth, Stack<GesValue>? deep)
     {
         switch (value.ValueKind)
         {
             case GesBytecodeTypeKind.Handle:
                 return value.Handle is { } handle && !handle.Ref.IsNothing;
-            case GesBytecodeTypeKind.List when depth < 256:
+            case GesBytecodeTypeKind.List:
             {
                 var items = value.AsList();
                 for (var index = 0; index < items.Length; index++)
-                    if (HoldsRef(items[index], depth + 1)) return true;
+                    if (ChildHoldsRef(items[index], depth, deep)) return true;
                 return false;
             }
-            case GesBytecodeTypeKind.Message when depth < 256 && value.ObjectValue is GameEventScriptMessage message:
+            case GesBytecodeTypeKind.Message when value.ObjectValue is GameEventScriptMessage message:
             {
                 var arguments = message.Arguments;
                 for (var index = 0; index < arguments.Count; index++)
-                    if (HoldsRef(arguments.ValueAt(index), depth + 1)) return true;
+                    if (ChildHoldsRef(arguments.ValueAt(index), depth, deep)) return true;
                 return false;
             }
-            case GesBytecodeTypeKind.Map or GesBytecodeTypeKind.Custom when depth < 256 && value.AsMap() is { } map:
+            case GesBytecodeTypeKind.Map or GesBytecodeTypeKind.Custom when value.AsMap() is { } map:
                 for (var index = 0; index < map.Length; index++)
-                    if (map.HandleKey(index) is { Ref.IsNothing: false } || HoldsRef(map.ValueAt(index), depth + 1)) return true;
+                    if (map.HandleKey(index) is { Ref.IsNothing: false } || ChildHoldsRef(map.ValueAt(index), depth, deep)) return true;
                 return false;
             default:
                 return false;
         }
+    }
+
+    private static bool ChildHoldsRef(GesValue child, int depth, Stack<GesValue>? deep)
+    {
+        if (!child.MayHoldHandle) return false;
+        if (deep is not null)
+        {
+            deep.Push(child);
+            return false;
+        }
+
+        return depth + 1 < RecursionDepth ? HoldsRef(child, depth + 1, null) : DeepHoldsRef(child);
+    }
+
+    private static bool DeepHoldsRef(GesValue value)
+    {
+        var pending = new Stack<GesValue>();
+        pending.Push(value);
+        while (pending.TryPop(out var current))
+            if (HoldsRef(current, 0, pending)) return true;
+        return false;
     }
 
     // The first message argument that holds a ref, or -1.

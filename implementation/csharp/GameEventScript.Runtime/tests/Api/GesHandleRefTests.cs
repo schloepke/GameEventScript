@@ -8,8 +8,8 @@ using GameEventScript.Runtime.Values;
 namespace GameEventScript.Tests.Native.Api;
 
 // Refs never enter the VM (specs/HostRuntime.md#handles). Markdown Conformance covers Receive and the answers of
-// ResolveRef (runtime/handles.md); these tests keep what it cannot reach: native Emit and Publish, the default
-// ResolveRef, a host without a resolver, identity and the preserved inner exception.
+// ResolveRef (runtime/handles.md); these tests keep what it cannot reach: native Emit and Publish, native values nested
+// beyond any script depth, the default ResolveRef, a host without a resolver, identity and the preserved inner exception.
 [TestClass]
 public sealed class GesHandleRefTests
 {
@@ -41,6 +41,23 @@ public sealed class GesHandleRefTests
         Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
 
         CollectionAssert.AreEqual(new[] { GesWireException.UnresolvedRef, GesWireException.UnresolvedRef }, codes);
+    }
+
+    [TestMethod]
+    public void ReceiveRejectsARefAtAnyNestingDepth()
+    {
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
+        GesValue Nested(GesValue inner, int depth)
+        {
+            for (var level = 0; level < depth; level++) inner = GesValue.GesList([GesValue.GesInteger(level), inner]);
+            return inner;
+        }
+
+        GameEventScriptMessage Deep(GesValue inner) => GameEventScriptMessage.Create("Deep", [new GesMessageArgument("value", Nested(inner, 1000))]);
+
+        Assert.AreEqual(GesWireException.UnresolvedRef, Assert.ThrowsExactly<GesWireException>(() => host.Receive(Deep(GesValue.GesHandle(Live)))).Code);
+        host.Receive(Deep(GesValue.GesHandle(GesHandle.Parse("@Drone:7~3"))));
+        host.Receive(Deep(GesValue.GesInteger(1)));
     }
 
     [TestMethod]

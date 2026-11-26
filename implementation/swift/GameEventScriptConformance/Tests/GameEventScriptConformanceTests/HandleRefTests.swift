@@ -6,8 +6,8 @@ import GameEventScriptSwiftBridge
 import XCTest
 
 /// Refs never enter the VM (specs/HostRuntime.md#handles). Markdown Conformance covers `receive` and the answers of
-/// `resolveRef` (runtime/handles.md); these tests keep what it cannot reach: native emit and publish, the default
-/// `resolveRef`, a host without a resolver, identity and the preserved underlying error.
+/// `resolveRef` (runtime/handles.md); these tests keep what it cannot reach: native emit and publish, native values nested
+/// beyond any script depth, the default `resolveRef`, a host without a resolver, identity and the preserved underlying error.
 final class HandleRefTests: XCTestCase {
     private static let schemas =
         "schema :DroneState as { altitude: :Number integer between 0 and 1000 }\n"
@@ -42,6 +42,22 @@ final class HandleRefTests: XCTestCase {
         XCTAssertEqual(try host.runToCompletion().state, .completed)
 
         XCTAssertEqual(codes, [GesWireError.unresolvedRef, GesWireError.unresolvedRef])
+    }
+
+    func testReceiveRejectsARefAtAnyNestingDepth() throws {
+        let host = try GameEventScriptHost.makeBuilder().build().startForTest()
+
+        func deep(_ inner: GesValue) throws -> GameEventScriptMessage {
+            var value = inner
+            for level in 0..<1000 { value = .list([.integer(Int64(level)), value]) }
+            return try GameEventScriptMessage(name: "Deep", arguments: [.init(name: "value", value: value)])
+        }
+
+        XCTAssertThrowsError(try host.receive(deep(.handle(Self.live())))) { error in
+            XCTAssertEqual((error as? GesWireError)?.code, GesWireError.unresolvedRef)
+        }
+        _ = try host.receive(deep(.handle(GesHandle(parsing: "@Drone:7~3"))))
+        _ = try host.receive(deep(.integer(1)))
     }
 
     func testResolveRefAsksOnlyForRefsAndReturnsNilForAnUnknownRef() throws {

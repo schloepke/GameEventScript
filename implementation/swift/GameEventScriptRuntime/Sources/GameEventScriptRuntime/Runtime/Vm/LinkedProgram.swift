@@ -136,7 +136,7 @@ final class GesLinkedProgram {
             let name = program.stringConstants[Int(binding.name)]
             var bound: GesHandleBinding?
             if let registered = handleResolvers?[name] {
-                if registered.type.hash != GesProgramDumper.handleTypeHash(binding) {
+                if registered.type.linkHash != GesProgramDumper.handleTypeHash(binding) {
                     throw GesDynamicLinkError(
                         .init(
                             phase: .link,

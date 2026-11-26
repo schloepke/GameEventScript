@@ -9,8 +9,12 @@ namespace GameEventScript.Generator;
 
 // The Swift model type of a handle type: a struct `<Name>Handle` that holds the id, or a composite's root and part, and the
 // version where the type has one. Equality, hashing and order use the identity only, a Text id by its Unicode scalars rather
-// than by String's canonical equivalence; the initializer requires the declared range or length. It converts to and from
-// GesHandle, whose text form it writes and reads as Codable.
+// than by String's canonical equivalence. Like the C# struct, the public initializers throw GesApiError for an id or part
+// outside the declared range or length and for a runtime handle of another form, and none creates a default handle; the
+// generated code builds handles it already checked through internal unchecked initializers. It converts to and from
+// GesHandle, whose canonical text form it writes and reads as Codable. Swift's synthesized equality and hashing of a
+// Dictionary already compare and hash entries independent of order, so models need no counterpart of the C# MapEquals and
+// MapHash helpers.
 internal static partial class GesSwiftModelEmitter
 {
     // Also the wire code's handle type, which needs only the Runtime; `handles` holds the composite's root.
@@ -66,14 +70,21 @@ internal static partial class GesSwiftModelEmitter
         code.Line("///");
         code.Line("/// - Parameters:");
         if (handle.IsComposite) code.Line("///   - root: The root, whose version is the handle's.");
-        code.Line($"///   - {keyName}: The {keyName}, {KeyDescription(key)}; another value is a precondition failure.");
+        code.Line($"///   - {keyName}: The {keyName}, {KeyDescription(key)}.");
         if (version is not null && !handle.IsComposite) code.Line("///   - version: The version, or nil for none.");
+        code.Line($"/// - Throws: `GesApiError.invalidArgument` when the {keyName} is out of its declared {(key.IsText ? "length" : "range")}.");
         var parameters = handle.IsComposite ? $"root: {rootName}, part: {keyType}" : version is null ? $"id: {keyType}" : $"id: {keyType}, version: {version}? = nil";
-        code.Open($"{access}init({parameters}) {{");
-        var bound = $"The {keyName} of a @{handle.Name} is out of its declared {(key.IsText ? "length" : "range")}.";
+        code.Open($"{access}init({parameters}) throws(GesApiError) {{");
+        var bound = GesSchemaPlanner.Literal($"The {keyName} of a @{handle.Name} is out of its declared {(key.IsText ? "length" : "range")}.", true);
         code.Line(key.IsText
-            ? $"precondition({keyName}.utf8.count <= {Number(key.MaxLength)}, {GesSchemaPlanner.Literal(bound, true)})"
-            : $"precondition({keyName} >= {Number(key.Minimum)} && {keyName} <= {Number(key.Maximum)}, {GesSchemaPlanner.Literal(bound, true)})");
+            ? $"guard {keyName}.utf8.count <= {Number(key.MaxLength)} else {{ throw .invalidArgument({bound}) }}"
+            : $"guard {keyName} >= {Number(key.Minimum)} && {keyName} <= {Number(key.Maximum)} else {{ throw .invalidArgument({bound}) }}");
+        code.Line(handle.IsComposite ? "self.init(uncheckedRoot: root, part: part)" : version is null ? "self.init(uncheckedId: id)" : "self.init(uncheckedId: id, version: version)");
+        code.Close();
+        code.Blank();
+        code.Line($"// A handle whose {keyName} the generated code already checked.");
+        var uncheckedParameters = handle.IsComposite ? $"uncheckedRoot root: {rootName}, part: {keyType}" : version is null ? $"uncheckedId id: {keyType}" : $"uncheckedId id: {keyType}, version: {version}? = nil";
+        code.Open($"init({uncheckedParameters}) {{");
         if (handle.IsComposite) code.Line("self.root = root");
         code.Line($"self.{keyName} = {keyName}");
         if (version is not null && !handle.IsComposite) code.Line("self.version = version");
@@ -82,7 +93,7 @@ internal static partial class GesSwiftModelEmitter
         {
             code.Blank();
             code.Line("/// Returns the handle with the same identity and no version.");
-            code.Line($"{access}func withoutVersion() -> {name} {{ {name}({(handle.IsComposite ? "root: root.withoutVersion(), part: part" : "id: id")}) }}");
+            code.Line($"{access}func withoutVersion() -> {name} {{ {name}({(handle.IsComposite ? "uncheckedRoot: root.withoutVersion(), part: part" : "uncheckedId: id")}) }}");
         }
 
         var equal = key.IsText ? $"left.{keyName}.utf8.elementsEqual(right.{keyName}.utf8)" : $"left.{keyName} == right.{keyName}";
@@ -111,31 +122,40 @@ internal static partial class GesSwiftModelEmitter
         code.Line($"/// The text form, such as `{Example(handle, root)}`.");
         code.Line($"{access}var description: String {{ toHandle().description }}");
         code.Blank();
+        code.Line("// Cannot throw: the type name is valid and the id, part and version have valid kinds.");
         code.Line("/// Converts to a runtime handle.");
         if (handle.IsComposite) code.Line($"{access}func toHandle() -> GesHandle {{ try! GesHandle(typeName: {typeName}, root: root.toHandle(), part: {KeyValue(key, "part")}) }}");
         else if (version is null) code.Line($"{access}func toHandle() -> GesHandle {{ try! GesHandle(typeName: {typeName}, id: {KeyValue(key, "id")}) }}");
         else code.Line($"{access}func toHandle() -> GesHandle {{ try! GesHandle(typeName: {typeName}, id: {KeyValue(key, "id")}, version: {VersionValue(handle.Version)}) }}");
         code.Blank();
-        code.Line("/// Converts a runtime handle of this type, or returns nil for a handle of another type or out of its declared form.");
-        code.Open($"{access}init?(_ handle: GesHandle) {{");
+        code.Line("/// Converts a runtime handle of this type.");
+        code.Line("///");
+        code.Line("/// - Throws: `GesApiError.invalidArgument` for a handle of another type or out of its declared form.");
+        code.Open($"{access}init(_ handle: GesHandle) throws(GesApiError) {{");
+        code.Line($"guard let value = {name}(matching: handle) else {{ throw .invalidArgument({GesSchemaPlanner.Literal("The handle is no @" + handle.Name + ".", true)}) }}");
+        code.Line("self = value");
+        code.Close();
+        code.Blank();
+        code.Line("// A runtime handle of this type, or nil for a handle of another type or out of its declared form.");
+        code.Open("init?(matching handle: GesHandle) {");
         code.Line($"guard handle.typeName == {typeName}, {(handle.IsComposite ? "" : "!")}handle.isComposite else {{ return nil }}");
         if (handle.IsComposite)
         {
             var rootHandle = root!.Version == GesHandleVersionKind.None
                 ? $"GesHandle(typeName: {GesSchemaPlanner.Literal(root.Name, true)}, id: handle.id)"
                 : $"GesHandle(typeName: {GesSchemaPlanner.Literal(root.Name, true)}, id: handle.id, version: handle.version)";
-            code.Line($"guard let rootHandle = try? {rootHandle}, let root = {rootName}(rootHandle) else {{ return nil }}");
+            code.Line($"guard let rootHandle = try? {rootHandle}, let root = {rootName}(matching: rootHandle) else {{ return nil }}");
             KeyRead(code, key, "handle.part", "part");
-            code.Line("self.init(root: root, part: part)");
+            code.Line("self.init(uncheckedRoot: root, part: part)");
         }
         else
         {
             KeyRead(code, key, "handle.id", "id");
-            if (version is null) code.Line("self.init(id: id)");
+            if (version is null) code.Line("self.init(uncheckedId: id)");
             else
             {
                 VersionRead(code, handle.Version);
-                code.Line("self.init(id: id, version: version)");
+                code.Line("self.init(uncheckedId: id, version: version)");
             }
         }
 
@@ -147,7 +167,7 @@ internal static partial class GesSwiftModelEmitter
         code.Open($"{access}init(from decoder: any Decoder) throws {{");
         code.Line("let container = try decoder.singleValueContainer()");
         code.Line("let text = try container.decode(String.self)");
-        code.Line($"guard let handle = try? GesHandle(parsing: text), let value = {name}(handle) else {{ throw DecodingError.dataCorruptedError(in: container, debugDescription: {GesSchemaPlanner.Literal("The text is no @" + handle.Name + ".", true)}) }}");
+        code.Line($"guard let handle = try? GesHandle(parsing: text), let value = {name}(matching: handle) else {{ throw DecodingError.dataCorruptedError(in: container, debugDescription: {GesSchemaPlanner.Literal("The text is no @" + handle.Name + ".", true)}) }}");
         code.Line("self = value");
         code.Close();
         code.Blank();
@@ -159,7 +179,7 @@ internal static partial class GesSwiftModelEmitter
         code.Blank();
         code.Line("// A GES handle value of this type; a field without a version drops it, one with a version requires it.");
         code.Open($"static func read(_ value: GesValue, versioned: Bool) -> {name}? {{");
-        code.Line($"guard let handle = value.handleValue, let result = {name}(handle) else {{ return nil }}");
+        code.Line($"guard let handle = value.handleValue, let result = {name}(matching: handle) else {{ return nil }}");
         if (version is null) code.Line("return result");
         else
         {

@@ -21,11 +21,26 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   (`~#live`), product JSON `Handle` objects, wire encodings of ids and versions, network `owns` routes, generated
   `<Name>Handle` model types, `GesHandle`, `GesHash20`/`GesHash32`, `WithHandleTypes`, `WithHandleResolver`,
   `ResolveRef` and the `HandleType` import (0x22) (specs/PublicApi.md#handle-api).
-- Both CLIs take `--handles <schema.gess>` (repeatable, with file-name patterns) for `compile`, `check` and `run`: the
-  handle types the schema sources declare reach every compilation, including scenarios, console input, `:load`,
-  `:reload` and `:edit`. The CLI registers no resolver, so a Program that reads handle state fails to load with
+- Both CLIs take `--schema <file.gess>` (repeatable, with file-name patterns) for `compile`, `check` and `run`: the
+  files are read as one schema set, and the handle types it declares reach every compilation, including scenarios,
+  console input, `:load`, `:reload` and `:edit`. With `--schema`, every handle type a `.gesb` input imports must match
+  the schemas, or loading fails with `link.mismatchedHandleType`; `:reload` reads the schema files again and keeps the
+  session if they fail. The CLI registers no resolver, so a Program that reads handle state fails to load with
   `link.missingHandleResolver`. The guide [Refer to host objects with handles](docs/guide/Handles.md) walks through
   schema, script, resolvers in C# and Swift, text form, documents and refs.
+- Handle resolution details (specs/HostRuntime.md#handles): a state read without a static handle type resolves through
+  the type's resolver when one is registered and otherwise reads Nothing; a resolver of a revision or hash type that
+  passes no version answers for the carried version, and a handle without one fails with `runtime.invalidHandleState`,
+  as does a version passed for an unversioned type; fatal runtime failures of a resolver propagate unchanged.
+  `ResolveRef` returns no handle (C# null, Swift nil) for an unknown ref, and resolvers of types without refs need not
+  implement it. Programs link handle types by `LinkHash` (Swift `linkHash`), which also covers the state schema's
+  hash. Documents reject a version or ref on a handle in an unpinned `@Name` field with `document.unexpectedVersion`,
+  values in handle Maps take the union alternative the check chose, and schema state with a free `:Map` or `:List`
+  field reads as unchecked data. In the text form a part that starts with `/` or contains `//` is quoted, `~#name`
+  takes tag characters and every other ref is quoted Text (`~'1.0'`). Generated Swift handle types throw
+  `GesApiError.invalidArgument` for an id or part out of range, and `init(_ handle: GesHandle)` throws for another
+  type or form, like C# `FromHandle`. Markdown Conformance scripts ref answers, `ResolveRef` results and input
+  rejections such as `wire.unresolvedRef` (specs/Conformance/MarkdownFormat.md#handle-catalogs).
 - Named timers and heartbeats: `emit after 30s named 'timeout' GiveUp()` names a delayed send so that a later send
   of the same name replaces it, and `emit every 1s named 'beat' Heartbeat()` (also `publish`) repeats one period after
   each completed firing. `cancel key`, `cancel named` and `cancel all` remove timers of the executing Program instance

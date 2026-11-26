@@ -219,7 +219,7 @@ internal sealed class GesLinkedProgram
             GesHandleBinding? binding = null;
             if (resolvers is not null && resolvers.TryGetValue(name, out var registered))
             {
-                if (registered.Type.Hash != GesProgramDumper.HandleTypeHash(bind))
+                if (registered.Type.LinkHash != GesProgramDumper.HandleTypeHash(bind))
                     throw LinkError(GesDiagnosticCodes.LinkMismatchedHandleType,
                         $"The registered handle type @{name} differs from the one the Program was compiled with.", name);
                 binding = registered;

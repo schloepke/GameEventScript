@@ -387,7 +387,7 @@ gesBlock: expect
 error:
   phase: validate
   code: validate.invalidHandleUse
-  symbol: "number"
+  symbol: ":Number"
   sourceName: union-with-other-type.ges
   line: 2
   column: 9
@@ -657,9 +657,53 @@ errors:
 
 ---
 
+## Test: the host's handle type must have the compiled state schema
+
+> **Since: Unreleased**
+
+The link hash covers the state schema: a host whose `:Contact` has another field range fails loading `@Target` with `link.mismatchedHandleType`, although id and version are the same and the Program reads no state.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: mismatched-handle-state
+kind: loadError
+sources:
+  - name: mismatched-handle-state.ges
+    program: main
+handles:
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  hostSchemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 99 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+```
+
+### Source code under test
+
+```ges
+module main
+on Seen(target as @Target) { emit Out(id: target.id) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: link
+    code: link.mismatchedHandleType
+    symbol: "Target"
+    sourceName: null
+    line: null
+    column: null
+    endLine: null
+    endColumn: null
+```
+
+---
+
 ## Test: a Program imports the handle types it names
 
-Each named handle type is one `HandleType` import with its canonical hash; the import of a type whose state is read points at the first read. `root` reads `@Root` and checks are by name.
+Each named handle type is one `HandleType` import with its link hash; the import of a type whose state is read points at the first read. `root` reads `@Root` and checks are by name.
 
 ### Case description
 
@@ -741,9 +785,9 @@ T_handles:			.text "handles"
 U16_0:				.u16 [0, 1]
 U16_1:				.u16 []
 U16_2:				.u16 [3, 4, 5]
-U16_3:				.u16 [57829, 17624, 29462, 38008]
-U16_4:				.u16 [42039, 54556, 44053, 43435]
-U16_5:				.u16 [49721, 6956, 44688, 32895]
+U16_3:				.u16 [34437, 42645, 45667, 53778]
+U16_4:				.u16 [10275, 7666, 52425, 25998]
+U16_5:				.u16 [17914, 38637, 19097, 10521]
 Args_6:				.registers [r2, r3, r4]
 
 .region-end "Lists"
@@ -756,9 +800,9 @@ Args_6:				.registers [r2, r3, r4]
 
 Handler_Seen:		.bind MessageHandler id=0 name=T_Seen args=[T_file, T_other] entry=Seen // "Seen(file, other)"
 Outbound_Out:		.bind OutboundMessage id=0 name=T_Out args=[T_root, T_label, T_drone] // "Out(root, label, drone)"
-HandleType_Drone:	.bind HandleType id=none name=T_Drone hash=0x9478731644d8e1e5 // "@Drone"
-HandleType_RepoFile:	.bind HandleType id=none name=T_RepoFile hash=0xa9abac15d51ca437 entry=Seen_3 // "@RepoFile"
-HandleType_Repository:	.bind HandleType id=none name=T_Repository hash=0x807fae901b2cc239 // "@Repository"
+HandleType_Drone:	.bind HandleType id=none name=T_Drone hash=0xd212b263a6958685 // "@Drone"
+HandleType_RepoFile:	.bind HandleType id=none name=T_RepoFile hash=0x658eccc91df22823 entry=Seen_3 // "@RepoFile"
+HandleType_Repository:	.bind HandleType id=none name=T_Repository hash=0x29194a9996ed45fa // "@Repository"
 
 .region-end "Bindings"
 // -------------------------------------------------------------------------------

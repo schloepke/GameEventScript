@@ -24,17 +24,19 @@ internal sealed class RunWorkspace
             var bytes = Paths.Select(File.ReadAllBytes).ToArray();
             return new Draft(Id, [.. Paths], bytes.Select(Decode).ToArray(), bytes);
         }
-        internal GameEventScriptProgram Compile(IReadOnlyList<GesHandleType> handleTypes)
+        internal GameEventScriptProgram Compile(IReadOnlyList<GesHandleType>? handleTypes)
         {
-            var builder = ToolHandles.Builder(handleTypes);
+            var builder = ToolSchemas.Builder(handleTypes);
             for (var index = 0; index < Text.Length; index++) builder.AddScript(Text[index], Paths[index]);
             return builder.Compile();
         }
     }
 
     internal readonly Dictionary<int, Draft> Drafts = [];
-    // The handle catalog of `--handles`, read once at startup and reused by every later compilation.
-    internal IReadOnlyList<GesHandleType> HandleTypes { get; init; } = [];
+    // The `--schema` arguments, expanded again by every `:reload`, and the handle types they declared at the last
+    // successful start or reload, used by every compilation and binary import check in between; null without `--schema`.
+    internal IReadOnlyList<string> SchemaArguments { get; init; } = [];
+    internal IReadOnlyList<GesHandleType>? HandleTypes { get; set; }
     internal static bool IsScratch(string selector) => selector is "" or "0" or "@0";
     internal static string Decode(byte[] bytes)
     {

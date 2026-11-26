@@ -638,44 +638,101 @@ final class ToolTests: XCTestCase {
         XCTAssertThrowsError(try Tool.loadPath("\"\""))
     }
 
-    func testHandlesOptionDeclaresHandleTypesWithoutResolver() throws {
-        let schema = try file("handles.gess", "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\n")
-        let pass = try file("pass.ges", "module pass\non Main(args) { emit Seen(target: nothing) }\non Seen(target as @Target) { emit ConsoleOut(target is @Target) }\n")
+    static let schemaText = "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\n"
+    static let narrowerSchemaText = "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\n"
+    static let otherHandleText = "handle @Other of :Contact as { id: :Number integer between 0 and 9, version: :Nothing }\n"
+    static let passingText = "module pass\non Main(args) { emit Seen(target: nothing) }\non Seen(target as @Target) { emit ConsoleOut(target is @Target) }\n"
+
+    func testSchemaOptionDeclaresHandleTypesWithoutResolver() throws {
+        let schema = try file("handles.gess", Self.schemaText)
+        let pass = try file("pass.ges", Self.passingText)
         let reads = try file("reads.ges", "module reads\non Main(args) { emit ConsoleOut('must not run') }\non Seen(target as @Target) { emit ConsoleOut(target.label) }\n")
         let unknown = run(["check", pass])
         XCTAssertEqual(unknown.code, 1)
         XCTAssertTrue(unknown.error.contains("validate.unknownHandleType"), unknown.error)
-        XCTAssertEqual(run(["check", pass, "--handles", schema, "--quiet"]).code, 0)
+        XCTAssertEqual(run(["check", pass, "--schema", schema, "--quiet"]).code, 0)
         let binary = directory.appendingPathComponent("reads.gesb").path
-        let compile = run(["compile", reads, "--handles", directory.appendingPathComponent("*.gess").path, "-o", binary, "--quiet"])
+        let compile = run(["compile", reads, "--schema", directory.appendingPathComponent("*.gess").path, "-o", binary, "--quiet"])
         XCTAssertEqual(compile.code, 0, compile.error)
         let dump = run(["dump", binary])
         XCTAssertTrue(dump.output.contains("HandleType") && dump.output.contains("\"@Target\""), dump.output)
-        let passing = run(["run", pass, "--handles", schema, "--quiet"])
+        let passing = run(["run", pass, "--schema", schema, "--quiet"])
         XCTAssertEqual(passing.code, 0, passing.error)
         XCTAssertEqual(passing.output, "false\n")
-        let reading = run(["run", reads, "--handles", schema, "--quiet"])
+        let reading = run(["run", reads, "--schema", schema, "--quiet"])
         XCTAssertEqual(reading.code, 1)
         XCTAssertTrue(reading.error.contains("link.missingHandleResolver"), reading.error)
         XCTAssertEqual(reading.output, "")
         let bad = try file("bad.gess", "bad\n")
         for command in ["check", "compile", "run"] {
-            let failed = run([command, pass, "--handles", bad])
+            let failed = run([command, pass, "--schema", bad])
             XCTAssertEqual(failed.code, 1)
             XCTAssertTrue(failed.error.contains("bad.gess(1,1): error schema."), failed.error)
             XCTAssertEqual(failed.output, "")
-            let usage = run([command, pass, "--handles"])
+            let usage = run([command, pass, "--schema"])
             XCTAssertEqual(usage.code, 2)
             XCTAssertTrue(usage.error.contains("cli.usage"), usage.error)
+            let removed = run([command, pass, "--handles", schema])
+            XCTAssertEqual(removed.code, 2)
+            XCTAssertTrue(removed.error.contains("'--handles'"), removed.error)
         }
         XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("pass.gesb").path))
         let interactive = run(
-            ["run", "--interactive", "--handles", schema, "--quiet"],
+            ["run", "--interactive", "--schema", schema, "--quiet"],
             input: ["emit ConsoleOut(nothing is @Target)", ":load \(pass)", "emit Seen(target: nothing)", ":reload", "emit Seen(target: nothing)", ":load \(reads)"]
         )
         XCTAssertEqual(interactive.code, 1)
         XCTAssertEqual(interactive.output, "false\nfalse\nfalse\n")
         XCTAssertTrue(interactive.error.contains("link.missingHandleResolver"), interactive.error)
         XCTAssertTrue(run(["run", "--interactive", "--quiet"], input: ["emit ConsoleOut(nothing is @Target)"]).error.contains("validate.unknownHandleType"))
+    }
+
+    func testSchemaOptionChecksBinaryHandleImports() throws {
+        let schema = try file("handles.gess", Self.schemaText)
+        let pass = try file("pass.ges", Self.passingText)
+        let binary = directory.appendingPathComponent("pass.gesb").path
+        let mismatches = [
+            try file("narrower.gess", Self.narrowerSchemaText),
+            try file("other.gess", "schema :Contact as { label: :Text max 16 }\n" + Self.otherHandleText),
+            try file("empty.gess", "schema :Contact as { label: :Text max 16 }\n"),
+        ]
+        let compile = run(["compile", pass, "--schema", schema, "--quiet"])
+        XCTAssertEqual(compile.code, 0, compile.error)
+        let matching = run(["run", binary, "--schema", schema, "--quiet"])
+        XCTAssertEqual(matching.code, 0, matching.error)
+        XCTAssertEqual(matching.output, "false\n")
+        XCTAssertEqual(run(["run", binary, "--quiet"]).code, 0)
+        for mismatch in mismatches {
+            let failed = run(["run", binary, "--schema", mismatch, "--quiet"])
+            XCTAssertEqual(failed.code, 1)
+            XCTAssertTrue(failed.error.contains("link: error link.mismatchedHandleType: ") && failed.error.contains("@Target"), failed.error)
+            XCTAssertTrue(failed.error.contains("[program=pass, symbol=Target]"), failed.error)
+            XCTAssertEqual(failed.output, "")
+        }
+        let load = run(["run", "--interactive", "--schema", mismatches[0], "--quiet"], input: [":load \(binary)", "emit Seen(target: nothing)"])
+        XCTAssertEqual(load.code, 1)
+        XCTAssertTrue(load.error.contains("link.mismatchedHandleType"), load.error)
+        XCTAssertEqual(load.output, "")
+    }
+
+    // `:reload` reads the schema files again; a schema that fails to read or no longer matches keeps the old session.
+    func testReloadReadsSchemasAgain() throws {
+        let schema = try file("handles.gess", Self.schemaText)
+        let pass = try file("pass.ges", Self.passingText)
+        let binary = directory.appendingPathComponent("pass.gesb").path
+        let compile = run(["compile", pass, "--schema", schema, "--quiet"])
+        XCTAssertEqual(compile.code, 0, compile.error)
+        var replacements = [Self.narrowerSchemaText, "bad\n", Self.schemaText + Self.otherHandleText]
+        let step = [":reload", "emit Seen(target: nothing)"]
+        let result = run(
+            ["run", "--interactive", "--schema", schema, binary, "--quiet"],
+            input: step + step + step + ["emit ConsoleOut(nothing is @Other)"],
+            beforeInput: { line in if line == ":reload" { _ = try self.file("handles.gess", replacements.removeFirst()) } }
+        )
+        XCTAssertEqual(result.code, 1)
+        XCTAssertEqual(result.output, "false\nfalse\nfalse\nfalse\n")
+        XCTAssertTrue(result.error.contains("link.mismatchedHandleType"), result.error)
+        XCTAssertTrue(result.error.contains("handles.gess(1,1): error schema."), result.error)
+        XCTAssertFalse(result.error.contains("validate.unknownHandleType"), result.error)
     }
 }

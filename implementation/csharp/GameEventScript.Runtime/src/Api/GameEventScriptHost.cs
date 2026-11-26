@@ -275,11 +275,12 @@ public sealed partial class GameEventScriptHost
     /// Turns the ref a handle read from a document carries into a version through the resolver of its type.
     /// </summary>
     /// <param name="handle">The handle; one without a ref is returned unchanged.</param>
-    /// <returns>The handle carrying the version its resolver named for the ref.</returns>
+    /// <returns>The handle carrying the version its resolver named for the ref, or <see langword="null"/> when the resolver returned Nothing because no such ref exists.</returns>
     /// <remarks>Messages and values passed to the host must not contain refs; see specs/HostRuntime.md#handles.</remarks>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
     /// <exception cref="GesHandleException">No resolver is registered for the type, the resolver failed, or it returned no valid version.</exception>
-    public GesHandle ResolveRef(GesHandle handle)
+    /// <exception cref="GesFatalRuntimeException">The resolver threw one; it is rethrown unchanged.</exception>
+    public GesHandle? ResolveRef(GesHandle handle)
     {
         _ = handle ?? throw new ArgumentNullException(nameof(handle));
         if (handle.Ref.IsNothing) return handle;

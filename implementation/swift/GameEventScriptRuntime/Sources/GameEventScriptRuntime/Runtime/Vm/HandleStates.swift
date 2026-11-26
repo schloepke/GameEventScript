@@ -24,9 +24,8 @@ struct GesHandleState {
 enum GesHandleStates {
     // Asks the type's resolver for the state, checks it against the state schema with defaults applied and checks the
     // versions. Failures throw a runtime fault that ends the handler.
-    static func resolve(_ binding: GesHandleBinding?, _ call: GesHandleResolveCall, _ handle: GesHandle) throws -> GesHandleState {
+    static func resolve(_ binding: GesHandleBinding, _ call: GesHandleResolveCall, _ handle: GesHandle) throws -> GesHandleState {
         let symbol = handle.description
-        guard let binding else { throw fault(GesDiagnosticCodes.runtimeHandleResolveFailed, "No resolver reads the state of @\(handle.typeName).", symbol) }
         let answer: GesHandleResolveCall.AnswerKind
         let record: GesValue
         let text: String?
@@ -52,7 +51,7 @@ enum GesHandleStates {
         if !passed.isNothing && !isVersionOf(type.version, passed) {
             throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The resolver of @\(handle.typeName) passed no valid version of its type.", symbol)
         }
-        if answer == .missing { return GesHandleState(state: .nothing, version: try resolved(type, handle, passed, symbol)) }
+        if answer == .missing { return GesHandleState(state: .nothing, version: try resolved(type, handle, passed, symbol, required: false)) }
         let state = try checkedState(type, answer == .document ? text! : try print(type, record, symbol), symbol)
         if type.version == .contentHash {
             let computed = GesValue.bytes(try GesSchemaValues.contentHash(type, state: state).bytes)
@@ -61,11 +60,11 @@ enum GesHandleStates {
             }
             return GesHandleState(state: state, version: computed)
         }
-        return GesHandleState(state: state, version: try resolved(type, handle, passed, symbol))
+        return GesHandleState(state: state, version: try resolved(type, handle, passed, symbol, required: true))
     }
 
-    // The ref of a handle turned into its version by the type's resolver.
-    static func resolveRef(_ binding: GesHandleBinding?, _ handle: GesHandle) throws(GesHandleError) -> GesHandle {
+    // The ref of a handle turned into its version by the type's resolver, or nil when the resolver knows no such ref.
+    static func resolveRef(_ binding: GesHandleBinding?, _ handle: GesHandle) throws -> GesHandle? {
         if handle.ref.isNothing { return handle }
         let symbol = handle.description
         guard let binding else {
@@ -74,9 +73,12 @@ enum GesHandleStates {
         let version: GesValue
         do {
             version = try binding.resolver.resolveRef(handle)
+        } catch let fault as any GesFatalRuntimeError {
+            throw fault
         } catch {
             throw GesHandleError(code: GesDiagnosticCodes.runtimeHandleResolveFailed, symbol: symbol, message: "The resolver of @\(handle.typeName) failed.", underlyingError: error)
         }
+        if version.isNothing { return nil }
         guard isVersionOf(binding.type.version, version), let versioned = try? handle.withVersion(version) else {
             throw GesHandleError(code: GesDiagnosticCodes.runtimeHandleResolveFailed, symbol: symbol, message: "The resolver of @\(handle.typeName) returned no valid version.")
         }
@@ -102,10 +104,16 @@ enum GesHandleStates {
         }
     }
 
-    // The version of a revision or hash type: the passed one, which must match the carried one, else the carried one.
-    private static func resolved(_ type: GesHandleType, _ handle: GesHandle, _ passed: GesValue, _ symbol: String) throws -> GesValue {
+    // The version of a revision or hash type: the passed one, which must match the carried one, else the carried one. A
+    // state needs one of them; a missing object may have none.
+    private static func resolved(_ type: GesHandleType, _ handle: GesHandle, _ passed: GesValue, _ symbol: String, required: Bool) throws -> GesValue {
         if type.version == .none { return .nothing }
-        if passed.isNothing { return handle.version }
+        if passed.isNothing {
+            if required && !handle.hasVersion {
+                throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The resolver of @\(handle.typeName) passed no version for \(symbol), which carries none.", symbol)
+            }
+            return handle.version
+        }
         if handle.hasVersion && !versionEquals(passed, handle.version) {
             throw fault(GesDiagnosticCodes.runtimeHandleVersionMismatch, "The resolver of @\(handle.typeName) delivered another version of \(symbol).", symbol)
         }

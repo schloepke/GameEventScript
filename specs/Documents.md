@@ -101,6 +101,17 @@ directly, as in `:Vector(...)` or `:Record(...)`.
 Documents also read [handles](Language.md#handles), which `parse` does not: a value or a Map key that starts with
 `@` is a handle in its [text form](Language.md#handle-text-form).
 
+The document below follows this schema; `unit` is an `@Unit~` field, so its handle may carry a version or a ref:
+
+```gess
+schema :Sighting as {
+    target: @Target
+    seen: :List(@Target) max 16
+    unit: @Unit~ optional
+    memory: :Map(@Target → :Contact) max 64
+}
+```
+
 ```gesd
 :Schema(:Sighting)
 target: @Target:3
@@ -114,20 +125,23 @@ memory: [
 ```text
 handle     = "@" TypeName ":" id [ "~" ( version | ref ) ] [ "/" part ]
 id, part   = integer | bare | quoted Text
-ref        = Tag | quoted Text
+ref        = "#" TagName | quoted Text
 ```
 
 - Reading uses no catalog. An id or part that is an optional `-` followed by decimal digits without a leading zero
   reads as an integer, otherwise as Text; a Text that looks like an integer is therefore quoted, `@Unit:'7'`. A bare
   id consists of ASCII letters, digits, `.`, `_` and `-`; a bare part also contains `/` and runs to the next
-  whitespace, comma, closing bracket or comment.
+  whitespace, comma, closing bracket or comment. A bare part never starts with `/` and never contains `//`, which
+  begins a comment; such a part is quoted, `@Unit:drone.gnabblo/'a//b'`.
 - A version of exactly 40 or 64 hexadecimal digits is a hash and reads as its bytes; any other version is a decimal
-  revision within Int64. A ref, `~#live` or `~'1.0'`, names a version through the owner; the document keeps it as
+  revision within Int64. A ref names a version through the owner: `~#live` takes the characters of a tag, any other
+  ref is quoted Text, `~'1.0'` or `~'feature/x'`, so `/` always separates the part. The document keeps a ref as
   written, and the host resolves it with `ResolveRef` before the value reaches a script.
 - A handle key carries neither a version nor a ref, because Map keys compare by identity only. A Map may mix Text and
   handle keys; a Record root takes only field names.
-- Everything else about the handle, whether its type exists, its id fits and a version is required, is checked
-  against a schema; plain reading accepts any well-formed handle.
+- Everything else about the handle, whether its type exists, its id fits and a version is required or allowed, is
+  checked against a schema; plain reading accepts any well-formed handle. Against a schema, only an `@Name~` field
+  takes a version or a ref.
 
 ## Strictness
 
@@ -192,7 +206,8 @@ A schema is a declaration in a `.gess` file, written in the one schema language 
 to a file and its root schema. Plain reading stays as specified here; the separate
 operation [`CheckDocument`](Schemas.md#document-checking) of a schema set reports missing,
 unknown and mistyped fields and values out of range with their document positions, without
-implicit unit casts. A handle whose type, id or version does not fit its field is `document.fieldType`. A document never sets a schema's [computed fields](Schemas.md#computed-fields); one that does fails
+implicit unit casts. A handle whose type, id or version does not fit its field is `document.fieldType`; a version or
+a ref on a handle of an `@Name` field, which takes neither, is `document.unexpectedVersion`. A document never sets a schema's [computed fields](Schemas.md#computed-fields); one that does fails
 with `document.unknownField`.
 
 ## Errors

@@ -370,12 +370,12 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Box => "GesBox(GesPoint(), GesPoint())",
         GesLayoutKind.Disc => "GesDisc(radius: 0)",
         GesLayoutKind.Schema when value.Packed is not null => TypeName(value) + "(uncheckedRawValue: 0)",
-        GesLayoutKind.Handle when value.HandleRoot is not null => $"{value.HandleType}(root: {GesCSharpEmitter.HandleRootType(value)}(id: {KeyZero(value.HandleRoot.Model.Id)}), part: {KeyZero(value.Handle!.Model.Part)})",
-        GesLayoutKind.Handle => $"{value.HandleType}(id: {KeyZero(value.Handle!.Model.Id)})",
+        GesLayoutKind.Handle when value.HandleRoot is not null => $"{value.HandleType}(uncheckedRoot: {GesCSharpEmitter.HandleRootType(value)}(uncheckedId: {KeyZero(value.HandleRoot.Model.Id)}), part: {KeyZero(value.Handle!.Model.Part)})",
+        GesLayoutKind.Handle => $"{value.HandleType}(uncheckedId: {KeyZero(value.Handle!.Model.Id)})",
         _ => TypeName(value) + "()"
     };
 
-    // The smallest key of a handle: an empty Text or the minimum.
+    // The smallest key of a handle: an empty Text or the minimum, so the placeholder of a new record is a valid handle.
     private static string KeyZero(GesHandleKey key) => key.IsText ? "\"\"" : Long(key.Minimum);
 
     // `var` for a local that later code assigns, `let` for one it only reads, so that Swift warns about neither.
@@ -1053,8 +1053,8 @@ internal static partial class GesSwiftEmitter
         }
 
         if (part is not null) ReadHandleKey(code, part, "part", target + ".part");
-        var arguments = "id: id" + (version is not null ? ", version: version" : "");
-        code.Line(value.HandleRoot is not null ? $"{target} = {value.HandleType}(root: {GesCSharpEmitter.HandleRootType(value)}({arguments}), part: part)" : $"{target} = {value.HandleType}({arguments})");
+        var arguments = "uncheckedId: id" + (version is not null ? ", version: version" : "");
+        code.Line(value.HandleRoot is not null ? $"{target} = {value.HandleType}(uncheckedRoot: {GesCSharpEmitter.HandleRootType(value)}({arguments}), part: part)" : $"{target} = {value.HandleType}({arguments})");
         code.Close();
     }
 

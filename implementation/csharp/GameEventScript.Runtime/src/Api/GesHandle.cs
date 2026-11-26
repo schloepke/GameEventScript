@@ -101,55 +101,29 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
         return TryRead(text, out var handle) ? handle! : throw new ArgumentException($"'{text}' is no handle.", nameof(text));
     }
 
-    // Reads the text form; false for anything else.
+    // Reads the text form through the scanner documents share; false for anything else.
     internal static bool TryRead(string text, out GesHandle? handle)
     {
         handle = null;
-        if (text.Length < 4 || text[0] != '@') return false;
-        var position = 1;
-        while (position < text.Length && (GesText.IsAsciiLetter(text[position]) || text[position] is >= '0' and <= '9' or '_')) position++;
-        var typeName = text.Substring(1, position - 1);
-        if (!GesText.IsTypeName(typeName) || position >= text.Length || text[position] != ':') return false;
-        position++;
-        if (!ReadKey(text, ref position, false, out var id)) return false;
+        if (text.Length == 0 || text[0] != '@' || GesHandleLiteral.Scan(text, 0, out var parts) != text.Length) return false;
         GesValue version = default, reference = default;
-        if (position < text.Length && text[position] == '~')
+        switch (parts.Version)
         {
-            position++;
-            if (position < text.Length && text[position] == '#')
-            {
-                var start = ++position;
-                while (position < text.Length && text[position] != '/') position++;
-                var tag = text.Substring(start, position - start);
-                if (!GesTagRules.IsValidTagName(tag)) return false;
-                reference = GesValue.GesTag(tag);
-            }
-            else if (position < text.Length && text[position] == '\'')
-            {
-                if (!ReadQuoted(text, ref position, out var quoted)) return false;
-                reference = GesValue.GesText(quoted);
-            }
-            else
-            {
-                var start = position;
-                while (position < text.Length && text[position] != '/') position++;
-                if (!ReadVersion(text.AsSpan(start, position - start), out version)) return false;
-            }
+            case GesHandleLiteral.VersionForm.Revision: version = GesValue.GesInteger(parts.Revision); break;
+            case GesHandleLiteral.VersionForm.Hash:
+                var hex = parts.VersionText;
+                var bytes = new byte[hex.Length / 2];
+                for (var index = 0; index < bytes.Length; index++) bytes[index] = (byte)((HexDigit(hex[2 * index]) << 4) | HexDigit(hex[(2 * index) + 1]));
+                version = GesValue.GesBytes(bytes);
+                break;
+            case GesHandleLiteral.VersionForm.Tag: reference = GesValue.GesTag(parts.VersionText); break;
+            case GesHandleLiteral.VersionForm.Text: reference = GesValue.GesText(parts.VersionText); break;
         }
 
-        var isComposite = false;
-        GesValue part = default;
-        if (position < text.Length)
-        {
-            if (text[position] != '/') return false;
-            position++;
-            if (!ReadKey(text, ref position, true, out part)) return false;
-            isComposite = true;
-        }
-
-        if (position != text.Length) return false;
-        handle = new GesHandle(typeName, id, version, reference, part, isComposite);
+        handle = new GesHandle(parts.TypeName, Key(parts.Id), version, reference, parts.HasPart ? Key(parts.Part) : default, parts.HasPart);
         return true;
+
+        static GesValue Key(GesHandleLiteral.Key key) => key.IsInteger ? GesValue.GesInteger(key.Integer) : GesValue.GesText(key.Text);
     }
 
     /// <summary>Writes the canonical text form, such as <c>@Drone:7~120</c>.</summary>
@@ -262,104 +236,6 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
         static int Rank(GesValue key) => key.ValueKind switch { GesBytecodeTypeKind.Nothing => 0, GesBytecodeTypeKind.Integer => 1, _ => 2 };
     }
 
-    // A key: quoted, or a bare run of ASCII letters, digits, '.', '_' and '-' (and '/' for a part) that is an integer when it reads as one.
-    private static bool ReadKey(string text, ref int position, bool isPart, out GesValue key)
-    {
-        key = default;
-        if (position >= text.Length) return false;
-        if (text[position] == '\'')
-        {
-            if (!ReadQuoted(text, ref position, out var quoted)) return false;
-            key = GesValue.GesText(quoted);
-            return true;
-        }
-
-        var start = position;
-        while (position < text.Length && IsBareCharacter(text[position], isPart)) position++;
-        if (position == start) return false;
-        var bare = text.AsSpan(start, position - start);
-        if (ReadsAsInteger(bare))
-        {
-            if (!long.TryParse(bare, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var integer)) return false;
-            key = GesValue.GesInteger(integer);
-            return true;
-        }
-
-        key = GesValue.GesText(bare.ToString());
-        return true;
-    }
-
-    private static bool ReadQuoted(string text, ref int position, out string value)
-    {
-        value = "";
-        var builder = new StringBuilder();
-        position++;
-        while (position < text.Length)
-        {
-            var character = text[position++];
-            if (character != '\'')
-            {
-                builder.Append(character);
-                continue;
-            }
-
-            if (position < text.Length && text[position] == '\'')
-            {
-                builder.Append('\'');
-                position++;
-                continue;
-            }
-
-            value = builder.ToString();
-            return GesText.GetInvalidUtf16Offset(value) < 0;
-        }
-
-        return false;
-    }
-
-    private static bool ReadVersion(ReadOnlySpan<char> text, out GesValue version)
-    {
-        version = default;
-        if (text.Length is 40 or 64 && IsLowerHex(text))
-        {
-            var bytes = new byte[text.Length / 2];
-            for (var index = 0; index < bytes.Length; index++) bytes[index] = (byte)((HexDigit(text[2 * index]) << 4) | HexDigit(text[(2 * index) + 1]));
-            version = GesValue.GesBytes(bytes);
-            return true;
-        }
-
-        if (!ReadsAsInteger(text) || !long.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var revision)) return false;
-        version = GesValue.GesInteger(revision);
-        return true;
-    }
-
-    // An integer is a decimal with an optional '-' and no leading zero.
-    private static bool ReadsAsInteger(ReadOnlySpan<char> text)
-    {
-        var start = text.Length > 0 && text[0] == '-' ? 1 : 0;
-        if (start == text.Length) return false;
-        if (text[start] == '0' && text.Length - start > 1) return false;
-        for (var index = start; index < text.Length; index++)
-        {
-            if (text[index] is < '0' or > '9') return false;
-        }
-
-        return true;
-    }
-
-    private static bool IsBareCharacter(char character, bool isPart)
-        => GesText.IsAsciiLetter(character) || character is >= '0' and <= '9' or '.' or '_' or '-' || (isPart && character == '/');
-
-    private static bool IsLowerHex(ReadOnlySpan<char> text)
-    {
-        foreach (var character in text)
-        {
-            if (character is not (>= '0' and <= '9' or >= 'a' and <= 'f')) return false;
-        }
-
-        return true;
-    }
-
     private static int HexDigit(char character) => character <= '9' ? character - '0' : character - 'a' + 10;
 
     private static void WriteKey(GesValue key, bool isPart, StringBuilder builder)
@@ -371,13 +247,7 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
         }
 
         var text = key.AsText();
-        var bare = text.Length > 0 && !ReadsAsInteger(text.AsSpan());
-        foreach (var character in text)
-        {
-            if (!IsBareCharacter(character, isPart)) bare = false;
-        }
-
-        if (bare) builder.Append(text);
+        if (GesHandleLiteral.IsBare(text, isPart)) builder.Append(text);
         else AppendQuoted(text, builder);
     }
 

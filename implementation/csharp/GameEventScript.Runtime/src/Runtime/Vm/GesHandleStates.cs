@@ -28,10 +28,9 @@ internal static class GesHandleStates
 {
     // Asks the type's resolver for the state, checks it against the state schema with defaults applied and checks the
     // versions. Failures throw a runtime fault that ends the handler.
-    internal static GesHandleState Resolve(GesHandleBinding? binding, GesHandleResolveCall call, GesHandle handle)
+    internal static GesHandleState Resolve(GesHandleBinding binding, GesHandleResolveCall call, GesHandle handle)
     {
         var symbol = handle.ToString();
-        if (binding is null) throw Fault(GesDiagnosticCodes.RuntimeHandleResolveFailed, $"No resolver reads the state of @{handle.TypeName}.", symbol);
         GesHandleResolveCall.AnswerKind answer;
         GesValue record, passed;
         string? text;
@@ -62,7 +61,7 @@ internal static class GesHandleStates
         var type = binding.Type;
         if (!passed.IsNothing && !IsVersionOf(type.Version, passed))
             throw Fault(GesDiagnosticCodes.RuntimeInvalidHandleState, $"The resolver of @{handle.TypeName} passed no valid version of its type.", symbol);
-        if (answer == GesHandleResolveCall.AnswerKind.Missing) return new GesHandleState(default, Resolved(type, handle, passed, symbol));
+        if (answer == GesHandleResolveCall.AnswerKind.Missing) return new GesHandleState(default, Resolved(type, handle, passed, symbol, false));
         var state = CheckedState(type, answer == GesHandleResolveCall.AnswerKind.Document ? text! : Print(type, record, symbol), symbol);
         if (type.Version == GesHandleVersionKind.ContentHash)
         {
@@ -74,11 +73,11 @@ internal static class GesHandleStates
             return new GesHandleState(state, computed);
         }
 
-        return new GesHandleState(state, Resolved(type, handle, passed, symbol));
+        return new GesHandleState(state, Resolved(type, handle, passed, symbol, true));
     }
 
-    // The ref of a handle turned into its version by the type's resolver.
-    internal static GesHandle ResolveRef(GesHandleBinding? binding, GesHandle handle)
+    // The ref of a handle turned into its version by the type's resolver, or null when the resolver knows no such ref.
+    internal static GesHandle? ResolveRef(GesHandleBinding? binding, GesHandle handle)
     {
         if (handle.Ref.IsNothing) return handle;
         var symbol = handle.ToString();
@@ -88,11 +87,16 @@ internal static class GesHandleStates
         {
             version = binding.Resolver.ResolveRef(handle);
         }
+        catch (GesFatalRuntimeException)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
             throw new GesHandleException(GesDiagnosticCodes.RuntimeHandleResolveFailed, symbol, $"The resolver of @{handle.TypeName} failed.", exception);
         }
 
+        if (version.IsNothing) return null;
         if (!IsVersionOf(binding.Type.Version, version))
             throw new GesHandleException(GesDiagnosticCodes.RuntimeHandleResolveFailed, symbol, $"The resolver of @{handle.TypeName} returned no valid version.");
         return handle.WithVersion(version);
@@ -118,11 +122,18 @@ internal static class GesHandleStates
         };
     }
 
-    // The version of a revision or hash type: the passed one, which must match the carried one, else the carried one.
-    private static GesValue Resolved(GesHandleType type, GesHandle handle, GesValue passed, string symbol)
+    // The version of a revision or hash type: the passed one, which must match the carried one, else the carried one. A
+    // state needs one of them; a missing object may have none.
+    private static GesValue Resolved(GesHandleType type, GesHandle handle, GesValue passed, string symbol, bool required)
     {
         if (type.Version == GesHandleVersionKind.None) return default;
-        if (passed.IsNothing) return handle.Version;
+        if (passed.IsNothing)
+        {
+            if (required && !handle.HasVersion)
+                throw Fault(GesDiagnosticCodes.RuntimeInvalidHandleState, $"The resolver of @{handle.TypeName} passed no version for {symbol}, which carries none.", symbol);
+            return handle.Version;
+        }
+
         if (handle.HasVersion && !VersionEquals(passed, handle.Version))
             throw Fault(GesDiagnosticCodes.RuntimeHandleVersionMismatch, $"The resolver of @{handle.TypeName} delivered another version of {symbol}.", symbol);
         return passed;

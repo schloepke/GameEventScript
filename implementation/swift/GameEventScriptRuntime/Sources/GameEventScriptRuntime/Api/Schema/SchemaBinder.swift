@@ -937,7 +937,7 @@ enum GesSchemaBinder {
     // encoding is an open point.
     private static func checkComposite(_ scope: GesFileScope, _ handle: GesResolvedHandle, _ offset: Int, _ levels: [ObjectIdentifier: Int]) throws {
         if let root = handle.root, levels[ObjectIdentifier(root.state)] != nil {
-            throw scope.error(Code.notEncodable, offset, "'@\(handle.name)' inside the state of its root '@\(root.name)' has no encoding yet.")
+            throw scope.error(Code.notEncodable, offset, "'@\(handle.name)' inside the state of its root '@\(root.name)' points into its own root's value; each element would repeat the root's identity, so it has no encoding.")
         }
     }
 

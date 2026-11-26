@@ -13,12 +13,25 @@ public protocol GesHandleResolver {
     ///   own diagnostic.
     func resolve(_ call: GesHandleResolveCall) throws
 
-    /// Turns the ref a handle read from a document carries into the version it names.
+    /// Turns the ref a handle read from a document carries into the version it names. The default implementation is
+    /// for types without refs.
     ///
     /// - Parameter handle: A handle of this resolver's type that carries a ref.
-    /// - Returns: The version: an integer Number, or Bytes of 20 or 32 bytes for a hash.
-    /// - Throws: Any error, which `GameEventScriptHost.resolveRef(_:)` reports as a `GesHandleError`.
+    /// - Returns: The version: an integer Number, or Bytes of 20 or 32 bytes for a hash; Nothing when no such ref
+    ///   exists.
+    /// - Throws: Any error, which `GameEventScriptHost.resolveRef(_:)` reports as a `GesHandleError`; a
+    ///   `GesFatalRuntimeError` is rethrown unchanged.
     func resolveRef(_ handle: GesHandle) throws -> GesValue
+}
+
+extension GesHandleResolver {
+    /// The default for types without refs: it always throws.
+    ///
+    /// - Parameter handle: A handle of this resolver's type that carries a ref.
+    /// - Returns: Never returns.
+    /// - Throws: `GesApiError.invalidOperation`, which `GameEventScriptHost.resolveRef(_:)` reports as
+    ///   `runtime.handleResolveFailed`.
+    public func resolveRef(_ handle: GesHandle) throws -> GesValue { throw GesApiError.invalidOperation("@\(handle.typeName) has no refs.") }
 }
 
 /// One state read a host asks a `GesHandleResolver` to answer. The host reuses the instance; it is valid only during

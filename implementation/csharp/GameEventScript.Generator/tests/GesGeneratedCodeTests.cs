@@ -88,8 +88,13 @@ public sealed class GesGeneratedCodeTests
         Assert.IsTrue(fleet.WireEquals(source));
     }
 
+    // The per-thread counter subtracts the unused rest of the thread's allocation context. While parallel tests allocate,
+    // a background garbage collection can retire that context without a counted collection, which adds up to one
+    // allocation quantum to the counter of a thread that allocates nothing. The gate therefore runs alone, after a
+    // settled heap, like the other allocation gates.
     [TestMethod]
     [TestCategory("Allocation")]
+    [DoNotParallelize]
     public void GeneratedRecordsAllocateNothing()
     {
         var name = "frigate"u8.ToArray();
@@ -129,6 +134,9 @@ public sealed class GesGeneratedCodeTests
         }
 
         for (var round = 0; round < 100; round++) Round(round);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var round = 100; round < 1100; round++) Round(round);
         Assert.AreEqual(before, GC.GetAllocatedBytesForCurrentThread());

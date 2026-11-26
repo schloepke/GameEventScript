@@ -211,6 +211,12 @@ here.
 
 ## Performance and optimizer follow-ups
 
+- Handle refs and `@Root`: `Receive`, `Emit`, `Publish` and callback results check every argument for a handle with a
+  ref by walking Lists, Maps, Records and Messages (`HoldsRef`, O(n) per value), and each `.@Root` read allocates a new
+  root handle. Give composite values a cached "may contain a ref" flag, set when a handle with a ref enters them, so the
+  check stops at values without one, and measure whether caching root handles pays off. Deferred because both costs only
+  arise with handles and the flag touches every collection constructor in both ports.
+
 - Scope-based register reuse for named locals: today every `let`, loop and `if let` binding pins its own register for the
   whole routine, so the frame grows with the number of bindings rather than with the values live at once (a generated
   handler with about 1,300 bindings exceeds the default 512 registers). Give named registers intervals from their first

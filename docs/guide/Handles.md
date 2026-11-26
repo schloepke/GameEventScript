@@ -106,8 +106,6 @@ sealed class Radar : IGesHandleResolver
         else
             call.SetMissing();
     }
-
-    public GesValue ResolveRef(GesHandle handle) => throw new InvalidOperationException("Targets have no refs.");
 }
 ```
 
@@ -131,10 +129,6 @@ struct Radar: GesHandleResolver {
         } else {
             try call.setMissing()
         }
-    }
-
-    func resolveRef(_ handle: GesHandle) throws -> GesValue {
-        throw GesApiError.invalidArgument("Targets have no refs.")
     }
 }
 
@@ -186,7 +180,19 @@ that would read as an integer, is quoted: `@Unit:'One Two'`, `@Unit:'7'`. `as :T
 text.
 
 [Documents](../../specs/Documents.md#handles) (`.gesd`) read handles as values and as Map keys, and the document
-formatter prints them back in the same form:
+formatter prints them back in the same form. Checked against a schema, a handle may carry a version or a ref only in
+an `@Name~` field, such as `unit` here; on `target`, `@Target:3~5` fails with `document.unexpectedVersion`:
+
+```gess
+schema :Composition as { name: :Text max 64, slots: :Number integer between 0 and 16 }
+handle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }
+schema :Sighting as {
+  target: @Target
+  seen: :List(@Target) max 16
+  unit: @Unit~ optional
+  memory: :Map(@Target → :Contact) max 64
+}
+```
 
 ```gesd
 :Schema(:Sighting)
@@ -203,7 +209,8 @@ Handle Map keys follow the Text keys, ordered by type name and then by id.
 ## Refs
 
 In a document, a version may also be a *ref*: `@Unit:drone.gnabblo~#live` or `@Unit:drone.gnabblo~'1.0'` names a
-version through the owner instead of stating it, like a branch or a tag. A ref never reaches a script. Before a
+version through the owner instead of stating it, like a branch or a tag. A ref with the characters of a tag is written
+`~#name`; any other is quoted Text, such as `~'feature/x'`, so a `/` always starts the part. A ref never reaches a script. Before a
 handle that carries one goes into a message, the host turns it into a version with
 `GameEventScriptHost.ResolveRef(handle)` (Swift `resolveRef(_:)`), which asks the type's resolver through
 `ResolveRef`/`resolveRef(_:)` and returns the handle with the concrete version. `Receive`, `Emit` and `Publish` of a
@@ -211,13 +218,17 @@ message that still holds a ref fail with `wire.unresolvedRef`.
 
 ## Try it with the CLI
 
-Both CLIs take the handle types of schema sources with the repeatable `--handles` option of `compile`, `check` and
-`run`, including scenarios, `:load`, `:reload`, `:edit` and interactive input:
+Both CLIs load a schema set with the repeatable `--schema` option of `compile`, `check` and `run` and declare its
+handle types to every compilation, including scenarios, `:load`, `:reload`, `:edit` and interactive input:
 
 ```sh
-ges check radar.ges --handles radar.gess
-ges run game.ges --handles "schemas/*.gess"
+ges check radar.ges --schema radar.gess
+ges run game.ges --schema "schemas/*.gess"
+ges run game.gesb --schema radar.gess
 ```
+
+With `--schema`, every handle type a `.gesb` input imports must match the one the schemas declare, or loading fails with
+`link.mismatchedHandleType`. `:reload` reads the schema files again and keeps the session if they fail.
 
 The CLI registers no resolver. A Program that only passes, compares and tests handles runs; one that reads state,
 like the radar above, fails to load with `link.missingHandleResolver`. See the

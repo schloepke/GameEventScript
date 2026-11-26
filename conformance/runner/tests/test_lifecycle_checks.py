@@ -3,7 +3,7 @@
 import unittest
 from types import SimpleNamespace
 from core.corpus import InvalidDocument
-from checks.lifecycle_checks import compare, validate, duration
+from checks.lifecycle_checks import compare, validate, duration, timer_name
 from runtime.host_actions import actions
 
 
@@ -28,7 +28,7 @@ class LifecycleTests(unittest.TestCase):
 
     def test_state_assertions_are_optional_but_missing_handles_fail(self):
         observed = {'hostReady': False, 'programStarts': {'main': 'runtimeError'}, 'idleDurationMicroseconds': 'none',
-                    'pendingTimers': [{'name': 'beat', 'deadline': '1000000', 'period': '0', 'message': 'Beat', 'program': 'main', 'publish': False}]}
+                    'pendingTimers': [{'name': "'beat'", 'deadline': '1000000', 'period': '0', 'message': 'Beat', 'program': 'main', 'publish': False}]}
         mismatches = []
         def check(path, expected, actual):
             if expected != actual:
@@ -46,3 +46,13 @@ class LifecycleTests(unittest.TestCase):
                 validate(self.case, invalid)
         with self.assertRaises(InvalidDocument):
             validate(self.case, {}, observation=True)
+
+    def test_timer_names_distinguish_handles_from_text(self):
+        for name in ('@Target:3', "@Unit:'One Two'", "'beat'", "'it''s'", "'@Target:3'"):
+            self.assertTrue(timer_name(name), name)
+        for name in ('beat', '', "''", '@', "'it's'", "'open", 3, None):
+            self.assertFalse(timer_name(name), name)
+        timer = {'name': 'beat', 'deadline': '1', 'period': '0', 'message': 'Beat', 'program': 'main', 'publish': False}
+        with self.assertRaises(InvalidDocument):
+            validate(self.case, {'pendingTimers': [timer]})
+        validate(self.case, {'pendingTimers': [{**timer, 'name': '@Target:3'}]})

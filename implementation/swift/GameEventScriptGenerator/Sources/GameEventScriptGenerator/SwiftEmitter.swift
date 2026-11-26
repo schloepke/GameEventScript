@@ -411,13 +411,13 @@ enum GesSwiftEmitter {
         case .disc: "GesDisc(radius: 0)"
         case .schema where value.packed != nil: typeName(value) + "(uncheckedRawValue: 0)"
         case .handle where value.handleRoot != nil:
-            "\(value.handleType)(root: \(GesCSharpEmitter.handleRootType(value))(id: \(keyZero(value.handleRoot!.model.id!))), part: \(keyZero(value.handle!.model.part!)))"
-        case .handle: "\(value.handleType)(id: \(keyZero(value.handle!.model.id!)))"
+            "\(value.handleType)(uncheckedRoot: \(GesCSharpEmitter.handleRootType(value))(uncheckedId: \(keyZero(value.handleRoot!.model.id!))), part: \(keyZero(value.handle!.model.part!)))"
+        case .handle: "\(value.handleType)(uncheckedId: \(keyZero(value.handle!.model.id!)))"
         default: typeName(value) + "()"
         }
     }
 
-    // The smallest key of a handle: an empty Text or the minimum.
+    // The smallest key of a handle: an empty Text or the minimum, so the placeholder of a new record is a valid handle.
     private static func keyZero(_ key: GesHandleKey) -> String { key.isText ? "\"\"" : long(key.minimum) }
 
     // `var` for a local that later code assigns, `let` for one it only reads, so that Swift warns about neither.
@@ -995,10 +995,10 @@ enum GesSwiftEmitter {
             }
         }
         if let part { readHandleKey(&code, part, "part", target + ".part") }
-        let arguments = "id: id" + (version != nil ? ", version: version" : "")
+        let arguments = "uncheckedId: id" + (version != nil ? ", version: version" : "")
         code.line(
             value.handleRoot != nil
-                ? "\(target) = \(value.handleType)(root: \(GesCSharpEmitter.handleRootType(value))(\(arguments)), part: part)" : "\(target) = \(value.handleType)(\(arguments))"
+                ? "\(target) = \(value.handleType)(uncheckedRoot: \(GesCSharpEmitter.handleRootType(value))(\(arguments)), part: part)" : "\(target) = \(value.handleType)(\(arguments))"
         )
         code.close()
     }

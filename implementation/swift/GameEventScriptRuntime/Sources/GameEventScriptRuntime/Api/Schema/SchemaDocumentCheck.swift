@@ -11,6 +11,7 @@ struct GesSchemaDocumentCheck {
     private static let fieldType = "document.fieldType"
     private static let outOfRange = "document.outOfRange"
     private static let tooDeep = "document.tooDeep"
+    private static let unexpectedVersion = "document.unexpectedVersion"
 
     private struct Failure: Error {
         let code: String
@@ -105,12 +106,19 @@ struct GesSchemaDocumentCheck {
 
     static func join(_ path: String, _ name: String) -> String { path.isEmpty ? name : path + "." + name }
 
-    // Checks a nested value under its path segment: a field name, or `[]` for the element at an index.
-    private func under(_ segment: String, index: Int = 0, _ check: () throws -> Void) throws {
+    // Checks a nested value under its path segment: a field name, or `[]` for the element at an index or, in a handle Map,
+    // for the entry of a key.
+    private func under(_ segment: String, index: Int = 0, key: String? = nil, _ check: () throws -> Void) throws {
         let outer = attempts.path
         let outerPosition = attempts.position
         attempts.path = segment == "[]" ? outer + segment : Self.join(outer, segment)
-        attempts.position = segment == "[]" ? Self.element(outerPosition, index) : Self.join(outerPosition, segment)
+        if segment != "[]" {
+            attempts.position = Self.join(outerPosition, segment)
+        } else if let key {
+            attempts.position = Self.entry(outerPosition, key)
+        } else {
+            attempts.position = Self.element(outerPosition, index)
+        }
         defer {
             attempts.path = outer
             attempts.position = outerPosition
@@ -120,6 +128,11 @@ struct GesSchemaDocumentCheck {
 
     // The exact path of a list element, which converting the checked document follows to the alternatives the check chose.
     static func element(_ position: String, _ index: Int) -> String { position + "[" + String(index) + "]" }
+
+    // The exact path of a handle Map entry, by the canonical text of its key, since a Map orders its keys canonically.
+    static func entry(_ position: String, _ key: GesHandle) -> String { entry(position, key.description) }
+
+    private static func entry(_ position: String, _ key: String) -> String { position + "[" + key + "]" }
 
     private func fields(_ keys: [String], _ values: [GesDocumentNode], _ keyOffsets: [Int], _ valueOffsets: [Int], start: Int, _ schema: GesResolvedDeclaration) throws {
         let level = attempts.levels[ObjectIdentifier(schema)] ?? 0
@@ -317,23 +330,24 @@ struct GesSchemaDocumentCheck {
         }
     }
 
-    // A handle of the field's type whose id, part and version have the declared forms. An `@Name~` field takes a version
-    // or a ref; an `@Name` field also takes one, which the wire drops.
+    // A handle of the field's type whose id, part and version have the declared forms. An `@Name~` field requires a version
+    // or a ref; an `@Name` field takes neither.
     private func handle(_ type: GesResolvedHandle, versioned: Bool, _ text: String, _ start: Int) throws {
         guard let handle = try? GesHandle(parsing: text), handle.typeName == type.name, handle.isComposite == (type.root != nil) else { throw fail(Self.fieldType, start) }
         let identity = type.root ?? type
         try handleKey(identity.id, handle, part: false, start)
         if handle.isComposite { try handleKey(type.id, handle, part: true, start) }
-        if handle.hasVersion {
+        if handle.hasVersion || !handle.ref.isNothing {
+            // Only an `@Name~` field holds a version or a ref; a type without versions takes neither.
             if identity.versionKind == .none { throw fail(Self.fieldType, start) }
+            if !versioned { throw fail(Self.unexpectedVersion, start) }
+            guard handle.hasVersion else { return }
             if let revision = identity.revision {
                 guard let number = handle.version.integerValue else { throw fail(Self.fieldType, start) }
                 try numeric(revision.constraints, true, number, Double(number), start)
             } else if handle.version.bytesValue?.count != (identity.versionKind == .sha1 ? 20 : 32) {
                 throw fail(Self.fieldType, start)
             }
-        } else if !handle.ref.isNothing {
-            if identity.versionKind == .none { throw fail(Self.fieldType, start) }
         } else if versioned {
             throw fail(Self.fieldType, start)
         }
@@ -358,7 +372,8 @@ struct GesSchemaDocumentCheck {
         for index in keys.indices {
             let offset = index < keyOffsets.count ? keyOffsets[index] : start
             if index >= handleKeys.count || !handleKeys[index] { throw fail(Self.fieldType, offset) }
-            try under("[]", index: index) {
+            let canonical = (try? GesHandle(parsing: keys[index]))?.description ?? keys[index]
+            try under("[]", index: index, key: canonical) {
                 try under("key") { try handle(key, versioned: false, keys[index], offset) }
                 try under("value") { try union(type.element!, values[index], valueOffsets[index]) }
             }

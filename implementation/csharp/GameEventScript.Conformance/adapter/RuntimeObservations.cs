@@ -41,6 +41,7 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
         var initialization = observer.Capture();
         initialization["actions"] = scenario.Actions.ToArray();
         scenario.CaptureState(initialization);
+        var resolvedRefs = handles?.ResolveRefs(host) ?? [];
         var steps = new Dictionary<string, object>();
         foreach (var step in request.GetProperty("steps").EnumerateArray())
         {
@@ -48,7 +49,19 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
             scenario.Actions.Clear();
             var stepId = step.GetProperty("id").GetString()!;
             if (request.GetProperty("stepActions").TryGetProperty(stepId, out var actions)) scenario.Apply("step/" + stepId, actions);
-            var accepted = host.Receive(RuntimeValues.DecodeMessage(step.GetProperty("input")));
+            bool accepted;
+            object? rejection = null;
+            try
+            {
+                accepted = host.Receive(RuntimeValues.DecodeMessage(step.GetProperty("input")));
+            }
+            catch (GesWireException exception)
+            {
+                // Receive rejects an input it cannot enqueue, such as a handle with an unresolved ref.
+                accepted = false;
+                rejection = new { phase = "wire", code = exception.Code, path = exception.Path };
+            }
+
             var paused = false;
             var waiting = false;
             if (host.IsReady)
@@ -78,11 +91,12 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
             scenario.CaptureState(result);
             result["actions"] = scenario.Actions.ToArray();
             result["accepted"] = accepted;
+            result["rejection"] = rejection!;
             result["paused"] = paused;
             result["waiting"] = waiting;
             steps.Add(step.GetProperty("id").GetString()!, result);
         }
-        return new { initialization, steps };
+        return new { initialization, steps, resolvedRefs };
     }
 
     internal static GesRuntimeLimits CreateLimits(JsonElement limits)
@@ -186,7 +200,8 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
     }
 
     // A Text timer name as its text, a handle name as its text form, which starts with @.
-    internal static string TimerName(GesValue name) => name.Handle?.ToString() ?? name.AsText();
+    // A handle name as its text form, a Text name as a single-quoted text literal, so the two stay distinct.
+    internal static string TimerName(GesValue name) => name.Handle?.ToString() ?? "'" + name.AsText().Replace("'", "''") + "'";
 
     /// <summary>Records one host reset.</summary>
     public void HostReset()

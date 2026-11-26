@@ -211,10 +211,11 @@ public final class GameEventScriptHost {
     /// and values passed to the host must not contain refs; see specs/HostRuntime.md#handles.
     ///
     /// - Parameter handle: The handle; one without a ref is returned unchanged.
-    /// - Returns: The handle carrying the version its resolver named for the ref.
+    /// - Returns: The handle carrying the version its resolver named for the ref, or nil when the resolver returned
+    ///   Nothing because no such ref exists.
     /// - Throws: `GesHandleError` when no resolver is registered for the type, the resolver failed, or it returned no
-    ///   valid version.
-    public func resolveRef(_ handle: GesHandle) throws(GesHandleError) -> GesHandle {
+    ///   valid version; a `GesFatalRuntimeError` the resolver threw, unchanged.
+    public func resolveRef(_ handle: GesHandle) throws -> GesHandle? {
         if handle.ref.isNothing { return handle }
         return try GesHandleStates.resolveRef(handleResolvers?[handle.typeName], handle)
     }

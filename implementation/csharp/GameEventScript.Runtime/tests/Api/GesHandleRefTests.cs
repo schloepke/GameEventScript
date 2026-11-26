@@ -7,35 +7,24 @@ using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Tests.Native.Api;
 
-// Refs never enter the VM (specs/HostRuntime.md#handles). Conformance Markdown cannot construct a handle with a ref, so
-// the boundary checks and GameEventScriptHost.ResolveRef are covered natively.
+// Refs never enter the VM (specs/HostRuntime.md#handles). Markdown Conformance covers Receive and the answers of
+// ResolveRef (runtime/handles.md); these tests keep what it cannot reach: native Emit and Publish, the default
+// ResolveRef, a host without a resolver, identity and the preserved inner exception.
 [TestClass]
 public sealed class GesHandleRefTests
 {
     private const string Schemas = "schema :DroneState as { altitude: :Number integer between 0 and 1000 }\n"
         + "handle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\n";
 
+    private static readonly GesHandle Live = GesHandle.Parse("@Drone:7~#live");
+
     private static GesHandleType DroneType => GesSchemaSet.Parse([new GesSchemaSource("drones.gess", Schemas)]).HandleTypes[0];
 
     private static GameEventScriptMessage WithRef(string name)
-        => GameEventScriptMessage.Create(name, [new GesMessageArgument("drone", GesValue.GesHandle(GesHandle.Parse("@Drone:7~#live")))]);
+        => GameEventScriptMessage.Create(name, [new GesMessageArgument("drone", GesValue.GesHandle(Live))]);
 
-    [TestMethod]
-    public void ReceiveRejectsAHandleWithARef()
-    {
-        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
-
-        var exception = Assert.ThrowsExactly<GesWireException>(() => host.Receive(WithRef("Seen")));
-
-        Assert.AreEqual(GesWireException.UnresolvedRef, exception.Code);
-        Assert.AreEqual("Seen.drone", exception.Path);
-        var delivered = 0;
-        host.Subscribe(GesMessageSignature.Create("Seen", ["drone"]), (_, _) => delivered++);
-        Assert.ThrowsExactly<GesWireException>(() => host.Receive(WithRef("Seen")));
-        Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Seen", [new GesMessageArgument("drone", GesValue.GesHandle(GesHandle.Parse("@Drone:7~3")))])));
-        Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
-        Assert.AreEqual(1, delivered, "Only the message without a ref is enqueued.");
-    }
+    private static GameEventScriptHost Host(IGesHandleResolver resolver)
+        => GameEventScriptHost.CreateBuilder().WithHandleResolver(DroneType, resolver).Build().StartForTest();
 
     [TestMethod]
     public void ContextEmitAndPublishRejectAHandleWithARef()
@@ -55,44 +44,38 @@ public sealed class GesHandleRefTests
     }
 
     [TestMethod]
-    public void ResolveRefAsksTheResolverOfTheType()
+    public void ResolveRefAsksOnlyForRefsAndReturnsNullForAnUnknownRef()
     {
         var resolver = new RefResolver(GesValue.GesInteger(12));
-        var host = GameEventScriptHost.CreateBuilder().WithHandleResolver(DroneType, resolver).Build().StartForTest();
+        var host = Host(resolver);
+        var plain = GesHandle.Parse("@Drone:7~3");
 
-        var resolved = host.ResolveRef(GesHandle.Parse("@Drone:7~#live"));
-
-        Assert.AreEqual("@Drone:7~12", resolved.ToString());
-        Assert.IsTrue(resolved.Ref.IsNothing);
+        Assert.AreEqual("@Drone:7~12", host.ResolveRef(Live)?.ToString());
+        Assert.AreSame(plain, host.ResolveRef(plain));
         CollectionAssert.AreEqual(new[] { "@Drone:7~#live" }, resolver.Asked);
+        Assert.IsNull(Host(new RefResolver(GesValue.GesNothing())).ResolveRef(Live));
     }
 
     [TestMethod]
-    public void ResolveRefReturnsAHandleWithoutARefUnchanged()
-    {
-        var resolver = new RefResolver(GesValue.GesInteger(12));
-        var host = GameEventScriptHost.CreateBuilder().WithHandleResolver(DroneType, resolver).Build().StartForTest();
-        var handle = GesHandle.Parse("@Drone:7~3");
-
-        Assert.AreSame(handle, host.ResolveRef(handle));
-        Assert.IsEmpty(resolver.Asked);
-    }
-
-    [TestMethod]
-    public void ResolveRefFailsWithoutAResolverOrAValidVersion()
+    public void ResolveRefFailsWithoutAResolverOrRefSupport()
     {
         var withoutResolver = GameEventScriptHost.CreateBuilder().Build().StartForTest();
-        var missing = Assert.ThrowsExactly<GesHandleException>(() => withoutResolver.ResolveRef(GesHandle.Parse("@Drone:7~#live")));
+        var missing = Assert.ThrowsExactly<GesHandleException>(() => withoutResolver.ResolveRef(Live));
         Assert.AreEqual(GesDiagnosticCodes.RuntimeHandleResolveFailed, missing.Code);
         Assert.AreEqual("@Drone:7~#live", missing.Symbol);
 
-        var invalid = GameEventScriptHost.CreateBuilder().WithHandleResolver(DroneType, new RefResolver(GesValue.GesText("12"))).Build().StartForTest();
-        Assert.AreEqual(GesDiagnosticCodes.RuntimeHandleResolveFailed, Assert.ThrowsExactly<GesHandleException>(() => invalid.ResolveRef(GesHandle.Parse("@Drone:7~#live"))).Code);
+        // A resolver of a type without refs need not implement ResolveRef; the default fails like a throwing resolver.
+        var stateOnly = Assert.ThrowsExactly<GesHandleException>(() => Host(new StateOnlyResolver()).ResolveRef(Live));
+        Assert.AreEqual(GesDiagnosticCodes.RuntimeHandleResolveFailed, stateOnly.Code);
 
-        var failing = GameEventScriptHost.CreateBuilder().WithHandleResolver(DroneType, new RefResolver(default, fail: true)).Build().StartForTest();
-        var failed = Assert.ThrowsExactly<GesHandleException>(() => failing.ResolveRef(GesHandle.Parse("@Drone:7~#live")));
+        var failed = Assert.ThrowsExactly<GesHandleException>(() => Host(new RefResolver(default, fail: true)).ResolveRef(Live));
         Assert.AreEqual(GesDiagnosticCodes.RuntimeHandleResolveFailed, failed.Code);
         Assert.IsInstanceOfType<InvalidOperationException>(failed.InnerException);
+    }
+
+    private sealed class StateOnlyResolver : IGesHandleResolver
+    {
+        public void Resolve(GesHandleResolveCall call) => call.SetMissing();
     }
 
     private sealed class RefResolver(GesValue version, bool fail = false) : IGesHandleResolver

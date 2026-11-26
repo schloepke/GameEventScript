@@ -236,10 +236,10 @@ extension GesSwiftEmitter {
             )
             code.close()
         }
-        let arguments = "id: id" + (members.contains { $0.part.base == "Version" } ? ", version: version" : "")
+        let arguments = "uncheckedId: id" + (members.contains { $0.part.base == "Version" } ? ", version: version" : "")
         code.line(
             value.handleRoot != nil
-                ? "\(a) = \(value.handleType)(root: \(GesCSharpEmitter.handleRootType(value))(\(arguments)), part: part)" : "\(a) = \(value.handleType)(\(arguments))"
+                ? "\(a) = \(value.handleType)(uncheckedRoot: \(GesCSharpEmitter.handleRootType(value))(\(arguments)), part: part)" : "\(a) = \(value.handleType)(\(arguments))"
         )
         code.close()
     }

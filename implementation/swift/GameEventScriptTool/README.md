@@ -86,7 +86,7 @@ ges schema generate world.gess --root Bot --param worldWidth=2000m --language sw
 ges run game.ges --args 12 Hello 34
 ges run first.gesb second.gesb -- 12 Hello --color
 ges run game.ges --scenario scenario.ges --seed 42
-ges run game.ges --handles catalog.gess
+ges run game.ges --schema catalog.gess
 ges run --interactive --color
 ```
 
@@ -122,12 +122,13 @@ C# commands documented in the C# CLI README.
 
 > **Since: Unreleased**
 
-`--handles <schema.gess>` declares the handle types of schema sources to `compile`, `check` and `run`, as the
+`--schema <file.gess>` loads a schema set and declares its handle types to `compile`, `check` and `run`, as the
 [C# CLI's handle types](../../csharp/GameEventScript.Tool/README.md#handle-types) describe: it is repeatable, expands
-file-name patterns, reads all files once as one schema set and reports schema errors in the `schema check` format.
+file-name patterns, reads all files as one schema set and reports schema errors in the `schema check` format.
 `run` passes the types to every compilation of the session (scenarios, console input, `:load`, `:reload`, `:edit`)
-without re-reading the files. The CLI registers no handle resolver, so a Program that reads handle state fails to load
-with `link.missingHandleResolver`.
+and checks every HandleType import of a binary input against them (`link.mismatchedHandleType`). `:reload` reads the
+schema files again and keeps the old session if they fail. The CLI registers no handle resolver, so a Program that reads
+handle state fails to load with `link.missingHandleResolver`.
 
 ## Event console
 

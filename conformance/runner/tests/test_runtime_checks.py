@@ -21,7 +21,7 @@ class RuntimeChecksTests(unittest.TestCase):
         result = {'initialization': {**empty}, 'steps': {}}
         for step in case.steps:
             expected = case.expected['steps'][step['step']]
-            result['steps'][step['step']] = {**empty, 'accepted': True, 'paused': False, 'waiting': False,
+            result['steps'][step['step']] = {**empty, 'accepted': True, 'rejection': None, 'paused': False, 'waiting': False,
                                            'local': [message(x) for x in expected.get('local', [])],
                                            'runtimeLimits': expected.get('runtimeLimits', {}).get('include', [])}
         return copy.deepcopy(result)
@@ -58,6 +58,7 @@ class RuntimeChecksTests(unittest.TestCase):
         for mutate in [lambda o: o['steps'][key]['local'].reverse(),
                        lambda o: o['steps'][key]['local'].pop(),
                        lambda o: o['steps'][key].update(accepted=False),
+                       lambda o: o['steps'][key].update(rejection={'phase': 'wire', 'code': 'wire.unresolvedRef', 'path': 'Ping.x'}),
                        lambda o: o['steps'][key]['diagnostics'].append({'phase': 'runtime', 'code': 'runtime.test'}),
                        lambda o: o['initialization']['local'].append({'name': 'Unexpected'})]:
             observation = self.observation(case)
@@ -67,6 +68,34 @@ class RuntimeChecksTests(unittest.TestCase):
         del observation['steps'][key]
         with self.assertRaises(InvalidDocument):
             compare(case, observation)
+
+    def test_input_rejection(self):
+        case = copy.deepcopy(next(c for c in self.cases if c.steps))
+        key = case.steps[0]['step']
+        expected = case.expected['steps'][key]
+        expected.update(accepted=False, rejection={'phase': 'wire', 'code': 'wire.unresolvedRef', 'path': 'Seen.drone'})
+        for name in ('local', 'outbound', 'diagnostics', 'runtimeLimits'):
+            expected.pop(name, None)
+        observation = self.observation(case)
+        observation['steps'][key].update(accepted=False, rejection={'phase': 'wire', 'code': 'wire.unresolvedRef', 'path': 'Seen.drone'})
+        self.assertEqual([], compare(case, observation))
+        for change in ({'path': 'Seen.other'}, {'code': 'wire.other'}):
+            changed = copy.deepcopy(observation)
+            changed['steps'][key]['rejection'].update(change)
+            self.assertTrue(compare(case, changed))
+        changed = copy.deepcopy(observation)
+        changed['steps'][key]['rejection'] = None
+        self.assertTrue(compare(case, changed))
+        for invalid in ({'phase': 'runtime', 'code': 'wire.unresolvedRef', 'path': 'x'}, {'phase': 'wire', 'code': 'runtime.x', 'path': 'x'},
+                        {'phase': 'wire', 'code': 'wire.unresolvedRef'}, {'phase': 'wire', 'code': 'wire.unresolvedRef', 'path': 'x', 'extra': 1}):
+            changed = copy.deepcopy(observation)
+            changed['steps'][key]['rejection'] = invalid
+            with self.subTest(invalid=invalid), self.assertRaises(InvalidDocument):
+                compare(case, changed)
+        accepted = copy.deepcopy(case)
+        accepted.expected['steps'][key]['accepted'] = True
+        with self.assertRaises(InvalidDocument):
+            prepare(accepted)
 
     def test_limit_include_exclude_and_type(self):
         for mode in ('include', 'exclude'):

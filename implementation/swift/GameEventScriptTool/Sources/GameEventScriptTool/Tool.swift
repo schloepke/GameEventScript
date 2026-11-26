@@ -57,7 +57,7 @@ final class Tool {
             return 0
         }
         var inputs: [String] = []
-        var handleArguments: [String] = []
+        var schemaArguments: [String] = []
         var output: String?
         var debug = true
         var verbose = false
@@ -72,12 +72,12 @@ final class Tool {
                 guard output == nil, index + 1 < arguments.count, !arguments[index + 1].hasPrefix("-") else { throw ToolError.usage("Specify one output path after -o or --output. Prefix paths starting with '-' with './'.") }
                 index += 1
                 output = arguments[index]
-            } else if options && argument == "--handles" {
+            } else if options && argument == "--schema" {
                 guard index + 1 < arguments.count, !arguments[index + 1].hasPrefix("-"), !arguments[index + 1].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                    throw ToolError.usage("Specify a schema path after --handles; prefix a path starting with '-' with './'.")
+                    throw ToolError.usage("Specify a schema path after --schema; prefix a path starting with '-' with './'.")
                 }
                 index += 1
-                handleArguments.append(arguments[index])
+                schemaArguments.append(arguments[index])
             } else if !check && options && argument == "--no-debug" {
                 debug = false
             } else if options && ["-v", "--verbose"].contains(argument) {
@@ -102,7 +102,7 @@ final class Tool {
             output = try ToolFiles.fullPath(output ?? (paths[0] as NSString).deletingPathExtension + ".gesb")
             try ToolFiles.ensureDistinct(output!, from: paths)
         }
-        let handles = try ToolFiles.handleTypes(handleArguments)
+        let handles = try ToolFiles.handleTypes(schemaArguments)
         let program = try ToolFiles.compile(paths, handles: handles, debug: debug)
         var fileSize = 0
         if let output {

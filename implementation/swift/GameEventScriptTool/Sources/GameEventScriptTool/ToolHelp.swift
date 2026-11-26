@@ -7,10 +7,10 @@ enum ToolHelp {
 
         Usage:
           ges [--help | --version]
-          ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--handles <schema.gess>] [--no-debug] [-v | -q]
-          ges check <source.ges> [more.ges ...] [--handles <schema.gess>] [-v | -q]
-          ges run <source.ges> [more.ges ...] [--handles <schema.gess>] [--scenario <scenario.ges>] [--seed <integer>]
-          ges run <program.gesb> [more.gesb ...] [--args <text> ...] [--seed <integer>]
+          ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--schema <file.gess> ...] [--no-debug] [-v | -q]
+          ges check <source.ges> [more.ges ...] [--schema <file.gess> ...] [-v | -q]
+          ges run <source.ges> [more.ges ...] [--schema <file.gess> ...] [--scenario <scenario.ges>] [--seed <integer>]
+          ges run <program.gesb> [more.gesb ...] [--schema <file.gess> ...] [--args <text> ...] [--seed <integer>]
           ges run <program files ...> [--color] -- <text> ...
           ges run --interactive [--color] [program files ...]
           ges dump <program.gesb> [-o <output.gesa>] [--addresses]
@@ -57,11 +57,11 @@ enum ToolHelp {
         """#
     static let compile = #"""
         Usage:
-          ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--handles <schema.gess> ...] [--no-debug] [-v | -q]
+          ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--schema <file.gess> ...] [--no-debug] [-v | -q]
 
         Options:
           -o, --output <path>  Output file. Required for multiple sources; otherwise defaults to source.gesb.
-          --handles <schema.gess> Declare the handle types of a schema source. Repeat for more files.
+          --schema <file.gess> Load a schema set and declare its handle types. Repeatable.
           --no-debug          Omit debug symbols, source map, and source archive.
           -v, --verbose       Include bindings, dependencies, bytecode size, and resource requirements.
           -q, --quiet         Suppress successful compilation output. Errors are still reported.
@@ -73,14 +73,14 @@ enum ToolHelp {
         Repeated paths are included once, keeping their first position.
         Output directories are created as needed. Existing output is replaced after
         successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
-        The schema files of --handles are read together; file-name patterns expand as for sources.
+        The schema files of --schema are read as one set; file-name patterns expand as for sources.
         """#
     static let check = #"""
         Usage:
-          ges check <source.ges> [more.ges ...] [--handles <schema.gess> ...] [-v | -q]
+          ges check <source.ges> [more.ges ...] [--schema <file.gess> ...] [-v | -q]
 
         Options:
-          --handles <schema.gess> Declare the handle types of a schema source. Repeat for more files.
+          --schema <file.gess> Load a schema set and declare its handle types. Repeatable.
           -v, --verbose       Include bindings, dependencies, bytecode size, and resource requirements.
           -q, --quiet         Suppress success output. Errors are still reported.
           -h, --help          Show this help.
@@ -120,8 +120,10 @@ enum ToolHelp {
           --interactive         Open the event console instead of Main. Initial files are optional.
 
         Compilation:
-          --handles <schema.gess> Declare the handle types of a schema source to every compilation,
-                                including scenarios, :load, :reload, :edit and console input. Repeatable.
+          --schema <file.gess>  Load a schema set whose handle types every compilation knows, including
+                                scenarios, :load, :reload, :edit and console input. Repeatable; patterns
+                                expand as for sources. Binary programs must import matching handle types.
+                                :reload reads the schema files again.
 
         Main arguments (always Text, in command-line order):
           --arg <text>          Append exactly one value, even if it looks like an option.

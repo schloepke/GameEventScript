@@ -294,6 +294,7 @@ public sealed class GesSchemaSet
         }
 
         foreach (var schema in schemas) schema.Complete();
+        foreach (var handleType in handleTypes) handleType.CompleteLinkHash();
         Schemas = new GesReadOnlyArray<GesSchema>(schemas);
         var networks = new List<GesNetwork>();
         foreach (var file in files)

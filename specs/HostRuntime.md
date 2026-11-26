@@ -294,13 +294,16 @@ A [handle](Language.md#handles) refers to an object outside the host. Like exter
 inputs: compilation receives the declarative [handle catalog](PublicApi.md#handle-api), and the host receives one
 resolver per handle type that reads state. GES never owns, stores or changes the objects; it reads them.
 
-**Program and link.** A Program records every handle type it names, with the declaration the compiler used and
-whether the Program reads state of that type: a member other than `id`, `version` and `root`, or a cast to the state
-schema. Load compares each recorded declaration with the host's catalog, if one is configured, and fails with
+**Program and link.** A Program records every handle type it names, with the [link hash](Schemas.md#canonical-form) of
+the declaration the compiler used, which covers its state schema, and whether the Program reads state of that type: a
+member other than `id`, `version` and `root`, or a cast to the state schema. Load compares each recorded link hash with
+the host's catalog, if one is configured, and fails with
 `link.mismatchedHandleType` on a difference. A type whose state the Program reads needs a resolver, otherwise Load
 fails with `link.missingHandleResolver`, located at the first instruction that reads the type's state as
 [link call sites](Diagnostics.md#link-call-sites) describe. Comparing, `is`, Map keys, timer names and passing a handle on
-need no resolver.
+need no resolver. A read whose handle type is not statically known, such as `.@Root` or a state cast of an untyped
+value, is not recorded; at run time it resolves through the type's resolver when the host registered one and otherwise
+reads the object as missing, so it gives `nothing` without a fault.
 
 **Resolution.** Reading state resolves the whole object lazily, the first time a handler reads it. The resolver
 receives the handle, with its version if it carries one, and answers synchronously with exactly one of:
@@ -313,25 +316,35 @@ receives the handle, with its version if it carries one, and answers synchronous
 The host checks the answer against the state schema as [document checking](Schemas.md#document-checking) does, with
 defaults applied. A state that does not fit, a document that does not read or names another schema, and an answer
 without a result fail with `runtime.invalidHandleState`. A resolver that throws or reports a failure fails with
-`runtime.handleResolveFailed`. Both stop the handler like an extension fault. A composite is resolved by its own type's resolver alone; when the
+`runtime.handleResolveFailed`. Both stop the handler like an extension fault. A resolver failure is classified like an
+[extension failure](PublicApi.md#diagnostics-and-failure-transport): a fatal runtime failure (C#
+`GesFatalRuntimeException`, Swift `GesFatalRuntimeError`), such as an `ExtensionFaultException` with its own code,
+propagates unchanged, and every other one becomes `runtime.handleResolveFailed`; the same holds for `ResolveRef`. A composite is resolved by its own type's resolver alone; when the
 handle carries no root version, the resolver may pass the root's version it delivered.
 
 **Versions.** For a `:ContentHash` type GES computes the [content hash](Schemas.md#content-hash) of the resolved
-state; a resolver need not pass one. For every other versioned type the resolver passes the version it delivered.
-A passed version that differs from the computed hash, or from the version the handle carries, fails with
-`runtime.handleVersionMismatch`. A resolver of an unversioned type passes none. A handle read without a version
+state; a resolver need not pass one. For every other versioned type the resolver passes the version it delivered;
+when it passes none for a state, the version the handle carries applies, because the resolver answered for it, and a
+handle that carries none fails with `runtime.invalidHandleState`, because no receiver could cache the state. A
+*missing* answer needs no version. A passed version that differs from the computed hash, or from the version the
+handle carries, fails with `runtime.handleVersionMismatch`. A resolver of an unversioned type passes none; passing one
+fails with `runtime.invalidHandleState`. A handle read without a version
 picks up the resolved version for `as :State` and later reads in the same handler, but `h.version` keeps
 reporting the version the value itself carries.
 
 **Cache.** Each handler invocation owns one cache keyed by handle type, identity and carried version. Every state
 read of the same object in that invocation, including across pauses, uses the first answer, so a handler sees one
-consistent state per object. The cache ends with the invocation; nothing is shared between handlers or hosts.
+consistent state per object. The cache ends with the invocation; nothing is shared between handlers or hosts. Cached
+states are immutable values, so entries, and the values a handler took from them, may share storage.
 Resolvers are called only from script execution on the host's serial path, never from loading or the pump itself.
 Pausing resolvers are not part of this version; a later version may let resolution pause the handler like a frame.
 
 **Refs.** A handle read from a document may carry a ref instead of a version. `ResolveRef` (Swift `resolveRef`)
 asks the type's resolver to turn it into a version and returns the handle with that version; a handle without a ref
-returns unchanged. A ref never reaches the VM: `Receive`, `Emit`, `Publish`, extension results and external field
+returns unchanged. A resolver that answers Nothing knows no such ref, and `ResolveRef` returns no handle (C# null,
+Swift nil). A composite's ref is its root's and resolves through the composite type's resolver. A resolver of a type
+without refs need not implement `ResolveRef`: the default reports an API error, which the host reports as
+`runtime.handleResolveFailed`. A ref never reaches the VM: `Receive`, `Emit`, `Publish`, extension results and external field
 values reject a value that contains one with `wire.unresolvedRef`, before anything is enqueued.
 
 **Wire.** A schema-encoded handle carries its identity and, for `@Name~`, its version; the state never travels.

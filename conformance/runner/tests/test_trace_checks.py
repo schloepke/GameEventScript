@@ -36,9 +36,9 @@ class TraceTests(unittest.TestCase):
                     {'event': 'publish', 'message': {'name': 'Ping'}, 'id': '0', 'result': {
                         'localAccepted': False, 'outboundAttempted': False, 'outboundAccepted': False, 'anyAccepted': False}}]
         self.assertEqual(['0', '0'], [item['id'] for item in normalize(unqueued, message, limit)])
-        named = {**scheduled, 'name': 'beat', 'period': '1000000'}
-        self.assertEqual(['beat', 'reset'], [item.get('name', item['event']) for item in normalize([named, {'event': 'reset'}], message, limit)])
-        for event in ({**scheduled, 'name': 'beat'}, {**scheduled, 'period': '0'}, {**named, 'name': ''}, {**named, 'period': '-1'},
+        named = {**scheduled, 'name': "'beat'", 'period': '1000000'}
+        self.assertEqual(["'beat'", 'reset'], [item.get('name', item['event']) for item in normalize([named, {'event': 'reset'}], message, limit)])
+        for event in ({**scheduled, 'name': 'beat'}, {**scheduled, 'period': '0'}, {**named, 'name': ''}, {**named, 'name': 'beat'}, {**named, 'period': '-1'},
                       {'event': 'reset', 'id': '1'}, {'event': 'discarded', 'id': '1', 'name': 'beat', 'period': '0'}):
             with self.assertRaises(InvalidDocument):
                 normalize([event], message, limit)

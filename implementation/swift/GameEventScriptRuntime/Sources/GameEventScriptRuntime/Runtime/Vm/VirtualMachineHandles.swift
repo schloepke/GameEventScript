@@ -70,7 +70,8 @@ extension GesVirtualMachine {
     func resolveHandleState(_ handle: GesHandle) throws -> GesValue {
         let key = HandleStateKey(handle: handle)
         if let cached = handleStates[key] { return cached.state }
-        let binding = linked!.handleResolvers?[handle.typeName]
+        // Without a resolver, which only a read without a static type reaches, the object reads as missing.
+        guard let binding = linked!.handleResolvers?[handle.typeName] else { return .nothing }
         let resolved = try GesHandleStates.resolve(binding, handleResolveCall, handle)
         handleStates[key] = resolved
         // A read without a version picks up the resolved one, so a later read of that version sees the same state.

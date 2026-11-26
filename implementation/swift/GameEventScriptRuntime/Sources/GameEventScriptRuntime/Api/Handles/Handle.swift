@@ -180,111 +180,39 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
         }
     }
 
-    // Reads the text form; nil for anything else.
+    // Reads the text form through the scanner documents share; nil for anything else.
     static func read(_ text: String) -> GesHandle? {
-        let scalars = Array(text.unicodeScalars)
-        guard scalars.count >= 4, scalars[0] == "@" else { return nil }
-        var position = 1
-        while position < scalars.count && (isAsciiLetter(scalars[position]) || isDigit(scalars[position]) || scalars[position] == "_") { position += 1 }
-        let typeName = String(String.UnicodeScalarView(scalars[1..<position]))
-        guard GesText.isUpperName(typeName), position < scalars.count, scalars[position] == ":" else { return nil }
-        position += 1
-        guard let id = readKey(scalars, &position, isPart: false) else { return nil }
+        let bytes = Array(text.utf8)
+        guard bytes.first == 64, let scanned = GesHandleLiteral.scan(bytes, 0), scanned.end == bytes.count else { return nil }
+        let parts = scanned.parts
         var version = GesValue.nothing
         var reference = GesValue.nothing
-        if position < scalars.count && scalars[position] == "~" {
-            position += 1
-            if position < scalars.count && scalars[position] == "#" {
-                position += 1
-                let start = position
-                while position < scalars.count && scalars[position] != "/" { position += 1 }
-                guard let tag = try? GesValue.tag(String(String.UnicodeScalarView(scalars[start..<position]))) else { return nil }
-                reference = tag
-            } else if position < scalars.count && scalars[position] == "'" {
-                guard let quoted = readQuoted(scalars, &position) else { return nil }
-                reference = .text(quoted)
-            } else {
-                let start = position
-                while position < scalars.count && scalars[position] != "/" { position += 1 }
-                guard let read = readVersion(Array(scalars[start..<position])) else { return nil }
-                version = read
-            }
+        switch parts.version {
+        case .none: break
+        case .revision(let revision): version = .integer(revision)
+        case .hash(let hex):
+            guard let bytes = GesHashBytes.parseHex(hex, count: hex.utf8.count / 2) else { return nil }
+            version = .bytes(bytes)
+        case .tag(let tag):
+            guard let value = try? GesValue.tag(tag) else { return nil }
+            reference = value
+        case .text(let value): reference = .text(value)
         }
-        var isComposite = false
-        var part = GesValue.nothing
-        if position < scalars.count {
-            guard scalars[position] == "/" else { return nil }
-            position += 1
-            guard let read = readKey(scalars, &position, isPart: true) else { return nil }
-            part = read
-            isComposite = true
-        }
-        guard position == scalars.count else { return nil }
-        return GesHandle(typeName: typeName, id: id, version: version, ref: reference, part: part, isComposite: isComposite)
+        return GesHandle(
+            typeName: parts.typeName,
+            id: keyValue(parts.id),
+            version: version,
+            ref: reference,
+            part: parts.part.map(keyValue) ?? .nothing,
+            isComposite: parts.part != nil
+        )
     }
 
-    // A key: quoted, or a bare run of ASCII letters, digits, '.', '_' and '-' (and '/' for a part) that is an integer
-    // when it reads as one.
-    private static func readKey(_ scalars: [Unicode.Scalar], _ position: inout Int, isPart: Bool) -> GesValue? {
-        guard position < scalars.count else { return nil }
-        if scalars[position] == "'" {
-            guard let quoted = readQuoted(scalars, &position) else { return nil }
-            return .text(quoted)
+    private static func keyValue(_ key: GesHandleLiteral.Key) -> GesValue {
+        switch key {
+        case .integer(let integer): .integer(integer)
+        case .text(let text): .text(text)
         }
-        let start = position
-        while position < scalars.count && isBare(scalars[position], isPart: isPart) { position += 1 }
-        guard position > start else { return nil }
-        let bare = Array(scalars[start..<position])
-        if readsAsInteger(bare) {
-            guard let integer = Int64(String(String.UnicodeScalarView(bare))) else { return nil }
-            return .integer(integer)
-        }
-        return .text(String(String.UnicodeScalarView(bare)))
-    }
-
-    private static func readQuoted(_ scalars: [Unicode.Scalar], _ position: inout Int) -> String? {
-        var value = String.UnicodeScalarView()
-        position += 1
-        while position < scalars.count {
-            let scalar = scalars[position]
-            position += 1
-            if scalar != "'" {
-                value.append(scalar)
-                continue
-            }
-            if position < scalars.count && scalars[position] == "'" {
-                value.append("'")
-                position += 1
-                continue
-            }
-            return String(value)
-        }
-        return nil
-    }
-
-    private static func readVersion(_ scalars: [Unicode.Scalar]) -> GesValue? {
-        if scalars.count == 40 || scalars.count == 64, scalars.allSatisfy({ isDigit($0) || ("a"..."f").contains($0) }) {
-            guard let bytes = GesHashBytes.parseHex(String(String.UnicodeScalarView(scalars)), count: scalars.count / 2) else { return nil }
-            return .bytes(bytes)
-        }
-        guard readsAsInteger(scalars), let revision = Int64(String(String.UnicodeScalarView(scalars))) else { return nil }
-        return .integer(revision)
-    }
-
-    // An integer is a decimal with an optional '-' and no leading zero.
-    private static func readsAsInteger(_ scalars: [Unicode.Scalar]) -> Bool {
-        let start = scalars.first == "-" ? 1 : 0
-        guard start < scalars.count else { return false }
-        if scalars[start] == "0" && scalars.count - start > 1 { return false }
-        return scalars[start...].allSatisfy(isDigit)
-    }
-
-    private static func isAsciiLetter(_ scalar: Unicode.Scalar) -> Bool { ("a"..."z").contains(scalar) || ("A"..."Z").contains(scalar) }
-
-    private static func isDigit(_ scalar: Unicode.Scalar) -> Bool { ("0"..."9").contains(scalar) }
-
-    private static func isBare(_ scalar: Unicode.Scalar, isPart: Bool) -> Bool {
-        isAsciiLetter(scalar) || isDigit(scalar) || scalar == "." || scalar == "_" || scalar == "-" || isPart && scalar == "/"
     }
 
     private static func writeKey(_ key: GesValue, isPart: Bool, to text: inout String) {
@@ -293,9 +221,7 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
             return
         }
         let value = key.textValue ?? ""
-        let scalars = Array(value.unicodeScalars)
-        let bare = !scalars.isEmpty && !readsAsInteger(scalars) && scalars.allSatisfy { isBare($0, isPart: isPart) }
-        if bare { text += value } else { appendQuoted(value, to: &text) }
+        if GesHandleLiteral.isBare(value, isPart: isPart) { text += value } else { appendQuoted(value, to: &text) }
     }
 
     private static func appendQuoted(_ value: String, to text: inout String) {

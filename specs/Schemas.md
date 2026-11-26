@@ -1081,7 +1081,9 @@ A [handle type](#handles) is a declaration reached like a schema: its `handle` l
 composite `part` followed by its root's declaration when first reached. Its state schema is not written. `<version>` is
 `Nothing`, `ContentHash`, `Hash(#sha256)`, `Hash(#sha1)` or `Number integer` with an optional range. The *handle hash*
 of a type is FNV-1a 64 over `gess1` and its declarations, so the [network hash](Network.md#network-hash) can name it.
-*Since: Unreleased.*
+Its *link hash*, which a Program records for the type, runs FNV-1a 64 over the same text followed by the line
+`state <hash>`, where `<hash>` is the state schema's hash as 16 lowercase hexadecimal digits; it therefore covers the
+name, the id, part and version forms, a composite's root and the state schema. *Since: Unreleased.*
 
 A message set writes one `argument` line per [parameter](#set-parameters) after its `messages` line, before its `member`
 lines; a set without parameters writes none, so its form stays that of 0.6.0.
@@ -1657,8 +1659,9 @@ to a `GesSchema`, which ignores it, and takes optional parameters.
   one schema no other schema of it refers to, which is the root. A reference from a message
   or a [recursive](#recursion) schema's reference to itself does not count. Without such a source or root the check fails with `schema.unknownName`.
 - Errors use document positions: `document.missingField`, `document.unknownField`,
-  `document.fieldType`, `document.outOfRange`, and `document.tooDeep` for a non-empty
-  [recursive List](#recursion) at its depth. Units are not cast implicitly.
+  `document.fieldType`, `document.outOfRange`, `document.tooDeep` for a non-empty
+  [recursive List](#recursion) at its depth, and `document.unexpectedVersion` for a version or ref on a handle that
+  takes none. Units are not cast implicitly.
 - An explicit form counts as the value it constructs, so `:Number(3, 'm')` checks like `3m`.
   A position inside such a value is reported at the form. A form that constructs `nothing`
   is `document.invalidLiteral`, as in [reading](Documents.md).
@@ -1700,8 +1703,13 @@ facing: #north
   or centre lies in the plane z = 0. A radius is a number of
   the unit whose magnitude, which the disc takes, lies within the block's `radius`, or zero when the block leaves it out.
 - A handle field accepts a [handle literal](Documents.md#handles) of its type, with a version or ref for `@Name~`;
-  an id outside its range or `max`, another type or a missing version is `document.fieldType` at the literal. A handle
-  Map accepts a Map whose keys are handle literals of its key type. *Since: Unreleased.*
+  an id outside its range or `max`, another type, a missing version or a version on a type without versions is
+  `document.fieldType` at the literal. Only an `@Name~` field takes a version or a ref: on an `@Name` field, a List
+  element or a handle Map value of that type, either is `document.unexpectedVersion` at the literal; in a union, as
+  every error of an alternative, it leaves the alternative unsatisfied. A handle Map accepts a Map whose keys are handle
+  literals of its key type, and checks its values like every other field; a model reads each value with the alternative
+  the check chose for its key. A free `:Map` or `:List` holds data without a field type, so its handles are not
+  checked. *Since: Unreleased.*
 - A value outside a closed range is an error. A wrapping field accepts any finite
   value. `max` and `integer` are checked; `step` and `delta within` are not.
 - A bound that uses an unbound parameter is not checked. A value that is given must have the
@@ -2411,12 +2419,15 @@ models and wire code alike, and the state schema becomes its model type as any s
 A type without a version has no `version` property, and a composite's `version` reads its root's. Swift types are
 `Hashable`, `Comparable`, `Sendable` and `Codable`; C# types implement `IEquatable<T>`, `IComparable<T>`, `==` and `!=`.
 Equality, hashing and order use the identity only, as in [scripts](Language.md#handles), so two handles of one object
-with different versions are equal. A constructor checks the id against its range or `max` and fails like a packed
-field. An `@Name~` field reads a handle with its version and writing one without a version is `wire.missingVersion`;
-an `@Name` field reads one without a version and drops a version when writing. Wire records store a handle in the
-storage of its id type, a Text id as UTF-8, and a hash version inline, so reading one reuses storage as for any other
-field. `Codable` writes the [handle text form](Language.md#handles). With `--bindings`, a handle field converts to
-and from the Runtime's `GesHandle`; the bindings declare no resolver, which the host [registers](HostRuntime.md#handles).
+with different versions are equal. A constructor checks the id or part against its range or `max` and throws, as does
+converting a runtime `GesHandle` of another type or form (C# `FromHandle`, Swift `init(_:)`): C# throws
+`ArgumentOutOfRangeException`, `ArgumentNullException` for a null Text id and `ArgumentException` for another handle,
+Swift `GesApiError.invalidArgument`. A Swift handle has no initializer without an id and so no default value. An
+`@Name~` field reads a handle with its version and writing one without a version is `wire.missingVersion`; an `@Name`
+field reads one without a version and drops a version when writing. Wire records store a handle in the storage of its
+id type, a Text id as UTF-8, and a hash version inline, so reading one reuses storage as for any other field. `Codable`
+writes the canonical [handle text form](Language.md#handles), the text of C# `ToString`. With `--bindings`, a handle
+field converts to and from the Runtime's `GesHandle`; the bindings declare no resolver, which the host [registers](HostRuntime.md#handles).
 A generated name that collides with a type or tag set of the file is `generate.nameCollision`.
 
 A `:Map` and a `:List` without an element type hold free data as the Runtime's GES values, so a model carries data whose
@@ -2919,7 +2930,8 @@ Parity is verified like every GES feature.
     lists of unions, a field after a union, and rejection of a document-only alternative with
     `schema.notEncodable`;
   - the document errors `document.missingField`, `document.unknownField`,
-    `document.fieldType`, `document.outOfRange` and `document.tooDeep`, with their positions;
+    `document.fieldType`, `document.outOfRange`, `document.tooDeep` and `document.unexpectedVersion`, with their
+    positions;
   - [recursive Lists](#recursion): the canonical form, trees as deep as their depth, deeper data, keyed trees and their
     deltas, a recursive List that `with` copies, and the source errors.
   - [packed schemas](#packed-schemas): the canonical form, the word as wire bytes, nested packed schemas, invalid

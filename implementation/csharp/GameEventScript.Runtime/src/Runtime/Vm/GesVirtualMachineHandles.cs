@@ -112,8 +112,8 @@ internal partial class GesVirtualMachine
     private GesValue ResolveHandleState(GesHandle handle)
     {
         if (_handleStates is not null && _handleStates.TryGetValue(handle, out var cached)) return cached.State;
-        GesHandleBinding? binding = null;
-        ActiveProgram!.HandleResolvers?.TryGetValue(handle.TypeName, out binding);
+        // Without a resolver, which only a read without a static type reaches, the object reads as missing.
+        if (ActiveProgram!.HandleResolvers is not { } resolvers || !resolvers.TryGetValue(handle.TypeName, out var binding)) return default;
         var resolved = GesHandleStates.Resolve(binding, _handleResolveCall ??= new GesHandleResolveCall(), handle);
         var states = _handleStates ??= new Dictionary<GesHandle, GesHandleState>(HandleStateComparer.Instance);
         states[handle] = resolved;

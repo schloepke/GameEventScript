@@ -959,7 +959,7 @@ internal static class GesSchemaBinder
     private static void CheckComposite(GesFileScope scope, GesResolvedHandle handle, int offset, Func<GesResolvedDeclaration, bool> enclosing)
     {
         if (handle.Root is { } root && enclosing(root.State))
-            throw scope.Error(Code.NotEncodable, offset, $"'@{handle.Name}' inside the state of its root '@{root.Name}' has no encoding yet.");
+            throw scope.Error(Code.NotEncodable, offset, $"'@{handle.Name}' inside the state of its root '@{root.Name}' points into its own root's value; each element would repeat the root's identity, so it has no encoding.");
     }
 
     // The encodability of a wire root as far as it is known without parameter values: the same conditions as binding, in

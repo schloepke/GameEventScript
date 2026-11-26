@@ -386,7 +386,8 @@ final class GesAstValidator {
     private func handleTypeName(_ typeName: String, _ location: GesSourceLocation) {
         for alternative in GesHandleTypeNames.alternatives(typeName) {
             guard GesHandleTypeNames.isHandleType(alternative) else {
-                report("validate.invalidHandleUse", location, symbol: alternative, kind: .type, message: "A union is written only of handle types, not ':\(alternative)'.")
+                let written = GesHandleTypeNames.sourceName(alternative)
+                report("validate.invalidHandleUse", location, symbol: written, kind: .type, message: "A union is written only of handle types, not '\(written)'.")
                 continue
             }
             let (name, versioned) = GesHandleTypeNames.split(alternative)
@@ -409,8 +410,25 @@ final class GesAstValidator {
         if member == "version" && !versioned {
             report("validate.invalidHandleUse", e.location, symbol: typeName, kind: .type, message: "'\(typeName)' has no versions.")
         } else if member == "root" && typeName.unicodeScalars.contains("|") && GesHandleTypeNames.commonRoot(typeName, handleTypes) == nil {
-            report("validate.invalidHandleUse", e.location, symbol: typeName, kind: .type, message: "The alternatives of '\(typeName)' have no common root type.")
+            report("validate.invalidHandleUse", e.location, symbol: typeName, kind: .type, message: noCommonRoot(typeName))
         }
+    }
+
+    // Names the two alternatives whose roots differ, or the first one that is no composite.
+    private func noCommonRoot(_ typeName: String) -> String {
+        var first: (name: String, root: GesHandleType)?
+        for alternative in GesHandleTypeNames.alternatives(typeName) {
+            let name = GesHandleTypeNames.split(alternative).name
+            guard let root = handleTypes[name]?.root else { return "'@\(name)' is no composite, so '\(typeName)' has no common root type." }
+            if let first {
+                if first.root.name != root.name {
+                    return "The root of '@\(first.name)' is '@\(first.root.name)' and the root of '@\(name)' is '@\(root.name)', so '\(typeName)' has no common root type."
+                }
+            } else {
+                first = (name, root)
+            }
+        }
+        return "The alternatives of '\(typeName)' have no common root type."
     }
 
     private func selector(_ s: GesSelector, _ location: GesSourceLocation, _ visit: (GesExpression) -> Void) {

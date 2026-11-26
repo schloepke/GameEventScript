@@ -13,7 +13,7 @@ struct AdapterHandles {
     static func from(_ test: Input) -> AdapterHandles? { test["handles"].map(AdapterHandles.init) }
 
     static func validate(_ catalog: Input) throws {
-        try Validation.fields(catalog, ["schemas", "hostSchemas", "resolvers", "answers"])
+        try Validation.fields(catalog, ["schemas", "hostSchemas", "resolvers", "answers", "refAnswers", "resolveRefs"])
         _ = try parse(catalog.required("schemas"))
         _ = try parse(catalog.required("hostSchemas"))
         let resolvers = try catalog.required("resolvers")
@@ -23,6 +23,12 @@ struct AdapterHandles {
             _ = try GesHandle(parsing: answer.text("handle"))
             try Validation.require(["document", "record", "missing", "fail"].contains(try answer.text("answer")))
         }
+        for answer in try Validation.array(catalog.required("refAnswers")) {
+            try Validation.fields(answer, ["ref", "answer", "version"])
+            try Validation.require(!(try GesHandle(parsing: answer.text("ref"))).ref.isNothing)
+            try Validation.require(["version", "missing", "fail"].contains(try answer.text("answer")))
+        }
+        for reference in try Validation.strings(catalog.required("resolveRefs")) { _ = try GesHandle(parsing: reference) }
     }
 
     // The handle types the sources may name.
@@ -34,8 +40,23 @@ struct AdapterHandles {
         let selected = resolvers == .null ? nil : Set(try Validation.strings(resolvers))
         var answers: [GesHandle: [Input]] = [:]
         for answer in try Validation.array(catalog.required("answers")) { answers[try GesHandle(parsing: answer.text("handle")), default: []].append(answer) }
-        let resolver = ScriptedResolver(answers)
+        // A ref is part of the text form but not of handle equality, so ref answers are found by text.
+        var refAnswers: [String: Input] = [:]
+        for answer in try Validation.array(catalog.required("refAnswers")) { refAnswers[String(describing: try GesHandle(parsing: answer.text("ref")))] = answer }
+        let resolver = ScriptedResolver(answers, refAnswers)
         for type in try Self.parse(catalog.required("hostSchemas")).handleTypes where selected?.contains(type.name) ?? true { builder.withHandleResolver(resolver, for: type) }
+    }
+
+    // Resolves each scripted ref through the started host, in order: the returned handle or Nothing, or the failure.
+    func resolveRefs(_ host: GameEventScriptHost) throws -> [[String: Any]] {
+        try Validation.strings(catalog.required("resolveRefs")).map { text in
+            do {
+                let resolved = try host.resolveRef(GesHandle(parsing: text))
+                return ["ref": text, "value": try RuntimeValues.encode(resolved.map { .handle($0) } ?? .nothing)]
+            } catch let error as GesHandleError {
+                return ["ref": text, "error": ["phase": "runtime", "code": error.code, "symbol": error.symbol]]
+            }
+        }
     }
 
     private static func parse(_ schemas: Input) throws -> GesSchemaSet {
@@ -50,9 +71,13 @@ private struct ScriptedResolverError: Error, CustomStringConvertible {
 // Answers each object's reads in the authored order; the last answer repeats, and an object without one fails.
 private final class ScriptedResolver: GesHandleResolver {
     private let answers: [GesHandle: [Input]]
+    private let refAnswers: [String: Input]
     private var calls: [GesHandle: Int] = [:]
 
-    init(_ answers: [GesHandle: [Input]]) { self.answers = answers }
+    init(_ answers: [GesHandle: [Input]], _ refAnswers: [String: Input]) {
+        self.answers = answers
+        self.refAnswers = refAnswers
+    }
 
     func resolve(_ call: GesHandleResolveCall) throws {
         let handle = call.handle
@@ -75,6 +100,9 @@ private final class ScriptedResolver: GesHandleResolver {
         }
     }
 
-    // Refs are not part of the scripted answers.
-    func resolveRef(_ handle: GesHandle) throws -> GesValue { throw ScriptedResolverError(description: "The case resolves no refs.") }
+    // Answers a ref from the case's scripted ref answers; a ref without one fails.
+    func resolveRef(_ handle: GesHandle) throws -> GesValue {
+        guard let answer = refAnswers[String(describing: handle)], try answer.text("answer") != "fail" else { throw ScriptedResolverError(description: "The case's resolver fails for \(handle).") }
+        return try answer.text("answer") == "missing" ? .nothing : RuntimeValues.decode(answer.required("version"))
+    }
 }

@@ -770,6 +770,19 @@ public static class GesSchemaValues
                     var shaped = new GesValue[list.Length];
                     for (var index = 0; index < shaped.Length; index++) shaped[index] = DocumentShape(element, list[index], GesSchemaDocumentCheck.Element(position, index), chosen);
                     return GesValue.GesList(shaped);
+                case GesSchemaTypeKind.Map when type.Handle is not null && type.Element is { } values && value.AsMap() is { } entries && value.CustomTypeName is null:
+                {
+                    var keys = new GesValue[entries.Length];
+                    var shapedValues = new GesValue[entries.Length];
+                    for (var index = 0; index < keys.Length; index++)
+                    {
+                        keys[index] = entries.KeyValueAt(index);
+                        var entry = entries.HandleKey(index) is { } handle ? GesSchemaDocumentCheck.Entry(position, handle) : GesSchemaDocumentCheck.Element(position, index);
+                        shapedValues[index] = DocumentShape(values, entries.ValueAt(index), GesSchemaDocumentCheck.Join(entry, "value"), chosen);
+                    }
+
+                    return GesValue.GesMapOfKeys(keys, shapedValues);
+                }
                 case GesSchemaTypeKind.Reference when value.AsMap() is not null && (value.CustomTypeName is not { } name || name == type.ReferenceName):
                     return DocumentShapes(type.Reference!, value, position, chosen, held is null ? value.CustomTypeName : type.ReferenceName);
             }
@@ -1128,21 +1141,21 @@ public static class GesSchemaValues
                     if (declaration.Kind == GesSchemaKind.Schema && !declaration.Abstract) return NormalizeState(declaration, value, path, declarations);
                     break;
                 }
-                case GesSchemaTypeKind.List when value.Kind == GesBytecodeTypeKind.List && value.ObjectValue is GesValue[] items:
+                case GesSchemaTypeKind.List when type.Element is { } element && value.Kind == GesBytecodeTypeKind.List && value.ObjectValue is GesValue[] items:
                 {
                     var normalized = new GesValue[items.Length];
                     for (var index = 0; index < items.Length; index++)
-                        normalized[index] = StateElement(type.Element!, items[index], path + "[]", declarations);
+                        normalized[index] = StateElement(element, items[index], path + "[]", declarations);
                     return GesValue.GesList(normalized);
                 }
-                case GesSchemaTypeKind.Map when value.AsMap() is { } map && value.CustomTypeName is null:
+                case GesSchemaTypeKind.Map when type.Element is { } mapElement && value.AsMap() is { } map && value.CustomTypeName is null:
                 {
                     var keys = new GesValue[map.Length];
                     var values = new GesValue[map.Length];
                     for (var index = 0; index < map.Length; index++)
                     {
                         keys[index] = map.KeyValueAt(index);
-                        values[index] = StateElement(type.Element!, map.ValueAt(index), path + "[]", declarations);
+                        values[index] = StateElement(mapElement, map.ValueAt(index), path + "[]", declarations);
                     }
 
                     return GesValue.GesMapOfKeys(keys, values);

@@ -36,7 +36,7 @@ final class RunWorkspace {
             return Draft(id: id, paths: paths, text: sources, baseline: bytes)
         }
 
-        func compile(handles: [GesHandleType]) throws -> GameEventScriptProgram {
+        func compile(handles: [GesHandleType]?) throws -> GameEventScriptProgram {
             let builder = ToolFiles.builder(handles)
             for (path, value) in zip(paths, text) { builder.addScript(value, sourceName: path) }
             return try builder.compile()
@@ -44,10 +44,13 @@ final class RunWorkspace {
     }
 
     var drafts: [Int: Draft] = [:]
-    // The handle catalog of `--handles`, read once at startup and reused by every later compilation.
-    let handleTypes: [GesHandleType]
+    // The `--schema` arguments, expanded again by every `:reload`, and the handle types they declared at the last
+    // successful start or reload, used by every compilation and binary import check in between; nil without `--schema`.
+    let schemaArguments: [String]
+    var handleTypes: [GesHandleType]?
 
-    init(handleTypes: [GesHandleType] = []) {
+    init(schemaArguments: [String] = [], handleTypes: [GesHandleType]? = nil) {
+        self.schemaArguments = schemaArguments
         self.handleTypes = handleTypes
     }
 

@@ -24,6 +24,13 @@ enum GesHandleTypeNames {
         return (String(scalars), versioned)
     }
 
+    // An alternative as written in source: a handle type as is, any other type with its `:` and its capitalized name,
+    // such as `:Number` for the binder's `number`.
+    static func sourceName(_ alternative: String) -> String {
+        guard let first = alternative.first, first != "@" else { return alternative }
+        return ":" + first.uppercased() + alternative.dropFirst()
+    }
+
     // The alternatives' names without `@`, in source order.
     static func names(_ typeName: String) -> [String] { alternatives(typeName).map { split($0).name } }
 

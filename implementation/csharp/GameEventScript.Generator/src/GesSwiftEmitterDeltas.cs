@@ -274,8 +274,8 @@ internal static partial class GesSwiftEmitter
             code.Close();
         }
 
-        var arguments = "id: id" + (members.Exists(member => member.Part.Base == "Version") ? ", version: version" : "");
-        code.Line(value.HandleRoot is not null ? $"{a} = {value.HandleType}(root: {GesCSharpEmitter.HandleRootType(value)}({arguments}), part: part)" : $"{a} = {value.HandleType}({arguments})");
+        var arguments = "uncheckedId: id" + (members.Exists(member => member.Part.Base == "Version") ? ", version: version" : "");
+        code.Line(value.HandleRoot is not null ? $"{a} = {value.HandleType}(uncheckedRoot: {GesCSharpEmitter.HandleRootType(value)}({arguments}), part: part)" : $"{a} = {value.HandleType}({arguments})");
         code.Close();
     }
 

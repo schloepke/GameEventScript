@@ -1324,3 +1324,218 @@ schema:
       line: 3
       column: 8
 ```
+
+---
+
+## Test: a document version on an unpinned field
+
+Only an `@Name~` field takes a version; one on an `@Name` field is `document.unexpectedVersion` at the handle. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-unexpected-version
+schemaApi:
+  sources: ["schema :DroneState as { x: :Number integer between 0 and 100 }\nschema :Contact as { label: :Text max 16 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nschema :Escort as {\n  target: @Target\n  escort: @Drone optional\n  pilot: @Drone~ optional\n  wing: :Map(@Target → @Drone) max 2\n  free: :Map optional\n}\n"]
+  document: ":Schema(:Escort)\ntarget: @Target:9\nescort: @Drone:4~7\nwing: [:]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.unexpectedVersion"
+      line: 3
+      column: 9
+```
+
+---
+
+## Test: a document ref on an unpinned field
+
+A ref is a version named through the owner, so an `@Name` field takes none either. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-unexpected-ref
+schemaApi:
+  sources: ["schema :DroneState as { x: :Number integer between 0 and 100 }\nschema :Contact as { label: :Text max 16 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nschema :Escort as {\n  target: @Target\n  escort: @Drone optional\n  pilot: @Drone~ optional\n  wing: :Map(@Target → @Drone) max 2\n  free: :Map optional\n}\n"]
+  document: ":Schema(:Escort)\ntarget: @Target:9\nescort: @Drone:4~'feature/x'\nwing: [:]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.unexpectedVersion"
+      line: 3
+      column: 9
+```
+
+---
+
+## Test: a document ref on a pinned field
+
+A pinned field takes a tag ref and a quoted ref as well as a version. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-pinned-ref
+schemaApi:
+  sources: ["schema :DroneState as { x: :Number integer between 0 and 100 }\nschema :Contact as { label: :Text max 16 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nschema :Escort as {\n  target: @Target\n  escort: @Drone optional\n  pilot: @Drone~ optional\n  wing: :Map(@Target → @Drone) max 2\n  free: :Map optional\n}\n"]
+  document: ":Schema(:Escort)\ntarget: @Target:9\nescort: @Drone:4\npilot: @Drone:4~#live\nwing: [@Target:1: @Drone:2, @Target:2: @Drone:3]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document version in a handle Map value
+
+The values of a handle Map are checked like every other field: a version on an `@Name` value is `document.unexpectedVersion`. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-map-value-version
+schemaApi:
+  sources: ["schema :DroneState as { x: :Number integer between 0 and 100 }\nschema :Contact as { label: :Text max 16 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nschema :Escort as {\n  target: @Target\n  escort: @Drone optional\n  pilot: @Drone~ optional\n  wing: :Map(@Target → @Drone) max 2\n  free: :Map optional\n}\n"]
+  document: ":Schema(:Escort)\ntarget: @Target:9\nwing: [@Target:1: @Drone:2~5]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.unexpectedVersion"
+      line: 3
+      column: 19
+```
+
+---
+
+## Test: a document version in a free Map
+
+A free `:Map` holds data without a field type, so a handle with a version passes there. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handle-free-map
+schemaApi:
+  sources: ["schema :DroneState as { x: :Number integer between 0 and 100 }\nschema :Contact as { label: :Text max 16 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nschema :Escort as {\n  target: @Target\n  escort: @Drone optional\n  pilot: @Drone~ optional\n  wing: :Map(@Target → @Drone) max 2\n  free: :Map optional\n}\n"]
+  document: ":Schema(:Escort)\ntarget: @Target:9\nwing: [:]\nfree: [a: @Drone:2~5]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document handle Map takes the alternatives its check chose
+
+A handle Map orders its keys, so each value takes the alternative the check chose for its key, not for its place in the
+document. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-handle-map-union
+schemaApi:
+  sources: ["schema :DroneState as { x: :Number integer between 0 and 100 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Nothing }\nschema :Small as { a: :Number integer }\nschema :Large as { a: :Number integer, b: :Text max 4 }\nschema :Fleet as { crew: :Map(@Drone → :Small | :Large) max 4 }\n"]
+  readDocument:
+    text: ":Schema(:Fleet)\ncrew: [@Drone:9: [a: 1, b: 'x'], @Drone:2: [a: 2]]\n"
+    expected: ["Fleet"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Fleet"
+    value:
+      type: ":Fleet"
+      entries:
+        - key: "crew"
+          value:
+            type: ":Map"
+            entries:
+              - handle: "@Drone:2"
+                value:
+                  type: ":Small"
+                  entries:
+                    - key: "a"
+                      value:
+                        type: ":Number.int64"
+                        value: "2"
+              - handle: "@Drone:9"
+                value:
+                  type: ":Large"
+                  entries:
+                    - key: "a"
+                      value:
+                        type: ":Number.int64"
+                        value: "1"
+                    - key: "b"
+                      value:
+                        type: ":Text"
+                        value: "x"
+```
+
+---
+
+## Test: the guide's document of handles
+
+The document of the [handles guide](../../../docs/guide/Handles.md#write-handles-as-text-and-in-documents) passes its
+schema: its ref stands in an `@Unit~` field. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-handles-guide
+schemaApi:
+  sources: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nschema :Composition as { name: :Text max 64, slots: :Number integer between 0 and 16 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nschema :Sighting as {\n  target: @Target\n  seen: :List(@Target) max 16\n  unit: @Unit~ optional\n  memory: :Map(@Target → :Contact) max 64\n}\n"]
+  document: ":Schema(:Sighting)\ntarget: @Target:3\nseen: [@Target:3, @Target:17]\nunit: @Unit:drone.gnabblo~#live\nmemory: [\n  @Target:3: [label: 'Alpha', strength: 42]\n]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```

@@ -5,7 +5,7 @@ import Foundation
 import GameEventScriptRuntime
 
 struct RunOptions {
-    var inputs: [String] = [], scenarios: [String] = [], handles: [String] = [], arguments: [GesValue] = []
+    var inputs: [String] = [], scenarios: [String] = [], schemas: [String] = [], arguments: [GesValue] = []
     var profilePath: String?
     var seed: Int64?
     var limits = GesRuntimeLimits()
@@ -44,12 +44,12 @@ struct RunOptions {
                 help = true
                 return
             }
-            if argument == "--handles" {
+            if argument == "--schema" {
                 guard index + 1 < args.count, !args[index + 1].hasPrefix("-"), !args[index + 1].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                    throw ToolError.usage("Specify a schema path after --handles; prefix a path starting with '-' with './'.")
+                    throw ToolError.usage("Specify a schema path after --schema; prefix a path starting with '-' with './'.")
                 }
                 index += 1
-                handles.append(args[index])
+                schemas.append(args[index])
                 continue
             }
             if ["--scenario", "--arg", "--seed", "--max-messages", "--max-steps", "--profile"].contains(argument) {
@@ -115,14 +115,14 @@ extension Tool {
             io.line(ToolHelp.run)
             return 0
         }
-        let handles = try ToolFiles.handleTypes(options.handles)
+        let handles = try ToolFiles.handleTypes(options.schemas)
         let paths = try ToolFiles.expand(options.inputs)
         let binaries = paths.filter(ToolFiles.isBinary).count
         guard binaries == 0 || binaries == paths.count else { throw ToolError.usage("Run accepts either sources compiled together or binaries loaded separately; inputs cannot be mixed.") }
         var programs: [GameEventScriptProgram] = []
         if binaries > 0 {
             for path in paths {
-                do { programs.append(try ToolFiles.read(path)) } catch let error as GesProgramFormatError {
+                do { programs.append(try ToolFiles.readBinary(path, handles: handles)) } catch let error as GesProgramFormatError {
                     io.report(error, fallback: path)
                     return 1
                 }
@@ -162,7 +162,7 @@ extension Tool {
 
     private func executePrograms(
         _ options: RunOptions,
-        handles: [GesHandleType],
+        handles: [GesHandleType]?,
         paths: [String],
         binaries: Int,
         programs: [GameEventScriptProgram],
@@ -170,7 +170,7 @@ extension Tool {
         scenario: GameEventScriptProgram?,
         profiler: RunProfiler?
     ) throws -> Int {
-        let session = try RunSession(options: options, io: io, workspace: RunWorkspace(handleTypes: handles), profiler: profiler)
+        let session = try RunSession(options: options, io: io, workspace: RunWorkspace(schemaArguments: options.schemas, handleTypes: handles), profiler: profiler)
         for (index, program) in programs.enumerated() { try session.inventory.load(program, paths: binaries > 0 ? [paths[index]] : paths) }
         if let scenario { try session.inventory.load(scenario, paths: scenarios) }
         let main = scenario == nil && !options.interactive

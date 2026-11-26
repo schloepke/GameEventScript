@@ -21,6 +21,9 @@ internal static class ToolProcess
     internal static DotNetProcessResult ExecuteWithInputAndNoColor(string directory, string input, params string[] arguments)
         => DotNetProcess.ExecuteConfigured(AssemblyPath(), directory, input, new Dictionary<string, string?> { ["NO_COLOR"] = "1" }, arguments);
 
+    internal static DotNetProcessResult ExecuteWithInputAndEditor(string directory, string input, string editor, params string[] arguments)
+        => DotNetProcess.ExecuteConfigured(AssemblyPath(), directory, input, new Dictionary<string, string?> { ["NO_COLOR"] = null, ["GES_EDITOR"] = editor }, arguments);
+
     private static string AssemblyPath()
     {
         var configuration = typeof(ToolProcess).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;

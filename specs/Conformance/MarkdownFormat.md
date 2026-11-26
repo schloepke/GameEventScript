@@ -574,6 +574,19 @@ entry. Message lists and argument lists are order-sensitive. `local` observes
 both Emit and the local half of Publish; `outbound` observes messages handed to
 the configured publish sink in call order.
 
+**Input rejection** (**Since: Unreleased**). A step whose Receive throws instead of enqueuing its input, such as an argument holding a handle with an unresolved
+ref, expects `accepted: false` and a `rejection` with `phase: wire`, the stable `wire.*` `code` and optionally the
+argument `path` as the error reports it (`Message.label`, or the index of an unlabeled argument):
+
+```yaml
+seen:
+  accepted: false
+  rejection: { phase: wire, code: wire.unresolvedRef, path: Seen.drone }
+```
+
+`rejection` defaults to none; a step that is rejected without expecting it, or expected to be rejected without it,
+fails. A rejection requires `accepted: false`. The input is not enqueued, so the step's pump sees only earlier work.
+
 Each `runtimeLimits.include` or `.exclude` entry may constrain `name`,
 `detailContains`, and `limit`; at least one field is required. The explicit
 wildcard `{ any: true }` may be used alone, most commonly in `exclude`, to match
@@ -625,7 +638,7 @@ trace:
     id: "5"
     deadline: "2000000"
     publish: false
-    name: beat
+    name: "'beat'"
     period: "1000000"
   - event: reset
 ```
@@ -678,8 +691,9 @@ ordered list of the host's pending named timers. Each entry has exactly the
 fields `name`, `deadline` and `period` (decimal microsecond text; period `"0"`
 for a one-shot timer), `message` (the message name), `program` (a loaded program
 ID) and Boolean `publish`. Omission makes no assertion.
-A handle-named timer's `name` is the handle's text form, so this list does not distinguish it from a
-Text name with the same spelling.
+A timer `name` here and in `scheduled` events is a handle's text form, such as `"@Target:3"`, or a
+nonempty Text name as a single-quoted text literal with doubled quotes, such as `"'beat'"`, so a handle and a
+Text of the same spelling stay distinct.
 
 ### Handle catalogs
 
@@ -708,15 +722,50 @@ handles:
 | `schemas` | non-empty sequence of strings | yes | [Schema](../Schemas.md) sources whose handle types the compiler knows |
 | `hostSchemas` | non-empty sequence of strings | no | sources of the host's handle types; default `schemas` |
 | `resolvers` | sequence of distinct type names without `@` | no | host types that get a resolver; omitted means every host type, `[]` none |
-| `answers` | sequence | no | scripted resolver answers; only `scriptApi` cases |
+| `answers` | sequence | no | scripted resolver answers for states and refs; only `scriptApi` cases |
+| `resolveRefs` | sequence of handle text forms | no | handles the runner resolves through the host's `ResolveRef` after Start, in order; only `scriptApi` cases |
 
 Each answer names one object by the handle's text form and has exactly one of `document` (GES document text, read
 against the state schema), `record` (a data literal of the state record), `missing: true` (the object does not
 exist) and `fail: true` (the resolver throws). A `document` or `record` answer may pass a `version` in the
 [portable value shape](#portable-message-and-value-shape), a `:Number.int64` or `:Bytes`; `fail` has none. The
 answers of one object are used in authored order, one per resolve call, and the last one repeats; a read of an
-object without an answer fails like `fail`. Refs are not scripted: every resolver rejects a ref resolution, so
-cases cannot observe refs or `wire.unresolvedRef`, which native tests cover.
+object without an answer fails like `fail`.
+
+An answer with `ref` instead of `handle` scripts a [ref](../HostRuntime.md#handles) resolution: `ref` is the text
+form of a handle that carries a ref, such as `"@Unit:7~#live"` or, for a composite, `"@RepoFile:repo~'main'/a.txt"`,
+and the answer has exactly one of `version` (the version the resolver returns, a `:Number.int64` or `:Bytes` in the
+portable value shape), `missing: true` (the resolver knows no such ref and returns Nothing) and `fail: true` (the
+resolver throws). A ref answer is used for every resolution of that text form; a ref without an answer fails like
+`fail`.
+
+```yaml
+handles:
+  answers:
+    - ref: "@Unit:7~#live"
+      version: { type: ":Number.int64", value: "5" }
+  resolveRefs: ["@Unit:7~#live", "@Unit:7~#gone"]
+```
+
+After Start and the initialization pump, and before the first step, each host resolves every `resolveRefs` entry in
+order through its `ResolveRef` (Swift `resolveRef`). A case with `resolveRefs` has a top-level `resolvedRefs`
+expectation with one entry per resolved handle, in the same order, naming it in `ref` and holding exactly one of
+`value`, the returned handle or `{ type: ":Nothing" }` for no handle, and `error`, a failure as `phase: runtime`, its
+`code` and optionally its `symbol`:
+
+```yaml
+gesBlock: expect
+resolvedRefs:
+  - ref: "@Unit:7~#live"
+    value: { type: ":Handle", value: "@Unit:7~5" }
+  - ref: "@Unit:7~#gone"
+    error: { phase: runtime, code: runtime.handleResolveFailed }
+```
+
+`resolvedRefs` without `resolveRefs` is invalid. Every host of the case reports the same entries.
+
+A step input may carry a handle with a ref. Receive rejects it before enqueuing anything, so the step expects
+`accepted: false` and a `rejection`, as the input rejection of [ordered steps](#ordered-steps) describes.
 
 ## Portable message and value shape
 

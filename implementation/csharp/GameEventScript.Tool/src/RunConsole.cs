@@ -124,7 +124,7 @@ internal static class RunConsole
                 }
                 var sourceName = $"<interactive:{lineNumber}>";
                 var source = "on initialization {\n" + line + "\n}\n";
-                var program = ToolHandles.Builder(session.Workspace.HandleTypes).AddScript(source, sourceName).Compile();
+                var program = ToolSchemas.Builder(session.Workspace.HandleTypes).AddScript(source, sourceName).Compile();
                 var handlers = program.Bindings.Entries.Where(binding => binding.Kind is GesBinaryBindKind.MessageHandler or GesBinaryBindKind.MessageNameHandler).ToArray();
                 if (handlers.Length != 1 || program.StringConstants.Resolve(handlers[0].Name) != "initialization")
                 {
@@ -151,6 +151,11 @@ internal static class RunConsole
                 if (exception.ByteOffset is { } offset) Console.Error.WriteLine($"  byteOffset={offset}");
                 if (exception.SectionType is { } section) Console.Error.WriteLine($"  sectionType=0x{section:X4}");
                 if (exception.EntryIndex is { } entry) Console.Error.WriteLine($"  entryIndex={entry}");
+                success = false;
+            }
+            catch (GesSchemaException exception)
+            {
+                ToolSchemas.Report(exception);
                 success = false;
             }
             catch (DecoderFallbackException exception)

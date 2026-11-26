@@ -34,6 +34,13 @@ def validate(case, raw, observation=False):
 # The host's pending named timers in its own order (deadline, then send order); deadline and period are exact
 # microseconds as decimal text, and period 0 marks a one-shot timer.
 TIMER_FIELDS = {'name', 'deadline', 'period', 'message', 'program', 'publish'}
+# A timer name is a handle's text form (`@Target:3`) or a nonempty Text as a single-quoted GES text literal with
+# doubled quotes (`'a'`, `'it''s'`), so a handle and a Text of the same spelling stay distinct.
+TIMER_NAME = re.compile(r"@.+|'(?:[^']|'')+'", re.DOTALL)
+
+
+def timer_name(value):
+    return isinstance(value, str) and TIMER_NAME.fullmatch(value) is not None
 
 
 def timers(raw, programs):
@@ -43,7 +50,7 @@ def timers(raw, programs):
         closed(item, TIMER_FIELDS, 'pending timer')
         if item.keys() != TIMER_FIELDS:
             raise InvalidDocument('Incomplete pending timer')
-        if not isinstance(item['name'], str) or not item['name'] or not isinstance(item['message'], str) or not item['message']:
+        if not timer_name(item['name']) or not isinstance(item['message'], str) or not item['message']:
             raise InvalidDocument('Invalid pending timer name')
         duration(item['deadline'])
         duration(item['period'])

@@ -47,21 +47,30 @@ enum ToolFiles {
         return text
     }
 
-    // The handle catalog of `--handles`: every handle type that the given schema sources declare, read once as one
-    // schema set. The CLI registers no resolver, so only programs that do not read handle state can load.
-    static func handleTypes(_ arguments: [String]) throws -> [GesHandleType] {
-        if arguments.isEmpty { return [] }
-        let paths = try expand(arguments)
-        return try GesSchemaSet(sources: try paths.map { GesSchemaSource(name: $0, text: try source($0)) }).handleTypes
+    // The schema set of `--schema`: every handle type that the given schema sources declare, read as one schema set.
+    // The CLI registers no resolver, so only programs that do not read handle state can load. Nil without `--schema`.
+    static func handleTypes(_ arguments: [String]) throws -> [GesHandleType]? {
+        var activePath = ""
+        return try handleTypes(arguments, activePath: &activePath)
     }
 
-    static func builder(_ handles: [GesHandleType]) -> GesProgramBuilder {
+    static func handleTypes(_ arguments: [String], activePath: inout String) throws -> [GesHandleType]? {
+        if arguments.isEmpty { return nil }
+        var sources: [GesSchemaSource] = []
+        for path in try expand(arguments) {
+            activePath = path
+            sources.append(GesSchemaSource(name: path, text: try source(path)))
+        }
+        return try GesSchemaSet(sources: sources).handleTypes
+    }
+
+    static func builder(_ handles: [GesHandleType]?) -> GesProgramBuilder {
         let builder = GesProgramBuilder()
-        if !handles.isEmpty { builder.withHandleTypes(handles) }
+        if let handles, !handles.isEmpty { builder.withHandleTypes(handles) }
         return builder
     }
 
-    static func compile(_ paths: [String], handles: [GesHandleType] = [], debug: Bool = true) throws -> GameEventScriptProgram {
+    static func compile(_ paths: [String], handles: [GesHandleType]? = nil, debug: Bool = true) throws -> GameEventScriptProgram {
         let builder = builder(handles).withDebugInfo(debug ? .all : .none)
         for path in paths { builder.addScript(try source(path), sourceName: path) }
         return try builder.compile()
@@ -69,9 +78,44 @@ enum ToolFiles {
 
     static func isBinary(_ path: String) -> Bool { (path as NSString).pathExtension.lowercased() == "gesb" }
 
-    static func read(_ path: String, handles: [GesHandleType] = []) throws -> GameEventScriptProgram {
-        if isBinary(path) { return try GameEventScriptProgram.read(Array(Data(contentsOf: URL(fileURLWithPath: path)))) }
+    static func read(_ path: String, handles: [GesHandleType]? = nil) throws -> GameEventScriptProgram {
+        if isBinary(path) { return try readBinary(path, handles: handles) }
         return try compile([path], handles: handles)
+    }
+
+    // A binary Program carries the handle types it was compiled with; they must match the schemas of `--schema`.
+    static func readBinary(_ path: String, handles: [GesHandleType]?) throws -> GameEventScriptProgram {
+        let program = try GameEventScriptProgram.read(Array(Data(contentsOf: URL(fileURLWithPath: path))))
+        try checkImports(program, handles: handles)
+        return program
+    }
+
+    // Checks every handle type a binary Program imports against the schemas of `--schema`. A type the schemas declare
+    // links on a throwaway host whose resolvers are never called, so the comparison is the runtime's own; a type they
+    // do not declare fails with the same code. Without `--schema` nothing is checked.
+    static func checkImports(_ program: GameEventScriptProgram, handles: [GesHandleType]?) throws {
+        guard let handles else { return }
+        var builder: GesHostBuilder?
+        for entry in program.bindings where entry.kind == .handleType {
+            let name = program.stringConstants.resolve(entry.name)
+            guard let type = handles.first(where: { $0.name == name }) else {
+                throw ToolError.link(
+                    GesDiagnostic(
+                        phase: .link,
+                        code: GesDiagnosticCodes.linkMismatchedHandleType,
+                        message: "The schemas declare no handle type @\(name), which the Program was compiled with.",
+                        symbol: name,
+                        programName: program.moduleName
+                    )
+                )
+            }
+            builder = (builder ?? GameEventScriptHost.makeBuilder()).withHandleResolver(UnusedResolver(), for: type)
+        }
+        if let builder { _ = try builder.build().load(program) }
+    }
+
+    private struct UnusedResolver: GesHandleResolver {
+        func resolve(_ call: GesHandleResolveCall) throws { throw ToolError.io("The import check reads no state.") }
     }
 
     static func ensureDistinct(_ output: String, from inputs: [String]) throws {

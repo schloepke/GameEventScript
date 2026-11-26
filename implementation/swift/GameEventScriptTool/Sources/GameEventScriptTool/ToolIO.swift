@@ -69,6 +69,7 @@ final class ToolIO {
         case ToolError.usage(let message): line("error \(argumentCode): \(message)", toError: true)
         case ToolError.encoding(let path): line("\(path): error cli.invalidEncoding: Expected valid UTF-8.", toError: true)
         case ToolError.io(let message): line("error cli.io: \(message)", toError: true)
+        case ToolError.link(let value): diagnostic(value, fallback: "link")
         default: line("error cli.io: \(failure.localizedDescription)", toError: true)
         }
     }
@@ -78,6 +79,8 @@ enum ToolError: Error {
     case usage(String)
     case encoding(String)
     case io(String)
+    // A link failure the CLI finds itself, printed like the runtime's link diagnostics.
+    case link(GesDiagnostic)
 }
 
 // Reads bounded chunks and accepts LF, CRLF and CR. Invalid UTF-8 is never repaired silently.

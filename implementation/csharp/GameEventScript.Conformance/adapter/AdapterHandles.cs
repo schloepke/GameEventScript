@@ -17,7 +17,7 @@ internal sealed class AdapterHandles
 
     internal static void Validate(JsonElement catalog)
     {
-        Fields(catalog, "schemas", "hostSchemas", "resolvers", "answers");
+        Fields(catalog, "schemas", "hostSchemas", "resolvers", "answers", "refAnswers", "resolveRefs");
         _ = Parse(catalog.GetProperty("schemas"));
         _ = Parse(catalog.GetProperty("hostSchemas"));
         var resolvers = catalog.GetProperty("resolvers");
@@ -28,6 +28,15 @@ internal sealed class AdapterHandles
             _ = GesHandle.Parse(answer.GetProperty("handle").GetString()!);
             if (answer.GetProperty("answer").GetString() is not ("document" or "record" or "missing" or "fail")) throw new ArgumentException("Invalid handle answer.");
         }
+
+        foreach (var answer in catalog.GetProperty("refAnswers").EnumerateArray())
+        {
+            Fields(answer, "ref", "answer", "version");
+            if (GesHandle.Parse(answer.GetProperty("ref").GetString()!).Ref.IsNothing) throw new ArgumentException("A ref answer names no ref.");
+            if (answer.GetProperty("answer").GetString() is not ("version" or "missing" or "fail")) throw new ArgumentException("Invalid ref answer.");
+        }
+
+        foreach (var reference in catalog.GetProperty("resolveRefs").EnumerateArray()) _ = GesHandle.Parse(reference.GetString()!);
     }
 
     // The handle types the sources may name.
@@ -46,9 +55,35 @@ internal sealed class AdapterHandles
             list.Add(answer);
         }
 
-        var resolver = new ScriptedResolver(answers);
+        // A ref is part of the text form but not of handle equality, so ref answers are found by text.
+        var refAnswers = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (var answer in _catalog.GetProperty("refAnswers").EnumerateArray())
+            refAnswers[GesHandle.Parse(answer.GetProperty("ref").GetString()!).ToString()] = answer;
+
+        var resolver = new ScriptedResolver(answers, refAnswers);
         foreach (var type in Parse(_catalog.GetProperty("hostSchemas")).HandleTypes)
             if (selected is null || selected.Contains(type.Name)) builder.WithHandleResolver(type, resolver);
+    }
+
+    // Resolves each scripted ref through the started host, in order: the returned handle or Nothing, or the failure.
+    internal object[] ResolveRefs(GameEventScriptHost host)
+    {
+        var results = new List<object>();
+        foreach (var item in _catalog.GetProperty("resolveRefs").EnumerateArray())
+        {
+            var text = item.GetString()!;
+            try
+            {
+                var resolved = host.ResolveRef(GesHandle.Parse(text));
+                results.Add(new { @ref = text, value = resolved is null ? RuntimeValues.Encode(default) : RuntimeValues.Encode(GesValue.GesHandle(resolved)) });
+            }
+            catch (GesHandleException exception)
+            {
+                results.Add(new { @ref = text, error = new { phase = "runtime", code = exception.Code, symbol = exception.Symbol } });
+            }
+        }
+
+        return results.ToArray();
     }
 
     private static GesSchemaSet Parse(JsonElement schemas)
@@ -62,7 +97,7 @@ internal sealed class AdapterHandles
     }
 
     // Answers each object's reads in the authored order; the last answer repeats, and an object without one fails.
-    private sealed class ScriptedResolver(Dictionary<GesHandle, List<JsonElement>> answers) : IGesHandleResolver
+    private sealed class ScriptedResolver(Dictionary<GesHandle, List<JsonElement>> answers, Dictionary<string, JsonElement> refAnswers) : IGesHandleResolver
     {
         private readonly Dictionary<GesHandle, int> _calls = new();
 
@@ -95,7 +130,12 @@ internal sealed class AdapterHandles
             }
         }
 
-        /// <summary>Refs are not part of the scripted answers.</summary>
-        public GesValue ResolveRef(GesHandle handle) => throw new InvalidOperationException("The case resolves no refs.");
+        /// <summary>Answers a ref from the case's scripted ref answers; a ref without one fails.</summary>
+        public GesValue ResolveRef(GesHandle handle)
+        {
+            if (!refAnswers.TryGetValue(handle.ToString(), out var answer) || answer.GetProperty("answer").GetString() == "fail")
+                throw new InvalidOperationException("The case's resolver fails for " + handle + ".");
+            return answer.GetProperty("answer").GetString() == "missing" ? default : RuntimeValues.Decode(answer.GetProperty("version"));
+        }
     }
 }

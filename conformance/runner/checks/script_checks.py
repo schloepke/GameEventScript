@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 """Single-Program source execution using the shared runtime observation oracle."""
 from core.corpus import InvalidDocument, closed
-from checks import runtime_checks
+from checks import handle_catalog, runtime_checks
 
 
 def prepare(case):
     closed(case.metadata, {'gesBlock', 'id', 'kind', 'level', 'categories', 'tags', 'requires',
                            'sources', 'compile', 'runtimeLimits', 'comparison', 'random', 'hostCount', 'nativeHandlers', 'stepActions', 'deferredPrograms', 'publishSink', 'handles'}, 'supported script metadata')
-    closed(case.expected, {'gesBlock', 'steps', 'initialization'}, 'supported script expectation')
+    closed(case.expected, {'gesBlock', 'steps', 'initialization', 'resolvedRefs'}, 'supported script expectation')
     if (not case.sources and not case.metadata.get('nativeHandlers')):
         raise InvalidDocument('Script execution requires source Programs or native handlers')
     return runtime_checks.prepare(case)
@@ -23,4 +23,9 @@ def compare(case, observed):
     if observed.get('status') != 'ok':
         raise InvalidDocument('Invalid script observation status')
     differences = runtime_checks.compare(case, observed.get('runtime'))
+    for host in observed['runtime']['hosts']:
+        if 'resolvedRefs' not in host:
+            raise InvalidDocument('Missing resolved ref observations')
+    handle_catalog.compare(case, observed['runtime']['hosts'],
+                           lambda path, expected, actual: None if expected == actual else differences.append({'path': path, 'expected': expected, 'actual': actual}))
     return ('failed' if differences else 'passed'), differences

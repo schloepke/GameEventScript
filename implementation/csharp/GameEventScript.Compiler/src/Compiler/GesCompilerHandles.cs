@@ -24,7 +24,7 @@ internal static partial class GesCompiler
             {
                 // The validator reported every undeclared type before lowering.
                 var type = module.HandleTypes[name];
-                _builder.AddHandleType(name, type.Hash, type.StateName);
+                _builder.AddHandleType(name, type.LinkHash, type.StateName);
             }
         }
 

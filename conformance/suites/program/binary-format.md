@@ -4098,7 +4098,7 @@ binaryFixture:
   id: gesb-v1-handle-types
   resourceId: gesb-v1.handle-types
   relativePath: GesbV1/handle-types.gesb
-  sha256: CDFDBA45F2E9D5A30E9215DEC25434CDB2669E6BEE690DEABCCECE0DF7E45FE0
+  sha256: B4104BC02A6101671E358922CC255654A7DF64866B7263104BF54A2FDAB28B89
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 0
@@ -4120,7 +4120,7 @@ gesBlock: expect
 binary:
   outcome: valid
   rewriteByteExact: true
-  rewriteSha256: CDFDBA45F2E9D5A30E9215DEC25434CDB2669E6BEE690DEABCCECE0DF7E45FE0
+  rewriteSha256: B4104BC02A6101671E358922CC255654A7DF64866B7263104BF54A2FDAB28B89
   moduleName: handles
   opaqueSectionCount: 0
 ```
@@ -4144,7 +4144,7 @@ binaryFixture:
   id: gesb-v1-handle-type-duplicate-name
   resourceId: gesb-v1.handle-type-duplicate-name
   relativePath: GesbV1/handle-type-duplicate-name.gesb
-  sha256: CA995A6CD8EC52B2F3C0D7283182154932E0FD29A3D990BD6F62535CD20378DB
+  sha256: E0985AB5F8D76748555DD9DE5D5CCC5AE815672B547C15EE6C0A5F3FDD94A7FC
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 0

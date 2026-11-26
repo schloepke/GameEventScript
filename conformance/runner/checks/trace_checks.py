@@ -3,6 +3,7 @@
 """Ordered observer callback assertions independent of the host implementation."""
 from core.corpus import InvalidDocument, closed
 from checks.compiler_checks import diagnostic
+from checks.lifecycle_checks import timer_name
 
 
 def normalize(events, message, limit, expectation=False):
@@ -26,7 +27,7 @@ def normalize(events, message, limit, expectation=False):
         closed(item, allowed, 'observer event')
         if item.keys() != allowed:
             raise InvalidDocument('Incomplete observer event')
-        if 'name' in item and (not isinstance(item['name'], str) or not item['name']):
+        if 'name' in item and not timer_name(item['name']):
             raise InvalidDocument('Invalid timer name')
         normalized = dict(item)
         if 'message' in item:

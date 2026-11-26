@@ -22,6 +22,11 @@ internal static class GesHandleTypeNames
         return (alternative.Substring(start, alternative.Length - start - (versioned ? 1 : 0)), versioned);
     }
 
+    // An alternative as written in source: a handle type as is, any other type with its `:` and its capitalized name,
+    // such as `:Number` for the binder's `number`.
+    internal static string SourceName(string alternative)
+        => alternative.Length == 0 || alternative[0] == '@' ? alternative : ":" + char.ToUpperInvariant(alternative[0]) + alternative.Substring(1);
+
     // The alternatives' names without `@`, in source order.
     internal static string[] Names(string typeName)
     {

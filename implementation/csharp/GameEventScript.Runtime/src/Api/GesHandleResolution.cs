@@ -21,11 +21,14 @@ public interface IGesHandleResolver
     void Resolve(GesHandleResolveCall call);
 
     /// <summary>
-    /// Turns the ref a handle read from a document carries into the version it names.
+    /// Turns the ref a handle read from a document carries into the version it names. The default implementation is
+    /// for types without refs: it throws, which <see cref="GameEventScriptHost.ResolveRef(GesHandle)"/> reports as
+    /// <c>runtime.handleResolveFailed</c>.
     /// </summary>
     /// <param name="handle">A handle of this resolver's type that carries a ref.</param>
-    /// <returns>The version: an integer Number, or Bytes of 20 or 32 bytes for a hash.</returns>
-    GesValue ResolveRef(GesHandle handle);
+    /// <returns>The version: an integer Number, or Bytes of 20 or 32 bytes for a hash; Nothing when no such ref exists.</returns>
+    /// <exception cref="InvalidOperationException">The default implementation: the type has no refs.</exception>
+    GesValue ResolveRef(GesHandle handle) => throw new InvalidOperationException($"@{handle.TypeName} has no refs.");
 }
 
 /// <summary>

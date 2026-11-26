@@ -2,103 +2,176 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Globalization;
 using System.Text;
 
 namespace GameEventScript.Syntax;
 
 /// <summary>
-/// Recognizes the text form of a handle in a document (specs/Documents.md#handles): <c>@Type:id</c> with an optional
-/// <c>~version</c> or ref and an optional <c>/part</c>. Runtime builds the handle from the recognized text.
+/// Recognizes the text form of a handle (specs/Language.md#handle-text-form): <c>@Type:id</c> with an optional
+/// <c>~version</c> or ref and an optional <c>/part</c>. Documents and Runtime's <c>GesHandle.Parse</c> share this one
+/// scanner; Runtime builds the handle from the recognized parts.
 /// </summary>
 internal static class GesHandleLiteral
 {
-    // Reads a handle at `start`, which holds `@`. Returns the end of the handle, or -1 when the text there is no
-    // well-formed handle that a document delimiter follows. `identity` is the type, id and part, which compare keys;
-    // `versioned` is whether a version or a ref follows the id.
-    internal static int Read(string text, int start, out string identity, out bool versioned)
+    /// <summary>What follows the <c>~</c> of a handle.</summary>
+    internal enum VersionForm : byte
     {
-        identity = "";
-        versioned = false;
+        None,
+        Revision,
+        Hash,
+        Tag,
+        Text,
+    }
+
+    /// <summary>An id or part: an integer or a Text.</summary>
+    internal readonly struct Key
+    {
+        internal Key(long integer)
+        {
+            IsInteger = true;
+            Integer = integer;
+            Text = "";
+        }
+
+        internal Key(string text)
+        {
+            IsInteger = false;
+            Integer = 0;
+            Text = text;
+        }
+
+        internal bool IsInteger { get; }
+
+        internal long Integer { get; }
+
+        internal string Text { get; }
+    }
+
+    /// <summary>The recognized parts of a handle.</summary>
+    internal readonly struct Parts
+    {
+        internal Parts(string typeName, Key id, VersionForm version, long revision, string versionText, bool hasPart, Key part)
+        {
+            TypeName = typeName;
+            Id = id;
+            Version = version;
+            Revision = revision;
+            VersionText = versionText;
+            HasPart = hasPart;
+            Part = part;
+        }
+
+        internal string TypeName { get; }
+
+        internal Key Id { get; }
+
+        internal VersionForm Version { get; }
+
+        // The decimal revision of a VersionForm.Revision.
+        internal long Revision { get; }
+
+        // The lowercase hexadecimal digits of a hash, the tag name or the Text of a ref.
+        internal string VersionText { get; }
+
+        internal bool HasPart { get; }
+
+        internal Key Part { get; }
+    }
+
+    // Reads a handle at `start`, which holds `@`, without looking at what follows it. Returns the end of the handle, or
+    // -1 when the text there is no well-formed handle. A `/` that begins a `//` comment never starts or continues a part.
+    internal static int Scan(string text, int start, out Parts parts)
+    {
+        parts = default;
         var position = start + 1;
         if (position >= text.Length || !GesText.IsAsciiUpper(text[position])) return -1;
         while (position < text.Length && (GesText.IsAsciiLetter(text[position]) || text[position] is >= '0' and <= '9' or '_')) position++;
         var typeName = text.Substring(start + 1, position - start - 1);
         if (!GesText.IsTypeName(typeName) || position >= text.Length || text[position] != ':') return -1;
         position++;
-        var builder = new StringBuilder(typeName).Append(':');
-        if (!ReadKey(text, ref position, false, builder)) return -1;
+        if (!ReadKey(text, ref position, false, out var id)) return -1;
+        var version = VersionForm.None;
+        var revision = 0L;
+        var versionText = "";
         if (position < text.Length && text[position] == '~')
         {
-            versioned = true;
             position++;
             if (position < text.Length && text[position] == '#')
             {
                 var tagStart = ++position;
                 while (position < text.Length && (GesText.IsAsciiLetter(text[position]) || text[position] is >= '0' and <= '9')) position++;
-                if (!GesText.IsTagName(text.Substring(tagStart, position - tagStart))) return -1;
+                versionText = text.Substring(tagStart, position - tagStart);
+                if (!GesText.IsTagName(versionText)) return -1;
+                version = VersionForm.Tag;
             }
             else if (position < text.Length && text[position] == '\'')
             {
-                if (GesTextLiteralReader.Read(text, ref position) is not { } quoted || GesText.GetInvalidUtf16Offset(quoted) >= 0) return -1;
+                if (ReadQuoted(text, ref position) is not { } quoted) return -1;
+                versionText = quoted;
+                version = VersionForm.Text;
             }
             else
             {
                 var versionStart = position;
                 while (position < text.Length && (GesText.IsAsciiLetter(text[position]) || text[position] is >= '0' and <= '9' or '-')) position++;
-                if (!IsVersion(text.AsSpan(versionStart, position - versionStart))) return -1;
+                var span = text.AsSpan(versionStart, position - versionStart);
+                if (span.Length is 40 or 64 && IsLowerHex(span))
+                {
+                    versionText = span.ToString();
+                    version = VersionForm.Hash;
+                }
+                else if (ReadsAsInteger(span) && long.TryParse(span.ToString(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out revision))
+                {
+                    version = VersionForm.Revision;
+                }
+                else
+                {
+                    return -1;
+                }
             }
         }
+        var hasPart = false;
+        Key part = default;
         if (position < text.Length && text[position] == '/' && !IsComment(text, position))
         {
             position++;
-            builder.Append('/');
-            if (!ReadKey(text, ref position, true, builder)) return -1;
+            if (!ReadKey(text, ref position, true, out part)) return -1;
+            hasPart = true;
         }
-        if (position < text.Length && !IsDelimiter(text, position)) return -1;
-        identity = builder.ToString();
+        parts = new Parts(typeName, id, version, revision, versionText, hasPart, part);
         return position;
     }
 
-    // A document delimiter ends a handle: whitespace, a separator, a closing bracket, a key colon or a comment.
-    private static bool IsDelimiter(string text, int position)
-        => text[position] is ' ' or '\t' or '\r' or '\n' or ',' or ']' or ')' or ':' || IsComment(text, position);
-
-    private static bool IsComment(string text, int position) => text[position] == '/' && position + 1 < text.Length && text[position + 1] == '/';
-
-    // An id or part, quoted or bare, appended to the identity as `i<integer>` or `t<text>`.
-    private static bool ReadKey(string text, ref int position, bool isPart, StringBuilder identity)
+    // Reads a handle in a document at `start`, which holds `@`. Returns the end of the handle, or -1 when the text there
+    // is no well-formed handle that a document delimiter follows. `identity` is the type, id and part, which compare
+    // keys; `versioned` is whether a version or a ref follows the id.
+    internal static int Read(string text, int start, out string identity, out bool versioned)
     {
-        if (position >= text.Length) return false;
-        if (text[position] == '\'')
+        identity = "";
+        versioned = false;
+        var end = Scan(text, start, out var parts);
+        if (end < 0 || (end < text.Length && !IsDelimiter(text, end))) return -1;
+        var builder = new StringBuilder(parts.TypeName).Append(':');
+        AppendIdentity(parts.Id, builder);
+        if (parts.HasPart)
         {
-            if (GesTextLiteralReader.Read(text, ref position) is not { } quoted || GesText.GetInvalidUtf16Offset(quoted) >= 0) return false;
-            identity.Append('t').Append(quoted.Length).Append(':').Append(quoted);
-            return true;
+            builder.Append('/');
+            AppendIdentity(parts.Part, builder);
         }
-        var start = position;
-        while (position < text.Length && IsBareCharacter(text[position], isPart) && !(isPart && IsComment(text, position))) position++;
-        if (position == start) return false;
-        var bare = text.AsSpan(start, position - start);
-        if (ReadsAsInteger(bare))
-        {
-            if (!long.TryParse(bare.ToString(), System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out var integer)) return false;
-            identity.Append('i').Append(integer.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(';');
-            return true;
-        }
-        identity.Append('t').Append(bare.Length).Append(':').Append(bare.ToString());
-        return true;
+        identity = builder.ToString();
+        versioned = parts.Version != VersionForm.None;
+        return end;
     }
 
-    // A version is 40 or 64 lowercase hexadecimal digits or a decimal revision within Int64.
-    private static bool IsVersion(ReadOnlySpan<char> text)
+    // Whether a Text id or part may be written without quotes: a nonempty bare run that does not read as an integer
+    // and, for a part, neither starts with `/` nor contains `//`.
+    internal static bool IsBare(string text, bool isPart)
     {
-        if (text.Length is 40 or 64)
-        {
-            var hex = true;
-            foreach (var character in text) hex &= character is >= '0' and <= '9' or >= 'a' and <= 'f';
-            if (hex) return true;
-        }
-        return ReadsAsInteger(text) && long.TryParse(text.ToString(), System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out _);
+        if (text.Length == 0 || ReadsAsInteger(text.AsSpan())) return false;
+        foreach (var character in text)
+            if (!IsBareCharacter(character, isPart)) return false;
+        return !isPart || (text[0] != '/' && text.IndexOf("//", StringComparison.Ordinal) < 0);
     }
 
     // An integer is a decimal with an optional '-' and no leading zero.
@@ -109,6 +182,56 @@ internal static class GesHandleLiteral
         if (text[start] == '0' && text.Length - start > 1) return false;
         for (var index = start; index < text.Length; index++)
             if (text[index] is < '0' or > '9') return false;
+        return true;
+    }
+
+    // A document delimiter ends a handle: whitespace, a separator, a closing bracket, a key colon or a comment.
+    private static bool IsDelimiter(string text, int position)
+        => text[position] is ' ' or '\t' or '\r' or '\n' or ',' or ']' or ')' or ':' || IsComment(text, position);
+
+    private static bool IsComment(string text, int position) => text[position] == '/' && position + 1 < text.Length && text[position + 1] == '/';
+
+    // An identity key: `i<integer>;` or `t<length>:<text>`.
+    private static void AppendIdentity(Key key, StringBuilder identity)
+    {
+        if (key.IsInteger) identity.Append('i').Append(key.Integer.ToString(CultureInfo.InvariantCulture)).Append(';');
+        else identity.Append('t').Append(key.Text.Length).Append(':').Append(key.Text);
+    }
+
+    // An id or part, quoted or bare; a bare one is an integer when it reads as one.
+    private static bool ReadKey(string text, ref int position, bool isPart, out Key key)
+    {
+        key = default;
+        if (position >= text.Length) return false;
+        if (text[position] == '\'')
+        {
+            if (ReadQuoted(text, ref position) is not { } quoted) return false;
+            key = new Key(quoted);
+            return true;
+        }
+        var start = position;
+        while (position < text.Length && IsBareCharacter(text[position], isPart) && !(isPart && IsComment(text, position))) position++;
+        if (position == start) return false;
+        var bare = text.AsSpan(start, position - start);
+        if (ReadsAsInteger(bare))
+        {
+            if (!long.TryParse(bare.ToString(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var integer)) return false;
+            key = new Key(integer);
+            return true;
+        }
+        key = new Key(bare.ToString());
+        return true;
+    }
+
+    // A `'`-quoted Text with doubled quotes, from the opening quote at `position`; null when unterminated or not valid
+    // UTF-16.
+    private static string? ReadQuoted(string text, ref int position)
+        => GesTextLiteralReader.Read(text, ref position) is { } quoted && GesText.GetInvalidUtf16Offset(quoted) < 0 ? quoted : null;
+
+    private static bool IsLowerHex(ReadOnlySpan<char> text)
+    {
+        foreach (var character in text)
+            if (character is not (>= '0' and <= '9' or >= 'a' and <= 'f')) return false;
         return true;
     }
 

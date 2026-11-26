@@ -2090,11 +2090,13 @@ An integer id is a decimal with an optional `-` and no leading zero. A Text id i
 of the ASCII letters, digits, `.`, `_` and `-` and does not read as an integer, and otherwise quoted with `'`, a quote
 inside doubled. A revision
 is decimal; a hash version is its bytes as lowercase hexadecimal, 40 digits for SHA-1 and 64 for SHA-256 and content
-hashes. A part follows the first `/` after the root and its version; a bare Text part also contains `/`. Writers use the
-bare form whenever it applies. `parse` does not recognize handles; [documents](Documents.md#handles) and the host's
-`GesHandle.Parse` do. A *ref*, `@Unit:drone.gnabblo~#live` or `~'1.0'`, names a version through the owner instead of
-stating it; refs exist only in documents and the host API, which [resolve](HostRuntime.md#handles) them before a value
-reaches a script.
+hashes. A part follows the first `/` after the root and its version, which no id, version or ref contains; a bare Text
+part also contains `/`, but neither starts with `/` nor contains `//`, which begins a comment in a document, so such a
+part is quoted. Writers use the bare form whenever it applies. `parse` does not recognize handles;
+[documents](Documents.md#handles) and the host's `GesHandle.Parse` do. A *ref* names a version through the owner instead
+of stating it: `~#name` with the characters of a [tag](#text-and-tags), as in `@Unit:drone.gnabblo~#live`, and any other ref as
+quoted Text, as in `~'1.0'` or `~'feature/x'`. Refs exist only in documents and the host API, which
+[resolve](HostRuntime.md#handles) them before a value reaches a script.
 
 ### Presence and Emptiness
 

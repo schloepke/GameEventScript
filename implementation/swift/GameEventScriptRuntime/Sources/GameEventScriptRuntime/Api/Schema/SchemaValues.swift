@@ -697,6 +697,19 @@ public enum GesSchemaValues {
                     let list = value.asList
                     return .list(list.indices.map { index in documentShape(element, list[index], GesSchemaDocumentCheck.element(position, index), chosen) })
                 }
+            case .map:
+                guard type.handle != nil, let element = type.element, value.customTypeName == nil, let entries = value.asMap else { continue }
+                var keys: [GesValue] = []
+                var values: [GesValue] = []
+                keys.reserveCapacity(entries.length)
+                values.reserveCapacity(entries.length)
+                for index in 0..<entries.length {
+                    keys.append(entries.keyValue(at: index))
+                    let entry = entries.handleKey(at: index).map { GesSchemaDocumentCheck.entry(position, $0) } ?? GesSchemaDocumentCheck.element(position, index)
+                    values.append(documentShape(element, entries.value(at: index), GesSchemaDocumentCheck.join(entry, "value"), chosen))
+                }
+                // The keys are those of a Map, so they stay distinct.
+                if let shaped = try? GesValue.map(keyValues: keys, values: values) { return shaped }
             case .reference:
                 if value.asMap != nil, value.customTypeName == nil || value.customTypeName == type.referenceName, let reference = type.reference {
                     return documentShapes(reference, value, position, chosen, name: held == nil ? value.customTypeName : type.referenceName)
@@ -936,17 +949,17 @@ public enum GesSchemaValues {
                 if let name = value.customTypeName, name != reference.name, let named = declarations[name] { declaration = named }
                 if declaration.kind == .schema && !declaration.isAbstract { return try normalizeState(declaration, value, path, declarations) }
             case .list:
-                guard let items = value.listValue else { break }
-                return .list(try items.map { try stateElement(type.element!, $0, path + "[]", declarations) })
+                guard let element = type.element, let items = value.listValue else { break }
+                return .list(try items.map { try stateElement(element, $0, path + "[]", declarations) })
             case .map:
-                guard value.customTypeName == nil, let map = value.asMap else { break }
+                guard let element = type.element, value.customTypeName == nil, let map = value.asMap else { break }
                 var keys: [GesValue] = []
                 var values: [GesValue] = []
                 keys.reserveCapacity(map.length)
                 values.reserveCapacity(map.length)
                 for index in 0..<map.length {
                     keys.append(map.keyValue(at: index))
-                    values.append(try stateElement(type.element!, map.value(at: index), path + "[]", declarations))
+                    values.append(try stateElement(element, map.value(at: index), path + "[]", declarations))
                 }
                 return try .map(keyValues: keys, values: values)
             default:

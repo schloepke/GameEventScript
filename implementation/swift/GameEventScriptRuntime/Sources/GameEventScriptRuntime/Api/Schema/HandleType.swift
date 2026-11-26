@@ -37,6 +37,9 @@ public final class GesHandleType: @unchecked Sendable {
     public let hash: UInt64
     /// The canonical form, which the hash runs over: the declaration and, for a composite, its root's.
     public let canonicalForm: String
+    /// The link hash a Program records for the type: FNV-1a 64 over the canonical form followed by the line `state` and
+    /// the state schema's hash, so a changed state schema fails to link as well (specs/Schemas.md#canonical-form).
+    public internal(set) var linkHash: UInt64 = 0
 
     init(_ handle: GesResolvedHandle, _ declarations: [String: GesResolvedDeclaration]) {
         resolved = handle
@@ -50,6 +53,9 @@ public final class GesHandleType: @unchecked Sendable {
         canonicalForm = GesSchemaCanonical.handleForm(handle)
         hash = GesSchemaCanonical.hash(canonicalForm)
     }
+
+    // Called once the state schema has its hash, after every schema of the set is complete.
+    func completeLinkHash() { linkHash = GesSchemaCanonical.hash(canonicalForm + "state " + GesSchemaCanonical.hex(resolved.state.schema!.hash) + "\n") }
 
     /// The nodes of the type on its own, with its version when it has one, which schema code generation lays out.
     @_spi(Generator) public func bindNodes() throws -> (nodes: [GesSchemaNode], infos: [GesSchemaNodeInfo]) { try GesSchemaBinder.bindHandle(resolved) }

@@ -199,7 +199,7 @@ final class GesCompiler {
         }.map(\.element)
         builder.routines = routines
         // The validator reported every undeclared type before lowering.
-        for name in namedHandleTypes { builder.handleTypes[name] = (handleTypes[name]!.hash, handleTypes[name]!.stateName) }
+        for name in namedHandleTypes { builder.handleTypes[name] = (handleTypes[name]!.linkHash, handleTypes[name]!.stateName) }
         return try builder.build(moduleName: moduleName)
     }
 

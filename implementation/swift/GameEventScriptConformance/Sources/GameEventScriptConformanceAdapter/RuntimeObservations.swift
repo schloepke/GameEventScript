@@ -21,6 +21,7 @@ final class HostScenario {
     let programs: [(id: String, program: GameEventScriptProgram)]
     let host: GameEventScriptHost
     let collector: RuntimeObservations
+    let handles: AdapterHandles?
     var actionResults: [[String: Any]] = []
     var instances: [String: GesProgramInstance] = [:]
     var subscriptions: [String: GesSubscription] = [:]
@@ -29,6 +30,7 @@ final class HostScenario {
     init(_ test: Input, programs: [(id: String, program: GameEventScriptProgram)], handles: AdapterHandles? = nil) throws {
         self.test = test
         self.programs = programs
+        self.handles = handles
         collector = RuntimeObservations(sink: test["publishSink"]?.stringValue ?? "accept")
         host = try Self.makeHost(test, observer: collector, publishSink: collector.sink == "absent" ? nil : collector, clock: clock, handles: handles)
     }
@@ -80,6 +82,7 @@ final class HostScenario {
         _ = try host.start()
         if host.isReady && test["initializationPump"]?.stringValue == "completion" { _ = try host.runToCompletion() }
         let initialization = try capture()
+        let resolvedRefs = try handles?.resolveRefs(host) ?? []
         var steps: [String: Any] = [:]
         for step in test.values("steps") {
             collector.clear()
@@ -87,7 +90,15 @@ final class HostScenario {
             let id = try step.text("id")
             path = "step/" + id
             try actions(test["stepActions"]?[id]?.arrayValue ?? [], path: path)
-            let accepted = try host.receive(RuntimeValues.decodeMessage(step.required("input")))
+            let accepted: Bool
+            var rejection: Any = NSNull()
+            do {
+                accepted = try host.receive(RuntimeValues.decodeMessage(step.required("input")))
+            } catch let error as GesWireError {
+                // Receive rejects an input it cannot enqueue, such as a handle with an unresolved ref.
+                accepted = false
+                rejection = ["phase": "wire", "code": error.code, "path": error.path]
+            }
             var paused = false
             var waiting = false
             switch host.isReady ? step["pump"]?.stringValue : "enqueue" {
@@ -109,11 +120,12 @@ final class HostScenario {
             }
             var result = try capture()
             result["accepted"] = accepted
+            result["rejection"] = rejection
             result["paused"] = paused
             result["waiting"] = waiting
             steps[id] = result
         }
-        return ["initialization": initialization, "steps": steps]
+        return ["initialization": initialization, "steps": steps, "resolvedRefs": resolvedRefs]
     }
 
     func actions(_ actions: [Input], path: String) throws {
@@ -309,7 +321,15 @@ final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
     }
 
     // A Text timer name as its text, a handle name as its text form, which starts with @.
-    static func timerName(_ name: GesValue) -> String { name.handleValue?.description ?? name.asText }
+    // A handle name as its text form, a Text name as a single-quoted text literal, so the two stay distinct.
+    static func timerName(_ name: GesValue) -> String {
+        if let handle = name.handleValue { return handle.description }
+        var text = "'"
+        for scalar in name.asText.unicodeScalars {
+            if scalar == "'" { text += "''" } else { text.unicodeScalars.append(scalar) }
+        }
+        return text + "'"
+    }
 
     func hostReset() { trace.append(.init(kind: "reset")) }
 

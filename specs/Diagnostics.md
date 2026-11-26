@@ -129,7 +129,7 @@ Linking uses `link.requiredRegisterCountExceeded`,
 `link.mismatchedExternalTypeConstructor`, `link.cyclicCallGraph`, and
 `link.invalidProgram`; **Since: Unreleased:** `link.missingHandleResolver` (the
 Program reads the state of a handle type without a registered resolver) and
-`link.mismatchedHandleType` (the registered handle type's hash differs from the
+`link.mismatchedHandleType` (the registered handle type's link hash differs from the
 Program's), both with the handle type name in `symbol`. `link.initializationQueueFull` rejects loading when the
 host cannot enqueue the instance's initialization snapshot. It carries the
 Program's module name in `programName`; its atomicity and retry rules are defined
@@ -172,11 +172,13 @@ Runtime uses these stable codes:
   `runtime.publishSinkFailure`;
 - `runtime.extensionCallFailed`, `runtime.externalConstructorFailed`, and
   `runtime.externalFieldAccessFailed`;
-- `runtime.handleResolveFailed` (a handle resolver threw or reported failure, or a
-  state read of a type without resolver), `runtime.invalidHandleState` (its answer
-  does not fit the state schema) and `runtime.handleVersionMismatch` (a passed or
-  computed version differs from the carried one), each with the handle's text form in
-  `symbol`; **Since: Unreleased**.
+- `runtime.handleResolveFailed` (a handle resolver threw a non-fatal error or
+  returned no valid version for a ref), `runtime.invalidHandleState` (its answer
+  gives no single result, does not fit the state schema, or lacks or has a version
+  the type does not allow) and `runtime.handleVersionMismatch` (a passed or computed
+  version differs from the carried one), each with the handle's text form in
+  `symbol`; a state read without a registered resolver, which only a read without a
+  static handle type reaches, gives `nothing` instead; **Since: Unreleased**.
 
 `runtime.randomStackUnderflow` reports an attempted pop across an active runtime
 boundary, while `runtime.randomScopeImbalance` reports scopes left open by a

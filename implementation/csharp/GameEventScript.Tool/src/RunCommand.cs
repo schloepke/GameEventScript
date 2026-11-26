@@ -24,8 +24,10 @@ Execution mode:
   --interactive         Open the event console instead of Main. Initial files are optional.
 
 Compilation:
-  --handles <schema.gess> Declare the handle types of a schema source to every compilation,
-                        including scenarios, :load, :reload, :edit and console input. Repeatable.
+  --schema <file.gess>  Load a schema set whose handle types every compilation knows, including
+                        scenarios, :load, :reload, :edit and console input. Repeatable; patterns
+                        expand as for sources. Binary programs must import matching handle types.
+                        :reload reads the schema files again.
 
 Main arguments (always Text, in command-line order):
   --arg <text>          Append exactly one value, even if it looks like an option.
@@ -88,7 +90,7 @@ state fails to load. Runtime errors/limits exit with 1; usage errors with 2.
         using var errorColors = new RunErrorColors();
         var inputs = new List<string>();
         var scenarios = new List<string>();
-        var handleArguments = new List<string>();
+        var schemaArguments = new List<string>();
         var mainArguments = new List<GesValue>();
         var suppliedOptions = new HashSet<string>(StringComparer.Ordinal);
         string? profilePath = null;
@@ -135,11 +137,11 @@ state fails to load. Runtime errors/limits exit with 1; usage errors with 2.
                 Console.WriteLine(HelpText);
                 return 0;
             }
-            else if (argument == ToolHandles.Option)
+            else if (argument == ToolSchemas.Option)
             {
                 if (index + 1 == arguments.Length || arguments[index + 1].StartsWith('-') || string.IsNullOrWhiteSpace(arguments[index + 1]))
-                    return UsageError("Specify a schema path after --handles; prefix a path starting with '-' with './'.");
-                handleArguments.Add(arguments[++index]);
+                    return UsageError("Specify a schema path after --schema; prefix a path starting with '-' with './'.");
+                schemaArguments.Add(arguments[++index]);
             }
             else if (argument is "--scenario" or "--arg" or "--seed" or "--max-messages" or "--max-steps" or "--profile")
             {
@@ -195,7 +197,7 @@ state fails to load. Runtime errors/limits exit with 1; usage errors with 2.
         string? activePath = null;
         try
         {
-            var handleTypes = ToolHandles.Load(handleArguments, ref activePath);
+            var handleTypes = ToolSchemas.Load(schemaArguments, ref activePath);
             var paths = CompileSources.Expand(inputs);
             var binaryCount = paths.Count(path => string.Equals(Path.GetExtension(path), ".gesb", StringComparison.OrdinalIgnoreCase));
             if (binaryCount > 0 && binaryCount != paths.Count) return UsageError("Run accepts either source files compiled together or binary files loaded separately; inputs cannot be mixed.");
@@ -205,7 +207,7 @@ state fails to load. Runtime errors/limits exit with 1; usage errors with 2.
                 foreach (var path in paths)
                 {
                     activePath = path;
-                    programs.Add(GameEventScriptProgram.Read(File.ReadAllBytes(path)));
+                    programs.Add(RunProgramFiles.ReadBinary(path, handleTypes));
                 }
             }
             else if (paths.Count > 0) programs.Add(RunProgramFiles.Compile(paths, handleTypes, ref activePath));
@@ -222,7 +224,7 @@ state fails to load. Runtime errors/limits exit with 1; usage errors with 2.
             try
             {
                 color = color && !PrettyPrompt.PromptConfiguration.HasUserOptedOutFromColor;
-                var session = new RunSession(seed, new GesRuntimeLimits { MaxProcessedMessagesPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, workspace: new RunWorkspace { HandleTypes = handleTypes }, profiler: profiler);
+                var session = new RunSession(seed, new GesRuntimeLimits { MaxProcessedMessagesPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, workspace: new RunWorkspace { SchemaArguments = schemaArguments, HandleTypes = handleTypes }, profiler: profiler);
                 for (var index = 0; index < programs.Count; index++) session.Inventory.Load(programs[index], binaryCount > 0 ? [paths[index]] : paths);
                 if (scenario is not null) session.Inventory.Load(scenario, scenarioPaths);
                 var runMain = scenario is null && !interactive;
@@ -276,7 +278,7 @@ state fails to load. Runtime errors/limits exit with 1; usage errors with 2.
         }
         catch (GesSchemaException exception)
         {
-            ToolHandles.Report(exception);
+            ToolSchemas.Report(exception);
             return 1;
         }
         catch (DecoderFallbackException exception)

@@ -796,6 +796,7 @@ sealed class GameEventScript.Api.GesHandleType
   property System.String Name { get }
   property System.String StateName { get }
   property System.UInt64 Hash { get }
+  property System.UInt64 LinkHash { get }
 enum GameEventScript.Api.GesHandleVersionKind
   enum-field None = 0
   enum-field Revision = 1

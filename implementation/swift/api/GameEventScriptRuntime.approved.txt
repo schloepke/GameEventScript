@@ -320,6 +320,7 @@ relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesVirtualClo
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesWireError :: struct GesWireError","target":"Swift.Equatable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesWireError :: struct GesWireError","target":"Swift.Error"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesWireError :: struct GesWireError","target":"Swift.Sendable"}
+relationship {"kind":"defaultImplementationOf","source":"GameEventScriptRuntime.GesHandleResolver.resolveRef(_:) :: func resolveRef(_ handle: GesHandle) throws -> GesValue","target":"GameEventScriptRuntime.GesHandleResolver.resolveRef(_:) :: func resolveRef(_ handle: GesHandle) throws -> GesValue"}
 relationship {"kind":"defaultImplementationOf","source":"GameEventScriptRuntime.GesRuntimeObserver.dispatchCompleted(_:id:signatureID:) :: func dispatchCompleted(_ message: GameEventScriptMessage, id: Int64, signatureID: String)","target":"GameEventScriptRuntime.GesRuntimeObserver.dispatchCompleted(_:id:signatureID:) :: func dispatchCompleted(_ message: GameEventScriptMessage, id: Int64, signatureID: String)"}
 relationship {"kind":"defaultImplementationOf","source":"GameEventScriptRuntime.GesRuntimeObserver.dispatchStarted(_:id:signatureID:) :: func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String)","target":"GameEventScriptRuntime.GesRuntimeObserver.dispatchStarted(_:id:signatureID:) :: func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String)"}
 relationship {"kind":"defaultImplementationOf","source":"GameEventScriptRuntime.GesRuntimeObserver.hostReset() :: func hostReset()","target":"GameEventScriptRuntime.GesRuntimeObserver.hostReset() :: func hostReset()"}
@@ -923,8 +924,9 @@ symbol {"access":"public","declaration":"func resolve(_ reference: GesExtensionR
 symbol {"access":"public","declaration":"func resolve(_ reference: GesExternalTypeConstructorReference) throws -> (any GesExternalTypeConstructor)?","kind":"swift.method","path":"GameEventScriptRuntime.GesExternalTypeRegistry.resolve(_:)"}
 symbol {"access":"public","declaration":"func resolve(_ typeName: String) throws -> GesExternalTypeDefinition?","kind":"swift.method","path":"GameEventScriptRuntime.GesDeclaredExternalTypeCatalog.resolve(_:)"}
 symbol {"access":"public","declaration":"func resolve(_ typeName: String) throws -> GesExternalTypeDefinition?","kind":"swift.method","path":"GameEventScriptRuntime.GesExternalTypeCatalog.resolve(_:)"}
+symbol {"access":"public","declaration":"func resolveRef(_ handle: GesHandle) throws -> GesHandle?","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptHost.resolveRef(_:)"}
+symbol {"access":"public","declaration":"func resolveRef(_ handle: GesHandle) throws -> GesValue","kind":"swift.method","path":"GameEventScriptRuntime.GesHandleResolver.resolveRef(_:)","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.protocol"}}
 symbol {"access":"public","declaration":"func resolveRef(_ handle: GesHandle) throws -> GesValue","kind":"swift.method","path":"GameEventScriptRuntime.GesHandleResolver.resolveRef(_:)"}
-symbol {"access":"public","declaration":"func resolveRef(_ handle: GesHandle) throws(GesHandleError) -> GesHandle","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptHost.resolveRef(_:)"}
 symbol {"access":"public","declaration":"func resolveSize(_ index: UInt16) -> Int","kind":"swift.method","path":"GameEventScriptRuntime.GesStringConstantSegment.resolveSize(_:)"}
 symbol {"access":"public","declaration":"func runToCompletion() throws -> GesExecutionResult","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptHost.runToCompletion()"}
 symbol {"access":"public","declaration":"func runtimeError(_ diagnostic: GesDiagnostic)","kind":"swift.method","path":"GameEventScriptRuntime.GesRuntimeObserver.runtimeError(_:)","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.protocol"}}
@@ -1839,6 +1841,7 @@ symbol {"access":"public","declaration":"var length: Int { get }","kind":"swift.
 symbol {"access":"public","declaration":"var lengthSquared: Double { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesVector.lengthSquared"}
 symbol {"access":"public","declaration":"var limits: GesProgramReadLimits","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramReadOptions.limits"}
 symbol {"access":"public","declaration":"var lineWidth: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesDocumentFormat.lineWidth"}
+symbol {"access":"public","declaration":"var linkHash: UInt64 { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesHandleType.linkHash"}
 symbol {"access":"public","declaration":"var listValue: [GesValue]? { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.listValue"}
 symbol {"access":"public","declaration":"var maxBindings: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramReadLimits.maxBindings"}
 symbol {"access":"public","declaration":"var maxCallDepth: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesRuntimeLimits.maxCallDepth"}

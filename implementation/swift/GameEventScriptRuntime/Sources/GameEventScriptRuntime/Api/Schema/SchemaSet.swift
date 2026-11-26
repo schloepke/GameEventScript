@@ -88,6 +88,7 @@ public final class GesSchemaSet: @unchecked Sendable {
             return schema
         }
         for schema in schemas { try schema.complete() }
+        for type in handleTypes { type.completeLinkHash() }
         var networks: [GesNetwork] = []
         for file in files {
             let start = networks.count

@@ -1295,7 +1295,7 @@ internal static class GesAstValidator
         {
             if (!GesHandleTypeNames.IsHandleType(alternative))
             {
-                errors.Add(parsedScriptContext, $"A union is written only of handle types, not ':{alternative}'.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, node);
+                errors.Add(parsedScriptContext, $"A union is written only of handle types, not '{GesHandleTypeNames.SourceName(alternative)}'.", GesHandleTypeNames.SourceName(alternative), GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, node);
                 continue;
             }
 
@@ -1324,7 +1324,23 @@ internal static class GesAstValidator
         if (memberAccess.Member == "version" && !versioned)
             errors.Add(parsedScriptContext, $"'{typeName}' has no versions.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, memberAccess);
         else if (memberAccess.Member == "root" && typeName.Contains('|') && GesHandleTypeNames.CommonRoot(typeName, handleTypes) is null)
-            errors.Add(parsedScriptContext, $"The alternatives of '{typeName}' have no common root type.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, memberAccess);
+            errors.Add(parsedScriptContext, NoCommonRoot(typeName, handleTypes), typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, memberAccess);
+    }
+
+    // Names the two alternatives whose roots differ, or the first one that is no composite.
+    private static string NoCommonRoot(string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes)
+    {
+        (string Name, GesHandleType Root)? first = null;
+        foreach (var alternative in typeName.Split('|'))
+        {
+            var name = GesHandleTypeNames.Split(alternative).Name;
+            if (handleTypes[name].Root is not { } root) return $"'@{name}' is no composite, so '{typeName}' has no common root type.";
+            if (first is null) first = (name, root);
+            else if (!string.Equals(first.Value.Root.Name, root.Name, StringComparison.Ordinal))
+                return $"The root of '@{first.Value.Name}' is '@{first.Value.Root.Name}' and the root of '@{name}' is '@{root.Name}', so '{typeName}' has no common root type.";
+        }
+
+        return $"The alternatives of '{typeName}' have no common root type.";
     }
 
     private static readonly Dictionary<string, GesHandleType> NoHandleTypes = new(StringComparer.Ordinal);

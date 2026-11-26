@@ -86,7 +86,7 @@ are stored as the type name.
 
 **Since: Unreleased:** every [handle type](Language.md#handles) a Program names is a
 `HandleType` import (`0x22`) whose name is the handle type name without `@`. Its argument-name
-list holds the type's 64-bit [canonical hash](Schemas.md#canonical-form) as four `u16`
+list holds the type's 64-bit [link hash](Schemas.md#canonical-form) as four `u16`
 elements, least significant first. Its `EntryAddress` is the first instruction that reads the
 type's state, a `MemberAccess` of another member than `id`, `version` and `root` or a
 `CastCustom` to its state schema, and `0xFFFF` when the Program reads none. Handle type names

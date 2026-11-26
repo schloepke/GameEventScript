@@ -18,6 +18,7 @@ internal sealed class GesSchemaDocumentCheck
     internal const string FieldType = "document.fieldType";
     internal const string OutOfRange = "document.outOfRange";
     internal const string TooDeep = "document.tooDeep";
+    internal const string UnexpectedVersion = "document.unexpectedVersion";
 
     private sealed class Failure(string code, int offset, string path) : Exception(code)
     {
@@ -92,13 +93,14 @@ internal sealed class GesSchemaDocumentCheck
 
     internal static string Join(string path, string name) => path.Length == 0 ? name : path + "." + name;
 
-    // Checks a nested value under its path segment: a field name, or `[]` for the element at an index.
-    private void Under(string segment, Action check, int index = 0)
+    // Checks a nested value under its path segment: a field name, or `[]` for the element at an index or, in a handle Map,
+    // for the entry of a key.
+    private void Under(string segment, Action check, int index = 0, string? key = null)
     {
         var outer = _path;
         var outerPosition = _position;
         _path = segment == "[]" ? outer + segment : Join(outer, segment);
-        _position = segment == "[]" ? Element(outerPosition, index) : Join(outerPosition, segment);
+        _position = segment != "[]" ? Join(outerPosition, segment) : key is null ? Element(outerPosition, index) : Entry(outerPosition, key);
         try
         {
             check();
@@ -112,6 +114,11 @@ internal sealed class GesSchemaDocumentCheck
 
     // The exact path of a list element, which converting the checked document follows to the alternatives the check chose.
     internal static string Element(string position, int index) => position + "[" + index.ToString(CultureInfo.InvariantCulture) + "]";
+
+    // The exact path of a handle Map entry, by the canonical text of its key, since a Map orders its keys canonically.
+    internal static string Entry(string position, GesHandle key) => Entry(position, key.ToString());
+
+    private static string Entry(string position, string key) => position + "[" + key + "]";
 
     // A missing field is reported where the value that lacks it starts.
     private void Fields(GesDocumentNode map, GesResolvedDeclaration schema, int start)
@@ -331,8 +338,8 @@ internal sealed class GesSchemaDocumentCheck
         Fields(fields, type.Reference!, value.Start);
     }
 
-    // A handle of the field's type whose id, part and version have the declared forms. An `@Name~` field takes a version or
-    // a ref; an `@Name` field also takes one, which the wire drops.
+    // A handle of the field's type whose id, part and version have the declared forms. An `@Name~` field requires a version
+    // or a ref; an `@Name` field takes neither.
     private void Handle(GesResolvedHandle type, bool versioned, string text, int start)
     {
         var handle = GesHandle.Parse(text);
@@ -340,9 +347,12 @@ internal sealed class GesSchemaDocumentCheck
         var identity = type.Root ?? type;
         HandleKey(identity.Id, handle, false, start);
         if (handle.IsComposite) HandleKey(type.Id, handle, true, start);
-        if (handle.HasVersion)
+        if (handle.HasVersion || !handle.Ref.IsNothing)
         {
+            // Only an `@Name~` field holds a version or a ref; a type without versions takes neither.
             if (identity.VersionKind == GesHandleVersionKind.None) throw Fail(FieldType, start);
+            if (!versioned) throw Fail(UnexpectedVersion, start);
+            if (!handle.HasVersion) return;
             if (identity.Revision is { } revision)
             {
                 if (handle.Version.ValueKind != GesBytecodeTypeKind.Integer) throw Fail(FieldType, start);
@@ -351,10 +361,6 @@ internal sealed class GesSchemaDocumentCheck
             }
             else if (handle.Version.ValueKind != GesBytecodeTypeKind.Bytes || handle.Version.AsBytes().Length != (identity.VersionKind == GesHandleVersionKind.Sha1 ? 20 : 32))
                 throw Fail(FieldType, start);
-        }
-        else if (!handle.Ref.IsNothing)
-        {
-            if (identity.VersionKind == GesHandleVersionKind.None) throw Fail(FieldType, start);
         }
         else if (versioned) throw Fail(FieldType, start);
     }
@@ -389,7 +395,7 @@ internal sealed class GesSchemaDocumentCheck
             {
                 Under("key", () => Handle(key, false, label, offset));
                 Under("value", () => Union(type.Element!, child));
-            }, index);
+            }, index, GesHandle.Parse(label).ToString());
         }
     }
 

@@ -176,10 +176,24 @@ def host_count(case):
     return count
 
 
+def rejection(raw, expectation=False):
+    """Why Receive rejected a step's input before enqueuing it: a wire code and the argument path."""
+    closed(raw, {'phase', 'code', 'path'}, 'input rejection')
+    if raw.get('phase') != 'wire' or not isinstance(raw.get('code'), str) or not raw['code'].startswith('wire.'):
+        raise InvalidDocument('An input rejection has the wire phase and a wire code')
+    if ('path' in raw or not expectation) and not isinstance(raw.get('path'), str):
+        raise InvalidDocument('An input rejection path is text')
+    return raw
+
+
 def phase_expectation(case, exp, initialization=False):
     allowed = {'local', 'outbound', 'runtimeLimits', 'diagnostics', 'hostReady', 'programStarts', 'idleDurationMicroseconds', 'pendingTimers', 'trace'}
-    allowed |= {'pump'} if initialization else {'input', 'accepted', 'paused', 'waiting'}
+    allowed |= {'pump'} if initialization else {'input', 'accepted', 'paused', 'waiting', 'rejection'}
     closed(exp, allowed, 'supported runtime expectation')
+    if 'rejection' in exp:
+        rejection(exp['rejection'], expectation=True)
+        if exp.get('accepted', True):
+            raise InvalidDocument('A rejected input is not accepted')
     lifecycle_checks.validate(case, exp)
     if 'trace' in exp:
         trace_checks.normalize(exp['trace'], message, limit, expectation=True)
@@ -262,7 +276,7 @@ def compare(case, actual):
 
 
 def compare_host(case, actual):
-    closed(actual, {'initialization', 'steps'}, 'runtime observations')
+    closed(actual, {'initialization', 'steps', 'resolvedRefs'}, 'runtime observations')
     steps = actual.get('steps')
     if not isinstance(steps, dict) or set(steps) != {s['step'] for s in case.steps}:
         raise InvalidDocument('Missing or extra runtime steps')
@@ -275,12 +289,12 @@ def compare_host(case, actual):
 
     def channels(path, exp, obs, initialization=False, step=None):
         fields = {'local', 'outbound', 'diagnostics', 'runtimeLimits'} if initialization else {
-            'local', 'outbound', 'diagnostics', 'runtimeLimits', 'accepted', 'paused', 'waiting'}
+            'local', 'outbound', 'diagnostics', 'runtimeLimits', 'accepted', 'paused', 'waiting', 'rejection'}
         fields.update({'trace', 'actions', 'hostReady', 'programStarts', 'idleDurationMicroseconds', 'pendingTimers'})
         closed(obs, fields, 'runtime phase')
         if set(obs) != fields:
             raise InvalidDocument('Incomplete runtime observations')
-        for key in fields - {'local', 'outbound', 'diagnostics', 'runtimeLimits', 'actions', 'programStarts', 'idleDurationMicroseconds', 'pendingTimers', 'trace'}:
+        for key in fields - {'local', 'outbound', 'diagnostics', 'runtimeLimits', 'actions', 'programStarts', 'idleDurationMicroseconds', 'pendingTimers', 'trace', 'rejection'}:
             if type(obs[key]) is not bool:
                 raise InvalidDocument('Invalid runtime state')
         observed_trace = trace_checks.normalize(obs['trace'], message, limit)
@@ -316,6 +330,13 @@ def compare_host(case, actual):
             check(path + '/runtimeLimits/exclude', False, any((item.get('any') is True or all(exact(x.get(k), v) for k, v in item.items())) for x in limits))
         if not initialization:
             check(path + '/accepted', exp.get('accepted', True), obs['accepted'])
+            observed_rejection = None if obs['rejection'] is None else rejection(obs['rejection'])
+            expected_rejection = exp.get('rejection')
+            if expected_rejection is None or observed_rejection is None:
+                check(path + '/rejection', expected_rejection, observed_rejection)
+            else:
+                for key, item in expected_rejection.items():
+                    check(path + '/rejection/' + key, item, observed_rejection.get(key))
             for key in ('paused', 'waiting'):
                 if key in exp:
                     check(path + '/' + key, exp[key], obs[key])

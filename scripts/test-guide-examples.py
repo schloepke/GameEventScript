@@ -100,7 +100,7 @@ def csharp():
     for index, example in enumerate(blocks("Handles.md", "ges")):
         source = OUTPUT / f"handles-{index + 1}.ges"
         source.write_text(example)
-        run(ges + ["check", str(source), "--handles", str(catalog)])
+        run(ges + ["check", str(source), "--schema", str(catalog)])
     print(f"C# embedding, bridge annotations, {len(examples)} language examples, the schema and the handle guide passed.")
 
 

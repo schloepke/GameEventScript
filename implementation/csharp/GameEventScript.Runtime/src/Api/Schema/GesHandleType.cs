@@ -78,7 +78,16 @@ public sealed class GesHandleType
     /// <summary>Gets the canonical form, which the hash runs over: the declaration and, for a composite, its root's.</summary>
     public string CanonicalForm { get; }
 
+    /// <summary>
+    /// Gets the link hash a Program records for the type: FNV-1a 64 over the canonical form followed by the line
+    /// <c>state</c> and the state schema's hash, so a changed state schema fails to link as well (specs/Schemas.md#canonical-form).
+    /// </summary>
+    public ulong LinkHash { get; private set; }
+
     internal GesResolvedHandle Resolved => _handle;
+
+    // Called once the state schema has its hash, after every schema of the set is complete.
+    internal void CompleteLinkHash() => LinkHash = GesSchemaCanonical.Hash(CanonicalForm + "state " + GesSchemaCanonical.Hex(_handle.State.Public.Hash) + "\n");
 
     // The declarations of the schema set, by name, so that a nested record of the state finds its schema.
     internal IReadOnlyDictionary<string, GesResolvedDeclaration> Declarations => _declarations;

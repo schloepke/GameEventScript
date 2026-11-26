@@ -78,7 +78,7 @@ dotnet ges compile game.ges --output artifacts/game.gesb --no-debug
 dotnet ges compile handlers.ges definitions.ges -o artifacts/game.gesb
 dotnet ges compile "scripts/*.ges" -o artifacts/game.gesb --verbose
 dotnet ges compile game.ges --quiet
-dotnet ges compile game.ges --handles catalog.gess
+dotnet ges compile game.ges --schema catalog.gess
 dotnet ges compile --help
 ```
 
@@ -116,11 +116,11 @@ External type catalogs are not configurable through this command yet.
 
 > **Since: Unreleased**
 
-`--handles <schema.gess>` declares the handle types of a schema source
+`--schema <file.gess>` loads a schema set and declares its handle types
 (`handle @Name of ...`, see the [handles guide](../../../docs/guide/Handles.md))
 to the compilation, so sources may use `@Name` in parameters, `is @Name` and handle
 fields. The option is repeatable and available for `compile`, `check` and `run`.
-File-name patterns expand as for sources. All given files are read once as one
+File-name patterns expand as for sources. All given files are read as one
 strict UTF-8 schema set before any source is compiled; a schema error is reported
 as `ges schema check` reports it, for example `catalog.gess(3,1): error schema.syntax: …`,
 and exits with code `1`. Without the option, a source naming a handle type fails with
@@ -167,7 +167,7 @@ dotnet ges check game.ges
 dotnet ges check handlers.ges definitions.ges
 dotnet ges check "scripts/*.ges" --verbose
 dotnet ges check game.ges --quiet
-dotnet ges check game.ges --handles catalog.gess
+dotnet ges check game.ges --schema catalog.gess
 dotnet ges check --help
 ```
 
@@ -177,7 +177,7 @@ validation, optimization, and Program validation. It does not encode or write a
 files remain untouched. This command accepts source text, not `.gesb` input.
 
 Source ordering, wildcard expansion, deduplication, strict UTF-8 decoding, source
-names, `--handles`, and compiler diagnostics follow `compile`. Multiple sources do not need an
+names, `--schema`, and compiler diagnostics follow `compile`. Multiple sources do not need an
 output path. `--output` and `--no-debug` are not check options. The default success
 report lists sources, module, and elapsed time; `--verbose` adds the same Program
 details as `compile`, and `--quiet` suppresses success output.
@@ -201,7 +201,7 @@ dotnet ges run script1.gesb script2.gesb
 dotnet ges run "programs/*.gesb" --arg hello
 dotnet ges run game.ges --scenario scenario.ges --seed 42
 dotnet ges run script1.gesb script2.gesb --scenario scenario.ges
-dotnet ges run game.ges --handles catalog.gess
+dotnet ges run game.ges --schema catalog.gess
 dotnet ges run --interactive --color
 dotnet ges run game.ges --interactive --color
 dotnet ges run script1.gesb script2.gesb --interactive --verbose
@@ -630,11 +630,16 @@ Only the three native CLI handlers are registered; no custom extensions,
 external types or handle resolvers are registered. Programs requiring unavailable
 imports fail during linking with the existing `link.*` diagnostic.
 
-`--handles <schema.gess>` (repeatable, see [Handle types](#handle-types)) declares
+`--schema <file.gess>` (repeatable, see [Handle types](#handle-types)) declares
 handle types to every compilation of the session: the input sources, scenarios,
-interactive input, `:load`, `:reload` and the rebuilds of `:edit`. The files are
-read once at startup; `:reload` does not re-read them. Binary inputs already carry
-their HandleType imports and do not need the option. A Program may pass, compare
+interactive input, `:load`, `:reload` and the rebuilds of `:edit`. With the option,
+every HandleType import of a binary input (also through `:load` and `:reload`) must
+name a handle type of the schemas and match it as the runtime link compares them;
+otherwise loading fails with `link.mismatchedHandleType`. Without the option binary
+imports are not checked. `:reload` reads the schema files again; if they fail to
+read or parse, or a Program no longer compiles or links against them, the old
+session continues with the old schemas. The rebuilds of `:edit` keep the schemas
+of the last start or reload. A Program may pass, compare
 and test handles, but one that reads handle state (fields of a handle, `exists`)
 fails to load with `link.missingHandleResolver`, because the CLI registers no resolver. Diagnostics go to stderr with stable
 codes and available source, Program, handler, symbol, or binary context. A runtime

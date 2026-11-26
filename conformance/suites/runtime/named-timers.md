@@ -67,8 +67,8 @@ steps:
   begin:
     waiting: true
     pendingTimers:
-      - { name: a, deadline: "1000000", period: "0", message: Ping, program: main, publish: false }
-      - { name: b, deadline: "1000000", period: "0", message: Ping, program: main, publish: false }
+      - { name: "'a'", deadline: "1000000", period: "0", message: Ping, program: main, publish: false }
+      - { name: "'b'", deadline: "1000000", period: "0", message: Ping, program: main, publish: false }
     local:
       - { name: Ping, args: [{ name: n, value: { type: ":Number.int64", value: "1" } }] }
       - { name: Ping, args: [{ name: n, value: { type: ":Number.int64", value: "2" } }] }
@@ -246,7 +246,7 @@ gesBlock: expect
 steps:
   begin:
     pendingTimers:
-      - { name: beat, deadline: "1000000", period: "1000000", message: Beat, program: main, publish: false }
+      - { name: "'beat'", deadline: "1000000", period: "1000000", message: Beat, program: main, publish: false }
   first:
     accepted: false
     waiting: false
@@ -303,7 +303,7 @@ steps:
     waiting: true
     local: [{ name: Beat }, { name: Seen }]
     pendingTimers:
-      - { name: beat, deadline: "4500000", period: "1000000", message: Beat, program: main, publish: false }
+      - { name: "'beat'", deadline: "4500000", period: "1000000", message: Beat, program: main, publish: false }
 ```
 
 ---
@@ -357,13 +357,13 @@ steps:
     local:
       - { name: Beat }
     pendingTimers:
-      - { name: beat, deadline: "1000000", period: "1000000", message: Beat, program: main, publish: false }
+      - { name: "'beat'", deadline: "1000000", period: "1000000", message: Beat, program: main, publish: false }
   finish:
     accepted: false
     local:
       - { name: Seen, args: [{ name: total, value: { type: ":Number.int64", value: "20100" } }] }
     pendingTimers:
-      - { name: beat, deadline: "2500000", period: "1000000", message: Beat, program: main, publish: false }
+      - { name: "'beat'", deadline: "2500000", period: "1000000", message: Beat, program: main, publish: false }
 ```
 
 ---
@@ -413,8 +413,8 @@ steps:
       - { name: Ping, args: [{ name: n, value: { type: ":Number.int64", value: "2" } }] }
       - { name: Ping, args: [{ name: n, value: { type: ":Number.int64", value: "3" } }] }
     pendingTimers:
-      - { name: b, deadline: "1000000", period: "0", message: Ping, program: main, publish: false }
-      - { name: a, deadline: "1000000", period: "0", message: Ping, program: main, publish: false }
+      - { name: "'b'", deadline: "1000000", period: "0", message: Ping, program: main, publish: false }
+      - { name: "'a'", deadline: "1000000", period: "0", message: Ping, program: main, publish: false }
   due:
     accepted: false
     local:
@@ -464,7 +464,7 @@ gesBlock: expect
 steps:
   begin:
     pendingTimers:
-      - { name: a, deadline: "2000000", period: "0", message: Ping, program: main, publish: false }
+      - { name: "'a'", deadline: "2000000", period: "0", message: Ping, program: main, publish: false }
     local: [{ name: Ping }, { name: Ping }]
     runtimeLimits:
       include:
@@ -524,7 +524,7 @@ steps:
     accepted: false
     local: [{ name: Beat }, { name: Seen }]
     pendingTimers:
-      - { name: beat, deadline: "2000000", period: "1000000", message: Beat, program: main, publish: false }
+      - { name: "'beat'", deadline: "2000000", period: "1000000", message: Beat, program: main, publish: false }
   detached:
     accepted: false
     waiting: false

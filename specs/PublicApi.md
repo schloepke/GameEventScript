@@ -1327,15 +1327,15 @@ receives the declarations, the host one resolver per type that reads state. Cont
 | handle value | `sealed class GesHandle` with `TypeName`, `Id`, `Version`, `Ref`, `Part`, `IsComposite`, `HasVersion`, `static Create(typeName, id)`, `Create(typeName, id, version)`, `CreateComposite(typeName, root, part)`, `WithVersion(version)`, `static Parse(text)`, `ToString()`; `IEquatable<GesHandle>`, `IComparable<GesHandle>` | `final class GesHandle` with `typeName`, `id`, `version`, `ref`, `part`, `isComposite`, `hasVersion`, `init(typeName:id:version:)`, `init(typeName:root:part:)`, `withVersion(_:)`, `init(parsing:) throws`, `description`; `Hashable`, `Comparable`, `Sendable` |
 | value | `GesValue.GesHandle(handle)`, `ValueKind == GesBytecodeTypeKind.Handle`, `Handle` (null for another kind) | `GesValue.handle(_:)`, `kind == .handle`, `handleValue` |
 | fixed hashes | `readonly struct GesHash20`, `GesHash32` with `static Parse(hex)`, `FromBytes(span)`, `CopyTo(span)`, `ToString()` (lowercase hex), equality and order by bytes | `struct GesHash20`, `GesHash32` with `init?(hex:)`, `init?(bytes:)`, `bytes`, `description`, `Hashable`, `Comparable`, `Sendable`, `Codable` |
-| handle type | `sealed class GesHandleType` with `Name`, `StateName`, `Id` and `Part` (`GesHandleKey` or null), `Version` (`GesHandleVersionKind`), `Root` (`GesHandleType` or null), `Hash`, `CanonicalForm` | `final class GesHandleType` with `name`, `stateName`, `id`, `part`, `version`, `root`, `hash`, `canonicalForm` |
+| handle type | `sealed class GesHandleType` with `Name`, `StateName`, `Id` and `Part` (`GesHandleKey` or null), `Version` (`GesHandleVersionKind`), `Root` (`GesHandleType` or null), `Hash`, `LinkHash`, `CanonicalForm` | `final class GesHandleType` with `name`, `stateName`, `id`, `part`, `version`, `root`, `hash`, `linkHash`, `canonicalForm` |
 | key description | `readonly struct GesHandleKey` with `IsText`, `Minimum`, `Maximum` (integer) or `MaxLength` (Text) | `struct GesHandleKey` with `isText`, `minimum`, `maximum`, `maxLength` |
 | version kinds | `enum GesHandleVersionKind { None, Revision, Sha1, Sha256, ContentHash }` | `enum GesHandleVersionKind` with the same cases |
 | from schemas | `GesSchemaSet.HandleTypes`, `HandleType(name)` | `GesSchemaSet.handleTypes`, `handleType(_:)` |
 | compiler | `GesProgramBuilder.WithHandleTypes(types)` | `withHandleTypes(_:)` |
-| resolver | `interface IGesHandleResolver` with `Resolve(GesHandleResolveCall call)` and `ResolveRef(GesHandle handle)` returning a version `GesValue` | `protocol GesHandleResolver` with `resolve(_:) throws` and `resolveRef(_:) throws -> GesValue` |
+| resolver | `interface IGesHandleResolver` with `Resolve(GesHandleResolveCall call)` and `ResolveRef(GesHandle handle)` returning a version `GesValue`, with a default implementation | `protocol GesHandleResolver` with `resolve(_:) throws` and `resolveRef(_:) throws -> GesValue`, with a default implementation in a protocol extension |
 | resolve call | `sealed class GesHandleResolveCall` with `Handle`, `HandleType`, `SetState(record)`, `SetState(record, version)`, `SetDocument(text)`, `SetDocument(text, version)`, `SetMissing()` | `final class GesHandleResolveCall` with `handle`, `handleType`, `setState(_:version:)`, `setDocument(_:version:)`, `setMissing()` |
 | host builder | `WithHandleResolver(type, resolver)` | `withHandleResolver(_:for:)` |
-| refs | `GameEventScriptHost.ResolveRef(handle)` | `GameEventScriptHost.resolveRef(_:) throws` |
+| refs | `GameEventScriptHost.ResolveRef(handle)` returning `GesHandle?` | `GameEventScriptHost.resolveRef(_:) throws -> GesHandle?` |
 | content hash | `static GesSchemaValues.ContentHash(handleType, state)` returning `GesHash32`; throws `GesWireException` (`wire.typeMismatch`, `wire.missingField`) for a state the state schema does not accept | `GesSchemaValues.contentHash(_:state:) throws` returning `GesHash32` |
 
 - `GesHandle` is immutable. `Id` and `Part` are an integer Number or a Text; `Version` is an integer Number for a
@@ -1348,17 +1348,22 @@ receives the declarations, the host one resolver per type that reads state. Cont
 - `Parse` reads the [text form](Language.md#handle-text-form), refs included, and throws `ArgumentException`
   (Swift `GesApiError.invalidArgument`) for anything else; `ToString` writes the canonical form.
 - `GesHandleType` is the declarative description of one `handle` declaration of a schema set; `Hash` is its
-  [canonical hash](Schemas.md#canonical-form). `WithHandleTypes` makes their names and state schemas known to the
-  compiler; a name the compilation uses that none declares is `validate.unknownHandleType`. The Program keeps only
-  the name and hash.
+  [canonical hash](Schemas.md#canonical-form) and `LinkHash` the link hash that also covers the state schema's hash.
+  `WithHandleTypes` makes their names and state schemas known to the compiler; a name the compilation uses that none
+  declares is `validate.unknownHandleType`. The Program keeps only the name and link hash.
 - `WithHandleResolver` registers one resolver per type and replaces an earlier one for the same name. Load links
   against these registrations as [Host runtime](HostRuntime.md#handles) describes. A resolver call is synchronous, and
   neither the call nor its arguments may be retained. `SetState` takes a Record of the state schema, `SetDocument`
   `.gesd` text; the version is an integer Number or Bytes. Not calling any of the three, calling two of them, or
-  throwing ends the read as `runtime.invalidHandleState` or `runtime.handleResolveFailed`.
-- `ResolveRef` returns the handle with the version the type's resolver returns for its ref, and the handle itself if it
-  carries none. A type without a resolver, a resolver result that is not a valid version, and a resolver failure throw
-  `GesHandleException` (Swift `GesHandleError`) with the stable code `runtime.handleResolveFailed`.
+  throwing ends the read as `runtime.invalidHandleState` or `runtime.handleResolveFailed`; a fatal runtime failure
+  (C# `GesFatalRuntimeException`, Swift `GesFatalRuntimeError`) propagates unchanged, as for extensions.
+- A resolver's `ResolveRef` returns the version of the ref's current object, or Nothing when it knows no such ref. Its
+  default implementation, for resolvers of types without refs, throws `InvalidOperationException` (Swift
+  `GesApiError.invalidOperation`) naming the type; the host reports that as a resolver failure.
+- The host's `ResolveRef` returns the handle with the version the type's resolver returns for its ref, the handle itself
+  if it carries none, and null (Swift nil) when the resolver returns Nothing. A type without a resolver, a resolver
+  result that is not a valid version, and a resolver failure throw `GesHandleException` (Swift `GesHandleError`) with
+  the stable code `runtime.handleResolveFailed`; a fatal runtime failure propagates unchanged.
 - `Receive` and a native handler's `Emit` and `Publish` throw `GesWireException` (Swift: the methods are
   `throws(GesWireError)`) with `wire.unresolvedRef` and the path `Message.label` (the index for an unlabeled argument)
   for a message whose argument holds a handle with a ref, as [Host runtime](HostRuntime.md#handles) requires.

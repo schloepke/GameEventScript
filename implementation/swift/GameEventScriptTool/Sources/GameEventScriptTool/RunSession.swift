@@ -39,7 +39,7 @@ final class RunSession {
         }
 
         // Link the complete group before initialization; preparation failures leave this session intact.
-        let handles = workspace.handleTypes
+        let handles = fromMemory ? workspace.handleTypes : try ToolFiles.handleTypes(workspace.schemaArguments, activePath: &activePath)
         for entry in inventory.activePrograms {
             activePath = entry.paths[0]
             let program: GameEventScriptProgram
@@ -56,6 +56,7 @@ final class RunSession {
             try replacement.inventory.load(prepare(draft).compile(handles: handles), paths: draft.paths, id: draft.id)
         }
         guard try replacement.pump() else { return false }
+        workspace.handleTypes = handles
         for (id, draft) in refreshed { workspace.drafts[id] = draft }
         for draft in workspace.drafts.values where replacement.inventory.activePrograms.contains(where: { $0.id == draft.id }) { draft.applied = draft.text }
         inventory.unloadAll()

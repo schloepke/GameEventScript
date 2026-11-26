@@ -3796,6 +3796,110 @@ document:
 
 ---
 
+## Test: a part with a double slash is quoted
+
+This case checks the following contract: A bare part never starts with `/` and never contains `//`, which begins a comment; such a part is quoted and stays quoted when printed, and a `//` after a bare part starts a comment. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "handle-part-slashes"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "double: @RepoFile:content/'Units//radar.gesd'\nleading: @RepoFile:content/'/radar.gesd'\nnested: @RepoFile:content/Units/radar.gesd// a comment\n"
+  print: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  value:
+    type: ":Map"
+    entries:
+      - key: "double"
+        value:
+          type: ":Handle"
+          value: "@RepoFile:content/'Units//radar.gesd'"
+      - key: "leading"
+        value:
+          type: ":Handle"
+          value: "@RepoFile:content/'/radar.gesd'"
+      - key: "nested"
+        value:
+          type: ":Handle"
+          value: "@RepoFile:content/Units/radar.gesd"
+```
+
+---
+
+## Test: a slash after a ref starts the part
+
+This case checks the following contract: A tag ref takes the characters of a tag and any other ref is quoted Text, so a `/` after a ref always starts the part. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "handle-ref-part"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "tagged: @UnitSlot:drone~#feature/1\nquoted: @UnitSlot:drone~'feature/x'/2\n"
+  print: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  value:
+    type: ":Map"
+    entries:
+      - key: "quoted"
+        value:
+          type: ":Handle"
+          value: "@UnitSlot:drone~'feature/x'/2"
+      - key: "tagged"
+        value:
+          type: ":Handle"
+          value: "@UnitSlot:drone~#feature/1"
+```
+
+---
+
+## Test: a tag ref takes only the characters of a tag
+
+This case checks the following contract: A ref after `~#` is a tag name, a lowercase letter followed by letters and digits; any other ref is quoted, so `~#Live` is `document.invalidHandle` at the `@`. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "handle-tag-ref-characters"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: 1\nunit: @Unit:drone~#Live\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidHandle"
+    line: 2
+    column: 7
+```
+
+---
+
 ## Test: a malformed handle is an error
 
 This case checks the following contract: A value starting with `@` that is no well-formed handle is `document.invalidHandle` at the `@`. *Since: Unreleased.*

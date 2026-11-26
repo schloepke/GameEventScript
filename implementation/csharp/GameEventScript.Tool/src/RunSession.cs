@@ -35,6 +35,8 @@ internal sealed class RunSession
 
     internal bool Reload(ref string? activePath, bool fromMemory = false)
     {
+        // `:reload` re-reads the schemas; applying an edit keeps the ones in use. Both commit only with the new host.
+        var handleTypes = fromMemory ? Workspace.HandleTypes : ToolSchemas.Load(Workspace.SchemaArguments, ref activePath);
         var replacement = new RunSession(_seed, _limits, _verbose, _color, _interactive, Inventory.NextId, Workspace);
         var refreshed = new Dictionary<int, RunWorkspace.Draft>();
         RunWorkspace.Draft Prepare(RunWorkspace.Draft draft)
@@ -48,14 +50,15 @@ internal sealed class RunSession
         foreach (var entry in Inventory.ActivePrograms())
         {
             activePath = entry.Paths[0];
-            var program = Workspace.Drafts.TryGetValue(entry.Id, out var draft) ? Prepare(draft).Compile(Workspace.HandleTypes) : fromMemory ? entry.Instance.Program : entry.Paths.Length == 1
-                ? RunProgramFiles.ReadOne(activePath, Workspace.HandleTypes)
-                : RunProgramFiles.Compile(entry.Paths, Workspace.HandleTypes, ref activePath);
+            var program = Workspace.Drafts.TryGetValue(entry.Id, out var draft) ? Prepare(draft).Compile(handleTypes) : fromMemory ? entry.Instance.Program : entry.Paths.Length == 1
+                ? RunProgramFiles.ReadOne(activePath, handleTypes)
+                : RunProgramFiles.Compile(entry.Paths, handleTypes, ref activePath);
             replacement.Inventory.Load(program, entry.Paths, entry.Id);
         }
         foreach (var draft in Workspace.Drafts.Values.Where(d => !Inventory.ActivePrograms().Any(e => e.Id == d.Id) && (d.Id != 0 || d.Dirty)))
-            replacement.Inventory.Load(Prepare(draft).Compile(Workspace.HandleTypes), draft.Paths, draft.Id);
+            replacement.Inventory.Load(Prepare(draft).Compile(handleTypes), draft.Paths, draft.Id);
         if (!replacement.Pump()) return false;
+        Workspace.HandleTypes = handleTypes;
         foreach (var (id, draft) in refreshed) Workspace.Drafts[id] = draft;
         foreach (var draft in Workspace.Drafts.Values.Where(d => replacement.Inventory.ActivePrograms().Any(e => e.Id == d.Id))) draft.Applied = [.. draft.Text];
         Inventory.UnloadAll();

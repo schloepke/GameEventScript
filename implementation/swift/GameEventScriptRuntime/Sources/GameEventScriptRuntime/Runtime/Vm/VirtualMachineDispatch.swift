@@ -70,6 +70,8 @@ extension GesVirtualMachine {
                 case .createSeries: setSeries(d, .init(signatureID: instruction.word2 == 1 ? "fibonacci" : "factorial"))
                 case .callExternal: try executeCallExternal(instruction, context)
                 case .emitInstant, .emitAfter, .publishInstant, .publishAfter: try send(instruction, context)
+                case .emitNamed, .publishNamed: sendNamed(instruction, context)
+                case .cancelTimers: executeCancelTimers(instruction, context)
                 case .emitMessage, .emitMessageWithTags, .publishMessage, .publishMessageWithTags, .emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags: try emitOrPublishMessage(instruction, context)
                 case .cast: try GesCasts.cast(value(x), GesBytecodeTypeKind(rawValue: instruction.word2)!, context, sink: output(d))
                 case .castCustom:

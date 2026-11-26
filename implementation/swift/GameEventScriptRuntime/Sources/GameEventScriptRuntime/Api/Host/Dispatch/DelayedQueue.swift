@@ -46,6 +46,25 @@ struct GesDelayedQueue {
 
     mutating func removeAll() { items.removeAll() }
 
+    // Removes the entry with the send ID, if present, and restores the heap order.
+    @discardableResult mutating func remove(id: Int64) -> Bool {
+        guard var index = items.firstIndex(where: { $0.id == id }) else { return false }
+        let last = items.removeLast()
+        if index == items.count { return true }
+        if index > 0 && Self.before(last, items[(index - 1) / 2]) {
+            while index > 0 {
+                let parent = (index - 1) / 2
+                if !Self.before(last, items[parent]) { break }
+                items[index] = items[parent]
+                index = parent
+            }
+            items[index] = last
+        } else {
+            siftDown(index, last)
+        }
+        return true
+    }
+
     private mutating func siftDown(_ start: Int, _ item: GesDelayedMessage) {
         var index = start
         while true {

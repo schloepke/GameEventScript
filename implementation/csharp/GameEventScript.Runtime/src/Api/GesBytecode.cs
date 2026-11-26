@@ -64,6 +64,8 @@ internal enum GesInstructionFlag : byte
     /// Normalizes the result of a call to a Boolean or <c>nothing</c>, as a predicate result.
     /// </summary>
     NormalizeResultAsPredicate = 0x20,
+    /// <summary>Makes a named send repeat every duration instead of firing once.</summary>
+    Repeat = 0x20,
     /// <summary>Selects the strict numeric view for Move and scalar arithmetic for binary arithmetic, Min, Max, Negate, Abs and Clamp.</summary>
     Numeric = 0x40,
     /// <summary>Makes ParseLiteral write Nothing instead of the original Text when recognition fails.</summary>
@@ -1272,6 +1274,21 @@ public enum GesBytecodeOpCode : byte
     SplitText = 0xDF,
     /// <summary>Materializes the ordered Cartesian product of two Lists as two-element Lists.</summary>
     Cartesian = 0xE0,
+    /// <summary>
+    /// Emits after a time quantity under a sender-scoped name, replacing an earlier entry of that name, optionally
+    /// repeating every period, and writes host acceptance to the destination register.
+    /// </summary>
+    EmitNamed = 0xE1,
+    /// <summary>
+    /// Publishes after a time quantity under a sender-scoped name, replacing an earlier entry of that name, optionally
+    /// repeating every period, and writes host acceptance to the destination register.
+    /// </summary>
+    PublishNamed = 0xE2,
+    /// <summary>
+    /// Cancels the sending instance's timers by name, all named timers, or all named and unnamed delayed sends, and
+    /// writes whether anything was removed to the destination register.
+    /// </summary>
+    CancelTimers = 0xE3,
 
     #endregion
 }

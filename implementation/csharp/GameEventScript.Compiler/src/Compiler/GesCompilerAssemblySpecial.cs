@@ -26,6 +26,7 @@ internal static partial class GesCompiler
             "RandomPop" => "",
             "HasPattern" or "TakePattern" => line.Operands.Count == 5 ? "wrpsr" : "wrps",
             "SplitText" => line.Operands.Count == 2 ? "wr" : "wrr",
+            "CancelTimers" when line.Operands.Count == 2 => line.Operands[1] is GesIdentifierExpressionNode ? "wr" : "wt",
             _ => null
         };
 
@@ -106,6 +107,16 @@ internal static partial class GesCompiler
                 case "SplitText":
                     _builder.AddOpcode(GesBytecodeOpCode.SplitText, dst: GesOperand.Register(registers[0]), x: GesOperand.Register(registers[1]),
                         y: args.Count == 3 ? GesOperand.Register(registers[2]) : default, a: GesOperand.U16((ushort)(args.Count == 2 ? 1 : 0)));
+                    break;
+                case "CancelTimers":
+                    var mode = args[1] is GesIdentifierExpressionNode ? (ushort)0 : AssemblyText(args[1]) switch
+                    {
+                        "named" => (ushort)1,
+                        "all" => (ushort)2,
+                        var name => throw AssemblyFailure("Unknown timer cancel mode.", name, args[1])
+                    };
+                    _builder.AddOpcode(GesBytecodeOpCode.CancelTimers, dst: GesOperand.Register(registers[0]),
+                        x: mode == 0 ? GesOperand.Register(registers[1]) : default, a: GesOperand.U16(mode));
                     break;
                 default: return false;
             }

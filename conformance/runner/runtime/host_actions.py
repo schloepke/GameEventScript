@@ -5,7 +5,7 @@ from core.corpus import InvalidDocument, closed
 from checks.compiler_checks import LINK_NULLABLE, diagnostic
 from checks.lifecycle_checks import duration
 
-OPERATIONS = {'loadProgram', 'detachProgram', 'subscribeHandler', 'unsubscribeHandler', 'advanceMicroseconds'}
+OPERATIONS = {'loadProgram', 'detachProgram', 'subscribeHandler', 'unsubscribeHandler', 'advanceMicroseconds', 'resetHost', 'startHost'}
 
 
 def actions(raw, programs, deferred, handlers):
@@ -22,6 +22,10 @@ def actions(raw, programs, deferred, handlers):
         targets = deferred if operation == 'loadProgram' else programs if operation == 'detachProgram' else handlers
         if operation == 'advanceMicroseconds':
             duration(target)
+        elif operation in ('resetHost', 'startHost'):
+            # The host itself is the only target; the result reports whether the host accepted the call.
+            if target != 'host':
+                raise InvalidDocument('Host actions target host')
         elif not isinstance(target, str) or target not in targets:
             raise InvalidDocument('Unknown host action target')
         if 'expectResult' in action and type(action['expectResult']) is not bool:

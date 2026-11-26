@@ -25,7 +25,7 @@ public sealed partial class GameEventScriptHost
 
     /// <summary>Initializes the complete initial load group in load order without dispatching ordinary messages.</summary>
     /// <returns>The shared startup outcome. Repeated calls return the original result without running initialization again.</returns>
-    /// <remarks>Register all programs and native handlers before calling this method. A failed start is terminal; create a new host to retry.</remarks>
+    /// <remarks>Register all programs and native handlers before calling this method. A failed start is terminal until <see cref="Reset"/> returns the host to the loading state.</remarks>
     /// <exception cref="InvalidOperationException">The host is already executing a callback or initialization.</exception>
     public GesStartResult Start()
     {

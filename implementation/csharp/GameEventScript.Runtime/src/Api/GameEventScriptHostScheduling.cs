@@ -67,11 +67,11 @@ public sealed partial class GameEventScriptHost
             return false;
         }
         var pending = new GesPendingMessage(message, exact, names, ++_lastSendId, initializationOutput: _initializationInstance);
-        var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance);
+        var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance, _activeHandler?.Instance);
         _delayed ??= new();
         _delayed.Add(in delayed);
         _idleSinceMicroseconds = null;
-        _observer?.MessageScheduled(message, delayed.Id, delayed.Deadline, publish);
+        _observer?.MessageScheduled(message, delayed.Id, delayed.Deadline, publish, null, 0);
         if (publish)
         {
             _stepPublishedMessages++;
@@ -94,6 +94,12 @@ public sealed partial class GameEventScriptHost
         {
             // Failed initializations removed their entries already, so every due entry is delivered.
             var delayed = _delayed.RemoveFirst();
+            if (delayed.Timer is not null)
+            {
+                PromoteTimer(in delayed, now);
+                continue;
+            }
+
             var localAccepted = delayed.Pending.HasRecipients();
             if (localAccepted) _queue.Enqueue(delayed.Pending);
             if (!delayed.Publish) continue;

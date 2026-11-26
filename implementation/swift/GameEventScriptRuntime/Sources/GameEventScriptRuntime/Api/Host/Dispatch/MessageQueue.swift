@@ -39,6 +39,24 @@ struct GesMessageQueue {
         for _ in 0..<length { if let item = dequeue(), Self.keeps(item, discardingOutputsFrom: id) { enqueue(item) } }
     }
 
+    // Removes the entry with the send ID, if present, keeping the order of the others.
+    mutating func remove(id: Int64) -> Bool {
+        var found = false
+        let length = count
+        for _ in 0..<length {
+            guard let item = dequeue() else { break }
+            if !found && item.id == id { found = true } else { enqueue(item) }
+        }
+        return found
+    }
+
+    // Discards every entry without reporting it.
+    mutating func reset() {
+        for index in items.indices { items[index] = nil }
+        head = 0
+        count = 0
+    }
+
     private static func keeps(_ item: GesPendingMessage, discardingOutputsFrom id: Int64) -> Bool { item.initializationOutputID != id && item.hasRecipients }
 
     mutating func dequeue() -> GesPendingMessage? {

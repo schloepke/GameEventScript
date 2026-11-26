@@ -49,6 +49,11 @@ public sealed class GesContext
     internal GesRuntimeBudget RuntimeBudget { get; }
     internal bool Send(GameEventScriptMessage message, bool publish, long microseconds) => _host.SendFromContext(message, publish, microseconds);
 
+    internal bool SendNamed(GameEventScriptMessage message, bool publish, long microseconds, string name, bool repeat)
+        => _host.SendNamedFromContext(message, publish, microseconds, name, repeat);
+
+    internal bool CancelTimers(int mode, string? name) => _host.CancelFromContext(mode, name);
+
     /// <summary>
     /// Enqueues a message for local host dispatch without invoking the publish sink.
     /// </summary>

@@ -6,7 +6,7 @@
     case compilationUnit, moduleDeclaration, constantDefinition, recordDefinition, recordField, predicateDefinition, functionDefinition
     case parameterList, parameter, typeReference, eventHandler, handlerTagFilter, block
     case emitStatement, publishStatement, letStatement, ifStatement, ifCondition, elseClause, forStatement, seededRandomStatement, expressionStatement
-    case assemblyBlock, tagClause, sendExpression, argumentList, argument
+    case assemblyBlock, tagClause, sendExpression, cancelExpression, argumentList, argument
     case guardedChoiceExpression, choiceBranch, binaryExpression, unaryExpression, betweenExpression, membershipExpression, typeOperationExpression
     case dicePattern, powerExpression, seriesExpression, intrinsicCallExpression, memberAccessExpression, collectionAccessExpression, collectionSelector
     case objectPattern, objectPatternEntry, parenthesizedExpression, literalExpression, nameExpression, messageExpression, callExpression

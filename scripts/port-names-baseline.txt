@@ -24,6 +24,7 @@ only	csharp	Compiler	GesCallExpressionNode
 only	csharp	Compiler	GesCallableDefinition
 only	csharp	Compiler	GesCallableKind
 only	csharp	Compiler	GesCallableSignatures
+only	csharp	Compiler	GesCancelExpressionNode
 only	csharp	Compiler	GesChooseSelectorNode
 only	csharp	Compiler	GesClampExpressionNode
 only	csharp	Compiler	GesCollectionAccessExpressionNode

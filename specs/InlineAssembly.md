@@ -413,8 +413,12 @@ initialization, context, effect and resource checks.
 | `PublishAfter` | Symbolic expansion |
 | `ConstructData` | Symbolic expansion |
 | `SplitText` | Direct; typed operands |
+| `Cartesian` | Direct; typed operands |
+| `EmitNamed` | Symbolic expansion |
+| `PublishNamed` | Symbolic expansion |
+| `CancelTimers` | Direct; typed operands |
 
-Inventory: 206 defined opcodes; reserved numeric values are forbidden.
+Inventory: 210 defined opcodes; reserved numeric values are forbidden.
 The [experimental range 0xF8..0xFF](Bytecode.md#experimental-opcode-reservation)
 requires an explicit experimental implementation; standard ASM cannot emit it.
 
@@ -446,8 +450,15 @@ Instruction names are case-sensitive. Immediate integers are range-checked.
 | `EmitMessageValue message` | Send a message register; tagged form takes a second list operand |
 | `EmitInstant result, Example(value: input)` | Result-bearing immediate send |
 | `EmitAfter result, 1s, Example(value: input), [#tag]` | Result-bearing delayed send, with optional tag list |
+| `EmitNamed result, 1s, 'beat', Example(value: input), [#tag]` | Named one-shot send, with optional tag list |
+| `EmitNamedEvery result, 1s, 'beat', Example(value: input)` | Repeating named send (`EmitNamed` with Repeat) |
+| `CancelTimers result, key` | Cancel the executing instance's timer named by a Text or Tag register |
+| `CancelTimers result, #named` | Cancel all named timers; `#all` also cancels unnamed delayed sends |
 
-Each `Emit…` form also has a corresponding `Publish…` form. Expression blocks
+> **Since: Unreleased** — `EmitNamed`, `EmitNamedEvery` and `CancelTimers`
+
+Each `Emit…` form also has a corresponding `Publish…` form. An unknown
+`CancelTimers` mode tag is `compile.invalidAssembly`. Expression blocks
 in handlers may send messages; function, predicate and computed-field blocks may
 not. The explicit `emit`/`publish` spellings retain their normal message syntax.
 Arguments inside symbolic forms must be scalar literals or register names;

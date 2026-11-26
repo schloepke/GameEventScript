@@ -148,7 +148,9 @@ internal enum GesPublishStatementKind
     Publish
 }
 
-internal sealed record GesSendExpressionNode(GesPublishStatementKind Kind, GesExpressionNode Message, IReadOnlyList<GesExpressionNode> Tags, GesExpressionNode? Delay) : GesExpressionNode;
+internal sealed record GesSendExpressionNode(GesPublishStatementKind Kind, GesExpressionNode Message, IReadOnlyList<GesExpressionNode> Tags, GesExpressionNode? Delay, GesExpressionNode? Name = null, bool Repeat = false) : GesExpressionNode;
+// Mode 0 cancels the timer named by Name, 1 every named timer and 2 every delayed send of the sending instance.
+internal sealed record GesCancelExpressionNode(int Mode, GesExpressionNode? Name) : GesExpressionNode;
 internal sealed record GesPublishStatementNode(GesPublishStatementKind Kind, GesExpressionNode MessageExpression, IReadOnlyList<GesExpressionNode> TagExpressions) : GesStatementNode;
 internal sealed record GesLetStatementNode(string Identifier, GesExpressionNode Expression) : GesStatementNode;
 internal sealed record GesStatementBodyNode(bool IsBlock, IReadOnlyList<GesStatementNode> Statements) : GesScriptNode;

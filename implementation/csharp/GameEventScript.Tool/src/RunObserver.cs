@@ -40,9 +40,11 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive, Ru
     }
 
     /// <inheritdoc />
-    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish)
+    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish, string? name, long period)
     {
-        if (verbose) WriteTrace($"schedule #{id} {(publish ? "publish" : "emit")} {Format(message)} at {clock.FormatDeadline(deadline)}");
+        if (!verbose) return;
+        var timer = name is null ? "" : period > 0 ? $" named {name} every {period}us" : $" named {name}";
+        WriteTrace($"schedule #{id} {(publish ? "publish" : "emit")}{timer} {Format(message)} at {clock.FormatDeadline(deadline)}");
     }
 
     /// <inheritdoc />

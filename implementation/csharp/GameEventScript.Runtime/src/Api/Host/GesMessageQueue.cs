@@ -63,6 +63,28 @@ internal sealed class GesMessageQueue
             if (Dequeue(out var item) && item.HasRecipients()) Enqueue(item);
     }
 
+    // Removes the entry with the send ID, if present, keeping the order of the others.
+    internal bool Remove(long id)
+    {
+        var found = false;
+        var count = Count;
+        for (var index = 0; index < count; index++)
+        {
+            if (!Dequeue(out var item)) break;
+            if (!found && item.Id == id) found = true;
+            else Enqueue(item);
+        }
+
+        return found;
+    }
+
+    // Discards every entry without reporting it.
+    internal void Reset()
+    {
+        Array.Clear(_items, 0, _items.Length);
+        _head = _tail = Count = 0;
+    }
+
     private void Grow()
     {
         var expanded = new GesPendingMessage[_items.Length * 2];

@@ -267,3 +267,12 @@ are unchanged.
 
 Unary forms include `Move result, value, #numeric`, `Negate result, value, #numeric` and `Abs result, value, #numeric`.
 Clamp uses `Clamp result, value, minimum, maximum, #numeric`.
+
+### Named-timer instructions
+
+> **Since: Unreleased** — named timers
+
+Result-bearing sends print their nonzero flags in the order `Repeat`, `WithTags`,
+`Indirect`, for example `EmitNamed r3(ok), Outbound_Beat, Args_2, r1(delay), r2(name) flags=Repeat`.
+`CancelTimers` prints its destination, the key register in mode 0, and the mode
+as an integer immediate (`#0` key, `#1` named, `#2` all).

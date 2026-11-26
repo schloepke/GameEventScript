@@ -677,7 +677,7 @@
         if matchWord("asm") {
             try assemblyBlock()
         } else if currentKind == .emit || currentKind == .publish {
-            if peek().isIdentifier("after") {
+            if peek().isIdentifier("after") || peek().isIdentifier("every") {
                 advance()
                 // As in C#, the send node starts at `after`, after any line break.
                 newlines()

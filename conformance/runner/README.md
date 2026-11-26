@@ -181,7 +181,7 @@ is returned only when requested. The adapter reads with PreserveAll retention.
 Python performs byte equality, SHA-256, metadata, error-context and dump assertions.
 `runtime` is null when no Steps are present. Otherwise it contains `limits`, `random`, `hostCount`, `nativeHandlers`, `deferredPrograms`, `stepActions`, `initializationPump`, `publishSink`, and
 ordered `steps`, each with `id`, a typed `input` message, `pump`, and `budget`.
-All eleven runtime-limit overrides are supported. Pump modes are `completion`,
+All thirteen runtime-limit overrides, including `maxValueDepth` and `maxNamedTimers`, are supported. Pump modes are `completion`,
 `enqueue`, `frame`, and `frames`; frame modes require a positive Int32 opcode
 budget, other modes transmit null. Repeated frame pumping is bounded at 1,000,000
 frames per Step, in addition to the adapter process timeout. Expected local/outbound messages, diagnostics
@@ -194,7 +194,7 @@ compiles or reads the Program once and reuses that immutable object across fresh
 Hosts, each with its own queue, Context, random stream and VM state. Python
 compares every Host independently and prefixes mismatch paths with `/hosts/N`.
 Each phase contains ordered `trace`, `actions`, `local`, `outbound`, `diagnostics` and `runtimeLimits`
-arrays. Every phase reports `hostReady`, `programStarts` and `idleDurationMicroseconds`; Steps also report `accepted`,
+arrays. Every phase reports `hostReady`, `programStarts`, `idleDurationMicroseconds` and the ordered `pendingTimers`; Steps also report `accepted`,
 `paused`, and `waiting`. A fresh host uses the fixture Program, the configured publish
 sink and a virtual clock starting at zero. Initialization calls Start and drains
 on success unless `initializationPump` is `start`. Failed Start is never pumped; observations reset between steps. Encoding occurs after
@@ -254,7 +254,7 @@ Unexpected exceptions and declared fault codes/context execute before emissions.
 The adapter returns structured runtime diagnostics; Python compares their count,
 order and authored context constraints, never their English text. Native definitions
 contain fixture inputs only. Native and pre-Receive step actions support `loadProgram`, `detachProgram`,
-`subscribeHandler`, and `unsubscribeHandler`. Only deferred Program IDs may be
+`subscribeHandler`, `unsubscribeHandler`, `advanceMicroseconds`, `resetHost` and `startHost`. Only deferred Program IDs may be
 loaded explicitly. Actions use `{operation, target}` transport without expectations.
 Each phase records ordered action invocations with an origin (`step/ID` or
 `native/ID`) and a complete result sequence. Results contain a Boolean `result`
@@ -263,9 +263,13 @@ expected results and errors, including errors handled inside native callbacks.
 No expectation influences whether the adapter catches a link error and continues.
 The `advanceMicroseconds` action advances a host-local virtual clock without
 pumping. Its nonnegative Int64 amount is a decimal string; overflow returns false
-and leaves the clock unchanged. Optional lifecycle assertions compare readiness,
-Program start states and exact idle duration (`none` or Int64 text). Missing Program
-handles fail an asserted start state. Observer traces cover emit, publish, dispatch start/completion, runtime limits and
+and leaves the clock unchanged. `resetHost` and `startHost` take the literal target
+`host`; the adapter reports false when the host rejects the call, and Start's
+result is whether the host is ready afterwards. Optional lifecycle assertions compare readiness,
+Program start states, exact idle duration (`none` or Int64 text) and pending named
+timers (`name`, `deadline`, `period`, `message`, `program`, `publish`). Missing Program
+handles fail an asserted start state. Observer traces cover emit, publish, dispatch start/completion, scheduling (with
+`name` and `period` for named timers), discards, host resets, runtime limits and
 diagnostics in exact callback order. Omitted trace expectations make no ordering
 assertion; an explicit empty trace requires no callbacks. Diagnostic and limit
 entries retain their normal partial-constraint semantics. Trace messages use the

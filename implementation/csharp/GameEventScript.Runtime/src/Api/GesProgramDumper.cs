@@ -429,7 +429,7 @@ internal static class GesProgramDumper
             DiceCount => Immediate(instruction.Count),
             DiceSideCount => Immediate(instruction.ImmediateY),
             SpatialStart => Immediate(instruction.ImmediateX),
-            CountImmediate => Immediate(instruction.OpCode == GesBytecodeOpCode.SplitText ? instruction.AU : instruction.ImmediateY),
+            CountImmediate => Immediate(instruction.OpCode is GesBytecodeOpCode.SplitText or GesBytecodeOpCode.CancelTimers ? instruction.AU : instruction.ImmediateY),
             IndexImmediate => Immediate(instruction.Index),
             FromImmediate => Immediate(instruction.ImmediateX),
             ToImmediate => Immediate(instruction.ImmediateY),
@@ -519,8 +519,12 @@ internal static class GesProgramDumper
         }
         if (GesOpcodePrinter.IsResultSend(instruction.OpCode))
         {
-            var sendFlags = instruction.UnitAndFlags & 0xC0;
-            if (sendFlags != 0) builder.Append(" flags=").Append(sendFlags == 0x40 ? "WithTags" : sendFlags == 0x80 ? "Indirect" : "WithTags, Indirect");
+            var sendFlags = instruction.UnitAndFlags & 0xE0;
+            if (sendFlags == 0) return;
+            var separator = " flags=";
+            if ((sendFlags & 0x20) != 0) { builder.Append(separator).Append("Repeat"); separator = ", "; }
+            if ((sendFlags & 0x40) != 0) { builder.Append(separator).Append("WithTags"); separator = ", "; }
+            if ((sendFlags & 0x80) != 0) builder.Append(separator).Append("Indirect");
             return;
         }
         var flags = GesBytecodeInstruction.DecodeInstructionFlags(instruction.UnitAndFlags);

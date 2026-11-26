@@ -490,6 +490,15 @@ public enum GesBytecodeOpCode: UInt8, Sendable, CaseIterable {
     case splitText = 0xDF
     /// Materializes ordered two-element Lists from two List operands; invalid operands produce Nothing.
     case cartesian = 0xE0
+    /// Emits after a time quantity under a sender-scoped name, replacing an earlier entry of that name, optionally repeating
+    /// every period, and stores host acceptance in the destination register.
+    case emitNamed = 0xE1
+    /// Publishes after a time quantity under a sender-scoped name, replacing an earlier entry of that name, optionally
+    /// repeating every period, and stores host acceptance in the destination register.
+    case publishNamed = 0xE2
+    /// Cancels the sending instance's timers by name, all named timers, or all named and unnamed delayed sends, and stores
+    /// whether anything was removed in the destination register.
+    case cancelTimers = 0xE3
 }
 
 /// Portable value and VM-internal storage identifiers used as bytecode operands.

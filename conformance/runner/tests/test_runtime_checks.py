@@ -17,7 +17,7 @@ class RuntimeChecksTests(unittest.TestCase):
                      if c.kind == 'programBinary' and c.steps]
 
     def observation(self, case):
-        empty = {'local': [], 'outbound': [], 'diagnostics': [], 'runtimeLimits': [], 'actions': [], 'trace': [], 'hostReady': True, 'programStarts': {'main': 'ready'}, 'idleDurationMicroseconds': 'none'}
+        empty = {'local': [], 'outbound': [], 'diagnostics': [], 'runtimeLimits': [], 'actions': [], 'trace': [], 'hostReady': True, 'programStarts': {'main': 'ready'}, 'idleDurationMicroseconds': 'none', 'pendingTimers': []}
         result = {'initialization': {**empty}, 'steps': {}}
         for step in case.steps:
             expected = case.expected['steps'][step['step']]

@@ -8,9 +8,11 @@ sealed class GameEventScript.Api.GameEventScriptHost
   method GameEventScript.Api.GesSubscription Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, GameEventScript.Api.IGesNativeMessageHandler handler, System.Int32 priority)
   method GameEventScript.Api.GesSubscription SubscribeMessageName(System.String messageName, GameEventScript.Api.IGesNativeMessageHandler handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
   method System.Boolean Receive(GameEventScript.Api.GameEventScriptMessage message)
+  method System.Void Reset()
   method static GameEventScript.Api.GesHostBuilder CreateBuilder()
   property System.Boolean IsIdle { get }
   property System.Boolean IsReady { get }
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesTimerInfo> PendingTimers { get }
   property System.Int32 PendingMessageCount { get }
   property System.Int64? IdleDurationMicroseconds { get }
   property System.Int64? NextMessageDelay { get }
@@ -392,6 +394,9 @@ enum GameEventScript.Api.GesBytecodeOpCode
   enum-field ConstructData = 222
   enum-field SplitText = 223
   enum-field Cartesian = 224
+  enum-field EmitNamed = 225
+  enum-field PublishNamed = 226
+  enum-field CancelTimers = 227
 enum GameEventScript.Api.GesBytecodePatternKind
   enum-field CountAny = 0
   enum-field CountFace = 1
@@ -1041,6 +1046,7 @@ sealed class GameEventScript.Api.GesRuntimeLimits
   property System.Int32 MaxExecutionSteps { get set }
   property System.Int32 MaxGeneratedCollectionItems { get set }
   property System.Int32 MaxLoopIterations { get set }
+  property System.Int32 MaxNamedTimers { get set }
   property System.Int32 MaxProcessedMessagesPerRun { get set }
   property System.Int32 MaxQueuedMessages { get set }
   property System.Int32 MaxRandomScopeDepth { get set }
@@ -1343,6 +1349,13 @@ sealed class GameEventScript.Api.GesSubscription
 sealed class GameEventScript.Api.GesSystemClock
   ctor GesSystemClock()
   property System.Int64 ElapsedMicroseconds { get }
+sealed class GameEventScript.Api.GesTimerInfo
+  property GameEventScript.Api.GesProgramInstance Instance { get }
+  property System.Boolean Publish { get }
+  property System.Int64 Deadline { get }
+  property System.Int64 Period { get }
+  property System.String MessageName { get }
+  property System.String Name { get }
 struct GameEventScript.Api.GesUInt16IndexList
   property System.Int32 Length { get }
   property System.Int32 Start { get }
@@ -1450,10 +1463,11 @@ interface GameEventScript.Api.IGesPublishSink
 interface GameEventScript.Api.IGesRuntimeObserver
   method System.Void DispatchCompleted(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.String dispatchSignatureId)
   method System.Void DispatchStarted(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.String dispatchSignatureId)
+  method System.Void HostReset()
   method System.Void MessageDiscarded(System.Int64 id)
   method System.Void MessageEmitted(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.Boolean accepted)
   method System.Void MessagePublished(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, GameEventScript.Api.GesPublishResult result)
-  method System.Void MessageScheduled(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.Int64 deadline, System.Boolean publish)
+  method System.Void MessageScheduled(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.Int64 deadline, System.Boolean publish, System.String name, System.Int64 period)
   method System.Void RuntimeError(GameEventScript.Api.GesDiagnostic diagnostic)
   method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
 static class GameEventScript.CSharpBridge.GesBridgeContextExtensions

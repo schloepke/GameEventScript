@@ -101,7 +101,7 @@ public sealed partial class GameEventScriptHost
     public GesProgramInstance Load(GameEventScriptProgram program, int priority = NormalPriority)
     {
         if (_starting || _executingScript || _startResult is { State: not GesStartState.Ready })
-            throw new InvalidOperationException("Loading is not allowed during initialization, script execution, or after a failed start.");
+            throw new InvalidOperationException("Loading is not allowed during initialization, script execution, or after a failed start without a reset.");
         _ = program ?? throw new ArgumentNullException(nameof(program));
         program.EnsureValid();
         var maxRegisterCount = Math.Min(
@@ -157,8 +157,9 @@ public sealed partial class GameEventScriptHost
         if (initialization.Count > 0)
         {
             var message = GesSystemEndpoints.CreateInitializationMessage();
+            instance.Initialization = Sort(initialization.ToArray());
             // No host callbacks occur between the capacity check and this initialization enqueue.
-            var pending = new GesPendingMessage(message, Sort(initialization.ToArray()), [], ++_lastSendId, instance);
+            var pending = new GesPendingMessage(message, instance.Initialization, [], ++_lastSendId, instance);
             _idleSinceMicroseconds = null;
             if (IsReady) _queue.Enqueue(pending);
             else _startupQueue.Enqueue(pending);
@@ -359,6 +360,7 @@ public sealed partial class GameEventScriptHost
                 CompleteInitialization();
                 _hasActiveMessage = false;
                 _stepProcessedMessages++;
+                if (_activeMessage.Timer is { } timer) CompleteTimerDispatch(timer);
                 continue;
             }
 
@@ -529,6 +531,7 @@ public sealed partial class GameEventScriptHost
         _initializationOpcodes = _initializationEmits = _initializationPublishes = 0;
         _initializationDiagnostic = null;
         _hasActiveMessage = true;
+        if (_activeMessage.Timer is { } timer) StartTimerDispatch(timer);
         return true;
     }
 
@@ -646,6 +649,7 @@ public sealed partial class GameEventScriptHost
         else previous.NextRegistration = current.NextRegistration;
         current.NextRegistration = null;
         RemoveInstanceRegistrations(current);
+        DetachTimers(current);
         return true;
     }
 

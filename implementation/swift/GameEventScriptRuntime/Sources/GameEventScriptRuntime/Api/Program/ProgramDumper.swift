@@ -166,7 +166,11 @@ private final class GesProgramDump {
                 output += " output=Components"
             } else {
                 var flags: [String] = []
-                if i.normalizeResultAsPredicate { flags.append("NormalizeResultAsPredicate") }
+                if i.opcode.isResultSend {
+                    if i.unitAndFlags & 0x20 != 0 { flags.append("Repeat") }
+                } else if i.normalizeResultAsPredicate {
+                    flags.append("NormalizeResultAsPredicate")
+                }
                 if i.unitAndFlags & 0x40 != 0 { flags.append("WithTags") }
                 if i.unitAndFlags & 0x80 != 0 { flags.append("Indirect") }
                 if !flags.isEmpty { output += " flags=" + flags.joined(separator: ", ") }
@@ -191,7 +195,7 @@ private final class GesProgramDump {
         switch part {
         case .outboundMessage, .recordReference, .externalReference: return binding(i, part).map { bindLabels[$0] } ?? "Bind_none"
         case .localRegisterDelta, .diceCount, .spatialStart, .fromImmediate: return "#" + String(i.signedWord1)
-        case .countImmediate where i.opcode == .splitText: return "#" + String(i.a)
+        case .countImmediate where i.opcode == .splitText || i.opcode == .cancelTimers: return "#" + String(i.a)
         case .diceSideCount, .countImmediate, .toImmediate: return "#" + String(i.signedWord2)
         case .indexImmediate: return "#" + String(i.word1)
         case .stepImmediate: return "#" + String(Int16(bitPattern: i.a))

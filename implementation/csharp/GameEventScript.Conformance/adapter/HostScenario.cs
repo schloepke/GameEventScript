@@ -36,6 +36,8 @@ internal sealed class HostScenario(GameEventScriptHost host, IReadOnlyDictionary
                     "detachProgram" => _instances.TryGetValue(target, out var instance) && instance.Detach(),
                     "subscribeHandler" => Subscribe(target),
                     "unsubscribeHandler" => _subscriptions.TryGetValue(target, out var subscription) && subscription.Unsubscribe(),
+                    "resetHost" => Reset(),
+                    "startHost" => StartHost(),
                     _ => throw new ArgumentException("Unknown host action.")
                 };
                 results.Add(new { result = (bool?)result, errors = Array.Empty<object>() });
@@ -44,6 +46,32 @@ internal sealed class HostScenario(GameEventScriptHost host, IReadOnlyDictionary
             {
                 results.Add(new { result = (bool?)null, errors = exception.Diagnostics.Select(CompilerObservations.Diagnostic).ToArray<object>() });
             }
+        }
+    }
+
+    // A rejected reset or start (while the host starts, pumps or runs script) reports false; a start on a ready host returns its original result.
+    private bool Reset()
+    {
+        try
+        {
+            host.Reset();
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private bool StartHost()
+    {
+        try
+        {
+            return host.Start().State == GesStartState.Ready;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
         }
     }
 
@@ -58,6 +86,15 @@ internal sealed class HostScenario(GameEventScriptHost host, IReadOnlyDictionary
             GesStartState.RuntimeLimitReached => "runtimeLimitReached",
             _ => "pending"
         }, StringComparer.Ordinal);
+        observation["pendingTimers"] = host.PendingTimers.Select(timer => new Dictionary<string, object>
+        {
+            ["name"] = timer.Name,
+            ["deadline"] = timer.Deadline.ToString(CultureInfo.InvariantCulture),
+            ["period"] = timer.Period.ToString(CultureInfo.InvariantCulture),
+            ["message"] = timer.MessageName,
+            ["program"] = _instances.First(pair => ReferenceEquals(pair.Value, timer.Instance)).Key,
+            ["publish"] = timer.Publish
+        }).ToArray();
     }
 
     private bool Load(string id)
@@ -97,6 +134,7 @@ internal sealed class HostScenario(GameEventScriptHost host, IReadOnlyDictionary
                     "loadProgram" => deferred.Contains(target, StringComparer.Ordinal),
                     "detachProgram" => target is not null && programs.Contains(target),
                     "subscribeHandler" or "unsubscribeHandler" => target is not null && handlers.Contains(target),
+                    "resetHost" or "startHost" => target == "host",
                     _ => false
                 };
                 if (!valid) throw new ArgumentException("Invalid host action target.");

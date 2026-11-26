@@ -35,6 +35,9 @@ public sealed class GesProgramInstance
     internal GesLinkedProgram LinkedProgram { get; }
     internal GesProgramInstance? NextRegistration { get; set; }
 
+    // The sorted initialization handlers, which a host reset queues again; null without an initialization handler.
+    internal GesSubscriptionEntry[]? Initialization { get; set; }
+
     /// <summary>
     /// Idempotently removes this instance's handlers from future message snapshots.
     /// </summary>

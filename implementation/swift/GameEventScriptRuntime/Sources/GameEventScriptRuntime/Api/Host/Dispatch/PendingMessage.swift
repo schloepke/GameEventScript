@@ -8,6 +8,8 @@ struct GesPendingMessage {
     let id: Int64
     var initialization: GesProgramInstance? = nil
     var initializationOutputID: Int64 = 0
+    /// The named timer whose firing this message is, or nil.
+    var timer: GesNamedTimer? = nil
     var exactIndex = 0, nameIndex = 0
 
     func canReceive(_ entry: GesSubscriptionEntry) -> Bool { !(entry.instance?.initializationFailed ?? false) && entry.matches(message) }

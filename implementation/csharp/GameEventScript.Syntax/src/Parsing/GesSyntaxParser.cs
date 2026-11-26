@@ -572,7 +572,7 @@ internal sealed partial class GesSyntaxParser
     {
         var startToken = PreviousIndex;
         SkipNewLines();
-        if (IsWord("after"))
+        if (IsWord("after") || IsWord("every"))
         {
             ParseSendExpression(startToken, _tree.Mark());
             return;
@@ -586,7 +586,15 @@ internal sealed partial class GesSyntaxParser
     {
         _tree.StartNodeAt(start, GesSyntaxNodeKind.SendExpression);
         SkipNewLines();
-        var delay = MatchWord("after") ? ParseExpression().Depth : 0;
+        var delay = 0;
+        var repeat = IsWord("every");
+        if (MatchWord("after") || MatchWord("every"))
+        {
+            delay = ParseExpression().Depth;
+            // A repeating send needs a name: only a name can cancel it.
+            if (repeat) ExpectWord("named");
+            if (repeat || MatchWord("named")) delay = Deepest(delay, ParseUnaryExpression().Depth);
+        }
         var message = Current.Kind == Message ? ParseMessageLiteralExpressionCore() : ParseUnaryExpression();
         var tags = ParseOptionalTagExpressions(resultSend: true);
         return FinishNode(Node(Deepest(message.Depth, delay, tags), startToken));

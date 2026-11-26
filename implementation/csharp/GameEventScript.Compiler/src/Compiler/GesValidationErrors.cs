@@ -187,7 +187,9 @@ internal sealed class GesValidationErrors
 
         return expression switch
         {
-            GesSendExpressionNode send => (send.Delay is null ? null : FindNodeInExpression(send.Delay, symbol)) ?? FindNodeInExpression(send.Message, symbol),
+            GesSendExpressionNode send => (send.Delay is null ? null : FindNodeInExpression(send.Delay, symbol))
+                ?? (send.Name is null ? null : FindNodeInExpression(send.Name, symbol)) ?? FindNodeInExpression(send.Message, symbol),
+            GesCancelExpressionNode cancel => cancel.Name is null ? null : FindNodeInExpression(cancel.Name, symbol),
             GesUnaryExpressionNode unary => FindNodeInExpression(unary.Operand, symbol),
             GesBinaryExpressionNode binary => FindNodeInExpression(binary.Left, symbol) ?? FindNodeInExpression(binary.Right, symbol),
             GesTypeCastExpressionNode cast => FindNodeInExpression(cast.Value, symbol),

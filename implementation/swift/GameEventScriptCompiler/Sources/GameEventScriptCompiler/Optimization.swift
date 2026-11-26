@@ -147,7 +147,7 @@ extension GesBinaryBuilder {
 
         private static func hasVariableShape(_ opcode: GesBytecodeOpCode) -> Bool {
             switch opcode {
-            case .iteratorCreate, .iteratorCreateOrJump, .iteratorNext, .splitText, .hasPattern, .takePattern, .emitInstant, .emitAfter, .publishInstant, .publishAfter: true
+            case .iteratorCreate, .iteratorCreateOrJump, .iteratorNext, .splitText, .hasPattern, .takePattern, .emitInstant, .emitAfter, .publishInstant, .publishAfter, .emitNamed, .publishNamed, .cancelTimers: true
             default: false
             }
         }

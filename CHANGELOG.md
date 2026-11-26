@@ -11,6 +11,16 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Added
+- Named timers and heartbeats: `emit after 30s named 'timeout' GiveUp()` names a delayed send so that a later send
+  of the same name replaces it, and `emit every 1s named 'beat' Heartbeat()` (also `publish`) repeats one period after
+  each completed firing. `cancel key`, `cancel named` and `cancel all` remove timers of the executing Program instance
+  and yield whether anything was removed (specs/Language.md#named-timers-and-heartbeats,
+  specs/HostRuntime.md#named-timers). New opcodes `EmitNamed` (0xE1, with the `Repeat` flag 0x20), `PublishNamed`
+  (0xE2) and `CancelTimers` (0xE3); `RuntimeLimits.MaxNamedTimers`; `Host.PendingTimers` with `GesTimerInfo`; observer
+  `MessageScheduled` reports the timer name and period.
+- `Host.Reset()` (Swift `reset()`) discards queued, delayed and timer work, keeps the loaded Programs, handlers and the
+  random generator, and requeues every instance's initialization for a new `Start`; the observer receives `HostReset`
+  (specs/HostRuntime.md#host-reset).
 - Schema messages and message sets have a namespace of their own, so a message or set may share its name with a schema,
   tag set or network; a network route names a message or set without `:` (`client sends Move reliable`). Where a name
   is in both namespaces, a root is written `:Name` for the schema or network and `Name()` for the message or set; the

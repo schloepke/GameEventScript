@@ -13,6 +13,12 @@ public final class GesContext {
 
     func send(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64) -> Bool { host?.send(message, publish: publish, microseconds: microseconds) ?? false }
 
+    func sendNamed(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64, name: String, repeats: Bool) -> Bool {
+        host?.sendNamed(message, publish: publish, microseconds: microseconds, name: name, repeats: repeats) ?? false
+    }
+
+    func cancelTimers(mode: Int, name: String?) -> Bool { host?.cancelTimers(mode: mode, name: name) ?? false }
+
     let observer: (any GesRuntimeObserver)?
     lazy var budget = GesRuntimeBudget(context: self)
 
@@ -72,6 +78,7 @@ public final class GesContext {
         case "MaxRandomScopeDepth": "Random scopes nest deeper than the configured limit."
         case "MaxValueDepth": "Value nesting exceeds the configured depth."
         case "MaxLiteralInputScalars": "Literal input exceeds the scalar limit."
+        case "MaxNamedTimers": "Named timer limit reached."
         default: "Literal parsing exceeds the resource limit."
         }
     }

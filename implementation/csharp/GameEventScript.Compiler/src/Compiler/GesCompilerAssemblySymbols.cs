@@ -16,7 +16,7 @@ internal static partial class GesCompiler
             if (line.Name is "emit" or "publish") return new string('e', line.Operands.Count);
             if (AssemblySend(line) is { } send)
             {
-                var expected = (send.Result ? 2 : 1) + (send.Delayed ? 1 : 0) + (send.Tags ? 1 : 0);
+                var expected = (send.Result ? 2 : 1) + (send.Delayed ? 1 : 0) + (send.Named ? 1 : 0) + (send.Tags ? 1 : 0);
                 if (line.Operands.Count != expected) throw AssemblyFailure("Incorrect symbolic send operands.", line.Name);
                 return (send.Result ? "w" : "") + new string('e', expected - (send.Result ? 1 : 0));
             }
@@ -48,16 +48,18 @@ internal static partial class GesCompiler
             => constructor.TypeName is "record" or "series" || constructor.TypeName is "number" or "range" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "bytes" or "handler"
                 && (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null);
 
-        private static (bool Publish, bool Result, bool Delayed, bool Tags)? AssemblySend(GesAssemblyLine line)
+        private static (bool Publish, bool Result, bool Delayed, bool Tags, bool Named)? AssemblySend(GesAssemblyLine line)
         {
             var name = line.Name;
+            if (name is "EmitNamed" or "PublishNamed" or "EmitNamedEvery" or "PublishNamedEvery")
+                return (name.StartsWith("Publish", StringComparison.Ordinal), true, true, line.Operands.Count == 5, true);
             if (name is "EmitInstant" or "EmitAfter" or "PublishInstant" or "PublishAfter")
             {
                 var delayed = name.EndsWith("After", StringComparison.Ordinal);
-                return (name.StartsWith("Publish", StringComparison.Ordinal), true, delayed, line.Operands.Count == (delayed ? 4 : 3));
+                return (name.StartsWith("Publish", StringComparison.Ordinal), true, delayed, line.Operands.Count == (delayed ? 4 : 3), false);
             }
             if (name is "EmitMessage" or "EmitMessageWithTags" or "EmitMessageValue" or "EmitMessageValueWithTags" or "PublishMessage" or "PublishMessageWithTags" or "PublishMessageValue" or "PublishMessageValueWithTags")
-                return (name.StartsWith("Publish", StringComparison.Ordinal), false, false, name.EndsWith("WithTags", StringComparison.Ordinal));
+                return (name.StartsWith("Publish", StringComparison.Ordinal), false, false, name.EndsWith("WithTags", StringComparison.Ordinal), false);
             return null;
         }
 
@@ -94,13 +96,14 @@ internal static partial class GesCompiler
             {
                 var offset = send.Result ? 1 : 0;
                 var delay = send.Delayed ? line.Operands[offset++] : null;
+                var name = send.Named ? line.Operands[offset++] : null;
                 var message = line.Operands[offset++];
                 IReadOnlyList<GesExpressionNode> tags = [];
                 if (send.Tags) tags = line.Operands[offset] is GesListLiteralExpressionNode list ? list.Items : throw AssemblyFailure("Send tags require a literal list of registers or tags.");
                 if (!send.Result && (line.Name.Contains("Value", StringComparison.Ordinal) ? message is not GesIdentifierExpressionNode : message is not GesMessageLiteralExpressionNode))
                     throw AssemblyFailure("Message opcode and symbolic operand disagree.", line.Name);
                 var kind = send.Publish ? GesPublishStatementKind.Publish : GesPublishStatementKind.Emit;
-                if (send.Result) EmitSend(registers[0], new GesSendExpressionNode(kind, message, tags, delay), context, new ExpressionState(context.RegisterCount));
+                if (send.Result) EmitSend(registers[0], new GesSendExpressionNode(kind, message, tags, delay, name, line.Name.EndsWith("Every", StringComparison.Ordinal)), context, new ExpressionState(context.RegisterCount));
                 else EmitPublish(new GesPublishStatementNode(kind, message, tags), context);
                 return;
             }

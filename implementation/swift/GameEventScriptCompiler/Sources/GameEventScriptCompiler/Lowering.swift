@@ -182,6 +182,7 @@ extension GesCompiler {
         case .predicate: try predicateExpression(e, d, r, scope)
         case .extensionCall: try extensionCallExpression(e, d, r, scope)
         case .send: try sendExpression(e, d, r, scope)
+        case .cancel: try cancelExpression(e, d, r, scope)
         case .message: try messageExpression(e, d, r, scope)
         case .constructor: try constructorExpression(e, d, r, scope)
         case .list, .map: try collectionLiteral(e, d, r, scope)
@@ -365,8 +366,9 @@ extension GesCompiler {
     }
 
     func sendExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
-        guard case .send(let publish, let message, let tags, let delay) = e.kind else { preconditionFailure() }
+        guard case .send(let publish, let message, let tags, let delay, let timerName, let repeats) = e.kind else { preconditionFailure() }
         let time = try delay.map { try expression($0, r, scope) }
+        let key = try timerName.map { try expression($0, r, scope) }
         let tagRegisters = try tags.map { try expression($0, r, scope) }
         var flags: UInt8 = tags.isEmpty ? 0 : 0x40
         let x: Int
@@ -379,8 +381,17 @@ extension GesCompiler {
             flags |= 0x80
             x = try expression(message, r, scope)
         }
-        let op: GesBytecodeOpCode = publish ? (time == nil ? .publishInstant : .publishAfter) : (time == nil ? .emitInstant : .emitAfter)
-        r.emit(op, d, x, y, payload: UInt64(tags.isEmpty ? 0 : builder.list(tagRegisters)) | UInt64(time ?? 0) << 16, flags: flags)
+        let op: GesBytecodeOpCode
+        if key != nil { op = publish ? .publishNamed : .emitNamed } else { op = publish ? (time == nil ? .publishInstant : .publishAfter) : (time == nil ? .emitInstant : .emitAfter) }
+        if repeats { flags |= 0x20 }
+        let payload = UInt64(tags.isEmpty ? 0 : builder.list(tagRegisters)) | UInt64(time ?? 0) << 16 | UInt64(key ?? 0) << 32
+        r.emit(op, d, x, y, payload: payload, flags: flags)
+    }
+
+    func cancelExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
+        guard case .cancel(let mode, let timerName) = e.kind else { preconditionFailure() }
+        let key = try timerName.map { try expression($0, r, scope) }
+        r.emit(.cancelTimers, d, key ?? 0, payload: UInt64(mode))
     }
 
     func messageExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {

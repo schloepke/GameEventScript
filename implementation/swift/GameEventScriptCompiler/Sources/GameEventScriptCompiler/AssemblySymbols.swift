@@ -4,14 +4,17 @@
 @_spi(Compiler) import GameEventScriptRuntime
 
 extension GesCompiler {
-    func assemblySend(_ line: GesAssemblyLine) -> (publish: Bool, result: Bool, delayed: Bool, tags: Bool)? {
+    func assemblySend(_ line: GesAssemblyLine) -> (publish: Bool, result: Bool, delayed: Bool, tags: Bool, named: Bool)? {
         let name = line.name
+        if ["EmitNamed", "PublishNamed", "EmitNamedEvery", "PublishNamedEvery"].contains(name) {
+            return (name.hasPrefix("Publish"), true, true, line.operands.count == 5, true)
+        }
         if ["EmitInstant", "EmitAfter", "PublishInstant", "PublishAfter"].contains(name) {
             let delayed = name.hasSuffix("After")
-            return (name.hasPrefix("Publish"), true, delayed, line.operands.count == (delayed ? 4 : 3))
+            return (name.hasPrefix("Publish"), true, delayed, line.operands.count == (delayed ? 4 : 3), false)
         }
         if ["EmitMessage", "EmitMessageWithTags", "EmitMessageValue", "EmitMessageValueWithTags", "PublishMessage", "PublishMessageWithTags", "PublishMessageValue", "PublishMessageValueWithTags"].contains(name) {
-            return (name.hasPrefix("Publish"), false, false, name.hasSuffix("WithTags"))
+            return (name.hasPrefix("Publish"), false, false, name.hasSuffix("WithTags"), false)
         }
         return nil
     }
@@ -20,7 +23,7 @@ extension GesCompiler {
         if let signature = try assemblyIteratorSignature(line) { return signature }
         if line.name == "emit" || line.name == "publish" { return String(repeating: "e", count: line.operands.count) }
         if let send = assemblySend(line) {
-            let count = (send.result ? 2 : 1) + (send.delayed ? 1 : 0) + (send.tags ? 1 : 0)
+            let count = (send.result ? 2 : 1) + (send.delayed ? 1 : 0) + (send.named ? 1 : 0) + (send.tags ? 1 : 0)
             if count != line.operands.count { throw assemblyFailure(line.location, "Incorrect send operand count.", line.name) }
             return (send.result ? "w" : "") + String(repeating: "e", count: count - (send.result ? 1 : 0))
         }
@@ -55,6 +58,9 @@ extension GesCompiler {
         case "RandomPop": return ""
         case "HasPattern", "TakePattern": return line.operands.count == 5 ? "wrpsr" : "wrps"
         case "SplitText": return line.operands.count == 2 ? "wr" : "wrr"
+        case "CancelTimers" where line.operands.count == 2:
+            if case .name = line.operands[1].kind { return "wr" }
+            return "wt"
         default:
             guard let entry = Self.assemblyInstructions[line.name] else { throw assemblyFailure(line.location, "Unsupported assembly instruction.", line.name) }
             return entry.1
@@ -84,6 +90,8 @@ extension GesCompiler {
             var offset = send.result ? 1 : 0
             let delay = send.delayed ? line.operands[offset] : nil
             if send.delayed { offset += 1 }
+            let timerName = send.named ? line.operands[offset] : nil
+            if send.named { offset += 1 }
             let message = line.operands[offset]
             offset += 1
             var tags: [GesExpression] = []
@@ -97,7 +105,7 @@ extension GesCompiler {
                 if !valid { throw assemblyFailure(line.location, "Message opcode and operand disagree.", line.name) }
             }
             if send.result {
-                _ = try expression(.init(.send(send.publish, message, tags, delay), line.location), r, scope, destination: regs[0])
+                _ = try expression(.init(.send(send.publish, message, tags, delay, timerName, line.name.hasSuffix("Every")), line.location), r, scope, destination: regs[0])
             } else {
                 try statements([.init(kind: .publish(send.publish, message, tags), location: line.location)], r, scope)
             }
@@ -203,6 +211,17 @@ extension GesCompiler {
             let count = try assemblyInteger(args[3], 0, Int64(Int16.max))
             if (pattern == 1) != (args.count == 5) { throw assemblyFailure(line.location, "Only countFace takes a face operand.") }
             r.emit(line.name == "HasPattern" ? .hasPattern : .takePattern, regs[0], regs[1], Int(count), payload: UInt64(pattern) | UInt64(args.count == 5 ? regs[4] : 0) << 16)
+        case "CancelTimers":
+            var mode = 0
+            if case .name = args[1].kind {
+            } else {
+                switch try assemblyText(args[1]) {
+                case "named": mode = 1
+                case "all": mode = 2
+                case let name: throw assemblyFailure(args[1].location, "Unknown timer cancel mode.", name)
+                }
+            }
+            r.emit(.cancelTimers, regs[0], mode == 0 ? regs[1] : 0, payload: UInt64(mode))
         case "SplitText": r.emit(.splitText, regs[0], regs[1], args.count == 3 ? regs[2] : 0, payload: args.count == 2 ? 1 : 0)
         default: return false
         }

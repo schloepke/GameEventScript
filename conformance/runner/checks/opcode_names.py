@@ -37,5 +37,6 @@ Shuffle ListBuilderCreate ListBuilderAdd ListBuilderFinish MapBuilderCreate MapB
 MapBuilderFinish DistinctBuilderCreate DistinctBuilderAdd DistinctBuilderFinish GroupBuilderCreate GroupBuilderAdd
 GroupBuilderFinish OrderBuilderCreate OrderBuilderAdd OrderBuilderFinishAscending OrderBuilderFinishDescending HasPattern
 TakePattern ParseLiteral EmitInstant EmitAfter PublishInstant PublishAfter
+EmitNamed PublishNamed CancelTimers
 ConstructData SplitText Cartesian
 """.split())

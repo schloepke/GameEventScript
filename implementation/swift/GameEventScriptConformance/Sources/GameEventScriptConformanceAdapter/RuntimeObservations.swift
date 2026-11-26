@@ -38,7 +38,7 @@ final class HostScenario {
         let setters: [String: WritableKeyPath<GesRuntimeLimits, Int>] = [
             "maxProcessedMessagesPerRun": \.maxProcessedMessagesPerRun, "maxQueuedMessages": \.maxQueuedMessages, "maxExecutionSteps": \.maxExecutionSteps, "maxRegisterValues": \.maxRegisterValues, "maxLoopIterations": \.maxLoopIterations,
             "maxCallDepth": \.maxCallDepth, "maxRandomScopeDepth": \.maxRandomScopeDepth, "maxRangeItems": \.maxRangeItems, "maxGeneratedCollectionItems": \.maxGeneratedCollectionItems, "maxValueDepth": \.maxValueDepth,
-            "maxDiceCount": \.maxDiceCount, "maxDiceSides": \.maxDiceSides,
+            "maxDiceCount": \.maxDiceCount, "maxDiceSides": \.maxDiceSides, "maxNamedTimers": \.maxNamedTimers,
         ]
         for entry in test["limits"]?.objectValue ?? [] { if let key = setters[entry.key], let number = entry.value.integerValue { limits[keyPath: key] = number } }
         let random = test["random"]
@@ -132,6 +132,8 @@ final class HostScenario {
                 case "detachProgram": result = instances[target]?.detach() ?? false
                 case "subscribeHandler": result = try subscribe(target)
                 case "unsubscribeHandler": result = subscriptions[target]?.unsubscribe() ?? false
+                case "resetHost": result = resetHost()
+                case "startHost": result = startHost()
                 default: throw ConformanceExecutionError.invalidInput("Unknown action")
                 }
                 results.append(["result": result, "errors": [Any]()])
@@ -148,7 +150,35 @@ final class HostScenario {
         result["hostReady"] = host.isReady
         result["idleDurationMicroseconds"] = host.idleDurationMicroseconds.map(String.init) ?? "none"
         result["programStarts"] = instances.mapValues { $0.startResult.map { String(describing: $0.state) } ?? "pending" }
+        result["pendingTimers"] = host.pendingTimers.map { timer -> [String: Any] in
+            [
+                "name": timer.name, "deadline": String(timer.deadline), "period": String(timer.period), "message": timer.messageName,
+                "program": instances.first(where: { $0.value === timer.instance })!.key, "publish": timer.publish,
+            ]
+        }
         return result
+    }
+
+    // A rejected reset or start (while the host pumps, or a start on a ready host) reports false.
+    func resetHost() -> Bool {
+        do {
+            try host.reset()
+            return true
+        } catch GesApiError.invalidOperation {
+            return false
+        } catch {
+            fatalError("Unexpected reset error: \(error)")
+        }
+    }
+
+    func startHost() -> Bool {
+        do {
+            return try host.start().state == .ready
+        } catch GesApiError.invalidOperation {
+            return false
+        } catch {
+            fatalError("Unexpected start error: \(error)")
+        }
     }
 
     func load(_ id: String) throws -> Bool {
@@ -223,6 +253,8 @@ final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
         var id: Int64?
         var deadline: Int64?
         var publish: Bool?
+        var name: String?
+        var period: Int64?
     }
 
     let sink: String
@@ -270,9 +302,12 @@ final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
         trace.append(.init(kind: "diagnostic", diagnostic: diagnostic))
     }
 
-    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) {
-        trace.append(.init(kind: "scheduled", message: message, id: id, deadline: deadline, publish: publish))
+    // Only named sends report their name and period, so unnamed traces stay unchanged.
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: String?, period: Int64) {
+        trace.append(.init(kind: "scheduled", message: message, id: id, deadline: deadline, publish: publish, name: name, period: name == nil ? nil : period))
     }
+
+    func hostReset() { trace.append(.init(kind: "reset")) }
 
     func messageDiscarded(id: Int64) { trace.append(.init(kind: "discarded", id: id)) }
 }
@@ -290,6 +325,8 @@ extension RuntimeObservations {
                 if let id = event.id { item["id"] = String(id) }
                 if let deadline = event.deadline { item["deadline"] = String(deadline) }
                 if let publish = event.publish { item["publish"] = publish }
+                if let name = event.name { item["name"] = name }
+                if let period = event.period { item["period"] = String(period) }
                 if let result = event.result { item["result"] = ["localAccepted": result.localAccepted, "outboundAttempted": result.outboundAttempted, "outboundAccepted": result.outboundAccepted, "anyAccepted": result.anyAccepted] }
                 if let diagnostic = event.diagnostic { item["diagnostic"] = CompilerObservations.diagnostic(diagnostic) }
                 if let limit = event.limit { item["runtimeLimit"] = ["name": limit.name, "limit": limit.limit] }

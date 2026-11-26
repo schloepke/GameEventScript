@@ -13,39 +13,74 @@ internal partial class GesVirtualMachine
     private bool Send(GesBytecodeInstruction instruction, GesContext context)
     {
         long microseconds = 0;
-        if (instruction.OpCode is GesBytecodeOpCode.EmitAfter or GesBytecodeOpCode.PublishAfter)
-        {
-            var delay = Register(instruction.BU);
-            if (delay.Kind is not (Integer or Float) || delay.Unit != GesQuantityUnit.UnitSecond) return false;
-            if (delay.Kind == Integer)
-            {
-                if (delay.IntegerValue < 0 || delay.IntegerValue > long.MaxValue / 1_000_000) return false;
-                microseconds = delay.IntegerValue * 1_000_000;
-            }
-            else
-            {
-                var rounded = Math.Ceiling(delay.FloatValue * 1_000_000);
-                if (delay.FloatValue < 0 || double.IsNaN(rounded) || rounded < 0 || rounded >= 9223372036854775808d) return false;
-                microseconds = (long)rounded;
-            }
-        }
+        if (instruction.OpCode is GesBytecodeOpCode.EmitAfter or GesBytecodeOpCode.PublishAfter && !TryReadDelay(instruction.BU, out microseconds)) return false;
         var publish = instruction.OpCode is GesBytecodeOpCode.PublishInstant or GesBytecodeOpCode.PublishAfter;
+        return SendResolved(instruction, publish, context, microseconds, null, false);
+    }
+
+    private bool SendNamed(GesBytecodeInstruction instruction, GesContext context)
+    {
+        if (!TryReadDelay(instruction.BU, out var microseconds) || !TryReadTimerName(instruction.CU, out var name)) return false;
+        var repeat = (instruction.InstructionFlags & GesInstructionFlag.Repeat) != 0;
+        if (repeat && microseconds == 0) return false;
+        return SendResolved(instruction, instruction.OpCode == GesBytecodeOpCode.PublishNamed, context, microseconds, name, repeat);
+    }
+
+    private bool ExecuteCancelTimers(GesBytecodeInstruction instruction, GesContext context)
+    {
+        string? name = null;
+        if (instruction.AU == 0 && !TryReadTimerName(instruction.XRegister, out name)) return false;
+        return context.CancelTimers(instruction.AU, name);
+    }
+
+    private bool TryReadTimerName(ushort register, out string name)
+    {
+        ref readonly var key = ref Register(register);
+        name = key.Kind is Text or Tag ? key.TextValue : "";
+        return key.Kind is Text or Tag;
+    }
+
+    // A delay is a seconds Quantity rounded up to whole microseconds; negative or unrepresentable delays fail.
+    private bool TryReadDelay(ushort register, out long microseconds)
+    {
+        microseconds = 0;
+        ref readonly var delay = ref Register(register);
+        if (delay.Kind is not (Integer or Float) || delay.Unit != GesQuantityUnit.UnitSecond) return false;
+        if (delay.Kind == Integer)
+        {
+            if (delay.IntegerValue < 0 || delay.IntegerValue > long.MaxValue / 1_000_000) return false;
+            microseconds = delay.IntegerValue * 1_000_000;
+            return true;
+        }
+        var rounded = Math.Ceiling(delay.FloatValue * 1_000_000);
+        if (delay.FloatValue < 0 || double.IsNaN(rounded) || rounded < 0 || rounded >= 9223372036854775808d) return false;
+        microseconds = (long)rounded;
+        return true;
+    }
+
+    private bool SendResolved(GesBytecodeInstruction instruction, bool publish, GesContext context, long? delay, string? name, bool repeat)
+    {
         var tags = (instruction.InstructionFlags & GesInstructionFlag.WithTags) != 0;
         try
         {
             if ((instruction.InstructionFlags & GesInstructionFlag.Indirect) != 0)
             {
                 var message = Register(instruction.XRegister);
-                return tags ? EmitOrPublishMessageValueWithTags(message, Program.UInt16IndexLists.Resolve(instruction.AU), publish, context, microseconds)
-                    : EmitOrPublishMessageValue(message, publish, context, microseconds);
+                return tags ? EmitOrPublishMessageValueWithTags(message, Program.UInt16IndexLists.Resolve(instruction.AU), publish, context, delay, name, repeat)
+                    : EmitOrPublishMessageValue(message, publish, context, delay, name, repeat);
             }
-            return tags ? EmitOrPublishMessageWithTags(instruction.BindId, Program.UInt16IndexLists.Resolve(instruction.YRegister), Program.UInt16IndexLists.Resolve(instruction.AU), publish, context, microseconds)
-                : EmitOrPublishMessage(instruction.BindId, Program.UInt16IndexLists.Resolve(instruction.YRegister), publish, context, microseconds);
+            return tags ? EmitOrPublishMessageWithTags(instruction.BindId, Program.UInt16IndexLists.Resolve(instruction.YRegister), Program.UInt16IndexLists.Resolve(instruction.AU), publish, context, delay, name, repeat)
+                : EmitOrPublishMessage(instruction.BindId, Program.UInt16IndexLists.Resolve(instruction.YRegister), publish, context, delay, name, repeat);
         }
         catch (ArgumentException) { return false; }
     }
 
-    private bool EmitOrPublishMessage(ushort outboundMessageSignatureIndex, GesUInt16IndexList argumentRegisters, bool publish, GesContext context, long? delay = null)
+    private static bool Deliver(GameEventScriptMessage message, bool publish, GesContext context, long? delay, string? name, bool repeat)
+        => name is not null ? context.SendNamed(message, publish, delay ?? 0, name, repeat)
+            : delay is { } microseconds ? context.Send(message, publish, microseconds)
+            : publish ? context.Publish(message).AnyAccepted : context.Emit(message);
+
+    private bool EmitOrPublishMessage(ushort outboundMessageSignatureIndex, GesUInt16IndexList argumentRegisters, bool publish, GesContext context, long? delay = null, string? name = null, bool repeat = false)
     {
         if (outboundMessageSignatureIndex >= OutboundMessageSignatures.Length) return false;
         var signature = OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -70,7 +105,7 @@ internal partial class GesVirtualMachine
             }
 
             var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId);
-            return delay is { } microseconds ? context.Send(message, publish, microseconds) : publish ? context.Publish(message).AnyAccepted : context.Emit(message);
+            return Deliver(message, publish, context, delay, name, repeat);
         }
         catch (ArgumentException)
         {
@@ -83,7 +118,7 @@ internal partial class GesVirtualMachine
         GesUInt16IndexList argumentRegisters,
         GesUInt16IndexList tagRegisters,
         bool publish,
-        GesContext context, long? delay = null)
+        GesContext context, long? delay = null, string? name = null, bool repeat = false)
     {
         if (outboundMessageSignatureIndex >= OutboundMessageSignatures.Length) return false;
         var signature = OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -114,7 +149,7 @@ internal partial class GesVirtualMachine
             }
 
             var message = GameEventScriptMessage.CreatePrecomputedWithNormalizedTags(signature.Name, arguments, signature.SignatureId, tags.ToArrayOrEmpty());
-            return delay is { } microseconds ? context.Send(message, publish, microseconds) : publish ? context.Publish(message).AnyAccepted : context.Emit(message);
+            return Deliver(message, publish, context, delay, name, repeat);
         }
         catch (ArgumentException)
         {
@@ -122,16 +157,16 @@ internal partial class GesVirtualMachine
         }
     }
 
-    private bool EmitOrPublishMessageValue(in GesValue messageValue, bool publish, GesContext context, long? delay = null)
+    private bool EmitOrPublishMessageValue(in GesValue messageValue, bool publish, GesContext context, long? delay = null, string? name = null, bool repeat = false)
     {
         if (messageValue.Kind is Message && messageValue.ObjectValue is GameEventScriptMessage msg)
         {
-            return delay is { } microseconds ? context.Send(msg, publish, microseconds) : publish ? context.Publish(msg).AnyAccepted : context.Emit(msg);
+            return Deliver(msg, publish, context, delay, name, repeat);
         }
         return false;
     }
 
-    private bool EmitOrPublishMessageValueWithTags(in GesValue messageValue, GesUInt16IndexList tagRegisters, bool publish, GesContext context, long? delay = null)
+    private bool EmitOrPublishMessageValueWithTags(in GesValue messageValue, GesUInt16IndexList tagRegisters, bool publish, GesContext context, long? delay = null, string? name = null, bool repeat = false)
     {
         if (messageValue.Kind is not Message || messageValue.ObjectValue is not GameEventScriptMessage msg) return false;
         try
@@ -142,7 +177,7 @@ internal partial class GesVirtualMachine
                 AddTagsToBuffer(tags, in Register(tagRegisters[index]));
             }
             var message = msg.WithNormalizedTags(tags.ToArrayOrEmpty());
-            return delay is { } microseconds ? context.Send(message, publish, microseconds) : publish ? context.Publish(message).AnyAccepted : context.Emit(message);
+            return Deliver(message, publish, context, delay, name, repeat);
         }
         catch (ArgumentException)
         {

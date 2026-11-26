@@ -296,8 +296,8 @@ Enabling it implicitly requires the core capability `program-binary`.
 `runtimeLimits` uses the exact portable names `maxProcessedMessagesPerRun`,
 `maxQueuedMessages`, `maxExecutionSteps`, `maxRegisterValues`,
 `maxLoopIterations`, `maxCallDepth`, `maxRandomScopeDepth`, `maxRangeItems`,
-`maxGeneratedCollectionItems`, `maxDiceCount`, and `maxDiceSides`. Values are
-positive integers. Omitted fields use Core defaults.
+`maxGeneratedCollectionItems`, `maxValueDepth`, `maxDiceCount`, `maxDiceSides`,
+and `maxNamedTimers` (**Since: Unreleased**). Values are positive integers. Omitted fields use Core defaults.
 
 `comparison` is:
 
@@ -495,6 +495,15 @@ closed host-action sequence used by native handlers. These actions execute
 immediately before that step's `Receive`. This makes enqueue/load ordering and
 changes while a VM is paused expressible without embedding test callbacks.
 
+> **Since: Unreleased** — host reset actions
+
+`resetHost: host` calls the host's reset and `startHost: host` calls Start; the
+target is always the literal `host`. Both are allowed in `stepActions` and
+native-handler actions and accept `expectResult`. Reset reports true, or false
+when the host rejects it (for example while it is pumping, which is always the
+case inside a native handler). Start reports whether the host is ready afterwards,
+and false when the call is rejected.
+
 ## Ordered steps
 
 Runtime and performance tests express chronological input in exactly one table
@@ -610,6 +619,14 @@ trace:
     publish: false
   - event: discarded
     id: "4"
+  - event: scheduled
+    message: { name: Beat }
+    id: "5"
+    deadline: "2000000"
+    publish: false
+    name: beat
+    period: "1000000"
+  - event: reset
 ```
 
 Emit requires the complete `accepted` flag. Publish trace assertions require the four final-delivery fields shown above; `outboundAccepted` implies
@@ -620,8 +637,12 @@ their standalone expectation lists. Emit, publish, dispatch, `scheduled` and
 `discarded` events require the send ID as an exact unsigned ASCII decimal
 string; only emit and publish may use `"0"` for a send without an ID. `scheduled`
 also requires the absolute deadline in the same form, the exact message and the
-Boolean `publish` flag. Message/value comparison uses the case's ordinary
-Binary64 comparison mode.
+Boolean `publish` flag. A `scheduled` event of a
+[named timer](../HostRuntime.md#named-timers) additionally carries both its
+nonempty `name` and its `period` in microseconds as decimal text (`"0"` for a
+one-shot timer); an unnamed delayed send carries neither. `reset` has no fields
+and marks a host reset (**Since: Unreleased** — named timers and reset).
+Message/value comparison uses the case's ordinary Binary64 comparison mode.
 
 An optional top-level `initialization` expectation has `local`, `outbound`,
 `runtimeLimits`, `diagnostics`, and optional exact `trace` with the same meanings.
@@ -648,6 +669,14 @@ a quoted canonical nonnegative Int64 string, or `"none"` when no idle phase exis
 Omission makes no assertion. The virtual clock starts at zero and existing
 `advanceMicroseconds` actions advance it without pumping, enabling exact elapsed
 time assertions without wall-clock sleeps.
+
+> **Since: Unreleased** — pending timers
+
+Initialization and step expectations may assert `pendingTimers`, the exact
+ordered list of the host's pending named timers. Each entry has exactly the
+fields `name`, `deadline` and `period` (decimal microsecond text; period `"0"`
+for a one-shot timer), `message` (the message name), `program` (a loaded program
+ID) and Boolean `publish`. Omission makes no assertion.
 
 ## Portable message and value shape
 

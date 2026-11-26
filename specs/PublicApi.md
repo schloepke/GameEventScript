@@ -918,7 +918,7 @@ settings: processed events per ordinary pump call (Start completes its whole
 initial group regardless), queued logical
 messages, execution steps per handler, register values, loop iterations, call
 depth, random scope depth, range items, generated collection items, value
-nesting depth, dice count, and dice sides. The exact defaults are part of the public versioned API.
+nesting depth, dice count, dice sides and named timers. The exact defaults are part of the public versioned API.
 
 | Setting | Default |
 | --- | ---: |
@@ -934,9 +934,10 @@ nesting depth, dice count, and dice sides. The exact defaults are part of the pu
 | `MaxValueDepth` | 64 |
 | `MaxDiceCount` | 1,000 |
 | `MaxDiceSides` | 1,000,000 |
+| `MaxNamedTimers` | 0 (unlimited) |
 
 A nonpositive value disables the processed-event, queue, execution-step, loop,
-range, generated-item, value-depth, dice-count, or dice-side limit. A nonpositive register
+range, generated-item, value-depth, dice-count, dice-side or named-timer limit. A nonpositive register
 limit selects the portable default capacity of 512. Call depth is clamped to the
 encoded `u16` range for linking; zero permits only root handlers. Random scope
 depth alone must be in `0...65535` and is validated at Build. Host.Load checks
@@ -955,7 +956,8 @@ rules are in [Host runtime](HostRuntime.md).
 | `CreateBuilder()` | Returns a new HostBuilder. |
 | `Load(program, priority = 0)` | Validates, links and atomically registers one instance with an initialization snapshot when present. During initial loading it joins the Start group; on a ready host it joins the ordinary FIFO. |
 | `Start()` | Synchronously initializes the initial group without processing ordinary messages and returns StartResult. Repeated calls return the original result. |
-| `IsReady` | True after successful initial Start; later instance failures and queued messages do not reset it. |
+| `Reset()` | Discards queued, delayed and active work, named timers and start results, keeps Programs, instances, subscriptions and random state, and requeues initialization for the next Start; see [Host reset](HostRuntime.md#host-reset). Throws `InvalidOperationException` (Swift `GesApiError.invalidOperation`) while the host starts or pumps. |
+| `IsReady` | True after successful initial Start; later instance failures and queued messages do not reset it, `Reset()` does. |
 | `Subscribe(signature, handler, matchingTags?, withoutTags?, priority = 0)` | Adds one exact-signature native subscription and returns a Subscription. Inputs are copied/retained as immutable registration data. |
 | `SubscribeMessageName(name, handler, matchingTags?, withoutTags?, priority = 0)` | Adds a native subscription matching every signature of that normalized message name. |
 | `Receive(message)` | Captures current matching subscriptions and attempts to enqueue the logical message locally. Returns whether accepted. Before Start succeeds it returns false. It never pumps and never publishes outbound. |
@@ -964,6 +966,7 @@ rules are in [Host runtime](HostRuntime.md).
 | `IsIdle` | True only when no active message/handler and no queued logical message exists. |
 | `IdleDurationMicroseconds` | Optional Int64 idle duration on a ready Host; see [idle observation](HostRuntime.md#idle-duration-observation). |
 | `PendingMessageCount` | Number of queued logical messages according to HostRuntime; it never counts handler invocations. |
+| `PendingTimers` | A new snapshot list of `TimerInfo` values for the registered named timers, ordered by deadline and then send ID; reading never pumps. |
 
 Equal priority uses stable registration order. A logical message completes all
 captured handlers before the next logical message. Load/Subscribe/Detach/
@@ -982,6 +985,14 @@ message and never attaches to another Host.
 `Unsubscribe()` returns true exactly once; later calls return false.
 `IsSubscribed` reports that transition. Both handle types retain host identity
 and a stable non-reused host-local registration ID, not a closure.
+
+> **Since: Unreleased** — `Reset`, `PendingTimers` and `TimerInfo`
+
+`TimerInfo` (C# and Swift `GesTimerInfo`) is an immutable snapshot of one named
+timer with `Name` (the key as Text), `Deadline` (the current firing's absolute
+deadline in whole microseconds on the Host clock), `Period` (whole microseconds,
+0 for a one-shot `after` timer), `MessageName`, the sending `Instance` and
+`Publish`. Their meaning is defined in [Named timers](HostRuntime.md#named-timers).
 
 `StartResult` is an immutable value containing `State` (Ready, RuntimeError or
 RuntimeLimitReached) and optional structured `Diagnostic`. Ready does not imply
@@ -1049,21 +1060,26 @@ RuntimeObserver receives synchronous callbacks in exact dispatch order:
 - `DispatchCompleted(message, id, dispatchSignatureId)` when the handler boundary closes, including cleanup after a handler failure or limit;
 - `RuntimeLimitReached(name, detail, limit)` for a limit stop;
 - `RuntimeError(diagnostic)` for a runtime diagnostic;
-- `MessageScheduled(message, id, deadline, publish)` once when a delayed Emit
-  or Publish is accepted, before that Emit's `MessageEmitted`;
-- `MessageDiscarded(id)` once for each message removed before it was dispatched.
+- `MessageScheduled(message, id, deadline, publish, name, period)` once when a
+  delayed Emit or Publish is accepted, before that Emit's `MessageEmitted`, and
+  for each re-arming of a repeating named timer; `name` is absent and `period` 0
+  for an unnamed send;
+- `MessageDiscarded(id)` once for each message removed before it was dispatched;
+- `HostReset()` once for each successful `Reset()`, which reports no individual discards.
 
 Swift spells these `messageEmitted(_:id:accepted:)`, `messagePublished(_:id:result:)`,
 `dispatchStarted(_:id:signatureID:)`, `dispatchCompleted(_:id:signatureID:)`,
 `runtimeLimitReached(_:detail:limit:)`, `runtimeError(_:)`,
-`messageScheduled(_:id:deadline:publish:)` and `messageDiscarded(id:)`.
+`messageScheduled(_:id:deadline:publish:name:period:)`, `messageDiscarded(id:)` and
+`hostReset()`.
 
 > **Since: 0.5.0** — send IDs, scheduling and discard callbacks, default implementations
 
 `id` is the send ID defined in `HostRuntime.md#send-ids`; it is 0 for an Emit
 that was not queued and for a Publish the Host did not accept. The same section
 defines when `MessageDiscarded` occurs; scheduling deadlines are defined in
-`HostRuntime.md#delayed-dispatch`. Every callback has an empty default
+`HostRuntime.md#delayed-dispatch`, timer names, periods and re-arming in
+`HostRuntime.md#named-timers` (**Since: Unreleased**, as is `HostReset`). Every callback has an empty default
 implementation in both ports, so an observer implements only the callbacks it
 needs.
 
@@ -1436,8 +1452,8 @@ protocols. `GameEventScriptHost.makeBuilder()` provides the same mutable
 configuration workflow as C#, including seed, entropy, sequence, limits, observer,
 sink and registries. Every `build()` creates an independent Host; the Host
 initializer is internal. `GesProgramBuilder()` or
-`GameEventScriptProgram.makeBuilder()` creates a compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
-and `runToCompletion` retain the host contracts above. The mutable VM is host-private.
+`GameEventScriptProgram.makeBuilder()` creates a compiler builder. `load`, `start`, `reset`, `isReady`, `subscribe`, `receive`, `executeFrame`,
+`runToCompletion` and `pendingTimers` retain the host contracts above. The mutable VM is host-private.
 
 `GesValue` and `GameEventScriptMessage` are deliberately not `Sendable`. A value
 may hold an External value, which is a live object of one host whose getters

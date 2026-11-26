@@ -169,7 +169,7 @@ enum Validation {
     static func limits(_ input: Input) throws {
         let allowed = [
             "maxProcessedMessagesPerRun", "maxQueuedMessages", "maxExecutionSteps", "maxRegisterValues", "maxLoopIterations", "maxCallDepth", "maxRandomScopeDepth", "maxRangeItems", "maxGeneratedCollectionItems", "maxValueDepth", "maxDiceCount",
-            "maxDiceSides",
+            "maxDiceSides", "maxNamedTimers",
         ]
         try fields(input, [], optional: allowed)
         for entry in input.objectValue! {
@@ -222,6 +222,7 @@ enum Validation {
                 case "loadProgram": try require(deferred.contains(target))
                 case "detachProgram": try require(programs.contains(target))
                 case "subscribeHandler", "unsubscribeHandler": try require(handlers.contains(target))
+                case "resetHost", "startHost": try require(target == "host")
                 default: try require(false)
                 }
             }

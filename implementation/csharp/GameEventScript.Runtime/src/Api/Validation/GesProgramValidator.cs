@@ -193,6 +193,7 @@ internal static class GesProgramValidator
         var encodedUnit = instruction.UnitAndFlags & 0x1F;
         var encodedFlags = instruction.UnitAndFlags & 0xE0;
         var resultSend = GesOpcodePrinter.IsResultSend(instruction.OpCode);
+        var namedSend = GesOpcodePrinter.IsNamedSend(instruction.OpCode);
         var iteratorCreate = instruction.OpCode is GesBytecodeOpCode.IteratorCreate or GesBytecodeOpCode.IteratorCreateOrJump;
         var iteratorNext = instruction.OpCode == GesBytecodeOpCode.IteratorNext;
         var numericArithmetic = instruction.OpCode is GesBytecodeOpCode.Move
@@ -211,11 +212,11 @@ internal static class GesProgramValidator
             or GesBytecodeOpCode.Clamp;
         if (numericArithmetic && (encodedUnit != 0 || (instruction.OpCode == GesBytecodeOpCode.Clamp ? (instruction.Payload & ~0xFFFFUL) != 0 : instruction.Payload != 0)))
             InvalidOperand("Arithmetic instruction contains reserved unit or payload bits.", instructionIndex);
-        var allowedFlags = numericArithmetic || instruction.OpCode == GesBytecodeOpCode.ParseLiteral ? 0x40 : iteratorCreate ? 0xE0 : resultSend ? 0xC0 : (byte)GesInstructionFlag.NormalizeResultAsPredicate;
+        var allowedFlags = numericArithmetic || instruction.OpCode == GesBytecodeOpCode.ParseLiteral ? 0x40 : iteratorCreate ? 0xE0 : namedSend ? 0xE0 : resultSend ? 0xC0 : (byte)GesInstructionFlag.NormalizeResultAsPredicate;
         if ((iteratorCreate || iteratorNext) && (encodedUnit != 0 || instruction.Payload != 0 ||
             iteratorCreate && (encodedFlags == 0xE0 || instruction.OpCode == GesBytecodeOpCode.IteratorCreate && instruction.YRegister != 0)))
             InvalidOperand("Iterator instruction contains an invalid mode or reserved operands.", instructionIndex);
-        if (resultSend && (encodedUnit != 0 || instruction.CU != 0 || instruction.DU != 0 ||
+        if (resultSend && (encodedUnit != 0 || !namedSend && instruction.CU != 0 || instruction.DU != 0 ||
             (encodedFlags & 0x40) == 0 && instruction.AU != 0 ||
             (encodedFlags & 0x80) != 0 && instruction.YRegister != 0 ||
             instruction.OpCode is GesBytecodeOpCode.EmitInstant or GesBytecodeOpCode.PublishInstant && instruction.BU != 0))
@@ -230,6 +231,9 @@ internal static class GesProgramValidator
             InvalidOperand("Data instruction contains nonzero reserved operands.", instructionIndex);
         if (instruction.OpCode is GesBytecodeOpCode.CreateVector or GesBytecodeOpCode.CreatePoint && instruction.ImmediateX is < 0 or > 3)
             InvalidOperand("Spatial creation needs the positional form 0, a first component 1 or 2, or the labeled x form 3.", instructionIndex);
+        if (instruction.OpCode == GesBytecodeOpCode.CancelTimers && (instruction.UnitAndFlags != 0 || instruction.YRegister != 0 || instruction.BU != 0
+                || instruction.CU != 0 || instruction.DU != 0 || instruction.AU > 2 || instruction.AU != 0 && instruction.XRegister != 0))
+            InvalidOperand("CancelTimers needs mode 0 with a key register, or mode 1 or 2 without one, and zero reserved operands.", instructionIndex);
         if (instruction.OpCode == GesBytecodeOpCode.Cartesian && (instruction.UnitAndFlags != 0 || instruction.Payload != 0))
             InvalidOperand("Cartesian reserves the unit/flag byte and payload.", instructionIndex);
         if (instruction.OpCode == GesBytecodeOpCode.ParseLiteral &&

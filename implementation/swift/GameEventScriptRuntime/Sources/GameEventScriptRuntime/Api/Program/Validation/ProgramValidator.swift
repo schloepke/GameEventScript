@@ -110,7 +110,7 @@ enum GesProgramValidator {
         _ validatedNames: inout Set<Int>
     ) throws {
         if i.opcode.isResultSend {
-            if i.unitAndFlags & 0x3f != 0 || i.c != 0 || i.d != 0 || i.unitAndFlags & 0x40 == 0 && i.a != 0 || i.unitAndFlags & 0x80 != 0 && i.word2 != 0
+            if i.unitAndFlags & (i.opcode.isNamedSend ? 0x1f : 0x3f) != 0 || !i.opcode.isNamedSend && i.c != 0 || i.d != 0 || i.unitAndFlags & 0x40 == 0 && i.a != 0 || i.unitAndFlags & 0x80 != 0 && i.word2 != 0
                 || (i.opcode == .emitInstant || i.opcode == .publishInstant) && i.b != 0
             {
                 throw failure(.invalidOperand, 16, index)
@@ -127,6 +127,7 @@ enum GesProgramValidator {
             throw failure(.invalidOperand, 16, index)
         }
         if i.opcode == .cartesian && (i.unitAndFlags != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
+        if i.opcode == .cancelTimers && (i.unitAndFlags != 0 || i.word2 != 0 || i.b != 0 || i.c != 0 || i.d != 0 || i.a > 2 || i.a != 0 && i.word1 != 0) { throw failure(.invalidOperand, 16, index) }
         if [.createVector, .createPoint].contains(i.opcode) && !(0...3).contains(i.signedWord1) { throw failure(.invalidOperand, 16, index) }
         if [.constructData, .splitText].contains(i.opcode) && (i.unitAndFlags != 0 || i.b != 0 || i.c != 0 || i.d != 0 || i.opcode == .splitText && (i.a > 1 || i.a == 1 && i.word2 != 0)) { throw failure(.invalidOperand, 16, index) }
         for (position, operand) in i.operands.enumerated() {
@@ -231,8 +232,10 @@ extension GesBytecodeInstruction {
             result += unitAndFlags & 0x80 != 0 ? [.messageRegister] : [.outboundMessage, .argumentRegisterList]
             if unitAndFlags & 0x40 != 0 { result.append(.tagRegisterList) }
             if opcode == .emitAfter || opcode == .publishAfter { result.append(.auxBRegister) }
+            if opcode.isNamedSend { result += [.auxBRegister, .auxCRegister] }
             return result
         }
+        if opcode == .cancelTimers && a == 0 { return [.targetRegister, .sourceRegister, .countImmediate] }
         if opcode == .hasPattern || opcode == .takePattern {
             if a == 1 { return opcode.operands + [.countImmediate, .faceRegister] }
             if a == 0 { return opcode.operands + [.countImmediate] }

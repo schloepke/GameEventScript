@@ -36,6 +36,15 @@ public sealed class GesRuntimeLimits
     public int MaxQueuedMessages { get; init; }
 
     /// <summary>
+    /// Specifies the maximum number of named timers a host may hold across all instances.
+    /// </summary>
+    /// <remarks>
+    /// The default is 0, which like every nonpositive value disables the limit. A named send that would register one more
+    /// name stops its handler with this limit; replacing an existing name of the same instance does not count again.
+    /// </remarks>
+    public int MaxNamedTimers { get; init; }
+
+    /// <summary>
     /// Specifies the maximum number of opcodes one script handler may execute.
     /// </summary>
     /// <remarks>

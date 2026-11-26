@@ -25,8 +25,32 @@ def validate(case, raw, observation=False):
     for state in starts.values():
         if not isinstance(state, str) or state not in STATES:
             raise InvalidDocument('Invalid Program start state')
-    if observation and not {'hostReady', 'idleDurationMicroseconds', 'programStarts'} <= raw.keys():
+    if 'pendingTimers' in raw:
+        timers(raw['pendingTimers'], programs)
+    if observation and not {'hostReady', 'idleDurationMicroseconds', 'programStarts', 'pendingTimers'} <= raw.keys():
         raise InvalidDocument('Incomplete lifecycle observations')
+
+
+# The host's pending named timers in its own order (deadline, then send order); deadline and period are exact
+# microseconds as decimal text, and period 0 marks a one-shot timer.
+TIMER_FIELDS = {'name', 'deadline', 'period', 'message', 'program', 'publish'}
+
+
+def timers(raw, programs):
+    if not isinstance(raw, list):
+        raise InvalidDocument('Expected pending timer sequence')
+    for item in raw:
+        closed(item, TIMER_FIELDS, 'pending timer')
+        if item.keys() != TIMER_FIELDS:
+            raise InvalidDocument('Incomplete pending timer')
+        if not isinstance(item['name'], str) or not item['name'] or not isinstance(item['message'], str) or not item['message']:
+            raise InvalidDocument('Invalid pending timer name')
+        duration(item['deadline'])
+        duration(item['period'])
+        if item['program'] not in programs:
+            raise InvalidDocument('Unknown pending timer Program')
+        if type(item['publish']) is not bool:
+            raise InvalidDocument('Invalid pending timer publish flag')
 
 
 def compare(case, expected, actual, check):
@@ -34,5 +58,7 @@ def compare(case, expected, actual, check):
     for key in ('hostReady', 'idleDurationMicroseconds'):
         if key in expected:
             check('/' + key, expected[key], actual[key])
+    if 'pendingTimers' in expected:
+        check('/pendingTimers', expected['pendingTimers'], actual['pendingTimers'])
     for program, state in expected.get('programStarts', {}).items():
         check('/programStarts/' + program, state, actual['programStarts'].get(program))

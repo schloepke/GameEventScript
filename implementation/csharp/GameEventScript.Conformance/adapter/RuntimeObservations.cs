@@ -91,6 +91,7 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
         {
             MaxProcessedMessagesPerRun = Read("maxProcessedMessagesPerRun", defaults.MaxProcessedMessagesPerRun),
             MaxQueuedMessages = Read("maxQueuedMessages", defaults.MaxQueuedMessages),
+            MaxNamedTimers = Read("maxNamedTimers", defaults.MaxNamedTimers),
             MaxExecutionSteps = Read("maxExecutionSteps", defaults.MaxExecutionSteps),
             MaxRegisterValues = Read("maxRegisterValues", defaults.MaxRegisterValues),
             MaxLoopIterations = Read("maxLoopIterations", defaults.MaxLoopIterations),
@@ -162,16 +163,29 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
     public void DispatchCompleted(GameEventScriptMessage message, long id, string dispatchSignatureId)
         => _trace.Add(new() { ["event"] = "dispatchCompleted", ["message"] = message, ["id"] = Id(id), ["signatureId"] = dispatchSignatureId });
 
-    /// <summary>Records a delayed send with its send ID and absolute deadline as exact decimal text.</summary>
-    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish)
-        => _trace.Add(new()
+    /// <summary>Records a delayed send with its send ID and absolute deadline, and a named send's name and period, as exact decimal text.</summary>
+    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish, string? name, long period)
+    {
+        var item = new Dictionary<string, object>
         {
             ["event"] = "scheduled",
             ["message"] = message,
             ["id"] = Id(id),
             ["deadline"] = deadline.ToString(CultureInfo.InvariantCulture),
             ["publish"] = publish
-        });
+        };
+        // Only named sends report their name and period, so unnamed traces stay unchanged.
+        if (name is not null)
+        {
+            item["name"] = name;
+            item["period"] = period.ToString(CultureInfo.InvariantCulture);
+        }
+        _trace.Add(item);
+    }
+
+    /// <summary>Records one host reset.</summary>
+    public void HostReset()
+        => _trace.Add(new() { ["event"] = "reset" });
 
     /// <summary>Records the send ID of a delayed send removed before it became due.</summary>
     public void MessageDiscarded(long id)

@@ -34,6 +34,7 @@ internal enum GesSyntaxNodeKind : byte
     AssemblyBlock,
     TagClause,
     SendExpression,
+    CancelExpression,
     ArgumentList,
     Argument,
     GuardedChoiceExpression,

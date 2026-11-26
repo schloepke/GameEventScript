@@ -122,12 +122,14 @@ initializations before ordinary message dispatch begins.
 ```mermaid
 flowchart TD
     accTitle: Initial host loading and startup
-    accDescr: Build creates a loading host. Register handlers and load initial programs, then Start runs their initialization in load order. Only complete group success makes the host ready. Failure discards the group and leaves the host permanently not ready.
+    accDescr: Build creates a loading host. Register handlers and load initial programs, then Start runs their initialization in load order. Only complete group success makes the host ready. Failure discards the group and leaves the host not ready until a reset. Reset returns a ready or failed host to the loading state with its programs kept.
     Build["Build: loading host"] --> Load["Register handlers and load programs"]
     Load --> Start["Start: initialize in load order"]
     Start --> Result{"All initializations succeed?"}
     Result -->|Yes| Ready["Ready: receive and pump messages"]
     Result -->|No| Failed["Group discarded; host remains not ready"]
+    Ready -->|Reset| Load
+    Failed -->|Reset| Load
 ```
 
 ### Initial group
@@ -148,8 +150,8 @@ and publish counters; these exclude subsequent ordinary dispatch. A runtime faul
 `RuntimeLimitReached`, with a structured diagnostic. Failure removes the group's
 registrations and discards all its queued outputs, reporting each discarded
 message as defined in [Send IDs](#send-ids). The host remains not ready and
-cannot be started again. Repeating Start returns its original result without
-executing code. Reentrant Start and pump calls are rejected.
+cannot be started again until a [reset](#host-reset). Repeating Start returns its
+original result without executing code. Reentrant Start and pump calls are rejected.
 
 ### Later instances
 
@@ -195,6 +197,27 @@ retains ordinary publish semantics and does not undo successful initialization.
 Direct external effects performed by arbitrary native callbacks are not rolled
 back. Host readiness promises successful init, not completion of its emitted
 message chains.
+
+### Host reset
+
+> **Since: Unreleased**
+
+`Reset()` (Swift `reset()`) discards all queued, delayed and active work and
+returns the host to the loading state. It keeps the loaded Programs, their
+instances, native handlers and subscriptions, the reusable VM and the random
+generator, which is neither reseeded nor rewound. It clears the runnable and
+startup queues, delayed entries and [named timers](#named-timers), buffered
+initialization outputs, a paused handler, the idle phase, the host's start result
+and every instance's `StartResult`. The discarded entries are not reported
+individually; the observer receives one `HostReset` instead. The initialization
+of each attached instance is queued again in load order under new send IDs, which
+keep counting, so a following `Start` runs it as the initial group and the
+[Initial group](#initial-group) rules apply again. Until then `IsReady` is false
+and the loading rules apply.
+
+A reset is allowed on a loading, ready or failed host and between the frames of a
+paused handler. It is rejected while the host starts or pumps, including from a
+native handler or another host callback; the rejection changes nothing.
 
 ## Random Ownership, Boundaries, and Limits
 
@@ -563,11 +586,12 @@ values and expected local/outbound messages.
 Every message the Host queues or processes carries a host-local send ID, a
 positive Int64. A Host starts at 1 and assigns the next ID, in order of
 occurrence, to each message queued by `Receive` or Emit, each processed Publish,
-each delayed send and each queued initialization message. An Emit or `Receive`
+each delayed send, each arming of a repeating [named timer](#named-timers) and each
+queued initialization message. An Emit or `Receive`
 that queues nothing, for example without recipients or on a full queue, gets no
 ID. Neither does a send rejected before it is processed: by an active
 random-scope fault, an invalid or unrepresentable delay, a negative clock reading,
-or a queue limit that stops a result-bearing or delayed send. Every Publish the
+or a queue or named-timer limit that stops a result-bearing or delayed send. Every Publish the
 Host processes owns an ID, even without local recipients and independent of the
 sink outcome.
 This is independent of the Boolean script result of a send: an Emit without
@@ -662,6 +686,77 @@ retains its frame-budget meaning. Errors and limits retain precedence.
 `IsIdle` is false while delayed entries remain. `NextMessageDelay` reports remaining
 whole microseconds, clamped to zero, or no value when there is no delayed entry.
 Bridges and command-line adapters own timers and serialize all Host access.
+
+## Named timers
+
+> **Since: Unreleased**
+
+A named send (`emit|publish after|every duration named key`,
+[Language](Language.md#named-timers-and-heartbeats)) registers a named timer under
+the sending Program instance and the key's text. Each instance has one namespace
+for emit and publish; instances never see each other's names. A timer has one
+current firing at a time, which is an ordinary delayed entry with its own send ID
+and follows [Delayed dispatch](#delayed-dispatch) unless stated here. Only script
+handlers send named and cancel; a send without an active instance, during an
+active random-scope fault, with a negative clock reading or with an overflowing
+deadline yields false and changes nothing.
+
+**Replacement.** A named send whose name is registered removes the old timer's
+waiting firing, delayed or promoted but not yet dispatched, and reports it with
+`MessageDiscarded`; a firing whose handlers already run only loses its name and is
+not re-armed. The new entry gets a new send ID, so it orders after existing entries
+with an equal deadline. A one-shot emit without recipients at acceptance is not
+scheduled, exactly like an unnamed delayed emit, and leaves the name free after
+removing the old timer.
+
+**One-shot timers.** An `after` timer is registered until its firing starts
+dispatch, or until a due firing finds no local recipient and is not queued. A
+zero delay is allowed and schedules a firing that is due at once. Recipients are
+captured at acceptance as for an unnamed delayed send.
+
+**Repeating timers.** An `every` timer needs a period greater than zero; otherwise
+the send yields false and changes nothing. Each firing captures its recipients,
+including the `undeliverable` fallback, when it becomes due, not at the send, and
+an emit firing reports `MessageEmitted` then. When all handlers of a firing's
+logical message complete, the timer re-arms one period after the clock reading at
+that completion, under a new send ID. While the firing is promoted, dispatched or
+paused across frames, the timer stays registered with that firing's deadline. A
+firing without a local recipient reports `MessageDiscarded` for an emit, still
+releases a publish to the sink, and re-arms one period after its promotion. Missed
+periods are never caught up, and a re-arming deadline that would overflow ends the
+timer.
+
+**Cancel.** `cancel key` selects the sending instance's timer of that name,
+`cancel named` all its named timers, and `cancel all` additionally its unnamed
+delayed entries that are not yet due. Selected waiting firings and entries are
+removed, a firing whose handlers already run only loses its name, and the
+expression yields true if anything was selected. Removals are reported with
+`MessageDiscarded` before anything changes: promoted firings in send-ID order,
+then delayed entries in deadline order. A one-shot timer whose handler runs is no
+longer registered, so cancelling it from that handler yields false; a repeating
+timer cancelled from its own handler yields true and does not re-arm.
+
+**Lifecycle.** Detaching the sending instance ends its repeating timers: a
+waiting delayed firing is discarded and reported, while a promoted firing keeps its
+captured delivery. One-shot firings outlive the detach like other accepted sends,
+but their names are released. Named sends of an initialization are staged as its
+outputs; a failed initialization abandons its timers with its other outputs, and a
+[reset](#host-reset) clears all timers without individual reports.
+
+**Limits.** Every waiting firing counts towards `MaxQueuedMessages`; a replacement
+reuses the slot of the waiting firing it removes. `MaxNamedTimers` (default 0,
+unlimited) bounds the registered names of all instances of a host; a replacement
+does not count again. A named send that would exceed either limit stops its
+handler with that limit before the send is observed, like a delayed send on a full
+queue.
+
+**Observation.** `PendingTimers` (Swift `pendingTimers`) is a snapshot of all
+registered timers, ordered by deadline and then by send ID, with name, deadline of
+the current firing in whole microseconds on the Host clock, period in whole
+microseconds (0 for `after`), message name, sending instance and publish flag.
+Reading it never pumps. Every arming of a timer reports `MessageScheduled` with
+its name and period: the first by its send and each re-arming of a repeating timer.
+Unnamed delayed sends report no name and period 0.
 
 ## Idle duration observation
 

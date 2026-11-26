@@ -1988,26 +1988,26 @@ binary:
 
 ---
 
-## Test: invalid-reserved-opcode-e1
+## Test: invalid-reserved-opcode-e4
 
-This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with e1.
+This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with e4.
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: invalid-reserved-opcode-e1
+id: invalid-reserved-opcode-e4
 compile:
   debugInfo: []
 binaryFixture:
-  id: gesb-v1-invalid-reserved-opcode-e1
-  resourceId: gesb-v1.invalid-reserved-opcode-e1
-  relativePath: GesbV1/invalid-reserved-opcode-e1.gesb
-  sha256: A40E35A9355C8D76AF18DADD389E75CE1925415ED0E5F325222EBA1F08F6DCB1
+  id: gesb-v1-invalid-reserved-opcode-e4
+  resourceId: gesb-v1.invalid-reserved-opcode-e4
+  relativePath: GesbV1/invalid-reserved-opcode-e4.gesb
+  sha256: 5107BF88F11C6CC4C8897A7B76FD25F7BD63BA6A2F6041208EA6CA271E3F23E0
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 0
-  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with e1."
+  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with e4."
 ```
 
 ### Source code under test

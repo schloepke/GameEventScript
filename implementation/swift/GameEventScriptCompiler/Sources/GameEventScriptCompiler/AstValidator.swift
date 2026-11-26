@@ -234,7 +234,7 @@ final class GesAstValidator {
         case .unary, .binary, .between, .range, .random, .combined, .list, .extensionCall, .assembly: operands(e, types)
         case .name, .handler, .member, .map, .generated: namedReferences(e, types)
         case .call, .message, .constructor: argumentReferences(e, types)
-        case .predicate, .send, .intrinsic, .seeded, .check, .cast: checkedOperands(e, types)
+        case .predicate, .send, .cancel, .intrinsic, .seeded, .check, .cast: checkedOperands(e, types)
         case .choice: choiceReferences(e, types)
         case .selector: selectorReferences(e, types)
         }
@@ -296,16 +296,18 @@ final class GesAstValidator {
         case .predicate(let value, let name):
             predicateReference(name, count: value == nil ? 0 : 1, e.location)
             if let value { expression(value, types) }
-        case .send(_, let message, let tags, let delay):
+        case .send(_, let message, let tags, let delay, let name, _):
             expression(message, types)
             if let delay {
                 expression(delay, types)
                 sendDelay(delay, types)
             }
+            if let name { timerName(name, types) }
             for tag in tags {
                 tagLiteral(tag)
                 expression(tag, types)
             }
+        case .cancel(_, let name): if let name { timerName(name, types) }
         // Geometric intrinsics are not visited, as in C#; clamp, min and max visit their operands.
         case .intrinsic(let name, let args): if Self.visitedIntrinsics.contains(name) { for arg in args { expression(arg, types) } }
         case .seeded(let seed, let body):
@@ -349,6 +351,15 @@ final class GesAstValidator {
         let time = type.hasPrefix("quantity:") && GesCompilerSupport.quantityUnit(String(type.dropFirst(9))) == .second
         if !time && !["unknown", "other", "nothing"].contains(type) {
             report("validate.invalidTypeConstructor", delay.location, symbol: "Quantity(s)", kind: .type, message: "Send delay requires a time quantity, for example 0.2s.")
+        }
+    }
+
+    // A timer name is Text or a Tag; statically unknown names are checked at runtime.
+    private func timerName(_ name: GesExpression, _ types: [String: String]) {
+        expression(name, types)
+        let type = infer(name, types)
+        if !["text", "tag", "unknown", "other", "nothing"].contains(type) {
+            report("validate.invalidTypeConstructor", name.location, symbol: "Text", kind: .type, message: "Timer name requires Text or Tag.")
         }
     }
 

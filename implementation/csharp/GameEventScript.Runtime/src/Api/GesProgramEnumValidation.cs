@@ -10,7 +10,7 @@ internal static class GesProgramEnumValidation
     internal static bool IsDefined(GesBytecodeOpCode value)
         => (byte)value <= (byte)GesBytecodeOpCode.Default
             || (byte)value >= (byte)GesBytecodeOpCode.Or && (byte)value <= (byte)GesBytecodeOpCode.AngleBetween3D
-            || (byte)value >= (byte)GesBytecodeOpCode.TakeFirst && (byte)value <= (byte)GesBytecodeOpCode.Cartesian;
+            || (byte)value >= (byte)GesBytecodeOpCode.TakeFirst && (byte)value <= (byte)GesBytecodeOpCode.CancelTimers;
 
     internal static bool IsDefined(GesBinaryBindKind value)
         => value is GesBinaryBindKind.MessageHandler

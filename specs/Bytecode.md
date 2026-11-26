@@ -194,12 +194,13 @@ shared program validator enforces this for compiler output and loaded binaries.
 
 ```text
 bits 0..4  UnitId        0..31
-bits 5     NormalizeResultAsPredicate
+bits 5     NormalizeResultAsPredicate; Repeat on named sends
 bits 6     WithTags on result-bearing sends; Numeric on Move and the arithmetic opcodes; Strict on ParseLiteral
 bits 7     Indirect (result-bearing sends only)
 ```
 
-Flag meanings are opcode-specific. Result-bearing sends reject bit 5. Bit 6 is defined only for result-bearing sends,
+Flag meanings are opcode-specific. Result-bearing sends reject bit 5, except that the named sends `EmitNamed` and
+`PublishNamed` use it as Repeat (0x20). Bit 6 is defined only for result-bearing sends,
 Move, the arithmetic opcodes that the opcode table marks Numeric (0x40) and ParseLiteral (Strict, 0x40); bit 7 only for
 result-bearing sends; other instructions except iterator creation reject both. Iterator creation
 uses bits 5..7 as the mode field defined below; IteratorNext uses bit 5 for
@@ -406,7 +407,7 @@ groups are:
 0xA0 Group 3: collection slicing, text/collection operators, map projections
 0xB0 Group 3 membership, collection algebra, map projections, element terminals
 0xC0 Group 3 iterators, aggregations, weighted terminals, collect terminals
-0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, literal parsing, result-bearing sends, Cartesian, reserved tail 0xE1..0xFF
+0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, literal parsing, result-bearing sends, Cartesian, named timers, reserved tail 0xE4..0xFF
 ```
 
 The exhaustive [canonical opcode field map](#canonical-opcode-field-map) in this document lists every defined opcode as its own row, and every group ends with one `reserved` row for its unused tail range.
@@ -415,7 +416,7 @@ The exhaustive [canonical opcode field map](#canonical-opcode-field-map) in this
 
 `0xF8..0xFF` (eight values) is reserved exclusively for local experimental
 opcodes, within the reserved tail of Group 3. It must not be allocated to
-permanent standard opcodes. `0xE1..0xF7` remains available for future standard
+permanent standard opcodes. `0xE4..0xF7` remains available for future standard
 allocations.
 
 This reservation defines no executable instructions or operand layouts.
@@ -1706,7 +1707,10 @@ remain protection limits, not additional optimizer-observable effects.
 | 0xDE | `ConstructData` | - | result register | type-name Text index | argument-register list | `AU`=argument-label Text list | Constructs explicit built-in data. |
 | 0xDF | `SplitText` | - | result register | input register | delimiter register, zero in whitespace mode | `AU`=mode: 0 explicit separator, 1 whitespace | Produces a Text/Nothing List. |
 | 0xE0 | `Cartesian` | zero | result register | left List register | right List register | zero | Binary materialized Cartesian product; non-List operands produce Nothing. |
-| 0xE1..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3: 0xE1..0xF7 for future standard opcodes; 0xF8..0xFF exclusively for local experiments. |
+| 0xE1 | `EmitNamed` | Repeat / WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged, `BU`=duration register, `CU`=timer-name register | Schedules or replaces a named timer; see named-timer instructions below. |
+| 0xE2 | `PublishNamed` | Repeat / WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged, `BU`=duration register, `CU`=timer-name register | Schedules or replaces a named timer; see named-timer instructions below. |
+| 0xE3 | `CancelTimers` | zero | Boolean result | timer-name register in mode 0, else zero | zero | `AU`=mode: 0 name, 1 all named, 2 all | Cancels timers of the executing instance; see named-timer instructions below. |
+| 0xE4..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3: 0xE4..0xF7 for future standard opcodes; 0xF8..0xFF exclusively for local experiments. |
 
 ## Side-Table Summary
 
@@ -1731,7 +1735,7 @@ V1 adds `EmitInstant` (0xDA), `EmitAfter` (0xDB), `PublishInstant` (0xDC), and
 `PublishAfter` (0xDD). The existing eight send instructions retain their encoding
 and behavior. Unsupported opcode values must be rejected before execution.
 
-Only these four instructions accept `WithTags` (0x40) and `Indirect` (0x80).
+Only these four instructions and the [named sends](#named-timer-instructions) accept `WithTags` (0x40) and `Indirect` (0x80).
 They reject the predicate-normalization flag and nonzero unit bits. Destination
 is the Boolean result register. X is an outbound binding ID or, with Indirect,
 a Message register. Y is the argument-register list for static sends and zero
@@ -1748,6 +1752,26 @@ callbacks return and must not retain a mutable register reference across them.
 Fold/reduce lower to ordinary iterator loops and accumulator registers. Their
 step expressions run in the normal VM execution stream and can pause/resume.
 No fold/reduce opcode or implicit per-element budget surcharge is introduced.
+
+### Named-timer instructions
+
+> **Since: Unreleased**
+
+`EmitNamed` (0xE1) and `PublishNamed` (0xE2) are result-bearing sends with the
+operand layout of `EmitAfter`/`PublishAfter`, plus `CU` as the timer-name
+register. They accept `Repeat` (0x20), `WithTags` (0x40) and `Indirect` (0x80);
+Repeat selects `every`, its absence a named `after`. Unit bits and `DU` must be
+zero. The VM reads the duration register, then the name register; a name that
+is neither Text nor Tag, an invalid duration, or a zero period with Repeat
+yields `false` without sending.
+
+`CancelTimers` (0xE3) writes its Boolean result to the destination register. `AU`
+selects the mode: 0 cancels the timer named by the Text or Tag in `XRegister`,
+1 cancels all named timers of the executing instance, and 2 additionally
+cancels its unnamed delayed sends. Modes 1 and 2 require a zero `XRegister`;
+`AU` above 2, unit/flag bits and nonzero `YRegister`, `BU`, `CU` or `DU` are
+invalid. A mode 0 key that is neither Text nor Tag yields `false`. Timer
+semantics are owned by [HostRuntime](HostRuntime.md#named-timers).
 
 ### Explicit data instruction validation
 

@@ -352,6 +352,14 @@ The CLI waits for delayed work in batch mode. Embedded hosts remain synchronous:
 your application's event loop or optional bridge runner resumes processing when
 work becomes due. `emit after 10 Ready()` is invalid because `10` has no time unit.
 
+> **Since: Unreleased** — named timers
+
+Name a delayed send to replace or cancel it later: `emit after 30s named 'timeout' GiveUp()`
+schedules a timeout, and sending it again with the same name restarts it.
+`emit every 1s named 'beat' Heartbeat()` repeats until `cancel 'beat'` stops it;
+`cancel named` stops all named timers of the program and `cancel all` also its
+unnamed delayed sends. See [named timers](../../specs/Language.md#named-timers-and-heartbeats).
+
 ## Explore and debug
 
 ```sh

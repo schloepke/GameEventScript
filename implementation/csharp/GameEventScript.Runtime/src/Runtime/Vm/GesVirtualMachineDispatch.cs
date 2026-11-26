@@ -92,6 +92,13 @@ internal partial class GesVirtualMachine
                     case PublishAfter:
                         SetBoolean(instruction.DestinationRegister, Send(instruction, context));
                         break;
+                    case EmitNamed:
+                    case PublishNamed:
+                        SetBoolean(instruction.DestinationRegister, SendNamed(instruction, context));
+                        break;
+                    case CancelTimers:
+                        SetBoolean(instruction.DestinationRegister, ExecuteCancelTimers(instruction, context));
+                        break;
                     case EmitMessage:
                         EmitOrPublishMessage(instruction.MessageDestination, Program.UInt16IndexLists.Resolve(instruction.ListIndex), false, context);
                         break;

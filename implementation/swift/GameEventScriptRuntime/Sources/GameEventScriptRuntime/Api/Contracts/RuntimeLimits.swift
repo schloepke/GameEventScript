@@ -9,6 +9,10 @@ public struct GesRuntimeLimits: Sendable {
     /// queue drops the message of an Emit or Publish statement and continues, stops a result-bearing or delayed send's
     /// handler, and fails `load` of an initialization with `link.initializationQueueFull`.
     public var maxQueuedMessages = 0
+    /// Maximum named timers a host may hold across all instances; nonpositive disables the bound. A named send that would
+    /// register one more name stops its handler with this limit; replacing an existing name of the same instance does
+    /// not count again.
+    public var maxNamedTimers = 0
     /// Maximum script execution steps per handler; nonpositive disables this bound.
     public var maxExecutionSteps = 100_000
     /// Register limit used while linking and executing; nonpositive selects the runtime fallback capacity.

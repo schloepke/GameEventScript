@@ -81,6 +81,7 @@ internal sealed partial class GesSyntaxParser
         {
             "LoadMessage" or "EmitInstant" or "PublishInstant" => index == 1,
             "EmitAfter" or "PublishAfter" => index == 2,
+            "EmitNamed" or "PublishNamed" or "EmitNamedEvery" or "PublishNamedEvery" => index == 3,
             "EmitMessage" or "EmitMessageWithTags" or "PublishMessage" or "PublishMessageWithTags" => index == 0,
             _ => false
         };
@@ -492,6 +493,14 @@ internal sealed partial class GesSyntaxParser
         }
 
         return expression;
+    }
+
+    // `cancel` is a contextual word: it cancels timers only before a key, `named` or `all` on the same line.
+    private bool IsCancelExpressionStart()
+    {
+        if (!Current.IsWord("cancel")) return false;
+        var next = _reader.PeekSignificant(1);
+        return next.Line == Current.EndLine && next.Kind is Identifier or Tag or Text or ConstantReference or LeftParen;
     }
 
     private bool IsImplicitMultiplicationRightStart() => Current.Kind is Identifier or MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity;
@@ -1045,6 +1054,14 @@ internal sealed partial class GesSyntaxParser
         // The send node of an expression includes its emit or publish keyword.
         var sendStart = _tree.Mark();
         if (Match(Emit) || Match(Publish)) return ParseSendExpression(PreviousIndex, sendStart);
+        if (IsCancelExpressionStart())
+        {
+            _tree.StartNode(GesSyntaxNodeKind.CancelExpression);
+            AdvanceKeyword();
+            var cancelStart = PreviousIndex;
+            if (MatchWord("named") || MatchWord("all")) return FinishNode(Node(0, cancelStart));
+            return FinishNode(Node(ParseUnaryExpression().Depth, cancelStart));
+        }
         ThrowIfIllegalToken();
 
         if (IsTypeConstructorStart())

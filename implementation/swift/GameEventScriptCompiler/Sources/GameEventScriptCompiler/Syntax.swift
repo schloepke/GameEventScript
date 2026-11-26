@@ -161,7 +161,10 @@ final class GesExpression {
         case call(String, [GesArgument])
         case extensionCall(String, String, [GesArgument])
         case constructor(String, [GesArgument])
-        case send(Bool, GesExpression, [GesExpression], GesExpression?)
+        // Publish flag, message, tags, delay, timer name and whether the timer repeats.
+        case send(Bool, GesExpression, [GesExpression], GesExpression?, GesExpression?, Bool)
+        // Timer cancellation: mode 0 cancels the named key, 1 all named timers, 2 all timers.
+        case cancel(Int, GesExpression?)
         case message(String, [GesArgument])
         case handler(String, [GesParameter])
         case list([GesExpression])

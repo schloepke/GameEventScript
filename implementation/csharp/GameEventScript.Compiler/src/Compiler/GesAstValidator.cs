@@ -430,7 +430,8 @@ internal static class GesAstValidator
             case GesTypeConstructorExpressionNode typeConstructor: return FromDeclaredType(typeConstructor.TypeName);
 
             case GesBetweenExpressionNode:
-            case GesSendExpressionNode: return StaticExpressionInfo.Boolean;
+            case GesSendExpressionNode:
+            case GesCancelExpressionNode: return StaticExpressionInfo.Boolean;
             case GesUnaryExpressionNode unary: return ClassifyUnary(unary, callables, typeDefinitions, declaredTypes, callableResults);
 
             case GesIntrinsicCallExpressionNode intrinsic:
@@ -739,6 +740,21 @@ internal static class GesAstValidator
             : StaticExpressionInfo.Nothing;
     }
 
+    // A timer name is Text or Tag; a statically known other type is rejected like a send delay of another unit.
+    private static void ValidateTimerName(
+        GesParsedScript parsedScriptContext,
+        GesExpressionNode name,
+        ValidationCallables callables,
+        IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
+        GesValidationErrors errors,
+        IReadOnlyDictionary<string, string>? declaredTypes)
+    {
+        ValidateExpressionReferences(parsedScriptContext, name, callables, typeDefinitions, errors, declaredTypes);
+        var nameType = ClassifyExpression(name, callables, typeDefinitions, declaredTypes ?? new Dictionary<string, string>(StringComparer.Ordinal), new CallableResults());
+        if (nameType.TypeName is not null && nameType.Kind is not (StaticExpressionKind.Unknown or StaticExpressionKind.Nothing) && nameType.TypeName is not ("text" or "tag"))
+            errors.Add(parsedScriptContext, "Timer name requires Text or Tag", "Text", GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, name);
+    }
+
     private static void ValidateExpressionReferences(
         GesParsedScript parsedScriptContext,
         GesExpressionNode expression,
@@ -814,11 +830,16 @@ internal static class GesAstValidator
                         if (delayType.TypeName is not null && delayType.Kind is not (StaticExpressionKind.Unknown or StaticExpressionKind.Nothing) && GesQuantityUnits.ParseQuantityTypeName(delayType.TypeName) != GesQuantityUnit.UnitSecond)
                             errors.Add(parsedScriptContext, "Send delay requires a time quantity", "Quantity(s)", GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, send.Delay);
                     }
+                    if (send.Name is not null) ValidateTimerName(parsedScriptContext, send.Name, callables, typeDefinitions, errors, declaredTypes);
                     foreach (var tag in send.Tags)
                     {
                         ValidateTagLiteral(parsedScriptContext, tag, errors, declaredTypes);
                         ValidateExpressionReferences(parsedScriptContext, tag, callables, typeDefinitions, errors, declaredTypes);
                     }
+                    return;
+
+                case GesCancelExpressionNode cancel:
+                    if (cancel.Name is not null) ValidateTimerName(parsedScriptContext, cancel.Name, callables, typeDefinitions, errors, declaredTypes);
                     return;
                 case GesUnaryExpressionNode unary: expression = unary.Operand; continue;
 

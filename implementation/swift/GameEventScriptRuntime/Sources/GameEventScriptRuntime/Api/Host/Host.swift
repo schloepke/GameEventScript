@@ -43,6 +43,10 @@ public final class GameEventScriptHost {
     private var randomBoundary = 0
     private var pumping = false
     private var idleSinceMicroseconds: Int64?
+    // Named timers of all instances, keyed by the sending instance's registration ID and the name
+    // (specs/HostRuntime.md#named-timers). A one-shot timer leaves the registry when its firing starts dispatch; a
+    // repeating one stays until it is cancelled, replaced or its sender is detached.
+    private var timers: [GesNamedTimer.Key: GesNamedTimer] = [:]
 
     // Hosts are created only through `GesHostBuilder.build()`, which forwards its complete configuration here.
     init(
@@ -100,9 +104,10 @@ public final class GameEventScriptHost {
     ///
     /// - Returns: An idempotently detachable Program instance; loading itself does not pump messages.
     /// - Throws: A format or linking error for invalid/unresolvable Programs, or an API error during
-    ///   initialization, script execution or after failed initial startup. Failed linking adds no registrations.
+    ///   initialization, script execution or after failed initial startup without a reset. Failed linking adds no
+    ///   registrations.
     public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GesProgramInstance {
-        guard !starting, !executingScript, startupResult == nil || isReady else { throw GesApiError.invalidOperation("Loading is not allowed during initialization, script execution, or after a failed start") }
+        guard !starting, !executingScript, startupResult == nil || isReady else { throw GesApiError.invalidOperation("Loading is not allowed during initialization, script execution, or after a failed start without a reset") }
         try program.ensureValid()
         let registers = min(65535, limits.maxRegisterValues > 0 ? limits.maxRegisterValues : 512)
         let depth = min(65535, max(0, limits.maxCallDepth))
@@ -150,7 +155,8 @@ public final class GameEventScriptHost {
         if !initialization.isEmpty {
             let message = GameEventScriptMessage(normalizedName: "initialization", arguments: .empty, signatureId: "initialization()", normalizedTags: [])
             lastSendID += 1
-            let pending = GesPendingMessage(message: message, exact: initialization.sorted(by: GesSubscriptionEntry.precedes), names: [], id: lastSendID, initialization: instance)
+            instance.initialization = initialization.sorted(by: GesSubscriptionEntry.precedes)
+            let pending = GesPendingMessage(message: message, exact: instance.initialization!, names: [], id: lastSendID, initialization: instance)
             idleSinceMicroseconds = nil
             if isReady { queue.enqueue(pending) } else { startupQueue.enqueue(pending) }
         } else if isReady {
@@ -229,6 +235,7 @@ public final class GameEventScriptHost {
                 }
                 active = starting ? startupQueue.dequeue() : queue.dequeue()
                 if active == nil { break }
+                if let timer = active!.timer { startTimerDispatch(timer) }
                 initializationInstance = active?.initialization
                 initializationOpcodes = 0
                 initializationEmits = 0
@@ -266,8 +273,10 @@ public final class GameEventScriptHost {
             }
             guard let next = active!.nextMatching() else {
                 completeInitialization()
+                let timer = active!.timer
                 active = nil
                 processed += 1
+                if let timer { completeTimerDispatch(timer) }
                 continue
             }
             activeHandler = next
@@ -373,10 +382,10 @@ public final class GameEventScriptHost {
         }
         lastSendID += 1
         let pending = GesPendingMessage(message: message, exact: exact, names: names, id: lastSendID, initializationOutputID: initializationInstance?.registrationID ?? 0)
-        let entry = GesDelayedMessage(deadline: now + microseconds, pending: pending, publish: publish, owner: initializationInstance)
+        let entry = GesDelayedMessage(deadline: now + microseconds, pending: pending, publish: publish, owner: initializationInstance, sender: activeHandler?.instance)
         delayed.add(entry)
         idleSinceMicroseconds = nil
-        observer?.messageScheduled(message, id: entry.id, deadline: entry.deadline, publish: publish)
+        observer?.messageScheduled(message, id: entry.id, deadline: entry.deadline, publish: publish, name: nil, period: 0)
         if publish {
             published += 1
             if initializationInstance != nil { initializationPublishes += 1 }
@@ -394,6 +403,10 @@ public final class GameEventScriptHost {
         while let next = delayed.first, next.deadline <= now {
             // Failed initializations removed their entries already, so every due entry is delivered.
             let entry = delayed.removeFirst()
+            if entry.timer != nil {
+                promoteTimer(entry, now: now)
+                continue
+            }
             let local = entry.pending.hasRecipients
             if local { queue.enqueue(entry.pending) }
             if entry.publish {
@@ -539,6 +552,7 @@ public final class GameEventScriptHost {
                 if byName[key]?.isEmpty == true { byName[key] = nil }
             }
         }
+        detachTimers(instance)
         return true
     }
 
@@ -561,7 +575,8 @@ extension GameEventScriptHost {
     /// Initializes the initial load group in Load order without dispatching its emitted messages.
     /// The host becomes ready only if the entire group succeeds; staged outbound publications are then committed.
     /// On failure the host stays unready and initial Program registrations and staged deliveries are discarded.
-    /// Repeated non-reentrant calls return the original outcome.
+    /// Repeated non-reentrant calls return the original outcome. A failed start is terminal until `reset()` returns the
+    /// host to the loading state.
     ///
     /// - Returns: The retained group initialization result, including runtime failures and limit violations.
     /// - Throws: An API error if startup or pumping is reentered.
@@ -696,6 +711,251 @@ extension GameEventScriptHost {
                 }
             }
             observer?.messagePublished(publication.message, id: publication.id, result: .init(localAccepted: publication.localAccepted, outboundAttempted: attempted, outboundAccepted: accepted))
+        }
+    }
+}
+
+extension GameEventScriptHost {
+    /// A snapshot of the pending named timers of all instances, ordered by deadline and then by send order.
+    ///
+    /// Reading never pumps the host. A timer whose firing waits in or runs from the message queue keeps that firing's
+    /// deadline; a repeating timer stays listed while its handlers run. Each read returns a new array.
+    public var pendingTimers: [GesTimerInfo] {
+        guard !timers.isEmpty else { return [] }
+        return timers.values.sorted(by: Self.timerPrecedes).map {
+            GesTimerInfo(name: $0.name, deadline: $0.deadline, period: $0.period, messageName: $0.message.name, instance: $0.instance, publish: $0.publish)
+        }
+    }
+
+    /// Discards all queued, delayed and active work and returns the host to the loading state, keeping its Programs,
+    /// instances, registrations and random state.
+    ///
+    /// The runnable queue, delayed entries and named timers, buffered initialization outputs, a paused handler, the
+    /// waiting state and every start result are cleared without individual discard reports; the observer receives one
+    /// `hostReset()`. The initialization of each attached instance is queued again in load order under new send IDs, so
+    /// a following `start()` runs it as the initial group. Send IDs keep counting and the random generator is neither
+    /// reseeded nor rewound. A reset is also allowed after a failed start.
+    ///
+    /// - Throws: An API error while the host is starting or pumping, including from a native handler or callback.
+    public func reset() throws {
+        guard !pumping, !starting, !executingScript else { throw GesApiError.invalidOperation("A host cannot be reset while it is starting or executing.") }
+        if active != nil {
+            if scriptActive { vm?.reset() }
+            if activeHandler != nil { _ = random.releaseBoundary(randomBoundary) }
+        }
+        active = nil
+        scriptActive = false
+        activeHandler = nil
+        initializationInstance = nil
+        initializationDiagnostic = nil
+        initializationFailure = nil
+        initializationPublications.removeAll()
+        startupPublications.removeAll()
+        queue.reset()
+        startupQueue.reset()
+        delayed.removeAll()
+        for timer in timers.values { timer.registered = false }
+        timers.removeAll()
+        startupResult = nil
+        isReady = false
+        idleSinceMicroseconds = nil
+        // Initialization runs again in load order, which registration IDs follow.
+        for instance in instances.values.sorted(by: { $0.registrationID < $1.registrationID }) {
+            instance.startResult = nil
+            if let entries = instance.initialization, !entries.isEmpty {
+                lastSendID += 1
+                let message = GameEventScriptMessage(normalizedName: "initialization", arguments: .empty, signatureId: "initialization()", normalizedTags: [])
+                startupQueue.enqueue(GesPendingMessage(message: message, exact: entries, names: [], id: lastSendID, initialization: instance))
+            }
+        }
+        observer?.hostReset()
+    }
+
+    private static func timerPrecedes(_ left: GesNamedTimer, _ right: GesNamedTimer) -> Bool {
+        left.deadline != right.deadline ? left.deadline < right.deadline : left.id < right.id
+    }
+
+    private func hasMatch(_ message: GameEventScriptMessage, _ exact: [GesSubscriptionEntry], _ names: [GesSubscriptionEntry]) -> Bool {
+        exact.contains(where: { $0.matches(message) }) || names.contains(where: { $0.matches(message) })
+    }
+
+    func sendNamed(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64, name: String, repeats: Bool) -> Bool {
+        guard !random.hasActiveScopeFault, let sender = activeHandler?.instance else { return false }
+        guard repeats ? microseconds > 0 : microseconds >= 0 else { return false }
+        let now = elapsedMicroseconds
+        guard now >= 0 && microseconds <= Int64.max - now else { return false }
+        let key = GesNamedTimer.Key(instance: sender.registrationID, name: name)
+        let old = timers[key]
+        if old == nil && limits.maxNamedTimers > 0 && timers.count >= limits.maxNamedTimers {
+            context.budget.exhaust("MaxNamedTimers", limits.maxNamedTimers)
+            return false
+        }
+        // A replaced firing that still waits gives its queue slot to the new one.
+        if !(old?.state == .delayed || old?.state == .runnable) && queueFull {
+            context.budget.exhaust("MaxQueuedMessages", limits.maxQueuedMessages)
+            return false
+        }
+        var exact: [GesSubscriptionEntry] = []
+        var names: [GesSubscriptionEntry] = []
+        var local = false
+        if !repeats {
+            exact = self.exact[message.signatureId] ?? []
+            names = byName[message.name] ?? []
+            local = hasMatch(message, exact, names)
+            if !local && message.name != "undeliverable" {
+                exact = self.exact["undeliverable(message)"] ?? []
+                names = byName["undeliverable"] ?? []
+                local = hasMatch(message, exact, names)
+            }
+        }
+        if let old { removeTimer(old, report: true) }
+        // Like an unnamed delayed emit, a one-shot emit without recipients is never queued; the name stays free.
+        if !repeats && !local && !publish {
+            _ = emit(message)
+            return !context.budget.isExhausted
+        }
+        let timer = GesNamedTimer(instance: sender, name: name, period: repeats ? microseconds : 0, publish: publish, message: message, owner: initializationInstance)
+        timer.registered = true
+        timers[key] = timer
+        lastSendID += 1
+        timer.id = lastSendID
+        timer.deadline = now + microseconds
+        timer.state = .delayed
+        var pending = GesPendingMessage(message: message, exact: exact, names: names, id: timer.id, initializationOutputID: initializationInstance?.registrationID ?? 0)
+        pending.timer = timer
+        delayed.add(.init(deadline: timer.deadline, pending: pending, publish: publish, owner: initializationInstance, sender: sender, timer: timer))
+        idleSinceMicroseconds = nil
+        observer?.messageScheduled(message, id: timer.id, deadline: timer.deadline, publish: publish, name: name, period: timer.period)
+        if publish {
+            published += 1
+            if initializationInstance != nil { initializationPublishes += 1 }
+        } else {
+            emitted += 1
+            if initializationInstance != nil { initializationEmits += 1 }
+            if !repeats { observer?.messageEmitted(message, id: timer.id, accepted: true) }
+        }
+        return true
+    }
+
+    // Mode 0 cancels one name, mode 1 every named timer and mode 2 also the unnamed delayed sends of the active instance.
+    func cancelTimers(mode: Int, name: String?) -> Bool {
+        guard let sender = activeHandler?.instance else { return false }
+        var selected: [GesNamedTimer] = []
+        if !timers.isEmpty {
+            if mode == 0 {
+                if let name, let timer = timers[.init(instance: sender.registrationID, name: name)] { selected.append(timer) }
+            } else {
+                selected = timers.values.filter { $0.instance === sender }
+            }
+        }
+        let unnamed = mode == 2 && !delayed.isEmpty ? delayed.inOrder.filter { $0.timer == nil && $0.sender === sender } : []
+        if selected.isEmpty && unnamed.isEmpty { return false }
+        // Discards are reported before anything changes: waiting runnable firings in send order, then delayed entries in
+        // deadline order. A firing whose handlers already run only loses its name.
+        if let observer {
+            var runnable: [Int64] = []
+            var waiting: [(deadline: Int64, id: Int64)] = []
+            for timer in selected {
+                if timer.state == .runnable { runnable.append(timer.id) } else if timer.state == .delayed { waiting.append((timer.deadline, timer.id)) }
+            }
+            for entry in unnamed { waiting.append((entry.deadline, entry.id)) }
+            runnable.sort()
+            waiting.sort { $0.deadline != $1.deadline ? $0.deadline < $1.deadline : $0.id < $1.id }
+            for id in runnable { observer.messageDiscarded(id: id) }
+            for entry in waiting { observer.messageDiscarded(id: entry.id) }
+        }
+        for timer in selected { removeTimer(timer, report: false) }
+        for entry in unnamed { delayed.remove(id: entry.id) }
+        return true
+    }
+
+    // Unregisters a timer and removes its waiting firing, if any.
+    private func removeTimer(_ timer: GesNamedTimer, report: Bool) {
+        unregisterTimer(timer)
+        let removed =
+            switch timer.state {
+            case .delayed: delayed.remove(id: timer.id)
+            case .runnable: queue.remove(id: timer.id)
+            case .dispatching: false
+            }
+        if removed && report { observer?.messageDiscarded(id: timer.id) }
+    }
+
+    private func unregisterTimer(_ timer: GesNamedTimer) {
+        guard timer.registered else { return }
+        timer.registered = false
+        timers[timer.key] = nil
+    }
+
+    // Promotes one due named firing. A repeating timer snapshots its recipients only now; without one it is armed again at
+    // once, as if its handlers had completed.
+    private func promoteTimer(_ entry: GesDelayedMessage, now: Int64) {
+        let timer = entry.timer!
+        var pending = entry.pending
+        if timer.repeats {
+            let message = timer.message
+            var exact = self.exact[message.signatureId] ?? []
+            var names = byName[message.name] ?? []
+            if !hasMatch(message, exact, names) && message.name != "undeliverable" {
+                exact = self.exact["undeliverable(message)"] ?? []
+                names = byName["undeliverable"] ?? []
+            }
+            pending = GesPendingMessage(message: message, exact: exact, names: names, id: timer.id, initializationOutputID: entry.owner?.registrationID ?? 0)
+            pending.timer = timer
+        }
+        let local = pending.hasRecipients
+        if local {
+            queue.enqueue(pending)
+            timer.state = .runnable
+            if timer.repeats && !timer.publish { observer?.messageEmitted(timer.message, id: timer.id, accepted: true) }
+        } else {
+            if !timer.publish { observer?.messageDiscarded(id: timer.id) }
+            if !timer.repeats { unregisterTimer(timer) }
+        }
+        if timer.publish {
+            let attempted = sink != nil
+            var accepted = false
+            if attempted { do { accepted = try sink!.publish(timer.message) } catch { observer?.runtimeError(runtimeDiagnostic("runtime.publishSinkFailure", error: error)) } }
+            observer?.messagePublished(timer.message, id: timer.id, result: .init(localAccepted: local, outboundAttempted: attempted, outboundAccepted: accepted))
+        }
+        if !local && timer.repeats && timer.registered { armTimer(timer, now: now) }
+    }
+
+    // Arms a repeating timer for its next firing, one period after now, under a new send ID. No firing is caught up.
+    private func armTimer(_ timer: GesNamedTimer, now: Int64) {
+        guard now >= 0 && timer.period <= Int64.max - now else {
+            unregisterTimer(timer)
+            return
+        }
+        lastSendID += 1
+        timer.id = lastSendID
+        timer.deadline = now + timer.period
+        timer.state = .delayed
+        var pending = GesPendingMessage(message: timer.message, exact: [], names: [], id: timer.id)
+        pending.timer = timer
+        delayed.add(.init(deadline: timer.deadline, pending: pending, publish: timer.publish, owner: timer.owner, sender: timer.instance, timer: timer))
+        idleSinceMicroseconds = nil
+        observer?.messageScheduled(timer.message, id: timer.id, deadline: timer.deadline, publish: timer.publish, name: timer.name, period: timer.period)
+    }
+
+    // A one-shot firing releases its name when its dispatch starts; a repeating one marks itself as running.
+    private func startTimerDispatch(_ timer: GesNamedTimer) {
+        if timer.repeats { timer.state = .dispatching } else { unregisterTimer(timer) }
+    }
+
+    // Arms a repeating timer again once all handlers of its firing completed, unless it was cancelled meanwhile.
+    private func completeTimerDispatch(_ timer: GesNamedTimer) {
+        if timer.repeats && timer.registered { armTimer(timer, now: elapsedMicroseconds) }
+    }
+
+    // Ends the named timers of a detached instance. A waiting repeating firing is discarded unless the instance failed its
+    // initialization, whose entries the failure path discards; queued firings and one-shot entries keep their delivery.
+    private func detachTimers(_ instance: GesProgramInstance) {
+        guard !timers.isEmpty else { return }
+        let ended = timers.values.filter { $0.instance === instance }.sorted(by: Self.timerPrecedes)
+        let failed = instance.startResult != nil && instance.startResult?.state != .ready
+        for timer in ended {
+            if timer.repeats && !failed && timer.state == .delayed { removeTimer(timer, report: true) } else { unregisterTimer(timer) }
         }
     }
 }

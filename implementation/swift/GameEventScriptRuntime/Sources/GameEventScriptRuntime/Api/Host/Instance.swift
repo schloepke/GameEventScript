@@ -14,6 +14,8 @@ public final class GesProgramInstance {
     /// Nil while initialization is pending; retains its success or failure result after completion.
     public internal(set) var startResult: GesStartResult? { didSet { initializationFailed = startResult != nil && startResult?.state != .ready } }
     private(set) var initializationFailed = false
+    // The sorted initialization handlers, which a host reset queues again; nil without an initialization handler.
+    var initialization: [GesSubscriptionEntry]?
 
     init(host: GameEventScriptHost, id: Int64, linked: GesLinkedProgram) {
         self.host = host

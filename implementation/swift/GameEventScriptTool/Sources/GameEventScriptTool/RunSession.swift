@@ -134,7 +134,10 @@ final class RunObserver: GesRuntimeObserver {
 
     func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String) { writeTrace("dispatch #\(id) \(signatureID) <- " + format(message)) }
 
-    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) { writeTrace("schedule #\(id) \(publish ? "publish" : "emit") " + format(message) + " at " + clock.formatDeadline(deadline)) }
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: String?, period: Int64) {
+        let timer = name.map { period > 0 ? " named \($0) every \(period)us" : " named \($0)" } ?? ""
+        writeTrace("schedule #\(id) \(publish ? "publish" : "emit")\(timer) " + format(message) + " at " + clock.formatDeadline(deadline))
+    }
 
     func messageDiscarded(id: Int64) { writeTrace("discard #\(id)") }
 

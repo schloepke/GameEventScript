@@ -75,7 +75,7 @@ extension GesSyntaxParser {
                 } while match(.comma)
             } else if currentKind == .emit || currentKind == .publish {
                 // An assembly send has the form of a statement send, but no statement node; a delayed send is no line.
-                if peek().isIdentifier("after") {
+                if peek().isIdentifier("after") || peek().isIdentifier("every") {
                     let start = index
                     advance()
                     newlines()
@@ -126,6 +126,7 @@ extension GesSyntaxParser {
         switch opcode {
         case "LoadMessage", "EmitInstant", "PublishInstant": return index == 1
         case "EmitAfter", "PublishAfter": return index == 2
+        case "EmitNamed", "PublishNamed", "EmitNamedEvery", "PublishNamedEvery": return index == 3
         case "EmitMessage", "EmitMessageWithTags", "PublishMessage", "PublishMessageWithTags": return index == 0
         default: return false
         }
@@ -523,7 +524,13 @@ extension GesSyntaxParser {
     func sendExpression(_ start: Int, _ checkpoint: GesSyntaxTreeBuilder.Checkpoint) throws -> Expression {
         startNode(at: checkpoint, .sendExpression)
         newlines()
-        if matchWord("after") { _ = try expression() }
+        let repeats = current.isIdentifier("every")
+        if matchWord("after") || matchWord("every") {
+            _ = try expression()
+            // A repeating send needs a name: only a name can cancel it.
+            if repeats { try expectWord("named") }
+            if repeats || matchWord("named") { _ = try expression(15) }
+        }
         if currentKind == .message {
             newlines()
             startNode(.messageExpression)
@@ -553,6 +560,12 @@ extension GesSyntaxParser {
             let start = index
             advance()
             return try sendExpression(start, checkpoint)
+        case .identifier where isCancelExpressionStart():
+            startNode(.cancelExpression)
+            advanceKeyword()
+            let start = previousIndex
+            if !matchWord("named") && !matchWord("all") { _ = try expression(15) }
+            return finishNode(try node(start))
         case .text, .tag, .nothing: return scalar(.scalar)
         case .`true`, .`false`: return scalar(.boolean)
         case .constantReference: return scalar(.none)
@@ -1245,5 +1258,14 @@ extension GesSyntaxParser {
         } else {
             _ = try expression(15)
         }
+    }
+}
+
+extension GesSyntaxParser {
+    // `cancel` is a contextual word: it cancels timers only before a key, `named` or `all` on the same line.
+    func isCancelExpressionStart() -> Bool {
+        guard current.isIdentifier("cancel") else { return false }
+        let next = peek()
+        return next.line == current.endLine && [.identifier, .tag, .text, .constantReference, .leftParen].contains(next.kind)
     }
 }

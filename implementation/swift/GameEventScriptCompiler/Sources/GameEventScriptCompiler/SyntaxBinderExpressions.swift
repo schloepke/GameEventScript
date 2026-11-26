@@ -65,6 +65,7 @@ extension GesSyntaxBinder {
         case .callExpression: return try call(node)
         case .handlerLiteralExpression: return try handlerLiteral(node)
         case .parenthesizedExpression: return try parenthesized(node)
+        case .cancelExpression: return try cancel(node)
         case .sendExpression:
             var c = cursor(node)
             let start = try c.advance()
@@ -663,7 +664,14 @@ extension GesSyntaxBinder {
     // The part of a send after its emit or publish keyword; a delayed send statement owns that keyword.
     func sendBody(_ c: inout Cursor, publish: Bool, start: GesToken) throws -> GesExpression {
         try c.newlines()
-        let delay = try c.matchWord("after") ? try expression(&c) : nil
+        var delay: GesExpression?
+        var name: GesExpression?
+        let after = try c.matchWord("after")
+        let repeats = try !after && c.matchWord("every")
+        if after || repeats {
+            delay = try expression(&c)
+            if try c.matchWord("named") { name = try expression(&c) }
+        }
         let message = try expression(&c)
         var tags: [GesExpression] = []
         if c.isNode(.tagClause) {
@@ -671,7 +679,15 @@ extension GesSyntaxBinder {
             try t.expect(.with)
             repeat { tags.append(try expression(&t)) } while try t.match(.comma)
         }
-        return node(.send(publish, message, tags, delay), start, c.previous)
+        return node(.send(publish, message, tags, delay, name, repeats), start, c.previous)
+    }
+
+    func cancel(_ cancel: GesSyntaxNode) throws -> GesExpression {
+        var c = cursor(cancel)
+        let start = try c.advance()
+        if try c.matchWord("named") { return node(.cancel(1, nil), start, c.previous) }
+        if try c.matchWord("all") { return node(.cancel(2, nil), start, c.previous) }
+        return node(.cancel(0, try expression(&c)), start, c.previous)
     }
 
     func bindSend(_ send: GesSyntaxNode, publish: Bool, start: GesToken) throws -> GesExpression {

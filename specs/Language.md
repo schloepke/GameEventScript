@@ -609,6 +609,52 @@ the last example confirms acceptance, not successful delivery. Use a time
 quantity such as `0.2s`; `emit after 10 Fire()` is invalid because `10` has no
 time unit.
 
+#### Named Timers and Heartbeats
+
+> **Since: Unreleased**
+
+`emit after duration named key Message(...) with tags` and the corresponding
+`publish` form give a delayed send a name. `emit every period named key Message(...)`
+and `publish every period named key ...` repeat the send every period until it is
+cancelled; `every` always requires `named`, otherwise the send is `parse.syntax`.
+The key uses unary precedence like the message operand and is evaluated after the
+duration and before tags and message arguments. It must be Text or a Tag; a Tag
+names the timer by its text, so `'beat'` and `#beat` are the same name. A
+statically established other type is `validate.invalidTypeConstructor`; any other
+runtime value yields false without sending.
+
+Names are scoped to the sending Program instance, and emit and publish share one
+namespace. A named send replaces a pending entry of the same name. The duration
+rules of delayed sends apply; an `every` period must additionally be greater than
+zero, otherwise the send yields false. Like every result-bearing send, a named send
+yields whether the host accepted it.
+
+`cancel key` removes the sending instance's timer of that name, `cancel named` all
+of its named timers, and `cancel all` additionally its unnamed delayed sends. The
+expression yields true if it removed anything and false otherwise, including for a
+key that is neither Text nor a Tag.
+
+```ges
+on Start {
+  emit every 1s named 'beat' Heartbeat()
+  emit after 30s named #timeout GiveUp()
+}
+on Answered {
+  let stopped be cancel #timeout
+  if stopped { emit Log("timeout cancelled") }
+}
+on Shutdown { cancel all }
+```
+
+`every`, `named`, `all` and `cancel` are contextual words, not reserved keywords.
+`every` and `named` have their meaning only at their send positions. `cancel` starts
+a cancel expression only when the next token on the same line is a name, a Tag, a
+Text, a `$` constant or `(`; otherwise it is an ordinary name. After `cancel`, the
+names `named` and `all` always select the modes, so a binding with one of those
+names is cancelled as `cancel (named)`. Replacement, firing, re-arming, limits and
+lifecycle effects are defined in
+[Host runtime](HostRuntime.md#named-timers).
+
 ### `let`
 
 `let` creates an immutable local binding:
@@ -2728,7 +2774,9 @@ publish_statement ::= 'publish' (message_expression [tag_clause] | delayed_send)
 message_expression ::= MESSAGE_NAME [parenthesized_arguments] | expression
 tag_clause ::= 'with' expression (',' expression)*
 send_expression ::= ('emit' | 'publish') (send_message_expression [send_tag_clause] | delayed_send)
-delayed_send ::= 'after' expression send_message_expression [send_tag_clause]
+delayed_send ::= ('after' expression [timer_name] | 'every' expression timer_name) send_message_expression [send_tag_clause]
+timer_name ::= 'named' unary_expression
+cancel_expression ::= 'cancel' ('named' | 'all' | unary_expression)
 send_message_expression ::= MESSAGE_NAME [parenthesized_arguments] | unary_expression
 send_tag_clause ::= 'with' unary_expression (',' unary_expression)*
 let_statement ::= 'let' VARIABLE_NAME 'be' expression
@@ -2790,7 +2838,7 @@ postfix_suffix ::= '.' field_name | '[' collection_selector structured_selector*
 primary_expression ::= nullary_predicate_expression | literal | CONSTANT_REFERENCE | call_expression | uppercase_call_expression |
                        type_constructor_expression | VARIABLE_NAME |
                        '(' expression ')' | bracket_literal | generated_list_expression | combined_source_expression |
-                       range_expression | random_expression | seeded_random_expression | dice_expression | send_expression
+                       range_expression | random_expression | seeded_random_expression | dice_expression | send_expression | cancel_expression
 nullary_predicate_expression ::= 'is' [not_operator] LOWER_NAME
 call_expression ::= LOWER_NAME parenthesized_arguments
 uppercase_call_expression ::= MESSAGE_NAME parenthesized_arguments

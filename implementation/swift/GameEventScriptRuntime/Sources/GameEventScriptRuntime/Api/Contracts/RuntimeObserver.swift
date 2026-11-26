@@ -30,12 +30,18 @@ public protocol GesRuntimeObserver {
     /// Observes a classified runtime failure; the default implementation does nothing.
     func runtimeError(_ diagnostic: GesDiagnostic)
 
-    /// Observes acceptance of one delayed `emit … after` or `publish … after`, once, when it is scheduled. `id` is the
-    /// send ID that later emit, publish and dispatch callbacks of this message repeat. `deadline` is the
-    /// absolute due time in whole microseconds on the host's monotonic clock, the clock `nextMessageDelay` uses; it is
-    /// neither a relative delay nor wall-clock time. `publish` distinguishes a publish from an emit. The default
-    /// implementation does nothing.
-    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool)
+    /// Observes acceptance of one delayed `emit … after` or `publish … after`, once, when it is scheduled, and each
+    /// arming of a repeating `every` timer: the first by its send and each later one when the previous firing completes
+    /// or found no recipient. `id` is the send ID that later emit, publish and dispatch callbacks of this message repeat.
+    /// `deadline` is the absolute due time in whole microseconds on the host's monotonic clock, the clock
+    /// `nextMessageDelay` uses; it is neither a relative delay nor wall-clock time. `publish` distinguishes a publish
+    /// from an emit. `name` is the timer name of a named send, or nil for an unnamed delayed send; `period` is the
+    /// repeat period of an `every` timer in whole microseconds, or 0. The default implementation does nothing.
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: String?, period: Int64)
+
+    /// Observes one `GameEventScriptHost.reset()`, after the host discarded its queued, delayed and active work without
+    /// reporting those entries individually. The default implementation does nothing.
+    func hostReset()
 
     /// Observes removal of a queued, pending-initialization or delayed message before it was dispatched, for example
     /// because an initialization failed, by its send ID. A dispatched or due message is not reported here; its ordinary
@@ -63,8 +69,11 @@ extension GesRuntimeObserver {
     /// Observes a classified runtime failure; the default implementation does nothing.
     public func runtimeError(_ diagnostic: GesDiagnostic) {}
 
-    /// Observes acceptance of one delayed `emit … after` or `publish … after`; the default implementation does nothing.
-    public func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) {}
+    /// Observes acceptance of one delayed send or arming of an `every` timer; the default implementation does nothing.
+    public func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool, name: String?, period: Int64) {}
+
+    /// Observes one host reset; the default implementation does nothing.
+    public func hostReset() {}
 
     /// Observes removal of a message before it was dispatched; the default implementation does nothing.
     public func messageDiscarded(id: Int64) {}

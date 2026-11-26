@@ -16,13 +16,18 @@ def normalize(events, message, limit, expectation=False):
         fields = {'emit': {'message', 'id', 'accepted'}, 'publish': {'message', 'id', 'result'},
                   'dispatchStarted': {'message', 'id', 'signatureId'}, 'dispatchCompleted': {'message', 'id', 'signatureId'},
                   'runtimeLimit': {'runtimeLimit'}, 'diagnostic': {'diagnostic'},
-                  'scheduled': {'message', 'id', 'deadline', 'publish'}, 'discarded': {'id'}}
+                  'scheduled': {'message', 'id', 'deadline', 'publish'}, 'discarded': {'id'}, 'reset': set()}
         if not isinstance(event, str) or event not in fields:
             raise InvalidDocument('Unknown observer event')
         allowed = fields[event] | {'event'}
+        # A named send also reports its timer name and repeat period; an unnamed one reports neither.
+        if event == 'scheduled' and ('name' in item or 'period' in item):
+            allowed |= {'name', 'period'}
         closed(item, allowed, 'observer event')
         if item.keys() != allowed:
             raise InvalidDocument('Incomplete observer event')
+        if 'name' in item and (not isinstance(item['name'], str) or not item['name']):
+            raise InvalidDocument('Invalid timer name')
         normalized = dict(item)
         if 'message' in item:
             normalized['message'] = message(item['message'])
@@ -37,7 +42,7 @@ def normalize(events, message, limit, expectation=False):
             if (flags['outboundAccepted'] and not flags['outboundAttempted']) or flags['anyAccepted'] != (flags['localAccepted'] or flags['outboundAccepted']):
                 raise InvalidDocument('Inconsistent publish result')
         # Send IDs and absolute deadlines are exact whole numbers, transported as decimal text; send ID 0 means none.
-        for key in ('id', 'deadline'):
+        for key in ('id', 'deadline', 'period'):
             if key in item and (not isinstance(item[key], str) or not (item[key].isascii() and item[key].isdigit())):
                 raise InvalidDocument('Invalid send ' + key)
         # Only an emit or publish may lack a send ID; every other event names a queued or processed send.

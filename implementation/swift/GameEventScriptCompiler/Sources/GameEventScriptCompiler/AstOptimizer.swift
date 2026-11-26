@@ -150,7 +150,7 @@ struct GesAstOptimizer {
         case .binary, .random, .seeded: return optimizedPair(kind)
         case .call, .extensionCall, .constructor, .message: return optimizedArguments(kind)
         case .between, .list, .combined, .intrinsic, .map: return optimizedItems(kind)
-        case .send, .range, .choice, .generated: return optimizedClauses(kind)
+        case .send, .cancel, .range, .choice, .generated: return optimizedClauses(kind)
         case .selector: return optimizedSelector(kind)
         }
     }
@@ -199,12 +199,14 @@ struct GesAstOptimizer {
     // Forms with optional or repeated parts, each rebuilt only when one of them changed.
     @inline(never) func optimizedClauses(_ kind: GesExpression.Kind) -> GesExpression.Kind? {
         switch kind {
-        case .send(let publish, let message, let tags, let delay):
+        case .send(let publish, let message, let tags, let delay, let name, let repeats):
             let value = changed(message)
             let optimizedTags = changedList(tags)
             let optimizedDelay = delay.flatMap(changed)
-            guard value != nil || optimizedTags != nil || optimizedDelay != nil else { return nil }
-            return .send(publish, value ?? message, optimizedTags ?? tags, optimizedDelay ?? delay)
+            let optimizedName = name.flatMap(changed)
+            guard value != nil || optimizedTags != nil || optimizedDelay != nil || optimizedName != nil else { return nil }
+            return .send(publish, value ?? message, optimizedTags ?? tags, optimizedDelay ?? delay, optimizedName ?? name, repeats)
+        case .cancel(let mode, let name): return name.flatMap(changed).map { .cancel(mode, $0) }
         case .range(let from, let to, let step):
             let a = changed(from)
             let b = changed(to)

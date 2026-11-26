@@ -62,6 +62,35 @@ internal sealed class GesDelayedQueue
         for (var index = Count / 2 - 1; index >= 0; index--) SiftDown(index, in _items[index]);
     }
 
+    // Removes the entry with the send ID, if present, and restores the heap order.
+    internal bool Remove(long id)
+    {
+        for (var index = 0; index < Count; index++)
+        {
+            if (_items[index].Id != id) continue;
+            var last = _items[--Count];
+            _items[Count] = default;
+            if (index == Count) return true;
+            var parent = (index - 1) / 2;
+            if (index > 0 && Before(in last, in _items[parent]))
+            {
+                while (index > 0)
+                {
+                    parent = (index - 1) / 2;
+                    if (!Before(in last, in _items[parent])) break;
+                    _items[index] = _items[parent];
+                    index = parent;
+                }
+
+                _items[index] = last;
+            }
+            else SiftDown(index, in last);
+            return true;
+        }
+
+        return false;
+    }
+
     internal void Clear()
     {
         Array.Clear(_items, 0, Count);

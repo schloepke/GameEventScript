@@ -41,7 +41,7 @@ extension GesAstValidator {
             guard let d = definitions[key] else { return "unknown" }
             if d.kind == "predicate" { return "boolean" }
             return callResult(key, callables)
-        case .send: return "boolean"
+        case .send, .cancel: return "boolean"
         case .unary(let op, let value):
             if [.predicate, .empty, .hasValue, .chance].contains(op) { return "boolean" }
             if op == .parse || op == .parseStrict { return "unknown" }

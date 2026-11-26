@@ -56,6 +56,13 @@ def main():
         if found != forms:
             raise RuntimeError(f"Changed dynamic iterator operands: {opcode}")
         expected[lower(opcode)] = forms[0]
+    # CancelTimers reads a key register only in mode 0. Swift's base operands are
+    # the other form; its validator adds the key register.
+    line = printer.split("GesBytecodeOpCode.CancelTimers =>", 1)[1].split("\n", 1)[0]
+    found = [[lower(part.strip()) for part in form.split(",")] for form in re.findall(r"\[([^\]]*)\]", line)]
+    if "AU == 0" not in line or found != [["targetRegister", "sourceRegister", "countImmediate"], ["targetRegister", "countImmediate"]]:
+        raise RuntimeError("Changed dynamic CancelTimers operands")
+    expected["cancelTimers"] = found[1]
     if expected != actual:
         changed = sorted(k for k in expected.keys() | actual.keys() if expected.get(k) != actual.get(k))
         raise RuntimeError(f"Opcode operand drift: {changed}")
@@ -68,6 +75,8 @@ def main():
             raise RuntimeError(f"Changed dynamic pattern operands: {opcode}")
     operands = (SWIFT / "Api/Program/Bytecode/BytecodeOperands.swift").read_text()
     validator = (SWIFT / "Api/Program/Validation/ProgramValidator.swift").read_text()
+    if re.sub(r"\s+", "", "if opcode == .cancelTimers && a == 0 { return [.targetRegister, .sourceRegister, .countImmediate] }") not in re.sub(r"\s+", "", validator):
+        raise RuntimeError("Swift dynamic CancelTimers operands changed")
     for required in ("case .hasPattern, .takePattern: [.targetRegister, .iteratorRegister, .patternKind]",):
         if re.sub(r"\s+", "", required) not in re.sub(r"\s+", "", operands):
             raise RuntimeError("Swift pattern base operands changed")
@@ -85,15 +94,27 @@ def main():
         if after == "true": layout.append("AuxBRegister")
         if [p.strip() for p in parts.split(",")] != layout:
             raise RuntimeError("Changed result-send operands")
+    # Named sends always carry a duration and a name register after the optional tags.
+    named_block = printer.split("if (IsNamedSend(instruction.OpCode))", 1)[1].split("};", 1)[0]
+    forms = re.findall(r"\((true|false), (true|false)\) => \[([^\]]*)\]", named_block)
+    if len(forms) != 4:
+        raise RuntimeError("Missing named-send operand forms")
+    for indirect, tags, parts in forms:
+        layout = ["TargetRegister"] + (["MessageRegister"] if indirect == "true" else ["OutboundMessage", "ArgumentRegisterList"])
+        if tags == "true": layout.append("TagRegisterList")
+        layout += ["AuxBRegister", "AuxCRegister"]
+        if [p.strip() for p in parts.split(",")] != layout:
+            raise RuntimeError("Changed named-send operands")
     for required in (
         "var result: [GesOperand] = [.targetRegister]",
         "result += unitAndFlags & 0x80 != 0 ? [.messageRegister] : [.outboundMessage, .argumentRegisterList]",
         "if unitAndFlags & 0x40 != 0 { result.append(.tagRegisterList) }",
         "if opcode == .emitAfter || opcode == .publishAfter { result.append(.auxBRegister) }",
+        "if opcode.isNamedSend { result += [.auxBRegister, .auxCRegister] }",
     ):
         if re.sub(r"\s+", "", required) not in re.sub(r"\s+", "", validator):
             raise RuntimeError("Swift result-send dynamic operands changed")
-    print(f"Verified {len(names)} V1 enums and {len(expected) + 6} opcode operand definitions against C#.")
+    print(f"Verified {len(names)} V1 enums and {len(expected) + 12} opcode operand definitions against C#.")
 
 
 if __name__ == "__main__":

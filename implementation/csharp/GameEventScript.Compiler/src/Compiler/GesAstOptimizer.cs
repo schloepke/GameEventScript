@@ -218,8 +218,10 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             {
                 Message = OptimizeExpression(send.Message, knownTypeNames),
                 Tags = OptimizeExpressions(send.Tags, knownTypeNames),
-                Delay = send.Delay is null ? null : OptimizeExpression(send.Delay, knownTypeNames)
+                Delay = send.Delay is null ? null : OptimizeExpression(send.Delay, knownTypeNames),
+                Name = send.Name is null ? null : OptimizeExpression(send.Name, knownTypeNames)
             },
+            GesCancelExpressionNode cancel => cancel with { Name = cancel.Name is null ? null : OptimizeExpression(cancel.Name, knownTypeNames) },
             GesUnaryExpressionNode unary => unary with
             {
                 Operand = OptimizeExpression(unary.Operand, knownTypeNames)

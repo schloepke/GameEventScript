@@ -374,6 +374,7 @@ internal static partial class GesCompiler
         private void EmitSend(GesRegisterRef destination, GesSendExpressionNode send, LoweringContext context, ExpressionState state)
         {
             var delay = send.Delay is null ? (GesRegisterRef?)null : EmitExpressionForRead(send.Delay, context, state);
+            var name = send.Name is null ? (GesRegisterRef?)null : EmitExpressionForRead(send.Name, context, state);
             var tags = EmitExpressionRegisters(send.Tags, context, state);
             GesOperand messageOperand;
             GesOperand arguments = default;
@@ -389,11 +390,22 @@ internal static partial class GesCompiler
                 messageOperand = GesOperand.Register(EmitExpressionForRead(send.Message, context, state));
                 flags |= GesInstructionFlag.Indirect;
             }
-            var opcode = send.Kind == GesPublishStatementKind.Publish
-                ? delay is null ? GesBytecodeOpCode.PublishInstant : GesBytecodeOpCode.PublishAfter
-                : delay is null ? GesBytecodeOpCode.EmitInstant : GesBytecodeOpCode.EmitAfter;
+            var opcode = name is not null
+                ? send.Kind == GesPublishStatementKind.Publish ? GesBytecodeOpCode.PublishNamed : GesBytecodeOpCode.EmitNamed
+                : send.Kind == GesPublishStatementKind.Publish
+                    ? delay is null ? GesBytecodeOpCode.PublishInstant : GesBytecodeOpCode.PublishAfter
+                    : delay is null ? GesBytecodeOpCode.EmitInstant : GesBytecodeOpCode.EmitAfter;
+            if (send.Repeat) flags |= GesInstructionFlag.Repeat;
             _builder.AddOpcode(opcode, flags: flags, dst: GesOperand.Register(destination), x: messageOperand, y: arguments,
-                a: tags.Length > 0 ? GesOperand.RegisterList(tags) : default, b: delay is { } time ? GesOperand.Register(time) : default);
+                a: tags.Length > 0 ? GesOperand.RegisterList(tags) : default, b: delay is { } time ? GesOperand.Register(time) : default,
+                c: name is { } key ? GesOperand.Register(key) : default);
+        }
+
+        private void EmitCancel(GesRegisterRef destination, GesCancelExpressionNode cancel, LoweringContext context, ExpressionState state)
+        {
+            var name = cancel.Name is null ? (GesRegisterRef?)null : EmitExpressionForRead(cancel.Name, context, state);
+            _builder.AddOpcode(GesBytecodeOpCode.CancelTimers, dst: GesOperand.Register(destination), x: name is { } key ? GesOperand.Register(key) : default,
+                a: GesOperand.U16((ushort)cancel.Mode));
         }
 
         private void EmitPublish(GesPublishStatementNode publish, LoweringContext context)
@@ -459,6 +471,7 @@ internal static partial class GesCompiler
                     return EmitExpressionToRegister(value with { SourceRange = constant.SourceRange }, destination, context, state);
                 }
                 case GesSendExpressionNode send: EmitSend(destination, send, context, state); return true;
+                case GesCancelExpressionNode cancel: EmitCancel(destination, cancel, context, state); return true;
                 case GesUnaryExpressionNode unary:
                 {
                     var operand = EmitExpressionForRead(unary.Operand, context, state);

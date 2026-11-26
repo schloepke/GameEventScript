@@ -13,7 +13,7 @@ from checks import numeric_checks as numeric
 
 LIMITS = {'maxProcessedMessagesPerRun', 'maxQueuedMessages', 'maxExecutionSteps', 'maxRegisterValues',
           'maxLoopIterations', 'maxCallDepth', 'maxRandomScopeDepth', 'maxRangeItems',
-          'maxGeneratedCollectionItems', 'maxValueDepth', 'maxDiceCount', 'maxDiceSides'}
+          'maxGeneratedCollectionItems', 'maxValueDepth', 'maxDiceCount', 'maxDiceSides', 'maxNamedTimers'}
 
 
 def value(raw):
@@ -164,7 +164,7 @@ def host_count(case):
 
 
 def phase_expectation(case, exp, initialization=False):
-    allowed = {'local', 'outbound', 'runtimeLimits', 'diagnostics', 'hostReady', 'programStarts', 'idleDurationMicroseconds', 'trace'}
+    allowed = {'local', 'outbound', 'runtimeLimits', 'diagnostics', 'hostReady', 'programStarts', 'idleDurationMicroseconds', 'pendingTimers', 'trace'}
     allowed |= {'pump'} if initialization else {'input', 'accepted', 'paused', 'waiting'}
     closed(exp, allowed, 'supported runtime expectation')
     lifecycle_checks.validate(case, exp)
@@ -263,11 +263,11 @@ def compare_host(case, actual):
     def channels(path, exp, obs, initialization=False, step=None):
         fields = {'local', 'outbound', 'diagnostics', 'runtimeLimits'} if initialization else {
             'local', 'outbound', 'diagnostics', 'runtimeLimits', 'accepted', 'paused', 'waiting'}
-        fields.update({'trace', 'actions', 'hostReady', 'programStarts', 'idleDurationMicroseconds'})
+        fields.update({'trace', 'actions', 'hostReady', 'programStarts', 'idleDurationMicroseconds', 'pendingTimers'})
         closed(obs, fields, 'runtime phase')
         if set(obs) != fields:
             raise InvalidDocument('Incomplete runtime observations')
-        for key in fields - {'local', 'outbound', 'diagnostics', 'runtimeLimits', 'actions', 'programStarts', 'idleDurationMicroseconds', 'trace'}:
+        for key in fields - {'local', 'outbound', 'diagnostics', 'runtimeLimits', 'actions', 'programStarts', 'idleDurationMicroseconds', 'pendingTimers', 'trace'}:
             if type(obs[key]) is not bool:
                 raise InvalidDocument('Invalid runtime state')
         observed_trace = trace_checks.normalize(obs['trace'], message, limit)

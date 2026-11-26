@@ -10,7 +10,10 @@ namespace GameEventScript.Api;
 internal static class GesOpcodePrinter
 {
     internal static bool IsResultSend(GesBytecodeOpCode opcode)
-        => opcode is >= GesBytecodeOpCode.EmitInstant and <= GesBytecodeOpCode.PublishAfter;
+        => opcode is >= GesBytecodeOpCode.EmitInstant and <= GesBytecodeOpCode.PublishAfter or GesBytecodeOpCode.EmitNamed or GesBytecodeOpCode.PublishNamed;
+
+    internal static bool IsNamedSend(GesBytecodeOpCode opcode)
+        => opcode is GesBytecodeOpCode.EmitNamed or GesBytecodeOpCode.PublishNamed;
 
     internal enum OperandPart
     {
@@ -104,6 +107,16 @@ internal static class GesOpcodePrinter
         var indirect = (instruction.InstructionFlags & GesInstructionFlag.Indirect) != 0;
         var tags = (instruction.InstructionFlags & GesInstructionFlag.WithTags) != 0;
         var after = instruction.OpCode is GesBytecodeOpCode.EmitAfter or GesBytecodeOpCode.PublishAfter;
+        if (IsNamedSend(instruction.OpCode))
+        {
+            return (indirect, tags) switch
+            {
+                (false, false) => [TargetRegister, OutboundMessage, ArgumentRegisterList, AuxBRegister, AuxCRegister],
+                (false, true) => [TargetRegister, OutboundMessage, ArgumentRegisterList, TagRegisterList, AuxBRegister, AuxCRegister],
+                (true, false) => [TargetRegister, MessageRegister, AuxBRegister, AuxCRegister],
+                (true, true) => [TargetRegister, MessageRegister, TagRegisterList, AuxBRegister, AuxCRegister],
+            };
+        }
         return (indirect, tags, after) switch
         {
             (false, false, false) => [TargetRegister, OutboundMessage, ArgumentRegisterList],
@@ -134,7 +147,9 @@ internal static class GesOpcodePrinter
             GesBytecodeOpCode.ReturnVoid => [],
             GesBytecodeOpCode.ReturnValue => [ReturnRegister],
 
-            GesBytecodeOpCode.EmitInstant or GesBytecodeOpCode.EmitAfter or GesBytecodeOpCode.PublishInstant or GesBytecodeOpCode.PublishAfter => SendOperands(instruction),
+            GesBytecodeOpCode.EmitInstant or GesBytecodeOpCode.EmitAfter or GesBytecodeOpCode.PublishInstant or GesBytecodeOpCode.PublishAfter
+                or GesBytecodeOpCode.EmitNamed or GesBytecodeOpCode.PublishNamed => SendOperands(instruction),
+            GesBytecodeOpCode.CancelTimers => instruction.AU == 0 ? [TargetRegister, SourceRegister, CountImmediate] : [TargetRegister, CountImmediate],
             GesBytecodeOpCode.EmitMessage => [OutboundMessage, ArgumentRegisterList],
             GesBytecodeOpCode.EmitMessageWithTags => [OutboundMessage, ArgumentRegisterList, TagRegisterList],
             GesBytecodeOpCode.EmitMessageValue => [MessageRegister],

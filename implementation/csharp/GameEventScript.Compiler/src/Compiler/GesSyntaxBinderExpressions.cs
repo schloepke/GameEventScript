@@ -88,6 +88,7 @@ internal sealed partial class GesSyntaxBinder
         NodeKind.HandlerLiteralExpression => BindHandlerLiteral(node),
         NodeKind.ParenthesizedExpression => BindParenthesized(node),
         NodeKind.SendExpression => BindSend(node, null, default),
+        NodeKind.CancelExpression => BindCancel(node),
         _ => throw Mismatch(node.FirstToken)
     };
 
@@ -965,9 +966,25 @@ internal sealed partial class GesSyntaxBinder
         var kind = statementKind ?? (start.Kind == Emit ? GesPublishStatementKind.Emit : GesPublishStatementKind.Publish);
         c.SkipNewLines();
         GesExpressionNode? delay = null;
-        if (c.MatchWord("after")) delay = Expression(ref c);
+        GesExpressionNode? name = null;
+        var repeat = false;
+        if (c.MatchWord("after") || (repeat = c.MatchWord("every")))
+        {
+            delay = Expression(ref c);
+            if (c.MatchWord("named")) name = Operand(ref c);
+        }
         var message = Operand(ref c);
         var tags = OptionalTags(ref c);
-        return Set(new GesSendExpressionNode(kind, message, tags, delay), start, c.Previous);
+        return Set(new GesSendExpressionNode(kind, message, tags, delay, name, repeat), start, c.Previous);
+    }
+
+    private GesExpressionNode BindCancel(GesSyntaxNode node)
+    {
+        var c = new Cursor(this, node);
+        var start = c.Advance();
+        if (c.MatchWord("named")) return Set(new GesCancelExpressionNode(1, null), start, c.Previous);
+        if (c.MatchWord("all")) return Set(new GesCancelExpressionNode(2, null), start, c.Previous);
+        var name = Operand(ref c);
+        return Set(new GesCancelExpressionNode(0, name), start, c.Previous);
     }
 }

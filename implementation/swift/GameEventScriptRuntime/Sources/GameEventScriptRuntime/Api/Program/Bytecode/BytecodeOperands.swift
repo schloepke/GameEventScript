@@ -83,12 +83,14 @@ enum GesOperand: Int, Sendable {
 }
 
 extension GesBytecodeOpCode {
-    var isResultSend: Bool { rawValue >= 0xDA && rawValue <= 0xDD }
+    var isResultSend: Bool { rawValue >= 0xDA && rawValue <= 0xDD || isNamedSend }
+
+    var isNamedSend: Bool { self == .emitNamed || self == .publishNamed }
 
     var operands: [GesOperand] {
         switch self {
         case .hasPattern, .takePattern: [.targetRegister, .iteratorRegister, .patternKind]
-        case .emitInstant, .emitAfter, .publishInstant, .publishAfter: [.targetRegister]
+        case .emitInstant, .emitAfter, .publishInstant, .publishAfter, .emitNamed, .publishNamed: [.targetRegister]
         case .`nop`: []
         case .`registerLocals`: [.localRegisterDelta]
         case .`jump`: [.jumpTarget]
@@ -176,6 +178,7 @@ extension GesBytecodeOpCode {
         case .`add`: [.targetRegister, .leftRegister, .rightRegister]
         case .`subtract`: [.targetRegister, .leftRegister, .rightRegister]
         case .cartesian: [.targetRegister, .leftRegister, .rightRegister]
+        case .cancelTimers: [.targetRegister, .countImmediate]
         case .`multiply`: [.targetRegister, .leftRegister, .rightRegister]
         case .`divide`: [.targetRegister, .leftRegister, .rightRegister]
         case .`power`: [.targetRegister, .leftRegister, .rightRegister]

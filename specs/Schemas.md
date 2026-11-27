@@ -2833,7 +2833,8 @@ builder.withHandleResolver(units, for: units.catalog.type)
 - **Resolving.** A generated catalog is the resolver of its handle type, as the untyped one is: register it with the
   host for `units.catalog.type`, and scripts read the states of its entries.
 - The handle type of the catalog is the model's `<Name>Handle`, which the [reach rule](#model-types) provides. Split
-  output puts every catalog in its own file, named after it, and the manifest adds `catalogs: true`.
+  output places `<Name>Catalog` like `<Name>Handle`: `--split schema` gives it a file of its own named after it, and
+  `--split file` puts it into the file of the source that declares the handle type. The manifest adds `catalogs: true`.
 
 ### Script bindings
 

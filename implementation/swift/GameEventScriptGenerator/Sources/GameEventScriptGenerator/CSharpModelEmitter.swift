@@ -103,7 +103,7 @@ enum GesCSharpModelEmitter {
         }
         let catalogs = options.catalogs ? try GesModelPlanner.catalogs(layout, topLevel) : []
         let catalogSet = schemaSet.map { $0.qualified + ".Set" } ?? "__GesModelDocuments" + suffix + ".Set"
-        for catalog in catalogs { document.units.append(GesCodeUnit(owner: catalog.name) { code in self.catalog(&code, catalog, access, qualifier, catalogSet) }) }
+        for catalog in catalogs { document.units.append(GesCodeUnit(owner: catalog.name, write: { code in self.catalog(&code, catalog, access, qualifier, catalogSet) }, handle: catalog.handle.name)) }
         if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, plain, access, qualifier, support, computed) }) }
         if valued { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, qualifier, support, computed) }) }
         if messages { document.units.append(GesCodeUnit(owner: "") { code in schemasHolder(&code, layout, schemas, schemaSet) }) }

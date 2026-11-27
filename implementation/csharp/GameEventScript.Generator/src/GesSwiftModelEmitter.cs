@@ -65,7 +65,7 @@ internal static partial class GesSwiftModelEmitter
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.")));
         var catalogs = options.Catalogs ? GesModelPlanner.Catalogs(layout, topLevel) : [];
         var catalogSet = schemaSet is not null ? schemaSet.Qualified + ".set" : "__GesModelDocuments" + suffix + ".set.get()";
-        foreach (var catalog in catalogs) document.Units.Add(new GesCodeUnit(catalog.Name, code => Catalog(code, catalog, access, catalogSet)));
+        foreach (var catalog in catalogs) document.Units.Add(new GesCodeUnit(catalog.Name, code => Catalog(code, catalog, access, catalogSet), handle: catalog.Handle.Name));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, plain, access, support, computed)));
         if (valued) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, support, computed)));
         if (messages) document.Units.Add(new GesCodeUnit("", code => SchemasHolder(code, layout, schemas, schemaSet)));

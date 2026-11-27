@@ -442,6 +442,35 @@ final class GenerateTests: XCTestCase {
         }
     }
 
+    func testSplitOutputPlacesACatalogInTheFileOfItsHandleType() throws {
+        // The catalog type has no declaration of its own; it goes with the handle type, as <Name>Handle does.
+        let set = try GesSchemaSet(sources: [
+            GesSchemaSource(name: "states.gess", text: "model(data) schema :Unit as { name: :Text max 64 }\n"),
+            GesSchemaSource(name: "handles.gess", text: "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\n"),
+        ])
+        let single = try GesSchemaSet(sources: [
+            GesSchemaSource(
+                name: "units.gess",
+                text: "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\nmodel(data) schema :Unit as { name: :Text max 64 }\n"
+            )
+        ])
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            let fileExtension = language == .swift ? ".swift" : ".g.cs"
+            var options = GesSchemaGenerateOptions(language: language, namespace: "Game.Data", split: .file)
+            options.catalogs = true
+            let files = try GesSchemaGenerator.generateModelFiles(set, roots: GesSchemaGenerator.modelRoots(set, group: "data"), options: options)
+            let handles = try XCTUnwrap(files.first { $0.path == "Game.Data.handles" + fileExtension })
+            XCTAssertTrue(handles.text.contains("UnitCatalog"))
+            XCTAssertTrue(handles.text.contains(" UnitHandle"))
+            XCTAssertFalse(try XCTUnwrap(files.first { $0.path == "Game.Data.states" + fileExtension }).text.contains("UnitCatalog"))
+            let one = try GesSchemaGenerator.generateModelFiles(single, roots: GesSchemaGenerator.modelRoots(single, group: "data"), options: options)
+            XCTAssertTrue(try XCTUnwrap(one.first { $0.path == "Game.Data.units" + fileExtension }).text.contains("UnitCatalog"))
+            options.split = .schema
+            let bySchema = try GesSchemaGenerator.generateModelFiles(set, roots: GesSchemaGenerator.modelRoots(set, group: "data"), options: options)
+            XCTAssertTrue(bySchema.contains { $0.path == "Game.Data.UnitCatalog" + fileExtension })
+        }
+    }
+
     func testHandleFieldsReachTheirHandleTypesButNotTheirStates() throws {
         let set = try GesSchemaSet(
             parsing: "schema :Composition as { name: :Text max 4 }\nschema :Source as { text: :Text }\n"

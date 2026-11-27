@@ -129,6 +129,31 @@ public sealed class GesCatalogGeneratedCodeTests
     }
 
     [TestMethod]
+    public void SplitOutputPlacesACatalogInTheFileOfItsHandleType()
+    {
+        // The catalog type has no declaration of its own; it goes with the handle type, as <Name>Handle does.
+        var set = GesSchemaSet.Parse(
+            new GesSchemaSource("states.gess", "model(data) schema :Unit as { name: :Text max 64 }\n"),
+            new GesSchemaSource("handles.gess", "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\n"));
+        var single = GesSchemaSet.Parse(new GesSchemaSource("units.gess",
+            "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\nmodel(data) schema :Unit as { name: :Text max 64 }\n"));
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            var extension = language == GesSchemaLanguage.Swift ? ".swift" : ".g.cs";
+            var options = new GesSchemaGenerateOptions { Language = language, Namespace = "Game.Data", Split = GesSchemaSplit.File, Catalogs = true };
+            var files = GesSchemaGenerator.GenerateModelFiles(set, GesSchemaGenerator.ModelRoots(set, "data"), options);
+            var handles = files.Single(file => file.Path == "Game.Data.handles" + extension);
+            StringAssert.Contains(handles.Text, "UnitCatalog");
+            StringAssert.Contains(handles.Text, " UnitHandle");
+            Assert.IsFalse(files.Single(file => file.Path == "Game.Data.states" + extension).Text.Contains("UnitCatalog", StringComparison.Ordinal));
+            var one = GesSchemaGenerator.GenerateModelFiles(single, GesSchemaGenerator.ModelRoots(single, "data"), options);
+            StringAssert.Contains(one.Single(file => file.Path == "Game.Data.units" + extension).Text, "UnitCatalog");
+            options.Split = GesSchemaSplit.Schema;
+            Assert.IsTrue(GesSchemaGenerator.GenerateModelFiles(set, GesSchemaGenerator.ModelRoots(set, "data"), options).Any(file => file.Path == "Game.Data.UnitCatalog" + extension));
+        }
+    }
+
+    [TestMethod]
     public void RejectsCatalogsInWireCode()
     {
         var set = Set();

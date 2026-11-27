@@ -271,7 +271,10 @@ HANDLE_SPLITS = tuple(entry for language in ("csharp", "swift") for entry in (
     (["--wire", "commands", "--values"], language, "Handles.Wire"),
     (["--wire", "commands", "--values", "--models", "Handles.Model"], language, "Handles.Net"))) \
     + ((["--model", "commands", "--extend-namespace", "Handles"], "swift", "Handles.Copy"),)
-SPLIT_OUTPUTS = tuple((ROLES, ROLE_FILES, *entry) for entry in ROLE_SPLITS) + tuple((HANDLE_SPLIT, HANDLE_SPLIT_FILES, *entry) for entry in HANDLE_SPLITS)
+# Typed catalogs have no declaration of their own: split output puts each `<Name>Catalog` beside its `<Name>Handle`.
+CATALOG_SPLITS = tuple((["--model", "catalog", "--catalogs"], language, "Catalogs.Model") for language in ("csharp", "swift"))
+SPLIT_OUTPUTS = tuple((ROLES, ROLE_FILES, *entry) for entry in ROLE_SPLITS) + tuple((HANDLE_SPLIT, HANDLE_SPLIT_FILES, *entry) for entry in HANDLE_SPLITS) \
+    + tuple((CATALOG_FIXTURE.parent, [CATALOG_FIXTURE.name], *entry) for entry in CATALOG_SPLITS)
 
 
 def role_splits(csharp, swift, work):

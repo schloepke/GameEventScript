@@ -250,13 +250,18 @@ here.
   76.5 ms for locally built Swift, 86.8 ms for the Homebrew Swift binary, and
   33.9 ms for the directly invoked .NET AOT CLI (`dotnet-ges`). These are
   end-to-end observations, not isolated VM timings or general language claims.
-  The handle resolve measurement (2026-11, M3 Max, native in-process harnesses
-  without logging) confirms a factor of about 5 in steady state: one message
-  that emits two values costs about 155 ns in C# and 800 ns in Swift, and the
-  handle paths keep the same ratio with equal allocations. The Swift profile is
-  dominated by malloc/free, retain/release and String scalar operations
-  (`UnicodeScalarView` distance/equality, `GesText.isUpperName`, small-string
-  appends, hashing, array growth). Separate startup, loading/validation and execution using native harnesses
+  Update 2026-11 (M3 Max): VM computation has since reached parity: `ges bench`
+  of the same `compute-benchmark.gesb` takes a median 15.5 ms per run in Swift
+  and 17.8 ms in C# (JIT). The remaining gap is the per-message host path. In an
+  in-process harness, `Receive` plus `RunToCompletion` of a handler that only
+  emits one message without recipients costs about 155 ns in C# and 800 ns in
+  Swift, and handle-resolving handlers keep that factor of about 5 with equal
+  allocations. Of the Swift samples of that loop, about 31% are retain/release,
+  18% dynamic exclusivity checks (`swift_beginAccess`/`endAccess` on Host and VM
+  class properties; the Runtime package does not disable them), 7% malloc/free
+  and 5% hashing/dictionary lookups, plus a clock read per message. With handles,
+  String scalar operations (`UnicodeScalarView` distance/equality,
+  `GesText.isUpperName`, small-string appends) are added. Separate startup, loading/validation and execution using native harnesses
   that load once and execute repeatedly; verify matching results and executed
   opcode counts. Profile Swift dispatch, register access, value copies, ARC and
   temporary allocations against C# before selecting optimizations. Record exact

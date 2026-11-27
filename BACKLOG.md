@@ -45,6 +45,11 @@ here.
   would also allow combinations the list rejects, such as `J/(kg·m²)`, and keep
   torque distinct from energy without special rules. Update Bytecode, Language,
   both unit tables, the schema wire format and the Swift macro mirror together.
+  The five UnitId bits of `UnitAndFlags` share their byte with flags in bits
+  5–7, so more units need either the instruction-format review before 1.0 or
+  UnitId 31 as an escape to an extended table; decide this with that review.
+  `specs/Bytecode.md` still says the map keeps additional unit IDs representable
+  without reshaping the instruction word, which holds only for that last id.
 
 ## Language
 

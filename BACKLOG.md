@@ -222,10 +222,14 @@ here.
 
 ## Performance and optimizer follow-ups
 
-- Measure the resolve path of projected handles in both ports. Bot scripts read handles on the hot path, and Swift
-  deliberately deviates from C# there: it computes projections when the link hash completes instead of storing them on
-  the resolved handle (which holds its schema weakly), and it sets the handle context in `runSlice`. Compare execution
-  time and allocations of reading `@X(:P)` fields, `ResolveMany` and the projection-keyed cache against C#.
+- Check resolved handle states with a schema validator in the resolve path instead of the document round trip. Each
+  resolve prints the resolver's Record to a document, reads it back, checks it against the schema, normalizes and
+  projects it (`GesHandleStates.Check` in both ports). Measured per resolve in C#: about 2.2–3 µs and 9–12 KB, about
+  4–7 µs and 15–27 KB with `:ContentHash` versions (Swift: same allocations, about 5× the time). A validator that
+  walks the Record against the bound schema could check, normalize and project in one pass and hash the canonical
+  bytes without text. First establish how much resolving matters on real hot paths (bot scripts, catalog reads)
+  before choosing the design. The projection-keyed cache and `ResolveMany` already serve several views and batches
+  with one resolve; Swift's link-hash projections and handle context in `runSlice` cost nothing measurable.
 
 - Handle refs and `@Root`: `Receive`, `Emit`, `Publish` and callback results check every argument for a handle with a
   ref by walking Lists, Maps, Records and Messages (`HoldsRef`, O(n) per value), and each `.@Root` read allocates a new
@@ -246,7 +250,13 @@ here.
   76.5 ms for locally built Swift, 86.8 ms for the Homebrew Swift binary, and
   33.9 ms for the directly invoked .NET AOT CLI (`dotnet-ges`). These are
   end-to-end observations, not isolated VM timings or general language claims.
-  Separate startup, loading/validation and execution using native harnesses
+  The handle resolve measurement (2026-11, M3 Max, native in-process harnesses
+  without logging) confirms a factor of about 5 in steady state: one message
+  that emits two values costs about 155 ns in C# and 800 ns in Swift, and the
+  handle paths keep the same ratio with equal allocations. The Swift profile is
+  dominated by malloc/free, retain/release and String scalar operations
+  (`UnicodeScalarView` distance/equality, `GesText.isUpperName`, small-string
+  appends, hashing, array growth). Separate startup, loading/validation and execution using native harnesses
   that load once and execute repeatedly; verify matching results and executed
   opcode counts. Profile Swift dispatch, register access, value copies, ARC and
   temporary allocations against C# before selecting optimizations. Record exact

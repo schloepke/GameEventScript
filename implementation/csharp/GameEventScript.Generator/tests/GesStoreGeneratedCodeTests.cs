@@ -3,22 +3,22 @@
 
 using GameEventScript.Api;
 using GameEventScript.Generator;
-using Model = GameEventScript.Tests.Generator.Catalog.Model;
+using Model = GameEventScript.Tests.Generator.Store.Model;
 
 namespace GameEventScript.Tests.Generator;
 
-// The checked-in code of conformance/fixtures/SchemaGeneration/catalogs.gess: typed catalogs that read their entries into
-// models, look them up by id and module, take the catalogs they depend on and resolve their handles like GesCatalog.
+// The checked-in code of conformance/fixtures/SchemaGeneration/stores.gess: typed stores that read their entries into
+// models, look them up by id and module, take the stores they depend on and resolve their handles like GesStore.
 [TestClass]
-public sealed class GesCatalogGeneratedCodeTests
+public sealed class GesStoreGeneratedCodeTests
 {
     private static GesSchemaSet Set()
     {
-        var fixture = Path.Combine(TestRepositoryPaths.ConformanceDirectory, "fixtures", "SchemaGeneration", "catalogs.gess");
-        return GesSchemaSet.Parse(new GesSchemaSource("catalogs.gess", File.ReadAllText(fixture)));
+        var fixture = Path.Combine(TestRepositoryPaths.ConformanceDirectory, "fixtures", "SchemaGeneration", "stores.gess");
+        return GesSchemaSet.Parse(new GesSchemaSource("stores.gess", File.ReadAllText(fixture)));
     }
 
-    private static GesSchemaGenerateOptions Options(GesSchemaLanguage language, string space) => new() { Language = language, Namespace = space, Access = GesSchemaAccess.Internal, Catalogs = true };
+    private static GesSchemaGenerateOptions Options(GesSchemaLanguage language, string space) => new() { Language = language, Namespace = space, Access = GesSchemaAccess.Internal, Stores = true };
 
     [TestMethod]
     public void CheckedInCodeIsCurrent()
@@ -26,16 +26,16 @@ public sealed class GesCatalogGeneratedCodeTests
         var set = Set();
         var csharp = Path.Combine(TestRepositoryPaths.CSharpDirectory, "GameEventScript.Generator", "tests", "Generated");
         var swift = Path.Combine(TestRepositoryPaths.Root, "implementation", "swift", "GameEventScriptConformance", "Tests", "GameEventScriptConformanceTests", "Generated");
-        var model = GesSchemaGenerator.ModelRoots(set, "catalog");
-        Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "CatalogModel.g.cs")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Catalog.Model")));
-        Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "CatalogModel.swift")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.Swift, "CatalogModel")));
+        var model = GesSchemaGenerator.ModelRoots(set, "store");
+        Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "StoreModel.g.cs")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Store.Model")));
+        Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "StoreModel.swift")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.Swift, "StoreModel")));
     }
 
-    private static Model.HullCatalog Hulls() => Model.HullCatalog.Read([new GesCatalogRoot("content", "hulls.gesd")],
-        new Files(("content", "hulls.gesd", ":Catalog(@Hull)\nlight: [name: 'Light', armor: 20]\nheavy: [name: 'Heavy', armor: 80]\n")));
+    private static Model.HullStore Hulls() => Model.HullStore.Read([new GesStoreRoot("content", "hulls.gesd")],
+        new Files(("content", "hulls.gesd", ":Store(@Hull)\nlight: [name: 'Light', armor: 20]\nheavy: [name: 'Heavy', armor: 80]\n")));
 
     private static readonly Files UnitFiles = new(
-        ("content", "units.gesd", ":Catalog(@Unit)\nscout: [name: 'Scout', hull: @Hull:light~, escorts: [], speed: 120m/s]\nmodule drone {\n"
+        ("content", "units.gesd", ":Store(@Unit)\nscout: [name: 'Scout', hull: @Hull:light~, escorts: [], speed: 120m/s]\nmodule drone {\n"
             + "  gnabblo: [name: 'Gnabblo', hull: @Hull:heavy~, escorts: [@scout], speed: 40m/s]\n"
             + "  brakk: [name: 'Brakk', hull: @Hull:light~, escorts: [@scout, @gnabblo], speed: 60m/s]\n}\n"));
 
@@ -43,7 +43,7 @@ public sealed class GesCatalogGeneratedCodeTests
     public void ReadsEntriesIntoModelsAndLooksThemUp()
     {
         var hulls = Hulls();
-        var units = Model.UnitCatalog.Read([new GesCatalogRoot("content", "units.gesd")], UnitFiles, hull: hulls);
+        var units = Model.UnitStore.Read([new GesStoreRoot("content", "units.gesd")], UnitFiles, hull: hulls);
 
         CollectionAssert.AreEqual(new[] { "drone.brakk", "drone.gnabblo", "scout" }, units.Entries.Select(entry => entry.Id).ToArray());
         CollectionAssert.AreEqual(units.Entries.Select(entry => entry.Handle).ToArray(), units.Index.ToArray());
@@ -60,16 +60,16 @@ public sealed class GesCatalogGeneratedCodeTests
         CollectionAssert.AreEqual(new[] { new Model.UnitHandle("scout"), new Model.UnitHandle("drone.gnabblo") }, brakk.Value.Escorts);
         Assert.AreEqual(5, brakk.Origin.Line);
         Assert.AreEqual(80, hulls["heavy"]!.Value.Armor);
-        Assert.AreSame(units.Catalog.Type, units.Catalog.Type);
-        Assert.AreEqual("Unit", units.Catalog.Type.Name);
+        Assert.AreSame(units.Store.Type, units.Store.Type);
+        Assert.AreEqual("Unit", units.Store.Type.Name);
     }
 
     [TestMethod]
     public void NarrowsEntriesToProjectionsAndIndexesTheirVersions()
     {
-        var files = new Files(("content", "units.gesd", ":Catalog(@Unit)\nscout: [name: 'Scout', hull: @Hull:light~, escorts: [], speed: 120m/s, look: [icon: 'eye']]\n"
+        var files = new Files(("content", "units.gesd", ":Store(@Unit)\nscout: [name: 'Scout', hull: @Hull:light~, escorts: [], speed: 120m/s, look: [icon: 'eye']]\n"
             + "module drone {\n  brakk: [name: 'Brakk', hull: @Hull:light~, escorts: [@scout], speed: 60m/s]\n}\n"));
-        var units = Model.UnitCatalog.Read([new GesCatalogRoot("content", "units.gesd")], files, hull: Hulls());
+        var units = Model.UnitStore.Read([new GesStoreRoot("content", "units.gesd")], files, hull: Hulls());
 
         var scout = units["scout"]!.Value;
         var display = Model.UnitDisplay.From(scout);
@@ -92,46 +92,46 @@ public sealed class GesCatalogGeneratedCodeTests
     }
 
     [TestMethod]
-    public void RejectsPinsWithoutTheCatalogItDependsOn()
+    public void RejectsPinsWithoutTheStoreItDependsOn()
     {
-        var exception = Assert.ThrowsExactly<GesCatalogException>(() => Model.UnitCatalog.Read([new GesCatalogRoot("content", "units.gesd")], UnitFiles));
-        Assert.IsTrue(exception.Diagnostics.All(diagnostic => diagnostic.Code == GesCatalogException.InvalidPin));
+        var exception = Assert.ThrowsExactly<GesStoreException>(() => Model.UnitStore.Read([new GesStoreRoot("content", "units.gesd")], UnitFiles));
+        Assert.IsTrue(exception.Diagnostics.All(diagnostic => diagnostic.Code == GesStoreException.InvalidPin));
     }
 
     private static string Code(string schemas, GesSchemaLanguage language)
     {
         var set = GesSchemaSet.Parse(new GesSchemaSource("names.gess", schemas));
-        return Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.GenerateModels(set, GesSchemaGenerator.ModelRoots(set, "catalog"), Options(language, "Names"))).Code;
+        return Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.GenerateModels(set, GesSchemaGenerator.ModelRoots(set, "store"), Options(language, "Names"))).Code;
     }
 
     [TestMethod]
-    [DataRow("model(catalog) schema :Roots as { name: :Text max 8 }\nhandle @Roots of :Roots as { id: :Text max 8, version: :ContentHash }\n"
-        + "model(catalog) schema :Unit as { roots: @Roots }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n")]
-    [DataRow("model(catalog) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n"
-        + "model(catalog) schema :UnitCatalog as { name: :Text max 8 }\n")]
-    [DataRow("model(catalog) schema :Entry as { name: :Text max 8 }\nhandle @Entry of :Entry as { id: :Text max 8, version: :ContentHash }\n")]
-    public void RejectsCatalogsWhoseNamesCollide(string schemas)
+    [DataRow("model(store) schema :Roots as { name: :Text max 8 }\nhandle @Roots of :Roots as { id: :Text max 8, version: :ContentHash }\n"
+        + "model(store) schema :Unit as { roots: @Roots }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n")]
+    [DataRow("model(store) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n"
+        + "model(store) schema :UnitStore as { name: :Text max 8 }\n")]
+    [DataRow("model(store) schema :Entry as { name: :Text max 8 }\nhandle @Entry of :Entry as { id: :Text max 8, version: :ContentHash }\n")]
+    public void RejectsStoresWhoseNamesCollide(string schemas)
     {
         Assert.AreEqual("generate.nameCollision", Code(schemas, GesSchemaLanguage.CSharp));
         Assert.AreEqual("generate.nameCollision", Code(schemas, GesSchemaLanguage.Swift));
     }
 
     [TestMethod]
-    public void LeavesHandleTypesWithoutAModelCatalogOut()
+    public void LeavesHandleTypesWithoutAModelStoreOut()
     {
-        // A Number id, a composite and a state that is no model root generate no catalog.
+        // A Number id, a composite and a state that is no model root generate no store.
         var set = GesSchemaSet.Parse(new GesSchemaSource("names.gess",
-            "model(catalog) schema :Contact as { label: :Text max 8 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 9, version: :Nothing }\n"
+            "model(store) schema :Contact as { label: :Text max 8 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 9, version: :Nothing }\n"
             + "handle @Slot of :Contact composite @Target as { part: :Text max 8 }\nschema :Other as { label: :Text max 8 }\n"
             + "handle @Other of :Other as { id: :Text max 8, version: :Nothing }\n"));
-        var code = GesSchemaGenerator.GenerateModels(set, GesSchemaGenerator.ModelRoots(set, "catalog"), Options(GesSchemaLanguage.CSharp, "Names"));
-        Assert.DoesNotContain("Catalog :", code);
+        var code = GesSchemaGenerator.GenerateModels(set, GesSchemaGenerator.ModelRoots(set, "store"), Options(GesSchemaLanguage.CSharp, "Names"));
+        Assert.DoesNotContain("Store :", code);
     }
 
     [TestMethod]
-    public void SplitOutputPlacesACatalogInTheFileOfItsHandleType()
+    public void SplitOutputPlacesAStoreInTheFileOfItsHandleType()
     {
-        // The catalog type has no declaration of its own; it goes with the handle type, as <Name>Handle does.
+        // The store type has no declaration of its own; it goes with the handle type, as <Name>Handle does.
         var set = GesSchemaSet.Parse(
             new GesSchemaSource("states.gess", "model(data) schema :Unit as { name: :Text max 64 }\n"),
             new GesSchemaSource("handles.gess", "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\n"));
@@ -140,28 +140,28 @@ public sealed class GesCatalogGeneratedCodeTests
         foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
         {
             var extension = language == GesSchemaLanguage.Swift ? ".swift" : ".g.cs";
-            var options = new GesSchemaGenerateOptions { Language = language, Namespace = "Game.Data", Split = GesSchemaSplit.File, Catalogs = true };
+            var options = new GesSchemaGenerateOptions { Language = language, Namespace = "Game.Data", Split = GesSchemaSplit.File, Stores = true };
             var files = GesSchemaGenerator.GenerateModelFiles(set, GesSchemaGenerator.ModelRoots(set, "data"), options);
             var handles = files.Single(file => file.Path == "Game.Data.handles" + extension);
-            StringAssert.Contains(handles.Text, "UnitCatalog");
+            StringAssert.Contains(handles.Text, "UnitStore");
             StringAssert.Contains(handles.Text, " UnitHandle");
-            Assert.IsFalse(files.Single(file => file.Path == "Game.Data.states" + extension).Text.Contains("UnitCatalog", StringComparison.Ordinal));
+            Assert.IsFalse(files.Single(file => file.Path == "Game.Data.states" + extension).Text.Contains("UnitStore", StringComparison.Ordinal));
             var one = GesSchemaGenerator.GenerateModelFiles(single, GesSchemaGenerator.ModelRoots(single, "data"), options);
-            StringAssert.Contains(one.Single(file => file.Path == "Game.Data.units" + extension).Text, "UnitCatalog");
+            StringAssert.Contains(one.Single(file => file.Path == "Game.Data.units" + extension).Text, "UnitStore");
             options.Split = GesSchemaSplit.Schema;
-            Assert.IsTrue(GesSchemaGenerator.GenerateModelFiles(set, GesSchemaGenerator.ModelRoots(set, "data"), options).Any(file => file.Path == "Game.Data.UnitCatalog" + extension));
+            Assert.IsTrue(GesSchemaGenerator.GenerateModelFiles(set, GesSchemaGenerator.ModelRoots(set, "data"), options).Any(file => file.Path == "Game.Data.UnitStore" + extension));
         }
     }
 
     [TestMethod]
-    public void RejectsCatalogsInWireCode()
+    public void RejectsStoresInWireCode()
     {
         var set = Set();
         Assert.AreEqual("generate.usage", Assert.ThrowsExactly<GesGeneratorException>(
-            () => GesSchemaGenerator.Generate(set, GesSchemaGenerator.ModelRoots(set, "catalog"), new GesSchemaParameters(), Options(GesSchemaLanguage.CSharp, "Names"))).Code);
+            () => GesSchemaGenerator.Generate(set, GesSchemaGenerator.ModelRoots(set, "store"), new GesSchemaParameters(), Options(GesSchemaLanguage.CSharp, "Names"))).Code);
     }
 
-    private sealed class Files(params (string Root, string Path, string Text)[] files) : IGesCatalogFiles
+    private sealed class Files(params (string Root, string Path, string Text)[] files) : IGesStoreFiles
     {
         public string? Read(string root, string path)
         {

@@ -72,8 +72,8 @@ public sealed class GesProgramBuilder
     /// <summary>
     /// Declares the handle types the sources may name as <c>@Name</c>, usually from
     /// <see cref="GesSchemaSet.HandleTypes"/>. A later declaration of the same name replaces an earlier one; composite
-    /// roots are known through <see cref="GesHandleType.Root"/> and need not be declared separately. Catalog file types
-    /// (<see cref="GesHandleType.CatalogOf"/>) are passed over, since scripts cannot name them.
+    /// roots are known through <see cref="GesHandleType.Root"/> and need not be declared separately. Store file types
+    /// (<see cref="GesHandleType.StoreOf"/>) are passed over, since scripts cannot name them.
     /// </summary>
     /// <param name="types">The handle type declarations.</param>
     /// <returns>The current builder instance.</returns>
@@ -83,8 +83,8 @@ public sealed class GesProgramBuilder
         _ = types ?? throw new ArgumentNullException(nameof(types));
         foreach (var type in types)
         {
-            // A catalog file type is no script type; only reading a catalog uses it.
-            if ((type ?? throw new ArgumentNullException(nameof(types))).CatalogOf is not null) continue;
+            // A store file type is no script type; only reading a store uses it.
+            if ((type ?? throw new ArgumentNullException(nameof(types))).StoreOf is not null) continue;
             for (var current = type; current is not null; current = current.Root)
                 if (ReferenceEquals(current, type) || !_handleTypes.ContainsKey(current.Name)) _handleTypes[current.Name] = current;
         }

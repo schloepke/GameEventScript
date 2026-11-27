@@ -322,7 +322,7 @@
     }
 
     /// `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`, where
-    /// `:Catalog(@Type)` may stand for the state.
+    /// `:Store(@Type)` may stand for the state.
     private mutating func handle(_ offset: Int) throws -> GesSchemaDeclarationSyntax {
         var result = GesSchemaDeclarationSyntax()
         result.kind = .handle
@@ -334,15 +334,18 @@
         skipSpaces()
         result.stateOffset = position
         result.state = try typeName()
-        if result.state == "Catalog" && position < bytes.count && bytes[position] == 40 {
-            // `:Catalog(@Unit)` declares a catalog file type; its state stays empty.
+        if result.state == "Store" && position < bytes.count && bytes[position] == 40 {
+            // `:Store(@Unit)` declares a store file type; its state stays empty.
             position += 1
             skipSpaces()
-            result.catalogOffset = position
-            result.catalog = try handleName()
+            result.storeOffset = position
+            result.store = try handleName()
             skipSpaces()
             try expect(41)
             result.state = ""
+        } else if position < bytes.count && bytes[position] == 40 {
+            // Only `:Store` takes a handle type here; any other name with an argument names no type.
+            throw Failure(offset: result.stateOffset, message: "Type ':\(result.state)(...)' is not declared.", code: Code.unknownName)
         }
         skipSpaces()
         if atWord("composite") {

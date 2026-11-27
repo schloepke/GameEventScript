@@ -47,7 +47,7 @@
         return (scanned.end, scanned.parts)
     }
 
-    /// Reads a handle like `scan(_:_:)`; with `allowPin`, a `~` that no version follows pins the handle of a catalog
+    /// Reads a handle like `scan(_:_:)`; with `allowPin`, a `~` that no version follows pins the handle of a store
     /// (specs/Documents.md#references) and `pin` is its offset, otherwise nil.
     static func scan(_ bytes: [UInt8], _ start: Int, allowPin: Bool) -> (end: Int, parts: Parts, pin: Int?)? {
         var pin: Int?
@@ -97,7 +97,7 @@
 
     /// Reads a handle in a document at `start`, which holds `@`. Returns nil when the text there is no well-formed
     /// handle that a document delimiter follows; otherwise its end, its identity (type, id and part, which compare keys)
-    /// and whether a version or a ref follows the id. With `allowPin`, a catalog handle may end with a pinning `~` at
+    /// and whether a version or a ref follows the id. With `allowPin`, a store handle may end with a pinning `~` at
     /// offset `pin`, otherwise nil.
     static func read(_ bytes: [UInt8], _ start: Int, allowPin: Bool = false) -> (end: Int, identity: [Unicode.Scalar], versioned: Bool, pin: Int?)? {
         guard let scanned = scan(bytes, start, allowPin: allowPin), scanned.end == bytes.count || isDelimiter(bytes, scanned.end) else { return nil }

@@ -50,7 +50,7 @@ internal sealed class GesSyntaxTreeModule
 
     internal IReadOnlyList<GesSourceDocument> Sources { get; }
 
-    // The handle catalog by type name without `@` (specs/Language.md#handles).
+    // The handle types by type name without `@` (specs/Language.md#handles).
     internal IReadOnlyDictionary<string, GesHandleType> HandleTypes { get; }
 }
 

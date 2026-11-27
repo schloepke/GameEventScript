@@ -73,7 +73,7 @@ public enum GesDiagnosticCodes {
     /// A `without` tag filter uses `|` alternatives, which only `matching` filters allow.
     public static let validateInvalidTagFilter = "validate.invalidTagFilter"
 
-    /// An `@Name` names no handle type of the compilation's handle catalog.
+    /// An `@Name` names no handle type of the compilation's handle types.
     public static let validateUnknownHandleType = "validate.unknownHandleType"
 
     /// A handle type is used where it is not allowed: `as @Name` outside a parameter or field, `@Name~` or `h.version`

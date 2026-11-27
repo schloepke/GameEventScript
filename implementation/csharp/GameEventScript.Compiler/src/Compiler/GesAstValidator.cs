@@ -275,7 +275,7 @@ internal static class GesAstValidator
     {
         public IReadOnlyDictionary<string, GesCallableDefinition> Definitions { get; } = definitions;
 
-        // The handle catalog by name without `@`; the validator checks every `@Name` against it.
+        // The handle types by name without `@`; the validator checks every `@Name` against it.
         public IReadOnlyDictionary<string, GesHandleType> HandleTypes { get; } = handleTypes ?? NoHandleTypes;
 
         public Dictionary<string, StaticExpressionInfo> Results { get; } = new(StringComparer.Ordinal);

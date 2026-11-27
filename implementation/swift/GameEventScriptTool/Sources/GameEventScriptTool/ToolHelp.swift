@@ -363,7 +363,7 @@ enum ToolHelp {
     static let document = #"""
         Usage:
           ges document check <data.gesd> [more.gesd ...] [--schema <file.gess> ...] [-q]
-          ges document check --schema <file.gess> ... --catalog @<Type> <root.gesd> ... [data.gesd ...] [-q]
+          ges document check --schema <file.gess> ... --store @<Type> <root.gesd> ... [data.gesd ...] [-q]
           ges document format <data.gesd> [-o <output.gesd>] [--color]
 
         Commands:
@@ -372,8 +372,8 @@ enum ToolHelp {
 
         Options:
           --schema <file.gess> Check each document against the schema its header names; repeatable.
-          --catalog @<Type> <root.gesd>
-                               Read the catalog of a handle type from a root file; repeatable.
+          --store @<Type> <root.gesd>
+                               Read the store of a handle type from a root file; repeatable.
           -o, --output <path>  Write the formatted document to a UTF-8 file instead of stdout.
           --color              Color terminal output (unless NO_COLOR is set).
           -q, --quiet          Hide the success report of check.
@@ -391,9 +391,9 @@ enum ToolHelp {
         given files. A schema that the set does not hold is schema.unknownName. Documents
         without a header are only read.
 
-        With --catalog, check reads the catalog of each named handle type of the schema
+        With --store, check reads the store of each named handle type of the schema
         set from its root files and reports every error of it. Imports are read relative
-        to the directory of their root file and cannot leave it. Catalogs are read in the
-        order their types first appear; each may pin entries of the catalogs before it.
+        to the directory of their root file and cannot leave it. Stores are read in the
+        order their types first appear; each may pin entries of the stores before it.
         """#
 }

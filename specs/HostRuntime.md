@@ -291,8 +291,9 @@ implementation and therefore does not depend on C# reflection.
 > **Since: Unreleased**
 
 A [handle](Language.md#handles) refers to an object outside the host. Like external types, handles use two separate
-inputs: compilation receives the declarative [handle catalog](PublicApi.md#handle-api), and the host receives one
-resolver per handle type that reads state. GES never owns, stores or changes the objects; it reads them.
+inputs: compilation receives the declarative [handle types](PublicApi.md#handle-api), and the host receives one
+resolver per handle type that reads state. GES never owns, stores or changes the objects; it reads them. A
+[store](Documents.md#the-store-model) is such a resolver, so a host holds at most one store per handle type.
 
 **Program and link.** A Program records every handle type it names, with the [link hash](Schemas.md#canonical-form) of
 the declaration the compiler used, which covers its state schema, and whether the Program reads state of that type: a

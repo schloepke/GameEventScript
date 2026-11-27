@@ -8,7 +8,7 @@ using Code = GameEventScript.Syntax.GesDocumentDiagnostic;
 namespace GameEventScript.Syntax;
 
 // Categorizes GES document text token by token, also after an error: keys and labels before their colon, the schema
-// header, typed forms with their message and parameter names, scalars and comments, and in a catalog file its header,
+// header, typed forms with their message and parameter names, scalars and comments, and in a store file its header,
 // imports, module blocks and references. The diagnostic is the reader's.
 internal static class GesDocumentHighlighting
 {
@@ -25,8 +25,8 @@ internal static class GesDocumentHighlighting
 
     internal static void Highlight(string text, GesSpanBuilder spans, List<GesHighlightDiagnostic> diagnostics)
     {
-        var catalog = GesDocumentReader.ReadCatalog(text);
-        var isCatalog = catalog.IsCatalog;
+        var store = GesDocumentReader.ReadStore(text);
+        var isStore = store.IsStore;
         var contexts = new List<Context>();
         // Whether a module name follows, until its `{`.
         var inModuleName = false;
@@ -53,9 +53,9 @@ internal static class GesDocumentHighlighting
                 continue;
             }
 
-            if (isCatalog && contexts.Count == 0 && CatalogSpan(text, ref position, ref inModuleName) is { } catalogKind)
+            if (isStore && contexts.Count == 0 && StoreSpan(text, ref position, ref inModuleName) is { } storeKind)
             {
-                spans.Add(start, position - start, catalogKind);
+                spans.Add(start, position - start, storeKind);
                 pending = null;
                 first = false;
                 afterSeriesKind = false;
@@ -77,7 +77,7 @@ internal static class GesDocumentHighlighting
             {
                 position = NameEnd(text, position + 1);
                 var name = text.Substring(start + 1, position - start - 1);
-                kind = name == "Schema" || (isCatalog && name == "Catalog") ? GesSyntaxKind.Keyword : GesSyntaxKind.Type;
+                kind = name == "Schema" || (isStore && name == "Store") ? GesSyntaxKind.Keyword : GesSyntaxKind.Type;
                 pending = name switch
                 {
                     "Message" => Context.MessageForm,
@@ -148,14 +148,14 @@ internal static class GesDocumentHighlighting
             spans.Add(start, position - start, kind);
         }
 
-        var diagnostic = isCatalog ? catalog.Diagnostic : GesDocumentReader.Read(text, references: true).Diagnostic;
+        var diagnostic = isStore ? store.Diagnostic : GesDocumentReader.Read(text, references: true).Diagnostic;
         if (diagnostic is not null)
             diagnostics.Add(new GesHighlightDiagnostic(diagnostic.Code, Code.Explain(diagnostic.Code, diagnostic.LimitName, diagnostic.LimitValue), diagnostic.Start, diagnostic.End - diagnostic.Start));
     }
 
-    // A token of a catalog file outside every bracket that the catalog grammar owns: braces, `import` and `module`
+    // A token of a store file outside every bracket that the store grammar owns: braces, `import` and `module`
     // without a key colon, a module name and a key. Returns null for every other token, which documents categorize.
-    private static GesSyntaxKind? CatalogSpan(string text, ref int position, ref bool inModuleName)
+    private static GesSyntaxKind? StoreSpan(string text, ref int position, ref bool inModuleName)
     {
         var c = text[position];
         if (c is '{' or '}')

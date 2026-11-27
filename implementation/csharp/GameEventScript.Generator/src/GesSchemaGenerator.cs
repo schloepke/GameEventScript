@@ -89,7 +89,7 @@ public static class GesSchemaGenerator
     {
         if (options.Bindings) throw new GesGeneratorException(GesGeneratorException.Usage, "Bindings concern model code; wire code converts through Values.");
         if (options.Documents) throw new GesGeneratorException(GesGeneratorException.Usage, "Documents concern model code; wire code converts through Values.");
-        if (options.Catalogs) throw new GesGeneratorException(GesGeneratorException.Usage, "Catalogs concern model code; wire code converts through Values.");
+        if (options.Stores) throw new GesGeneratorException(GesGeneratorException.Usage, "Stores concern model code; wire code converts through Values.");
         // Both namespaces are checked first, so that an invalid one reports itself rather than a collision.
         var keywords = options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Keywords : GesSwiftEmitter.Keywords;
         var wireSpace = GesSchemaPlanner.Namespace(options.Namespace, keywords);
@@ -244,8 +244,8 @@ public static class GesSchemaGenerator
         if (options.Language == GesSchemaLanguage.Swift) GesSchemaPlanner.CheckSwiftNamespace(GesSchemaPlanner.Namespace(options.Namespace, GesSwiftEmitter.Keywords), options.Namespace, null);
         if (options.Models is not null) throw new GesGeneratorException(GesGeneratorException.Usage, "Models concern wire code, which shares their types; models do not name another namespace.");
         layout = GesModelLayoutBuilder.Build(set, roots);
-        // Reading documents converts through the plain values, and catalogs read documents.
-        var effective = (options.Documents || options.Catalogs) && !(options.Values && options.Documents) ? new GesSchemaGenerateOptions { Language = options.Language, Namespace = options.Namespace, Access = options.Access, Values = true, Bindings = options.Bindings, Documents = true, Catalogs = options.Catalogs, Split = options.Split, ExtendNamespace = options.ExtendNamespace, SchemaSet = options.SchemaSet, UseSchemaSet = options.UseSchemaSet, Imports = options.Imports } : options;
+        // Reading documents converts through the plain values, and stores read documents.
+        var effective = (options.Documents || options.Stores) && !(options.Values && options.Documents) ? new GesSchemaGenerateOptions { Language = options.Language, Namespace = options.Namespace, Access = options.Access, Values = true, Bindings = options.Bindings, Documents = true, Stores = options.Stores, Split = options.Split, ExtendNamespace = options.ExtendNamespace, SchemaSet = options.SchemaSet, UseSchemaSet = options.UseSchemaSet, Imports = options.Imports } : options;
         return effective.Language == GesSchemaLanguage.CSharp ? GesCSharpModelEmitter.Emit(layout, effective) : GesSwiftModelEmitter.Emit(layout, effective, extended);
     }
 
@@ -284,10 +284,10 @@ public static class GesSchemaGenerator
         json.String("namespace", options.Namespace);
         json.String("access", options.Access == GesSchemaAccess.Public ? "public" : "internal");
         // Document reading includes the value conversions, so the manifest names what the files contain.
-        json.Boolean("values", options.Values || options.Documents || options.Catalogs);
+        json.Boolean("values", options.Values || options.Documents || options.Stores);
         json.Boolean("bindings", options.Bindings);
-        if (options.Documents || options.Catalogs) json.Boolean("documents", true);
-        if (options.Catalogs) json.Boolean("catalogs", true);
+        if (options.Documents || options.Stores) json.Boolean("documents", true);
+        if (options.Stores) json.Boolean("stores", true);
         json.Boolean("checkedExclusivity", options.CheckedExclusivity);
         if (options.ExtendNamespace is { } extended) json.String("extendNamespace", extended);
         if (options.SchemaSet is { } schemaSet) json.String("schemaSet", schemaSet);

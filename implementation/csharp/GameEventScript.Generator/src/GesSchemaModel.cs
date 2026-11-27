@@ -205,9 +205,9 @@ internal static class GesModelLayoutBuilder
             Reach(schema, reached, handles);
         }
 
-        // A model root that is the state of a handle type with a Text id of its own reaches that type, whose catalog holds it.
+        // A model root that is the state of a handle type with a Text id of its own reaches that type, whose store holds it.
         foreach (var handle in set.HandleTypes)
-            if (handle.Root is null && handle.CatalogOf is null && handle.Id is { IsText: true } && rootNames.Contains(handle.StateName)
+            if (handle.Root is null && handle.StoreOf is null && handle.Id is { IsText: true } && rootNames.Contains(handle.StateName)
                 && reached.TryGetValue(handle.StateName, out var state) && state.Declaration == handle.Resolved.State)
                 Reach(handle, handles);
 

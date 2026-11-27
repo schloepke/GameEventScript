@@ -191,7 +191,7 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(1, verify(cases, observed)['summary']['failed'])
         self.assertEqual(request, requests(cases))
 
-    def test_load_and_catalog_api_controls(self):
+    def test_load_and_store_api_controls(self):
         cases = [copy.deepcopy(c) for c in self.cases if c.kind in ('loadError', 'externalTypeApi')]
         self.assertEqual(14, len(cases))
         report = verify(cases, execute(self.command, requests(cases)))
@@ -201,14 +201,14 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(1, verify([load], execute(self.command, requests([load])))['summary']['failed'])
         load.sources[0]['text'] = 'on {'
         self.assertEqual(1, verify([load], execute(self.command, requests([load])))['summary']['error'])
-        catalog = next(c for c in cases if c.kind == 'externalTypeApi')
+        store = next(c for c in cases if c.kind == 'externalTypeApi')
         for names in ([], ['Sample', 'Other']):
-            catalog.metadata['externalTypeApi']['typeNames'] = names
-            catalog.expected['externalType'] = {'typeCount': len(names)}
-            self.assertEqual(1, verify([catalog], execute(self.command, requests([catalog])))['summary']['passed'])
-        catalog.metadata['externalTypeApi']['typeNames'] = ['sample', 'sample']
-        catalog.expected['externalType'] = {'error': 'duplicateTypeName'}
-        self.assertEqual(1, verify([catalog], execute(self.command, requests([catalog])))['summary']['error'])
+            store.metadata['externalTypeApi']['typeNames'] = names
+            store.expected['externalType'] = {'typeCount': len(names)}
+            self.assertEqual(1, verify([store], execute(self.command, requests([store])))['summary']['passed'])
+        store.metadata['externalTypeApi']['typeNames'] = ['sample', 'sample']
+        store.expected['externalType'] = {'error': 'duplicateTypeName'}
+        self.assertEqual(1, verify([store], execute(self.command, requests([store])))['summary']['error'])
 
     def test_conformance_message_comparisons_use_independent_oracle(self):
         cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'messageApi' and 'compareConformanceMessage' in c.metadata['messageApi'] and supported(c)]
@@ -307,9 +307,9 @@ class AdapterTests(unittest.TestCase):
 
     def test_document_reading_printing_and_errors_are_checked_only_in_python(self):
         cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'documentApi']
-        self.assertEqual(114, len(cases))
+        self.assertEqual(115, len(cases))
         observed = execute(self.command, requests(cases))
-        self.assertEqual(114, verify(cases, observed)['summary']['passed'])
+        self.assertEqual(115, verify(cases, observed)['summary']['passed'])
         failure = next(c for c in cases if c.id.endswith('unquoted-text'))
         observed['observations'][failure.id]['document']['read']['error']['column'] += 1
         self.assertEqual(1, verify(cases, observed)['summary']['failed'])

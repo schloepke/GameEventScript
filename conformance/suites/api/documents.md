@@ -3003,6 +3003,34 @@ document:
 
 ---
 
+## Test: only `:Store` opens a store file
+
+This case checks the following contract: A header with any other type name, such as the removed `:Catalog(@Unit)`, is no header, so the document starts with an entry and fails with `document.invalidKey` at its first character.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "header-unknown-store-type"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: ":Catalog(@Unit)\nscout: [name: 'Scout']\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidKey"
+    line: 1
+    column: 1
+```
+
+---
+
 ## Test: the header needs a schema argument
 
 This case checks the following contract: An empty argument list is `document.invalidSchemaHeader` at the closing parenthesis.

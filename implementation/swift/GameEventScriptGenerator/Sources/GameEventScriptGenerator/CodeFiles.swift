@@ -3,13 +3,13 @@
 
 // One top-level declaration of generated code and the declaration it belongs to. An empty owner is the shared part, such
 // as the embedded schema sources; an outside unit stands after the namespace, at file level. The types `<Name>Handle` and
-// `<Name>Catalog` of a handle type are owned by their own names and name the handle type, whose source places them in a
+// `<Name>Store` of a handle type are owned by their own names and name the handle type, whose source places them in a
 // split by file.
 struct GesCodeUnit {
     var owner: String
     var write: (inout GesSchemaPlanner.Code) throws -> Void
     var outside = false
-    // The handle type, without `@`, whose type `<Name>Handle` or `<Name>Catalog` the unit declares; nil for any other unit.
+    // The handle type, without `@`, whose type `<Name>Handle` or `<Name>Store` the unit declares; nil for any other unit.
     var handle: String? = nil
 }
 

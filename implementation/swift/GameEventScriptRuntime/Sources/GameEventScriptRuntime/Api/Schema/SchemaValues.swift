@@ -896,9 +896,9 @@ public enum GesSchemaValues {
     /// - Throws: `GesWireError` `wire.typeMismatch` with the path when the state, or a value of a field that only takes
     ///   Records, is no Record or Map; `wire.missingField` with the path when a field without default is missing and not
     ///   optional; `message.invalidJson` when the state holds a value product JSON cannot write, such as a handle;
-    ///   `GesApiError.invalidArgument` when `handleType` is a catalog file type, which has no state.
+    ///   `GesApiError.invalidArgument` when `handleType` is a store file type, which has no state.
     public static func contentHash(_ handleType: GesHandleType, state: GesValue) throws -> GesHash32 {
-        if handleType.catalogOf != nil { throw GesApiError.invalidArgument("The catalog file type '@\(handleType.name)' has no state.") }
+        if handleType.storeOf != nil { throw GesApiError.invalidArgument("The store file type '@\(handleType.name)' has no state.") }
         let normalized = try normalizeState(handleType.resolved.state, state, "", handleType.declarations)
         let json = try GesJson.write(try GesMessageJsonCodec().encode(normalized, 0))
         return GesHash32(bytes: GesSha256.digest(Array(json.utf8)))!
@@ -915,7 +915,7 @@ public enum GesSchemaValues {
     /// - Throws: `GesApiError.invalidArgument` when `projection` is no projection of the handle type; otherwise as
     ///   ``project(_:state:)`` and ``contentHash(_:state:)``.
     public static func contentHash(_ handleType: GesHandleType, projection: GesSchema, state: GesValue) throws -> GesHash32 {
-        if handleType.catalogOf != nil || !projection.declaration.narrows(handleType.resolved.state) {
+        if handleType.storeOf != nil || !projection.declaration.narrows(handleType.resolved.state) {
             throw GesApiError.invalidArgument("':\(projection.name)' is no projection of '@\(handleType.name)'.")
         }
         return try projectedHash(handleType, projection.declaration, try project(projection.declaration, state))

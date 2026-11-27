@@ -128,7 +128,7 @@ id, part   = integer | bare | quoted Text
 ref        = "#" TagName | quoted Text
 ```
 
-- Reading uses no catalog. An id or part that is an optional `-` followed by decimal digits without a leading zero
+- Reading uses no store. An id or part that is an optional `-` followed by decimal digits without a leading zero
   reads as an integer, otherwise as Text; a Text that looks like an integer is therefore quoted, `@Unit:'7'`. A bare
   id consists of ASCII letters, digits, `.`, `_` and `-`; a bare part also contains `/` and runs to the next
   whitespace, comma, closing bracket or comment. A bare part never starts with `/` and never contains `//`, which
@@ -238,7 +238,7 @@ order, which evaluates arguments before their form and siblings left to right.
 | `document.invalidSchemaHeader` | the header has no, a non-schema or a labeled argument, or a built-in type name | start of the offending argument |
 | `document.misplacedSchemaHeader` | a header follows the first entry or another header | the `:` of that header |
 | `document.invalidHandle` | a value or key starting with `@` is not a well-formed handle, or a handle key has a version or ref | the `@` |
-| `document.unexpectedModule` | a `module` block appears outside a [catalog](#catalogs) file *Since: Unreleased.* | the word `module` |
+| `document.unexpectedModule` | a `module` block appears outside a [store](#stores) file *Since: Unreleased.* | the word `module` |
 | `document.limitExceeded` | a literal parsing limit is exceeded | see below |
 
 The token of `document.unquotedText`, `document.unknownUnit` and
@@ -351,20 +351,20 @@ entries with commas as well as line breaks, so the result reads back with `parse
 within the literal parsing limits; it is not a document unless the value is
 printed as a document. A value that contains [handles](#handles) reads back only as a document.
 
-## Catalogs
+## Stores
 
 > **Since: Unreleased**
 
-A catalog is a set of documents that together describe many objects of one
+A store is a set of documents that together describe many objects of one
 [handle type](Schemas.md#handles), each under a stable Text id: the units, hulls or
 weapons of a game. Every entry is the state of one object, written like a state
 document and checked against the type's state schema. Entries refer to each other
-by short references instead of complete handles. A catalog spans files through
+by short references instead of complete handles. A store spans files through
 imports and is read as a whole; GES never reads files itself, the host passes the
 text of each requested file.
 
 ```gesd
-:Catalog(@Unit)
+:Store(@Unit)
 import 'drones/heavy.gesd'
 
 scout: [name: 'Scout', hull: @hull.light, escort: nothing]
@@ -379,11 +379,34 @@ module hull {
 }
 ```
 
-### Catalog files
+### The store model
+
+A store is one read API, whatever its entries come from: [files](#reading-a-store), versioned
+[sources through handles](#reading-from-handles), or later the cache of a network receiver. Every store
+offers the same reads:
+
+- the entry of an id, with its handle, state and origin;
+- all entries in id order, and the entries of one module in the same order;
+- the index of a [projection](Schemas.md#projections) of its type: every entry's handle in id order with the
+  projection's version;
+- use as the [resolver](#stores-as-resolvers) of its type.
+
+Every entry has exactly one version, the one its handle carries: the content hash of its state for a
+`:ContentHash` type; an entry of a type with another version form carries none. A host holds at most one store per
+handle type, the one it registers as that type's resolver.
+
+A store has one owner, which is the only party that answers index and resolve requests for its entries; every other
+holder of the same type's entries only reads. The owner is the host that reads the store's files or registers its
+source, or across a network the side whose route [`owns`](Network.md#declaration) the type. A receiver's cache of
+another side's entries is a store of the same type that the receiver reads but does not own.
+
+Scripts do not see stores: they receive handles and read states through the resolver, as for any other handle type.
+
+### Store files
 
 ```text
-catalog    = header { item }
-header     = ":Catalog" "(" "@" TypeName ")"
+store    = header { item }
+header     = ":Store" "(" "@" TypeName ")"
 item       = import | module | entry
 import     = "import" quoted Text
 module     = "module" name "{" { entry } "}"
@@ -392,15 +415,15 @@ name       = key { "." key }
 key        = 1*( ASCII letter | digit | "_" | "-" )
 ```
 
-- A catalog file starts with its header, which names the handle type of every entry;
+- A store file starts with its header, which names the handle type of every entry;
   comments and blank lines may precede it. The type is a handle type whose id is Text
-  and that is not composite. A catalog file contains no other header.
+  and that is not composite. A store file contains no other header.
 - Items follow the separator rules of root entries: a comma or a line break separates
   them. A `module` block is one item; a line break directly after its `{` and before its
   `}` is trivia, and its entries follow the same separator rules.
 - `import` and `module` start an item only when no `:` follows the word; `import: 5`
   and `module: 5` are ordinary entries.
-- A key is a bare name of ASCII letters, digits, `_` and `-`; catalogs have no quoted
+- A key is a bare name of ASCII letters, digits, `_` and `-`; stores have no quoted
   keys. A module name is one or more such keys joined by `.`.
 - Module blocks do not nest. The same module may appear in several blocks and files;
   its entries add up.
@@ -408,12 +431,12 @@ key        = 1*( ASCII letter | digit | "_" | "-" )
   documents and with [references](#references); another value is
   `document.unexpectedToken` at its start. Instead of a value, `import 'path'`
   takes the entry's state from a state document: a document whose header is
-  `:Schema(:StateName)` of the catalog's state, which may also contain references.
-- A root `import 'path'` adds a further catalog file of the same type. Its root entries
+  `:Schema(:StateName)` of the store's state, which may also contain references.
+- A root `import 'path'` adds a further store file of the same type. Its root entries
   become root entries and its modules join the modules of that name. A root import
   stands only at the root, never inside a module.
 
-A document read as a plain document rejects a `:Catalog` header with
+A document read as a plain document rejects a `:Store` header with
 `document.invalidSchemaHeader` and a `module` block with `document.unexpectedModule`;
 references are `document.invalidHandle` there.
 
@@ -421,11 +444,11 @@ references are `document.invalidHandle` there.
 
 The id of an entry is its module name, a `.` and its key, or only its key for an entry
 at the root. `module drone { gnabblo: ... }` declares the id `drone.gnabblo`. Every id
-is a Text id of the catalog's type: one whose UTF-8 length exceeds the id's `max` is
-`catalog.invalidId`. Ids are unique across all files and roots of a catalog; a repeated
-id is `catalog.duplicateId` at the later entry, which names the first one.
+is a Text id of the store's type: one whose UTF-8 length exceeds the id's `max` is
+`store.invalidId`. Ids are unique across all files and roots of a store; a repeated
+id is `store.duplicateId` at the later entry, which names the first one.
 
-Catalog modules are names in a data file. They are unrelated to the
+Store modules are names in a data file. They are unrelated to the
 [module declaration](Language.md) of a script source and follow their own name rule.
 
 ### References
@@ -435,12 +458,12 @@ reference  = "@" name [ "~" ]
 pinned     = handle-without-version "~"
 ```
 
-- A reference names an entry of the catalog's own type by its id. A reference with more
+- A reference names an entry of the store's own type by its id. A reference with more
   than one segment, `@hull.light`, is the complete id. A reference with one segment,
   `@scout`, names an entry of the referring entry's module or a root entry; if both
-  exist it is `catalog.ambiguousReference`, if neither exists `catalog.unknownReference`.
+  exist it is `store.ambiguousReference`, if neither exists `store.unknownReference`.
 - A complete handle, `@Unit:hull.light`, names the entry with that id as well. A handle of
-  another type names an entry of that type's catalog when the host passed that catalog
+  another type names an entry of that type's store when the host passed that store
   as a dependency; without one, a handle of another type is not checked.
 - `@` followed by a `TypeName`, `:` and directly the start of an id is a handle; every
   other `@` followed by a name is a reference. A reference may be a Map key; then it
@@ -448,9 +471,9 @@ pinned     = handle-without-version "~"
 - A reference reads as the handle of the named entry, `@Unit:hull.light`, without a
   version. With a trailing `~`, a reference or a complete handle of an entry is pinned:
   it carries the content hash of the named entry as its version. Pinning needs a type
-  whose version is `:ContentHash`, otherwise it is `catalog.invalidPin`, and the named
-  entry's catalog: the own one or a dependency. Pinned references must not form a cycle,
-  which is `catalog.dependencyCycle`; unpinned references may, because the game resolves
+  whose version is `:ContentHash`, otherwise it is `store.invalidPin`, and the named
+  entry's store: the own one or a dependency. Pinned references must not form a cycle,
+  which is `store.dependencyCycle`; unpinned references may, because the game resolves
   them.
 - The resulting handle is checked against its field like every other handle: an `@Name~`
   field needs a pinned reference.
@@ -466,19 +489,19 @@ there is no suggestion.
 An import path is a non-empty quoted Text of segments separated by `/`. It is relative
 to the directory of the importing file; a leading `/` makes it relative to the root.
 Empty segments and `.` are ignored and `..` steps up one directory. A path that steps
-above the root is `catalog.importOutsideRoot`. The host interprets the resulting
-root-relative path; a file it does not have is `catalog.importMissing`.
+above the root is `store.importOutsideRoot`. The host interprets the resulting
+root-relative path; a file it does not have is `store.importMissing`.
 
-A file that imports a file on its own import chain is `catalog.importCycle`. A file
+A file that imports a file on its own import chain is `store.importCycle`. A file
 reached a second time on another path contributes nothing further, so every file
-contributes once. A root import must name a catalog file and an entry import a state
-document of the catalog's state; another kind of file is `catalog.importKind`, a
-catalog or state of another type `catalog.importType`.
+contributes once. A root import must name a store file and an entry import a state
+document of the store's state; another kind of file is `store.importKind`, a
+store or state of another type `store.importType`.
 
-### Reading a catalog
+### Reading a store
 
-A host reads a catalog of a handle type from one or more named roots, each with the
-path of its root file, and optionally the catalogs of other types it depends on. The
+A host reads a store of a handle type from one or more named roots, each with the
+path of its root file, and optionally the stores of other types it depends on. The
 root file of each root follows the rules of a root import. Roots are read in the given
 order and every file in import order: its own items first, an import's file at the
 import.
@@ -506,27 +529,27 @@ found no error:
 
 | Code | Reported when | Position |
 | --- | --- | --- |
-| `catalog.importMissing` | the host has no file for a root or an import | the import's path; no line and column for a root file |
-| `catalog.importOutsideRoot` | an import path steps above the root | the import's path |
-| `catalog.importCycle` | an import names a file on its own import chain | the import's path |
-| `catalog.importKind` | a root file or root import is no catalog file, or an entry import no state document of a type schema | the import's path; the start of a root file |
-| `catalog.importType` | such a file names another handle or state type | the import's path; the header of a root file |
-| `catalog.invalidId` | an id is longer than the id's `max` | the entry's key |
-| `catalog.duplicateId` | an id repeats | the later key; the second position is the first key |
-| `catalog.unknownReference` | a reference or handle names no entry of a known catalog | the `@` |
-| `catalog.ambiguousReference` | a one-segment reference names both a module and a root entry | the `@` |
-| `catalog.invalidPin` | a pinned reference to a type without content hashes or without a known catalog | the `@` |
-| `catalog.dependencyCycle` | pinned references form a cycle | the `@` of the reference that closes it, first in reading order |
+| `store.importMissing` | the host has no file for a root or an import | the import's path; no line and column for a root file |
+| `store.importOutsideRoot` | an import path steps above the root | the import's path |
+| `store.importCycle` | an import names a file on its own import chain | the import's path |
+| `store.importKind` | a root file or root import is no store file, or an entry import no state document of a type schema | the import's path; the start of a root file |
+| `store.importType` | such a file names another handle or state type | the import's path; the header of a root file |
+| `store.invalidId` | an id is longer than the id's `max` | the entry's key |
+| `store.duplicateId` | an id repeats | the later key; the second position is the first key |
+| `store.unknownReference` | a reference or handle names no entry of a known store | the `@` |
+| `store.ambiguousReference` | a one-segment reference names both a module and a root entry | the `@` |
+| `store.invalidPin` | a pinned reference to a type without content hashes or without a known store | the `@` |
+| `store.dependencyCycle` | pinned references form a cycle | the `@` of the reference that closes it, first in reading order |
 
-Each file stays within the document [limits](#limits) on its own. A catalog has no
+Each file stays within the document [limits](#limits) on its own. A store has no
 further limits; the host decides which files it passes.
 
 ### Reading from handles
 
 > **Since: Unreleased**
 
-A catalog may also be read from versioned sources, such as a repository at a commit,
-through a [catalog file type](Schemas.md#handles) `handle @UnitFiles of :Catalog(@Unit)
+A store may also be read from versioned sources, such as a repository at a commit,
+through a [store file type](Schemas.md#handles) `handle @UnitFiles of :Store(@Unit)
 composite @Repository as { part: :Text max 256 }`. Each root is then a handle of that
 type, whose root names the source and whose part is the path of the root file within
 it: `@UnitFiles:content~#main/Units.gesd`. Every other file of that
@@ -534,23 +557,23 @@ root is requested as the composite handle with the same root and the file's
 root-relative path as part, through the resolver the host passes:
 
 - a document answer gives the file's text;
-- a *missing* answer is `catalog.importMissing`, as is a path longer than the part's
-  `max`; a state answer is `catalog.importKind`, both at the import's path;
+- a *missing* answer is `store.importMissing`, as is a path longer than the part's
+  `max`; a state answer is `store.importKind`, both at the import's path;
 - no answer or several answers fail the read with `runtime.handleResolveFailed`, and
   an error the resolver throws ends the read unchanged.
 
 A root handle that carries a ref is first resolved through the resolver's ref
-resolution; an unknown ref is `catalog.importMissing` for the root file. A root without
+resolution; an unknown ref is `store.importMissing` for the root file. A root without
 a version is pinned by the version the first answer of that root passes, so every file
 of a root comes from one version; a later answer with another version fails the read
 with `runtime.handleVersionMismatch`. A root's name, which origins and errors name, is
 the [text form](Language.md#handle-text-form) of the root handle as given. The
-catalog's *sources* are the root handles with the version they were read at, in the
-given order; a catalog read from named roots has none.
+store's *sources* are the root handles with the version they were read at, in the
+given order; a store read from named roots has none.
 
-### Catalogs as resolvers
+### Stores as resolvers
 
-A catalog is a [handle resolver](HostRuntime.md#handles) of its type: a host that
+A store is a [handle resolver](HostRuntime.md#handles) of its type: a host that
 registers it lets scripts read the states of its entries. It answers a handle of a
 known id with the entry's state and, for a `:ContentHash` type, its content hash, and
 every other handle as *missing*. A handle that carries another version is checked by

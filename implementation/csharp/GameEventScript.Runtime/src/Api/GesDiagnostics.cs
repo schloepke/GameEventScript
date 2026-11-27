@@ -80,7 +80,7 @@ public static class GesDiagnosticCodes
     /// A <c>without</c> tag filter uses <c>|</c> alternatives, which only <c>matching</c> filters allow.
     /// </summary>
     public const string ValidateInvalidTagFilter = "validate.invalidTagFilter";
-    /// <summary>An <c>@Name</c> names no handle type of the compilation's handle catalog.</summary>
+    /// <summary>An <c>@Name</c> names no handle type of the compilation's handle types.</summary>
     public const string ValidateUnknownHandleType = "validate.unknownHandleType";
     /// <summary>
     /// A handle type is used where it is not allowed: <c>as @Name</c> outside a parameter or field, <c>@Name~</c> or

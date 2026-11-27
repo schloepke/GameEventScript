@@ -9,7 +9,7 @@ using NodeKind = GameEventScript.Syntax.GesSyntaxNodeKind;
 
 namespace GameEventScript.Syntax;
 
-// Checks the rules of one source that need no other source, catalog or runtime: the spelling of names and labels,
+// Checks the rules of one source that need no other source, store or runtime: the spelling of names and labels,
 // repeated parameters, arguments, fields and bindings, shadowing, variables without a visible binding, the forms of
 // system endpoints and removed type names.
 // The diagnostics come in source order; at one position, shadowing follows the other rules, which keep their check order.

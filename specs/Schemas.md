@@ -122,7 +122,7 @@ network     = "network" ":" TypeName "as" "{" route { route } "}"
 route       = ( "client" | "server" ) ( ( "sends" | "publishes" ) ( ":" TypeName | MessageName )
               ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ]
               | "owns" "@" TypeName [ "as" ":" TypeName ] [ "sending" "state" ] )
-handle      = "handle" "@" TypeName "of" ( ":" TypeName | ":Catalog" "(" "@" TypeName ")" )
+handle      = "handle" "@" TypeName "of" ( ":" TypeName | ":Store" "(" "@" TypeName ")" )
               ( "as" "{" "id" ":" handleid sep "version" ":" version [ sep ] "}"
               | "composite" "@" TypeName "as" "{" "part" ":" handleid [ sep ] "}" )
 handleid    = ":Number" "integer" "between" bound "and" bound | ":Text" "max" integer
@@ -796,14 +796,14 @@ identity and the part; it has the root's version and no version of its own, so `
 `@Repository` has a version, and carries the root's version. A composite's root is a handle type that is not composite
 itself: composites have one level, and a composite of a composite is `schema.invalidHandle`.
 
-**Catalog files.** *Since: Unreleased.* `handle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 256 }`
-declares the type of the files a [catalog](Documents.md#catalogs) of `@Unit` is read from: a handle names a root, such as a
-repository at a commit, and the part is the path of a file within it. Such a *catalog file type* is composite, its part
-is Text, and `@Unit` is a declared handle type with a Text id that is neither composite nor a catalog file type itself;
-anything else is `schema.invalidHandle`. A catalog file type has no state schema: a host reads its files through the
+**Store files.** *Since: Unreleased.* `handle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 256 }`
+declares the type of the files a [store](Documents.md#stores) of `@Unit` is read from: a handle names a root, such as a
+repository at a commit, and the part is the path of a file within it. Such a *store file type* is composite, its part
+is Text, and `@Unit` is a declared handle type with a Text id that is neither composite nor a store file type itself;
+anything else is `schema.invalidHandle`. A store file type has no state schema: a host reads its files through the
 type's resolver as document text, never as state. It is no field, argument, List element, union alternative or Map key
 type and no network `owns` target (`schema.invalidHandle`), and scripts cannot name it: the compiler does not receive it,
-so naming it is an unknown handle type. Reading a catalog through such handles is described in
+so naming it is an unknown handle type. Reading a store through such handles is described in
 [Documents](Documents.md#reading-from-handles).
 
 **State.** The state schema is a declared, non-abstract schema; it may be a field type elsewhere too. A state field
@@ -930,7 +930,7 @@ projection's name. The conversion belongs to the schemas, not to handles, so scr
 **Projected handles.** `@Unit(:UnitDisplay)` is a handle of `@Unit` that can read only `:UnitDisplay`, and
 `@Unit(:UnitDisplay)~` one that carries the version of that projection. It stands wherever `@Unit` stands: as a field,
 argument or List element type and as a union alternative; a Map key is a handle type without projection. A projection
-that is no projection of the handle type, a projection of a composite or of a catalog file type, and a projection with
+that is no projection of the handle type, a projection of a composite or of a store file type, and a projection with
 `@Name` beside `@Name(:P)` of the same type in one union are `schema.invalidProjection`. The projection is part of the
 static type only: the wire form, the identity, equality, Map keys and the [handle text form](Language.md#handle-text-form)
 are those of `@Unit`, so `@Unit(:UnitDisplay)` encodes and compares like `@Unit`. The version of `@Unit(:UnitDisplay)~`
@@ -949,8 +949,8 @@ change: both sides must agree on what a handle lets them read.
 
 **Generation.** A projection takes roles like a schema and is otherwise a part, generated when a root reaches it. A
 field of type `@Name(:P)` reaches the handle type and `:P`, never the state schema. A model root that is the state of a
-handle type for which [catalogs](#model-catalogs) are generated also reaches the projections of that handle type, so a
-catalog can offer them.
+handle type for which [stores](#model-stores) are generated also reaches the projections of that handle type, so a
+store can offer them.
 
 ### Constraints
 
@@ -1074,7 +1074,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidRoute` | a [network route](Network.md#declaration) breaks its rules |
 | `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root with the same side and verb, or a second `owns` names the same handle type |
 | `schema.invalidHandle` | a [handle declaration](#handles) has fields other than `id` and `version` or `part`, a bound that is no literal or constant, a state that is not a declared non-abstract schema or has a field named `id`, `version` or `root`, a composite root that is composite itself, or a role; a `~` on a type without a version; a Map key other than one handle type without `~`; an `owns` route of a composite type |
-| `schema.invalidProjection` | a [projection](#projections) names a source that is no declared non-abstract, unpacked schema or projection, a field the source or a Record on a path lacks, a path through anything but a Record or into a handle, a field twice, a computed field or a field of a recursive List, or projections form a cycle; `@Name(:P)` names no projection of the handle type, a composite or catalog file type, or stands beside `@Name` of the same type in one union; in a network, an `owns ... as :P` whose `:P` does not narrow the state, or a route from the owner that carries the type in another view ([Network](Network.md#declaration)) *Since: Unreleased.* |
+| `schema.invalidProjection` | a [projection](#projections) names a source that is no declared non-abstract, unpacked schema or projection, a field the source or a Record on a path lacks, a path through anything but a Record or into a handle, a field twice, a computed field or a field of a recursive List, or projections form a cycle; `@Name(:P)` names no projection of the handle type, a composite or store file type, or stands beside `@Name` of the same type in one union; in a network, an `owns ... as :P` whose `:P` does not narrow the state, or a route from the owner that carries the type in another view ([Network](Network.md#declaration)) *Since: Unreleased.* |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field or argument with a literal, is no literal on an argument, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
@@ -1187,7 +1187,7 @@ handle <HandleName>
 id <type>
 version <version>
 handle <HandleName> composite <HandleName>
-catalog <HandleName>
+store <HandleName>
 part <type>
 ```
 
@@ -1195,11 +1195,11 @@ A [handle type](#handles) is a declaration reached like a schema: its `handle` l
 composite `part` followed by its root's declaration when first reached. Its state schema is not written. `<version>` is
 `Nothing`, `ContentHash`, `Hash(#sha256)`, `Hash(#sha1)` or `Number integer` with an optional range. The *handle hash*
 of a type is FNV-1a 64 over `gess1` and its declarations, so the [network hash](Network.md#network-hash) can name it.
-A [catalog file type](#handles) writes the `catalog` line with the name of its catalog's handle type after its `handle`
-line; the catalog's type is not written as a declaration. *Since: Unreleased* — catalog file types.
+A [store file type](#handles) writes the `store` line with the name of its store's handle type after its `handle`
+line; the store's type is not written as a declaration. *Since: Unreleased* — store file types.
 Its *link hash*, which a Program records for the type, runs FNV-1a 64 over the same text followed by the line
 `state <hash>`, where `<hash>` is the state schema's hash as 16 lowercase hexadecimal digits; it therefore covers the
-name, the id, part and version forms, a composite's root and the state schema. A catalog file type has no state, so
+name, the id, part and version forms, a composite's root and the state schema. A store file type has no state, so
 its link hash is its handle hash. *Since: Unreleased.*
 When the state schema has [projections](#projections) in the schema set, the link hash adds one line
 `projection <Name> <hash>` per projection of the handle type, in scalar order of the name, after the `state` line,
@@ -2547,7 +2547,7 @@ models and wire code alike. A handle field reaches only its handle type and, for
 whose `<Name>Handle` the composite holds; it never reaches the state schema, which a handle names in its documentation
 only. The state is a model type of a generation only when a root reaches it otherwise or is itself a model root, as in
 the [generation layout](#generation-layout). Conversely, a model root that is the state schema of a handle type with a
-Text id that is not composite reaches that handle type, so its `<Name>Handle` exists for [catalogs](#model-catalogs).
+Text id that is not composite reaches that handle type, so its `<Name>Handle` exists for [stores](#model-stores).
 Wire code generated with
 `--models` declares none and names the models' `<Name>Handle`, as it does their packed types, so the model generation
 must reach the same handle types:
@@ -2778,34 +2778,34 @@ I/O: text goes in, a model comes out.
 - The embedded sources live in one internal helper per generation, beside the value conversions; split output puts the
   document type and the helper in the shared file, and the manifest adds `documents: true`.
 
-### Model catalogs
+### Model stores
 
 > **Since: Unreleased**
 
-`--catalogs` (option `Catalogs`) generates a typed [catalog](Documents.md#catalogs) for every handle type whose state is a
+`--stores` (option `Stores`) generates a typed [store](Documents.md#stores) for every handle type whose state is a
 model root, whose id is Text and that is not composite: with `handle @Unit of :Unit as { id: :Text max 64, version:
-:ContentHash }` and the model root `:Unit`, the type `UnitCatalog` reads, holds and resolves the units. It includes
-`--documents` and concerns only model code; wire code with `--catalogs` is `generate.usage`. A catalog type of the
-name of another generated type, and a state type named `Entry`, which the catalog's nested `Entry` would hide, are
+:ContentHash }` and the model root `:Unit`, the type `UnitStore` reads, holds and resolves the units. It includes
+`--documents` and concerns only model code; wire code with `--stores` is `generate.usage`. A store type of the
+name of another generated type, and a state type named `Entry`, which the store's nested `Entry` would hide, are
 `generate.nameCollision`.
 
 ```swift
-let hulls = try HullCatalog.read(roots: [GesCatalogRoot(name: "content", path: "Hulls.gesd")], files: files)
-let units = try UnitCatalog.read(roots: [GesCatalogRoot(name: "content", path: "Units.gesd")], files: files, hull: hulls)
+let hulls = try HullStore.read(roots: [GesStoreRoot(name: "content", path: "Hulls.gesd")], files: files)
+let units = try UnitStore.read(roots: [GesStoreRoot(name: "content", path: "Units.gesd")], files: files, hull: hulls)
 units["ruin.radarTower"]?.value     // Unit
-units.module("ruin")                // [UnitCatalog.Entry], sorted by id
+units.module("ruin")                // [UnitStore.Entry], sorted by id
 units.index                         // [UnitHandle], sorted by id
 units.index(UnitDisplay.self)       // [UnitHandle] with the versions of :UnitDisplay, sorted by id
 units.module("ruin", UnitDisplay.self)
-builder.withHandleResolver(units, for: units.catalog.type)
+builder.withHandleResolver(units, for: units.store.type)
 ```
 
 | Member | Swift | C# |
 | --- | --- | --- |
-| type | `final class UnitCatalog: GesHandleResolver`, not `Sendable`, like `GesCatalog` | `sealed class UnitCatalog : IGesHandleResolver` |
-| read from files | `static func read(roots: [GesCatalogRoot], files: some GesCatalogFiles, hull: HullCatalog? = nil) throws -> UnitCatalog` | `static UnitCatalog Read(IReadOnlyList<GesCatalogRoot> roots, IGesCatalogFiles files, HullCatalog? hull = null)` |
-| read from handles | `static func read(roots: [GesHandle], resolver: some GesHandleResolver, hull: HullCatalog? = nil) throws -> UnitCatalog` | `static UnitCatalog Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver, HullCatalog? hull = null)` |
-| untyped catalog | `catalog: GesCatalog` | `GesCatalog Catalog` |
+| type | `final class UnitStore: GesHandleResolver`, not `Sendable`, like `GesStore` | `sealed class UnitStore : IGesHandleResolver` |
+| read from files | `static func read(roots: [GesStoreRoot], files: some GesStoreFiles, hull: HullStore? = nil) throws -> UnitStore` | `static UnitStore Read(IReadOnlyList<GesStoreRoot> roots, IGesStoreFiles files, HullStore? hull = null)` |
+| read from handles | `static func read(roots: [GesHandle], resolver: some GesHandleResolver, hull: HullStore? = nil) throws -> UnitStore` | `static UnitStore Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver, HullStore? hull = null)` |
+| untyped store | `store: GesStore` | `GesStore Store` |
 | roots read | `sources: [GesHandle]` | `IReadOnlyList<GesHandle> Sources` |
 | entries | `entries: [Entry]`, sorted by id | `IReadOnlyList<Entry> Entries` |
 | entry by id | `subscript(_ id: String) -> Entry?` | `Entry? this[string id]` (null when unknown) |
@@ -2815,26 +2815,26 @@ builder.withHandleResolver(units, for: units.catalog.type)
 | handles of a projection | `index(_: UnitDisplay.Type) -> [UnitHandle]` | `IReadOnlyList<UnitHandle> UnitDisplayIndex` |
 | module of a projection | `module(_ name: String, _: UnitDisplay.Type) -> [UnitHandle]` | `IReadOnlyList<UnitHandle> UnitDisplayModule(string name)` |
 
-- **Projections.** *Since: Unreleased.* The catalog keeps one index per [projection](#projections) of its handle type
+- **Projections.** *Since: Unreleased.* The store keeps one index per [projection](#projections) of its handle type
   that the generation declares: the handles of every entry, sorted by id, each with the version of the projection, the
   [content hash](#content-hash) of the projected state for a `:ContentHash` type and the entry's version otherwise. Such a
   handle is what a script receives as `@Unit(:UnitDisplay)~`, so a receiver caches per handle and projection, and the
-  untyped catalog computes the same hashes (`GesCatalog.Index(projection)`). The projected value of an entry is
+  untyped store computes the same hashes (`GesStore.Index(projection)`). The projected value of an entry is
   `UnitDisplay(entry.value)` (C# `UnitDisplay.From(entry.Value)`).
 
-- **Dependencies.** A catalog takes one optional parameter per other generated catalog whose handle type its state
+- **Dependencies.** A store takes one optional parameter per other generated store whose handle type its state
   reaches through a field, a List element, a union alternative or a Map key, at any depth: the handle type's name in
-  lower camel case, ordered by name. A passed catalog becomes a [dependency](PublicApi.md#catalogs) of the read; a
+  lower camel case, ordered by name. A passed store becomes a [dependency](PublicApi.md#stores) of the read; a
   parameter named `roots`, `files` or `resolver` is `generate.nameCollision`.
-- **Reading** delegates to `GesCatalog` and converts every entry's state to the model once, as `init(value:)` does;
-  errors are those of `GesCatalog` (C# `GesCatalogException`, `GesHandleException`, `ArgumentException`; Swift
-  `GesCatalogError`, `GesHandleError`, `GesApiError`), and Swift adds `GesSchemaError` when the embedded schema sources
-  no longer parse. Entries, modules and handles follow the untyped catalog's order.
-- **Resolving.** A generated catalog is the resolver of its handle type, as the untyped one is: register it with the
-  host for `units.catalog.type`, and scripts read the states of its entries.
-- The handle type of the catalog is the model's `<Name>Handle`, which the [reach rule](#model-types) provides. Split
-  output places `<Name>Catalog` like `<Name>Handle`: `--split schema` gives it a file of its own named after it, and
-  `--split file` puts it into the file of the source that declares the handle type. The manifest adds `catalogs: true`.
+- **Reading** delegates to `GesStore` and converts every entry's state to the model once, as `init(value:)` does;
+  errors are those of `GesStore` (C# `GesStoreException`, `GesHandleException`, `ArgumentException`; Swift
+  `GesStoreError`, `GesHandleError`, `GesApiError`), and Swift adds `GesSchemaError` when the embedded schema sources
+  no longer parse. Entries, modules and handles follow the untyped store's order.
+- **Resolving.** A generated store is the resolver of its handle type, as the untyped one is: register it with the
+  host for `units.store.type`, and scripts read the states of its entries.
+- The handle type of the store is the model's `<Name>Handle`, which the [reach rule](#model-types) provides. Split
+  output places `<Name>Store` like `<Name>Handle`: `--split schema` gives it a file of its own named after it, and
+  `--split file` puts it into the file of the source that declares the handle type. The manifest adds `stores: true`.
 
 ### Script bindings
 

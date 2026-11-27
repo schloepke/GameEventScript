@@ -74,9 +74,9 @@ enum GesSwiftModelEmitter {
                 }
             )
         }
-        let catalogs = options.catalogs ? try GesModelPlanner.catalogs(layout, topLevel) : []
-        let catalogSet = schemaSet.map { $0.qualified + ".set" } ?? "__GesModelDocuments" + suffix + ".set.get()"
-        for catalog in catalogs { document.units.append(GesCodeUnit(owner: catalog.name, write: { code in self.catalog(&code, catalog, access, catalogSet) }, handle: catalog.handle.name)) }
+        let stores = options.stores ? try GesModelPlanner.stores(layout, topLevel) : []
+        let storeSet = schemaSet.map { $0.qualified + ".set" } ?? "__GesModelDocuments" + suffix + ".set.get()"
+        for store in stores { document.units.append(GesCodeUnit(owner: store.name, write: { code in self.store(&code, store, access, storeSet) }, handle: store.handle.name)) }
         if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, plain, access, support, computed) }) }
         if valued { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, support, computed) }) }
         if messages { document.units.append(GesCodeUnit(owner: "") { code in schemasHolder(&code, layout, schemas, schemaSet) }) }

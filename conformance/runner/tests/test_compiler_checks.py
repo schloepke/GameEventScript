@@ -34,7 +34,7 @@ class CompilerChecksTests(unittest.TestCase):
             if 'handles' in case:
                 self.assertEqual([], case['handles']['answers'])
 
-    def test_opcode_catalog_matches_normative_spec(self):
+    def test_opcode_store_matches_normative_spec(self):
         names = re.findall(r'^\| 0x[0-9A-Fa-f]{2} \| `([^`]+)` \|',
                            (ROOT / 'specs/Bytecode.md').read_text(), re.M)
         self.assertEqual(OPCODES, set(names))

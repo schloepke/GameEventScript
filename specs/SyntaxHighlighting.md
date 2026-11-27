@@ -56,7 +56,7 @@ their token-kind category.
 Diagnostics are those the Compiler reports for the document as one source: its
 syntax errors or, when there are none, the violated rules that need only this
 source, such as name spelling, repeated parameters, fields or bindings, and
-shadowing (`specs/Diagnostics.md`). Rules that need other sources, catalogs or
+shadowing (`specs/Diagnostics.md`). Rules that need other sources, stores or
 a host are not reported.
 
 ## GESA
@@ -94,14 +94,14 @@ ids and parts are Plain. When the text after `@Type` is no well-formed handle,
 only `@Type` is categorized as a handle and the rest as other tokens. *Since:
 Unreleased — handles.*
 
-A document whose first item is a `:Catalog` header is highlighted as a [catalog](Documents.md#catalogs) file;
-every other document as a state document a catalog may import, so references are allowed in both. In a catalog
-file, `:Catalog` is Keyword and the `@Type` of its header Type; `import`
+A document whose first item is a `:Store` header is highlighted as a [store](Documents.md#stores) file;
+every other document as a state document a store may import, so references are allowed in both. In a store
+file, `:Store` is Keyword and the `@Type` of its header Type; `import`
 and `module` that start an item, and `import` before an entry's path, are Keyword, and a module name is
 Identifier with its `.` as Symbol. A key is Identifier also when it starts with a digit, an uppercase letter or
 contains `-`. A reference such as `@hull.light~` is Identifier with its `@`, its `.` and `~` as Symbol; braces are
 Symbol. The diagnostics hold the first reading error of the file alone, never errors that need other files or the
-catalog; a reference in a document that is read on its own as a `GesDocument` is no highlighting error. *Since: Unreleased — catalogs.*
+store; a reference in a document that is read on its own as a `GesDocument` is no highlighting error. *Since: Unreleased — stores.*
 
 The diagnostics hold the document's first reading error, with the code and
 position [Documents](Documents.md#errors) defines. Its range covers the token

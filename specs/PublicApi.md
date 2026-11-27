@@ -760,27 +760,27 @@ limited to `MaximumIndentation`/`maximumIndentation` (100). C# layout options re
 an indentation outside 0 to 100 and a line width below 1; Swift prints such values
 clamped to that range. Equality compares the root values and schema references.
 
-#### Catalogs
+#### Stores
 
 > **Since: Unreleased**
 
-A [catalog](Documents.md#catalogs) is read from named roots through a host-provided file
-source; Runtime does no file I/O.
+A [store](Documents.md#the-store-model) is one read API whatever its source: it is read from named roots through
+a host-provided file source, or from root handles through a resolver; Runtime does no file I/O.
 
 | Concept | C# | Swift |
 | --- | --- | --- |
-| root | `sealed record GesCatalogRoot(string Name, string Path)` | `struct GesCatalogRoot` with `init(name:path:)` |
-| files | `interface IGesCatalogFiles` with `string? Read(string root, string path)` | `protocol GesCatalogFiles` with `read(root:path:) -> String?` |
-| read | `static GesCatalog GesCatalog.Read(GesHandleType type, IReadOnlyList<GesCatalogRoot> roots, IGesCatalogFiles files, IReadOnlyList<GesCatalog>? dependencies = null)` | `static func GesCatalog.read(_:roots:files:dependencies:) throws`, throwing `GesCatalogError` |
-| read from handles | `static GesCatalog GesCatalog.Read(GesHandleType type, IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver, IReadOnlyList<GesCatalog>? dependencies = null)` | `static func GesCatalog.read(_:roots:resolver:dependencies:) throws` |
-| catalog | `sealed class GesCatalog : IGesHandleResolver` with `Type`, `Sources`, `Entries`, `this[id]`, `Module(name)`, `Index(projection)` | `final class GesCatalog: GesHandleResolver` with `type`, `sources`, `entries`, `subscript(_:)`, `module(_:)`, `index(_:)` |
-| entry | `sealed class GesCatalogEntry` with `Id`, `Handle`, `Value`, `Origin` | `struct GesCatalogEntry` with `id`, `handle`, `value`, `origin` |
-| error | `GesCatalogException` with `Diagnostics` and a constant per `catalog.*` code | `GesCatalogError` with `diagnostics` and a static constant per code |
-| diagnostic | `sealed class GesCatalogDiagnostic` with `Code`, `Message`, `Location`, `FieldPath`, `Other`, `Suggestion` | `struct GesCatalogDiagnostic` with `code`, `message`, `location`, `fieldPath`, `other`, `suggestion` |
+| root | `sealed record GesStoreRoot(string Name, string Path)` | `struct GesStoreRoot` with `init(name:path:)` |
+| files | `interface IGesStoreFiles` with `string? Read(string root, string path)` | `protocol GesStoreFiles` with `read(root:path:) -> String?` |
+| read | `static GesStore GesStore.Read(GesHandleType type, IReadOnlyList<GesStoreRoot> roots, IGesStoreFiles files, IReadOnlyList<GesStore>? dependencies = null)` | `static func GesStore.read(_:roots:files:dependencies:) throws`, throwing `GesStoreError` |
+| read from handles | `static GesStore GesStore.Read(GesHandleType type, IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver, IReadOnlyList<GesStore>? dependencies = null)` | `static func GesStore.read(_:roots:resolver:dependencies:) throws` |
+| store | `sealed class GesStore : IGesHandleResolver` with `Type`, `Sources`, `Entries`, `this[id]`, `Module(name)`, `Index(projection)` | `final class GesStore: GesHandleResolver` with `type`, `sources`, `entries`, `subscript(_:)`, `module(_:)`, `index(_:)` |
+| entry | `sealed class GesStoreEntry` with `Id`, `Handle`, `Value`, `Origin` | `struct GesStoreEntry` with `id`, `handle`, `value`, `origin` |
+| error | `GesStoreException` with `Diagnostics` and a constant per `store.*` code | `GesStoreError` with `diagnostics` and a static constant per code |
+| diagnostic | `sealed class GesStoreDiagnostic` with `Code`, `Message`, `Location`, `FieldPath`, `Other`, `Suggestion` | `struct GesStoreDiagnostic` with `code`, `message`, `location`, `fieldPath`, `other`, `suggestion` |
 
 The type must have Text ids and no parts, root names must be unique and dependencies
 must have distinct types other than the read type; otherwise C# throws
-`ArgumentException` and Swift `GesApiError.invalidArgument`. A dependency is a catalog
+`ArgumentException` and Swift `GesApiError.invalidArgument`. A dependency is a store
 read before; its entries are the targets of handles and pinned references of its type.
 A file source returns null (Swift nil) for a file it does not have. `Origin` is a
 `GesSourceLocation` whose module name is the root name and whose source name is the
@@ -791,10 +791,10 @@ entries in id order, each carrying the projection and its version; a projection 
 
 *Since: Unreleased* — reading from handles. The handle overload reads every root as
 [Documents](Documents.md#reading-from-handles) describes. Each root must be a composite
-handle of a catalog file type (`GesHandleType.CatalogOf`, Swift `catalogOf`, is the read
+handle of a store file type (`GesHandleType.StoreOf`, Swift `storeOf`, is the read
 type) whose part is Text, and root handles must be distinct; otherwise C# throws
-`ArgumentException` and Swift `GesApiError.invalidArgument`. Catalog errors throw
-`GesCatalogException` (Swift `GesCatalogError`); a resolver without an answer or with
+`ArgumentException` and Swift `GesApiError.invalidArgument`. Store errors throw
+`GesStoreException` (Swift `GesStoreError`); a resolver without an answer or with
 several, and a version that changes within a root, throw `GesHandleException` (Swift
 `GesHandleError`) with `runtime.handleResolveFailed` or `runtime.handleVersionMismatch`;
 errors the resolver throws propagate unchanged. `Sources` holds the root handles with the
@@ -860,7 +860,7 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 | models | `ModelLayout(set, roots)`, `GenerateModels(set, roots, options)` | `modelLayout(_:roots:)`, `generateModels(_:roots:options:)` |
 | split files | `GenerateFiles(set, roots, parameters, options)`, `GenerateModelFiles(set, roots, options)`, returning `IReadOnlyList<GesGeneratedFile>` | `generateFiles(_:roots:parameters:options:)`, `generateModelFiles(_:roots:options:)`, returning `[GesGeneratedFile]` |
 | generated file | `sealed class GesGeneratedFile` with `Path`, `Text` | `struct GesGeneratedFile` with `path`, `text` |
-| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Catalogs`, `Split`, `Models`, `ExtendNamespace`, `SchemaSet`, `UseSchemaSet`, `Imports`, `MessageSuffix` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:catalogs:split:models:extendNamespace:schemaSet:useSchemaSet:imports:messageSuffix:)` and the same properties |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Stores`, `Split`, `Models`, `ExtendNamespace`, `SchemaSet`, `UseSchemaSet`, `Imports`, `MessageSuffix` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:stores:split:models:extendNamespace:schemaSet:useSchemaSet:imports:messageSuffix:)` and the same properties |
 | split | `enum GesSchemaSplit` with `None`, `Schema`, `File` | `enum GesSchemaSplit` with `none`, `schema`, `file` |
 | target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
 | access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
@@ -879,8 +879,8 @@ port.
 `ModelLayout` and `GenerateModels` write the [model layout](Schemas.md#model-layout) and the
 [model types](Schemas.md#model-types) of schema roots and the [model sets](Schemas.md#model-message-sets) of message set
 roots, where `Values` adds their plain values; any other root fails with `generate.usage`, and so do the wire-only options `CheckedExclusivity`, `Models` and a non-empty `MessageSuffix` ([message type names](Schemas.md#message-type-names)); `Generate` rejects the model-only options
-`Bindings`, `Documents` and `Catalogs` with `generate.usage`. A reached type without a model type fails with `generate.unsupported`.
-`Catalogs` (*Since: Unreleased*) adds the [model catalogs](Schemas.md#model-catalogs) and includes `Documents`.
+`Bindings`, `Documents` and `Stores` with `generate.usage`. A reached type without a model type fails with `generate.unsupported`.
+`Stores` (*Since: Unreleased*) adds the [model stores](Schemas.md#model-stores) and includes `Documents`.
 
 > **Since: 0.5.0** — split files
 
@@ -1368,7 +1368,7 @@ receives the declarations, the host one resolver per type that reads state. Cont
 | handle value | `sealed class GesHandle` with `TypeName`, `Id`, `Version`, `Ref`, `Part`, `IsComposite`, `HasVersion`, `Projection` (the projection name or empty), `static Create(typeName, id)`, `Create(typeName, id, version)`, `CreateComposite(typeName, root, part)`, `WithVersion(version)`, `WithProjection(projection)`, `static Parse(text)`, `ToString()`; `IEquatable<GesHandle>`, `IComparable<GesHandle>` | `final class GesHandle` with `typeName`, `id`, `version`, `ref`, `part`, `isComposite`, `hasVersion`, `projection`, `init(typeName:id:version:)`, `init(typeName:root:part:)`, `withVersion(_:)`, `withProjection(_:)`, `init(parsing:) throws`, `description`; `Hashable`, `Comparable`, `Sendable` |
 | value | `GesValue.GesHandle(handle)`, `ValueKind == GesBytecodeTypeKind.Handle`, `Handle` (null for another kind) | `GesValue.handle(_:)`, `kind == .handle`, `handleValue` |
 | fixed hashes | `readonly struct GesHash20`, `GesHash32` with `static Parse(hex)`, `FromBytes(span)`, `CopyTo(span)`, `ToString()` (lowercase hex), equality and order by bytes | `struct GesHash20`, `GesHash32` with `init?(hex:)`, `init?(bytes:)`, `bytes`, `description`, `Hashable`, `Comparable`, `Sendable`, `Codable` |
-| handle type | `sealed class GesHandleType` with `Name`, `StateName`, `Id` and `Part` (`GesHandleKey` or null), `Version` (`GesHandleVersionKind`), `Root` (`GesHandleType` or null), `CatalogOf` (`GesHandleType` or null), `Projections` (the [projections](Schemas.md#projections) of the state schema, `IReadOnlyList<GesSchema>` in name order), `Hash`, `LinkHash`, `CanonicalForm` | `final class GesHandleType` with `name`, `stateName`, `id`, `part`, `version`, `root`, `catalogOf`, `projections`, `hash`, `linkHash`, `canonicalForm` |
+| handle type | `sealed class GesHandleType` with `Name`, `StateName`, `Id` and `Part` (`GesHandleKey` or null), `Version` (`GesHandleVersionKind`), `Root` (`GesHandleType` or null), `StoreOf` (`GesHandleType` or null), `Projections` (the [projections](Schemas.md#projections) of the state schema, `IReadOnlyList<GesSchema>` in name order), `Hash`, `LinkHash`, `CanonicalForm` | `final class GesHandleType` with `name`, `stateName`, `id`, `part`, `version`, `root`, `storeOf`, `projections`, `hash`, `linkHash`, `canonicalForm` |
 | key description | `readonly struct GesHandleKey` with `IsText`, `Minimum`, `Maximum` (integer) or `MaxLength` (Text) | `struct GesHandleKey` with `isText`, `minimum`, `maximum`, `maxLength` |
 | version kinds | `enum GesHandleVersionKind { None, Revision, Sha1, Sha256, ContentHash }` | `enum GesHandleVersionKind` with the same cases |
 | from schemas | `GesSchemaSet.HandleTypes`, `HandleType(name)` | `GesSchemaSet.handleTypes`, `handleType(_:)` |
@@ -1392,7 +1392,7 @@ receives the declarations, the host one resolver per type that reads state. Cont
   (Swift `GesApiError.invalidArgument`) for anything else; `ToString` writes the canonical form.
 - `GesHandleType` is the declarative description of one `handle` declaration of a schema set; `Hash` is its
   [canonical hash](Schemas.md#canonical-form) and `LinkHash` the link hash that also covers the state schema's hash.
-  A [catalog file type](Schemas.md#handles) has `CatalogOf`, the handle type of its catalog, an empty `StateName`, and
+  A [store file type](Schemas.md#handles) has `StoreOf`, the handle type of its store, an empty `StateName`, and
   its `Hash` as `LinkHash`; `HandleTypes` lists it, and `WithHandleTypes` passes it over, so a script that names it gets
   `validate.unknownHandleType`.
   `WithHandleTypes` makes their names and state schemas known to the compiler; a name the compilation uses that none

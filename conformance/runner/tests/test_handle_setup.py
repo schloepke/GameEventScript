@@ -1,17 +1,17 @@
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
-"""Controls for the per-case handle catalog (specs/Conformance/MarkdownFormat.md#handle-catalogs)."""
+"""Controls for the per-case handle setup (specs/Conformance/MarkdownFormat.md#handle-setup)."""
 import copy
 from pathlib import Path
 import unittest
 
-from checks import handle_catalog
+from checks import handle_setup
 from core.corpus import InvalidDocument, read_corpus
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
-class HandleCatalogTests(unittest.TestCase):
+class HandleSetupTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cases = read_corpus([ROOT / 'conformance/suites/runtime/handles.md', ROOT / 'conformance/suites/compile/handles.md'])
@@ -19,25 +19,25 @@ class HandleCatalogTests(unittest.TestCase):
         cls.compile = next(case for case in cases if case.kind == 'compileError' and 'handles' in case.metadata)
         cls.refs = next(case for case in cases if case.metadata.get('handles', {}).get('resolveRefs'))
 
-    def with_catalog(self, case, **changes):
+    def with_setup(self, case, **changes):
         case = copy.deepcopy(case)
         case.metadata['handles'] = {**case.metadata['handles'], **changes}
         return case
 
-    def test_corpus_catalogs_normalize_with_defaults(self):
-        catalog = handle_catalog.prepare(self.script)
-        self.assertEqual({'schemas', 'hostSchemas', 'resolvers', 'answers', 'refAnswers', 'resolveRefs'}, set(catalog))
-        self.assertTrue(catalog['answers'])
-        for answer in catalog['answers']:
+    def test_corpus_setups_normalize_with_defaults(self):
+        setup = handle_setup.prepare(self.script)
+        self.assertEqual({'schemas', 'hostSchemas', 'resolvers', 'answers', 'refAnswers', 'resolveRefs'}, set(setup))
+        self.assertTrue(setup['answers'])
+        for answer in setup['answers']:
             self.assertEqual({'handle', 'answer', 'text', 'version'}, set(answer))
-        defaulted = handle_catalog.prepare(self.with_catalog(self.compile, resolvers=None))
+        defaulted = handle_setup.prepare(self.with_setup(self.compile, resolvers=None))
         self.assertEqual(defaulted['schemas'], defaulted['hostSchemas'])
         self.assertIsNone(defaulted['resolvers'])
         self.assertEqual([], defaulted['answers'])
         self.assertEqual([], defaulted['refAnswers'])
         self.assertEqual([], defaulted['resolveRefs'])
 
-    def test_invalid_catalogs_are_rejected(self):
+    def test_invalid_setups_are_rejected(self):
         answer = {'handle': '@Drone:7', 'document': '{ altitude: 1 }'}
         invalid = [
             (self.script, {'schemas': []}),
@@ -66,21 +66,21 @@ class HandleCatalogTests(unittest.TestCase):
         ]
         for case, changes in invalid:
             with self.subTest(changes=changes), self.assertRaises(InvalidDocument):
-                handle_catalog.prepare(self.with_catalog(case, **changes))
+                handle_setup.prepare(self.with_setup(case, **changes))
 
     def test_not_visible_answer(self):
-        case = self.with_catalog(self.script, answers=[{'handle': '@Drone:7', 'notVisible': True}])
-        answer = handle_catalog.prepare(case)['answers'][0]
+        case = self.with_setup(self.script, answers=[{'handle': '@Drone:7', 'notVisible': True}])
+        answer = handle_setup.prepare(case)['answers'][0]
         self.assertEqual({'handle': '@Drone:7', 'answer': 'notVisible', 'text': None, 'version': None}, answer)
 
     def test_ref_answers_and_resolved_refs(self):
-        catalog = handle_catalog.prepare(self.refs)
-        self.assertTrue(catalog['refAnswers'])
-        self.assertEqual({'missing', 'fail', 'version'}, {item['answer'] for item in catalog['refAnswers']})
-        for item in catalog['refAnswers']:
+        setup = handle_setup.prepare(self.refs)
+        self.assertTrue(setup['refAnswers'])
+        self.assertEqual({'missing', 'fail', 'version'}, {item['answer'] for item in setup['refAnswers']})
+        for item in setup['refAnswers']:
             self.assertEqual({'ref', 'answer', 'version'}, set(item))
-        self.assertEqual(self.refs.metadata['handles']['resolveRefs'], catalog['resolveRefs'])
-        refs = catalog['resolveRefs']
+        self.assertEqual(self.refs.metadata['handles']['resolveRefs'], setup['resolveRefs'])
+        refs = setup['resolveRefs']
         invalid = [
             None,
             [],
@@ -95,11 +95,11 @@ class HandleCatalogTests(unittest.TestCase):
             case = copy.deepcopy(self.refs)
             case.expected['resolvedRefs'] = expected
             with self.subTest(expected=expected), self.assertRaises(InvalidDocument):
-                handle_catalog.prepare(case)
+                handle_setup.prepare(case)
         without = copy.deepcopy(self.script)
         without.expected = {**(without.expected or {}), 'resolvedRefs': []}
         with self.assertRaises(InvalidDocument):
-            handle_catalog.prepare(without)
+            handle_setup.prepare(without)
 
     def test_resolved_refs_compare_per_host(self):
         expected = self.refs.expected['resolvedRefs']
@@ -110,28 +110,28 @@ class HandleCatalogTests(unittest.TestCase):
             else:
                 observed.append({'ref': item['ref'], 'error': {'phase': 'runtime', 'code': item['error']['code'], 'symbol': item['ref']}})
         mismatches = []
-        handle_catalog.compare(self.refs, [{'resolvedRefs': observed}], lambda path, exp, obs: mismatches.append(path) if exp != obs else None)
+        handle_setup.compare(self.refs, [{'resolvedRefs': observed}], lambda path, exp, obs: mismatches.append(path) if exp != obs else None)
         self.assertEqual([], mismatches)
         value = next(index for index, item in enumerate(observed) if 'value' in item)
         error = next(index for index, item in enumerate(observed) if 'error' in item)
         changed = copy.deepcopy(observed)
         changed[value]['value'] = {'type': ':Nothing'}
         changed[error]['error']['code'] = 'runtime.other'
-        handle_catalog.compare(self.refs, [{'resolvedRefs': observed}, {'resolvedRefs': changed}],
+        handle_setup.compare(self.refs, [{'resolvedRefs': observed}, {'resolvedRefs': changed}],
                                lambda path, exp, obs: mismatches.append(path) if exp != obs else None)
         self.assertEqual(['/hosts/1/resolvedRefs/%d/value' % value, '/hosts/1/resolvedRefs/%d/error/code' % error], mismatches)
         missing_symbol = copy.deepcopy(observed)
         del missing_symbol[error]['error']['symbol']
         with self.assertRaises(InvalidDocument):
-            handle_catalog.compare(self.refs, [{'resolvedRefs': missing_symbol}], lambda *_: None)
+            handle_setup.compare(self.refs, [{'resolvedRefs': missing_symbol}], lambda *_: None)
         with self.assertRaises(InvalidDocument):
-            handle_catalog.compare(self.refs, [{'resolvedRefs': observed[:-1]}], lambda *_: None)
+            handle_setup.compare(self.refs, [{'resolvedRefs': observed[:-1]}], lambda *_: None)
 
-    def test_catalog_belongs_to_compiler_loading_and_script_cases(self):
+    def test_setup_belongs_to_compiler_loading_and_script_cases(self):
         case = copy.deepcopy(self.compile)
         case.kind = 'valueApi'
         with self.assertRaises(InvalidDocument):
-            handle_catalog.prepare(case)
+            handle_setup.prepare(case)
 
 
 if __name__ == '__main__':

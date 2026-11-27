@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Reads GES document text: a bracket-free root of entries, an optional schema header, comments and line-break
-/// separators around the data literals of `parse`. Reading stops at the first error. Catalog files and the references
-/// of their documents are read only on request (specs/Documents.md#catalogs).
+/// separators around the data literals of `parse`. Reading stops at the first error. Store files and the references
+/// of their documents are read only on request (specs/Documents.md#stores).
 @_spi(Syntax) public struct GesDocumentReader {
     private typealias Code = GesDocumentDiagnostic
 
     private let bytes: [UInt8]
-    // Whether catalog references and pinned handles may appear, as in the documents of a catalog.
+    // Whether store references and pinned handles may appear, as in the documents of a store.
     private let references: Bool
     private var position = 0, items = 0
     private var error: GesDocumentDiagnostic?
@@ -18,7 +18,7 @@
         self.references = references
     }
 
-    /// Reads a document; with `references`, a state document of a catalog entry, whose values may be references.
+    /// Reads a document; with `references`, a state document of a store entry, whose values may be references.
     @_spi(Syntax) public static func read(_ text: String, references: Bool = false) -> GesDocumentSyntax {
         let bytes = Array(text.utf8)
         if text.unicodeScalars.count > 1_048_576 { return GesDocumentSyntax(bytes: bytes, root: nil, schema: .none, diagnostic: inputLimit()) }
@@ -30,47 +30,47 @@
 
     private static func inputLimit() -> GesDocumentDiagnostic { Code(Code.limitExceeded, 0, 0, limitName: "MaxLiteralInputScalars", limitValue: 1_048_576) }
 
-    /// Reads a catalog file. A text without a `:Catalog` header is no catalog file; reading reports no error for it.
-    @_spi(Syntax) public static func readCatalog(_ text: String) -> GesCatalogSyntax {
+    /// Reads a store file. A text without a `:Store` header is no store file; reading reports no error for it.
+    @_spi(Syntax) public static func readStore(_ text: String) -> GesStoreSyntax {
         let bytes = Array(text.utf8)
-        if text.unicodeScalars.count > 1_048_576 { return GesCatalogSyntax(bytes: bytes, isCatalog: true, typeName: "", headerOffset: 0, items: [], diagnostic: inputLimit()) }
+        if text.unicodeScalars.count > 1_048_576 { return GesStoreSyntax(bytes: bytes, isStore: true, typeName: "", headerOffset: 0, items: [], diagnostic: inputLimit()) }
         var reader = Self(bytes, references: true)
-        var items: [GesCatalogItem] = []
-        let (isCatalog, typeName, headerOffset) = reader.catalogFile(&items)
-        return GesCatalogSyntax(bytes: bytes, isCatalog: isCatalog, typeName: typeName, headerOffset: headerOffset, items: items, diagnostic: reader.error)
+        var items: [GesStoreItem] = []
+        let (isStore, typeName, headerOffset) = reader.storeFile(&items)
+        return GesStoreSyntax(bytes: bytes, isStore: isStore, typeName: typeName, headerOffset: headerOffset, items: items, diagnostic: reader.error)
     }
 
-    private mutating func catalogFile(_ items: inout [GesCatalogItem]) -> (isCatalog: Bool, typeName: String, headerOffset: Int) {
+    private mutating func storeFile(_ items: inout [GesStoreItem]) -> (isStore: Bool, typeName: String, headerOffset: Int) {
         if bytes.starts(with: [0xEF, 0xBB, 0xBF]) { position = 3 }
         whitespace()
         let headerOffset = position
-        guard isCatalogHeader() else { return (false, "", headerOffset) }
-        guard let typeName = catalogHeader() else { return (true, "", headerOffset) }
+        guard isStoreHeader() else { return (false, "", headerOffset) }
+        guard let typeName = storeHeader() else { return (true, "", headerOffset) }
         spacesAndComments()
         if position < bytes.count && !atLineBreak {
             fail(Code.unexpectedToken, position)
             return (true, typeName, headerOffset)
         }
         whitespace()
-        _ = catalogItems(&items)
+        _ = storeItems(&items)
         return (true, typeName, headerOffset)
     }
 
-    // The items of a catalog file after its header; false after a failure.
-    private mutating func catalogItems(_ items: inout [GesCatalogItem]) -> Bool {
+    // The items of a store file after its header; false after a failure.
+    private mutating func storeItems(_ items: inout [GesStoreItem]) -> Bool {
         while position < bytes.count {
             let itemStart = position
-            if isSchemaHeader() || isCatalogHeader() { return fail(Code.misplacedSchemaHeader, itemStart) != nil }
+            if isSchemaHeader() || isStoreHeader() { return fail(Code.misplacedSchemaHeader, itemStart) != nil }
             if self.items >= 65536 { return setLimit("MaxLiteralItems", 65536, itemStart) != nil }
             self.items += 1
             if isItemWord("import") {
                 position += 6
                 spacesAndComments()
                 guard let (path, pathOffset) = importPath() else { return false }
-                items.append(GesCatalogItem(kind: .import, module: "", key: "", keyOffset: itemStart, value: nil, valueOffset: -1, path: path, pathOffset: pathOffset))
+                items.append(GesStoreItem(kind: .import, module: "", key: "", keyOffset: itemStart, value: nil, valueOffset: -1, path: path, pathOffset: pathOffset))
             } else if isItemWord("module") {
                 if !module(&items) { return false }
-            } else if !catalogEntry("", &items) {
+            } else if !storeEntry("", &items) {
                 return false
             }
             spacesAndComments()
@@ -82,11 +82,11 @@
         return true
     }
 
-    private func isCatalogHeader() -> Bool { startsWord(":Catalog") }
+    private func isStoreHeader() -> Bool { startsWord(":Store") }
 
-    // `:Catalog(@TypeName)`; nil after a failure.
-    private mutating func catalogHeader() -> String? {
-        position += 8
+    // `:Store(@TypeName)`; nil after a failure.
+    private mutating func storeHeader() -> String? {
+        position += 6
         whitespace()
         let open = position
         var failure: (code: String, at: Int)?
@@ -121,7 +121,7 @@
     private mutating func isItemWord(_ word: String) -> Bool {
         if !starts(word) { return false }
         let end = position + word.utf8.count
-        if end < bytes.count && Self.catalogKeyByte(bytes[end]) { return false }
+        if end < bytes.count && Self.storeKeyByte(bytes[end]) { return false }
         let saved = position
         position = end
         spacesAndComments()
@@ -131,11 +131,11 @@
     }
 
     // `module name { entries }`; module blocks do not nest and hold no imports. False after a failure.
-    private mutating func module(_ items: inout [GesCatalogItem]) -> Bool {
+    private mutating func module(_ items: inout [GesStoreItem]) -> Bool {
         position += 6
         spacesAndComments()
         let nameStart = position
-        guard let nameEnd = catalogNameEnd(position) else { return fail(Code.invalidKey, nameStart) != nil }
+        guard let nameEnd = storeNameEnd(position) else { return fail(Code.invalidKey, nameStart) != nil }
         let name = String(decoding: bytes[nameStart..<nameEnd], as: UTF8.self)
         position = nameEnd
         spacesAndComments()
@@ -148,31 +148,31 @@
             let entryStart = position
             if isItemWord("module") { return fail(Code.unexpectedModule, entryStart, end: entryStart + 6) != nil }
             if isItemWord("import") { return fail(Code.unexpectedToken, entryStart, end: entryStart + 6) != nil }
-            if isSchemaHeader() || isCatalogHeader() { return fail(Code.misplacedSchemaHeader, entryStart) != nil }
+            if isSchemaHeader() || isStoreHeader() { return fail(Code.misplacedSchemaHeader, entryStart) != nil }
             if self.items >= 65536 { return setLimit("MaxLiteralItems", 65536, entryStart) != nil }
             self.items += 1
-            if !catalogEntry(name, &items) { return false }
+            if !storeEntry(name, &items) { return false }
             let next = separator(125, open)
             if next != 0 { return next > 0 }
         }
     }
 
     // `key: value` or `key: import 'path'`; false after a failure.
-    private mutating func catalogEntry(_ module: String, _ items: inout [GesCatalogItem]) -> Bool {
+    private mutating func storeEntry(_ module: String, _ items: inout [GesStoreItem]) -> Bool {
         let keyStart = position
         var keyEnd = keyStart
-        while keyEnd < bytes.count && Self.catalogKeyByte(bytes[keyEnd]) { keyEnd += 1 }
+        while keyEnd < bytes.count && Self.storeKeyByte(bytes[keyEnd]) { keyEnd += 1 }
         if keyEnd == keyStart { return fail(Code.invalidKey, keyStart) != nil }
         let key = String(decoding: bytes[keyStart..<keyEnd], as: UTF8.self)
         position = keyEnd
         spacesAndComments()
         if !consume(58) { return fail(Code.missingColon, position) != nil }
         spacesAndComments()
-        if starts("import") && (position + 6 == bytes.count || !Self.catalogKeyByte(bytes[position + 6])) {
+        if starts("import") && (position + 6 == bytes.count || !Self.storeKeyByte(bytes[position + 6])) {
             position += 6
             spacesAndComments()
             guard let (path, pathOffset) = importPath() else { return false }
-            items.append(GesCatalogItem(kind: .entryImport, module: module, key: key, keyOffset: keyStart, value: nil, valueOffset: -1, path: path, pathOffset: pathOffset))
+            items.append(GesStoreItem(kind: .entryImport, module: module, key: key, keyOffset: keyStart, value: nil, valueOffset: -1, path: path, pathOffset: pathOffset))
             return true
         }
         let valueStart = position
@@ -181,7 +181,7 @@
         let offset = position
         guard let value = implied ? .boolean(true) : self.value(depth: 0) else { return false }
         guard case .map = value else { return fail(Code.unexpectedToken, valueStart) != nil }
-        items.append(GesCatalogItem(kind: .entry, module: module, key: key, keyOffset: keyStart, value: value, valueOffset: offset, path: "", pathOffset: -1))
+        items.append(GesStoreItem(kind: .entry, module: module, key: key, keyOffset: keyStart, value: value, valueOffset: offset, path: "", pathOffset: -1))
         return true
     }
 
@@ -203,14 +203,14 @@
         return (path, pathOffset)
     }
 
-    private static func catalogKeyByte(_ byte: UInt8) -> Bool { GesNames.alnum(byte) || byte == 95 || byte == 45 }
+    private static func storeKeyByte(_ byte: UInt8) -> Bool { GesNames.alnum(byte) || byte == 95 || byte == 45 }
 
-    // The end of a catalog name, keys joined by `.`, from `start`; nil when no key starts there or a `.` ends it.
-    private func catalogNameEnd(_ start: Int) -> Int? {
+    // The end of a store name, keys joined by `.`, from `start`; nil when no key starts there or a `.` ends it.
+    private func storeNameEnd(_ start: Int) -> Int? {
         var position = start
         while true {
             let keyStart = position
-            while position < bytes.count && Self.catalogKeyByte(bytes[position]) { position += 1 }
+            while position < bytes.count && Self.storeKeyByte(bytes[position]) { position += 1 }
             if position == keyStart { return nil }
             if position == bytes.count || bytes[position] != 46 { return position }
             position += 1
@@ -224,7 +224,7 @@
             guard let read = GesHandleLiteral.read(bytes, start) else { return nil }
             return (read.end, false, read.identity, read.versioned, nil)
         }
-        let nameEnd = catalogNameEnd(start + 1)
+        let nameEnd = storeNameEnd(start + 1)
         if let nameEnd, nameEnd + 1 < bytes.count, bytes[nameEnd] == 58, GesHandleLiteral.isIdStart(bytes[nameEnd + 1]),
             GesNames.type(String(decoding: bytes[(start + 1)..<nameEnd], as: UTF8.self))
         {
@@ -264,8 +264,8 @@
         while position < bytes.count {
             let entryStart = position
             if isSchemaHeader() { return (fail(Code.misplacedSchemaHeader, entryStart), schema) }
-            // Catalog headers and module blocks belong only to catalog files.
-            if isCatalogHeader() { return (fail(Code.invalidSchemaHeader, entryStart), schema) }
+            // Store headers and module blocks belong only to store files.
+            if isStoreHeader() { return (fail(Code.invalidSchemaHeader, entryStart), schema) }
             if isItemWord("module") { return (fail(Code.unexpectedModule, entryStart, end: entryStart + 6), schema) }
             if items >= 65536 { return (setLimit("MaxLiteralItems", 65536, entryStart), schema) }
             items += 1

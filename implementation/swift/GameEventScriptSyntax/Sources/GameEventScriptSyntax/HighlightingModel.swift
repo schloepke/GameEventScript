@@ -51,7 +51,7 @@ public enum GesSyntaxKind: String, CaseIterable, Sendable {
 
 /// A diagnostic of the highlighted source: a syntax error or a violated single-source rule.
 ///
-/// Rules that need other sources, catalogs or a host are checked only by the Compiler.
+/// Rules that need other sources, stores or a host are checked only by the Compiler.
 public struct GesHighlightDiagnostic: Equatable, Sendable {
     /// The stable diagnostic code, such as `parse.syntax` or `validate.duplicateVariable`.
     public let code: String

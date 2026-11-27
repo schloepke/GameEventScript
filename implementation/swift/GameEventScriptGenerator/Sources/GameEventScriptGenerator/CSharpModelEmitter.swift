@@ -101,15 +101,15 @@ enum GesCSharpModelEmitter {
                 }
             )
         }
-        let catalogs = options.catalogs ? try GesModelPlanner.catalogs(layout, topLevel) : []
-        let catalogSet = schemaSet.map { $0.qualified + ".Set" } ?? "__GesModelDocuments" + suffix + ".Set"
-        for catalog in catalogs { document.units.append(GesCodeUnit(owner: catalog.name, write: { code in self.catalog(&code, catalog, access, qualifier, catalogSet) }, handle: catalog.handle.name)) }
+        let stores = options.stores ? try GesModelPlanner.stores(layout, topLevel) : []
+        let storeSet = schemaSet.map { $0.qualified + ".Set" } ?? "__GesModelDocuments" + suffix + ".Set"
+        for store in stores { document.units.append(GesCodeUnit(owner: store.name, write: { code in self.store(&code, store, access, qualifier, storeSet) }, handle: store.handle.name)) }
         if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, plain, access, qualifier, support, computed) }) }
         if valued { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, qualifier, support, computed) }) }
         if messages { document.units.append(GesCodeUnit(owner: "") { code in schemasHolder(&code, layout, schemas, schemaSet) }) }
         if let documents, !plain.roots.isEmpty {
             document.units.append(GesCodeUnit(owner: "") { code in documentTypeDeclaration(&code, plain, documentType, documents, access, qualifier) })
-            if schemaSet == nil { document.units.append(GesCodeUnit(owner: "") { code in documentsHolder(&code, layout, "__GesModelDocuments" + suffix, catalogs: !catalogs.isEmpty) }) }
+            if schemaSet == nil { document.units.append(GesCodeUnit(owner: "") { code in documentsHolder(&code, layout, "__GesModelDocuments" + suffix, stores: !stores.isEmpty) }) }
         }
         if let setName = schemaSet?.declared {
             document.units.append(GesCodeUnit(owner: "") { code in GesSchemaSetReference.writeCSharp(&code, setName, access, layout.sources, [], networks: false) })
@@ -180,14 +180,14 @@ enum GesCSharpModelEmitter {
     }
 
     // The schema sources of this file, parsed when a document is first read.
-    // With catalogs it also offers the parsed set, which they look their handle types up in.
-    private static func documentsHolder(_ code: inout Code, _ layout: GesModelLayout, _ holder: String, catalogs: Bool) {
+    // With stores it also offers the parsed set, which they look their handle types up in.
+    private static func documentsHolder(_ code: inout Code, _ layout: GesModelLayout, _ holder: String, stores: Bool) {
         code.line("/// <summary>The schema sources of this file, which reading documents checks them against.</summary>")
         code.line("internal static class \(holder)")
         code.open("{")
         code.line("private static GesSchemaSet? __set;")
         code.blank()
-        if catalogs {
+        if stores {
             code.line("internal static GesSchemaDocument Read(string text, params string[] roots) => GesSchemaDocument.Read(Set, text, roots);")
             code.blank()
             code.line("internal static GesSchemaSet Set => __set ??= GesSchemaSet.Parse(")
@@ -204,7 +204,7 @@ enum GesCSharpModelEmitter {
             code.close(index + 1 < layout.sources.count ? "}))," : "})));")
         }
         code.dedent()
-        if !catalogs {
+        if !stores {
             code.line("return GesSchemaDocument.Read(set, text, roots);")
             code.close()
         }

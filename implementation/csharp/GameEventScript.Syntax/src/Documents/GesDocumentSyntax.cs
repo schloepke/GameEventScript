@@ -26,7 +26,7 @@ internal enum GesDocumentNodeKind : byte
     Handler,
     // A handle in its text form, built by Runtime.
     Handle,
-    // A catalog reference such as `@hull.light`, which a catalog replaces by a handle (specs/Documents.md#references).
+    // A store reference such as `@hull.light`, which a store replaces by a handle (specs/Documents.md#references).
     Reference
 }
 
@@ -77,7 +77,7 @@ internal sealed class GesDocumentNode
     // The UTF-16 offset of a form's `:`, where construction errors point.
     internal int Offset { get; private init; }
 
-    // Whether a reference or complete handle of a catalog ends with `~`, which pins it to the named entry's hash.
+    // Whether a reference or complete handle of a store ends with `~`, which pins it to the named entry's hash.
     internal bool Pinned { get; private init; }
 
     internal static GesDocumentNode Text(string value) => new(GesDocumentNodeKind.Text) { Name = value };
@@ -105,7 +105,7 @@ internal sealed class GesDocumentNode
     // Whether a Map key is a reference: a handle key whose label has no type, as `@scout` has none.
     internal bool IsReferenceKey(int index) => IsHandleKey(index) && Labels[index].IndexOf(':') < 0;
 
-    // A copy with other labels and children, which a catalog uses to replace references.
+    // A copy with other labels and children, which a store uses to replace references.
     internal GesDocumentNode With(string[] labels, GesDocumentNode[] children) => new(Kind)
     {
         Name = Name,
@@ -186,10 +186,10 @@ internal sealed record GesDocumentDiagnostic(string Code, int Start, int End, st
         UnexpectedToken => "An entry, separator or closing bracket is expected here.",
         UnclosedBracket => "This bracket is never closed.",
         UnclosedText => "This Text is never closed.",
-        InvalidSchemaHeader => "A schema header names one record type or a schema file; a catalog header one handle type.",
+        InvalidSchemaHeader => "A schema header names one record type or a schema file; a store header one handle type.",
         MisplacedSchemaHeader => "The schema header must come before the first entry.",
         InvalidHandle => "This is not a handle, or a handle key has a version.",
-        UnexpectedModule => "Module blocks belong only at the root of a catalog file.",
+        UnexpectedModule => "Module blocks belong only at the root of a store file.",
         LimitExceeded => $"The document exceeds {limitName ?? "a limit"} ({limitValue}).",
         _ => "This is not a valid document."
     };
@@ -239,9 +239,9 @@ internal sealed class GesDocumentSyntax(string text, GesDocumentNode? root, GesD
     }
 }
 
-internal enum GesCatalogItemKind : byte
+internal enum GesStoreItemKind : byte
 {
-    // A root `import 'path'` of a further catalog file.
+    // A root `import 'path'` of a further store file.
     Import,
     // `key: value` at the root or in a module block.
     Entry,
@@ -249,10 +249,10 @@ internal enum GesCatalogItemKind : byte
     EntryImport
 }
 
-/// <summary>One item of a catalog file: an entry with its module, key and value, or an import with its path.</summary>
-internal sealed class GesCatalogItem(GesCatalogItemKind kind, string module, string key, int keyOffset, GesDocumentNode? value, string path, int pathOffset)
+/// <summary>One item of a store file: an entry with its module, key and value, or an import with its path.</summary>
+internal sealed class GesStoreItem(GesStoreItemKind kind, string module, string key, int keyOffset, GesDocumentNode? value, string path, int pathOffset)
 {
-    internal GesCatalogItemKind Kind { get; } = kind;
+    internal GesStoreItemKind Kind { get; } = kind;
 
     // The module name of the block holding the entry, empty at the root.
     internal string Module { get; } = module;
@@ -271,14 +271,14 @@ internal sealed class GesCatalogItem(GesCatalogItemKind kind, string module, str
 }
 
 /// <summary>
-/// A read catalog file (specs/Documents.md#catalog-files): its handle type and items, or the first error. A text
-/// without a <c>:Catalog</c> header is no catalog file and has no error.
+/// A read store file (specs/Documents.md#store-files): its handle type and items, or the first error. A text
+/// without a <c>:Store</c> header is no store file and has no error.
 /// </summary>
-internal sealed class GesCatalogSyntax(string text, bool isCatalog, string typeName, int headerOffset, GesCatalogItem[] items, GesDocumentDiagnostic? diagnostic)
+internal sealed class GesStoreSyntax(string text, bool isStore, string typeName, int headerOffset, GesStoreItem[] items, GesDocumentDiagnostic? diagnostic)
 {
     internal string Text { get; } = text;
 
-    internal bool IsCatalog { get; } = isCatalog;
+    internal bool IsStore { get; } = isStore;
 
     // The handle type name of the header, without `@`.
     internal string TypeName { get; } = typeName;
@@ -286,7 +286,7 @@ internal sealed class GesCatalogSyntax(string text, bool isCatalog, string typeN
     // The offset of the header's `:`.
     internal int HeaderOffset { get; } = headerOffset;
 
-    internal GesCatalogItem[] Items { get; } = items;
+    internal GesStoreItem[] Items { get; } = items;
 
     internal GesDocumentDiagnostic? Diagnostic { get; } = diagnostic;
 }

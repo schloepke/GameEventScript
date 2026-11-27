@@ -84,7 +84,7 @@ struct GesSchemaDocumentCheck {
     }
 
     // The first error of a document against its schema, with its position and field path, or nil. `rootStart` is where an
-    // error of the root Map itself points, such as a missing field: a catalog entry's value rather than the text's start.
+    // error of the root Map itself points, such as a missing field: a store entry's value rather than the text's start.
     static func failing(_ syntax: GesDocumentSyntax, _ schema: GesResolvedDeclaration, _ parameters: GesSchemaParameters?, rootStart: Int = 0) throws -> GesDocumentError? {
         try choosing(syntax, schema, parameters, rootStart: rootStart).failure
     }

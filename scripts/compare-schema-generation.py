@@ -170,8 +170,8 @@ def self_test():
 GOLDEN_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
 ROLES = ROOT / "conformance/fixtures/SchemaGeneration/roles"
 TREE_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/tree.gess"
-# Two catalog handle types whose states are model roots, one naming the other, for the typed catalogs of --catalogs.
-CATALOG_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/catalogs.gess"
+# Two store handle types whose states are model roots, one naming the other, for the typed stores of --stores.
+STORE_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/stores.gess"
 ARGUMENTS_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/arguments.gess"
 COMPUTED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/computed.gess"
 SPATIAL_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/spatial.gess"
@@ -202,8 +202,8 @@ GOLDENS = (
     (TREE_FIXTURE.parent, [TREE_FIXTURE.name], ["--wire", "tree", "--values"], "swift", "TreeWire", SWIFT_GENERATED / "TreeWire.swift"),
     (TREE_FIXTURE.parent, [TREE_FIXTURE.name], ["--model", "tree", "--values"], "csharp", "GameEventScript.Tests.Generator.Tree.Model", CSHARP_GENERATED / "TreeModel.g.cs"),
     (TREE_FIXTURE.parent, [TREE_FIXTURE.name], ["--model", "tree", "--values"], "swift", "TreeModel", SWIFT_GENERATED / "TreeModel.swift"),
-    (CATALOG_FIXTURE.parent, [CATALOG_FIXTURE.name], ["--model", "catalog", "--catalogs"], "csharp", "GameEventScript.Tests.Generator.Catalog.Model", CSHARP_GENERATED / "CatalogModel.g.cs"),
-    (CATALOG_FIXTURE.parent, [CATALOG_FIXTURE.name], ["--model", "catalog", "--catalogs"], "swift", "CatalogModel", SWIFT_GENERATED / "CatalogModel.swift"),
+    (STORE_FIXTURE.parent, [STORE_FIXTURE.name], ["--model", "store", "--stores"], "csharp", "GameEventScript.Tests.Generator.Store.Model", CSHARP_GENERATED / "StoreModel.g.cs"),
+    (STORE_FIXTURE.parent, [STORE_FIXTURE.name], ["--model", "store", "--stores"], "swift", "StoreModel", SWIFT_GENERATED / "StoreModel.swift"),
     (ARGUMENTS_FIXTURE.parent, [ARGUMENTS_FIXTURE.name], ["--wire", "arguments", "--values"], "csharp", "GameEventScript.Tests.Generator.Arguments.Wire", CSHARP_GENERATED / "ArgumentsWire.g.cs"),
     (ARGUMENTS_FIXTURE.parent, [ARGUMENTS_FIXTURE.name], ["--wire", "arguments", "--values"], "swift", "ArgumentsWire", SWIFT_GENERATED / "ArgumentsWire.swift"),
     (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--wire", "computed", "--values"], "csharp", "GameEventScript.Tests.Generator.Computed.Wire", CSHARP_GENERATED / "ComputedWire.g.cs"),
@@ -271,10 +271,10 @@ HANDLE_SPLITS = tuple(entry for language in ("csharp", "swift") for entry in (
     (["--wire", "commands", "--values"], language, "Handles.Wire"),
     (["--wire", "commands", "--values", "--models", "Handles.Model"], language, "Handles.Net"))) \
     + ((["--model", "commands", "--extend-namespace", "Handles"], "swift", "Handles.Copy"),)
-# Typed catalogs have no declaration of their own: split output puts each `<Name>Catalog` beside its `<Name>Handle`.
-CATALOG_SPLITS = tuple((["--model", "catalog", "--catalogs"], language, "Catalogs.Model") for language in ("csharp", "swift"))
+# Typed stores have no declaration of their own: split output puts each `<Name>Store` beside its `<Name>Handle`.
+STORE_SPLITS = tuple((["--model", "store", "--stores"], language, "Stores.Model") for language in ("csharp", "swift"))
 SPLIT_OUTPUTS = tuple((ROLES, ROLE_FILES, *entry) for entry in ROLE_SPLITS) + tuple((HANDLE_SPLIT, HANDLE_SPLIT_FILES, *entry) for entry in HANDLE_SPLITS) \
-    + tuple((CATALOG_FIXTURE.parent, [CATALOG_FIXTURE.name], *entry) for entry in CATALOG_SPLITS)
+    + tuple((STORE_FIXTURE.parent, [STORE_FIXTURE.name], *entry) for entry in STORE_SPLITS)
 
 
 def role_splits(csharp, swift, work):

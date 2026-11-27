@@ -1262,7 +1262,7 @@ register-list entry in `UShortListPool`.
 External type constructors are emitted as `ExternalType` imports in the binding
 segment and dynamically bound against the host's external type runtime registry.
 The compiler validates source against a separate, declarative external type
-catalog; neither that catalog nor executable bindings are stored in the program.
+store; neither that store nor executable bindings are stored in the program.
 Record constructors and external constructors share the same source syntax but
 remain distinguishable through their binding kind.
 

@@ -45,11 +45,11 @@ class ApiChecksTests(unittest.TestCase):
                 prepare(case)
 
     def test_closed_api_schemas(self):
-        catalog = copy.deepcopy(next(c for c in self.cases if c.kind == 'externalTypeApi'))
+        store = copy.deepcopy(next(c for c in self.cases if c.kind == 'externalTypeApi'))
         for expected in ({}, {'typeCount': True}, {'error': 'unknown'}, {'typeCount': 1, 'error': 'duplicateTypeName'}):
-            catalog.expected['externalType'] = expected
+            store.expected['externalType'] = expected
             with self.assertRaises(InvalidDocument):
-                prepare(catalog)
+                prepare(store)
         load = copy.deepcopy(next(c for c in self.cases if c.kind == 'loadError'))
         load.metadata['externalTypeRegistry'] = 'unknown'
         with self.assertRaises(InvalidDocument):

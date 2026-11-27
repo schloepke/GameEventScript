@@ -681,8 +681,8 @@ internal sealed partial class GesFileScope
         foreach (var handle in _ownHandles)
         {
             var syntax = handle.Syntax;
-            if (syntax.Catalog.Length > 0)
-                handle.Catalog = CatalogOf(handle);
+            if (syntax.Store.Length > 0)
+                handle.Store = StoreOf(handle);
             else if (!all.TryGetValue(syntax.State, out var state) || state.Kind != GesSchemaKind.Schema)
                 throw Error(Code.InvalidHandle, syntax.StateOffset, $"The state of '@{handle.Name}', ':{syntax.State}', is no declared schema.");
             else if (state.Abstract) throw Error(Code.InvalidHandle, syntax.StateOffset, $"The state of '@{handle.Name}', ':{syntax.State}', is abstract.");
@@ -705,26 +705,26 @@ internal sealed partial class GesFileScope
         }
     }
 
-    // A catalog file type `:Catalog(@Unit)` is composite with a Text part, and its catalog's type is a declared handle type
-    // with a Text id that is neither composite nor a catalog file type itself.
-    private GesResolvedHandle CatalogOf(GesResolvedHandle handle)
+    // A store file type `:Store(@Unit)` is composite with a Text part, and its store's type is a declared handle type
+    // with a Text id that is neither composite nor a store file type itself.
+    private GesResolvedHandle StoreOf(GesResolvedHandle handle)
     {
         var syntax = handle.Syntax;
         if (syntax.Root.Length == 0)
-            throw Error(Code.InvalidHandle, syntax.CatalogOffset, $"The catalog file type '@{handle.Name}' is no composite; it names the files of a root.");
+            throw Error(Code.InvalidHandle, syntax.StoreOffset, $"The store file type '@{handle.Name}' is no composite; it names the files of a root.");
         if (syntax.Id!.Kind != GesSchemaTypeKind.Text)
-            throw Error(Code.InvalidHandle, syntax.Id.Offset, $"The part of the catalog file type '@{handle.Name}' is a path, a :Text with max.");
-        var target = Handle(syntax.Catalog, syntax.CatalogOffset);
-        if (target.Syntax.Catalog.Length > 0 || target.Syntax.Root.Length > 0 || target.Syntax.Id!.Kind != GesSchemaTypeKind.Text)
-            throw Error(Code.InvalidHandle, syntax.CatalogOffset, $"A catalog holds a handle type with a Text id that is not composite, unlike '@{syntax.Catalog}'.");
+            throw Error(Code.InvalidHandle, syntax.Id.Offset, $"The part of the store file type '@{handle.Name}' is a path, a :Text with max.");
+        var target = Handle(syntax.Store, syntax.StoreOffset);
+        if (target.Syntax.Store.Length > 0 || target.Syntax.Root.Length > 0 || target.Syntax.Id!.Kind != GesSchemaTypeKind.Text)
+            throw Error(Code.InvalidHandle, syntax.StoreOffset, $"A store holds a handle type with a Text id that is not composite, unlike '@{syntax.Store}'.");
         target.Files.Add(handle);
         return target;
     }
 
-    // A state field named `id`, `version` or `root` would collide with the handle's members; a catalog file type has no state.
+    // A state field named `id`, `version` or `root` would collide with the handle's members; a store file type has no state.
     internal void CheckHandleState(GesResolvedHandle handle)
     {
-        if (handle.Catalog is not null) return;
+        if (handle.Store is not null) return;
         foreach (var name in new[] { "id", "version", "root" })
             if (Array.Exists(handle.State.Fields, field => field.Name == name) || Array.Exists(handle.State.Computed, field => field.Name == name))
                 throw Error(Code.InvalidHandle, handle.Syntax.StateOffset, $"The state ':{handle.State.Name}' of '@{handle.Name}' has a field '{name}', which collides with the handle's members.");
@@ -736,8 +736,8 @@ internal sealed partial class GesFileScope
     private GesResolvedHandle KeyHandle(string name, int offset)
     {
         var handle = Handle(name, offset);
-        return handle.Syntax.Catalog.Length == 0 ? handle
-            : throw Error(Code.InvalidHandle, offset, $"'@{name}' is a catalog file type, which only reading a catalog uses.");
+        return handle.Syntax.Store.Length == 0 ? handle
+            : throw Error(Code.InvalidHandle, offset, $"'@{name}' is a store file type, which only reading a store uses.");
     }
 
     internal void Resolve(Dictionary<string, GesResolvedDeclaration> all, Dictionary<string, GesResolvedDeclaration> messages)
@@ -1218,7 +1218,7 @@ internal sealed partial class GesFileScope
         return result;
     }
 
-    // `@Name(:P)` names a projection that narrows the state of a handle type that is neither composite nor a catalog file
+    // `@Name(:P)` names a projection that narrows the state of a handle type that is neither composite nor a store file
     // type. Narrowing follows the declared sources by name, since projections are composed only later.
     private GesResolvedDeclaration HandleProjection(GesResolvedHandle handle, GesSchemaTypeSyntax type, Dictionary<string, GesResolvedDeclaration> all)
     {
@@ -1242,8 +1242,8 @@ internal sealed partial class GesFileScope
         if (type.Kind == GesSchemaTypeKind.Handle)
         {
             var handle = Handle(type.Name, type.Offset);
-            if (handle.Syntax.Catalog.Length > 0)
-                throw Error(Code.InvalidHandle, type.Offset, $"'@{type.Name}' is a catalog file type, which only reading a catalog uses.");
+            if (handle.Syntax.Store.Length > 0)
+                throw Error(Code.InvalidHandle, type.Offset, $"'@{type.Name}' is a store file type, which only reading a store uses.");
             if (type.Versioned && !handle.Versioned)
                 throw Error(Code.InvalidHandle, type.Offset, $"'@{type.Name}' has no version, so '@{type.Name}~' does not exist.");
             var projection = type.Projection.Length > 0 ? HandleProjection(handle, type, all) : null;

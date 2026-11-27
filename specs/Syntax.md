@@ -142,12 +142,12 @@ reports construction errors and the Range materialization total. The
 recognition of number text and the parameters of the explicit forms live in
 Syntax and are shared with Runtime's `parse`.
 
-> **Since: Unreleased** — catalogs
+> **Since: Unreleased** — stores
 
-The reader also reads [catalog files](Documents.md#catalog-files) into their header
+The reader also reads [store files](Documents.md#store-files) into their header
 type, imports, module blocks and entries, and reads state documents in a mode that
 accepts [references](Documents.md#references) and pinned handles as reference nodes.
-Each file reports at most its first reading error. Runtime's catalog reading resolves
+Each file reports at most its first reading error. Runtime's store reading resolves
 the imports through the host's files, the ids and references and the schema check, and
 builds the values; no step that needs other files lives in Syntax.
 

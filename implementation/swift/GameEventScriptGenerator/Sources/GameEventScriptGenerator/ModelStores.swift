@@ -3,10 +3,10 @@
 
 @_spi(Generator) import GameEventScriptRuntime
 
-// A typed catalog of a handle type whose state is a model root, whose id is Text and that is not composite
-// (specs/Schemas.md#model-catalogs): the type `<Name>Catalog` and the handle types of the other catalogs its state reaches,
+// A typed store of a handle type whose state is a model root, whose id is Text and that is not composite
+// (specs/Schemas.md#model-stores): the type `<Name>Store` and the handle types of the other stores its state reaches,
 // which it takes as optional dependencies, ordered by name.
-struct GesModelCatalog {
+struct GesModelStore {
     var name = ""
     var handle = GesModelHandle()
     var dependencies: [String] = []
@@ -16,8 +16,8 @@ struct GesModelCatalog {
 }
 
 extension GesModelPlanner {
-    // The catalogs of a layout, in the order of their handle types, which is by name.
-    static func catalogs(_ layout: GesModelLayout, _ topLevel: Set<String>) throws(GesGeneratorError) -> [GesModelCatalog] {
+    // The stores of a layout, in the order of their handle types, which is by name.
+    static func stores(_ layout: GesModelLayout, _ topLevel: Set<String>) throws(GesGeneratorError) -> [GesModelStore] {
         var typed: Set<String> = []
         for handle in layout.handles
         where !handle.isComposite && handle.id?.isText == true && layout.roots.contains(handle.state)
@@ -25,15 +25,15 @@ extension GesModelPlanner {
         {
             typed.insert(handle.name)
         }
-        var catalogs: [GesModelCatalog] = []
+        var stores: [GesModelStore] = []
         for handle in layout.handles where typed.contains(handle.name) {
-            let name = handle.name + "Catalog"
+            let name = handle.name + "Store"
             if topLevel.contains(name) {
-                throw GesGeneratorError(GesGeneratorError.nameCollision, "The catalog type '\(name)' of @\(handle.name) takes the name of a generated type.")
+                throw GesGeneratorError(GesGeneratorError.nameCollision, "The store type '\(name)' of @\(handle.name) takes the name of a generated type.")
             }
-            // The catalog declares its entry type Entry, which would hide a state type of that name inside it.
+            // The store declares its entry type Entry, which would hide a state type of that name inside it.
             if handle.state == "Entry" {
-                throw GesGeneratorError(GesGeneratorError.nameCollision, "The catalog type '\(name)' declares the type Entry, which hides the state type :Entry.")
+                throw GesGeneratorError(GesGeneratorError.nameCollision, "The store type '\(name)' declares the type Entry, which hides the state type :Entry.")
             }
             var visited: Set<String> = []
             var reached: Set<String> = []
@@ -45,13 +45,13 @@ extension GesModelPlanner {
                 if parameter == "roots" || parameter == "files" || parameter == "resolver" {
                     throw GesGeneratorError(
                         GesGeneratorError.nameCollision,
-                        "The catalog type '\(name)' takes the catalog of @\(dependency) as the parameter '\(parameter)', which its reading already names."
+                        "The store type '\(name)' takes the store of @\(dependency) as the parameter '\(parameter)', which its reading already names."
                     )
                 }
             }
-            catalogs.append(GesModelCatalog(name: name, handle: handle, dependencies: dependencies, projections: handle.projections.map { ($0, layout.type($0).lookup) }))
+            stores.append(GesModelStore(name: name, handle: handle, dependencies: dependencies, projections: handle.projections.map { ($0, layout.type($0).lookup) }))
         }
-        return catalogs
+        return stores
     }
 
     // The handle types a type reaches through its fields, List elements, union alternatives and Map keys, at any depth.

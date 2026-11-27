@@ -3,53 +3,53 @@
 
 import GameEventScriptRuntime
 
-// The per-case handle catalog: the handle types the compiler and the host know, and the scripted resolver answers
-// (specs/Conformance/MarkdownFormat.md#handle-catalogs).
+// The per-case handle setup: the handle types the compiler and the host know, and the scripted resolver answers
+// (specs/Conformance/MarkdownFormat.md#handle-setup).
 struct AdapterHandles {
-    private let catalog: Input
+    private let store: Input
 
-    private init(_ catalog: Input) { self.catalog = catalog }
+    private init(_ store: Input) { self.store = store }
 
     static func from(_ test: Input) -> AdapterHandles? { test["handles"].map(AdapterHandles.init) }
 
-    static func validate(_ catalog: Input) throws {
-        try Validation.fields(catalog, ["schemas", "hostSchemas", "resolvers", "answers", "refAnswers", "resolveRefs"])
-        _ = try parse(catalog.required("schemas"))
-        _ = try parse(catalog.required("hostSchemas"))
-        let resolvers = try catalog.required("resolvers")
+    static func validate(_ store: Input) throws {
+        try Validation.fields(store, ["schemas", "hostSchemas", "resolvers", "answers", "refAnswers", "resolveRefs"])
+        _ = try parse(store.required("schemas"))
+        _ = try parse(store.required("hostSchemas"))
+        let resolvers = try store.required("resolvers")
         if resolvers != .null { _ = try Validation.strings(resolvers) }
-        for answer in try Validation.array(catalog.required("answers")) {
+        for answer in try Validation.array(store.required("answers")) {
             try Validation.fields(answer, ["handle", "answer", "text", "version"])
             _ = try GesHandle(parsing: answer.text("handle"))
             try Validation.require(["document", "record", "missing", "notVisible", "fail"].contains(try answer.text("answer")))
         }
-        for answer in try Validation.array(catalog.required("refAnswers")) {
+        for answer in try Validation.array(store.required("refAnswers")) {
             try Validation.fields(answer, ["ref", "answer", "version"])
             try Validation.require(!(try GesHandle(parsing: answer.text("ref"))).ref.isNothing)
             try Validation.require(["version", "missing", "fail"].contains(try answer.text("answer")))
         }
-        for reference in try Validation.strings(catalog.required("resolveRefs")) { _ = try GesHandle(parsing: reference) }
+        for reference in try Validation.strings(store.required("resolveRefs")) { _ = try GesHandle(parsing: reference) }
     }
 
     // The handle types the sources may name.
-    func compilerTypes() throws -> [GesHandleType] { try Self.parse(catalog.required("schemas")).handleTypes }
+    func compilerTypes() throws -> [GesHandleType] { try Self.parse(store.required("schemas")).handleTypes }
 
-    // Registers a fresh scripted resolver for every selected type of the host catalog.
+    // Registers a fresh scripted resolver for every selected type of the host store.
     func register(_ builder: GesHostBuilder) throws {
-        let resolvers = try catalog.required("resolvers")
+        let resolvers = try store.required("resolvers")
         let selected = resolvers == .null ? nil : Set(try Validation.strings(resolvers))
         var answers: [GesHandle: [Input]] = [:]
-        for answer in try Validation.array(catalog.required("answers")) { answers[try GesHandle(parsing: answer.text("handle")), default: []].append(answer) }
+        for answer in try Validation.array(store.required("answers")) { answers[try GesHandle(parsing: answer.text("handle")), default: []].append(answer) }
         // A ref is part of the text form but not of handle equality, so ref answers are found by text.
         var refAnswers: [String: Input] = [:]
-        for answer in try Validation.array(catalog.required("refAnswers")) { refAnswers[String(describing: try GesHandle(parsing: answer.text("ref")))] = answer }
+        for answer in try Validation.array(store.required("refAnswers")) { refAnswers[String(describing: try GesHandle(parsing: answer.text("ref")))] = answer }
         let resolver = ScriptedResolver(answers, refAnswers)
-        for type in try Self.parse(catalog.required("hostSchemas")).handleTypes where selected?.contains(type.name) ?? true { builder.withHandleResolver(resolver, for: type) }
+        for type in try Self.parse(store.required("hostSchemas")).handleTypes where selected?.contains(type.name) ?? true { builder.withHandleResolver(resolver, for: type) }
     }
 
     // Resolves each scripted ref through the started host, in order: the returned handle or Nothing, or the failure.
     func resolveRefs(_ host: GameEventScriptHost) throws -> [[String: Any]] {
-        try Validation.strings(catalog.required("resolveRefs")).map { text in
+        try Validation.strings(store.required("resolveRefs")).map { text in
             do {
                 let resolved = try host.resolveRef(GesHandle(parsing: text))
                 return ["ref": text, "value": try RuntimeValues.encode(resolved.map { .handle($0) } ?? .nothing)]

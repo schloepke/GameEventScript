@@ -23,7 +23,7 @@ public final class GesHandleType: @unchecked Sendable {
     let declarations: [String: GesResolvedDeclaration]
     /// The name, without the leading `@`.
     public let name: String
-    /// The name of the state schema, without the leading `:`; empty for a catalog file type.
+    /// The name of the state schema, without the leading `:`; empty for a store file type.
     public let stateName: String
     /// The form of the id; nil for a composite, whose identity is its root's id and its part.
     public let id: GesHandleKey?
@@ -33,11 +33,11 @@ public final class GesHandleType: @unchecked Sendable {
     public let version: GesHandleVersionKind
     /// The root type of a composite; nil for any other type.
     public internal(set) var root: GesHandleType?
-    /// The handle type of the catalog whose files this catalog file type names, `:Catalog(@Type)`; nil for any other type
+    /// The handle type of the store whose files this store file type names, `:Store(@Type)`; nil for any other type
     /// (specs/Schemas.md#handles).
-    public internal(set) var catalogOf: GesHandleType?
+    public internal(set) var storeOf: GesHandleType?
     /// The projections of the state schema in the schema set, the projections a handle of this type can read through, in
-    /// ascending name order; empty for a catalog file type (specs/Schemas.md#projections).
+    /// ascending name order; empty for a store file type (specs/Schemas.md#projections).
     public internal(set) var projections: [GesSchema] = []
     /// The handle hash: FNV-1a 64 over the canonical form.
     public let hash: UInt64
@@ -60,14 +60,14 @@ public final class GesHandleType: @unchecked Sendable {
         hash = GesSchemaCanonical.hash(canonicalForm)
     }
 
-    // The catalog file type of this type's catalog with a name, or nil when none of that name names it. A file type holds
-    // its catalog's type, so this side does not hold the file types: once the schema set and the file type are released,
+    // The store file type of this type's store with a name, or nil when none of that name names it. A file type holds
+    // its store's type, so this side does not hold the file types: once the schema set and the file type are released,
     // an equal description is built again.
     func fileType(_ name: String) -> GesHandleType? {
         for file in resolved.files where file.name == name {
             if let type = file.publicType { return type }
             let type = Self.rebuilt(file, declarations)
-            type.catalogOf = self
+            type.storeOf = self
             return type
         }
         return nil
@@ -83,7 +83,7 @@ public final class GesHandleType: @unchecked Sendable {
         return type
     }
 
-    // Called once the state schema has its hash, after every schema of the set is complete. A catalog file type has no
+    // Called once the state schema has its hash, after every schema of the set is complete. A store file type has no
     // state, so its link hash is its handle hash.
     // Each projection of the state adds its name and schema hash, so a Program and a host agree on what it reads.
     func completeLinkHash() {
@@ -127,11 +127,11 @@ final class GesResolvedHandle {
     let offset: Int
     let scope: GesFileScope
     let syntax: GesSchemaDeclarationSyntax
-    /// The state schema; nil for a catalog file type, which has none.
+    /// The state schema; nil for a store file type, which has none.
     var state: GesResolvedDeclaration!
-    /// The handle type of the catalog whose files a catalog file type names; nil for any other type.
-    var catalog: GesResolvedHandle?
-    /// The catalog file types that name this type's catalog, in declaration order.
+    /// The handle type of the store whose files a store file type names; nil for any other type.
+    var store: GesResolvedHandle?
+    /// The store file types that name this type's store, in declaration order.
     var files: [GesResolvedHandle] = []
     /// The root of a composite, which is not composite itself.
     var root: GesResolvedHandle?
@@ -160,7 +160,7 @@ final class GesResolvedHandle {
         output += "handle " + name
         if let root {
             output += " composite " + root.name + "\n"
-            if let catalog { output += "catalog " + catalog.name + "\n" }
+            if let store { output += "store " + store.name + "\n" }
             output += "part "
             GesSchemaCanonical.writeHandleType(id, &output)
             output += "\n"

@@ -10,10 +10,10 @@
 
 import GameEventScriptRuntime
 
-/// The namespace `CatalogModel` of generated model types.
-enum CatalogModel {}
+/// The namespace `StoreModel` of generated model types.
+enum StoreModel {}
 
-extension CatalogModel {
+extension StoreModel {
     /// The model of the schema `:Hull`: a plain value that is never encoded.
     struct Hull: Hashable, Sendable, Codable {
         /// The hash of the schema `:Hull`, which wire records of it carry too; a test that compares it notices stale generated code.
@@ -401,10 +401,10 @@ extension CatalogModel {
         func toValue(versioned: Bool) -> GesValue { .handle((versioned ? self : withoutVersion()).toHandle()) }
     }
 
-    /// The catalog of `@Hull`: the entries of `:Hull` read from GES catalog documents, sorted by id in UTF-16
-    /// order. It is the handle resolver of its type: register it with a host for `catalog.type`.
-    final class HullCatalog: GesHandleResolver {
-        /// One entry of the catalog: its id, its handle, its state and where it is declared.
+    /// The store of `@Hull`: the entries of `:Hull` read from GES store documents, sorted by id in UTF-16
+    /// order. It is the handle resolver of its type: register it with a host for `store.type`.
+    final class HullStore: GesHandleResolver {
+        /// One entry of the store: its id, its handle, its state and where it is declared.
         struct Entry {
             /// The id, such as `drone.scout`.
             let id: String
@@ -416,29 +416,29 @@ extension CatalogModel {
             let origin: GesSourceLocation
         }
 
-        /// The untyped catalog, whose type is the handle type a host registers this catalog for.
-        let catalog: GesCatalog
+        /// The untyped store, whose type is the handle type a host registers this store for.
+        let store: GesStore
         /// Every entry, sorted by id.
         let entries: [Entry]
         /// The handle of every entry, sorted by id.
         let index: [HullHandle]
 
-        /// The roots a catalog read from handles was read from, each with the version it was read at; empty for named roots.
-        var sources: [GesHandle] { catalog.sources }
+        /// The roots a store read from handles was read from, each with the version it was read at; empty for named roots.
+        var sources: [GesHandle] { store.sources }
 
-        private init(_ catalog: GesCatalog) throws {
+        private init(_ store: GesStore) throws {
             var entries: [Entry] = []
-            entries.reserveCapacity(catalog.entries.count)
-            for entry in catalog.entries {
+            entries.reserveCapacity(store.entries.count)
+            for entry in store.entries {
                 guard let handle = HullHandle(matching: entry.handle) else { throw GesApiError.invalidArgument("The entry \(entry.id) has no @Hull handle.") }
                 entries.append(Entry(id: entry.id, handle: handle, value: try Hull(value: entry.value), origin: entry.origin))
             }
-            self.catalog = catalog
+            self.store = store
             self.entries = entries
             self.index = entries.map(\.handle)
         }
 
-        /// The entry with an id, or nil when the catalog has none with that id.
+        /// The entry with an id, or nil when the store has none with that id.
         subscript(_ id: String) -> Entry? {
             let index = lowerBound(id)
             return index < entries.count && entries[index].id.utf16.elementsEqual(id.utf16) ? entries[index] : nil
@@ -455,35 +455,35 @@ extension CatalogModel {
             return Array(entries[start..<end])
         }
 
-        /// Reads the catalog from named roots, whose files a source supplies.
+        /// Reads the store from named roots, whose files a source supplies.
         ///
         /// - Parameters:
         ///   - roots: The roots, read in this order.
         ///   - files: The source of every file's text.
-        /// - Returns: The catalog.
-        /// - Throws: `GesApiError.invalidArgument` when two roots share a name or a root is no catalog file of the type; `GesCatalogError`
-        ///   listing every error when the catalog has errors; `GesSchemaError` when the embedded schema sources no longer parse.
-        static func read(roots: [GesCatalogRoot], files: some GesCatalogFiles) throws -> HullCatalog {
-            try HullCatalog(GesCatalog.read(try __GesModelDocumentscf7490cb9f0ffae7.set.get().handleType("Hull"), roots: roots, files: files))
+        /// - Returns: The store.
+        /// - Throws: `GesApiError.invalidArgument` when two roots share a name or a root is no store file of the type; `GesStoreError`
+        ///   listing every error when the store has errors; `GesSchemaError` when the embedded schema sources no longer parse.
+        static func read(roots: [GesStoreRoot], files: some GesStoreFiles) throws -> HullStore {
+            try HullStore(GesStore.read(try __GesModelDocumentscf7490cb9f0ffae7.set.get().handleType("Hull"), roots: roots, files: files))
         }
 
-        /// Reads the catalog from root handles, whose files a resolver answers.
+        /// Reads the store from root handles, whose files a resolver answers.
         ///
         /// - Parameters:
         ///   - roots: The roots, read in this order.
         ///   - resolver: The resolver that answers the root files and their imports.
-        /// - Returns: The catalog.
-        /// - Throws: `GesApiError.invalidArgument` when two roots share a name or a root is no catalog file of the type; `GesCatalogError`
-        ///   listing every error when the catalog has errors; `GesHandleError` when the resolver answers a file wrongly; `GesSchemaError`
+        /// - Returns: The store.
+        /// - Throws: `GesApiError.invalidArgument` when two roots share a name or a root is no store file of the type; `GesStoreError`
+        ///   listing every error when the store has errors; `GesHandleError` when the resolver answers a file wrongly; `GesSchemaError`
         ///   when the embedded schema sources no longer parse.
-        static func read(roots: [GesHandle], resolver: some GesHandleResolver) throws -> HullCatalog {
-            try HullCatalog(GesCatalog.read(try __GesModelDocumentscf7490cb9f0ffae7.set.get().handleType("Hull"), roots: roots, resolver: resolver))
+        static func read(roots: [GesHandle], resolver: some GesHandleResolver) throws -> HullStore {
+            try HullStore(GesStore.read(try __GesModelDocumentscf7490cb9f0ffae7.set.get().handleType("Hull"), roots: roots, resolver: resolver))
         }
 
         /// Answers a read of an entry's state: its state, with its content hash for a type that declares one, or missing.
         /// - Parameter call: The call holding the handle and receiving the answer.
         func resolve(_ call: GesHandleResolveCall) throws {
-            try catalog.resolve(call)
+            try store.resolve(call)
         }
 
         private func lowerBound(_ id: String) -> Int {
@@ -501,10 +501,10 @@ extension CatalogModel {
         }
     }
 
-    /// The catalog of `@Unit`: the entries of `:Unit` read from GES catalog documents, sorted by id in UTF-16
-    /// order. It is the handle resolver of its type: register it with a host for `catalog.type`.
-    final class UnitCatalog: GesHandleResolver {
-        /// One entry of the catalog: its id, its handle, its state and where it is declared.
+    /// The store of `@Unit`: the entries of `:Unit` read from GES store documents, sorted by id in UTF-16
+    /// order. It is the handle resolver of its type: register it with a host for `store.type`.
+    final class UnitStore: GesHandleResolver {
+        /// One entry of the store: its id, its handle, its state and where it is declared.
         struct Entry {
             /// The id, such as `drone.scout`.
             let id: String
@@ -516,8 +516,8 @@ extension CatalogModel {
             let origin: GesSourceLocation
         }
 
-        /// The untyped catalog, whose type is the handle type a host registers this catalog for.
-        let catalog: GesCatalog
+        /// The untyped store, whose type is the handle type a host registers this store for.
+        let store: GesStore
         /// Every entry, sorted by id.
         let entries: [Entry]
         /// The handle of every entry, sorted by id.
@@ -525,34 +525,34 @@ extension CatalogModel {
         private let unitDisplayIndex: [UnitHandle]
         private let unitLabelIndex: [UnitHandle]
 
-        /// The roots a catalog read from handles was read from, each with the version it was read at; empty for named roots.
-        var sources: [GesHandle] { catalog.sources }
+        /// The roots a store read from handles was read from, each with the version it was read at; empty for named roots.
+        var sources: [GesHandle] { store.sources }
 
-        private init(_ catalog: GesCatalog) throws {
+        private init(_ store: GesStore) throws {
             var entries: [Entry] = []
-            entries.reserveCapacity(catalog.entries.count)
-            for entry in catalog.entries {
+            entries.reserveCapacity(store.entries.count)
+            for entry in store.entries {
                 guard let handle = UnitHandle(matching: entry.handle) else { throw GesApiError.invalidArgument("The entry \(entry.id) has no @Unit handle.") }
                 entries.append(Entry(id: entry.id, handle: handle, value: try Unit(value: entry.value), origin: entry.origin))
             }
-            self.catalog = catalog
+            self.store = store
             self.entries = entries
             self.index = entries.map(\.handle)
             var unitDisplayIndex: [UnitHandle] = []
-            for handle in try catalog.index(__GesModelDocumentscf7490cb9f0ffae7.set.get().schema("UnitDisplay")) {
+            for handle in try store.index(__GesModelDocumentscf7490cb9f0ffae7.set.get().schema("UnitDisplay")) {
                 guard let typed = UnitHandle(matching: handle) else { throw GesApiError.invalidArgument("The handle \(handle) is no @Unit handle.") }
                 unitDisplayIndex.append(typed)
             }
             self.unitDisplayIndex = unitDisplayIndex
             var unitLabelIndex: [UnitHandle] = []
-            for handle in try catalog.index(__GesModelDocumentscf7490cb9f0ffae7.set.get().schema("UnitLabel")) {
+            for handle in try store.index(__GesModelDocumentscf7490cb9f0ffae7.set.get().schema("UnitLabel")) {
                 guard let typed = UnitHandle(matching: handle) else { throw GesApiError.invalidArgument("The handle \(handle) is no @Unit handle.") }
                 unitLabelIndex.append(typed)
             }
             self.unitLabelIndex = unitLabelIndex
         }
 
-        /// The entry with an id, or nil when the catalog has none with that id.
+        /// The entry with an id, or nil when the store has none with that id.
         subscript(_ id: String) -> Entry? {
             let index = lowerBound(id)
             return index < entries.count && entries[index].id.utf16.elementsEqual(id.utf16) ? entries[index] : nil
@@ -607,42 +607,42 @@ extension CatalogModel {
             return Array(unitLabelIndex[start..<end])
         }
 
-        /// Reads the catalog from named roots, whose files a source supplies.
+        /// Reads the store from named roots, whose files a source supplies.
         ///
         /// - Parameters:
         ///   - roots: The roots, read in this order.
         ///   - files: The source of every file's text.
-        ///   - hull: The catalog of `@Hull`, whose entries this catalog's entries may name or pin; none when nil.
-        /// - Returns: The catalog.
-        /// - Throws: `GesApiError.invalidArgument` when two roots share a name or a root is no catalog file of the type; `GesCatalogError`
-        ///   listing every error when the catalog has errors; `GesSchemaError` when the embedded schema sources no longer parse.
-        static func read(roots: [GesCatalogRoot], files: some GesCatalogFiles, hull: HullCatalog? = nil) throws -> UnitCatalog {
-            try UnitCatalog(GesCatalog.read(try __GesModelDocumentscf7490cb9f0ffae7.set.get().handleType("Unit"), roots: roots, files: files, dependencies: dependencies(hull: hull)))
+        ///   - hull: The store of `@Hull`, whose entries this store's entries may name or pin; none when nil.
+        /// - Returns: The store.
+        /// - Throws: `GesApiError.invalidArgument` when two roots share a name or a root is no store file of the type; `GesStoreError`
+        ///   listing every error when the store has errors; `GesSchemaError` when the embedded schema sources no longer parse.
+        static func read(roots: [GesStoreRoot], files: some GesStoreFiles, hull: HullStore? = nil) throws -> UnitStore {
+            try UnitStore(GesStore.read(try __GesModelDocumentscf7490cb9f0ffae7.set.get().handleType("Unit"), roots: roots, files: files, dependencies: dependencies(hull: hull)))
         }
 
-        /// Reads the catalog from root handles, whose files a resolver answers.
+        /// Reads the store from root handles, whose files a resolver answers.
         ///
         /// - Parameters:
         ///   - roots: The roots, read in this order.
         ///   - resolver: The resolver that answers the root files and their imports.
-        ///   - hull: The catalog of `@Hull`, whose entries this catalog's entries may name or pin; none when nil.
-        /// - Returns: The catalog.
-        /// - Throws: `GesApiError.invalidArgument` when two roots share a name or a root is no catalog file of the type; `GesCatalogError`
-        ///   listing every error when the catalog has errors; `GesHandleError` when the resolver answers a file wrongly; `GesSchemaError`
+        ///   - hull: The store of `@Hull`, whose entries this store's entries may name or pin; none when nil.
+        /// - Returns: The store.
+        /// - Throws: `GesApiError.invalidArgument` when two roots share a name or a root is no store file of the type; `GesStoreError`
+        ///   listing every error when the store has errors; `GesHandleError` when the resolver answers a file wrongly; `GesSchemaError`
         ///   when the embedded schema sources no longer parse.
-        static func read(roots: [GesHandle], resolver: some GesHandleResolver, hull: HullCatalog? = nil) throws -> UnitCatalog {
-            try UnitCatalog(GesCatalog.read(try __GesModelDocumentscf7490cb9f0ffae7.set.get().handleType("Unit"), roots: roots, resolver: resolver, dependencies: dependencies(hull: hull)))
+        static func read(roots: [GesHandle], resolver: some GesHandleResolver, hull: HullStore? = nil) throws -> UnitStore {
+            try UnitStore(GesStore.read(try __GesModelDocumentscf7490cb9f0ffae7.set.get().handleType("Unit"), roots: roots, resolver: resolver, dependencies: dependencies(hull: hull)))
         }
 
         /// Answers a read of an entry's state: its state, with its content hash for a type that declares one, or missing.
         /// - Parameter call: The call holding the handle and receiving the answer.
         func resolve(_ call: GesHandleResolveCall) throws {
-            try catalog.resolve(call)
+            try store.resolve(call)
         }
 
-        private static func dependencies(hull: HullCatalog?) -> [GesCatalog] {
-            var dependencies: [GesCatalog] = []
-            if let hull { dependencies.append(hull.catalog) }
+        private static func dependencies(hull: HullStore?) -> [GesStore] {
+            var dependencies: [GesStore] = []
+            if let hull { dependencies.append(hull.store) }
             return dependencies
         }
 
@@ -909,20 +909,20 @@ extension CatalogModel {
     enum __GesModelDocumentscf7490cb9f0ffae7 {
         static let set = Result<GesSchemaSet, any Error> {
             try GesSchemaSet(sources: [
-                GesSchemaSource(name: "catalogs.gess", text: [
+                GesSchemaSource(name: "stores.gess", text: [
                     "// Copyright 2026 Stephan Schl\u{F6}pke",
                     "// SPDX-License-Identifier: Apache-2.0",
-                    "// The fixture of the checked-in catalog code: two catalog handle types whose states are model roots, one of which names",
-                    "// the other, the catalog file types of both below one repository, and two projections of the unit, one of the other.",
+                    "// The fixture of the checked-in store code: two store handle types whose states are model roots, one of which names",
+                    "// the other, the store file types of both below one repository, and two projections of the unit, one of the other.",
                     "schema :Source as { text: :Text }",
                     "handle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }",
                     "",
-                    "model(catalog) schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 1000 }",
+                    "model(store) schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 1000 }",
                     "handle @Hull of :Hull as { id: :Text max 64, version: :ContentHash }",
                     "",
                     "schema :Look as { icon: :Text max 16 }",
                     "",
-                    "model(catalog) schema :Unit as {",
+                    "model(store) schema :Unit as {",
                     "  name: :Text max 32",
                     "  hull: @Hull~",
                     "  escorts: :List(@Unit) max 4",
@@ -931,11 +931,11 @@ extension CatalogModel {
                     "}",
                     "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }",
                     "",
-                    "model(catalog) projection :UnitDisplay of :Unit as { name, hull, icon: look.icon }",
-                    "model(catalog) projection :UnitLabel of :UnitDisplay as { name }",
+                    "model(store) projection :UnitDisplay of :Unit as { name, hull, icon: look.icon }",
+                    "model(store) projection :UnitLabel of :UnitDisplay as { name }",
                     "",
-                    "handle @HullFiles of :Catalog(@Hull) composite @Repository as { part: :Text max 256 }",
-                    "handle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 256 }",
+                    "handle @HullFiles of :Store(@Hull) composite @Repository as { part: :Text max 256 }",
+                    "handle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 256 }",
                     "",
                 ].joined(separator: "\n")),
             ])

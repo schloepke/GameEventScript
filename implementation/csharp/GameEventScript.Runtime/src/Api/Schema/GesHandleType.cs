@@ -57,7 +57,7 @@ public sealed class GesHandleType
     /// <summary>Gets the name, without the leading <c>@</c>.</summary>
     public string Name { get; }
 
-    /// <summary>Gets the name of the state schema, without the leading <c>:</c>; empty for a catalog file type.</summary>
+    /// <summary>Gets the name of the state schema, without the leading <c>:</c>; empty for a store file type.</summary>
     public string StateName { get; }
 
     /// <summary>Gets the form of the id; null for a composite, whose identity is its root's id and its part.</summary>
@@ -73,13 +73,13 @@ public sealed class GesHandleType
     public GesHandleType? Root => _handle.Root?.Public;
 
     /// <summary>
-    /// Gets the handle type of the catalog whose files this catalog file type names, <c>:Catalog(@Type)</c>; null for any other
+    /// Gets the handle type of the store whose files this store file type names, <c>:Store(@Type)</c>; null for any other
     /// type (specs/Schemas.md#handles).
     /// </summary>
-    public GesHandleType? CatalogOf => _handle.Catalog?.Public;
+    public GesHandleType? StoreOf => _handle.Store?.Public;
 
     /// <summary>Gets the projections of the state schema in the schema set, the projections a handle of this type can read
-    /// through, in ascending name order; empty for a catalog file type (specs/Schemas.md#projections).</summary>
+    /// through, in ascending name order; empty for a store file type (specs/Schemas.md#projections).</summary>
     public IReadOnlyList<GesSchema> Projections { get; private set; } = [];
 
     /// <summary>Gets the handle hash: FNV-1a 64 over the canonical form.</summary>
@@ -96,7 +96,7 @@ public sealed class GesHandleType
 
     internal GesResolvedHandle Resolved => _handle;
 
-    // The catalog file type of this type's catalog with a name, or null when none of that name names it.
+    // The store file type of this type's store with a name, or null when none of that name names it.
     internal GesHandleType? FileType(string name)
     {
         foreach (var file in _handle.Files)
@@ -105,7 +105,7 @@ public sealed class GesHandleType
     }
 
     // Called once the state schema has its hash, after every schema of the set is complete.
-    // A catalog file type has no state, so its link hash is its handle hash.
+    // A store file type has no state, so its link hash is its handle hash.
     // Each projection of the state adds its name and schema hash, so a Program and a host agree on what it reads.
     internal void CompleteLinkHash()
     {
@@ -161,13 +161,13 @@ internal sealed class GesResolvedHandle
 
     internal GesSchemaDeclarationSyntax Syntax { get; init; } = null!;
 
-    // The state schema; null for a catalog file type, which has none.
+    // The state schema; null for a store file type, which has none.
     internal GesResolvedDeclaration State { get; set; } = null!;
 
-    // The handle type of the catalog whose files a catalog file type names; null for any other type.
-    internal GesResolvedHandle? Catalog { get; set; }
+    // The handle type of the store whose files a store file type names; null for any other type.
+    internal GesResolvedHandle? Store { get; set; }
 
-    // The catalog file types that name this type's catalog, in declaration order.
+    // The store file types that name this type's store, in declaration order.
     internal List<GesResolvedHandle> Files { get; } = [];
 
     // The root of a composite, which is not composite itself.
@@ -192,7 +192,7 @@ internal sealed class GesResolvedHandle
         if (Root is { } root)
         {
             builder.Append(" composite ").Append(root.Name).Append('\n');
-            if (Catalog is { } catalog) builder.Append("catalog ").Append(catalog.Name).Append('\n');
+            if (Store is { } store) builder.Append("store ").Append(store.Name).Append('\n');
             builder.Append("part ");
             GesSchemaCanonical.WriteHandleType(Id, builder);
             builder.Append('\n');

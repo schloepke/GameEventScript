@@ -153,7 +153,7 @@ internal static class GesDocumentReading
             case GesDocumentNodeKind.Form: return new GesLiteralNode(node.Name, node.Labels, Values(node.Children), null, node.Offset).Value;
             case GesDocumentNodeKind.Message: return new GesLiteralNode("@message:" + node.Name, node.Labels, Values(node.Children), null, node.Offset).Value;
             case GesDocumentNodeKind.Handler: return GesValue.GesHandler(GesMessageSignature.Create(node.Name, node.Labels));
-            // A catalog replaces every reference by its handle before a value is built.
+            // A store replaces every reference by its handle before a value is built.
             default: throw new InvalidOperationException($"A {node.Kind} node has no value.");
         }
     }

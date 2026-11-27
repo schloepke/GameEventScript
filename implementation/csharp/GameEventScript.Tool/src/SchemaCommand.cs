@@ -24,7 +24,7 @@ Usage:
   dotnet ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                              [--param <name>=<literal> ...]
                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                             [--checked-exclusivity] [--message-suffix <text>] [--bindings] [--documents] [--catalogs] [--models <namespace>] [--extend-namespace <A>]
+                             [--checked-exclusivity] [--message-suffix <text>] [--bindings] [--documents] [--stores] [--models <namespace>] [--extend-namespace <A>]
                              [--schemas <Name> | --use-schemas <A.Name>] [--import <Module> ...]
                              [-o <file> | -d <dir> [--split schema|file]] [--check]
 
@@ -57,7 +57,7 @@ Options:
   --import <Module>         Import this Swift module in every generated file, such as the module of --use-schemas.
   --bindings                Also offer generated model types to scripts as external types; only with --model.
   --documents               Also read model roots from GES document text; includes --values, only with --model.
-  --catalogs                Also generate a typed catalog per handle type whose state is a model root; includes --documents.
+  --stores                Also generate a typed store per handle type whose state is a model root; includes --documents.
   --models <namespace>      Share the packed types of the model code in that namespace ("" for the global one) and
                             convert wire records directly to and from the models of their schemas; only wire code.
   -d, --out-dir <dir>       Write the code as several files into a directory that generate owns, with a manifest.
@@ -94,7 +94,7 @@ Options:
         string? extendNamespace = null;
         var bindings = false;
         var documents = false;
-        var catalogs = false;
+        var stores = false;
         string? language = null;
         string? space = null;
         string? access = null;
@@ -126,7 +126,7 @@ Options:
             else if (argument == "--checked-exclusivity" && command == "generate") checkedExclusivity = true;
             else if (argument == "--bindings" && command == "generate") bindings = true;
             else if (argument == "--documents" && command == "generate") documents = true;
-            else if (argument == "--catalogs" && command == "generate") catalogs = true;
+            else if (argument == "--stores" && command == "generate") stores = true;
             else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split" or "--models" or "--extend-namespace" or "--schemas" or "--use-schemas" or "--import" or "--message-suffix")
             {
                 var applies = argument switch
@@ -195,7 +195,7 @@ Options:
         if (modelGroup is not null && messageSuffix is not null) return UsageError("--message-suffix concerns wire code, not --model.");
         if (bindings && modelGroup is null) return UsageError("--bindings concerns model code and requires --model.");
         if (documents && modelGroup is null) return UsageError("--documents concerns model code and requires --model.");
-        if (catalogs && modelGroup is null) return UsageError("--catalogs concerns model code and requires --model.");
+        if (stores && modelGroup is null) return UsageError("--stores concerns model code and requires --model.");
         if (models is not null && modelGroup is not null) return UsageError("--models concerns wire code, not --model.");
         if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
         if (extendNamespace is not null && language != "swift") return UsageError("--extend-namespace concerns Swift, whose namespaces are enums; C# merges namespaces.");
@@ -255,7 +255,7 @@ Options:
                         ExtendNamespace = extendNamespace,
                         Bindings = bindings,
                         Documents = documents,
-                        Catalogs = catalogs,
+                        Stores = stores,
                         Split = outDir is null ? GesSchemaSplit.None : split == "file" ? GesSchemaSplit.File : GesSchemaSplit.Schema,
                         Models = models,
                         SchemaSet = schemaSet,

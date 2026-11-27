@@ -6,7 +6,7 @@ import GameEventScriptRuntime
 /// Generates `static func createGesType() throws -> GesBridgeTypeBinding<Self>` on a struct or final class.
 /// Only members marked with `@GesField` or `@GesConstruct` are exposed. The optional name defaults to the Swift type name.
 /// Each factory call creates a distinct descriptor: retain and reuse it for wrapping, unwrapping and registration.
-/// Declaration validation errors are reported during compilation; portable name/catalog errors throw when creating the descriptor.
+/// Declaration validation errors are reported during compilation; portable name/store errors throw when creating the descriptor.
 @attached(member, names: named(createGesType))
 public macro GesType(_ name: String? = nil) = #externalMacro(module: "GameEventScriptSwiftBridgeMacros", type: "GesTypeMacro")
 

@@ -63,9 +63,9 @@ internal static partial class GesSwiftModelEmitter
         foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => Handle(code, layout.Handles, handle, access), handle: handle.Name));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.")));
-        var catalogs = options.Catalogs ? GesModelPlanner.Catalogs(layout, topLevel) : [];
-        var catalogSet = schemaSet is not null ? schemaSet.Qualified + ".set" : "__GesModelDocuments" + suffix + ".set.get()";
-        foreach (var catalog in catalogs) document.Units.Add(new GesCodeUnit(catalog.Name, code => Catalog(code, catalog, access, catalogSet), handle: catalog.Handle.Name));
+        var stores = options.Stores ? GesModelPlanner.Stores(layout, topLevel) : [];
+        var storeSet = schemaSet is not null ? schemaSet.Qualified + ".set" : "__GesModelDocuments" + suffix + ".set.get()";
+        foreach (var store in stores) document.Units.Add(new GesCodeUnit(store.Name, code => Store(code, store, access, storeSet), handle: store.Handle.Name));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, plain, access, support, computed)));
         if (valued) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, support, computed)));
         if (messages) document.Units.Add(new GesCodeUnit("", code => SchemasHolder(code, layout, schemas, schemaSet)));

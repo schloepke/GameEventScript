@@ -60,9 +60,9 @@ Validation uses the following semantic codes:
   projection converted or passed to the full view or to a projection it does not
   narrow); **Since: Unreleased**.
 
-Documents use the `document.*` codes of [Documents](Documents.md#errors) and catalogs the
-`catalog.*` codes of [reading a catalog](Documents.md#reading-a-catalog); **Since: Unreleased**
-— catalogs.
+Documents use the `document.*` codes of [Documents](Documents.md#errors) and stores the
+`store.*` codes of [reading a store](Documents.md#reading-a-store); **Since: Unreleased**
+— stores.
 
 Compiler lowering/resource analysis uses `compile.unsupportedConstruct`,
 `compile.invalidArity`, `compile.unresolvedSymbol`,

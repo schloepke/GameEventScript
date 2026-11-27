@@ -1767,86 +1767,87 @@ schema:
 
 ---
 
-## Test: the canonical form of a catalog file type
+## Test: the canonical form of a store file type
 
-A catalog file type writes a `catalog` line with the handle type of its catalog after its `handle` line. *Since: Unreleased.*
+A store file type writes a `store` line with the handle type of its store after its `handle` line. *Since: Unreleased.*
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: catalog-file-canonical
+id: store-file-canonical
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 64 }\n"]
+  handle: "UnitFiles"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"handle": {"canonical": "gess1\nhandle UnitFiles composite Repository\nstore Unit\npart Text max 64\nhandle Repository\nid Text max 16\nversion Hash(#sha1)\n", "hash": "e20c20e2054996ff"}}
+```
+
+---
+
+## Test: a store file type that is no composite
+
+A store file lies below a root, so its type must be composite. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-file-not-composite
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Store(@Unit) as { id: :Text max 64, version: :Nothing }\n"]
+  handle: "UnitFiles"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidHandle"}}
+```
+
+---
+
+## Test: a store file type with a Number part
+
+The part of a store file type is its path and must be Text. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-file-number-part
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Number integer between 0 and 9 }\n"]
+  handle: "UnitFiles"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidHandle"}}
+```
+
+---
+
+## Test: only `:Store` takes a handle type as state
+
+A state written with an argument names a type only as `:Store(@Type)`; any other name, such as the removed
+`:Catalog(@Unit)`, is an unknown type, `schema.unknownName` at the name. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-file-unknown-state-type
 schemaApi:
   sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 64 }\n"]
-  handle: "UnitFiles"
-```
-
-### Expectation
-
-```yaml
-gesBlock: expect
-schema: {"handle": {"canonical": "gess1\nhandle UnitFiles composite Repository\ncatalog Unit\npart Text max 64\nhandle Repository\nid Text max 16\nversion Hash(#sha1)\n", "hash": "b8e04ba00613ff61"}}
-```
-
----
-
-## Test: a catalog file type that is no composite
-
-A catalog file lies below a root, so its type must be composite. *Since: Unreleased.*
-
-### Case description
-
-```yaml
-gesBlock: case
-id: catalog-file-not-composite
-schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Catalog(@Unit) as { id: :Text max 64, version: :Nothing }\n"]
-  handle: "UnitFiles"
-```
-
-### Expectation
-
-```yaml
-gesBlock: expect
-schema: {"error": {"code": "schema.invalidHandle"}}
-```
-
----
-
-## Test: a catalog file type with a Number part
-
-The part of a catalog file type is its path and must be Text. *Since: Unreleased.*
-
-### Case description
-
-```yaml
-gesBlock: case
-id: catalog-file-number-part
-schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Number integer between 0 and 9 }\n"]
-  handle: "UnitFiles"
-```
-
-### Expectation
-
-```yaml
-gesBlock: expect
-schema: {"error": {"code": "schema.invalidHandle"}}
-```
-
----
-
-## Test: a catalog of an undeclared handle type
-
-Naming an undeclared handle type as a catalog is `schema.unknownName`, as for any other use. *Since: Unreleased.*
-
-### Case description
-
-```yaml
-gesBlock: case
-id: catalog-file-unknown-target
-schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Catalog(@Ghost) composite @Repository as { part: :Text max 64 }\n"]
   handle: "UnitFiles"
 ```
 
@@ -1859,17 +1860,40 @@ schema: {"error": {"code": "schema.unknownName"}}
 
 ---
 
-## Test: a catalog of a handle type with a Number id
+## Test: a store of an undeclared handle type
 
-Catalog entries are keyed by Text, so the catalog's handle type needs a Text id. *Since: Unreleased.*
+Naming an undeclared handle type as a store is `schema.unknownName`, as for any other use. *Since: Unreleased.*
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: catalog-file-number-target
+id: store-file-unknown-target
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 99, version: :Nothing }\nhandle @TargetFiles of :Catalog(@Target) composite @Repository as { part: :Text max 64 }\n"]
+  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Store(@Ghost) composite @Repository as { part: :Text max 64 }\n"]
+  handle: "UnitFiles"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.unknownName"}}
+```
+
+---
+
+## Test: a store of a handle type with a Number id
+
+Store entries are keyed by Text, so the store's handle type needs a Text id. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-file-number-target
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 99, version: :Nothing }\nhandle @TargetFiles of :Store(@Target) composite @Repository as { part: :Text max 64 }\n"]
   handle: "TargetFiles"
 ```
 
@@ -1882,17 +1906,17 @@ schema: {"error": {"code": "schema.invalidHandle"}}
 
 ---
 
-## Test: a catalog of a composite handle type
+## Test: a store of a composite handle type
 
-A catalog holds the states of a handle type of its own, never of a composite. *Since: Unreleased.*
+A store holds the states of a handle type of its own, never of a composite. *Since: Unreleased.*
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: catalog-file-composite-target
+id: store-file-composite-target
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFile of :Composition composite @Repository as { part: :Text max 64 }\nhandle @UnitFiles of :Catalog(@UnitFile) composite @Repository as { part: :Text max 64 }\n"]
+  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFile of :Composition composite @Repository as { part: :Text max 64 }\nhandle @UnitFiles of :Store(@UnitFile) composite @Repository as { part: :Text max 64 }\n"]
   handle: "UnitFiles"
 ```
 
@@ -1905,17 +1929,17 @@ schema: {"error": {"code": "schema.invalidHandle"}}
 
 ---
 
-## Test: a catalog of catalog files
+## Test: a store of store files
 
-A catalog file type is no catalog type itself. *Since: Unreleased.*
+A store file type is no store type itself. *Since: Unreleased.*
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: catalog-file-file-target
+id: store-file-file-target
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 64 }\nhandle @Deeper of :Catalog(@UnitFiles) composite @Repository as { part: :Text max 64 }\n"]
+  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 64 }\nhandle @Deeper of :Store(@UnitFiles) composite @Repository as { part: :Text max 64 }\n"]
   handle: "Deeper"
 ```
 
@@ -1928,17 +1952,17 @@ schema: {"error": {"code": "schema.invalidHandle"}}
 
 ---
 
-## Test: a catalog file handle as a field type
+## Test: a store file handle as a field type
 
-Catalog file types serve only reading; a field cannot hold one. *Since: Unreleased.*
+Store file types serve only reading; a field cannot hold one. *Since: Unreleased.*
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: catalog-file-field
+id: store-file-field
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 64 }\nwire schema :S as { file: @UnitFiles }\n"]
+  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 64 }\nwire schema :S as { file: @UnitFiles }\n"]
   root: "S"
 ```
 
@@ -1951,17 +1975,17 @@ schema: {"error": {"code": "schema.invalidHandle"}}
 
 ---
 
-## Test: a catalog file handle as a Map key
+## Test: a store file handle as a Map key
 
-A Map cannot be keyed by a catalog file type either. *Since: Unreleased.*
+A Map cannot be keyed by a store file type either. *Since: Unreleased.*
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: catalog-file-map-key
+id: store-file-map-key
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 64 }\nwire schema :S as { files: :Map(@UnitFiles → :Number integer between 0 and 9) max 4 }\n"]
+  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 64 }\nwire schema :S as { files: :Map(@UnitFiles → :Number integer between 0 and 9) max 4 }\n"]
   root: "S"
 ```
 

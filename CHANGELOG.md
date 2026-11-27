@@ -21,21 +21,25 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   (`~#live`), product JSON `Handle` objects, wire encodings of ids and versions, network `owns` routes, generated
   `<Name>Handle` model types, `GesHandle`, `GesHash20`/`GesHash32`, `WithHandleTypes`, `WithHandleResolver`,
   `ResolveRef` and the `HandleType` import (0x22) (specs/PublicApi.md#handle-api).
-- Catalogs collect content objects of one Text-id handle type in documents: `:Catalog(@Unit)` files hold entries,
-  `module drone.heavy { ... }` blocks and `import 'path'` of further catalog files or of one entry's document; entries
+- Stores collect content objects of one Text-id handle type in documents: `:Store(@Unit)` files hold entries,
+  `module drone.heavy { ... }` blocks and `import 'path'` of further store files or of one entry's document; entries
   refer to each other with `@scout`, `@drone.heavy` or `@Unit:scout` and pin with `~`, which fills in the content hash
-  of the target. Reading resolves every import within named roots and reports all errors at once with `catalog.*`
-  codes, an unknown reference with a suggestion (specs/Documents.md#catalogs). `GesCatalog.Read` (Swift
-  `GesCatalog.read`) reads one through a host file source and returns entries with handle, value and origin, sorted by
-  id (specs/PublicApi.md#catalogs). `document check --schema ... --catalog @Unit <path>` checks catalogs in both CLIs;
-  highlighting and the editor grammars know catalog files and references.
-- Catalogs can be read from versioned sources: `handle @UnitFiles of :Catalog(@Unit) composite @Repository as { part:
-  :Text max 256 }` declares the files of a catalog within a repository, and `GesCatalog.Read(type, roots, resolver)`
+  of the target. Reading resolves every import within named roots and reports all errors at once with `store.*`
+  codes, an unknown reference with a suggestion (specs/Documents.md#stores). `GesStore.Read` (Swift
+  `GesStore.read`) reads one through a host file source and returns entries with handle, value and origin, sorted by
+  id (specs/PublicApi.md#stores). `document check --schema ... --store @Unit <path>` checks stores in both CLIs;
+  highlighting and the editor grammars know store files and references.
+- Stores can be read from versioned sources: `handle @UnitFiles of :Store(@Unit) composite @Repository as { part:
+  :Text max 256 }` declares the files of a store within a repository, and `GesStore.Read(type, roots, resolver)`
   (Swift `read(_:roots:resolver:)`) requests every file through that type's resolver, pins each root to the version of
-  its first answer and reports the roots read as `Sources` (specs/Documents.md#reading-from-handles). A catalog is the
-  handle resolver of its type, so a host can register it for scripts. `generate --model --catalogs` writes a typed
-  `<Name>Catalog` for every model root that is a Text-id handle type's state, with typed entries, `module`, `index` and
-  its dependencies as parameters (specs/Schemas.md#model-catalogs).
+  its first answer and reports the roots read as `Sources` (specs/Documents.md#reading-from-handles). A store is the
+  handle resolver of its type, so a host can register it for scripts. `generate --model --stores` writes a typed
+  `<Name>Store` for every model root that is a Text-id handle type's state, with typed entries, `module`, `index` and
+  its dependencies as parameters (specs/Schemas.md#model-stores).
+- A store is one read API whatever its source: lookup by id, entries and modules in id order, projection indexes with
+  one version per entry and use as the resolver. A host holds at most one store per handle type, and its owner, the
+  host that reads it or the side that `owns` the type, alone answers index and resolve requests
+  (specs/Documents.md#the-store-model).
 - Projections name the part of a state a handle may read: `projection :UnitDisplay of :Composition as { name, kinds,
   icon: presentation.icon }` in a schema source takes fields of a schema, also through Records under a new name
   (specs/Schemas.md#projections). Scripts declare `@Unit(:UnitDisplay)` and `@Unit(:UnitDisplay)~`, read only the
@@ -45,8 +49,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `Projection` and `Party`, may answer `SetNotVisible()` (`runtime.handleNotVisible` for the observer) and resolve the
   handles of a List at once with `ResolveMany`; the cache keys by projection (specs/HostRuntime.md#handles). Generated
   projection models convert from their sources (`UnitDisplay(composition)`, C# `UnitDisplay.From`), and generated
-  catalogs keep an index per projection (`units.index(UnitDisplay.self)`, C# `UnitDisplayIndex`), built on
-  `GesCatalog.Index(projection)` (Swift `index(_:)`); `GesHandleType.Projections` and `GesSchema.Source` describe them.
+  stores keep an index per projection (`units.index(UnitDisplay.self)`, C# `UnitDisplayIndex`), built on
+  `GesStore.Index(projection)` (Swift `index(_:)`); `GesHandleType.Projections` and `GesSchema.Source` describe them.
 - Network `owns` routes name the projection the other side reads and whether the owner sends state along:
   `server owns @Unit as :UnitPublic sending state`. Routes from the owner must carry that projection or a narrower one
   (`schema.invalidProjection`) and cannot pin revision handles (`schema.invalidHandle`); both enter the network hash
@@ -80,7 +84,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   (`--split schema`) or into the file of the source that declares the handle type (`--split file`). A model field of a
   handle type reaches only its `<Name>Handle` and, for a composite, the root's handle type, never the state schema, which
   the handle names in documentation only; a state model is generated only when it is selected or reached otherwise. Markdown Conformance scripts ref answers, `ResolveRef` results and input
-  rejections such as `wire.unresolvedRef` (specs/Conformance/MarkdownFormat.md#handle-catalogs).
+  rejections such as `wire.unresolvedRef` (specs/Conformance/MarkdownFormat.md#handle-setup).
 - Named timers and heartbeats: `emit after 30s named 'timeout' GiveUp()` names a delayed send so that a later send
   of the same name replaces it, and `emit every 1s named 'beat' Heartbeat()` (also `publish`) repeats one period after
   each completed firing. `cancel key`, `cancel named` and `cancel all` remove timers of the executing Program instance

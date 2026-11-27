@@ -39,10 +39,10 @@ enum Validation {
             let kind = try test.text("kind")
             try require(kinds.contains(kind) && (!measuring || kind == "scriptApi"))
             var fields = ["id", "kind", "sources", "compile", "requires"]
-            // A handle catalog is optional for compiler, loading and script cases.
-            if let catalog = test["handles"] {
+            // A handle setup is optional for compiler, loading and script cases.
+            if let store = test["handles"] {
                 try require(!measuring && ["scriptApi", "loadError", "compileError", "compileMetadata", "bytecode", "bytecodeSnapshot"].contains(kind))
-                try AdapterHandles.validate(catalog)
+                try AdapterHandles.validate(store)
                 fields.append("handles")
             }
             if ["loadError", "messageApi", "valueApi", "externalTypeApi", "documentApi", "schemaApi", "networkApi"].contains(kind) { fields.append("api") }
@@ -90,7 +90,7 @@ enum Validation {
                             "complete",
                             "dump", "dumpBaseline",
                             "deltaEncode",
-                            "deltaDecode", "describe", "document", "readDocument", "network", "handle", "contentHash", "catalog",
+                            "deltaDecode", "describe", "document", "readDocument", "network", "handle", "contentHash", "store",
                         ]
                     )
                     if api["contentHash"] != nil && api["contentHash"] != .null { try value(api.required("contentHash")) }

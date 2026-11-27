@@ -13,7 +13,7 @@
       "include": "#strings"
     },
     {
-      "include": "#catalog"
+      "include": "#store"
     },
     {
       "include": "#handles"
@@ -77,7 +77,7 @@
     "forms": {
       "patterns": [
         {
-          "match": ":(?:Schema|Catalog)\\b",
+          "match": ":(?:Schema|Store)\\b",
           "name": "keyword.other.declaration.schema.gameeventscript.document"
         },
         {
@@ -208,7 +208,7 @@
         }
       ]
     },
-    "catalog": {
+    "store": {
       "patterns": [
         {
           "match": "^[ \\t]*(module)[ \\t]+([A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)*)",

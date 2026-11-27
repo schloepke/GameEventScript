@@ -6,9 +6,9 @@ import XCTest
 
 @testable import GameEventScriptRuntime
 
-/// Markdown Conformance covers catalog reading (api/catalogs.md); these tests keep the argument checks, the lookups of the
+/// Markdown Conformance covers store reading (api/stores.md); these tests keep the argument checks, the lookups of the
 /// result and the path arithmetic that the corpus reaches only through its file table.
-final class CatalogTests: XCTestCase {
+final class StoreTests: XCTestCase {
     private static let schemas = """
         schema :Hull as { armor: :Number integer between 0 and 100 }
         handle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }
@@ -20,7 +20,7 @@ final class CatalogTests: XCTestCase {
 
         """
 
-    private struct Files: GesCatalogFiles {
+    private struct Files: GesStoreFiles {
         let files: [(root: String, path: String, text: String)]
 
         init(_ files: (root: String, path: String, text: String)...) { self.files = files }
@@ -30,29 +30,29 @@ final class CatalogTests: XCTestCase {
 
     private func type(_ name: String) throws -> GesHandleType { try GesSchemaSet(sources: [GesSchemaSource(name: "units.gess", text: Self.schemas)]).handleType(name) }
 
-    private func hulls() throws -> GesCatalog {
-        try GesCatalog.read(
+    private func hulls() throws -> GesStore {
+        try GesStore.read(
             type("Hull"),
-            roots: [GesCatalogRoot(name: "content", path: "hulls.gesd")],
-            files: Files(("content", "hulls.gesd", ":Catalog(@Hull)\nlight: [armor: 20]\nheavy: [armor: 80]\n"))
+            roots: [GesStoreRoot(name: "content", path: "hulls.gesd")],
+            files: Files(("content", "hulls.gesd", ":Store(@Hull)\nlight: [armor: 20]\nheavy: [armor: 80]\n"))
         )
     }
 
     func testReadsEntriesWithPinnedDependenciesAndOrdersThemById() throws {
         let hulls = try hulls()
         let files = Files(
-            ("content", "units.gesd", ":Catalog(@Unit)\nimport 'drones/all.gesd'\nscout: [name: 'Scout', hull: @Hull:light~]\n"),
-            ("content", "drones/all.gesd", ":Catalog(@Unit)\nmodule drone {\n  gnabblo: [name: 'Gnabblo', hull: @Hull:heavy~, escort: @scout]\n  brakk: import 'brakk.gesd'\n}\n"),
+            ("content", "units.gesd", ":Store(@Unit)\nimport 'drones/all.gesd'\nscout: [name: 'Scout', hull: @Hull:light~]\n"),
+            ("content", "drones/all.gesd", ":Store(@Unit)\nmodule drone {\n  gnabblo: [name: 'Gnabblo', hull: @Hull:heavy~, escort: @scout]\n  brakk: import 'brakk.gesd'\n}\n"),
             ("content", "drones/brakk.gesd", ":Schema(:Composition)\nname: 'Brakk', hull: @Hull:light~, escort: @gnabblo\n")
         )
 
-        let catalog = try GesCatalog.read(type("Unit"), roots: [GesCatalogRoot(name: "content", path: "units.gesd")], files: files, dependencies: [hulls])
+        let store = try GesStore.read(type("Unit"), roots: [GesStoreRoot(name: "content", path: "units.gesd")], files: files, dependencies: [hulls])
 
-        XCTAssertEqual(catalog.entries.map(\.id), ["drone.brakk", "drone.gnabblo", "scout"])
-        XCTAssertEqual(catalog.module("drone").map(\.id), ["drone.brakk", "drone.gnabblo"])
-        XCTAssertTrue(catalog.module("dron").isEmpty)
-        XCTAssertNil(catalog["drone"])
-        let brakk = try XCTUnwrap(catalog["drone.brakk"])
+        XCTAssertEqual(store.entries.map(\.id), ["drone.brakk", "drone.gnabblo", "scout"])
+        XCTAssertEqual(store.module("drone").map(\.id), ["drone.brakk", "drone.gnabblo"])
+        XCTAssertTrue(store.module("dron").isEmpty)
+        XCTAssertNil(store["drone"])
+        let brakk = try XCTUnwrap(store["drone.brakk"])
         XCTAssertEqual(brakk.origin.sourceName, "drones/all.gesd")
         XCTAssertEqual(brakk.origin.moduleName, "content")
         XCTAssertEqual(brakk.origin.line, 4)
@@ -61,17 +61,17 @@ final class CatalogTests: XCTestCase {
         let fields = try XCTUnwrap(brakk.value.asMap)
         XCTAssertEqual(fields.get("hull")?.handleValue, hulls["light"]?.handle)
         XCTAssertEqual(fields.get("escort")?.handleValue?.description, "@Unit:drone.gnabblo")
-        XCTAssertNotEqual(catalog["drone.gnabblo"]?.handle, catalog["scout"]?.handle)
+        XCTAssertNotEqual(store["drone.gnabblo"]?.handle, store["scout"]?.handle)
     }
 
     func testReportsEveryErrorWithASuggestion() throws {
-        let files = Files(("content", "units.gesd", ":Catalog(@Unit)\nscout: [name: 'Scout', hull: @Hull:light~, escort: @scuot]\nmodule drone {\n  a: [name: 'A', hull: @Hull:hevy~]\n}\n"))
+        let files = Files(("content", "units.gesd", ":Store(@Unit)\nscout: [name: 'Scout', hull: @Hull:light~, escort: @scuot]\nmodule drone {\n  a: [name: 'A', hull: @Hull:hevy~]\n}\n"))
         let unit = try type("Unit")
         let hulls = try hulls()
 
-        XCTAssertThrowsError(try GesCatalog.read(unit, roots: [GesCatalogRoot(name: "content", path: "units.gesd")], files: files, dependencies: [hulls])) { error in
-            guard let error = error as? GesCatalogError else { return XCTFail("\(error)") }
-            XCTAssertEqual(error.diagnostics.map(\.code), [GesCatalogError.unknownReference, GesCatalogError.unknownReference])
+        XCTAssertThrowsError(try GesStore.read(unit, roots: [GesStoreRoot(name: "content", path: "units.gesd")], files: files, dependencies: [hulls])) { error in
+            guard let error = error as? GesStoreError else { return XCTFail("\(error)") }
+            XCTAssertEqual(error.diagnostics.map(\.code), [GesStoreError.unknownReference, GesStoreError.unknownReference])
             XCTAssertEqual(error.diagnostics[0].suggestion, "scout")
             XCTAssertEqual(error.diagnostics[0].location.line, 2)
             XCTAssertEqual(error.diagnostics[1].suggestion, "heavy")
@@ -83,16 +83,16 @@ final class CatalogTests: XCTestCase {
         let hulls = try hulls()
         let unit = try type("Unit")
         for (type, roots, dependencies) in [
-            (try type("Slot"), [GesCatalogRoot](), [GesCatalog]()),
+            (try type("Slot"), [GesStoreRoot](), [GesStore]()),
             (try type("Target"), [], []),
-            (unit, [GesCatalogRoot(name: "a", path: "x"), GesCatalogRoot(name: "a", path: "y")], []),
+            (unit, [GesStoreRoot(name: "a", path: "x"), GesStoreRoot(name: "a", path: "y")], []),
             (unit, [], [hulls, hulls]),
         ] {
-            XCTAssertThrowsError(try GesCatalog.read(type, roots: roots, files: files, dependencies: dependencies)) { error in
+            XCTAssertThrowsError(try GesStore.read(type, roots: roots, files: files, dependencies: dependencies)) { error in
                 guard case GesApiError.invalidArgument = error else { return XCTFail("\(error)") }
             }
         }
-        XCTAssertTrue(try GesCatalog.read(unit, roots: [], files: files).entries.isEmpty)
+        XCTAssertTrue(try GesStore.read(unit, roots: [], files: files).entries.isEmpty)
     }
 
     func testIndexesEntriesThroughProjectionsOfItsStateOnly() throws {
@@ -102,33 +102,33 @@ final class CatalogTests: XCTestCase {
                 text: Self.schemas + "projection :Named of :Composition as { name }\nprojection :Short of :Named as { name }\nprojection :Label of :Contact as { label }\n"
             )
         ])
-        let catalog = try GesCatalog.read(
+        let store = try GesStore.read(
             set.handleType("Unit"),
-            roots: [GesCatalogRoot(name: "content", path: "units.gesd")],
-            files: Files(("content", "units.gesd", ":Catalog(@Unit)\nscout: [name: 'Scout', hull: @Hull:light~]\n")),
+            roots: [GesStoreRoot(name: "content", path: "units.gesd")],
+            files: Files(("content", "units.gesd", ":Store(@Unit)\nscout: [name: 'Scout', hull: @Hull:light~]\n")),
             dependencies: [try hulls()]
         )
 
-        let named = try catalog.index(set.schema("Named"))
-        let scout = try XCTUnwrap(catalog["scout"]).handle
+        let named = try store.index(set.schema("Named"))
+        let scout = try XCTUnwrap(store["scout"]).handle
         XCTAssertEqual(named.count, 1)
         XCTAssertEqual(named[0].projection, "Named")
         XCTAssertEqual(try named[0].withoutVersion().withProjection(""), scout.withoutVersion())
         XCTAssertTrue(named[0].hasVersion)
         XCTAssertNotEqual(named[0].version, scout.version)
         // A projection of a projection narrows the same state.
-        XCTAssertEqual(try catalog.index(set.schema("Short")).count, 1)
-        XCTAssertThrowsError(try catalog.index(set.schema("Composition")))
-        XCTAssertThrowsError(try catalog.index(set.schema("Label")))
+        XCTAssertEqual(try store.index(set.schema("Short")).count, 1)
+        XCTAssertThrowsError(try store.index(set.schema("Composition")))
+        XCTAssertThrowsError(try store.index(set.schema("Label")))
     }
 
     func testCombinesImportPathsWithinTheRoot() {
-        XCTAssertEqual(GesCatalog.combine("a/b.gesd", "c.gesd"), "a/c.gesd")
-        XCTAssertEqual(GesCatalog.combine("a/b.gesd", "/c.gesd"), "c.gesd")
-        XCTAssertEqual(GesCatalog.combine("a/b.gesd", "../c.gesd"), "c.gesd")
-        XCTAssertEqual(GesCatalog.combine("a/b.gesd", "./d//c.gesd"), "a/d/c.gesd")
-        XCTAssertNil(GesCatalog.combine("a/b.gesd", "../../c.gesd"))
-        XCTAssertNil(GesCatalog.combine("", ".."))
+        XCTAssertEqual(GesStore.combine("a/b.gesd", "c.gesd"), "a/c.gesd")
+        XCTAssertEqual(GesStore.combine("a/b.gesd", "/c.gesd"), "c.gesd")
+        XCTAssertEqual(GesStore.combine("a/b.gesd", "../c.gesd"), "c.gesd")
+        XCTAssertEqual(GesStore.combine("a/b.gesd", "./d//c.gesd"), "a/d/c.gesd")
+        XCTAssertNil(GesStore.combine("a/b.gesd", "../../c.gesd"))
+        XCTAssertNil(GesStore.combine("", ".."))
     }
 
     private static let fileSchemas = """
@@ -136,7 +136,7 @@ final class CatalogTests: XCTestCase {
         handle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }
         schema :Source as { text: :Text }
         handle @Repository of :Source as { id: :Text max 16, version: :Number integer between 0 and 1000 }
-        handle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 64 }
+        handle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 64 }
         handle @Other of :Source composite @Repository as { part: :Text max 64 }
 
         """
@@ -151,8 +151,8 @@ final class CatalogTests: XCTestCase {
 
     private func fileType(_ name: String) throws -> GesHandleType { try GesSchemaSet(sources: [GesSchemaSource(name: "files.gess", text: Self.fileSchemas)]).handleType(name) }
 
-    private func readUnits(_ answer: @escaping (GesHandleResolveCall) throws -> Void) throws -> GesCatalog {
-        try GesCatalog.read(fileType("Unit"), roots: [GesHandle(parsing: "@UnitFiles:content/units.gesd")], resolver: Resolver(answer: answer))
+    private func readUnits(_ answer: @escaping (GesHandleResolveCall) throws -> Void) throws -> GesStore {
+        try GesStore.read(fileType("Unit"), roots: [GesHandle(parsing: "@UnitFiles:content/units.gesd")], resolver: Resolver(answer: answer))
     }
 
     private func assertHandleError(_ code: String, _ answer: @escaping (GesHandleResolveCall) throws -> Void, line: UInt = #line) {
@@ -163,36 +163,36 @@ final class CatalogTests: XCTestCase {
 
     func testReadsThroughHandlesAndAnswersTheStatesOfItsEntries() throws {
         var requested: [String] = []
-        let catalog = try readUnits { call in
+        let store = try readUnits { call in
             requested.append(call.handle.description)
             if call.handle.part.asText == "units.gesd" {
-                try call.setDocument(":Catalog(@Unit)\nimport 'more.gesd'\nscout: [name: 'Scout']\n", version: .integer(9))
+                try call.setDocument(":Store(@Unit)\nimport 'more.gesd'\nscout: [name: 'Scout']\n", version: .integer(9))
             } else {
-                try call.setDocument(":Catalog(@Unit)\none: [name: 'One']\n")
+                try call.setDocument(":Store(@Unit)\none: [name: 'One']\n")
             }
         }
 
         XCTAssertEqual(requested, ["@UnitFiles:content/units.gesd", "@UnitFiles:content~9/more.gesd"])
-        XCTAssertEqual(catalog.sources.map(\.description), ["@UnitFiles:content~9/units.gesd"])
-        XCTAssertEqual(catalog["one"]?.origin.moduleName, "@UnitFiles:content/units.gesd")
+        XCTAssertEqual(store.sources.map(\.description), ["@UnitFiles:content~9/units.gesd"])
+        XCTAssertEqual(store["one"]?.origin.moduleName, "@UnitFiles:content/units.gesd")
 
         let unit = try fileType("Unit")
         let call = GesHandleResolveCall()
-        let scout = try XCTUnwrap(catalog["scout"])
+        let scout = try XCTUnwrap(store["scout"])
         call.begin(try GesHandle(typeName: "Unit", id: .text("scout")), unit, nil, 0)
-        try catalog.resolve(call)
+        try store.resolve(call)
         XCTAssertEqual(call.answer, .state)
         XCTAssertEqual(call.record, scout.value)
         XCTAssertEqual(call.version, scout.handle.version)
         call.begin(try GesHandle(typeName: "Unit", id: .text("ghost")), unit, nil, 0)
-        try catalog.resolve(call)
+        try store.resolve(call)
         XCTAssertEqual(call.answer, .missing)
         call.end()
     }
 
     func testReportsAStateAnswerAsTheWrongKindOfFile() {
         XCTAssertThrowsError(try readUnits { try $0.setState(.nothing) }) { error in
-            XCTAssertEqual((error as? GesCatalogError)?.diagnostics.first?.code, GesCatalogError.importKind)
+            XCTAssertEqual((error as? GesStoreError)?.diagnostics.first?.code, GesStoreError.importKind)
         }
     }
 
@@ -202,11 +202,11 @@ final class CatalogTests: XCTestCase {
             try call.setMissing()
             try call.setMissing()
         }
-        assertHandleError(GesDiagnosticCodes.runtimeHandleResolveFailed) { try $0.setDocument(":Catalog(@Unit)\n", version: .bytes([1])) }
+        assertHandleError(GesDiagnosticCodes.runtimeHandleResolveFailed) { try $0.setDocument(":Store(@Unit)\n", version: .bytes([1])) }
         XCTAssertThrowsError(try readUnits { _ in throw Offline() }) { error in XCTAssertTrue(error is Offline, "\(error)") }
     }
 
-    func testRejectsRootsThatAreNoCatalogFiles() throws {
+    func testRejectsRootsThatAreNoStoreFiles() throws {
         let resolver = Resolver { try $0.setMissing() }
         let unit = try fileType("Unit")
         let content = try GesHandle(parsing: "@UnitFiles:content/units.gesd")
@@ -216,14 +216,14 @@ final class CatalogTests: XCTestCase {
             (unit, [content, try GesHandle(parsing: "@UnitFiles:content/units.gesd")]),
             (try fileType("Other"), []),
         ] {
-            XCTAssertThrowsError(try GesCatalog.read(type, roots: roots, resolver: resolver)) { error in
+            XCTAssertThrowsError(try GesStore.read(type, roots: roots, resolver: resolver)) { error in
                 guard case GesApiError.invalidArgument = error else { return XCTFail("\(error)") }
             }
         }
-        XCTAssertTrue(try GesCatalog.read(unit, roots: [], resolver: resolver).sources.isEmpty)
+        XCTAssertTrue(try GesStore.read(unit, roots: [], resolver: resolver).sources.isEmpty)
     }
 
-    func testLeavesCatalogFileTypesOutOfScripts() throws {
+    func testLeavesStoreFileTypesOutOfScripts() throws {
         let types = try GesSchemaSet(sources: [GesSchemaSource(name: "files.gess", text: Self.fileSchemas)]).handleTypes
         _ = try GesProgramBuilder().withHandleTypes(types).addScript("on Seen(unit as @Unit) { }").compile()
         XCTAssertThrowsError(try GesProgramBuilder().withHandleTypes(types).addScript("on Seen(file as @UnitFiles) { }").compile())

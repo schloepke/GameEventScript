@@ -22,8 +22,8 @@ tags: [handles, schemas, host]
 These cases verify [handles](../../../specs/Language.md#handles) in scripts: handle parameter types and unions, `is`
 checks, the identity members, lazy state reads through the host's resolvers with their per-invocation cache, version
 checks and the content hash, `as :State`, Map keys and handle-named timers
-([Host runtime](../../../specs/HostRuntime.md#handles)). Each case declares its handle catalog and scripted resolver
-answers in a `handles` block ([Markdown format](../../../specs/Conformance/MarkdownFormat.md#handle-catalogs)).
+([Host runtime](../../../specs/HostRuntime.md#handles)). Each case declares its handle setup and scripted resolver
+answers in a `handles` block ([Markdown format](../../../specs/Conformance/MarkdownFormat.md#handle-setup)).
 
 ---
 

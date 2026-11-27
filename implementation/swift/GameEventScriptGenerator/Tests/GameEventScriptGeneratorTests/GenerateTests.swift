@@ -442,8 +442,8 @@ final class GenerateTests: XCTestCase {
         }
     }
 
-    func testSplitOutputPlacesACatalogInTheFileOfItsHandleType() throws {
-        // The catalog type has no declaration of its own; it goes with the handle type, as <Name>Handle does.
+    func testSplitOutputPlacesAStoreInTheFileOfItsHandleType() throws {
+        // The store type has no declaration of its own; it goes with the handle type, as <Name>Handle does.
         let set = try GesSchemaSet(sources: [
             GesSchemaSource(name: "states.gess", text: "model(data) schema :Unit as { name: :Text max 64 }\n"),
             GesSchemaSource(name: "handles.gess", text: "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\n"),
@@ -457,17 +457,17 @@ final class GenerateTests: XCTestCase {
         for language in [GesSchemaLanguage.csharp, .swift] {
             let fileExtension = language == .swift ? ".swift" : ".g.cs"
             var options = GesSchemaGenerateOptions(language: language, namespace: "Game.Data", split: .file)
-            options.catalogs = true
+            options.stores = true
             let files = try GesSchemaGenerator.generateModelFiles(set, roots: GesSchemaGenerator.modelRoots(set, group: "data"), options: options)
             let handles = try XCTUnwrap(files.first { $0.path == "Game.Data.handles" + fileExtension })
-            XCTAssertTrue(handles.text.contains("UnitCatalog"))
+            XCTAssertTrue(handles.text.contains("UnitStore"))
             XCTAssertTrue(handles.text.contains(" UnitHandle"))
-            XCTAssertFalse(try XCTUnwrap(files.first { $0.path == "Game.Data.states" + fileExtension }).text.contains("UnitCatalog"))
+            XCTAssertFalse(try XCTUnwrap(files.first { $0.path == "Game.Data.states" + fileExtension }).text.contains("UnitStore"))
             let one = try GesSchemaGenerator.generateModelFiles(single, roots: GesSchemaGenerator.modelRoots(single, group: "data"), options: options)
-            XCTAssertTrue(try XCTUnwrap(one.first { $0.path == "Game.Data.units" + fileExtension }).text.contains("UnitCatalog"))
+            XCTAssertTrue(try XCTUnwrap(one.first { $0.path == "Game.Data.units" + fileExtension }).text.contains("UnitStore"))
             options.split = .schema
             let bySchema = try GesSchemaGenerator.generateModelFiles(set, roots: GesSchemaGenerator.modelRoots(set, group: "data"), options: options)
-            XCTAssertTrue(bySchema.contains { $0.path == "Game.Data.UnitCatalog" + fileExtension })
+            XCTAssertTrue(bySchema.contains { $0.path == "Game.Data.UnitStore" + fileExtension })
         }
     }
 
@@ -565,42 +565,42 @@ final class GenerateTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(documentFiles.last).text.contains("\"values\": true"))
     }
 
-    private func catalogs(_ language: GesSchemaLanguage) -> GesSchemaGenerateOptions {
-        GesSchemaGenerateOptions(language: language, namespace: "Names", access: .internal, catalogs: true)
+    private func stores(_ language: GesSchemaLanguage) -> GesSchemaGenerateOptions {
+        GesSchemaGenerateOptions(language: language, namespace: "Names", access: .internal, stores: true)
     }
 
-    func testCatalogNamesCollideWithNoTopLevelType() throws {
-        // A dependency parameter named roots, a catalog named like a top-level type and a state type named Entry.
+    func testStoreNamesCollideWithNoTopLevelType() throws {
+        // A dependency parameter named roots, a store named like a top-level type and a state type named Entry.
         let sources = [
-            "model(catalog) schema :Roots as { name: :Text max 8 }\nhandle @Roots of :Roots as { id: :Text max 8, version: :ContentHash }\n"
-                + "model(catalog) schema :Unit as { roots: @Roots }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n",
-            "model(catalog) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n"
-                + "model(catalog) schema :UnitCatalog as { name: :Text max 8 }\n",
-            "model(catalog) schema :Entry as { name: :Text max 8 }\nhandle @Entry of :Entry as { id: :Text max 8, version: :ContentHash }\n",
+            "model(store) schema :Roots as { name: :Text max 8 }\nhandle @Roots of :Roots as { id: :Text max 8, version: :ContentHash }\n"
+                + "model(store) schema :Unit as { roots: @Roots }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n",
+            "model(store) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n"
+                + "model(store) schema :UnitStore as { name: :Text max 8 }\n",
+            "model(store) schema :Entry as { name: :Text max 8 }\nhandle @Entry of :Entry as { id: :Text max 8, version: :ContentHash }\n",
         ]
         for source in sources {
             let set = try GesSchemaSet(parsing: source)
             for language in [GesSchemaLanguage.csharp, .swift] {
-                XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: GesSchemaGenerator.modelRoots(set, group: "catalog"), options: catalogs(language)) }, "generate.nameCollision")
+                XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: GesSchemaGenerator.modelRoots(set, group: "store"), options: stores(language)) }, "generate.nameCollision")
             }
         }
     }
 
-    func testHandleTypesWithoutAModelCatalogGenerateNone() throws {
-        // A Number id, a composite and a state that is no model root generate no catalog.
+    func testHandleTypesWithoutAModelStoreGenerateNone() throws {
+        // A Number id, a composite and a state that is no model root generate no store.
         let set = try GesSchemaSet(
-            parsing: "model(catalog) schema :Contact as { label: :Text max 8 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 9, version: :Nothing }\n"
+            parsing: "model(store) schema :Contact as { label: :Text max 8 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 9, version: :Nothing }\n"
                 + "handle @Slot of :Contact composite @Target as { part: :Text max 8 }\nschema :Other as { label: :Text max 8 }\n"
                 + "handle @Other of :Other as { id: :Text max 8, version: :Nothing }\n"
         )
         for language in [GesSchemaLanguage.csharp, .swift] {
-            let generated = try GesSchemaGenerator.generateModels(set, roots: GesSchemaGenerator.modelRoots(set, group: "catalog"), options: catalogs(language))
-            XCTAssertFalse(generated.contains("Catalog: GesHandleResolver") || generated.contains("Catalog : IGesHandleResolver"))
+            let generated = try GesSchemaGenerator.generateModels(set, roots: GesSchemaGenerator.modelRoots(set, group: "store"), options: stores(language))
+            XCTAssertFalse(generated.contains("Store: GesHandleResolver") || generated.contains("Store : IGesHandleResolver"))
         }
     }
 
-    func testWireCodeTakesNoCatalogs() throws {
-        let set = try GesSchemaSet(parsing: "model(catalog) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n")
-        XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: ["Unit"], parameters: GesSchemaParameters(), options: catalogs(.swift)) }, "generate.usage")
+    func testWireCodeTakesNoStores() throws {
+        let set = try GesSchemaSet(parsing: "model(store) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: ["Unit"], parameters: GesSchemaParameters(), options: stores(.swift)) }, "generate.usage")
     }
 }

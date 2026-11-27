@@ -153,7 +153,7 @@ final class GesCompiler {
     var modules: [GesModule]
     let sources: [GesSource], options: GesCompileOptions
     let catalog: (any GesExternalTypeCatalog)?
-    // The handle catalog by name without `@`, and the handle types the Program names, imported as HandleType bindings.
+    // The handle types by name without `@`, and the handle types the Program names, imported as HandleType bindings.
     let handleTypes: [String: GesHandleType]
     let handleTypeOrder: [String]
     var namedHandleTypes: Set<String> = []

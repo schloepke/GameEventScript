@@ -26,7 +26,7 @@
 		</dict>
 		<dict>
 			<key>include</key>
-			<string>#catalog</string>
+			<string>#store</string>
 		</dict>
 		<dict>
 			<key>include</key>
@@ -121,7 +121,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>:(?:Schema|Catalog)\b</string>
+					<string>:(?:Schema|Store)\b</string>
 					<key>name</key>
 					<string>keyword.other.declaration.schema.gameeventscript.document</string>
 				</dict>
@@ -321,7 +321,7 @@
 				</dict>
 			</array>
 		</dict>
-		<key>catalog</key>
+		<key>store</key>
 		<dict>
 			<key>patterns</key>
 			<array>

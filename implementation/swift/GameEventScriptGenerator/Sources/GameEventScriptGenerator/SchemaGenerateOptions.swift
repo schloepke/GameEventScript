@@ -68,10 +68,10 @@ public struct GesSchemaGenerateOptions: Sendable {
     /// `ModelDocument` without one. It includes `values`.
     /// The code reads text and does no file I/O. Only model generation takes it.
     public var documents: Bool
-    /// Whether model generation also writes a typed catalog `<Name>Catalog` for every handle type whose state is a model root,
-    /// whose id is Text and that is not composite (specs/Schemas.md#model-catalogs). It reads, holds and resolves the states
+    /// Whether model generation also writes a typed store `<Name>Store` for every handle type whose state is a model root,
+    /// whose id is Text and that is not composite (specs/Schemas.md#model-stores). It reads, holds and resolves the states
     /// of that type and includes `documents`. Only model generation takes it.
-    public var catalogs: Bool
+    public var stores: Bool
     /// How the code is divided into files. `.none`, the default, is the single text of `generate` and `generateModels`; the
     /// other choices are the files of `generateFiles` and `generateModelFiles`.
     public var split: GesSchemaSplit
@@ -116,7 +116,7 @@ public struct GesSchemaGenerateOptions: Sendable {
     ///   - checkedExclusivity: Whether generated Swift classes keep dynamic exclusivity checks.
     ///   - bindings: Whether generated model types also offer themselves to scripts as external types.
     ///   - documents: Whether generated model roots also read GES document text.
-    ///   - catalogs: Whether model generation also writes a typed catalog for every handle type whose state is a model root.
+    ///   - stores: Whether model generation also writes a typed store for every handle type whose state is a model root.
     ///   - split: How the code is divided into files.
     ///   - models: The namespace of the model code that wire code shares types with, or nil for none.
     ///   - extendNamespace: The leading part of the Swift namespace that another generation of the module declares, or nil.
@@ -132,7 +132,7 @@ public struct GesSchemaGenerateOptions: Sendable {
         checkedExclusivity: Bool = false,
         bindings: Bool = false,
         documents: Bool = false,
-        catalogs: Bool = false,
+        stores: Bool = false,
         split: GesSchemaSplit = .none,
         models: String? = nil,
         extendNamespace: String? = nil,
@@ -148,7 +148,7 @@ public struct GesSchemaGenerateOptions: Sendable {
         self.checkedExclusivity = checkedExclusivity
         self.bindings = bindings
         self.documents = documents
-        self.catalogs = catalogs
+        self.stores = stores
         self.split = split
         self.models = models
         self.extendNamespace = extendNamespace

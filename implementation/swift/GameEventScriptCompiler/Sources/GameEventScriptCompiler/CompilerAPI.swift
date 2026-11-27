@@ -69,11 +69,11 @@ public final class GesProgramBuilder {
 
     /// Declares the handle types the sources may name as `@Name`, usually from `GesSchemaSet.handleTypes`. A later
     /// declaration of the same name replaces an earlier one; composite roots are known through `GesHandleType.root`
-    /// and need not be declared separately. Catalog file types (`GesHandleType.catalogOf`) are passed over, since scripts
+    /// and need not be declared separately. Store file types (`GesHandleType.storeOf`) are passed over, since scripts
     /// cannot name them. Returns this builder.
     @discardableResult public func withHandleTypes(_ types: some Sequence<GesHandleType>) -> Self {
-        // A catalog file type is no script type; only reading a catalog uses it.
-        for type in types where type.catalogOf == nil {
+        // A store file type is no script type; only reading a store uses it.
+        for type in types where type.storeOf == nil {
             var current: GesHandleType? = type
             while let handle = current {
                 if handleTypes[handle.name] == nil { handleTypeOrder.append(handle.name) }

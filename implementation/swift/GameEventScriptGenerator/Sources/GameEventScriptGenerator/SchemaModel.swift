@@ -159,10 +159,10 @@ enum GesModelLayoutBuilder {
             rootNames.append(schema.name)
             try reach(schema, &reached, &handles)
         }
-        // A model root that is the state of a handle type with a Text id of its own reaches that type, whose catalog holds it.
+        // A model root that is the state of a handle type with a Text id of its own reaches that type, whose store holds it.
         // A handle's state is a schema, which a message of the same name does not stand for.
         for handle in set.handleTypes
-        where handle.root == nil && handle.catalogOf == nil && handle.id?.isText == true && rootNames.contains(handle.stateName)
+        where handle.root == nil && handle.storeOf == nil && handle.id?.isText == true && rootNames.contains(handle.stateName)
             && reached[handle.stateName]?.kind == .schema
         {
             reach(handle, &handles)

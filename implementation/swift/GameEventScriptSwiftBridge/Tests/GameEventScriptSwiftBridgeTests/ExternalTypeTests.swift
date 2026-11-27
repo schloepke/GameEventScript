@@ -21,7 +21,7 @@ final class ExternalTypeTests: XCTestCase {
         )
     }
 
-    func testDescriptorCatalogConstructorAndKeyPathAccess() throws {
+    func testDescriptorStoreConstructorAndKeyPathAccess() throws {
         let type = try playerType()
         let registry = try GesBridgeExternalTypeRegistry([type.binding])
         XCTAssertEqual(registry.types.count, 1)

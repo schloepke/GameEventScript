@@ -396,10 +396,10 @@ internal sealed class GesSchemaDeclarationSyntax
 
     internal int StateOffset { get; init; }
 
-    // The handle type of a catalog file type, `:Catalog(@Type)`, without `@`; empty otherwise, when State names the state.
-    internal string Catalog { get; init; } = "";
+    // The handle type of a store file type, `:Store(@Type)`, without `@`; empty otherwise, when State names the state.
+    internal string Store { get; init; } = "";
 
-    internal int CatalogOffset { get; init; }
+    internal int StoreOffset { get; init; }
 
     internal string Root { get; init; } = "";
 

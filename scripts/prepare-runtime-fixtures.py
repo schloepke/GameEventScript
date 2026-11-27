@@ -9,14 +9,14 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'conformance/runner'))
-from checks import handle_catalog
+from checks import handle_setup
 from core.corpus import read_corpus
 
 
 def handle_schemas(case):
     # The handle types the compiler knows; resolvers and answers stay with the executing adapter.
-    catalog = handle_catalog.prepare(case)
-    return catalog['schemas'] if catalog is not None else []
+    setup = handle_setup.prepare(case)
+    return setup['schemas'] if setup is not None else []
 
 
 def compiled_sources(case):

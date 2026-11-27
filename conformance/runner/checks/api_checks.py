@@ -103,7 +103,7 @@ def compare(case, observed):
     closed(actual, {'error', 'typeCount'}, 'catalog observation')
     if set(actual) == {'error'}:
         if actual['error'] != 'duplicateTypeName':
-            raise InvalidDocument('Unknown catalog error')
+            raise InvalidDocument('Unknown store error')
     elif set(actual) == {'typeCount'}:
         if type(actual['typeCount']) is not int or not 0 <= actual['typeCount'] < 2**32:
             raise InvalidDocument('Invalid catalog count')

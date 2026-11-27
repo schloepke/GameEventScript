@@ -14,7 +14,7 @@ using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 
-namespace GameEventScript.Tests.Generator.Catalog.Model
+namespace GameEventScript.Tests.Generator.Store.Model
 {
     /// <summary>The model of the schema <c>:Hull</c>: a plain value that is never encoded and compares by value.</summary>
     internal sealed class Hull : IEquatable<Hull>
@@ -380,7 +380,7 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
         /// <param name="source">The value to narrow.</param>
         /// <returns>The projected value.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
-        public static UnitDisplay From(global::GameEventScript.Tests.Generator.Catalog.Model.Unit source) => __GesModelValuescf7490cb9f0ffae7.UnitDisplay__Unit(source ?? throw new ArgumentNullException(nameof(source)));
+        public static UnitDisplay From(global::GameEventScript.Tests.Generator.Store.Model.Unit source) => __GesModelValuescf7490cb9f0ffae7.UnitDisplay__Unit(source ?? throw new ArgumentNullException(nameof(source)));
 
         /// <summary>Reads a record from GES document text with the header <c>:Schema(:UnitDisplay)</c>: the document is checked against
         /// the schema sources of this file, and fields it leaves out take their defaults. Reading allocates and does no file I/O.</summary>
@@ -474,14 +474,14 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
         /// <param name="source">The value to narrow.</param>
         /// <returns>The projected value.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
-        public static UnitLabel From(global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay source) => __GesModelValuescf7490cb9f0ffae7.UnitLabel__UnitDisplay(source ?? throw new ArgumentNullException(nameof(source)));
+        public static UnitLabel From(global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay source) => __GesModelValuescf7490cb9f0ffae7.UnitLabel__UnitDisplay(source ?? throw new ArgumentNullException(nameof(source)));
 
         /// <summary>Narrows a <c>:Unit</c> to this projection: every taken field along its path, absent where an optional Record
         /// on the path is absent. It never fails, since the source holds valid values.</summary>
         /// <param name="source">The value to narrow.</param>
         /// <returns>The projected value.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
-        public static UnitLabel From(global::GameEventScript.Tests.Generator.Catalog.Model.Unit source) => __GesModelValuescf7490cb9f0ffae7.UnitLabel__Unit(source ?? throw new ArgumentNullException(nameof(source)));
+        public static UnitLabel From(global::GameEventScript.Tests.Generator.Store.Model.Unit source) => __GesModelValuescf7490cb9f0ffae7.UnitLabel__Unit(source ?? throw new ArgumentNullException(nameof(source)));
 
         /// <summary>Reads a record from GES document text with the header <c>:Schema(:UnitLabel)</c>: the document is checked against
         /// the schema sources of this file, and fields it leaves out take their defaults. Reading allocates and does no file I/O.</summary>
@@ -753,43 +753,43 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
         internal global::GameEventScript.Runtime.Values.GesValue ToValue(bool versioned) => global::GameEventScript.Runtime.Values.GesValue.GesHandle((versioned ? this : WithoutVersion()).ToHandle());
     }
 
-    /// <summary>The catalog of <c>@Hull</c>: the entries of <c>:Hull</c> read from GES catalog documents, sorted by id in
-    /// ordinal order. It is the handle resolver of its type: register it with a host for the type of <see cref="Catalog"/>.</summary>
-    internal sealed class HullCatalog : IGesHandleResolver
+    /// <summary>The store of <c>@Hull</c>: the entries of <c>:Hull</c> read from GES store documents, sorted by id in
+    /// ordinal order. It is the handle resolver of its type: register it with a host for the type of <see cref="Store"/>.</summary>
+    internal sealed class HullStore : IGesHandleResolver
     {
         private readonly Entry[] _entries;
-        private readonly global::GameEventScript.Tests.Generator.Catalog.Model.HullHandle[] _index;
+        private readonly global::GameEventScript.Tests.Generator.Store.Model.HullHandle[] _index;
 
-        private HullCatalog(GesCatalog catalog)
+        private HullStore(GesStore store)
         {
-            Catalog = catalog;
-            var entries = catalog.Entries;
+            Store = store;
+            var entries = store.Entries;
             _entries = new Entry[entries.Count];
-            _index = new global::GameEventScript.Tests.Generator.Catalog.Model.HullHandle[entries.Count];
+            _index = new global::GameEventScript.Tests.Generator.Store.Model.HullHandle[entries.Count];
             for (var index = 0; index < _entries.Length; index++)
             {
                 var entry = entries[index];
-                var handle = global::GameEventScript.Tests.Generator.Catalog.Model.HullHandle.FromHandle(entry.Handle);
-                _entries[index] = new Entry(entry.Id, handle, global::GameEventScript.Tests.Generator.Catalog.Model.Hull.FromValue(entry.Value), entry.Origin);
+                var handle = global::GameEventScript.Tests.Generator.Store.Model.HullHandle.FromHandle(entry.Handle);
+                _entries[index] = new Entry(entry.Id, handle, global::GameEventScript.Tests.Generator.Store.Model.Hull.FromValue(entry.Value), entry.Origin);
                 _index[index] = handle;
             }
         }
 
-        /// <summary>Gets the untyped catalog, whose type is the handle type a host registers this catalog for.</summary>
-        public GesCatalog Catalog { get; }
+        /// <summary>Gets the untyped store, whose type is the handle type a host registers this store for.</summary>
+        public GesStore Store { get; }
 
-        /// <summary>Gets the roots a catalog read from handles was read from, each with the version it was read at; empty for named roots.</summary>
-        public IReadOnlyList<GesHandle> Sources => Catalog.Sources;
+        /// <summary>Gets the roots a store read from handles was read from, each with the version it was read at; empty for named roots.</summary>
+        public IReadOnlyList<GesHandle> Sources => Store.Sources;
 
         /// <summary>Gets every entry, sorted by id.</summary>
         public IReadOnlyList<Entry> Entries => _entries;
 
         /// <summary>Gets the handle of every entry, sorted by id.</summary>
-        public IReadOnlyList<global::GameEventScript.Tests.Generator.Catalog.Model.HullHandle> Index => _index;
+        public IReadOnlyList<global::GameEventScript.Tests.Generator.Store.Model.HullHandle> Index => _index;
 
         /// <summary>Gets the entry with an id.</summary>
         /// <param name="id">The id, such as <c>drone.scout</c>.</param>
-        /// <returns>The entry, or null when the catalog has none with that id.</returns>
+        /// <returns>The entry, or null when the store has none with that id.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="id"/> is null.</exception>
         public Entry? this[string id]
         {
@@ -817,30 +817,30 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
             return result;
         }
 
-        /// <summary>Reads the catalog from named roots, whose files a source supplies.</summary>
+        /// <summary>Reads the store from named roots, whose files a source supplies.</summary>
         /// <param name="roots">The roots, read in this order.</param>
         /// <param name="files">The source of every file's text.</param>
-        /// <returns>The catalog.</returns>
+        /// <returns>The store.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the roots, a root or the files are null.</exception>
-        /// <exception cref="ArgumentException">Thrown when two roots share a name or a root is no catalog file of the type.</exception>
-        /// <exception cref="GesCatalogException">Thrown when the catalog has errors; the exception lists every one.</exception>
-        public static HullCatalog Read(IReadOnlyList<GesCatalogRoot> roots, IGesCatalogFiles files)
-            => new HullCatalog(GesCatalog.Read(__HandleType, roots, files, null));
+        /// <exception cref="ArgumentException">Thrown when two roots share a name or a root is no store file of the type.</exception>
+        /// <exception cref="GesStoreException">Thrown when the store has errors; the exception lists every one.</exception>
+        public static HullStore Read(IReadOnlyList<GesStoreRoot> roots, IGesStoreFiles files)
+            => new HullStore(GesStore.Read(__HandleType, roots, files, null));
 
-        /// <summary>Reads the catalog from root handles, whose files a resolver answers.</summary>
+        /// <summary>Reads the store from root handles, whose files a resolver answers.</summary>
         /// <param name="roots">The roots, read in this order.</param>
         /// <param name="resolver">The resolver that answers the root files and their imports.</param>
-        /// <returns>The catalog.</returns>
+        /// <returns>The store.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the roots, a root or the resolver are null.</exception>
-        /// <exception cref="ArgumentException">Thrown when two roots share a name or a root is no catalog file of the type.</exception>
-        /// <exception cref="GesCatalogException">Thrown when the catalog has errors; the exception lists every one.</exception>
+        /// <exception cref="ArgumentException">Thrown when two roots share a name or a root is no store file of the type.</exception>
+        /// <exception cref="GesStoreException">Thrown when the store has errors; the exception lists every one.</exception>
         /// <exception cref="GesHandleException">Thrown when the resolver answers a file wrongly.</exception>
-        public static HullCatalog Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver)
-            => new HullCatalog(GesCatalog.Read(__HandleType, roots, resolver, null));
+        public static HullStore Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver)
+            => new HullStore(GesStore.Read(__HandleType, roots, resolver, null));
 
         /// <summary>Answers a read of an entry's state: its state, with its content hash for a type that declares one, or missing.</summary>
         /// <param name="call">The call holding the handle and receiving the answer.</param>
-        public void Resolve(GesHandleResolveCall call) => Catalog.Resolve(call);
+        public void Resolve(GesHandleResolveCall call) => Store.Resolve(call);
 
         private static GesHandleType __HandleType => __GesModelDocumentscf7490cb9f0ffae7.Set.HandleType("Hull");
 
@@ -856,10 +856,10 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
             return low;
         }
 
-        /// <summary>One entry of the catalog: its id, its handle, its state and where it is declared.</summary>
+        /// <summary>One entry of the store: its id, its handle, its state and where it is declared.</summary>
         public sealed class Entry
         {
-            internal Entry(string id, global::GameEventScript.Tests.Generator.Catalog.Model.HullHandle handle, global::GameEventScript.Tests.Generator.Catalog.Model.Hull value, GesSourceLocation origin)
+            internal Entry(string id, global::GameEventScript.Tests.Generator.Store.Model.HullHandle handle, global::GameEventScript.Tests.Generator.Store.Model.Hull value, GesSourceLocation origin)
             {
                 Id = id;
                 Handle = handle;
@@ -871,63 +871,63 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
             public string Id { get; }
 
             /// <summary>Gets the handle of the entry, without a version.</summary>
-            public global::GameEventScript.Tests.Generator.Catalog.Model.HullHandle Handle { get; }
+            public global::GameEventScript.Tests.Generator.Store.Model.HullHandle Handle { get; }
 
             /// <summary>Gets the state.</summary>
-            public global::GameEventScript.Tests.Generator.Catalog.Model.Hull Value { get; }
+            public global::GameEventScript.Tests.Generator.Store.Model.Hull Value { get; }
 
             /// <summary>Gets where the entry is declared.</summary>
             public GesSourceLocation Origin { get; }
         }
     }
 
-    /// <summary>The catalog of <c>@Unit</c>: the entries of <c>:Unit</c> read from GES catalog documents, sorted by id in
-    /// ordinal order. It is the handle resolver of its type: register it with a host for the type of <see cref="Catalog"/>.</summary>
-    internal sealed class UnitCatalog : IGesHandleResolver
+    /// <summary>The store of <c>@Unit</c>: the entries of <c>:Unit</c> read from GES store documents, sorted by id in
+    /// ordinal order. It is the handle resolver of its type: register it with a host for the type of <see cref="Store"/>.</summary>
+    internal sealed class UnitStore : IGesHandleResolver
     {
         private readonly Entry[] _entries;
-        private readonly global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle[] _index;
-        private readonly global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle[] _unitDisplayIndex;
-        private readonly global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle[] _unitLabelIndex;
+        private readonly global::GameEventScript.Tests.Generator.Store.Model.UnitHandle[] _index;
+        private readonly global::GameEventScript.Tests.Generator.Store.Model.UnitHandle[] _unitDisplayIndex;
+        private readonly global::GameEventScript.Tests.Generator.Store.Model.UnitHandle[] _unitLabelIndex;
 
-        private UnitCatalog(GesCatalog catalog)
+        private UnitStore(GesStore store)
         {
-            Catalog = catalog;
-            var entries = catalog.Entries;
+            Store = store;
+            var entries = store.Entries;
             _entries = new Entry[entries.Count];
-            _index = new global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle[entries.Count];
+            _index = new global::GameEventScript.Tests.Generator.Store.Model.UnitHandle[entries.Count];
             for (var index = 0; index < _entries.Length; index++)
             {
                 var entry = entries[index];
-                var handle = global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle.FromHandle(entry.Handle);
-                _entries[index] = new Entry(entry.Id, handle, global::GameEventScript.Tests.Generator.Catalog.Model.Unit.FromValue(entry.Value), entry.Origin);
+                var handle = global::GameEventScript.Tests.Generator.Store.Model.UnitHandle.FromHandle(entry.Handle);
+                _entries[index] = new Entry(entry.Id, handle, global::GameEventScript.Tests.Generator.Store.Model.Unit.FromValue(entry.Value), entry.Origin);
                 _index[index] = handle;
             }
 
-            var unitDisplay = catalog.Index(__GesModelDocumentscf7490cb9f0ffae7.Set.Schema("UnitDisplay"));
-            _unitDisplayIndex = new global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle[unitDisplay.Count];
-            for (var index = 0; index < _unitDisplayIndex.Length; index++) _unitDisplayIndex[index] = global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle.FromHandle(unitDisplay[index]);
+            var unitDisplay = store.Index(__GesModelDocumentscf7490cb9f0ffae7.Set.Schema("UnitDisplay"));
+            _unitDisplayIndex = new global::GameEventScript.Tests.Generator.Store.Model.UnitHandle[unitDisplay.Count];
+            for (var index = 0; index < _unitDisplayIndex.Length; index++) _unitDisplayIndex[index] = global::GameEventScript.Tests.Generator.Store.Model.UnitHandle.FromHandle(unitDisplay[index]);
 
-            var unitLabel = catalog.Index(__GesModelDocumentscf7490cb9f0ffae7.Set.Schema("UnitLabel"));
-            _unitLabelIndex = new global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle[unitLabel.Count];
-            for (var index = 0; index < _unitLabelIndex.Length; index++) _unitLabelIndex[index] = global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle.FromHandle(unitLabel[index]);
+            var unitLabel = store.Index(__GesModelDocumentscf7490cb9f0ffae7.Set.Schema("UnitLabel"));
+            _unitLabelIndex = new global::GameEventScript.Tests.Generator.Store.Model.UnitHandle[unitLabel.Count];
+            for (var index = 0; index < _unitLabelIndex.Length; index++) _unitLabelIndex[index] = global::GameEventScript.Tests.Generator.Store.Model.UnitHandle.FromHandle(unitLabel[index]);
         }
 
-        /// <summary>Gets the untyped catalog, whose type is the handle type a host registers this catalog for.</summary>
-        public GesCatalog Catalog { get; }
+        /// <summary>Gets the untyped store, whose type is the handle type a host registers this store for.</summary>
+        public GesStore Store { get; }
 
-        /// <summary>Gets the roots a catalog read from handles was read from, each with the version it was read at; empty for named roots.</summary>
-        public IReadOnlyList<GesHandle> Sources => Catalog.Sources;
+        /// <summary>Gets the roots a store read from handles was read from, each with the version it was read at; empty for named roots.</summary>
+        public IReadOnlyList<GesHandle> Sources => Store.Sources;
 
         /// <summary>Gets every entry, sorted by id.</summary>
         public IReadOnlyList<Entry> Entries => _entries;
 
         /// <summary>Gets the handle of every entry, sorted by id.</summary>
-        public IReadOnlyList<global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle> Index => _index;
+        public IReadOnlyList<global::GameEventScript.Tests.Generator.Store.Model.UnitHandle> Index => _index;
 
         /// <summary>Gets the entry with an id.</summary>
         /// <param name="id">The id, such as <c>drone.scout</c>.</param>
-        /// <returns>The entry, or null when the catalog has none with that id.</returns>
+        /// <returns>The entry, or null when the store has none with that id.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="id"/> is null.</exception>
         public Entry? this[string id]
         {
@@ -957,77 +957,77 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
 
         /// <summary>Gets the handle of every entry with the version of the projection <c>:UnitDisplay</c>, sorted by id: the content hash of
         /// the projected state for a type with content hashes, the entry's version otherwise.</summary>
-        public IReadOnlyList<global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle> UnitDisplayIndex => _unitDisplayIndex;
+        public IReadOnlyList<global::GameEventScript.Tests.Generator.Store.Model.UnitHandle> UnitDisplayIndex => _unitDisplayIndex;
 
         /// <summary>Returns the handles of a module's entries with the version of the projection <c>:UnitDisplay</c>, sorted by id.</summary>
         /// <param name="name">The module name, such as <c>drone</c>.</param>
         /// <returns>The module's projected handles; empty when it has none.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
-        public IReadOnlyList<global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle> UnitDisplayModule(string name)
+        public IReadOnlyList<global::GameEventScript.Tests.Generator.Store.Model.UnitHandle> UnitDisplayModule(string name)
         {
             if (name is null) throw new ArgumentNullException(nameof(name));
             var prefix = name + ".";
             var start = LowerBound(prefix);
             var end = start;
             while (end < _entries.Length && _entries[end].Id.StartsWith(prefix, StringComparison.Ordinal)) end++;
-            var result = new global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle[end - start];
+            var result = new global::GameEventScript.Tests.Generator.Store.Model.UnitHandle[end - start];
             Array.Copy(_unitDisplayIndex, start, result, 0, result.Length);
             return result;
         }
 
         /// <summary>Gets the handle of every entry with the version of the projection <c>:UnitLabel</c>, sorted by id: the content hash of
         /// the projected state for a type with content hashes, the entry's version otherwise.</summary>
-        public IReadOnlyList<global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle> UnitLabelIndex => _unitLabelIndex;
+        public IReadOnlyList<global::GameEventScript.Tests.Generator.Store.Model.UnitHandle> UnitLabelIndex => _unitLabelIndex;
 
         /// <summary>Returns the handles of a module's entries with the version of the projection <c>:UnitLabel</c>, sorted by id.</summary>
         /// <param name="name">The module name, such as <c>drone</c>.</param>
         /// <returns>The module's projected handles; empty when it has none.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
-        public IReadOnlyList<global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle> UnitLabelModule(string name)
+        public IReadOnlyList<global::GameEventScript.Tests.Generator.Store.Model.UnitHandle> UnitLabelModule(string name)
         {
             if (name is null) throw new ArgumentNullException(nameof(name));
             var prefix = name + ".";
             var start = LowerBound(prefix);
             var end = start;
             while (end < _entries.Length && _entries[end].Id.StartsWith(prefix, StringComparison.Ordinal)) end++;
-            var result = new global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle[end - start];
+            var result = new global::GameEventScript.Tests.Generator.Store.Model.UnitHandle[end - start];
             Array.Copy(_unitLabelIndex, start, result, 0, result.Length);
             return result;
         }
 
-        /// <summary>Reads the catalog from named roots, whose files a source supplies.</summary>
+        /// <summary>Reads the store from named roots, whose files a source supplies.</summary>
         /// <param name="roots">The roots, read in this order.</param>
         /// <param name="files">The source of every file's text.</param>
-        /// <param name="hull">The catalog of <c>@Hull</c>, whose entries this catalog's entries may name or pin; none when null.</param>
-        /// <returns>The catalog.</returns>
+        /// <param name="hull">The store of <c>@Hull</c>, whose entries this store's entries may name or pin; none when null.</param>
+        /// <returns>The store.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the roots, a root or the files are null.</exception>
-        /// <exception cref="ArgumentException">Thrown when two roots share a name or a root is no catalog file of the type.</exception>
-        /// <exception cref="GesCatalogException">Thrown when the catalog has errors; the exception lists every one.</exception>
-        public static UnitCatalog Read(IReadOnlyList<GesCatalogRoot> roots, IGesCatalogFiles files, global::GameEventScript.Tests.Generator.Catalog.Model.HullCatalog? hull = null)
-            => new UnitCatalog(GesCatalog.Read(__HandleType, roots, files, __Dependencies(hull)));
+        /// <exception cref="ArgumentException">Thrown when two roots share a name or a root is no store file of the type.</exception>
+        /// <exception cref="GesStoreException">Thrown when the store has errors; the exception lists every one.</exception>
+        public static UnitStore Read(IReadOnlyList<GesStoreRoot> roots, IGesStoreFiles files, global::GameEventScript.Tests.Generator.Store.Model.HullStore? hull = null)
+            => new UnitStore(GesStore.Read(__HandleType, roots, files, __Dependencies(hull)));
 
-        /// <summary>Reads the catalog from root handles, whose files a resolver answers.</summary>
+        /// <summary>Reads the store from root handles, whose files a resolver answers.</summary>
         /// <param name="roots">The roots, read in this order.</param>
         /// <param name="resolver">The resolver that answers the root files and their imports.</param>
-        /// <param name="hull">The catalog of <c>@Hull</c>, whose entries this catalog's entries may name or pin; none when null.</param>
-        /// <returns>The catalog.</returns>
+        /// <param name="hull">The store of <c>@Hull</c>, whose entries this store's entries may name or pin; none when null.</param>
+        /// <returns>The store.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the roots, a root or the resolver are null.</exception>
-        /// <exception cref="ArgumentException">Thrown when two roots share a name or a root is no catalog file of the type.</exception>
-        /// <exception cref="GesCatalogException">Thrown when the catalog has errors; the exception lists every one.</exception>
+        /// <exception cref="ArgumentException">Thrown when two roots share a name or a root is no store file of the type.</exception>
+        /// <exception cref="GesStoreException">Thrown when the store has errors; the exception lists every one.</exception>
         /// <exception cref="GesHandleException">Thrown when the resolver answers a file wrongly.</exception>
-        public static UnitCatalog Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver, global::GameEventScript.Tests.Generator.Catalog.Model.HullCatalog? hull = null)
-            => new UnitCatalog(GesCatalog.Read(__HandleType, roots, resolver, __Dependencies(hull)));
+        public static UnitStore Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver, global::GameEventScript.Tests.Generator.Store.Model.HullStore? hull = null)
+            => new UnitStore(GesStore.Read(__HandleType, roots, resolver, __Dependencies(hull)));
 
         /// <summary>Answers a read of an entry's state: its state, with its content hash for a type that declares one, or missing.</summary>
         /// <param name="call">The call holding the handle and receiving the answer.</param>
-        public void Resolve(GesHandleResolveCall call) => Catalog.Resolve(call);
+        public void Resolve(GesHandleResolveCall call) => Store.Resolve(call);
 
         private static GesHandleType __HandleType => __GesModelDocumentscf7490cb9f0ffae7.Set.HandleType("Unit");
 
-        private static IReadOnlyList<GesCatalog> __Dependencies(global::GameEventScript.Tests.Generator.Catalog.Model.HullCatalog? hull)
+        private static IReadOnlyList<GesStore> __Dependencies(global::GameEventScript.Tests.Generator.Store.Model.HullStore? hull)
         {
-            var dependencies = new List<GesCatalog>();
-            if (hull is not null) dependencies.Add(hull.Catalog);
+            var dependencies = new List<GesStore>();
+            if (hull is not null) dependencies.Add(hull.Store);
             return dependencies;
         }
 
@@ -1043,10 +1043,10 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
             return low;
         }
 
-        /// <summary>One entry of the catalog: its id, its handle, its state and where it is declared.</summary>
+        /// <summary>One entry of the store: its id, its handle, its state and where it is declared.</summary>
         public sealed class Entry
         {
-            internal Entry(string id, global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle handle, global::GameEventScript.Tests.Generator.Catalog.Model.Unit value, GesSourceLocation origin)
+            internal Entry(string id, global::GameEventScript.Tests.Generator.Store.Model.UnitHandle handle, global::GameEventScript.Tests.Generator.Store.Model.Unit value, GesSourceLocation origin)
             {
                 Id = id;
                 Handle = handle;
@@ -1058,10 +1058,10 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
             public string Id { get; }
 
             /// <summary>Gets the handle of the entry, without a version.</summary>
-            public global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle Handle { get; }
+            public global::GameEventScript.Tests.Generator.Store.Model.UnitHandle Handle { get; }
 
             /// <summary>Gets the state.</summary>
-            public global::GameEventScript.Tests.Generator.Catalog.Model.Unit Value { get; }
+            public global::GameEventScript.Tests.Generator.Store.Model.Unit Value { get; }
 
             /// <summary>Gets where the entry is declared.</summary>
             public GesSourceLocation Origin { get; }
@@ -1073,7 +1073,7 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
     {
         private static readonly string[] HullFields = { "name", "armor" };
 
-        internal static GesValue Value(global::GameEventScript.Tests.Generator.Catalog.Model.Hull record)
+        internal static GesValue Value(global::GameEventScript.Tests.Generator.Store.Model.Hull record)
         {
             var values = new GesValue[2];
             values[0] = GesValue.GesText(record.Name);
@@ -1081,57 +1081,57 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
             return GesValue.GesRecord("Hull", HullFields, values);
         }
 
-        internal static global::GameEventScript.Tests.Generator.Catalog.Model.Hull ReadHull(in GesValue value, string path)
+        internal static global::GameEventScript.Tests.Generator.Store.Model.Hull ReadHull(in GesValue value, string path)
         {
             var fields = RecordFields(value, "Hull", HullFields) ?? throw Failure(value, path);
             var value0 = Required(fields, "name", path);
             if (!__GesModelscf7490cb9f0ffae7.Text(value0, out var field0)) throw Failure(value0, Path(path, "name"));
             var value1 = Required(fields, "armor", path);
             if (!__GesModelscf7490cb9f0ffae7.Integer(value1, GesQuantityUnit.UnitNone, out var field1)) throw Failure(value1, Path(path, "armor"));
-            return new global::GameEventScript.Tests.Generator.Catalog.Model.Hull(field0, field1);
+            return new global::GameEventScript.Tests.Generator.Store.Model.Hull(field0, field1);
         }
 
-        private static bool DecodeHull(in GesValue value, out global::GameEventScript.Tests.Generator.Catalog.Model.Hull result)
+        private static bool DecodeHull(in GesValue value, out global::GameEventScript.Tests.Generator.Store.Model.Hull result)
         {
             result = null!;
             var fields = RecordFields(value, "Hull", HullFields);
             if (fields is null
                 || !__GesModelscf7490cb9f0ffae7.Text(__GesModelscf7490cb9f0ffae7.Field(fields, "name"), out var field0)
                 || !__GesModelscf7490cb9f0ffae7.Integer(__GesModelscf7490cb9f0ffae7.Field(fields, "armor"), GesQuantityUnit.UnitNone, out var field1)) return false;
-            result = new global::GameEventScript.Tests.Generator.Catalog.Model.Hull(field0, field1);
+            result = new global::GameEventScript.Tests.Generator.Store.Model.Hull(field0, field1);
             return true;
         }
 
         private static readonly string[] LookFields = { "icon" };
 
-        internal static GesValue Value(global::GameEventScript.Tests.Generator.Catalog.Model.Look record)
+        internal static GesValue Value(global::GameEventScript.Tests.Generator.Store.Model.Look record)
         {
             var values = new GesValue[1];
             values[0] = GesValue.GesText(record.Icon);
             return GesValue.GesRecord("Look", LookFields, values);
         }
 
-        internal static global::GameEventScript.Tests.Generator.Catalog.Model.Look ReadLook(in GesValue value, string path)
+        internal static global::GameEventScript.Tests.Generator.Store.Model.Look ReadLook(in GesValue value, string path)
         {
             var fields = RecordFields(value, "Look", LookFields) ?? throw Failure(value, path);
             var value0 = Required(fields, "icon", path);
             if (!__GesModelscf7490cb9f0ffae7.Text(value0, out var field0)) throw Failure(value0, Path(path, "icon"));
-            return new global::GameEventScript.Tests.Generator.Catalog.Model.Look(field0);
+            return new global::GameEventScript.Tests.Generator.Store.Model.Look(field0);
         }
 
-        private static bool DecodeLook(in GesValue value, out global::GameEventScript.Tests.Generator.Catalog.Model.Look result)
+        private static bool DecodeLook(in GesValue value, out global::GameEventScript.Tests.Generator.Store.Model.Look result)
         {
             result = null!;
             var fields = RecordFields(value, "Look", LookFields);
             if (fields is null
                 || !__GesModelscf7490cb9f0ffae7.Text(__GesModelscf7490cb9f0ffae7.Field(fields, "icon"), out var field0)) return false;
-            result = new global::GameEventScript.Tests.Generator.Catalog.Model.Look(field0);
+            result = new global::GameEventScript.Tests.Generator.Store.Model.Look(field0);
             return true;
         }
 
         private static readonly string[] UnitFields = { "name", "hull", "escorts", "speed", "look" };
 
-        internal static GesValue Value(global::GameEventScript.Tests.Generator.Catalog.Model.Unit record)
+        internal static GesValue Value(global::GameEventScript.Tests.Generator.Store.Model.Unit record)
         {
             var values = new GesValue[5];
             values[0] = GesValue.GesText(record.Name);
@@ -1142,39 +1142,39 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
             return GesValue.GesRecord("Unit", UnitFields, values);
         }
 
-        internal static global::GameEventScript.Tests.Generator.Catalog.Model.Unit ReadUnit(in GesValue value, string path)
+        internal static global::GameEventScript.Tests.Generator.Store.Model.Unit ReadUnit(in GesValue value, string path)
         {
             var fields = RecordFields(value, "Unit", UnitFields) ?? throw Failure(value, path);
             var value0 = Required(fields, "name", path);
             if (!__GesModelscf7490cb9f0ffae7.Text(value0, out var field0)) throw Failure(value0, Path(path, "name"));
             var value1 = Required(fields, "hull", path);
-            if (!global::GameEventScript.Tests.Generator.Catalog.Model.HullHandle.Read(value1, true, out var field1)) throw Failure(value1, Path(path, "hull"));
+            if (!global::GameEventScript.Tests.Generator.Store.Model.HullHandle.Read(value1, true, out var field1)) throw Failure(value1, Path(path, "hull"));
             var value2 = Required(fields, "escorts", path);
-            var field2 = ReadList(value2, Path(path, "escorts"), (in GesValue x0, string p0) => global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle.Read(x0, false, out var y0) ? y0 : throw Failure(x0, p0));
+            var field2 = ReadList(value2, Path(path, "escorts"), (in GesValue x0, string p0) => global::GameEventScript.Tests.Generator.Store.Model.UnitHandle.Read(x0, false, out var y0) ? y0 : throw Failure(x0, p0));
             var value3 = Required(fields, "speed", path);
             if (!__GesModelscf7490cb9f0ffae7.Number(value3, GesQuantityUnit.UnitMeterPerSecond, out var field3)) throw Failure(value3, Path(path, "speed"));
             var value4 = __GesModelscf7490cb9f0ffae7.Field(fields, "look");
             var field4 = ReadOptional(value4, Path(path, "look"), (in GesValue x0, string p0) => ReadLook(x0, p0));
-            return new global::GameEventScript.Tests.Generator.Catalog.Model.Unit(field0, field1, field2, field3, field4);
+            return new global::GameEventScript.Tests.Generator.Store.Model.Unit(field0, field1, field2, field3, field4);
         }
 
-        private static bool DecodeUnit(in GesValue value, out global::GameEventScript.Tests.Generator.Catalog.Model.Unit result)
+        private static bool DecodeUnit(in GesValue value, out global::GameEventScript.Tests.Generator.Store.Model.Unit result)
         {
             result = null!;
             var fields = RecordFields(value, "Unit", UnitFields);
             if (fields is null
                 || !__GesModelscf7490cb9f0ffae7.Text(__GesModelscf7490cb9f0ffae7.Field(fields, "name"), out var field0)
-                || !global::GameEventScript.Tests.Generator.Catalog.Model.HullHandle.Read(__GesModelscf7490cb9f0ffae7.Field(fields, "hull"), true, out var field1)
-                || !__GesModelscf7490cb9f0ffae7.List(__GesModelscf7490cb9f0ffae7.Field(fields, "escorts"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle y0) => global::GameEventScript.Tests.Generator.Catalog.Model.UnitHandle.Read(x0, false, out y0), out var field2)
+                || !global::GameEventScript.Tests.Generator.Store.Model.HullHandle.Read(__GesModelscf7490cb9f0ffae7.Field(fields, "hull"), true, out var field1)
+                || !__GesModelscf7490cb9f0ffae7.List(__GesModelscf7490cb9f0ffae7.Field(fields, "escorts"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Store.Model.UnitHandle y0) => global::GameEventScript.Tests.Generator.Store.Model.UnitHandle.Read(x0, false, out y0), out var field2)
                 || !__GesModelscf7490cb9f0ffae7.Number(__GesModelscf7490cb9f0ffae7.Field(fields, "speed"), GesQuantityUnit.UnitMeterPerSecond, out var field3)
-                || !__GesModelscf7490cb9f0ffae7.OptionalObject(__GesModelscf7490cb9f0ffae7.Field(fields, "look"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Catalog.Model.Look y0) => DecodeLook(x0, out y0), out var field4)) return false;
-            result = new global::GameEventScript.Tests.Generator.Catalog.Model.Unit(field0, field1, field2, field3, field4);
+                || !__GesModelscf7490cb9f0ffae7.OptionalObject(__GesModelscf7490cb9f0ffae7.Field(fields, "look"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Store.Model.Look y0) => DecodeLook(x0, out y0), out var field4)) return false;
+            result = new global::GameEventScript.Tests.Generator.Store.Model.Unit(field0, field1, field2, field3, field4);
             return true;
         }
 
         private static readonly string[] UnitDisplayFields = { "name", "hull", "icon" };
 
-        internal static GesValue Value(global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay record)
+        internal static GesValue Value(global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay record)
         {
             var values = new GesValue[3];
             values[0] = GesValue.GesText(record.Name);
@@ -1183,70 +1183,70 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
             return GesValue.GesRecord("UnitDisplay", UnitDisplayFields, values);
         }
 
-        internal static global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay ReadUnitDisplay(in GesValue value, string path)
+        internal static global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay ReadUnitDisplay(in GesValue value, string path)
         {
             var fields = RecordFields(value, "UnitDisplay", UnitDisplayFields) ?? throw Failure(value, path);
             var value0 = Required(fields, "name", path);
             if (!__GesModelscf7490cb9f0ffae7.Text(value0, out var field0)) throw Failure(value0, Path(path, "name"));
             var value1 = Required(fields, "hull", path);
-            if (!global::GameEventScript.Tests.Generator.Catalog.Model.HullHandle.Read(value1, true, out var field1)) throw Failure(value1, Path(path, "hull"));
+            if (!global::GameEventScript.Tests.Generator.Store.Model.HullHandle.Read(value1, true, out var field1)) throw Failure(value1, Path(path, "hull"));
             var value2 = __GesModelscf7490cb9f0ffae7.Field(fields, "icon");
             if (!__GesModelscf7490cb9f0ffae7.OptionalObject(value2, (in GesValue x0, out string y0) => __GesModelscf7490cb9f0ffae7.Text(x0, out y0), out var field2)) throw Failure(value2, Path(path, "icon"));
-            return new global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay(field0, field1, field2);
+            return new global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay(field0, field1, field2);
         }
 
-        private static bool DecodeUnitDisplay(in GesValue value, out global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay result)
+        private static bool DecodeUnitDisplay(in GesValue value, out global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay result)
         {
             result = null!;
             var fields = RecordFields(value, "UnitDisplay", UnitDisplayFields);
             if (fields is null
                 || !__GesModelscf7490cb9f0ffae7.Text(__GesModelscf7490cb9f0ffae7.Field(fields, "name"), out var field0)
-                || !global::GameEventScript.Tests.Generator.Catalog.Model.HullHandle.Read(__GesModelscf7490cb9f0ffae7.Field(fields, "hull"), true, out var field1)
+                || !global::GameEventScript.Tests.Generator.Store.Model.HullHandle.Read(__GesModelscf7490cb9f0ffae7.Field(fields, "hull"), true, out var field1)
                 || !__GesModelscf7490cb9f0ffae7.OptionalObject(__GesModelscf7490cb9f0ffae7.Field(fields, "icon"), (in GesValue x0, out string y0) => __GesModelscf7490cb9f0ffae7.Text(x0, out y0), out var field2)) return false;
-            result = new global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay(field0, field1, field2);
+            result = new global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay(field0, field1, field2);
             return true;
         }
 
         private static readonly string[][] UnitDisplay__UnitPaths = { new[] { "name" }, new[] { "hull" }, new[] { "look", "icon" } };
 
-        internal static global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay UnitDisplay__Unit(global::GameEventScript.Tests.Generator.Catalog.Model.Unit source)
+        internal static global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay UnitDisplay__Unit(global::GameEventScript.Tests.Generator.Store.Model.Unit source)
             => ReadUnitDisplay(Select(Value(source), "UnitDisplay", UnitDisplayFields, UnitDisplay__UnitPaths), "");
 
         private static readonly string[] UnitLabelFields = { "name" };
 
-        internal static GesValue Value(global::GameEventScript.Tests.Generator.Catalog.Model.UnitLabel record)
+        internal static GesValue Value(global::GameEventScript.Tests.Generator.Store.Model.UnitLabel record)
         {
             var values = new GesValue[1];
             values[0] = GesValue.GesText(record.Name);
             return GesValue.GesRecord("UnitLabel", UnitLabelFields, values);
         }
 
-        internal static global::GameEventScript.Tests.Generator.Catalog.Model.UnitLabel ReadUnitLabel(in GesValue value, string path)
+        internal static global::GameEventScript.Tests.Generator.Store.Model.UnitLabel ReadUnitLabel(in GesValue value, string path)
         {
             var fields = RecordFields(value, "UnitLabel", UnitLabelFields) ?? throw Failure(value, path);
             var value0 = Required(fields, "name", path);
             if (!__GesModelscf7490cb9f0ffae7.Text(value0, out var field0)) throw Failure(value0, Path(path, "name"));
-            return new global::GameEventScript.Tests.Generator.Catalog.Model.UnitLabel(field0);
+            return new global::GameEventScript.Tests.Generator.Store.Model.UnitLabel(field0);
         }
 
-        private static bool DecodeUnitLabel(in GesValue value, out global::GameEventScript.Tests.Generator.Catalog.Model.UnitLabel result)
+        private static bool DecodeUnitLabel(in GesValue value, out global::GameEventScript.Tests.Generator.Store.Model.UnitLabel result)
         {
             result = null!;
             var fields = RecordFields(value, "UnitLabel", UnitLabelFields);
             if (fields is null
                 || !__GesModelscf7490cb9f0ffae7.Text(__GesModelscf7490cb9f0ffae7.Field(fields, "name"), out var field0)) return false;
-            result = new global::GameEventScript.Tests.Generator.Catalog.Model.UnitLabel(field0);
+            result = new global::GameEventScript.Tests.Generator.Store.Model.UnitLabel(field0);
             return true;
         }
 
         private static readonly string[][] UnitLabel__UnitDisplayPaths = { new[] { "name" } };
 
-        internal static global::GameEventScript.Tests.Generator.Catalog.Model.UnitLabel UnitLabel__UnitDisplay(global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay source)
+        internal static global::GameEventScript.Tests.Generator.Store.Model.UnitLabel UnitLabel__UnitDisplay(global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay source)
             => ReadUnitLabel(Select(Value(source), "UnitLabel", UnitLabelFields, UnitLabel__UnitDisplayPaths), "");
 
         private static readonly string[][] UnitLabel__UnitPaths = { new[] { "name" } };
 
-        internal static global::GameEventScript.Tests.Generator.Catalog.Model.UnitLabel UnitLabel__Unit(global::GameEventScript.Tests.Generator.Catalog.Model.Unit source)
+        internal static global::GameEventScript.Tests.Generator.Store.Model.UnitLabel UnitLabel__Unit(global::GameEventScript.Tests.Generator.Store.Model.Unit source)
             => ReadUnitLabel(Select(Value(source), "UnitLabel", UnitLabelFields, UnitLabel__UnitPaths), "");
 
         // The taken fields of a projection's source along their paths; a path through an absent Record gives nothing.
@@ -1306,13 +1306,13 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
         {
             /// <summary>Holds a record.</summary>
             /// <param name="value">The record.</param>
-            public Hull(global::GameEventScript.Tests.Generator.Catalog.Model.Hull value)
+            public Hull(global::GameEventScript.Tests.Generator.Store.Model.Hull value)
             {
                 Value = value;
             }
 
             /// <summary>Gets the record.</summary>
-            public global::GameEventScript.Tests.Generator.Catalog.Model.Hull Value { get; }
+            public global::GameEventScript.Tests.Generator.Store.Model.Hull Value { get; }
         }
 
         /// <summary>A document of <c>:Unit</c>.</summary>
@@ -1320,13 +1320,13 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
         {
             /// <summary>Holds a record.</summary>
             /// <param name="value">The record.</param>
-            public Unit(global::GameEventScript.Tests.Generator.Catalog.Model.Unit value)
+            public Unit(global::GameEventScript.Tests.Generator.Store.Model.Unit value)
             {
                 Value = value;
             }
 
             /// <summary>Gets the record.</summary>
-            public global::GameEventScript.Tests.Generator.Catalog.Model.Unit Value { get; }
+            public global::GameEventScript.Tests.Generator.Store.Model.Unit Value { get; }
         }
 
         /// <summary>A document of <c>:UnitDisplay</c>.</summary>
@@ -1334,13 +1334,13 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
         {
             /// <summary>Holds a record.</summary>
             /// <param name="value">The record.</param>
-            public UnitDisplay(global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay value)
+            public UnitDisplay(global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay value)
             {
                 Value = value;
             }
 
             /// <summary>Gets the record.</summary>
-            public global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay Value { get; }
+            public global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay Value { get; }
         }
 
         /// <summary>A document of <c>:UnitLabel</c>.</summary>
@@ -1348,13 +1348,13 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
         {
             /// <summary>Holds a record.</summary>
             /// <param name="value">The record.</param>
-            public UnitLabel(global::GameEventScript.Tests.Generator.Catalog.Model.UnitLabel value)
+            public UnitLabel(global::GameEventScript.Tests.Generator.Store.Model.UnitLabel value)
             {
                 Value = value;
             }
 
             /// <summary>Gets the record.</summary>
-            public global::GameEventScript.Tests.Generator.Catalog.Model.UnitLabel Value { get; }
+            public global::GameEventScript.Tests.Generator.Store.Model.UnitLabel Value { get; }
         }
 
         /// <summary>Reads GES document text whose header names a model root of this file, as that root's <c>FromDocument</c> does.</summary>
@@ -1370,13 +1370,13 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
                 switch (document.Schema)
                 {
                     case "Hull":
-                        return new Hull(global::GameEventScript.Tests.Generator.Catalog.Model.Hull.FromValue(document.Value));
+                        return new Hull(global::GameEventScript.Tests.Generator.Store.Model.Hull.FromValue(document.Value));
                     case "Unit":
-                        return new Unit(global::GameEventScript.Tests.Generator.Catalog.Model.Unit.FromValue(document.Value));
+                        return new Unit(global::GameEventScript.Tests.Generator.Store.Model.Unit.FromValue(document.Value));
                     case "UnitDisplay":
-                        return new UnitDisplay(global::GameEventScript.Tests.Generator.Catalog.Model.UnitDisplay.FromValue(document.Value));
+                        return new UnitDisplay(global::GameEventScript.Tests.Generator.Store.Model.UnitDisplay.FromValue(document.Value));
                     default:
-                        return new UnitLabel(global::GameEventScript.Tests.Generator.Catalog.Model.UnitLabel.FromValue(document.Value));
+                        return new UnitLabel(global::GameEventScript.Tests.Generator.Store.Model.UnitLabel.FromValue(document.Value));
                 }
             }
             catch (GesWireException error)
@@ -1394,21 +1394,21 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
         internal static GesSchemaDocument Read(string text, params string[] roots) => GesSchemaDocument.Read(Set, text, roots);
 
         internal static GesSchemaSet Set => __set ??= GesSchemaSet.Parse(
-            new GesSchemaSource("catalogs.gess", string.Join("\n", new[]
+            new GesSchemaSource("stores.gess", string.Join("\n", new[]
             {
                 "// Copyright 2026 Stephan Schl\u00F6pke",
                 "// SPDX-License-Identifier: Apache-2.0",
-                "// The fixture of the checked-in catalog code: two catalog handle types whose states are model roots, one of which names",
-                "// the other, the catalog file types of both below one repository, and two projections of the unit, one of the other.",
+                "// The fixture of the checked-in store code: two store handle types whose states are model roots, one of which names",
+                "// the other, the store file types of both below one repository, and two projections of the unit, one of the other.",
                 "schema :Source as { text: :Text }",
                 "handle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }",
                 "",
-                "model(catalog) schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 1000 }",
+                "model(store) schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 1000 }",
                 "handle @Hull of :Hull as { id: :Text max 64, version: :ContentHash }",
                 "",
                 "schema :Look as { icon: :Text max 16 }",
                 "",
-                "model(catalog) schema :Unit as {",
+                "model(store) schema :Unit as {",
                 "  name: :Text max 32",
                 "  hull: @Hull~",
                 "  escorts: :List(@Unit) max 4",
@@ -1417,11 +1417,11 @@ namespace GameEventScript.Tests.Generator.Catalog.Model
                 "}",
                 "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }",
                 "",
-                "model(catalog) projection :UnitDisplay of :Unit as { name, hull, icon: look.icon }",
-                "model(catalog) projection :UnitLabel of :UnitDisplay as { name }",
+                "model(store) projection :UnitDisplay of :Unit as { name, hull, icon: look.icon }",
+                "model(store) projection :UnitLabel of :UnitDisplay as { name }",
                 "",
-                "handle @HullFiles of :Catalog(@Hull) composite @Repository as { part: :Text max 256 }",
-                "handle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 256 }",
+                "handle @HullFiles of :Store(@Hull) composite @Repository as { part: :Text max 256 }",
+                "handle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 256 }",
                 "",
             })));
     }

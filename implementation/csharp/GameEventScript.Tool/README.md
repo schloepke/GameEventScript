@@ -692,7 +692,7 @@ provided by the Reader. File errors use `cli.io`, and invalid arguments use
 ```sh
 dotnet ges document check data/drive.gesd data/weapons.gesd
 dotnet ges document check data/*.gesd --schema schemas/*.gess
-dotnet ges document check --schema units.gess --catalog @Hull content/hulls.gesd --catalog @Unit content/units.gesd
+dotnet ges document check --schema units.gess --store @Hull content/hulls.gesd --store @Unit content/units.gesd
 dotnet ges document format data/drive.gesd
 dotnet ges document format data/drive.gesd --color
 dotnet ges document format data/drive.gesd -o data/drive.gesd.new
@@ -725,17 +725,17 @@ the given files. Errors with a position use `path(line,column): error code: mess
 errors without one, such as `schema.unknownName` for a schema the set does not
 hold, use `path: error code: message`. Documents without a header are only read.
 
-> **Since: Unreleased** — `document check --catalog`
+> **Since: Unreleased** — `document check --store`
 
-`--catalog @Type <root.gesd>` (repeatable, `check` only, requires `--schema`) reads
-the [catalog](../../../specs/Documents.md#catalogs) of the handle type `@Type` from
-the given root files before any document; the files of one type form one catalog,
+`--store @Type <root.gesd>` (repeatable, `check` only, requires `--schema`) reads
+the [store](../../../specs/Documents.md#stores) of the handle type `@Type` from
+the given root files before any document; the files of one type form one store,
 whose root names are the paths as given and whose imports stay within each root's
-directory. Catalogs are read in the order their types first appear, and each one
-may pin the entries of every catalog before it, so dependencies come first. Every
-catalog error is reported as `path(line,column): error catalog.code: message`, an
+directory. Stores are read in the order their types first appear, and each one
+may pin the entries of every store before it, so dependencies come first. Every
+store error is reported as `path(line,column): error store.code: message`, an
 unknown reference with a suggested id; a file that cannot be read is
-`catalog.importMissing`. A valid catalog prints `Checked catalog @Type: N entries.`
+`store.importMissing`. A valid store prints `Checked store @Type: N entries.`
 unless `-q` is given. A type the schemas do not declare is `schema.unknownName`.
 
 In the event console, `:show <file>` displays a `.ges`, `.gesa`, `.gesd` or `.gess` file
@@ -786,9 +786,9 @@ model types of the schemas marked `model(group)`, which are never encoded; `--bi
 scripts as external types, `--values` converts them to and from the plain values that wire records read and write, and
 `--documents` adds `FromDocument` (Swift `init(document:)`) per root and a `Document` type (`ModelDocument` without a namespace) that reads GES document
 text by its `:Schema(:Name)` header, checked against the embedded schemas, with errors at their line, column and field path.
-`--catalogs` (Since: Unreleased) includes `--documents` and adds a typed catalog `<Name>Catalog` per handle type whose state
-is a model root, whose id is Text and that is not composite: it reads catalog documents, offers entries by id, module and
-handle and resolves the handle type for a host. See [Model catalogs](../../../specs/Schemas.md#model-catalogs).
+`--stores` (Since: Unreleased) includes `--documents` and adds a typed store `<Name>Store` per handle type whose state
+is a model root, whose id is Text and that is not composite: it reads store documents, offers entries by id, module and
+handle and resolves the handle type for a host. See [Model stores](../../../specs/Schemas.md#model-stores).
 `--schemas <Name>` generates one public schema set type `Name` that embeds the sources once and holds their hash, the
 parameters, `Bind`, `BindNetwork`, `ReadDocument` and, per network, `Bound`; conversions and documents of the generation
 use it. `--use-schemas <A.Name>` uses the set of another generation instead, such as models beside wire code, and

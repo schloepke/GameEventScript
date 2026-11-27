@@ -93,7 +93,7 @@ def prepare(case):
         raise InvalidDocument('Schema API requires no GES source, Steps or assembler')
     numeric_checks.options(case)
     raw = case.metadata.get('schemaApi')
-    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeExternal', 'baselineExternal', 'externalFields', 'failingField', 'baselineFailingField', 'failingCode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'complete', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document', 'readDocument', 'network', 'handle', 'contentHash', 'catalog'}, 'schema API input')
+    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeExternal', 'baselineExternal', 'externalFields', 'failingField', 'baselineFailingField', 'failingCode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'complete', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document', 'readDocument', 'network', 'handle', 'contentHash', 'store'}, 'schema API input')
     sources = raw.get('sources')
     if not isinstance(sources, list) or not sources or any(not isinstance(s, str) for s in sources):
         raise InvalidDocument('Schema API requires source texts')
@@ -144,11 +144,11 @@ def prepare(case):
         'network': text(raw['network'], 'network') if 'network' in raw else None,
         'handle': text(raw['handle'], 'handle') if 'handle' in raw else None,
         'contentHash': input_value(raw['contentHash']) if 'contentHash' in raw else None,
-        'catalog': catalog_input(raw['catalog']) if 'catalog' in raw else None,
+        'store': store_input(raw['store']) if 'store' in raw else None,
     }
     closed(case.expected, {'gesBlock', 'schema'}, 'schema expectation')
     expected = case.expected.get('schema')
-    closed(expected, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'completed', 'dump', 'description', 'document', 'readDocument', 'network', 'handle', 'contentHash', 'catalog'}, 'schema result')
+    closed(expected, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'completed', 'dump', 'description', 'document', 'readDocument', 'network', 'handle', 'contentHash', 'store'}, 'schema result')
     if not expected:
         raise InvalidDocument('Schema expectation requires a result')
     if 'error' in expected:
@@ -282,20 +282,20 @@ def prepare(case):
             closed(wanted, {'schema', 'value'}, 'read document result')
             text(wanted.get('schema'), 'read document schema')
             value(wanted['value'])
-    if 'catalog' in expected:
-        if request['catalog'] is None:
-            raise InvalidDocument('A catalog expectation requires a catalog')
-        catalog_result(expected['catalog'])
-        if set(expected['catalog'].get('indexes', {})) != set(request['catalog']['index']) and 'entries' in expected['catalog']:
-            raise InvalidDocument('Catalog indexes expect exactly the requested projections')
+    if 'store' in expected:
+        if request['store'] is None:
+            raise InvalidDocument('A store expectation requires a store')
+        store_result(expected['store'])
+        if set(expected['store'].get('indexes', {})) != set(request['store']['index']) and 'entries' in expected['store']:
+            raise InvalidDocument('Store indexes expect exactly the requested projections')
     return request
 
 
-CATALOG_CODE = re.compile(r'(catalog|document|schema|wire)\.[a-zA-Z]+')
-CATALOG_NAME = re.compile(r'[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*')
+STORE_CODE = re.compile(r'(store|document|schema|wire)\.[a-zA-Z]+')
+STORE_NAME = re.compile(r'[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*')
 
 
-def catalog_root(raw, label):
+def store_root(raw, label):
     closed(raw, {'name', 'path'}, label)
     return {'name': text(raw.get('name'), label + ' name'), 'path': text(raw.get('path'), label + ' path')}
 
@@ -306,111 +306,111 @@ def revision(raw, label):
     return raw
 
 
-# Catalogs read in order from one file table; each depends on every catalog before it. A catalog reads named roots or root
+# Stores read in order from one file table; each depends on every store before it. A store reads named roots or root
 # handles; for handles, the table's root is the root handle's Text id, `refs` turns refs into revisions, a file answers with
 # its own `version` or else the root's, and `latest` is the revision of an answer for a root that carries none.
-def catalog_input(raw):
-    closed(raw, {'files', 'catalogs', 'refs', 'latest', 'index'}, 'catalog input')
+def store_input(raw):
+    closed(raw, {'files', 'stores', 'refs', 'latest', 'index'}, 'store input')
     index = raw.get('index', [])
     if not isinstance(index, list) or any(not isinstance(name, str) or not name for name in index) or len(set(index)) != len(index):
-        raise InvalidDocument('A catalog index names distinct projections')
+        raise InvalidDocument('A store index names distinct projections')
     refs = raw.get('refs', {})
     if not isinstance(refs, dict) or any(not isinstance(name, str) for name in refs):
-        raise InvalidDocument('Catalog refs map names to revisions')
-    refs = {name: revision(number, 'A catalog ref') for name, number in refs.items()}
-    latest = revision(raw['latest'], 'The latest catalog revision') if 'latest' in raw else None
+        raise InvalidDocument('Store refs map names to revisions')
+    refs = {name: revision(number, 'A store ref') for name, number in refs.items()}
+    latest = revision(raw['latest'], 'The latest store revision') if 'latest' in raw else None
     files = raw.get('files')
     if not isinstance(files, list):
-        raise InvalidDocument('A catalog input has a file table')
+        raise InvalidDocument('A store input has a file table')
     table = []
     for entry in files:
-        closed(entry, {'root', 'path', 'text', 'version'}, 'catalog file')
+        closed(entry, {'root', 'path', 'text', 'version'}, 'store file')
         if not all(isinstance(entry.get(key), str) for key in ('root', 'path', 'text')):
-            raise InvalidDocument('A catalog file has a root, a path and a text')
+            raise InvalidDocument('A store file has a root, a path and a text')
         if any(seen['root'] == entry['root'] and seen['path'] == entry['path'] for seen in table):
-            raise InvalidDocument('A catalog file appears once')
-        version = revision(entry['version'], 'A catalog file version') if 'version' in entry else None
+            raise InvalidDocument('A store file appears once')
+        version = revision(entry['version'], 'A store file version') if 'version' in entry else None
         table.append({'root': entry['root'], 'path': entry['path'], 'text': entry['text'], 'version': version})
-    catalogs = raw.get('catalogs')
-    if not isinstance(catalogs, list) or not catalogs:
-        raise InvalidDocument('A catalog input reads at least one catalog')
+    stores = raw.get('stores')
+    if not isinstance(stores, list) or not stores:
+        raise InvalidDocument('A store input reads at least one store')
     read = []
-    for catalog in catalogs:
-        closed(catalog, {'type', 'roots', 'handles'}, 'catalog')
-        name = catalog.get('type')
-        if not isinstance(name, str) or not CATALOG_NAME.fullmatch(name) or any(seen['type'] == name for seen in read):
-            raise InvalidDocument('Each catalog reads a distinct handle type')
-        if ('roots' in catalog) == ('handles' in catalog):
-            raise InvalidDocument('A catalog reads either named roots or root handles')
-        if 'handles' in catalog:
-            handles = catalog['handles']
+    for store in stores:
+        closed(store, {'type', 'roots', 'handles'}, 'store')
+        name = store.get('type')
+        if not isinstance(name, str) or not STORE_NAME.fullmatch(name) or any(seen['type'] == name for seen in read):
+            raise InvalidDocument('Each store reads a distinct handle type')
+        if ('roots' in store) == ('handles' in store):
+            raise InvalidDocument('A store reads either named roots or root handles')
+        if 'handles' in store:
+            handles = store['handles']
             if not isinstance(handles, list) or any(not isinstance(handle, str) or not handle.startswith('@') for handle in handles):
-                raise InvalidDocument('A catalog has a list of root handles')
+                raise InvalidDocument('A store has a list of root handles')
             read.append({'type': name, 'roots': None, 'handles': list(handles)})
             continue
-        roots = catalog.get('roots')
+        roots = store.get('roots')
         if not isinstance(roots, list):
-            raise InvalidDocument('A catalog has a list of roots')
-        read.append({'type': name, 'roots': [catalog_root(root, 'catalog root') for root in roots], 'handles': None})
-    return {'files': table, 'catalogs': read, 'refs': refs, 'latest': latest, 'index': index}
+            raise InvalidDocument('A store has a list of roots')
+        read.append({'type': name, 'roots': [store_root(root, 'store root') for root in roots], 'handles': None})
+    return {'files': table, 'stores': read, 'refs': refs, 'latest': latest, 'index': index}
 
 
-def catalog_location(raw, label, positioned_required):
+def store_location(raw, label, positioned_required):
     closed(raw, {'root', 'path', 'line', 'column'}, label)
     text(raw.get('root'), label + ' root')
     if not isinstance(raw.get('path'), str):
-        raise InvalidDocument('A catalog location has a path')
+        raise InvalidDocument('A store location has a path')
     for key in ('line', 'column'):
         if key in raw:
             positive(raw[key])
         elif positioned_required:
-            raise InvalidDocument('A catalog location has a line and a column')
+            raise InvalidDocument('A store location has a line and a column')
 
 
-# Entries of the last catalog, sorted by id, with the sources it was read from, or the errors of the first catalog that could
+# Entries of the last store, sorted by id, with the sources it was read from, or the errors of the first store that could
 # not be read, in report order, or the code of a resolver failure.
-def catalog_result(raw):
-    closed(raw, {'entries', 'sources', 'indexes', 'errors', 'failure'}, 'catalog result')
+def store_result(raw):
+    closed(raw, {'entries', 'sources', 'indexes', 'errors', 'failure'}, 'store result')
     if len(set(raw) - {'sources', 'indexes'}) != 1 or ('sources' in raw or 'indexes' in raw) and 'entries' not in raw:
-        raise InvalidDocument('A catalog result has entries, errors or a failure')
+        raise InvalidDocument('A store result has entries, errors or a failure')
     if 'indexes' in raw and (not isinstance(raw['indexes'], dict) or any(
             not isinstance(handles, list) or any(not isinstance(handle, str) for handle in handles) for handles in raw['indexes'].values())):
-        raise InvalidDocument('Catalog indexes map projections to lists of handles')
+        raise InvalidDocument('Store indexes map projections to lists of handles')
     if 'failure' in raw:
         if raw['failure'] not in ('runtime.handleResolveFailed', 'runtime.handleVersionMismatch'):
-            raise InvalidDocument('A catalog failure is a handle resolution code')
+            raise InvalidDocument('A store failure is a handle resolution code')
         return
     if 'sources' in raw and (not isinstance(raw['sources'], list) or any(not isinstance(source, str) for source in raw['sources'])):
-        raise InvalidDocument('Catalog sources are a list of handles')
+        raise InvalidDocument('Store sources are a list of handles')
     if 'entries' in raw:
         if not isinstance(raw['entries'], list):
-            raise InvalidDocument('Catalog entries are a list')
+            raise InvalidDocument('Store entries are a list')
         for entry in raw['entries']:
-            closed(entry, {'id', 'handle', 'origin', 'value'}, 'catalog entry')
-            text(entry.get('id'), 'catalog id')
-            text(entry.get('handle'), 'catalog handle')
-            catalog_location(entry.get('origin'), 'catalog origin', True)
+            closed(entry, {'id', 'handle', 'origin', 'value'}, 'store entry')
+            text(entry.get('id'), 'store id')
+            text(entry.get('handle'), 'store handle')
+            store_location(entry.get('origin'), 'store origin', True)
             value(entry['value'])
         ids = [entry['id'] for entry in raw['entries']]
         if ids != sorted(ids):
-            raise InvalidDocument('Catalog entries are sorted by id')
+            raise InvalidDocument('Store entries are sorted by id')
         return
     errors = raw['errors']
     if not isinstance(errors, list) or not errors:
-        raise InvalidDocument('Catalog errors are a nonempty list')
+        raise InvalidDocument('Store errors are a nonempty list')
     for error in errors:
-        closed(error, {'code', 'location', 'fieldPath', 'other', 'suggestion'}, 'catalog error')
-        if not isinstance(error.get('code'), str) or not CATALOG_CODE.fullmatch(error['code']):
-            raise InvalidDocument('Invalid catalog error code')
-        catalog_location(error.get('location'), 'catalog error location', False)
+        closed(error, {'code', 'location', 'fieldPath', 'other', 'suggestion'}, 'store error')
+        if not isinstance(error.get('code'), str) or not STORE_CODE.fullmatch(error['code']):
+            raise InvalidDocument('Invalid store error code')
+        store_location(error.get('location'), 'store error location', False)
         if 'other' in error:
-            catalog_location(error['other'], 'catalog error other', False)
+            store_location(error['other'], 'store error other', False)
         for key in ('fieldPath', 'suggestion'):
             if key in error and not isinstance(error[key], str):
-                raise InvalidDocument('A catalog error ' + key + ' is text')
+                raise InvalidDocument('A store error ' + key + ' is text')
 
 
-def compare_catalog(wanted, seen, options):
+def compare_store(wanted, seen, options):
     if not isinstance(seen, dict):
         return False
     if 'failure' in wanted:
@@ -454,7 +454,7 @@ def compare(case, observed):
     if set(observed) != {'status', 'schema'} or observed['status'] != 'ok':
         raise InvalidDocument('Invalid schema API outcome')
     actual = observed['schema']
-    closed(actual, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'completed', 'dump', 'description', 'document', 'readDocument', 'network', 'handle', 'contentHash', 'catalog'}, 'schema observation')
+    closed(actual, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'completed', 'dump', 'description', 'document', 'readDocument', 'network', 'handle', 'contentHash', 'store'}, 'schema observation')
     expected = case.expected['schema']
     differences = []
     def differ(path, wanted, seen):
@@ -525,6 +525,6 @@ def compare(case, observed):
         elif not isinstance(seen, dict) or seen.get('schema') != wanted['schema'] or 'value' not in seen \
                 or not numeric_checks.equal(value(wanted['value']), input_value(seen['value']), numeric_checks.options(case)):
             differ('readDocument', wanted, seen)
-    if 'catalog' in expected and not compare_catalog(expected['catalog'], actual.get('catalog'), numeric_checks.options(case)):
-        differ('catalog', expected['catalog'], actual.get('catalog'))
+    if 'store' in expected and not compare_store(expected['store'], actual.get('store'), numeric_checks.options(case)):
+        differ('store', expected['store'], actual.get('store'))
     return ('passed', []) if not differences else ('failed', differences)

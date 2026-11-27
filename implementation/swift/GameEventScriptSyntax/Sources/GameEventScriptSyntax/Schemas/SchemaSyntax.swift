@@ -427,9 +427,9 @@ public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
     /// revision's type, each with where it starts.
     @_spi(Syntax) public var state = ""
     @_spi(Syntax) public var stateOffset = 0
-    /// The handle type of a catalog file type, `:Catalog(@Type)`, without `@`; empty otherwise, when `state` names the state.
-    @_spi(Syntax) public var catalog = ""
-    @_spi(Syntax) public var catalogOffset = 0
+    /// The handle type of a store file type, `:Store(@Type)`, without `@`; empty otherwise, when `state` names the state.
+    @_spi(Syntax) public var store = ""
+    @_spi(Syntax) public var storeOffset = 0
     @_spi(Syntax) public var root = ""
     @_spi(Syntax) public var rootOffset = 0
     @_spi(Syntax) public var id: GesSchemaTypeSyntax?

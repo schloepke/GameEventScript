@@ -10,8 +10,8 @@ namespace GameEventScript.Syntax;
 
 /// <summary>
 /// Reads GES document text: a bracket-free root of entries, an optional schema header, comments and line-break
-/// separators around the data literals of <c>parse</c>. Reading stops at the first error. Catalog files and the
-/// references of their documents are read only on request (specs/Documents.md#catalogs).
+/// separators around the data literals of <c>parse</c>. Reading stops at the first error. Store files and the
+/// references of their documents are read only on request (specs/Documents.md#stores).
 /// </summary>
 internal sealed class GesDocumentReader
 {
@@ -20,7 +20,7 @@ internal sealed class GesDocumentReader
     internal const int MaximumItems = 65536;
 
     private readonly string _text;
-    // Whether catalog references and pinned handles may appear, as in the documents of a catalog.
+    // Whether store references and pinned handles may appear, as in the documents of a store.
     private readonly bool _references;
     private int _position;
     private int _items;
@@ -32,7 +32,7 @@ internal sealed class GesDocumentReader
         _references = references;
     }
 
-    // Reads a document; with `references`, a state document of a catalog entry, whose values may be references.
+    // Reads a document; with `references`, a state document of a store entry, whose values may be references.
     internal static GesDocumentSyntax Read(string text, bool references = false)
     {
         if (GesText.CountScalars(text) > MaximumInputScalars)
@@ -44,24 +44,24 @@ internal sealed class GesDocumentReader
 
     private static GesDocumentDiagnostic InputLimit() => new(Code.LimitExceeded, 0, 0, "MaxLiteralInputScalars", MaximumInputScalars);
 
-    // Reads a catalog file. A text without a `:Catalog` header is no catalog file; reading reports no error for it.
-    internal static GesCatalogSyntax ReadCatalog(string text)
+    // Reads a store file. A text without a `:Store` header is no store file; reading reports no error for it.
+    internal static GesStoreSyntax ReadStore(string text)
     {
-        if (GesText.CountScalars(text) > MaximumInputScalars) return new GesCatalogSyntax(text, true, "", 0, [], InputLimit());
+        if (GesText.CountScalars(text) > MaximumInputScalars) return new GesStoreSyntax(text, true, "", 0, [], InputLimit());
         var reader = new GesDocumentReader(text, references: true);
-        var items = new List<GesCatalogItem>();
-        reader.ReadCatalogFile(items, out var isCatalog, out var typeName, out var headerOffset);
-        return new GesCatalogSyntax(text, isCatalog, typeName, headerOffset, items.ToArray(), reader._error);
+        var items = new List<GesStoreItem>();
+        reader.ReadStoreFile(items, out var isStore, out var typeName, out var headerOffset);
+        return new GesStoreSyntax(text, isStore, typeName, headerOffset, items.ToArray(), reader._error);
     }
 
-    private void ReadCatalogFile(List<GesCatalogItem> items, out bool isCatalog, out string typeName, out int headerOffset)
+    private void ReadStoreFile(List<GesStoreItem> items, out bool isStore, out string typeName, out int headerOffset)
     {
         typeName = "";
         if (_text.Length > 0 && _text[0] == '\uFEFF') _position = 1;
         SkipWhitespace();
         headerOffset = _position;
-        isCatalog = IsCatalogHeader();
-        if (!isCatalog || !ReadCatalogHeader(out typeName)) return;
+        isStore = IsStoreHeader();
+        if (!isStore || !ReadStoreHeader(out typeName)) return;
         SkipSpacesAndComments();
         if (_position < _text.Length && !AtLineBreak)
         {
@@ -72,7 +72,7 @@ internal sealed class GesDocumentReader
         while (_position < _text.Length)
         {
             var itemStart = _position;
-            if (IsSchemaHeader() || IsCatalogHeader())
+            if (IsSchemaHeader() || IsStoreHeader())
             {
                 Fail(Code.MisplacedSchemaHeader, itemStart);
                 return;
@@ -88,13 +88,13 @@ internal sealed class GesDocumentReader
                 _position += 6;
                 SkipSpacesAndComments();
                 if (ReadImportPath(out var pathOffset) is not { } path) return;
-                items.Add(new GesCatalogItem(GesCatalogItemKind.Import, "", "", itemStart, null, path, pathOffset));
+                items.Add(new GesStoreItem(GesStoreItemKind.Import, "", "", itemStart, null, path, pathOffset));
             }
             else if (IsItemWord("module"))
             {
                 if (!ReadModule(items)) return;
             }
-            else if (!ReadCatalogEntry("", items))
+            else if (!ReadStoreEntry("", items))
             {
                 return;
             }
@@ -114,13 +114,13 @@ internal sealed class GesDocumentReader
         }
     }
 
-    private bool IsCatalogHeader() => StartsWord(":Catalog");
+    private bool IsStoreHeader() => StartsWord(":Store");
 
-    // `:Catalog(@TypeName)`.
-    private bool ReadCatalogHeader(out string typeName)
+    // `:Store(@TypeName)`.
+    private bool ReadStoreHeader(out string typeName)
     {
         typeName = "";
-        _position += 8;
+        _position += 6;
         SkipWhitespace();
         var open = _position;
         if (!Consume('(')) return Fail(Code.InvalidSchemaHeader, _position) is not null;
@@ -140,7 +140,7 @@ internal sealed class GesDocumentReader
     {
         if (!_text.AsSpan(_position).StartsWith(word.AsSpan(), StringComparison.Ordinal)) return false;
         var position = _position + word.Length;
-        if (position < _text.Length && IsCatalogKeyCharacter(_text[position])) return false;
+        if (position < _text.Length && IsStoreKeyCharacter(_text[position])) return false;
         var saved = _position;
         _position = position;
         SkipSpacesAndComments();
@@ -150,12 +150,12 @@ internal sealed class GesDocumentReader
     }
 
     // `module name { entries }`; module blocks do not nest and hold no imports.
-    private bool ReadModule(List<GesCatalogItem> items)
+    private bool ReadModule(List<GesStoreItem> items)
     {
         _position += 6;
         SkipSpacesAndComments();
         var nameStart = _position;
-        var nameEnd = CatalogNameEnd(_position);
+        var nameEnd = StoreNameEnd(_position);
         if (nameEnd < 0) return Fail(Code.InvalidKey, nameStart) is not null;
         var name = _text.Substring(nameStart, nameEnd - nameStart);
         _position = nameEnd;
@@ -170,21 +170,21 @@ internal sealed class GesDocumentReader
             var entryStart = _position;
             if (IsItemWord("module")) return Fail(Code.UnexpectedModule, entryStart, entryStart + 6) is not null;
             if (IsItemWord("import")) return Fail(Code.UnexpectedToken, entryStart, entryStart + 6) is not null;
-            if (IsSchemaHeader() || IsCatalogHeader()) return Fail(Code.MisplacedSchemaHeader, entryStart) is not null;
+            if (IsSchemaHeader() || IsStoreHeader()) return Fail(Code.MisplacedSchemaHeader, entryStart) is not null;
             if (_items >= MaximumItems) return Limit("MaxLiteralItems", MaximumItems, entryStart) is not null;
             _items++;
-            if (!ReadCatalogEntry(name, items)) return false;
+            if (!ReadStoreEntry(name, items)) return false;
             var separator = Separator('}', open);
             if (separator != 0) return separator > 0;
         }
     }
 
     // `key: value` or `key: import 'path'`.
-    private bool ReadCatalogEntry(string module, List<GesCatalogItem> items)
+    private bool ReadStoreEntry(string module, List<GesStoreItem> items)
     {
         var keyStart = _position;
         var keyEnd = keyStart;
-        while (keyEnd < _text.Length && IsCatalogKeyCharacter(_text[keyEnd])) keyEnd++;
+        while (keyEnd < _text.Length && IsStoreKeyCharacter(_text[keyEnd])) keyEnd++;
         if (keyEnd == keyStart) return Fail(Code.InvalidKey, keyStart) is not null;
         var key = _text.Substring(keyStart, keyEnd - keyStart);
         _position = keyEnd;
@@ -192,18 +192,18 @@ internal sealed class GesDocumentReader
         if (!Consume(':')) return Fail(Code.MissingColon, _position) is not null;
         SkipSpacesAndComments();
         if (_text.AsSpan(_position).StartsWith("import".AsSpan(), StringComparison.Ordinal)
-            && (_position + 6 == _text.Length || !IsCatalogKeyCharacter(_text[_position + 6])))
+            && (_position + 6 == _text.Length || !IsStoreKeyCharacter(_text[_position + 6])))
         {
             _position += 6;
             SkipSpacesAndComments();
             if (ReadImportPath(out var pathOffset) is not { } path) return false;
-            items.Add(new GesCatalogItem(GesCatalogItemKind.EntryImport, module, key, keyStart, null, path, pathOffset));
+            items.Add(new GesStoreItem(GesStoreItemKind.EntryImport, module, key, keyStart, null, path, pathOffset));
             return true;
         }
         var valueStart = _position;
         if (ReadEntryValue(0) is not { } value) return false;
         if (value.Kind != GesDocumentNodeKind.Map) return Fail(Code.UnexpectedToken, valueStart) is not null;
-        items.Add(new GesCatalogItem(GesCatalogItemKind.Entry, module, key, keyStart, value, "", -1));
+        items.Add(new GesStoreItem(GesStoreItemKind.Entry, module, key, keyStart, value, "", -1));
         return true;
     }
 
@@ -230,16 +230,16 @@ internal sealed class GesDocumentReader
         return path;
     }
 
-    private static bool IsCatalogKeyCharacter(char value) => value is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_' or '-';
+    private static bool IsStoreKeyCharacter(char value) => value is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_' or '-';
 
-    // The end of a catalog name, keys joined by `.`, from `start`; -1 when no key starts there or a `.` ends it.
-    private int CatalogNameEnd(int start)
+    // The end of a store name, keys joined by `.`, from `start`; -1 when no key starts there or a `.` ends it.
+    private int StoreNameEnd(int start)
     {
         var position = start;
         while (true)
         {
             var keyStart = position;
-            while (position < _text.Length && IsCatalogKeyCharacter(_text[position])) position++;
+            while (position < _text.Length && IsStoreKeyCharacter(_text[position])) position++;
             if (position == keyStart) return -1;
             if (position == _text.Length || _text[position] != '.') return position;
             position++;
@@ -256,7 +256,7 @@ internal sealed class GesDocumentReader
             pin = -1;
             return GesHandleLiteral.Read(_text, start, out identity, out versioned);
         }
-        var nameEnd = CatalogNameEnd(start + 1);
+        var nameEnd = StoreNameEnd(start + 1);
         if (nameEnd > 0 && nameEnd + 1 < _text.Length && _text[nameEnd] == ':' && GesHandleLiteral.IsIdStart(_text[nameEnd + 1])
             && GesText.IsTypeName(_text.Substring(start + 1, nameEnd - start - 1)))
             return GesHandleLiteral.Read(_text, start, true, out identity, out versioned, out pin);
@@ -295,8 +295,8 @@ internal sealed class GesDocumentReader
         {
             var entryStart = _position;
             if (IsSchemaHeader()) return Fail(Code.MisplacedSchemaHeader, entryStart);
-            // Catalog headers and module blocks belong only to catalog files.
-            if (IsCatalogHeader()) return Fail(Code.InvalidSchemaHeader, entryStart);
+            // Store headers and module blocks belong only to store files.
+            if (IsStoreHeader()) return Fail(Code.InvalidSchemaHeader, entryStart);
             if (IsItemWord("module")) return Fail(Code.UnexpectedModule, entryStart, entryStart + 6);
             if (_items >= MaximumItems) return Limit("MaxLiteralItems", MaximumItems, entryStart);
             _items++;

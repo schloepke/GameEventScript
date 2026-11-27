@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Categorizes GES document text token by token, also after an error: keys and labels before their colon, the schema
-// header, typed forms with their message and parameter names, scalars and comments, and in a catalog file its header,
+// header, typed forms with their message and parameter names, scalars and comments, and in a store file its header,
 // imports, module blocks and references. The diagnostic is the reader's.
 enum GesDocumentHighlighting {
     private enum Context {
@@ -11,8 +11,8 @@ enum GesDocumentHighlighting {
 
     static func highlight(_ text: String, _ spans: inout GesSpanBuilder) -> [GesSpanBuilder.Diagnostic] {
         let bytes = spans.bytes
-        let catalog = GesDocumentReader.readCatalog(text)
-        let isCatalog = catalog.isCatalog
+        let store = GesDocumentReader.readStore(text)
+        let isStore = store.isStore
         var contexts: [Context] = []
         // Whether a module name follows, until its `{`.
         var inModuleName = false
@@ -39,8 +39,8 @@ enum GesDocumentHighlighting {
                 continue
             }
 
-            if isCatalog && contexts.isEmpty, let catalogKind = catalogSpan(bytes, &position, &inModuleName) {
-                spans.add(start, position, catalogKind)
+            if isStore && contexts.isEmpty, let storeKind = storeSpan(bytes, &position, &inModuleName) {
+                spans.add(start, position, storeKind)
                 pending = nil
                 first = false
                 afterSeriesKind = false
@@ -59,7 +59,7 @@ enum GesDocumentHighlighting {
             } else if c == 58 && position + 1 < bytes.count && isLetter(bytes[position + 1]) {
                 position = nameEnd(bytes, position + 1)
                 let name = String(decoding: bytes[(start + 1)..<position], as: UTF8.self)
-                kind = name == "Schema" || (isCatalog && name == "Catalog") ? .keyword : .type
+                kind = name == "Schema" || (isStore && name == "Store") ? .keyword : .type
                 switch name {
                 case "Message": pending = .messageForm
                 case "Handler": pending = .handlerForm
@@ -116,13 +116,13 @@ enum GesDocumentHighlighting {
             spans.add(start, position, kind)
         }
 
-        guard let diagnostic = isCatalog ? catalog.diagnostic : GesDocumentReader.read(text, references: true).diagnostic else { return [] }
+        guard let diagnostic = isStore ? store.diagnostic : GesDocumentReader.read(text, references: true).diagnostic else { return [] }
         return [GesSpanBuilder.Diagnostic(code: diagnostic.code, message: GesDocumentDiagnostic.explain(diagnostic.code, limitName: diagnostic.limitName, limitValue: diagnostic.limitValue), start: diagnostic.start, end: diagnostic.end)]
     }
 
-    // A token of a catalog file outside every bracket that the catalog grammar owns: braces, `import` and `module`
+    // A token of a store file outside every bracket that the store grammar owns: braces, `import` and `module`
     // without a key colon, a module name and a key. Returns nil for every other token, which documents categorize.
-    private static func catalogSpan(_ bytes: [UInt8], _ position: inout Int, _ inModuleName: inout Bool) -> GesSyntaxKind? {
+    private static func storeSpan(_ bytes: [UInt8], _ position: inout Int, _ inModuleName: inout Bool) -> GesSyntaxKind? {
         let c = bytes[position]
         if c == 123 || c == 125 {
             inModuleName = false

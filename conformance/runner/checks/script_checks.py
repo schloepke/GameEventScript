@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Single-Program source execution using the shared runtime observation oracle."""
 from core.corpus import InvalidDocument, closed
-from checks import handle_catalog, runtime_checks
+from checks import handle_setup, runtime_checks
 
 
 def prepare(case):
@@ -26,6 +26,6 @@ def compare(case, observed):
     for host in observed['runtime']['hosts']:
         if 'resolvedRefs' not in host:
             raise InvalidDocument('Missing resolved ref observations')
-    handle_catalog.compare(case, observed['runtime']['hosts'],
+    handle_setup.compare(case, observed['runtime']['hosts'],
                            lambda path, expected, actual: None if expected == actual else differences.append({'path': path, 'expected': expected, 'actual': actual}))
     return ('failed' if differences else 'passed'), differences

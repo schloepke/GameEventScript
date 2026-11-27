@@ -11,7 +11,7 @@ internal static class SchemaApiObservations
 {
     internal static void Validate(JsonElement input)
     {
-        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "complete", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument", "network", "handle", "contentHash", "catalog");
+        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "complete", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument", "network", "handle", "contentHash", "store");
         if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("encode"));
         if (input.GetProperty("baseline").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("baseline"));
         if (input.GetProperty("complete").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("complete"));
@@ -63,7 +63,7 @@ internal static class SchemaApiObservations
 
             if (input.GetProperty("document").GetString() is { } document) result["document"] = Check(set, document, root, parameters);
             if (input.GetProperty("readDocument") is { ValueKind: JsonValueKind.Object } reading) result["readDocument"] = ReadDocument(set, reading);
-            if (input.GetProperty("catalog") is { ValueKind: JsonValueKind.Object } catalog) result["catalog"] = Catalogs(set, catalog);
+            if (input.GetProperty("store") is { ValueKind: JsonValueKind.Object } store) result["store"] = Stores(set, store);
             if (input.GetProperty("bind").GetBoolean())
             {
                 var bound = set.Schema(root!).Bind(parameters);
@@ -217,38 +217,38 @@ internal static class SchemaApiObservations
         }
     }
 
-    // Reads the catalogs in order, each with every earlier one as a dependency, from named roots or from root handles: the
+    // Reads the stores in order, each with every earlier one as a dependency, from named roots or from root handles: the
     // entries of the last with its sources, the errors of the first that fails, or the code of a resolver failure.
-    private static object Catalogs(GesSchemaSet set, JsonElement input)
+    private static object Stores(GesSchemaSet set, JsonElement input)
     {
-        RuntimeValues.Fields(input, "files", "catalogs", "refs", "latest", "index");
+        RuntimeValues.Fields(input, "files", "stores", "refs", "latest", "index");
         var table = input.GetProperty("files").EnumerateArray()
-            .Select(file => new CatalogFile(file.GetProperty("root").GetString()!, file.GetProperty("path").GetString()!, file.GetProperty("text").GetString()!,
+            .Select(file => new StoreFile(file.GetProperty("root").GetString()!, file.GetProperty("path").GetString()!, file.GetProperty("text").GetString()!,
                 file.GetProperty("version").ValueKind == JsonValueKind.Null ? null : file.GetProperty("version").GetInt64())).ToArray();
-        var files = new CatalogFiles(table);
-        var resolver = new CatalogResolver(table, input.GetProperty("refs").EnumerateObject().ToDictionary(entry => entry.Name, entry => entry.Value.GetInt64(), StringComparer.Ordinal),
+        var files = new StoreFiles(table);
+        var resolver = new StoreResolver(table, input.GetProperty("refs").EnumerateObject().ToDictionary(entry => entry.Name, entry => entry.Value.GetInt64(), StringComparer.Ordinal),
             input.GetProperty("latest").ValueKind == JsonValueKind.Null ? null : input.GetProperty("latest").GetInt64());
-        var read = new List<GesCatalog>();
-        foreach (var catalog in input.GetProperty("catalogs").EnumerateArray())
+        var read = new List<GesStore>();
+        foreach (var store in input.GetProperty("stores").EnumerateArray())
         {
-            var type = set.HandleType(catalog.GetProperty("type").GetString()!);
+            var type = set.HandleType(store.GetProperty("type").GetString()!);
             try
             {
-                if (catalog.GetProperty("handles").ValueKind == JsonValueKind.Array)
+                if (store.GetProperty("handles").ValueKind == JsonValueKind.Array)
                 {
-                    var handles = catalog.GetProperty("handles").EnumerateArray().Select(handle => GesHandle.Parse(handle.GetString()!)).ToArray();
-                    read.Add(GesCatalog.Read(type, handles, resolver, read.ToArray()));
+                    var handles = store.GetProperty("handles").EnumerateArray().Select(handle => GesHandle.Parse(handle.GetString()!)).ToArray();
+                    read.Add(GesStore.Read(type, handles, resolver, read.ToArray()));
                 }
                 else
                 {
-                    var roots = catalog.GetProperty("roots").EnumerateArray()
-                        .Select(root => new GesCatalogRoot(root.GetProperty("name").GetString()!, root.GetProperty("path").GetString()!)).ToArray();
-                    read.Add(GesCatalog.Read(type, roots, files, read.ToArray()));
+                    var roots = store.GetProperty("roots").EnumerateArray()
+                        .Select(root => new GesStoreRoot(root.GetProperty("name").GetString()!, root.GetProperty("path").GetString()!)).ToArray();
+                    read.Add(GesStore.Read(type, roots, files, read.ToArray()));
                 }
             }
-            catch (GesCatalogException exception)
+            catch (GesStoreException exception)
             {
-                return new { errors = exception.Diagnostics.Select(CatalogError).ToArray() };
+                return new { errors = exception.Diagnostics.Select(StoreError).ToArray() };
             }
             catch (GesHandleException exception)
             {
@@ -270,22 +270,22 @@ internal static class SchemaApiObservations
         };
     }
 
-    // The handles of the last catalog through each requested projection, by projection name.
-    private static Dictionary<string, string[]> Indexes(GesCatalog catalog, JsonElement input)
+    // The handles of the last store through each requested projection, by projection name.
+    private static Dictionary<string, string[]> Indexes(GesStore store, JsonElement input)
     {
         var result = new Dictionary<string, string[]>(StringComparer.Ordinal);
         if (!input.TryGetProperty("index", out var names)) return result;
         foreach (var name in names.EnumerateArray())
         {
-            var projection = catalog.Type.Projections.FirstOrDefault(candidate => candidate.Name == name.GetString())
-                ?? throw new ArgumentException($"':{name.GetString()}' is no projection of '@{catalog.Type.Name}'.");
-            result[projection.Name] = catalog.Index(projection).Select(handle => handle.ToString()).ToArray();
+            var projection = store.Type.Projections.FirstOrDefault(candidate => candidate.Name == name.GetString())
+                ?? throw new ArgumentException($"':{name.GetString()}' is no projection of '@{store.Type.Name}'.");
+            result[projection.Name] = store.Index(projection).Select(handle => handle.ToString()).ToArray();
         }
 
         return result;
     }
 
-    private static Dictionary<string, object?> CatalogError(GesCatalogDiagnostic diagnostic)
+    private static Dictionary<string, object?> StoreError(GesStoreDiagnostic diagnostic)
     {
         var error = new Dictionary<string, object?> { ["code"] = diagnostic.Code, ["location"] = Location(diagnostic.Location) };
         if (diagnostic.FieldPath.Length > 0) error["fieldPath"] = diagnostic.FieldPath;
@@ -302,13 +302,13 @@ internal static class SchemaApiObservations
         return result;
     }
 
-    private sealed record CatalogFile(string Root, string Path, string Text, long? Version);
+    private sealed record StoreFile(string Root, string Path, string Text, long? Version);
 
-    private sealed class CatalogFiles(CatalogFile[] files) : IGesCatalogFiles
+    private sealed class StoreFiles(StoreFile[] files) : IGesStoreFiles
     {
         public string? Read(string root, string path) => Find(files, root, path)?.Text;
 
-        internal static CatalogFile? Find(CatalogFile[] files, string root, string path)
+        internal static StoreFile? Find(StoreFile[] files, string root, string path)
         {
             foreach (var file in files)
                 if (file.Root == root && file.Path == path) return file;
@@ -318,13 +318,13 @@ internal static class SchemaApiObservations
 
     // Answers a file handle from the table: its root is the root handle's Text id, its path the part. A present file
     // answers with its own version, else the requested one, else the latest; refs name revisions by their text form.
-    private sealed class CatalogResolver(CatalogFile[] files, Dictionary<string, long> refs, long? latest) : IGesHandleResolver
+    private sealed class StoreResolver(StoreFile[] files, Dictionary<string, long> refs, long? latest) : IGesHandleResolver
     {
         public void Resolve(GesHandleResolveCall call)
         {
             var handle = call.Handle;
             var root = handle.Id.ValueKind == GesBytecodeTypeKind.Text ? handle.Id.AsText() : handle.Id.AsInteger().ToString(CultureInfo.InvariantCulture);
-            if (CatalogFiles.Find(files, root, handle.Part.AsText()) is not { } file)
+            if (StoreFiles.Find(files, root, handle.Part.AsText()) is not { } file)
             {
                 call.SetMissing();
                 return;

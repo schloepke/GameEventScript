@@ -166,7 +166,7 @@ and ANSI text preservation.
 ```
 
 ```highlight
-{"name":"schema handles and catalog files","language":"gess","source":"handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\nhandle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 256 }\n","expect":[{"text":"handle","kind":"keyword"},{"text":"@Unit","kind":"type"},{"text":"of","kind":"keyword"},{"text":":ContentHash","kind":"type"},{"text":"@UnitFiles","kind":"type"},{"text":":Catalog","kind":"type"},{"text":"@Unit","occurrence":1,"kind":"type"},{"text":"composite","kind":"keyword"},{"text":"@Repository","kind":"type"}],"diagnostics":[]}
+{"name":"schema handles and store files","language":"gess","source":"handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\nhandle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 256 }\n","expect":[{"text":"handle","kind":"keyword"},{"text":"@Unit","kind":"type"},{"text":"of","kind":"keyword"},{"text":":ContentHash","kind":"type"},{"text":"@UnitFiles","kind":"type"},{"text":":Store","kind":"type"},{"text":"@Unit","occurrence":1,"kind":"type"},{"text":"composite","kind":"keyword"},{"text":"@Repository","kind":"type"}],"diagnostics":[]}
 ```
 
 ```highlight
@@ -314,11 +314,11 @@ and ANSI text preservation.
 ```
 
 ```highlight
-{"name": "catalog file", "language": "gesd", "source": ":Catalog(@Unit)\nimport 'extra'\nscout-1: [name: 'Scout', hull: @Hull:light~, escort: @drone.brakk~]\nmodule drone.heavy {\n  Brakk: import 'brakk.gesd'\n}\nimport: [name: 'I']\n", "expect": [{"text": ":Catalog", "kind": "keyword"}, {"text": "@Unit", "kind": "type"}, {"text": "import", "kind": "keyword"}, {"text": "'extra'", "kind": "string"}, {"text": "scout-1", "kind": "identifier"}, {"text": "@Hull", "kind": "type"}, {"text": "light", "kind": "plain"}, {"text": "~", "kind": "symbol"}, {"text": "@", "kind": "symbol", "occurrence": 2}, {"text": "drone", "kind": "identifier"}, {"text": ".", "kind": "symbol"}, {"text": "brakk", "kind": "identifier"}, {"text": "~", "kind": "symbol", "occurrence": 1}, {"text": "module", "kind": "keyword"}, {"text": "drone", "kind": "identifier", "occurrence": 1}, {"text": ".", "kind": "symbol", "occurrence": 1}, {"text": "heavy", "kind": "identifier"}, {"text": "{", "kind": "symbol"}, {"text": "Brakk", "kind": "identifier"}, {"text": "import", "kind": "keyword", "occurrence": 1}, {"text": "}", "kind": "symbol"}, {"text": "import", "kind": "identifier", "occurrence": 2}], "diagnostics": []}
+{"name": "store file", "language": "gesd", "source": ":Store(@Unit)\nimport 'extra'\nscout-1: [name: 'Scout', hull: @Hull:light~, escort: @drone.brakk~]\nmodule drone.heavy {\n  Brakk: import 'brakk.gesd'\n}\nimport: [name: 'I']\n", "expect": [{"text": ":Store", "kind": "keyword"}, {"text": "@Unit", "kind": "type"}, {"text": "import", "kind": "keyword"}, {"text": "'extra'", "kind": "string"}, {"text": "scout-1", "kind": "identifier"}, {"text": "@Hull", "kind": "type"}, {"text": "light", "kind": "plain"}, {"text": "~", "kind": "symbol"}, {"text": "@", "kind": "symbol", "occurrence": 2}, {"text": "drone", "kind": "identifier"}, {"text": ".", "kind": "symbol"}, {"text": "brakk", "kind": "identifier"}, {"text": "~", "kind": "symbol", "occurrence": 1}, {"text": "module", "kind": "keyword"}, {"text": "drone", "kind": "identifier", "occurrence": 1}, {"text": ".", "kind": "symbol", "occurrence": 1}, {"text": "heavy", "kind": "identifier"}, {"text": "{", "kind": "symbol"}, {"text": "Brakk", "kind": "identifier"}, {"text": "import", "kind": "keyword", "occurrence": 1}, {"text": "}", "kind": "symbol"}, {"text": "import", "kind": "identifier", "occurrence": 2}], "diagnostics": []}
 ```
 
 ```highlight
-{"name": "catalog file reading error", "language": "gesd", "source": ":Catalog(@Unit)\nmodule a {\n  import 'x.gesd'\n}\n", "expect": [{"text": "module", "kind": "keyword"}, {"text": "import", "kind": "keyword"}], "diagnostics": [{"code": "document.unexpectedToken", "text": "import"}]}
+{"name": "store file reading error", "language": "gesd", "source": ":Store(@Unit)\nmodule a {\n  import 'x.gesd'\n}\n", "expect": [{"text": "module", "kind": "keyword"}, {"text": "import", "kind": "keyword"}], "diagnostics": [{"code": "document.unexpectedToken", "text": "import"}]}
 ```
 
 ```highlight

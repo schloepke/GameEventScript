@@ -209,7 +209,7 @@ reported visibly, and in-memory slots remain usable until reload.
 
 To add an example, create games/<id>/<id>.ges and register its id, name, and
 examples/<id>.ges path in web/examples.json. Optional players chooses its default
-player count. The build copies game sources into the catalog's target directory.
+player count. The build copies game sources into the store's target directory.
 
 Player-specific duties can be queued with `Action(spec: [player: …, …])` or
 `ActionGroup(spec: [player: …, actions: […], …])`. Required offers set a priority
@@ -252,7 +252,7 @@ Only winning players enter the environment's winner list. The example has no
 bets, payouts, double down, split, insurance or surrender. All blackjack rules
 and dealer behavior are in GES. See [Blackjack rules](https://bicyclecards.com/how-to-play/blackjack/).
 
-The environment accepts 1–4 players. Catalog entries can constrain their player
+The environment accepts 1–4 players. Store entries can constrain their player
 selector with `playerCounts`; Draft and Saved preserve that choice along with
 source and player count. Existing examples default to their 2–4-player selector.
 

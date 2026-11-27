@@ -24,13 +24,13 @@ These cases verify where scripts may name [handle types](../../../specs/Language
 `validate.handleWidening` ([projections](../../../specs/Language.md#projections)), the `HandleType` import
 ([Bytecode](../../../specs/Bytecode.md)) and its link checks `link.missingHandleResolver` and
 `link.mismatchedHandleType` ([Host runtime](../../../specs/HostRuntime.md#handles)). Each case declares its handle
-catalog in a `handles` block ([Markdown format](../../../specs/Conformance/MarkdownFormat.md#handle-catalogs)).
+store in a `handles` block ([Markdown format](../../../specs/Conformance/MarkdownFormat.md#handle-setup)).
 
 ---
 
 ## Test: a parameter names an unknown handle type
 
-A handle type outside the compilation's catalog is `validate.unknownHandleType`.
+A handle type outside the compilation's store is `validate.unknownHandleType`.
 
 ### Case description
 
@@ -69,7 +69,7 @@ error:
 
 ---
 
-## Test: without a catalog no handle type is known
+## Test: without a store no handle type is known
 
 A compilation without handle types knows no `@Name`.
 
@@ -77,9 +77,9 @@ A compilation without handle types knows no `@Name`.
 
 ```yaml
 gesBlock: case
-id: unknown-without-catalog
+id: unknown-without-store
 sources:
-  - name: unknown-without-catalog.ges
+  - name: unknown-without-store.ges
     program: main
 ```
 
@@ -98,7 +98,7 @@ error:
   phase: validate
   code: validate.unknownHandleType
   symbol: "@Drone"
-  sourceName: unknown-without-catalog.ges
+  sourceName: unknown-without-store.ges
   line: 2
   column: 9
   endLine: 2
@@ -150,7 +150,7 @@ error:
 
 ## Test: an `is` check names an unknown handle type
 
-`is @Name` is checked against the catalog like a parameter type.
+`is @Name` is checked against the store like a parameter type.
 
 ### Case description
 
@@ -191,7 +191,7 @@ error:
 
 ## Test: a record field names an unknown handle type
 
-Record fields may be handle types and are checked against the catalog.
+Record fields may be handle types and are checked against the store.
 
 ### Case description
 

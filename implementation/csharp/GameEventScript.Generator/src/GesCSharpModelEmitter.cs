@@ -75,16 +75,16 @@ internal static partial class GesCSharpModelEmitter
         foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => Handle(code, layout.Handles, handle, access), handle: handle.Name));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>")));
-        var catalogs = options.Catalogs ? GesModelPlanner.Catalogs(layout, topLevel) : [];
-        var catalogSet = schemaSet is not null ? schemaSet.Qualified + ".Set" : "__GesModelDocuments" + suffix + ".Set";
-        foreach (var catalog in catalogs) document.Units.Add(new GesCodeUnit(catalog.Name, code => Catalog(code, catalog, access, qualifier, catalogSet), handle: catalog.Handle.Name));
+        var stores = options.Stores ? GesModelPlanner.Stores(layout, topLevel) : [];
+        var storeSet = schemaSet is not null ? schemaSet.Qualified + ".Set" : "__GesModelDocuments" + suffix + ".Set";
+        foreach (var store in stores) document.Units.Add(new GesCodeUnit(store.Name, code => Store(code, store, access, qualifier, storeSet), handle: store.Handle.Name));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, plain, access, qualifier, support, computed)));
         if (valued) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, qualifier, support, computed)));
         if (messages) document.Units.Add(new GesCodeUnit("", code => SchemasHolder(code, layout, schemas, schemaSet)));
         if (documents is not null && plain.Roots.Count > 0)
         {
             document.Units.Add(new GesCodeUnit("", code => DocumentType(code, plain, documentType, documents, access, qualifier)));
-            if (schemaSet is null) document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, "__GesModelDocuments" + suffix, catalogs.Count > 0)));
+            if (schemaSet is null) document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, "__GesModelDocuments" + suffix, stores.Count > 0)));
         }
 
         if (schemaSet?.Declared is { } setName)
@@ -156,15 +156,15 @@ internal static partial class GesCSharpModelEmitter
     }
 
     // The schema sources of this file, parsed when a document is first read.
-    // With catalogs it also offers the parsed set, which they look their handle types up in.
-    private static void DocumentsHolder(GesSchemaPlanner.Code code, GesModelLayout layout, string holder, bool catalogs)
+    // With stores it also offers the parsed set, which they look their handle types up in.
+    private static void DocumentsHolder(GesSchemaPlanner.Code code, GesModelLayout layout, string holder, bool stores)
     {
         code.Line("/// <summary>The schema sources of this file, which reading documents checks them against.</summary>");
         code.Line($"internal static class {holder}");
         code.Open("{");
         code.Line("private static GesSchemaSet? __set;");
         code.Blank();
-        if (catalogs)
+        if (stores)
         {
             code.Line("internal static GesSchemaDocument Read(string text, params string[] roots) => GesSchemaDocument.Read(Set, text, roots);");
             code.Blank();
@@ -188,7 +188,7 @@ internal static partial class GesCSharpModelEmitter
         }
 
         code.Dedent();
-        if (!catalogs)
+        if (!stores)
         {
             code.Line("return GesSchemaDocument.Read(set, text, roots);");
             code.Close();

@@ -32,7 +32,7 @@ class BinaryTests(unittest.TestCase):
                 self.assertEqual([], entry['sources'])
         self.assertEqual(39, sum(bool(c.steps) for c in cases))
 
-    def test_error_catalog_matches_spec(self):
+    def test_error_store_matches_spec(self):
         text = (ROOT / 'specs/BinaryFormat.md').read_text().split('The portable numeric error codes are fixed as follows:', 1)[1].split('The writer exposes', 1)[0]
         pairs = re.findall(r'\| (\d+) \| (\w+) ', text)
         self.assertEqual({i + 1: name for i, name in enumerate(binary.ERRORS)},

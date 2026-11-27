@@ -43,7 +43,7 @@ enum SchemaApiObservations {
             }
             if let document = input["document"]?.stringValue { result["document"] = check(set, document, root, parameters) }
             if let read = input["readDocument"], read != .null { result["readDocument"] = try readDocument(set, read) }
-            if let catalog = input["catalog"], catalog.objectValue != nil { result["catalog"] = try catalogs(set, catalog) }
+            if let store = input["store"], store.objectValue != nil { result["store"] = try stores(set, store) }
             if input["bind"]?.boolValue == true, let root {
                 let bound = try set.schema(root).bind(parameters: parameters)
                 result["bindingHash"] = hex(bound.bindingHash)
@@ -183,30 +183,30 @@ enum SchemaApiObservations {
         }
     }
 
-    // Reads the catalogs in order, each with every earlier one as a dependency, from named roots or from root handles: the
+    // Reads the stores in order, each with every earlier one as a dependency, from named roots or from root handles: the
     // entries of the last with its sources, the errors of the first that fails, or the code of a resolver failure.
-    private static func catalogs(_ set: GesSchemaSet, _ input: Input) throws -> [String: Any] {
-        try Validation.fields(input, ["files", "catalogs", "refs", "latest", "index"])
+    private static func stores(_ set: GesSchemaSet, _ input: Input) throws -> [String: Any] {
+        try Validation.fields(input, ["files", "stores", "refs", "latest", "index"])
         let table = try input.values("files").map { file in
-            CatalogFile(root: try file.text("root"), path: try file.text("path"), text: try file.text("text"), version: try optionalInt64(file["version"]))
+            StoreFile(root: try file.text("root"), path: try file.text("path"), text: try file.text("text"), version: try optionalInt64(file["version"]))
         }
-        let files = CatalogFiles(files: table)
+        let files = StoreFiles(files: table)
         var refs: [String: Int64] = [:]
         for entry in input["refs"]?.objectValue ?? [] { refs[entry.key] = try optionalInt64(entry.value) }
-        let resolver = CatalogResolver(files: table, refs: refs, latest: try optionalInt64(input["latest"]))
-        var read: [GesCatalog] = []
-        for catalog in input.values("catalogs") {
-            let type = try set.handleType(try catalog.text("type"))
+        let resolver = StoreResolver(files: table, refs: refs, latest: try optionalInt64(input["latest"]))
+        var read: [GesStore] = []
+        for store in input.values("stores") {
+            let type = try set.handleType(try store.text("type"))
             do {
-                if let handles = catalog["handles"]?.arrayValue {
+                if let handles = store["handles"]?.arrayValue {
                     let roots = try handles.map { try GesHandle(parsing: $0.stringValue ?? "") }
-                    read.append(try GesCatalog.read(type, roots: roots, resolver: resolver, dependencies: read))
+                    read.append(try GesStore.read(type, roots: roots, resolver: resolver, dependencies: read))
                 } else {
-                    let roots = try catalog.values("roots").map { GesCatalogRoot(name: try $0.text("name"), path: try $0.text("path")) }
-                    read.append(try GesCatalog.read(type, roots: roots, files: files, dependencies: read))
+                    let roots = try store.values("roots").map { GesStoreRoot(name: try $0.text("name"), path: try $0.text("path")) }
+                    read.append(try GesStore.read(type, roots: roots, files: files, dependencies: read))
                 }
-            } catch let error as GesCatalogError {
-                return ["errors": error.diagnostics.map(catalogError)]
+            } catch let error as GesStoreError {
+                return ["errors": error.diagnostics.map(storeError)]
             } catch let error as GesHandleError {
                 return ["failure": error.code]
             }
@@ -220,15 +220,15 @@ enum SchemaApiObservations {
         ]
     }
 
-    // The handles of the last catalog through each requested projection, by projection name.
-    private static func indexes(_ catalog: GesCatalog, _ input: Input) throws -> [String: Any] {
+    // The handles of the last store through each requested projection, by projection name.
+    private static func indexes(_ store: GesStore, _ input: Input) throws -> [String: Any] {
         var result: [String: Any] = [:]
         for name in input["index"]?.arrayValue ?? [] {
             let text = name.stringValue ?? ""
-            guard let projection = catalog.type.projections.first(where: { $0.name == text }) else {
-                throw ConformanceExecutionError.invalidInput("':\(text)' is no projection of '@\(catalog.type.name)'.")
+            guard let projection = store.type.projections.first(where: { $0.name == text }) else {
+                throw ConformanceExecutionError.invalidInput("':\(text)' is no projection of '@\(store.type.name)'.")
             }
-            result[projection.name] = try catalog.index(projection).map(\.description)
+            result[projection.name] = try store.index(projection).map(\.description)
         }
         return result
     }
@@ -239,7 +239,7 @@ enum SchemaApiObservations {
         return value
     }
 
-    private static func catalogError(_ diagnostic: GesCatalogDiagnostic) -> [String: Any] {
+    private static func storeError(_ diagnostic: GesStoreDiagnostic) -> [String: Any] {
         var error: [String: Any] = ["code": diagnostic.code, "location": location(diagnostic.location)]
         if !diagnostic.fieldPath.isEmpty { error["fieldPath"] = diagnostic.fieldPath }
         if let other = diagnostic.other { error["other"] = location(other) }
@@ -254,34 +254,34 @@ enum SchemaApiObservations {
         return result
     }
 
-    private struct CatalogFile {
+    private struct StoreFile {
         let root: String
         let path: String
         let text: String
         let version: Int64?
     }
 
-    private struct CatalogFiles: GesCatalogFiles {
-        let files: [CatalogFile]
+    private struct StoreFiles: GesStoreFiles {
+        let files: [StoreFile]
 
         func read(root: String, path: String) -> String? { Self.find(files, root, path)?.text }
 
-        static func find(_ files: [CatalogFile], _ root: String, _ path: String) -> CatalogFile? {
+        static func find(_ files: [StoreFile], _ root: String, _ path: String) -> StoreFile? {
             files.first { $0.root.utf8.elementsEqual(root.utf8) && $0.path.utf8.elementsEqual(path.utf8) }
         }
     }
 
     // Answers a file handle from the table: its root is the root handle's Text id, its path the part. A present file
     // answers with its own version, else the requested one, else the latest; refs name revisions by their text form.
-    private struct CatalogResolver: GesHandleResolver {
-        let files: [CatalogFile]
+    private struct StoreResolver: GesHandleResolver {
+        let files: [StoreFile]
         let refs: [String: Int64]
         let latest: Int64?
 
         func resolve(_ call: GesHandleResolveCall) throws {
             let handle = call.handle
             let root = handle.id.valueKind == .text ? handle.id.asText : String(handle.id.asInteger)
-            guard let file = CatalogFiles.find(files, root, handle.part.asText) else {
+            guard let file = StoreFiles.find(files, root, handle.part.asText) else {
                 try call.setMissing()
                 return
             }

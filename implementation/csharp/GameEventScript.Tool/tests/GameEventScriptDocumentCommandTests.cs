@@ -98,10 +98,10 @@ public sealed class GameEventScriptDocumentCommandTests
     [DataRow("document", "check", "a.gesd", "--schema")]
     [DataRow("document", "check", "a.gesd", "--schema", "-q")]
     [DataRow("document", "format", "a.gesd", "--schema", "units.gess")]
-    [DataRow("document", "check", "--catalog", "@Unit", "a.gesd")]
-    [DataRow("document", "check", "--schema", "a.gess", "--catalog", "Unit", "a.gesd")]
-    [DataRow("document", "check", "--schema", "a.gess", "--catalog", "@Unit")]
-    [DataRow("document", "format", "a.gesd", "--catalog", "@Unit", "b.gesd")]
+    [DataRow("document", "check", "--store", "@Unit", "a.gesd")]
+    [DataRow("document", "check", "--schema", "a.gess", "--store", "Unit", "a.gesd")]
+    [DataRow("document", "check", "--schema", "a.gess", "--store", "@Unit")]
+    [DataRow("document", "format", "a.gesd", "--store", "@Unit", "b.gesd")]
     public void UsageErrorsExitWithTwo(params string[] arguments)
     {
         Write("a.gesd", Valid);
@@ -156,36 +156,36 @@ public sealed class GameEventScriptDocumentCommandTests
     }
 
     /// <summary>
-    /// Verifies that check with <c>--catalog</c> reads each catalog after the ones before it, reports every error with
-    /// its file and position and counts the entries of a valid catalog.
+    /// Verifies that check with <c>--store</c> reads each store after the ones before it, reports every error with
+    /// its file and position and counts the entries of a valid store.
     /// </summary>
     [TestMethod]
-    public void CheckWithCatalogsReadsTheCatalogsInOrder()
+    public void CheckWithStoresReadsTheStoresInOrder()
     {
         Write("units.gess", "schema :Hull as { armor: :Number integer between 0 and 100 }\n"
             + "handle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\n"
             + "schema :Composition as { name: :Text max 64, hull: @Hull~, escort: @Unit optional }\n"
             + "handle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\n");
         Directory.CreateDirectory(Path.Combine(_directory, "content", "drones"));
-        Write(Path.Combine("content", "hulls.gesd"), ":Catalog(@Hull)\nlight: [armor: 20]\nheavy: [armor: 80]\n");
-        Write(Path.Combine("content", "units.gesd"), ":Catalog(@Unit)\nimport 'drones/all.gesd'\nscout: [name: 'Scout', hull: @Hull:light~]\n");
-        Write(Path.Combine("content", "drones", "all.gesd"), ":Catalog(@Unit)\nmodule drone {\n  gnabblo: [name: 'Gnabblo', hull: @Hull:heavy~, escort: @scout]\n}\n");
-        string[] catalogs = ["--catalog", "@Hull", Path.Combine("content", "hulls.gesd"), "--catalog", "@Unit", Path.Combine("content", "units.gesd")];
+        Write(Path.Combine("content", "hulls.gesd"), ":Store(@Hull)\nlight: [armor: 20]\nheavy: [armor: 80]\n");
+        Write(Path.Combine("content", "units.gesd"), ":Store(@Unit)\nimport 'drones/all.gesd'\nscout: [name: 'Scout', hull: @Hull:light~]\n");
+        Write(Path.Combine("content", "drones", "all.gesd"), ":Store(@Unit)\nmodule drone {\n  gnabblo: [name: 'Gnabblo', hull: @Hull:heavy~, escort: @scout]\n}\n");
+        string[] stores = ["--store", "@Hull", Path.Combine("content", "hulls.gesd"), "--store", "@Unit", Path.Combine("content", "units.gesd")];
 
-        var valid = Run(["document", "check", "--schema", "units.gess", .. catalogs]);
+        var valid = Run(["document", "check", "--schema", "units.gess", .. stores]);
         Assert.AreEqual(0, valid.ExitCode, valid.StandardError);
-        Assert.AreEqual(Lines("Checked catalog @Hull: 2 entries.", "Checked catalog @Unit: 2 entries."), valid.StandardOutput);
-        Assert.AreEqual(string.Empty, Run(["document", "check", "--schema", "units.gess", "-q", .. catalogs]).StandardOutput);
+        Assert.AreEqual(Lines("Checked store @Hull: 2 entries.", "Checked store @Unit: 2 entries."), valid.StandardOutput);
+        Assert.AreEqual(string.Empty, Run(["document", "check", "--schema", "units.gess", "-q", .. stores]).StandardOutput);
 
-        Write(Path.Combine("content", "drones", "all.gesd"), ":Catalog(@Unit)\nmodule drone {\n  gnabblo: [name: 'Gnabblo', hull: @Hull:hevy~, escort: @scout]\n}\n");
-        var invalid = Run(["document", "check", "--schema", "units.gess", .. catalogs]);
+        Write(Path.Combine("content", "drones", "all.gesd"), ":Store(@Unit)\nmodule drone {\n  gnabblo: [name: 'Gnabblo', hull: @Hull:hevy~, escort: @scout]\n}\n");
+        var invalid = Run(["document", "check", "--schema", "units.gess", .. stores]);
         Assert.AreEqual(1, invalid.ExitCode);
-        Assert.AreEqual(Lines("Checked catalog @Hull: 2 entries."), invalid.StandardOutput);
+        Assert.AreEqual(Lines("Checked store @Hull: 2 entries."), invalid.StandardOutput);
         Assert.AreEqual(Lines(
-            $"{Path.Combine("content", "drones", "all.gesd")}(3,36): error catalog.unknownReference: @Hull:hevy names no entry. Did you mean @Hull:heavy?"),
+            $"{Path.Combine("content", "drones", "all.gesd")}(3,36): error store.unknownReference: @Hull:hevy names no entry. Did you mean @Hull:heavy?"),
             invalid.StandardError);
 
-        var unknown = Run("document", "check", "--schema", "units.gess", "--catalog", "@Ship", Path.Combine("content", "hulls.gesd"));
+        var unknown = Run("document", "check", "--schema", "units.gess", "--store", "@Ship", Path.Combine("content", "hulls.gesd"));
         Assert.AreEqual(1, unknown.ExitCode);
         Assert.AreEqual(Lines($"{Path.Combine("content", "hulls.gesd")}: error schema.unknownName: The schemas of --schema declare no handle type @Ship."), unknown.StandardError);
     }

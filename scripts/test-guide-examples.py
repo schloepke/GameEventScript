@@ -94,13 +94,13 @@ def csharp():
     run(["dotnet", "build", str(directory / "GuideExample.csproj"), "--configuration", "Release", "--nologo"])
     if run(["dotnet", str(directory / "bin/Release/net8.0/GuideExample.dll")]) != HANDLE_OUTPUT:
         raise RuntimeError("C# handle guide did not produce the documented output.")
-    catalog = OUTPUT / "handles.gess"
-    catalog.write_text(blocks("Handles.md", "gess")[0])
-    run(ges + ["schema", "check", str(catalog)])
+    store = OUTPUT / "handles.gess"
+    store.write_text(blocks("Handles.md", "gess")[0])
+    run(ges + ["schema", "check", str(store)])
     for index, example in enumerate(blocks("Handles.md", "ges")):
         source = OUTPUT / f"handles-{index + 1}.ges"
         source.write_text(example)
-        run(ges + ["check", str(source), "--schema", str(catalog)])
+        run(ges + ["check", str(source), "--schema", str(store)])
     print(f"C# embedding, bridge annotations, {len(examples)} language examples, the schema and the handle guide passed.")
 
 

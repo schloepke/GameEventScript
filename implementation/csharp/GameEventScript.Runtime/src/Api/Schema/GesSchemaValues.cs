@@ -1047,13 +1047,13 @@ public static class GesSchemaValues
     /// <param name="state">A Record or Map of the state schema; the kinds and ranges of other values are not checked.</param>
     /// <returns>The content hash.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="handleType"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="handleType"/> is a catalog file type, which has no state.</exception>
+    /// <exception cref="ArgumentException"><paramref name="handleType"/> is a store file type, which has no state.</exception>
     /// <exception cref="GesWireException"><c>wire.typeMismatch</c> with the path when the state, or a value of a field that
     /// only takes Records, is no Record or Map; <c>wire.missingField</c> with the path when a field without default is missing and not optional.</exception>
     public static GesHash32 ContentHash(GesHandleType handleType, GesValue state)
     {
         if (handleType is null) throw new ArgumentNullException(nameof(handleType));
-        if (handleType.CatalogOf is not null) throw new ArgumentException($"The catalog file type '@{handleType.Name}' has no state.", nameof(handleType));
+        if (handleType.StoreOf is not null) throw new ArgumentException($"The store file type '@{handleType.Name}' has no state.", nameof(handleType));
         var declarations = handleType.Declarations;
         var normalized = NormalizeState(handleType.Resolved.State, state, "", declarations);
         var json = GameEventScript.Runtime.GesJson.Write(new GameEventScript.Runtime.GesMessageJsonCodec().Encode(normalized, 0));
@@ -1079,7 +1079,7 @@ public static class GesSchemaValues
     {
         if (handleType is null) throw new ArgumentNullException(nameof(handleType));
         if (projection is null) throw new ArgumentNullException(nameof(projection));
-        if (handleType.CatalogOf is not null || !projection.Declaration.Narrows(handleType.Resolved.State))
+        if (handleType.StoreOf is not null || !projection.Declaration.Narrows(handleType.Resolved.State))
             throw new ArgumentException($"':{projection.Name}' is no projection of '@{handleType.Name}'.", nameof(projection));
         return ProjectedHash(handleType, projection.Declaration, Project(projection.Declaration, state));
     }

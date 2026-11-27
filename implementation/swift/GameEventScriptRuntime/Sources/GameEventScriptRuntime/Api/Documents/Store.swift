@@ -3,8 +3,8 @@
 
 @_spi(Syntax) import GameEventScriptSyntax
 
-/// A named root of a catalog and the root-relative path of its root file (specs/Documents.md#reading-a-catalog).
-public struct GesCatalogRoot: Sendable, Hashable {
+/// A named root of a store and the root-relative path of its root file (specs/Documents.md#reading-a-store).
+public struct GesStoreRoot: Sendable, Hashable {
     /// The root's name, which the host's file source and every origin carry.
     public let name: String
     /// The path of the root file, relative to the root.
@@ -20,18 +20,18 @@ public struct GesCatalogRoot: Sendable, Hashable {
     }
 }
 
-/// The files of a catalog's roots. GES reads no files itself: it asks for the text of each file a catalog reaches.
-public protocol GesCatalogFiles {
+/// The files of a store's roots. GES reads no files itself: it asks for the text of each file a store reaches.
+public protocol GesStoreFiles {
     /// Returns the text of a file of a root.
     /// - Parameters:
     ///   - root: The root's name.
     ///   - path: The root-relative path, segments joined by `/`, without `.` or `..` segments.
-    /// - Returns: The file's text, or nil when the root has no such file (`catalog.importMissing`).
+    /// - Returns: The file's text, or nil when the root has no such file (`store.importMissing`).
     func read(root: String, path: String) -> String?
 }
 
-/// One object of a catalog: its id, its handle, its checked state and where it is declared.
-public struct GesCatalogEntry {
+/// One object of a store: its id, its handle, its checked state and where it is declared.
+public struct GesStoreEntry {
     /// The entry's id: its module name, a `.` and its key, or only its key at the root.
     public let id: String
     /// The entry's handle, which carries the content hash of `value` for a `:ContentHash` type.
@@ -43,9 +43,9 @@ public struct GesCatalogEntry {
     public let origin: GesSourceLocation
 }
 
-/// One error of reading a catalog (specs/Documents.md#reading-a-catalog).
-public struct GesCatalogDiagnostic: Sendable, CustomStringConvertible {
-    /// The stable code, a `catalog.*` or `document.*` code.
+/// One error of reading a store (specs/Documents.md#reading-a-store).
+public struct GesStoreDiagnostic: Sendable, CustomStringConvertible {
+    /// The stable code, a `store.*` or `document.*` code.
     public let code: String
     /// A message for people, which is not part of the contract.
     public let message: String
@@ -54,9 +54,9 @@ public struct GesCatalogDiagnostic: Sendable, CustomStringConvertible {
     public let location: GesSourceLocation
     /// The field path of a schema error, such as `weapons[].range`; otherwise empty.
     public let fieldPath: String
-    /// The second position of an error, the first key of a `catalog.duplicateId`; otherwise nil.
+    /// The second position of an error, the first key of a `store.duplicateId`; otherwise nil.
     public let other: GesSourceLocation?
-    /// The suggested id of a `catalog.unknownReference`, or nil when no id is close.
+    /// The suggested id of a `store.unknownReference`, or nil when no id is close.
     public let suggestion: String?
 
     /// The position, the code and the message.
@@ -71,33 +71,33 @@ public struct GesCatalogDiagnostic: Sendable, CustomStringConvertible {
     }
 }
 
-/// A catalog could not be read; `diagnostics` holds every error found.
-public struct GesCatalogError: Error, CustomStringConvertible {
+/// A store could not be read; `diagnostics` holds every error found.
+public struct GesStoreError: Error, CustomStringConvertible {
     /// The code of a file the host does not have.
-    public static let importMissing = "catalog.importMissing"
+    public static let importMissing = "store.importMissing"
     /// The code of an import path that steps above its root.
-    public static let importOutsideRoot = "catalog.importOutsideRoot"
+    public static let importOutsideRoot = "store.importOutsideRoot"
     /// The code of an import of a file on its own import chain.
-    public static let importCycle = "catalog.importCycle"
+    public static let importCycle = "store.importCycle"
     /// The code of an imported file of the wrong kind.
-    public static let importKind = "catalog.importKind"
+    public static let importKind = "store.importKind"
     /// The code of an imported file of another handle or state type.
-    public static let importType = "catalog.importType"
+    public static let importType = "store.importType"
     /// The code of an id longer than the id's `max`.
-    public static let invalidId = "catalog.invalidId"
+    public static let invalidId = "store.invalidId"
     /// The code of a repeated id.
-    public static let duplicateId = "catalog.duplicateId"
-    /// The code of a reference or handle that names no entry of a known catalog.
-    public static let unknownReference = "catalog.unknownReference"
+    public static let duplicateId = "store.duplicateId"
+    /// The code of a reference or handle that names no entry of a known store.
+    public static let unknownReference = "store.unknownReference"
     /// The code of a one-segment reference that names both a module entry and a root entry.
-    public static let ambiguousReference = "catalog.ambiguousReference"
-    /// The code of a pin to a type without content hashes or without a known catalog.
-    public static let invalidPin = "catalog.invalidPin"
+    public static let ambiguousReference = "store.ambiguousReference"
+    /// The code of a pin to a type without content hashes or without a known store.
+    public static let invalidPin = "store.invalidPin"
     /// The code of pinned references that form a cycle.
-    public static let dependencyCycle = "catalog.dependencyCycle"
+    public static let dependencyCycle = "store.dependencyCycle"
 
     /// Every error, ordered by file in reading order and by position within a file; never empty.
-    public let diagnostics: [GesCatalogDiagnostic]
+    public let diagnostics: [GesStoreDiagnostic]
 
     /// A message for people: the first error and the number of further ones; it is not part of the contract.
     public var message: String { diagnostics.count == 1 ? diagnostics[0].description : "\(diagnostics[0]) (and \(diagnostics.count - 1) more errors)" }
@@ -106,26 +106,26 @@ public struct GesCatalogError: Error, CustomStringConvertible {
     public var description: String { message }
 }
 
-/// The entries of one handle type read from catalog documents (specs/Documents.md#catalogs): every object under a stable
+/// The entries of one handle type read from store documents (specs/Documents.md#stores): every object under a stable
 /// Text id, with references between entries replaced by handles and every state checked against the state schema. A
-/// catalog is the handle resolver of its type (specs/Documents.md#catalogs-as-resolvers).
-public final class GesCatalog: GesHandleResolver {
+/// store is the handle resolver of its type (specs/Documents.md#stores-as-resolvers).
+public final class GesStore: GesHandleResolver {
     /// The handle type of every entry.
     public let type: GesHandleType
-    /// The root handles a catalog read from handles was read from, each with the version it was read at, in the given
-    /// order; empty for a catalog read from named roots.
+    /// The root handles a store read from handles was read from, each with the version it was read at, in the given
+    /// order; empty for a store read from named roots.
     public let sources: [GesHandle]
     /// Every entry, sorted by id in ordinal UTF-16 order.
-    public let entries: [GesCatalogEntry]
+    public let entries: [GesStoreEntry]
 
-    private init(_ type: GesHandleType, _ entries: [GesCatalogEntry], _ sources: [GesHandle]) {
+    private init(_ type: GesHandleType, _ entries: [GesStoreEntry], _ sources: [GesHandle]) {
         self.type = type
         self.entries = entries
         self.sources = sources
     }
 
-    /// The entry with an id, or nil when the catalog has none with that id.
-    public subscript(_ id: String) -> GesCatalogEntry? {
+    /// The entry with an id, or nil when the store has none with that id.
+    public subscript(_ id: String) -> GesStoreEntry? {
         let index = lowerBound(id)
         return index < entries.count && entries[index].id.utf16.elementsEqual(id.utf16) ? entries[index] : nil
     }
@@ -133,7 +133,7 @@ public final class GesCatalog: GesHandleResolver {
     /// Returns the entries of a module: those whose id starts with the module name and `.`, sorted by id.
     /// - Parameter name: The module name, such as `drone`.
     /// - Returns: The module's entries; empty when it has none.
-    public func module(_ name: String) -> [GesCatalogEntry] {
+    public func module(_ name: String) -> [GesStoreEntry] {
         let prefix = name + "."
         let start = lowerBound(prefix)
         var end = start
@@ -141,12 +141,12 @@ public final class GesCatalog: GesHandleResolver {
         return Array(entries[start..<end])
     }
 
-    /// Returns the handles of every entry through a projection (specs/Schemas.md#catalogs), sorted by id, each carrying
+    /// Returns the handles of every entry through a projection (specs/Schemas.md#stores), sorted by id, each carrying
     /// the projection and its version: the content hash of the projected state for a `:ContentHash` type, the entry's
     /// version otherwise. The list is computed on each call.
-    /// - Parameter projection: A projection of the catalog's state, one of ``GesHandleType/projections``.
+    /// - Parameter projection: A projection of the store's state, one of ``GesHandleType/projections``.
     /// - Returns: The projected handles, as a script receives them as `@Name(:P)~`.
-    /// - Throws: `GesApiError.invalidArgument` when `projection` is no projection of the catalog's state.
+    /// - Throws: `GesApiError.invalidArgument` when `projection` is no projection of the store's state.
     public func index(_ projection: GesSchema) throws -> [GesHandle] {
         if !projection.declaration.narrows(type.resolved.state) {
             throw GesApiError.invalidArgument("':\(projection.name)' is no projection of '@\(type.name)'.")
@@ -165,16 +165,16 @@ public final class GesCatalog: GesHandleResolver {
         return result
     }
 
-    /// Reads a catalog of a handle type from its roots.
+    /// Reads a store of a handle type from its roots.
     /// - Parameters:
     ///   - type: The handle type, whose id is Text and which is not composite.
     ///   - roots: The roots, read in this order.
     ///   - files: The source of every file's text.
-    ///   - dependencies: The catalogs of other types whose handles entries may name or pin.
-    /// - Returns: The catalog.
+    ///   - dependencies: The stores of other types whose handles entries may name or pin.
+    /// - Returns: The store.
     /// - Throws: `GesApiError.invalidArgument` when the type is composite or has no Text id, two roots share a name, or
-    ///   two catalogs share a type; `GesCatalogError` listing every error when the catalog has errors.
-    public static func read(_ type: GesHandleType, roots: [GesCatalogRoot], files: some GesCatalogFiles, dependencies: [GesCatalog] = []) throws -> GesCatalog {
+    ///   two stores share a type; `GesStoreError` listing every error when the store has errors.
+    public static func read(_ type: GesHandleType, roots: [GesStoreRoot], files: some GesStoreFiles, dependencies: [GesStore] = []) throws -> GesStore {
         let (maxIdLength, others) = try Self.dependencies(type, dependencies)
         var names = Set<[UInt8]>()
         for root in roots where !names.insert(Array(root.name.utf8)).inserted {
@@ -184,37 +184,37 @@ public final class GesCatalog: GesHandleResolver {
         return try reading.run(roots, nil)
     }
 
-    /// Reads a catalog of a handle type from versioned sources (specs/Documents.md#reading-from-handles): each root is a
-    /// handle of a catalog file type of `type` whose part is the path of the root file, and every file is requested from
+    /// Reads a store of a handle type from versioned sources (specs/Documents.md#reading-from-handles): each root is a
+    /// handle of a store file type of `type` whose part is the path of the root file, and every file is requested from
     /// the resolver as the composite handle of the same root with the file's root-relative path.
     /// - Parameters:
     ///   - type: The handle type, whose id is Text and which is not composite.
     ///   - roots: The root handles, read in this order; a root without a version is pinned by the version of its first
     ///     answer.
-    ///   - resolver: The resolver of the catalog file type, which answers each file with its document text.
-    ///   - dependencies: The catalogs of other types whose handles entries may name or pin.
-    /// - Returns: The catalog, whose `sources` are the roots with the versions they were read at.
+    ///   - resolver: The resolver of the store file type, which answers each file with its document text.
+    ///   - dependencies: The stores of other types whose handles entries may name or pin.
+    /// - Returns: The store, whose `sources` are the roots with the versions they were read at.
     /// - Throws: `GesApiError.invalidArgument` when the type is composite or has no Text id, a root is no handle of a
-    ///   catalog file type of `type` with a Text part, two roots are equal, or two catalogs share a type; `GesHandleError`
+    ///   store file type of `type` with a Text part, two roots are equal, or two stores share a type; `GesHandleError`
     ///   with `runtime.handleResolveFailed` when the resolver gave no answer or several, passed an invalid version, or
     ///   failed to turn a ref into a version, and with `runtime.handleVersionMismatch` when it passed another version than
-    ///   the root's; `GesCatalogError` listing every error when the catalog has errors. Errors the resolver throws
+    ///   the root's; `GesStoreError` listing every error when the store has errors. Errors the resolver throws
     ///   propagate unchanged.
-    public static func read(_ type: GesHandleType, roots: [GesHandle], resolver: some GesHandleResolver, dependencies: [GesCatalog] = []) throws -> GesCatalog {
+    public static func read(_ type: GesHandleType, roots: [GesHandle], resolver: some GesHandleResolver, dependencies: [GesStore] = []) throws -> GesStore {
         let (maxIdLength, others) = try Self.dependencies(type, dependencies)
         var fileType: GesHandleType?
         let sources = HandleSources(resolver, roots.count)
         for root in roots {
             if !root.isComposite || root.part.valueKind != .text {
-                throw GesApiError.invalidArgument("\(root) is no handle of a catalog file of @\(type.name) with a Text part.")
+                throw GesApiError.invalidArgument("\(root) is no handle of a store file of @\(type.name) with a Text part.")
             }
             if fileType == nil || fileType!.name != root.typeName {
                 fileType = type.fileType(root.typeName)
-                if fileType == nil { throw GesApiError.invalidArgument("@\(root.typeName) is no catalog file type of @\(type.name).") }
+                if fileType == nil { throw GesApiError.invalidArgument("@\(root.typeName) is no store file type of @\(type.name).") }
             }
             if !sources.add(root, fileType!) { throw GesApiError.invalidArgument("The root \(root) is given twice.") }
         }
-        let names = roots.map { GesCatalogRoot(name: $0.description, path: $0.part.asText) }
+        let names = roots.map { GesStoreRoot(name: $0.description, path: $0.part.asText) }
         var reading = Reading(type: type, maxIdLength: maxIdLength, fetch: { root, path in try sources.read(root, path) }, dependencies: others)
         return try reading.run(names, sources)
     }
@@ -236,14 +236,14 @@ public final class GesCatalog: GesHandleResolver {
         }
     }
 
-    // The maximum id length of a catalog's type and the dependencies by type name, after checking both.
-    private static func dependencies(_ type: GesHandleType, _ dependencies: [GesCatalog]) throws -> (Int64, [String: GesCatalog]) {
-        if type.root != nil { throw GesApiError.invalidArgument("@\(type.name) is composite; a catalog needs a type of its own.") }
+    // The maximum id length of a store's type and the dependencies by type name, after checking both.
+    private static func dependencies(_ type: GesHandleType, _ dependencies: [GesStore]) throws -> (Int64, [String: GesStore]) {
+        if type.root != nil { throw GesApiError.invalidArgument("@\(type.name) is composite; a store needs a type of its own.") }
         guard let id = type.id, id.isText else { throw GesApiError.invalidArgument("@\(type.name) has no Text id.") }
-        var others: [String: GesCatalog] = [:]
+        var others: [String: GesStore] = [:]
         for dependency in dependencies {
             if dependency.type.name == type.name || others[dependency.type.name] != nil {
-                throw GesApiError.invalidArgument("More than one catalog of @\(dependency.type.name).")
+                throw GesApiError.invalidArgument("More than one store of @\(dependency.type.name).")
             }
             others[dependency.type.name] = dependency
         }
@@ -289,7 +289,7 @@ public final class GesCatalog: GesHandleResolver {
         return String(result)
     }
 
-    // A file a catalog reached, numbered in reading order; a missing root file has no text.
+    // A file a store reached, numbered in reading order; a missing root file has no text.
     private final class SourceFile {
         let index: Int
         let root: String
@@ -310,13 +310,13 @@ public final class GesCatalog: GesHandleResolver {
         }
     }
 
-    // An entry before its check: the key in its catalog file and the value, written there or in an imported state document.
+    // An entry before its check: the key in its store file and the value, written there or in an imported state document.
     private final class Pending {
         let keyFile: SourceFile
-        let item: GesCatalogItem
+        let item: GesStoreItem
         let valueFile: SourceFile
         let value: GesDocumentNode
-        // The offset of the value: the entry's value in its catalog file, or the start of an imported state document.
+        // The offset of the value: the entry's value in its store file, or the start of an imported state document.
         let valueStart: Int
         let id: String
         // The resolved references and handles of the value, in reading order.
@@ -324,9 +324,9 @@ public final class GesCatalog: GesHandleResolver {
         var broken = false
         // 0 unvisited, 1 on the current pin chain, 2 checked, 3 failed or skipped.
         var state = 0
-        var entry: GesCatalogEntry?
+        var entry: GesStoreEntry?
 
-        init(_ keyFile: SourceFile, _ item: GesCatalogItem, _ valueFile: SourceFile, _ value: GesDocumentNode, _ valueStart: Int) {
+        init(_ keyFile: SourceFile, _ item: GesStoreItem, _ valueFile: SourceFile, _ value: GesDocumentNode, _ valueStart: Int) {
             self.keyFile = keyFile
             self.item = item
             self.valueFile = valueFile
@@ -349,13 +349,13 @@ public final class GesCatalog: GesHandleResolver {
         let offset: Int
         let pinned: Bool
         let own: Pending?
-        let other: GesCatalogEntry?
+        let other: GesStoreEntry?
     }
 
     // The text of a root's file, or nil when the root has none; `state` is true for a state answer instead of a document.
     private typealias Fetch = (_ root: String, _ path: String) throws -> (text: String?, state: Bool)
 
-    // The roots of a catalog read from handles, by the text form of each root handle, with the version each is read at.
+    // The roots of a store read from handles, by the text form of each root handle, with the version each is read at.
     private final class HandleSources {
         private final class Source {
             let handle: GesHandle
@@ -464,8 +464,8 @@ public final class GesCatalog: GesHandleResolver {
         let type: GesHandleType
         let maxIdLength: Int64
         let fetch: Fetch
-        let dependencies: [String: GesCatalog]
-        private var diagnostics: [(file: SourceFile, diagnostic: GesCatalogDiagnostic)] = []
+        let dependencies: [String: GesStore]
+        private var diagnostics: [(file: SourceFile, diagnostic: GesStoreDiagnostic)] = []
         private var sourceFiles: [SourceFile] = []
         private var visited = Set<[UInt8]>()
         private var chain = Set<[UInt8]>()
@@ -473,50 +473,50 @@ public final class GesCatalog: GesHandleResolver {
         private var ids: [String: Pending] = [:]
         private var sortedIds: [String] = []
 
-        init(type: GesHandleType, maxIdLength: Int64, fetch: @escaping Fetch, dependencies: [String: GesCatalog]) {
+        init(type: GesHandleType, maxIdLength: Int64, fetch: @escaping Fetch, dependencies: [String: GesStore]) {
             self.type = type
             self.maxIdLength = maxIdLength
             self.fetch = fetch
             self.dependencies = dependencies
         }
 
-        mutating func run(_ roots: [GesCatalogRoot], _ sources: HandleSources?) throws -> GesCatalog {
+        mutating func run(_ roots: [GesStoreRoot], _ sources: HandleSources?) throws -> GesStore {
             for root in roots {
                 guard let path = combine("", root.path) else {
                     let file = addFile(root.name, root.path, nil)
-                    report(file, -1, GesCatalogError.importOutsideRoot, "The root file path '\(root.path)' steps above the root.")
+                    report(file, -1, GesStoreError.importOutsideRoot, "The root file path '\(root.path)' steps above the root.")
                     continue
                 }
-                try readCatalogFile(root.name, path, nil, -1)
+                try readStoreFile(root.name, path, nil, -1)
             }
             if diagnostics.isEmpty { checkIds() }
             if diagnostics.isEmpty { try checkEntries() }
-            if !diagnostics.isEmpty { throw GesCatalogError(diagnostics: sorted()) }
+            if !diagnostics.isEmpty { throw GesStoreError(diagnostics: sorted()) }
             let entries = pendingEntries.map { $0.entry! }.sorted { ordinalLess($0.id, $1.id) }
-            return GesCatalog(type, entries, try sources?.read() ?? [])
+            return GesStore(type, entries, try sources?.read() ?? [])
         }
 
-        // Step 1: a catalog file and, at each import, the imported file.
-        private mutating func readCatalogFile(_ root: String, _ path: String, _ importer: SourceFile?, _ importOffset: Int) throws {
+        // Step 1: a store file and, at each import, the imported file.
+        private mutating func readStoreFile(_ root: String, _ path: String, _ importer: SourceFile?, _ importOffset: Int) throws {
             let key = Array((root + "\n" + path).utf8)
             if chain.contains(key) {
-                report(importer!, importOffset, GesCatalogError.importCycle, "'\(path)' imports itself through its import chain.")
+                report(importer!, importOffset, GesStoreError.importCycle, "'\(path)' imports itself through its import chain.")
                 return
             }
             if !visited.insert(key).inserted { return }
             let (fetched, state) = try fetch(root, path)
             if state {
-                report(importer ?? addFile(root, path, nil), importer == nil ? -1 : importOffset, GesCatalogError.importKind, "'\(path)' is an object's state, not a catalog file.")
+                report(importer ?? addFile(root, path, nil), importer == nil ? -1 : importOffset, GesStoreError.importKind, "'\(path)' is an object's state, not a store file.")
                 return
             }
             guard let text = fetched else {
-                report(importer ?? addFile(root, path, nil), importer == nil ? -1 : importOffset, GesCatalogError.importMissing, "The root '\(root)' has no file '\(path)'.")
+                report(importer ?? addFile(root, path, nil), importer == nil ? -1 : importOffset, GesStoreError.importMissing, "The root '\(root)' has no file '\(path)'.")
                 return
             }
             let file = addFile(root, path, text)
-            let syntax = GesDocumentReader.readCatalog(text)
-            guard syntax.isCatalog else {
-                report(importer ?? file, importer == nil ? syntax.headerOffset : importOffset, GesCatalogError.importKind, "'\(path)' is no catalog file.")
+            let syntax = GesDocumentReader.readStore(text)
+            guard syntax.isStore else {
+                report(importer ?? file, importer == nil ? syntax.headerOffset : importOffset, GesStoreError.importKind, "'\(path)' is no store file.")
                 return
             }
             if let diagnostic = syntax.diagnostic {
@@ -524,15 +524,15 @@ public final class GesCatalog: GesHandleResolver {
                 return
             }
             if syntax.typeName != type.name {
-                let message = "'\(path)' is a catalog of @\(syntax.typeName), not of @\(type.name)."
-                report(importer ?? file, importer == nil ? syntax.headerOffset : importOffset, GesCatalogError.importType, message)
+                let message = "'\(path)' is a store of @\(syntax.typeName), not of @\(type.name)."
+                report(importer ?? file, importer == nil ? syntax.headerOffset : importOffset, GesStoreError.importType, message)
                 return
             }
             chain.insert(key)
             for item in syntax.items {
                 switch item.kind {
                 case .import:
-                    if let imported = imported(file, item) { try readCatalogFile(root, imported, file, item.pathOffset) }
+                    if let imported = imported(file, item) { try readStoreFile(root, imported, file, item.pathOffset) }
                 case .entry:
                     pendingEntries.append(Pending(file, item, file, item.value!, item.valueOffset))
                 case .entryImport:
@@ -543,20 +543,20 @@ public final class GesCatalog: GesHandleResolver {
         }
 
         // The state document of `key: import 'path'`.
-        private mutating func readStateDocument(_ file: SourceFile, _ item: GesCatalogItem) throws {
+        private mutating func readStateDocument(_ file: SourceFile, _ item: GesStoreItem) throws {
             guard let path = imported(file, item) else { return }
             let (fetched, state) = try fetch(file.root, path)
             if state {
-                report(file, item.pathOffset, GesCatalogError.importKind, "'\(path)' is an object's state, not a state document.")
+                report(file, item.pathOffset, GesStoreError.importKind, "'\(path)' is an object's state, not a state document.")
                 return
             }
             guard let text = fetched else {
-                report(file, item.pathOffset, GesCatalogError.importMissing, "The root '\(file.root)' has no file '\(path)'.")
+                report(file, item.pathOffset, GesStoreError.importMissing, "The root '\(file.root)' has no file '\(path)'.")
                 return
             }
             let syntax = GesDocumentReader.read(text, references: true)
-            if GesDocumentReader.readCatalog(text).isCatalog {
-                report(file, item.pathOffset, GesCatalogError.importKind, "'\(path)' is a catalog file, not a state document.")
+            if GesDocumentReader.readStore(text).isStore {
+                report(file, item.pathOffset, GesStoreError.importKind, "'\(path)' is a store file, not a state document.")
                 return
             }
             let document = addFile(file.root, path, text)
@@ -565,19 +565,19 @@ public final class GesCatalog: GesHandleResolver {
                 return
             }
             guard case .type(let name) = syntax.schema else {
-                report(file, item.pathOffset, GesCatalogError.importKind, "'\(path)' names no state type in a :Schema header.")
+                report(file, item.pathOffset, GesStoreError.importKind, "'\(path)' names no state type in a :Schema header.")
                 return
             }
             if name != type.stateName {
-                report(file, item.pathOffset, GesCatalogError.importType, "'\(path)' is a :\(name) document, not a :\(type.stateName) state.")
+                report(file, item.pathOffset, GesStoreError.importType, "'\(path)' is a :\(name) document, not a :\(type.stateName) state.")
                 return
             }
             pendingEntries.append(Pending(file, item, document, syntax.root!, 0))
         }
 
-        private mutating func imported(_ file: SourceFile, _ item: GesCatalogItem) -> String? {
+        private mutating func imported(_ file: SourceFile, _ item: GesStoreItem) -> String? {
             if let path = combine(file.path, item.path) { return path }
-            report(file, item.pathOffset, GesCatalogError.importOutsideRoot, "The import path '\(item.path)' steps above the root.")
+            report(file, item.pathOffset, GesStoreError.importOutsideRoot, "The import path '\(item.path)' steps above the root.")
             return nil
         }
 
@@ -585,14 +585,14 @@ public final class GesCatalog: GesHandleResolver {
         private mutating func checkIds() {
             for pending in pendingEntries {
                 if Int64(pending.id.utf8.count) > maxIdLength {
-                    report(pending.keyFile, pending.item.keyOffset, GesCatalogError.invalidId, "The id '\(pending.id)' is longer than \(maxIdLength) bytes.")
+                    report(pending.keyFile, pending.item.keyOffset, GesStoreError.invalidId, "The id '\(pending.id)' is longer than \(maxIdLength) bytes.")
                     continue
                 }
                 if let first = ids[pending.id] {
                     let firstLocation = first.keyFile.at(first.item.keyOffset)
-                    let diagnostic = GesCatalogDiagnostic(
-                        code: GesCatalogError.duplicateId,
-                        message: "The id '\(pending.id)' is already declared at \(GesCatalogDiagnostic.text(firstLocation)).",
+                    let diagnostic = GesStoreDiagnostic(
+                        code: GesStoreError.duplicateId,
+                        message: "The id '\(pending.id)' is already declared at \(GesStoreDiagnostic.text(firstLocation)).",
                         location: pending.keyFile.at(pending.item.keyOffset),
                         fieldPath: "",
                         other: firstLocation,
@@ -655,7 +655,7 @@ public final class GesCatalog: GesHandleResolver {
                 let inModule = ids[pending.item.module + "." + name]
                 let atRoot = ids[name]
                 if let inModule, let atRoot {
-                    fail(pending, offset, GesCatalogError.ambiguousReference, "@\(name) names both \(inModule.id) and the root entry \(atRoot.id).")
+                    fail(pending, offset, GesStoreError.ambiguousReference, "@\(name) names both \(inModule.id) and the root entry \(atRoot.id).")
                     return
                 }
                 target = inModule ?? atRoot
@@ -665,16 +665,16 @@ public final class GesCatalog: GesHandleResolver {
                 return
             }
             if pinned && type.version != .contentHash {
-                fail(pending, offset, GesCatalogError.invalidPin, "@\(type.name) has no content hash to pin @\(name) to.")
+                fail(pending, offset, GesStoreError.invalidPin, "@\(type.name) has no content hash to pin @\(name) to.")
                 return
             }
             pending.links.append(Link(site: site, offset: offset, pinned: pinned, own: target, other: nil))
         }
 
-        // A complete handle names an entry of its type's catalog when the catalog is known.
+        // A complete handle names an entry of its type's store when the store is known.
         private mutating func resolveHandle(_ pending: Pending, _ site: Site, _ text: String, _ offset: Int, _ pinned: Bool) {
             guard let handle = try? GesHandle(parsing: text), !handle.isComposite else {
-                if pinned { fail(pending, offset, GesCatalogError.invalidPin, "\(text) names no catalog entry to pin to.") }
+                if pinned { fail(pending, offset, GesStoreError.invalidPin, "\(text) names no store entry to pin to.") }
                 return
             }
             let id = handle.id.valueKind == .text ? handle.id.asText : nil
@@ -684,22 +684,22 @@ public final class GesCatalog: GesHandleResolver {
                     return
                 }
                 if pinned && type.version != .contentHash {
-                    fail(pending, offset, GesCatalogError.invalidPin, "@\(type.name) has no content hash to pin \(text) to.")
+                    fail(pending, offset, GesStoreError.invalidPin, "@\(type.name) has no content hash to pin \(text) to.")
                     return
                 }
                 if pinned { pending.links.append(Link(site: site, offset: offset, pinned: true, own: target, other: nil)) }
                 return
             }
-            guard let catalog = dependencies[handle.typeName] else {
-                if pinned { fail(pending, offset, GesCatalogError.invalidPin, "No catalog of @\(handle.typeName) is known to pin \(text) to.") }
+            guard let store = dependencies[handle.typeName] else {
+                if pinned { fail(pending, offset, GesStoreError.invalidPin, "No store of @\(handle.typeName) is known to pin \(text) to.") }
                 return
             }
-            guard let id, let entry = catalog[id] else {
-                failUnknown(pending, offset, text, id ?? "", "", catalog.entries.map(\.id))
+            guard let id, let entry = store[id] else {
+                failUnknown(pending, offset, text, id ?? "", "", store.entries.map(\.id))
                 return
             }
-            if pinned && catalog.type.version != .contentHash {
-                fail(pending, offset, GesCatalogError.invalidPin, "@\(handle.typeName) has no content hash to pin \(text) to.")
+            if pinned && store.type.version != .contentHash {
+                fail(pending, offset, GesStoreError.invalidPin, "@\(handle.typeName) has no content hash to pin \(text) to.")
                 return
             }
             if pinned { pending.links.append(Link(site: site, offset: offset, pinned: true, own: nil, other: entry)) }
@@ -711,7 +711,7 @@ public final class GesCatalog: GesHandleResolver {
             for link in pending.links {
                 guard link.pinned, let target = link.own else { continue }
                 if target.state == 1 {
-                    report(pending.valueFile, link.offset, GesCatalogError.dependencyCycle, "Pinning @\(target.id) closes a cycle of pinned references.")
+                    report(pending.valueFile, link.offset, GesStoreError.dependencyCycle, "Pinning @\(target.id) closes a cycle of pinned references.")
                     pending.broken = true
                     break
                 }
@@ -758,14 +758,14 @@ public final class GesCatalog: GesHandleResolver {
                 } else {
                     handle = try GesHandle(typeName: type.name, id: id)
                 }
-                pending.entry = GesCatalogEntry(id: pending.id, handle: handle, value: state, origin: pending.keyFile.at(pending.item.keyOffset))
+                pending.entry = GesStoreEntry(id: pending.id, handle: handle, value: state, origin: pending.keyFile.at(pending.item.keyOffset))
                 return true
             } catch let error as GesDocumentError {
                 reportError(file, error)
                 return false
             } catch let error as GesWireError {
                 let message = error.detail.isEmpty ? "\(error.code) at '\(error.path)'" : "\(error.code) at '\(error.path)': \(error.detail)"
-                diagnostics.append((file, GesCatalogDiagnostic(code: error.code, message: message, location: file.at(pending.valueStart), fieldPath: error.path, other: nil, suggestion: nil)))
+                diagnostics.append((file, GesStoreDiagnostic(code: error.code, message: message, location: file.at(pending.valueStart), fieldPath: error.path, other: nil, suggestion: nil)))
                 return false
             }
         }
@@ -802,8 +802,8 @@ public final class GesCatalog: GesHandleResolver {
             let suggestion = Self.suggest(id, !id.utf8.contains(46) && !module.isEmpty ? module + "." + id : nil, ids)
             let message = "\(written) names no entry." + (suggestion.map { " Did you mean \(Self.written(written, $0))?" } ?? "")
             pending.broken = true
-            let diagnostic = GesCatalogDiagnostic(
-                code: GesCatalogError.unknownReference,
+            let diagnostic = GesStoreDiagnostic(
+                code: GesStoreError.unknownReference,
                 message: message,
                 location: pending.valueFile.at(offset),
                 fieldPath: "",
@@ -873,23 +873,23 @@ public final class GesCatalog: GesHandleResolver {
         }
 
         private mutating func report(_ file: SourceFile, _ offset: Int, _ code: String, _ message: String) {
-            diagnostics.append((file, GesCatalogDiagnostic(code: code, message: message, location: file.at(offset), fieldPath: "", other: nil, suggestion: nil)))
+            diagnostics.append((file, GesStoreDiagnostic(code: code, message: message, location: file.at(offset), fieldPath: "", other: nil, suggestion: nil)))
         }
 
         private mutating func reportDocument(_ file: SourceFile, _ diagnostic: GesDocumentDiagnostic) {
             let (line, column) = GesDocumentSyntax.location(file.bytes!, diagnostic.start)
             let limit = diagnostic.limitName == nil ? nil : diagnostic.limitValue
             let error = GesDocumentError(code: diagnostic.code, line: line, column: column, limitName: diagnostic.limitName, limit: limit)
-            diagnostics.append((file, GesCatalogDiagnostic(code: diagnostic.code, message: error.message, location: file.at(diagnostic.start), fieldPath: "", other: nil, suggestion: nil)))
+            diagnostics.append((file, GesStoreDiagnostic(code: diagnostic.code, message: error.message, location: file.at(diagnostic.start), fieldPath: "", other: nil, suggestion: nil)))
         }
 
         // A document error, which carries its line and column; it sorts by them within its file.
         private mutating func reportError(_ file: SourceFile, _ error: GesDocumentError) {
             let location = GesSourceLocation(sourceName: file.path, line: error.line, column: error.column, moduleName: file.root)
-            diagnostics.append((file, GesCatalogDiagnostic(code: error.code, message: error.message, location: location, fieldPath: error.path, other: nil, suggestion: nil)))
+            diagnostics.append((file, GesStoreDiagnostic(code: error.code, message: error.message, location: location, fieldPath: error.path, other: nil, suggestion: nil)))
         }
 
-        private func sorted() -> [GesCatalogDiagnostic] {
+        private func sorted() -> [GesStoreDiagnostic] {
             diagnostics.indices.sorted { left, right in
                 let a = diagnostics[left]
                 let b = diagnostics[right]

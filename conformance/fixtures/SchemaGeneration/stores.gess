@@ -1,0 +1,26 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The fixture of the checked-in store code: two store handle types whose states are model roots, one of which names
+// the other, the store file types of both below one repository, and two projections of the unit, one of the other.
+schema :Source as { text: :Text }
+handle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }
+
+model(store) schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 1000 }
+handle @Hull of :Hull as { id: :Text max 64, version: :ContentHash }
+
+schema :Look as { icon: :Text max 16 }
+
+model(store) schema :Unit as {
+  name: :Text max 32
+  hull: @Hull~
+  escorts: :List(@Unit) max 4
+  speed: :Quantity(m/s) between 0m/s and 400m/s
+  look: :Look optional
+}
+handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }
+
+model(store) projection :UnitDisplay of :Unit as { name, hull, icon: look.icon }
+model(store) projection :UnitLabel of :UnitDisplay as { name }
+
+handle @HullFiles of :Store(@Hull) composite @Repository as { part: :Text max 256 }
+handle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 256 }

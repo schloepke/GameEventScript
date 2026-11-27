@@ -12,7 +12,7 @@
 final class GesAstValidator {
     let modules: [GesModule]
     let catalog: (any GesExternalTypeCatalog)?
-    // The handle catalog by name without `@`; the validator checks every `@Name` against it.
+    // The handle types by name without `@`; the validator checks every `@Name` against it.
     let handleTypes: [String: GesHandleType]
     // The handle type names in declaration order.
     let handleTypeOrder: [String]

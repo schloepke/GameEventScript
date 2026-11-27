@@ -216,14 +216,15 @@ here.
 
 ## Network
 
-- Phase D2, network protocol for handles: the part of phase D of the catalog/projection assignment (§0 "Mitgeschickter
+- Phase D2, network protocol for handles: the part of phase D of the store/projection assignment (§0 "Mitgeschickter
   Zustand", §5 "Über das Wire") that phase D left out. Phase D delivered `owns ... as :P sending state` as syntax,
   checking, network hash and layout only. Open: a receiver fetches the index (id + hash) of an owned handle type,
-  compares it with its cache (itself a catalog of the same type) and loads only new or changed entries; `owns` routes
+  compares it with its cache and loads only new or changed entries; the receiver's cache is a store of the same type,
+  which the receiver reads and the owning side's store answers (Documents.md#the-store-model); `owns` routes
   generate the network resolve, batched like `ResolveMany`; `sending state` actually sends the state (full or the
   route's projection) with a delta per connection, the sender remembering which version each party holds; the first
   query lists the entries of one module. Decide there whether a field may choose between sent-along state and lazy
-  resolve instead of one choice per handle type. Not needed while catalogs are read only on the server.
+  resolve instead of one choice per handle type. Not needed while stores are read only on the server.
 
 ## Performance and optimizer follow-ups
 
@@ -232,7 +233,7 @@ here.
   projects it (`GesHandleStates.Check` in both ports). Measured per resolve in C#: about 2.2–3 µs and 9–12 KB, about
   4–7 µs and 15–27 KB with `:ContentHash` versions (Swift: same allocations, about 5× the time). A validator that
   walks the Record against the bound schema could check, normalize and project in one pass and hash the canonical
-  bytes without text. First establish how much resolving matters on real hot paths (bot scripts, catalog reads)
+  bytes without text. First establish how much resolving matters on real hot paths (bot scripts, store reads)
   before choosing the design. The projection-keyed cache and `ResolveMany` already serve several views and batches
   with one resolve; Swift's link-hash projections and handle context in `runSlice` cost nothing measurable.
 

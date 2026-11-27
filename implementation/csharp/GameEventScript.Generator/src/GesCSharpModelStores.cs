@@ -5,33 +5,33 @@ using System.Collections.Generic;
 
 namespace GameEventScript.Generator;
 
-// The C# type of a model catalog (specs/Schemas.md#model-catalogs): a sealed class that reads a GesCatalog of its handle type,
-// converts every entry's state to the model once and keeps the untyped catalog's order, so that lookups search the typed
-// entries by ordinal id like GesCatalog does. It is the resolver of its type by delegating to the untyped catalog.
+// The C# type of a model store (specs/Schemas.md#model-stores): a sealed class that reads a GesStore of its handle type,
+// converts every entry's state to the model once and keeps the untyped store's order, so that lookups search the typed
+// entries by ordinal id like GesStore does. It is the resolver of its type by delegating to the untyped store.
 internal static partial class GesCSharpModelEmitter
 {
     // `set` is the expression of the schema set that declares the handle type; `qualifier` qualifies model types.
-    internal static void Catalog(GesSchemaPlanner.Code code, GesModelCatalog catalog, string access, string qualifier, string set)
+    internal static void Store(GesSchemaPlanner.Code code, GesModelStore store, string access, string qualifier, string set)
     {
-        var handle = catalog.Handle;
-        var name = catalog.Name;
+        var handle = store.Handle;
+        var name = store.Name;
         var state = qualifier + handle.State;
         var handleType = qualifier + GesModelPlanner.HandleName(handle.Name);
-        var dependencies = catalog.Dependencies.ConvertAll(dependency => (Name: dependency, Parameter: Parameter(dependency), Type: qualifier + dependency + "Catalog"));
+        var dependencies = store.Dependencies.ConvertAll(dependency => (Name: dependency, Parameter: Parameter(dependency), Type: qualifier + dependency + "Store"));
         var parameters = string.Concat(dependencies.ConvertAll(dependency => $", {dependency.Type}? {dependency.Parameter} = null"));
         var passed = dependencies.Count == 0 ? "null" : "__Dependencies(" + string.Join(", ", dependencies.ConvertAll(dependency => dependency.Parameter)) + ")";
-        code.Line($"/// <summary>The catalog of <c>@{handle.Name}</c>: the entries of <c>:{handle.State}</c> read from GES catalog documents, sorted by id in");
-        code.Line("/// ordinal order. It is the handle resolver of its type: register it with a host for the type of <see cref=\"Catalog\"/>.</summary>");
+        code.Line($"/// <summary>The store of <c>@{handle.Name}</c>: the entries of <c>:{handle.State}</c> read from GES store documents, sorted by id in");
+        code.Line("/// ordinal order. It is the handle resolver of its type: register it with a host for the type of <see cref=\"Store\"/>.</summary>");
         code.Line($"{access} sealed class {name} : IGesHandleResolver");
         code.Open("{");
         code.Line("private readonly Entry[] _entries;");
         code.Line($"private readonly {handleType}[] _index;");
-        foreach (var projection in catalog.Projections) code.Line($"private readonly {handleType}[] _{GesSchemaPlanner.Camel(projection.Name)}Index;");
+        foreach (var projection in store.Projections) code.Line($"private readonly {handleType}[] _{GesSchemaPlanner.Camel(projection.Name)}Index;");
         code.Blank();
-        code.Line($"private {name}(GesCatalog catalog)");
+        code.Line($"private {name}(GesStore store)");
         code.Open("{");
-        code.Line("Catalog = catalog;");
-        code.Line("var entries = catalog.Entries;");
+        code.Line("Store = store;");
+        code.Line("var entries = store.Entries;");
         code.Line("_entries = new Entry[entries.Count];");
         code.Line($"_index = new {handleType}[entries.Count];");
         code.Line("for (var index = 0; index < _entries.Length; index++)");
@@ -41,23 +41,23 @@ internal static partial class GesCSharpModelEmitter
         code.Line($"_entries[index] = new Entry(entry.Id, handle, {state}.FromValue(entry.Value), entry.Origin);");
         code.Line("_index[index] = handle;");
         code.Close();
-        foreach (var projection in catalog.Projections)
+        foreach (var projection in store.Projections)
         {
             var field = "_" + GesSchemaPlanner.Camel(projection.Name) + "Index";
             var local = GesSchemaPlanner.Camel(projection.Name);
             code.Blank();
-            code.Line($"var {local} = catalog.Index({set}.Schema({GesSchemaPlanner.Literal(projection.Lookup, false)}));");
+            code.Line($"var {local} = store.Index({set}.Schema({GesSchemaPlanner.Literal(projection.Lookup, false)}));");
             code.Line($"{field} = new {handleType}[{local}.Count];");
             code.Line($"for (var index = 0; index < {field}.Length; index++) {field}[index] = {handleType}.FromHandle({local}[index]);");
         }
 
         code.Close();
         code.Blank();
-        code.Line("/// <summary>Gets the untyped catalog, whose type is the handle type a host registers this catalog for.</summary>");
-        code.Line("public GesCatalog Catalog { get; }");
+        code.Line("/// <summary>Gets the untyped store, whose type is the handle type a host registers this store for.</summary>");
+        code.Line("public GesStore Store { get; }");
         code.Blank();
-        code.Line("/// <summary>Gets the roots a catalog read from handles was read from, each with the version it was read at; empty for named roots.</summary>");
-        code.Line("public IReadOnlyList<GesHandle> Sources => Catalog.Sources;");
+        code.Line("/// <summary>Gets the roots a store read from handles was read from, each with the version it was read at; empty for named roots.</summary>");
+        code.Line("public IReadOnlyList<GesHandle> Sources => Store.Sources;");
         code.Blank();
         code.Line("/// <summary>Gets every entry, sorted by id.</summary>");
         code.Line("public IReadOnlyList<Entry> Entries => _entries;");
@@ -67,7 +67,7 @@ internal static partial class GesCSharpModelEmitter
         code.Blank();
         code.Line("/// <summary>Gets the entry with an id.</summary>");
         code.Line("/// <param name=\"id\">The id, such as <c>drone.scout</c>.</param>");
-        code.Line("/// <returns>The entry, or null when the catalog has none with that id.</returns>");
+        code.Line("/// <returns>The entry, or null when the store has none with that id.</returns>");
         code.Line("/// <exception cref=\"ArgumentNullException\">Thrown when <paramref name=\"id\"/> is null.</exception>");
         code.Line("public Entry? this[string id]");
         code.Open("{");
@@ -95,7 +95,7 @@ internal static partial class GesCSharpModelEmitter
         code.Line("return result;");
         code.Close();
         code.Blank();
-        foreach (var projection in catalog.Projections)
+        foreach (var projection in store.Projections)
         {
             var field = "_" + GesSchemaPlanner.Camel(projection.Name) + "Index";
             code.Line($"/// <summary>Gets the handle of every entry with the version of the projection <c>:{projection.Name}</c>, sorted by id: the content hash of");
@@ -121,25 +121,25 @@ internal static partial class GesCSharpModelEmitter
         }
 
         ReadDocumentation(code, dependencies.ConvertAll(dependency => (dependency.Name, dependency.Parameter)), files: true);
-        code.Line($"public static {name} Read(IReadOnlyList<GesCatalogRoot> roots, IGesCatalogFiles files{parameters})");
-        code.Line($"    => new {name}(GesCatalog.Read(__HandleType, roots, files, {passed}));");
+        code.Line($"public static {name} Read(IReadOnlyList<GesStoreRoot> roots, IGesStoreFiles files{parameters})");
+        code.Line($"    => new {name}(GesStore.Read(__HandleType, roots, files, {passed}));");
         code.Blank();
         ReadDocumentation(code, dependencies.ConvertAll(dependency => (dependency.Name, dependency.Parameter)), files: false);
         code.Line($"public static {name} Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver{parameters})");
-        code.Line($"    => new {name}(GesCatalog.Read(__HandleType, roots, resolver, {passed}));");
+        code.Line($"    => new {name}(GesStore.Read(__HandleType, roots, resolver, {passed}));");
         code.Blank();
         code.Line("/// <summary>Answers a read of an entry's state: its state, with its content hash for a type that declares one, or missing.</summary>");
         code.Line("/// <param name=\"call\">The call holding the handle and receiving the answer.</param>");
-        code.Line("public void Resolve(GesHandleResolveCall call) => Catalog.Resolve(call);");
+        code.Line("public void Resolve(GesHandleResolveCall call) => Store.Resolve(call);");
         code.Blank();
         code.Line($"private static GesHandleType __HandleType => {set}.HandleType({GesSchemaPlanner.Literal(handle.Name, false)});");
         if (dependencies.Count > 0)
         {
             code.Blank();
-            code.Line($"private static IReadOnlyList<GesCatalog> __Dependencies({string.Join(", ", dependencies.ConvertAll(dependency => $"{dependency.Type}? {dependency.Parameter}"))})");
+            code.Line($"private static IReadOnlyList<GesStore> __Dependencies({string.Join(", ", dependencies.ConvertAll(dependency => $"{dependency.Type}? {dependency.Parameter}"))})");
             code.Open("{");
-            code.Line("var dependencies = new List<GesCatalog>();");
-            foreach (var dependency in dependencies) code.Line($"if ({dependency.Parameter} is not null) dependencies.Add({dependency.Parameter}.Catalog);");
+            code.Line("var dependencies = new List<GesStore>();");
+            foreach (var dependency in dependencies) code.Line($"if ({dependency.Parameter} is not null) dependencies.Add({dependency.Parameter}.Store);");
             code.Line("return dependencies;");
             code.Close();
         }
@@ -157,7 +157,7 @@ internal static partial class GesCSharpModelEmitter
         code.Line("return low;");
         code.Close();
         code.Blank();
-        code.Line($"/// <summary>One entry of the catalog: its id, its handle, its state and where it is declared.</summary>");
+        code.Line($"/// <summary>One entry of the store: its id, its handle, its state and where it is declared.</summary>");
         code.Line("public sealed class Entry");
         code.Open("{");
         code.Line($"internal Entry(string id, {handleType} handle, {state} value, GesSourceLocation origin)");
@@ -185,15 +185,15 @@ internal static partial class GesCSharpModelEmitter
 
     private static void ReadDocumentation(GesSchemaPlanner.Code code, List<(string Name, string Parameter)> dependencies, bool files)
     {
-        code.Line(files ? "/// <summary>Reads the catalog from named roots, whose files a source supplies.</summary>" : "/// <summary>Reads the catalog from root handles, whose files a resolver answers.</summary>");
+        code.Line(files ? "/// <summary>Reads the store from named roots, whose files a source supplies.</summary>" : "/// <summary>Reads the store from root handles, whose files a resolver answers.</summary>");
         code.Line("/// <param name=\"roots\">The roots, read in this order.</param>");
         code.Line(files ? "/// <param name=\"files\">The source of every file's text.</param>" : "/// <param name=\"resolver\">The resolver that answers the root files and their imports.</param>");
         foreach (var dependency in dependencies)
-            code.Line($"/// <param name=\"{dependency.Parameter.TrimStart('@')}\">The catalog of <c>@{dependency.Name}</c>, whose entries this catalog's entries may name or pin; none when null.</param>");
-        code.Line("/// <returns>The catalog.</returns>");
+            code.Line($"/// <param name=\"{dependency.Parameter.TrimStart('@')}\">The store of <c>@{dependency.Name}</c>, whose entries this store's entries may name or pin; none when null.</param>");
+        code.Line("/// <returns>The store.</returns>");
         code.Line("/// <exception cref=\"ArgumentNullException\">Thrown when the roots, a root or the " + (files ? "files" : "resolver") + " are null.</exception>");
-        code.Line("/// <exception cref=\"ArgumentException\">Thrown when two roots share a name or a root is no catalog file of the type.</exception>");
-        code.Line("/// <exception cref=\"GesCatalogException\">Thrown when the catalog has errors; the exception lists every one.</exception>");
+        code.Line("/// <exception cref=\"ArgumentException\">Thrown when two roots share a name or a root is no store file of the type.</exception>");
+        code.Line("/// <exception cref=\"GesStoreException\">Thrown when the store has errors; the exception lists every one.</exception>");
         if (!files) code.Line("/// <exception cref=\"GesHandleException\">Thrown when the resolver answers a file wrongly.</exception>");
     }
 }

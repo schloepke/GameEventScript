@@ -1,31 +1,31 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-// The C# type of a model catalog (specs/Schemas.md#model-catalogs): a sealed class that reads a GesCatalog of its handle type,
-// converts every entry's state to the model once and keeps the untyped catalog's order, so that lookups search the typed
-// entries by ordinal id like GesCatalog does. It is the resolver of its type by delegating to the untyped catalog.
+// The C# type of a model store (specs/Schemas.md#model-stores): a sealed class that reads a GesStore of its handle type,
+// converts every entry's state to the model once and keeps the untyped store's order, so that lookups search the typed
+// entries by ordinal id like GesStore does. It is the resolver of its type by delegating to the untyped store.
 extension GesCSharpModelEmitter {
     // `set` is the expression of the schema set that declares the handle type; `qualifier` qualifies model types.
-    static func catalog(_ code: inout Code, _ catalog: GesModelCatalog, _ access: String, _ qualifier: String, _ set: String) {
-        let handle = catalog.handle
-        let name = catalog.name
+    static func store(_ code: inout Code, _ store: GesModelStore, _ access: String, _ qualifier: String, _ set: String) {
+        let handle = store.handle
+        let name = store.name
         let state = qualifier + handle.state
         let handleType = qualifier + GesModelPlanner.handleName(handle.name)
-        let dependencies = catalog.dependencies.map { (name: $0, parameter: parameter($0), type: qualifier + $0 + "Catalog") }
+        let dependencies = store.dependencies.map { (name: $0, parameter: parameter($0), type: qualifier + $0 + "Store") }
         let parameters = dependencies.map { ", \($0.type)? \($0.parameter) = null" }.joined()
         let passed = dependencies.isEmpty ? "null" : "__Dependencies(" + dependencies.map(\.parameter).joined(separator: ", ") + ")"
-        code.line("/// <summary>The catalog of <c>@\(handle.name)</c>: the entries of <c>:\(handle.state)</c> read from GES catalog documents, sorted by id in")
-        code.line("/// ordinal order. It is the handle resolver of its type: register it with a host for the type of <see cref=\"Catalog\"/>.</summary>")
+        code.line("/// <summary>The store of <c>@\(handle.name)</c>: the entries of <c>:\(handle.state)</c> read from GES store documents, sorted by id in")
+        code.line("/// ordinal order. It is the handle resolver of its type: register it with a host for the type of <see cref=\"Store\"/>.</summary>")
         code.line("\(access) sealed class \(name) : IGesHandleResolver")
         code.open("{")
         code.line("private readonly Entry[] _entries;")
         code.line("private readonly \(handleType)[] _index;")
-        for projection in catalog.projections { code.line("private readonly \(handleType)[] _\(GesSchemaPlanner.camel(projection.name))Index;") }
+        for projection in store.projections { code.line("private readonly \(handleType)[] _\(GesSchemaPlanner.camel(projection.name))Index;") }
         code.blank()
-        code.line("private \(name)(GesCatalog catalog)")
+        code.line("private \(name)(GesStore store)")
         code.open("{")
-        code.line("Catalog = catalog;")
-        code.line("var entries = catalog.Entries;")
+        code.line("Store = store;")
+        code.line("var entries = store.Entries;")
         code.line("_entries = new Entry[entries.Count];")
         code.line("_index = new \(handleType)[entries.Count];")
         code.line("for (var index = 0; index < _entries.Length; index++)")
@@ -35,21 +35,21 @@ extension GesCSharpModelEmitter {
         code.line("_entries[index] = new Entry(entry.Id, handle, \(state).FromValue(entry.Value), entry.Origin);")
         code.line("_index[index] = handle;")
         code.close()
-        for projection in catalog.projections {
+        for projection in store.projections {
             let field = "_" + GesSchemaPlanner.camel(projection.name) + "Index"
             let local = GesSchemaPlanner.camel(projection.name)
             code.blank()
-            code.line("var \(local) = catalog.Index(\(set).Schema(\(GesSchemaPlanner.literal(projection.lookup, swift: false))));")
+            code.line("var \(local) = store.Index(\(set).Schema(\(GesSchemaPlanner.literal(projection.lookup, swift: false))));")
             code.line("\(field) = new \(handleType)[\(local).Count];")
             code.line("for (var index = 0; index < \(field).Length; index++) \(field)[index] = \(handleType).FromHandle(\(local)[index]);")
         }
         code.close()
         code.blank()
-        code.line("/// <summary>Gets the untyped catalog, whose type is the handle type a host registers this catalog for.</summary>")
-        code.line("public GesCatalog Catalog { get; }")
+        code.line("/// <summary>Gets the untyped store, whose type is the handle type a host registers this store for.</summary>")
+        code.line("public GesStore Store { get; }")
         code.blank()
-        code.line("/// <summary>Gets the roots a catalog read from handles was read from, each with the version it was read at; empty for named roots.</summary>")
-        code.line("public IReadOnlyList<GesHandle> Sources => Catalog.Sources;")
+        code.line("/// <summary>Gets the roots a store read from handles was read from, each with the version it was read at; empty for named roots.</summary>")
+        code.line("public IReadOnlyList<GesHandle> Sources => Store.Sources;")
         code.blank()
         code.line("/// <summary>Gets every entry, sorted by id.</summary>")
         code.line("public IReadOnlyList<Entry> Entries => _entries;")
@@ -59,7 +59,7 @@ extension GesCSharpModelEmitter {
         code.blank()
         code.line("/// <summary>Gets the entry with an id.</summary>")
         code.line("/// <param name=\"id\">The id, such as <c>drone.scout</c>.</param>")
-        code.line("/// <returns>The entry, or null when the catalog has none with that id.</returns>")
+        code.line("/// <returns>The entry, or null when the store has none with that id.</returns>")
         code.line("/// <exception cref=\"ArgumentNullException\">Thrown when <paramref name=\"id\"/> is null.</exception>")
         code.line("public Entry? this[string id]")
         code.open("{")
@@ -87,7 +87,7 @@ extension GesCSharpModelEmitter {
         code.line("return result;")
         code.close()
         code.blank()
-        for projection in catalog.projections {
+        for projection in store.projections {
             let field = "_" + GesSchemaPlanner.camel(projection.name) + "Index"
             code.line("/// <summary>Gets the handle of every entry with the version of the projection <c>:\(projection.name)</c>, sorted by id: the content hash of")
             code.line("/// the projected state for a type with content hashes, the entry's version otherwise.</summary>")
@@ -110,25 +110,25 @@ extension GesCSharpModelEmitter {
             code.close()
             code.blank()
         }
-        catalogReadDocumentation(&code, dependencies.map { ($0.name, $0.parameter) }, files: true)
-        code.line("public static \(name) Read(IReadOnlyList<GesCatalogRoot> roots, IGesCatalogFiles files\(parameters))")
-        code.line("    => new \(name)(GesCatalog.Read(__HandleType, roots, files, \(passed)));")
+        storeReadDocumentation(&code, dependencies.map { ($0.name, $0.parameter) }, files: true)
+        code.line("public static \(name) Read(IReadOnlyList<GesStoreRoot> roots, IGesStoreFiles files\(parameters))")
+        code.line("    => new \(name)(GesStore.Read(__HandleType, roots, files, \(passed)));")
         code.blank()
-        catalogReadDocumentation(&code, dependencies.map { ($0.name, $0.parameter) }, files: false)
+        storeReadDocumentation(&code, dependencies.map { ($0.name, $0.parameter) }, files: false)
         code.line("public static \(name) Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver\(parameters))")
-        code.line("    => new \(name)(GesCatalog.Read(__HandleType, roots, resolver, \(passed)));")
+        code.line("    => new \(name)(GesStore.Read(__HandleType, roots, resolver, \(passed)));")
         code.blank()
         code.line("/// <summary>Answers a read of an entry's state: its state, with its content hash for a type that declares one, or missing.</summary>")
         code.line("/// <param name=\"call\">The call holding the handle and receiving the answer.</param>")
-        code.line("public void Resolve(GesHandleResolveCall call) => Catalog.Resolve(call);")
+        code.line("public void Resolve(GesHandleResolveCall call) => Store.Resolve(call);")
         code.blank()
         code.line("private static GesHandleType __HandleType => \(set).HandleType(\(GesSchemaPlanner.literal(handle.name, swift: false)));")
         if !dependencies.isEmpty {
             code.blank()
-            code.line("private static IReadOnlyList<GesCatalog> __Dependencies(\(dependencies.map { "\($0.type)? \($0.parameter)" }.joined(separator: ", ")))")
+            code.line("private static IReadOnlyList<GesStore> __Dependencies(\(dependencies.map { "\($0.type)? \($0.parameter)" }.joined(separator: ", ")))")
             code.open("{")
-            code.line("var dependencies = new List<GesCatalog>();")
-            for dependency in dependencies { code.line("if (\(dependency.parameter) is not null) dependencies.Add(\(dependency.parameter).Catalog);") }
+            code.line("var dependencies = new List<GesStore>();")
+            for dependency in dependencies { code.line("if (\(dependency.parameter) is not null) dependencies.Add(\(dependency.parameter).Store);") }
             code.line("return dependencies;")
             code.close()
         }
@@ -145,7 +145,7 @@ extension GesCSharpModelEmitter {
         code.line("return low;")
         code.close()
         code.blank()
-        code.line("/// <summary>One entry of the catalog: its id, its handle, its state and where it is declared.</summary>")
+        code.line("/// <summary>One entry of the store: its id, its handle, its state and where it is declared.</summary>")
         code.line("public sealed class Entry")
         code.open("{")
         code.line("internal Entry(string id, \(handleType) handle, \(state) value, GesSourceLocation origin)")
@@ -171,18 +171,18 @@ extension GesCSharpModelEmitter {
         code.close()
     }
 
-    private static func catalogReadDocumentation(_ code: inout Code, _ dependencies: [(name: String, parameter: String)], files: Bool) {
-        code.line(files ? "/// <summary>Reads the catalog from named roots, whose files a source supplies.</summary>" : "/// <summary>Reads the catalog from root handles, whose files a resolver answers.</summary>")
+    private static func storeReadDocumentation(_ code: inout Code, _ dependencies: [(name: String, parameter: String)], files: Bool) {
+        code.line(files ? "/// <summary>Reads the store from named roots, whose files a source supplies.</summary>" : "/// <summary>Reads the store from root handles, whose files a resolver answers.</summary>")
         code.line("/// <param name=\"roots\">The roots, read in this order.</param>")
         code.line(files ? "/// <param name=\"files\">The source of every file's text.</param>" : "/// <param name=\"resolver\">The resolver that answers the root files and their imports.</param>")
         for dependency in dependencies {
             let parameter = dependency.parameter.hasPrefix("@") ? String(dependency.parameter.dropFirst()) : dependency.parameter
-            code.line("/// <param name=\"\(parameter)\">The catalog of <c>@\(dependency.name)</c>, whose entries this catalog's entries may name or pin; none when null.</param>")
+            code.line("/// <param name=\"\(parameter)\">The store of <c>@\(dependency.name)</c>, whose entries this store's entries may name or pin; none when null.</param>")
         }
-        code.line("/// <returns>The catalog.</returns>")
+        code.line("/// <returns>The store.</returns>")
         code.line("/// <exception cref=\"ArgumentNullException\">Thrown when the roots, a root or the " + (files ? "files" : "resolver") + " are null.</exception>")
-        code.line("/// <exception cref=\"ArgumentException\">Thrown when two roots share a name or a root is no catalog file of the type.</exception>")
-        code.line("/// <exception cref=\"GesCatalogException\">Thrown when the catalog has errors; the exception lists every one.</exception>")
+        code.line("/// <exception cref=\"ArgumentException\">Thrown when two roots share a name or a root is no store file of the type.</exception>")
+        code.line("/// <exception cref=\"GesStoreException\">Thrown when the store has errors; the exception lists every one.</exception>")
         if !files { code.line("/// <exception cref=\"GesHandleException\">Thrown when the resolver answers a file wrongly.</exception>") }
     }
 }

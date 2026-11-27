@@ -15,7 +15,7 @@
     -
       "include": "strings"
     -
-      "include": "catalog"
+      "include": "store"
     -
       "include": "handles"
     -
@@ -59,7 +59,7 @@
           "pop": true
   "forms":
     -
-      "match": ":(?:Schema|Catalog)\\b"
+      "match": ":(?:Schema|Store)\\b"
       "scope": "keyword.other.declaration.schema.gameeventscript.document"
     -
       "match": "(:(?:Message|Handler))\\s*(\\()\\s*([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)\\b"
@@ -125,7 +125,7 @@
         5: "constant.numeric.handle-version.gameeventscript.document"
         6: "punctuation.separator.handle.gameeventscript.document"
         7: "constant.other.handle-part.gameeventscript.document"
-  "catalog":
+  "store":
     -
       "match": "^[ \\t]*(module)[ \\t]+([A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)*)"
       "captures":

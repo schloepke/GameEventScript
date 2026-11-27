@@ -79,8 +79,9 @@ allowed. Each route stays on one line.
 - **`owns`** names a [handle type](Schemas.md#handles) whose objects that side owns: `server owns @Target`. Its
   handles cross the network as identities; the owner is the side that can resolve them. A network names a handle type
   in at most one `owns` route, and a composite type in none, since its root's owner owns it. An `owns` route carries no
-  payload, has no class, rate, route index or channel and does not count towards the route limit. Resolving a handle
-  across the network is not part of this version. *Since: Unreleased.*
+  payload, has no class, rate, route index or channel and does not count towards the route limit. The owning side is
+  the [owner](Documents.md#the-store-model) of the type's store and alone answers index and resolve requests; the
+  other side only reads. Resolving a handle across the network is not part of this version. *Since: Unreleased.*
 - **`as :P`** after `owns` names a [projection](Schemas.md#projections) of the handle type's state: the other side
   reads that type's state only as `:P`. Every handle of the type in a route from the owner, at any depth of its root,
   reads `:P` or a projection that narrows it (`@Unit(:UnitPublic)`); a full view or a wider projection would show the

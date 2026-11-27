@@ -67,7 +67,7 @@ public final class GesSchemaSet: @unchecked Sendable {
         }
         for type in handleTypes {
             type.root = type.resolved.root?.publicType
-            type.catalogOf = type.resolved.catalog?.publicType
+            type.storeOf = type.resolved.store?.publicType
         }
         self.handleTypes = handleTypes
         for file in files { try file.resolve(declarations, messages, tagSets) }
@@ -601,8 +601,8 @@ final class GesFileScope {
         lets.removeAll()
         for handle in ownHandles {
             let syntax = handle.syntax
-            if !syntax.catalog.isEmpty {
-                handle.catalog = try catalogOf(handle)
+            if !syntax.store.isEmpty {
+                handle.store = try storeOf(handle)
             } else {
                 guard let state = all[syntax.state], state.kind == .schema else {
                     throw error(Code.invalidHandle, syntax.stateOffset, "The state of '@\(handle.name)', ':\(syntax.state)', is no declared schema.")
@@ -631,27 +631,27 @@ final class GesFileScope {
         }
     }
 
-    // A catalog file type `:Catalog(@Unit)` is composite with a Text part, and its catalog's type is a declared handle type
-    // with a Text id that is neither composite nor a catalog file type itself.
-    private func catalogOf(_ handle: GesResolvedHandle) throws -> GesResolvedHandle {
+    // A store file type `:Store(@Unit)` is composite with a Text part, and its store's type is a declared handle type
+    // with a Text id that is neither composite nor a store file type itself.
+    private func storeOf(_ handle: GesResolvedHandle) throws -> GesResolvedHandle {
         let syntax = handle.syntax
         if syntax.root.isEmpty {
-            throw error(Code.invalidHandle, syntax.catalogOffset, "The catalog file type '@\(handle.name)' is no composite; it names the files of a root.")
+            throw error(Code.invalidHandle, syntax.storeOffset, "The store file type '@\(handle.name)' is no composite; it names the files of a root.")
         }
         if syntax.id!.kind != .text {
-            throw error(Code.invalidHandle, syntax.id!.offset, "The part of the catalog file type '@\(handle.name)' is a path, a :Text with max.")
+            throw error(Code.invalidHandle, syntax.id!.offset, "The part of the store file type '@\(handle.name)' is a path, a :Text with max.")
         }
-        let target = try self.handle(syntax.catalog, syntax.catalogOffset)
-        if !target.syntax.catalog.isEmpty || !target.syntax.root.isEmpty || target.syntax.id!.kind != .text {
-            throw error(Code.invalidHandle, syntax.catalogOffset, "A catalog holds a handle type with a Text id that is not composite, unlike '@\(syntax.catalog)'.")
+        let target = try self.handle(syntax.store, syntax.storeOffset)
+        if !target.syntax.store.isEmpty || !target.syntax.root.isEmpty || target.syntax.id!.kind != .text {
+            throw error(Code.invalidHandle, syntax.storeOffset, "A store holds a handle type with a Text id that is not composite, unlike '@\(syntax.store)'.")
         }
         target.files.append(handle)
         return target
     }
 
-    // A state field named `id`, `version` or `root` would collide with the handle's members; a catalog file type has no state.
+    // A state field named `id`, `version` or `root` would collide with the handle's members; a store file type has no state.
     func checkHandleState(_ handle: GesResolvedHandle) throws {
-        if handle.catalog != nil { return }
+        if handle.store != nil { return }
         for name in ["id", "version", "root"] where handle.state.fields.contains(where: { $0.name == name }) || handle.state.computed.contains(where: { $0.name == name }) {
             throw error(
                 Code.invalidHandle,
@@ -668,7 +668,7 @@ final class GesFileScope {
 
     private func keyHandle(_ name: String, _ offset: Int) throws -> GesResolvedHandle {
         let handle = try handle(name, offset)
-        if !handle.syntax.catalog.isEmpty { throw error(Code.invalidHandle, offset, "'@\(name)' is a catalog file type, which only reading a catalog uses.") }
+        if !handle.syntax.store.isEmpty { throw error(Code.invalidHandle, offset, "'@\(name)' is a store file type, which only reading a store uses.") }
         return handle
     }
 
@@ -1097,7 +1097,7 @@ final class GesFileScope {
         return result
     }
 
-    // `@Name(:P)` names a projection that narrows the state of a handle type that is neither composite nor a catalog file
+    // `@Name(:P)` names a projection that narrows the state of a handle type that is neither composite nor a store file
     // type. Narrowing follows the declared sources by name, since projections are composed only later.
     private func handleProjection(_ handle: GesResolvedHandle, _ type: GesSchemaTypeSyntax, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedDeclaration {
         if handle.root != nil {
@@ -1120,8 +1120,8 @@ final class GesFileScope {
     private func resolveType(_ type: GesSchemaTypeSyntax, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedType {
         if type.kind == .handle {
             let handle = try self.handle(type.name, type.offset)
-            if !handle.syntax.catalog.isEmpty {
-                throw error(Code.invalidHandle, type.offset, "'@\(type.name)' is a catalog file type, which only reading a catalog uses.")
+            if !handle.syntax.store.isEmpty {
+                throw error(Code.invalidHandle, type.offset, "'@\(type.name)' is a store file type, which only reading a store uses.")
             }
             if type.versioned && !handle.versioned {
                 throw error(Code.invalidHandle, type.offset, "'@\(type.name)' has no version, so '@\(type.name)~' does not exist.")

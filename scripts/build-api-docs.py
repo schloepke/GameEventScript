@@ -159,18 +159,18 @@ def swift(output, version):
                 path.unlink()
         if not (graphs / (module + '.symbols.json')).is_file():
             raise RuntimeError(f'Missing public symbol graph for {module}')
-        catalog = work / (module + '.docc')
-        reset(catalog)
-        (catalog / (module + '.md')).write_text(
+        store = work / (module + '.docc')
+        reset(store)
+        (store / (module + '.md')).write_text(
             f'# ``{module}``\n\nGame Event Script {version["label"]} API, source {version["revision"][:12]}.\n\n'
             '## Overview\n\nThis reference is generated from the public Swift documentation comments. '
             'It describes the development checkout, not necessarily a published package.\n\n'
             '[Guides and version information](https://gameeventscript.org/api/swift/)\n')
-        (catalog / 'header.html').write_text(
+        (store / 'header.html').write_text(
             '<div style="padding:10px 20px;background:#142641;color:#dce6ff;font:14px system-ui">'
             '<a href="/api/swift/" style="color:#a9c3ff">Game Event Script · Swift API</a>'
             f' — {html.escape(version["label"])} · {version["revision"][:12]}</div>\n')
-        run([docc, 'convert', catalog, '--additional-symbol-graph-dir', graphs,
+        run([docc, 'convert', store, '--additional-symbol-graph-dir', graphs,
              '--output-path', output / module.lower(), '--fallback-bundle-identifier', 'org.gameeventscript.' + module,
              '--hosting-base-path', '/api/swift/' + module.lower(), '--transform-for-static-hosting',
              '--experimental-enable-custom-templates'])

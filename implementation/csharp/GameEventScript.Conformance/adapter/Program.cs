@@ -146,13 +146,13 @@ static void ValidateCase(JsonElement test, IReadOnlyCollection<string> capabilit
 {
     if (allocation && Text(test, "kind") != "scriptApi") throw new ArgumentException("Allocation mode requires script input.");
     var binary = Text(test, "kind") == "programBinary";
-    // A handle catalog is optional for compiler, loading and script cases.
-    var handles = test.TryGetProperty("handles", out var catalog);
+    // A handle setup is optional for compiler, loading and script cases.
+    var handles = test.TryGetProperty("handles", out var store);
     if (handles)
     {
         if (allocation || Text(test, "kind") is not ("scriptApi" or "loadError" or "compileError" or "compileMetadata" or "bytecode" or "bytecodeSnapshot"))
-            throw new ArgumentException("Unexpected handle catalog.");
-        AdapterHandles.Validate(catalog);
+            throw new ArgumentException("Unexpected handle setup.");
+        AdapterHandles.Validate(store);
     }
     void CaseFields(params string[] names) => Fields(test, handles ? [.. names, "handles"] : names);
     if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi" or "schemaApi" or "networkApi") CaseFields("id", "kind", "sources", "compile", "requires", "api");
@@ -210,7 +210,7 @@ static void ValidateCase(JsonElement test, IReadOnlyCollection<string> capabilit
     }
     if (Text(test, "kind") == "externalTypeApi")
     {
-        if (sources.GetArrayLength() != 0) throw new ArgumentException("Catalog test cannot contain source.");
+        if (sources.GetArrayLength() != 0) throw new ArgumentException("Store test cannot contain source.");
         var api = test.GetProperty("api");
         Fields(api, "typeNames");
         foreach (var name in api.GetProperty("typeNames").EnumerateArray())

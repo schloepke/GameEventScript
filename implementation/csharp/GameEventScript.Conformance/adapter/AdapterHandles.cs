@@ -5,50 +5,50 @@ using System.Text.Json;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 
-// The per-case handle catalog: the handle types the compiler and the host know, and the scripted resolver answers
-// (specs/Conformance/MarkdownFormat.md#handle-catalogs).
+// The per-case handle setup: the handle types the compiler and the host know, and the scripted resolver answers
+// (specs/Conformance/MarkdownFormat.md#handle-setup).
 internal sealed class AdapterHandles
 {
-    private readonly JsonElement _catalog;
+    private readonly JsonElement _store;
 
-    private AdapterHandles(JsonElement catalog) => _catalog = catalog;
+    private AdapterHandles(JsonElement store) => _store = store;
 
-    internal static AdapterHandles? From(JsonElement test) => test.TryGetProperty("handles", out var catalog) ? new AdapterHandles(catalog) : null;
+    internal static AdapterHandles? From(JsonElement test) => test.TryGetProperty("handles", out var store) ? new AdapterHandles(store) : null;
 
-    internal static void Validate(JsonElement catalog)
+    internal static void Validate(JsonElement store)
     {
-        Fields(catalog, "schemas", "hostSchemas", "resolvers", "answers", "refAnswers", "resolveRefs");
-        _ = Parse(catalog.GetProperty("schemas"));
-        _ = Parse(catalog.GetProperty("hostSchemas"));
-        var resolvers = catalog.GetProperty("resolvers");
+        Fields(store, "schemas", "hostSchemas", "resolvers", "answers", "refAnswers", "resolveRefs");
+        _ = Parse(store.GetProperty("schemas"));
+        _ = Parse(store.GetProperty("hostSchemas"));
+        var resolvers = store.GetProperty("resolvers");
         if (resolvers.ValueKind is not (JsonValueKind.Null or JsonValueKind.Array)) throw new ArgumentException("Invalid resolver list.");
-        foreach (var answer in catalog.GetProperty("answers").EnumerateArray())
+        foreach (var answer in store.GetProperty("answers").EnumerateArray())
         {
             Fields(answer, "handle", "answer", "text", "version");
             _ = GesHandle.Parse(answer.GetProperty("handle").GetString()!);
             if (answer.GetProperty("answer").GetString() is not ("document" or "record" or "missing" or "notVisible" or "fail")) throw new ArgumentException("Invalid handle answer.");
         }
 
-        foreach (var answer in catalog.GetProperty("refAnswers").EnumerateArray())
+        foreach (var answer in store.GetProperty("refAnswers").EnumerateArray())
         {
             Fields(answer, "ref", "answer", "version");
             if (GesHandle.Parse(answer.GetProperty("ref").GetString()!).Ref.IsNothing) throw new ArgumentException("A ref answer names no ref.");
             if (answer.GetProperty("answer").GetString() is not ("version" or "missing" or "fail")) throw new ArgumentException("Invalid ref answer.");
         }
 
-        foreach (var reference in catalog.GetProperty("resolveRefs").EnumerateArray()) _ = GesHandle.Parse(reference.GetString()!);
+        foreach (var reference in store.GetProperty("resolveRefs").EnumerateArray()) _ = GesHandle.Parse(reference.GetString()!);
     }
 
     // The handle types the sources may name.
-    internal GesReadOnlyArray<GesHandleType> CompilerTypes => Parse(_catalog.GetProperty("schemas")).HandleTypes;
+    internal GesReadOnlyArray<GesHandleType> CompilerTypes => Parse(_store.GetProperty("schemas")).HandleTypes;
 
-    // Registers a fresh scripted resolver for every selected type of the host catalog.
+    // Registers a fresh scripted resolver for every selected type of the host store.
     internal void Register(GesHostBuilder builder)
     {
-        var resolvers = _catalog.GetProperty("resolvers");
+        var resolvers = _store.GetProperty("resolvers");
         var selected = resolvers.ValueKind == JsonValueKind.Null ? null : resolvers.EnumerateArray().Select(name => name.GetString()!).ToHashSet(StringComparer.Ordinal);
         var answers = new Dictionary<GesHandle, List<JsonElement>>();
-        foreach (var answer in _catalog.GetProperty("answers").EnumerateArray())
+        foreach (var answer in _store.GetProperty("answers").EnumerateArray())
         {
             var handle = GesHandle.Parse(answer.GetProperty("handle").GetString()!);
             if (!answers.TryGetValue(handle, out var list)) answers.Add(handle, list = new List<JsonElement>());
@@ -57,11 +57,11 @@ internal sealed class AdapterHandles
 
         // A ref is part of the text form but not of handle equality, so ref answers are found by text.
         var refAnswers = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
-        foreach (var answer in _catalog.GetProperty("refAnswers").EnumerateArray())
+        foreach (var answer in _store.GetProperty("refAnswers").EnumerateArray())
             refAnswers[GesHandle.Parse(answer.GetProperty("ref").GetString()!).ToString()] = answer;
 
         var resolver = new ScriptedResolver(answers, refAnswers);
-        foreach (var type in Parse(_catalog.GetProperty("hostSchemas")).HandleTypes)
+        foreach (var type in Parse(_store.GetProperty("hostSchemas")).HandleTypes)
             if (selected is null || selected.Contains(type.Name)) builder.WithHandleResolver(type, resolver);
     }
 
@@ -69,7 +69,7 @@ internal sealed class AdapterHandles
     internal object[] ResolveRefs(GameEventScriptHost host)
     {
         var results = new List<object>();
-        foreach (var item in _catalog.GetProperty("resolveRefs").EnumerateArray())
+        foreach (var item in _store.GetProperty("resolveRefs").EnumerateArray())
         {
             var text = item.GetString()!;
             try

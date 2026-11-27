@@ -108,7 +108,7 @@ struct GesDocumentReading {
         case .form(let type, let labels, let arguments, let offset): return literal(type, labels, arguments, offset: offset)
         case .message(let name, let labels, let arguments, let offset): return literal("@message:" + name, labels, arguments, offset: offset)
         case .handler(let name, let labels): return (try? .handler(GesMessageSignature(name: name, parameters: labels))) ?? .nothing
-        // A catalog replaces every reference by its handle before a value is built.
+        // A store replaces every reference by its handle before a value is built.
         case .reference: preconditionFailure("A reference node has no value.")
         }
     }

@@ -40,7 +40,7 @@ meaning and is specified separately in [Bytecode](Bytecode.md).
 The following guarantees apply from release 1.0 onward, within one major release
 line. They do not freeze the current 0.x language. A later compatible compiler
 must continue to accept previously valid source under equivalent compiler options
-and native catalogs, preserving its defined meaning. Additions must not silently
+and native stores, preserving its defined meaning. Additions must not silently
 reinterpret existing valid source. Incompatible language changes require a major
 release under the [version policy](../docs/guide/distribution/Packages.md#version-policy).
 
@@ -2031,10 +2031,10 @@ let callback be Done(value)
 
 A handle refers to an object that lives outside the host: a drone of the simulation, a radar contact, a unit definition.
 Its type is declared in a schema source as a [handle type](Schemas.md#handles) and reaches the compiler through the
-[handle catalog](PublicApi.md#handle-api); scripts write it with `@`, in a namespace of its own beside `:Types` and
+[handle types](PublicApi.md#handle-api); scripts write it with `@`, in a namespace of its own beside `:Types` and
 messages. A handle holds the identity of its object and, optionally, a version. It is never a Record: a script has no
 handle literal, no constructor and no cast to `@Name`; handles arrive in messages, documents, state, extension results
-and Map keys. A [catalog](Documents.md#catalogs) is the host's source of handles for content written by hand.
+and Map keys. A [store](Documents.md#stores) is the host's source of handles for content written by hand.
 
 ```ges
 on Spotted(target as @Target, by as @Drone | @Unit_Probe) {
@@ -2050,7 +2050,7 @@ may name one or a union of several, `name as @A | @B~`; a union is written only 
 type of handles checks without converting: a value that is no handle of one of the types, or lacks a version that
 `~` requires, binds `nothing`, as a failed cast does. `value is @Name` and `value is @Name~` test the same in any
 expression. `as @Name` outside a parameter or field declaration is `validate.invalidHandleUse`; a handle type the
-catalog does not declare is `validate.unknownHandleType`.
+store does not declare is `validate.unknownHandleType`.
 
 **Members.** `h.id` is the identity: an integer Number or a Text. `h.version` is the version a handle carries, a Number
 for a revision or Bytes for a hash, and `nothing` without one; on a type without versions it is
@@ -2060,6 +2060,10 @@ Every other member reads a field of the object's state, and `h as :State`, with 
 the whole state as a plain Record of that name. A missing object reads as `nothing`. `h as :Text` gives the
 [text form](#handle-text-form). Any other cast gives `nothing`. Resolution, caching and failures are owned by
 [Host runtime](HostRuntime.md#handles).
+
+**Identity, not presence.** A handle guarantees the identity of its object, not that the object exists: the object may
+be missing when a member reads it, which then gives `nothing`. A script cannot enumerate the handles of a type; only
+the index of a [store](Documents.md#the-store-model), which the host owns, lists them.
 
 **Equality and order.** Two handles are equal when they have the same type and identity; the version does not take
 part, so a handle with and one without a version of the same object are equal. A handle equals no other kind of value.
@@ -2117,7 +2121,7 @@ on Listed(units as @Unit(:UnitDisplay)) {
 `c as :UnitDisplay` converts a plain value too: a Record of `:Composition`, or of any schema `:UnitDisplay` narrows,
 becomes a Record named `UnitDisplay` with the taken fields read along their paths; any other value gives `nothing`. The
 conversion belongs to the schema and calls no resolver. A script knows the projections of the handle types the
-[handle catalog](PublicApi.md#handle-api) declares, and the host knows a schema only through a registered handle type,
+[handle types](PublicApi.md#handle-api) declares, and the host knows a schema only through a registered handle type,
 so the conversion links as a read of the first handle type with that projection: without its resolver the Program fails
 with `link.missingHandleResolver`.
 

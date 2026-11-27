@@ -57,7 +57,7 @@ public enum GesSyntaxKind
 }
 
 /// <summary>A diagnostic of the highlighted source: a syntax error or a violated single-source rule.</summary>
-/// <remarks>Rules that need other sources, catalogs or a host are checked only by the Compiler.</remarks>
+/// <remarks>Rules that need other sources, stores or a host are checked only by the Compiler.</remarks>
 public sealed class GesHighlightDiagnostic
 {
     /// <summary>The stable diagnostic code, such as <c>parse.syntax</c> or <c>validate.duplicateVariable</c>.</summary>

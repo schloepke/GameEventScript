@@ -115,9 +115,9 @@ final class DocumentTests: XCTestCase {
         XCTAssertEqual(failed.output, "")
     }
 
-    // Each catalog is read after the ones before it, every error is reported with its file and position, and a valid
-    // catalog reports its entry count.
-    func testCheckWithCatalogsReadsTheCatalogsInOrder() throws {
+    // Each store is read after the ones before it, every error is reported with its file and position, and a valid
+    // store reports its entry count.
+    func testCheckWithStoresReadsTheStoresInOrder() throws {
         let schemas = try tool.file(
             "units.gess",
             """
@@ -129,31 +129,31 @@ final class DocumentTests: XCTestCase {
 
             """
         )
-        let hulls = try tool.file("content/hulls.gesd", ":Catalog(@Hull)\nlight: [armor: 20]\nheavy: [armor: 80]\n")
-        let units = try tool.file("content/units.gesd", ":Catalog(@Unit)\nimport 'drones/all.gesd'\nscout: [name: 'Scout', hull: @Hull:light~]\n")
-        let drones = try tool.file("content/drones/all.gesd", ":Catalog(@Unit)\nmodule drone {\n  gnabblo: [name: 'Gnabblo', hull: @Hull:heavy~, escort: @scout]\n}\n")
-        let catalogs = ["--catalog", "@Hull", hulls, "--catalog", "@Unit", units]
+        let hulls = try tool.file("content/hulls.gesd", ":Store(@Hull)\nlight: [armor: 20]\nheavy: [armor: 80]\n")
+        let units = try tool.file("content/units.gesd", ":Store(@Unit)\nimport 'drones/all.gesd'\nscout: [name: 'Scout', hull: @Hull:light~]\n")
+        let drones = try tool.file("content/drones/all.gesd", ":Store(@Unit)\nmodule drone {\n  gnabblo: [name: 'Gnabblo', hull: @Hull:heavy~, escort: @scout]\n}\n")
+        let stores = ["--store", "@Hull", hulls, "--store", "@Unit", units]
 
-        let valid = tool.run(["document", "check", "--schema", schemas] + catalogs)
+        let valid = tool.run(["document", "check", "--schema", schemas] + stores)
         XCTAssertEqual(valid.code, 0, valid.error)
-        XCTAssertEqual(valid.output, "Checked catalog @Hull: 2 entries.\nChecked catalog @Unit: 2 entries.\n")
-        XCTAssertEqual(tool.run(["document", "check", "--schema", schemas, "-q"] + catalogs).output, "")
+        XCTAssertEqual(valid.output, "Checked store @Hull: 2 entries.\nChecked store @Unit: 2 entries.\n")
+        XCTAssertEqual(tool.run(["document", "check", "--schema", schemas, "-q"] + stores).output, "")
 
-        _ = try tool.file("content/drones/all.gesd", ":Catalog(@Unit)\nmodule drone {\n  gnabblo: [name: 'Gnabblo', hull: @Hull:hevy~, escort: @scout]\n}\n")
-        let invalid = tool.run(["document", "check", "--schema", schemas] + catalogs)
+        _ = try tool.file("content/drones/all.gesd", ":Store(@Unit)\nmodule drone {\n  gnabblo: [name: 'Gnabblo', hull: @Hull:hevy~, escort: @scout]\n}\n")
+        let invalid = tool.run(["document", "check", "--schema", schemas] + stores)
         XCTAssertEqual(invalid.code, 1)
-        XCTAssertEqual(invalid.output, "Checked catalog @Hull: 2 entries.\n")
-        XCTAssertEqual(invalid.error, "\(drones)(3,36): error catalog.unknownReference: @Hull:hevy names no entry. Did you mean @Hull:heavy?\n")
+        XCTAssertEqual(invalid.output, "Checked store @Hull: 2 entries.\n")
+        XCTAssertEqual(invalid.error, "\(drones)(3,36): error store.unknownReference: @Hull:hevy names no entry. Did you mean @Hull:heavy?\n")
 
-        let unknown = tool.run(["document", "check", "--schema", schemas, "--catalog", "@Ship", hulls])
+        let unknown = tool.run(["document", "check", "--schema", schemas, "--store", "@Ship", hulls])
         XCTAssertEqual(unknown.code, 1)
         XCTAssertEqual(unknown.error, "\(hulls): error schema.unknownName: The schemas of --schema declare no handle type @Ship.\n")
 
-        let composite = tool.run(["document", "check", "--schema", schemas, "--catalog", "@Slot", hulls])
+        let composite = tool.run(["document", "check", "--schema", schemas, "--store", "@Slot", hulls])
         XCTAssertEqual(composite.code, 1)
-        XCTAssertEqual(composite.error, "\(hulls): error cli.usage: @Slot is composite; a catalog needs a type of its own. (Parameter 'type')\n")
+        XCTAssertEqual(composite.error, "\(hulls): error cli.usage: @Slot is composite; a store needs a type of its own. (Parameter 'type')\n")
 
-        let twice = tool.run(["document", "check", "--schema", schemas, "--catalog", "@Hull", hulls, "--catalog", "@Hull", hulls])
+        let twice = tool.run(["document", "check", "--schema", schemas, "--store", "@Hull", hulls, "--store", "@Hull", hulls])
         XCTAssertEqual(twice.code, 2)
         XCTAssertEqual(twice.error, "error cli.usage: The root '\(hulls)' of @Hull is given twice. Run 'ges document --help' for usage.\n")
     }
@@ -164,8 +164,8 @@ final class DocumentTests: XCTestCase {
         for arguments in [
             ["document"], ["document", "lint", a], ["document", "check"], ["document", "format", a, b], ["document", "format", a, "-o", a], ["document", "check", "--color", a], ["document", "check", ""], ["document", "format", "", "-o", "out.gesd"],
             ["document", "check", a, "--schema"], ["document", "check", a, "--schema", "-q"], ["document", "format", a, "--schema", "units.gess"],
-            ["document", "check", "--catalog", "@Unit", a], ["document", "check", "--schema", "a.gess", "--catalog", "Unit", a], ["document", "check", "--schema", "a.gess", "--catalog", "@Unit"],
-            ["document", "format", a, "--catalog", "@Unit", b],
+            ["document", "check", "--store", "@Unit", a], ["document", "check", "--schema", "a.gess", "--store", "Unit", a], ["document", "check", "--schema", "a.gess", "--store", "@Unit"],
+            ["document", "format", a, "--store", "@Unit", b],
         ] {
             let result = tool.run(arguments)
             XCTAssertEqual(result.code, 2, "\(arguments) \(result.error)")

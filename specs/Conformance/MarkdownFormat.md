@@ -269,7 +269,7 @@ discriminator is `gesBlock: case`. It supports:
 | `hostCount` | positive integer | no | run the same compiled Programs and expectations independently in this many Hosts; default `1` |
 | `deferredPrograms` | ID sequence | no | source-program groups loaded only by a native host action |
 | `nativeHandlers` | sequence | no | declarative portable native handlers |
-| `handles` | mapping | no | [handle catalog](#handle-catalogs) and scripted resolver answers |
+| `handles` | mapping | no | [handle setup](#handle-setup) and scripted resolver answers |
 | `stepActions` | mapping | no | ordered host actions performed immediately before a named step's Receive |
 | `messageApi` | mapping | `messageApi` only | signature and message input |
 | `valueApi` | mapping | `valueApi` only | portable value construction, comparison, copy or literal parsing input |
@@ -695,7 +695,7 @@ A timer `name` here and in `scheduled` events is a handle's text form, such as `
 nonempty Text name as a single-quoted text literal with doubled quotes, such as `"'beat'"`, so a handle and a
 Text of the same spelling stay distinct.
 
-### Handle catalogs
+### Handle setup
 
 > **Since: Unreleased**
 

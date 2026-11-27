@@ -332,7 +332,7 @@ internal sealed partial class GesSchemaSourceReader
     }
 
     // `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`, where
-    // `:Catalog(@Type)` may stand for the state.
+    // `:Store(@Type)` may stand for the state.
     private GesSchemaDeclarationSyntax ReadHandle(int offset)
     {
         SkipSpaces();
@@ -342,18 +342,23 @@ internal sealed partial class GesSchemaSourceReader
         SkipSpaces();
         var stateOffset = _position;
         var state = ReadTypeName();
-        var catalog = "";
-        var catalogOffset = 0;
-        if (state == "Catalog" && _position < _text.Length && _text[_position] == '(')
+        var store = "";
+        var storeOffset = 0;
+        if (state == "Store" && _position < _text.Length && _text[_position] == '(')
         {
-            // `:Catalog(@Unit)` declares a catalog file type; its state stays empty.
+            // `:Store(@Unit)` declares a store file type; its state stays empty.
             _position++;
             SkipSpaces();
-            catalogOffset = _position;
-            catalog = ReadHandleName();
+            storeOffset = _position;
+            store = ReadHandleName();
             SkipSpaces();
             Expect(')');
             state = "";
+        }
+        else if (_position < _text.Length && _text[_position] == '(')
+        {
+            // Only `:Store` takes a handle type here; any other name with an argument names no type.
+            throw new SyntaxFailure(stateOffset, $"Type ':{state}(...)' is not declared.", Code.UnknownName);
         }
 
         SkipSpaces();
@@ -434,8 +439,8 @@ internal sealed partial class GesSchemaSourceReader
             Offset = offset,
             State = state,
             StateOffset = stateOffset,
-            Catalog = catalog,
-            CatalogOffset = catalogOffset,
+            Store = store,
+            StoreOffset = storeOffset,
             Root = root,
             RootOffset = rootOffset,
             Id = id,

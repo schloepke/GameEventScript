@@ -1,6 +1,6 @@
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
-"""The per-case handle catalog and scripted resolver answers (specs/Conformance/MarkdownFormat.md#handle-catalogs)."""
+"""The per-case handle setup and scripted resolver answers (specs/Conformance/MarkdownFormat.md#handle-setup)."""
 import re
 
 from core.corpus import InvalidDocument, closed
@@ -62,13 +62,13 @@ def ref_answer(raw):
 
 
 def prepare(case):
-    """The normalized catalog of a case, or None. Every field is present in the request."""
+    """The normalized setup of a case, or None. Every field is present in the request."""
     raw = case.metadata.get('handles')
     if raw is None:
         return None
     if case.kind not in KINDS:
-        raise InvalidDocument('A handle catalog belongs to compiler, loading and script cases')
-    closed(raw, {'schemas', 'hostSchemas', 'resolvers', 'answers', 'resolveRefs'}, 'handle catalog')
+        raise InvalidDocument('A handle setup belongs to compiler, loading and script cases')
+    closed(raw, {'schemas', 'hostSchemas', 'resolvers', 'answers', 'resolveRefs'}, 'handle setup')
     schemas = texts(raw.get('schemas'), 'schemas')
     host = texts(raw['hostSchemas'], 'hostSchemas') if 'hostSchemas' in raw else schemas
     resolvers = raw.get('resolvers')

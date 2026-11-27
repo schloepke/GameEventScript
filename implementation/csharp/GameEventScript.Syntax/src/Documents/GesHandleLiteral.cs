@@ -83,7 +83,7 @@ internal static class GesHandleLiteral
     // -1 when the text there is no well-formed handle. A `/` that begins a `//` comment never starts or continues a part.
     internal static int Scan(string text, int start, out Parts parts) => Scan(text, start, false, out parts, out _);
 
-    // Reads a handle like Scan; with `allowPin`, a `~` that no version follows pins the handle of a catalog
+    // Reads a handle like Scan; with `allowPin`, a `~` that no version follows pins the handle of a store
     // (specs/Documents.md#references) and `pin` is its offset, otherwise -1.
     internal static int Scan(string text, int start, bool allowPin, out Parts parts, out int pin)
     {
@@ -157,7 +157,7 @@ internal static class GesHandleLiteral
     // keys; `versioned` is whether a version or a ref follows the id.
     internal static int Read(string text, int start, out string identity, out bool versioned) => Read(text, start, false, out identity, out versioned, out _);
 
-    // Reads like Read; with `allowPin`, a catalog handle may end with a pinning `~` at offset `pin`, otherwise -1.
+    // Reads like Read; with `allowPin`, a store handle may end with a pinning `~` at offset `pin`, otherwise -1.
     internal static int Read(string text, int start, bool allowPin, out string identity, out bool versioned, out int pin)
     {
         identity = "";

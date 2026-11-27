@@ -198,7 +198,7 @@ public sealed class GesStore : IGesHandleResolver
     }
 
     /// <summary>
-    /// Returns the handles of every entry through a projection (specs/Schemas.md#stores), sorted by id, each carrying the
+    /// Returns the handles of every entry through a projection (specs/Schemas.md#projections), sorted by id, each carrying the
     /// projection and its version: the content hash of the projected state for a <c>:ContentHash</c> type, the entry's version
     /// otherwise. The list is computed on each call.
     /// </summary>

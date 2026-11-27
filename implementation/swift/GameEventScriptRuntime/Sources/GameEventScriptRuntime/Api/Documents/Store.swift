@@ -141,7 +141,7 @@ public final class GesStore: GesHandleResolver {
         return Array(entries[start..<end])
     }
 
-    /// Returns the handles of every entry through a projection (specs/Schemas.md#stores), sorted by id, each carrying
+    /// Returns the handles of every entry through a projection (specs/Schemas.md#projections), sorted by id, each carrying
     /// the projection and its version: the content hash of the projected state for a `:ContentHash` type, the entry's
     /// version otherwise. The list is computed on each call.
     /// - Parameter projection: A projection of the store's state, one of ``GesHandleType/projections``.

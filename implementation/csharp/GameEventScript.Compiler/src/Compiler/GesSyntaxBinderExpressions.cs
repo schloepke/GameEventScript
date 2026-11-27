@@ -87,6 +87,7 @@ internal sealed partial class GesSyntaxBinder
         NodeKind.CallExpression => BindCall(node),
         NodeKind.HandlerLiteralExpression => BindHandlerLiteral(node),
         NodeKind.ParenthesizedExpression => BindParenthesized(node),
+        NodeKind.StoreExpression => BindStore(node),
         NodeKind.SendExpression => BindSend(node, null, default),
         NodeKind.CancelExpression => BindCancel(node),
         _ => throw Mismatch(node.FirstToken)
@@ -947,6 +948,18 @@ internal sealed partial class GesSyntaxBinder
     }
 
     // Parentheses leave no semantic node; the enclosed expression keeps its own range.
+    private GesExpressionNode BindStore(GesSyntaxNode node)
+    {
+        var c = new Cursor(this, node);
+        var start = c.Advance();
+        if (!c.Match(LeftParen)) return Set(new GesStoreExpressionNode(start.Text, null), start, start);
+        c.SkipNewLines();
+        var root = Expression(ref c);
+        c.SkipNewLines();
+        c.Expect(RightParen);
+        return Set(new GesStoreExpressionNode(start.Text, root), start, c.Previous);
+    }
+
     private GesExpressionNode BindParenthesized(GesSyntaxNode node)
     {
         var c = new Cursor(this, node);

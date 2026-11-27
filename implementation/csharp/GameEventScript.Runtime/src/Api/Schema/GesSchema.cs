@@ -196,6 +196,7 @@ public sealed class GesSchemaType
         TagSet = type.TagSet;
         Label = type.Label;
         Max = type.Max;
+        IsExact = type.Exact;
         Element = GesSchema.Types(type.Element ?? []);
         Depth = type.Depth;
         var axes = new List<GesSchemaAxisInfo>();
@@ -246,6 +247,10 @@ public sealed class GesSchemaType
 
     /// <summary>Gets the maximum of a Text in UTF-8 bytes, of a List in elements or of a Poly in points, if there is one.</summary>
     public long? Max { get; }
+
+    /// <summary>Gets whether a List is fixed, written <c>exactly n</c>: it always holds <see cref="Max"/> elements, which the
+    /// wire writes without a count.</summary>
+    public bool IsExact { get; }
 
     /// <summary>Gets the alternatives of a List's element; empty when any element is allowed.</summary>
     public GesReadOnlyArray<GesSchemaType> Element { get; }

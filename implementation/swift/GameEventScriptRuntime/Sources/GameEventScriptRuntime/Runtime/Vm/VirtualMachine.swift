@@ -42,6 +42,9 @@ final class GesVirtualMachine {
     // The Lists of the message that hold handles, collected at the first uncached read of the invocation.
     var handleLists: [[GesValue]] = []
     var handleListsCollected = false
+    // The handles each store or root's parts the running invocation listed, in key order; nil for a type that does not
+    // enumerate. It survives pauses and ends with the invocation like the state cache.
+    var storeHandles: [StoreKey: [GesHandle]?] = [:]
     var handleContext: GesContext?
     // The party state reads are for: 0 for the host itself (specs/HostRuntime.md#handles).
     var handleParty = 0

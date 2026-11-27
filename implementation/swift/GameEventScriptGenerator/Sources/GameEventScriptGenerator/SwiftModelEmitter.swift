@@ -527,7 +527,8 @@ enum GesSwiftModelEmitter {
     /// A literal default as a native value; a record calls the memberwise initializer of its model with the fields the literal
     /// names.
     static func native(_ layout: GesModelLayout, _ value: GesModelPlanValue, _ fallback: GesLayoutDefault) -> String {
-        switch fallback.kind {
+        if GesModelPlanner.fill(value, fallback) { return "(0..<\(value.model.max!)).map { _ -> \(type(value.element!)) in \(native(layout, value.element!, fallback)) }" }
+        return switch fallback.kind {
         case .boolean: fallback.boolean ? "true" : "false"
         case .tag where value.closedTag: "." + name(fallback.value)
         case .tag: literal(fallback.value)

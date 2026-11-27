@@ -21,6 +21,8 @@ public sealed class GesProgramBuilder
     private GesCompileOptions _options = new();
     private IGesExternalTypeCatalog _externalTypeCatalog = GesEmptyExternalTypeCatalog.Instance;
     private readonly Dictionary<string, GesHandleType> _handleTypes = new(StringComparer.Ordinal);
+    private HashSet<string>? _enumerableHandleTypes;
+    private IReadOnlyList<GesDiagnostic> _warnings = [];
 
     /// <summary>
     /// Creates an empty source builder with default compile options.
@@ -93,6 +95,29 @@ public sealed class GesProgramBuilder
     }
 
     /// <summary>
+    /// Tells the compiler which handle types the host enumerates (<see cref="IGesHandleResolver.Handles"/>), so that a
+    /// store read of any other declared type, which reads as Nothing, reports a
+    /// <see cref="GesDiagnosticCodes.ValidateHandleTypeNotEnumerable"/> warning in <see cref="Warnings"/>. Without this
+    /// call the compiler does not know and warns about none; each call replaces the previous set.
+    /// </summary>
+    /// <param name="names">The handle type names without <c>@</c>.</param>
+    /// <returns>The current builder instance.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="names"/> or one of its elements is <see langword="null"/>.</exception>
+    public GesProgramBuilder WithEnumerableHandleTypes(IEnumerable<string> names)
+    {
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var name in names ?? throw new ArgumentNullException(nameof(names))) set.Add(name ?? throw new ArgumentNullException(nameof(names)));
+        _enumerableHandleTypes = set;
+        return this;
+    }
+
+    /// <summary>
+    /// The warnings of the last <see cref="Compile"/> call, in report order; empty before the first call. Warnings do
+    /// not fail a compilation, and a failed compilation reports them as of its validation.
+    /// </summary>
+    public IReadOnlyList<GesDiagnostic> Warnings => _warnings;
+
+    /// <summary>
     /// Adds a GameEventScript source string to the builder.
     /// </summary>
     /// <param name="text">The content of the script to be added.</param>
@@ -134,6 +159,7 @@ public sealed class GesProgramBuilder
     internal GesSyntaxTreeModule BuildModule(GesCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;
+        _warnings = [];
         var modules = new GesParsedScript[_sources.Count];
         // Each source's own rules report first, in source order; the program-wide rules follow.
         var sourceDiagnostics = new List<GesDiagnostic>();
@@ -171,7 +197,8 @@ public sealed class GesProgramBuilder
             errors.Add(conflictModule, $"Name '{conflictName}' is declared as both a predicate and a function", conflictName, GlobalDefinition, ValidatePredicateFunctionConflict, conflictNode);
         }
 
-        GesAstValidator.ValidateModules(modules, callables, validationTypeDefinitions, constants, _handleTypes, errors);
+        GesAstValidator.ValidateModules(modules, callables, validationTypeDefinitions, constants, _handleTypes, _enumerableHandleTypes, errors);
+        _warnings = errors.Warnings.Count == 0 ? [] : [.. errors.Warnings];
 
         errors.ThrowIfAny();
 

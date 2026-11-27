@@ -266,6 +266,11 @@ public enum GesSchemaValues {
     private static func literal(_ field: GesResolvedField, _ fallback: GesResolvedDefault) -> GesValue {
         guard field.alternatives.count == 1 else { return literal(fallback, integer: false, percentage: false, unit: .none) }
         let type = field.alternatives[0]
+        if type.exact { return filled([], type.max!, typeLiteral(type.element![0], fallback)) }
+        return typeLiteral(type, fallback)
+    }
+
+    private static func typeLiteral(_ type: GesResolvedType, _ fallback: GesResolvedDefault) -> GesValue {
         if fallback.kind == .empty { return type.kind == .map ? .map(keys: [], values: []) : .list([]) }
         let number = type.kind == .number || type.kind == .percentage || type.kind == .quantity
         return literal(fallback, integer: number && type.constraints.integer && type.constraints.step == nil, percentage: type.kind == .percentage, unit: type.unit)
@@ -347,6 +352,10 @@ public enum GesSchemaValues {
             }
             return index
         default:
+            if schema.nodes[index].fixed && schema.nodes[index].kind == .list {
+                value = filled([], schema.nodes[index].maxCount, fillElement(schema, index, fallback))
+                return nil
+            }
             value = literal(fallback, integer: schema.nodes[index].kind == .integer, percentage: info.valueKind == .percentage, unit: info.unit)
         }
         return nil
@@ -429,7 +438,11 @@ public enum GesSchemaValues {
             try encodeHandleMap(&writer, schema, index, value, strict: strict)
         case .list:
             guard value.valueKind == .list else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
-            let items = value.asList
+            var items = Array(value.asList)
+            let node = schema.nodes[index]
+            if node.fixed && Int64(items.count) < node.maxCount, let fill = info.defaultValue, fill.kind != .field {
+                items = filled(items, node.maxCount, fillElement(schema, index, fill)).asList.map { $0 }
+            }
             try writer.beginList(field, count: items.count)
             for item in items { try encodeNode(&writer, schema, index + 1, item, strict: strict) }
         case .group:
@@ -1001,7 +1014,7 @@ public enum GesSchemaValues {
             }
             if held.isNothing && field.marker == .optional { continue }
             keys.append(field.name)
-            values.append(try stateElement(field.alternatives, held, fieldPath, declarations))
+            values.append(try stateElement(field.alternatives, fillState(field, held), fieldPath, declarations))
         }
         return .record(typeName: schema.name, keys: keys, values: values)
     }
@@ -1018,6 +1031,28 @@ public enum GesSchemaValues {
             field = sibling
         }
         return nil
+    }
+
+    /// A fixed List with a literal default fills a shorter List of a field at its end (specs/Schemas.md#fixed-lists).
+    private static func fillState(_ field: GesResolvedField, _ value: GesValue) -> GesValue {
+        guard field.alternatives.count == 1, field.alternatives[0].exact, let fallback = field.defaultValue, fallback.kind != .field else { return value }
+        let type = field.alternatives[0]
+        guard value.valueKind == .list, Int64(value.asList.count) < type.max! else { return value }
+        return filled(Array(value.asList), type.max!, typeLiteral(type.element![0], fallback))
+    }
+
+    /// The elements followed by copies of the fill element up to the count.
+    private static func filled(_ items: [GesValue], _ count: Int64, _ element: GesValue) -> GesValue {
+        var filled = items
+        filled.reserveCapacity(Int(count))
+        while filled.count < Int(count) { filled.append(element) }
+        return .list(filled)
+    }
+
+    /// The fill element of a fixed List node with a literal default, from its element node.
+    private static func fillElement(_ schema: GesBoundSchema, _ index: Int, _ fallback: GesResolvedDefault) -> GesValue {
+        let info = schema.infos[index + 1]
+        return literal(fallback, integer: schema.nodes[index + 1].kind == .integer, percentage: info.valueKind == .percentage, unit: info.unit)
     }
 
     /// Nested Records normalize against their schema, chosen by the Record's name among the alternatives; Lists and Map

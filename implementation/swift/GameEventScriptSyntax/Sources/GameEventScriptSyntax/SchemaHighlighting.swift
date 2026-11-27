@@ -5,8 +5,8 @@
 // comments. The diagnostic is the reader's.
 enum GesSchemaHighlighting {
     private static let keywords: Set<String> = [
-        "schema", "message", "messages", "constant", "parameter", "as", "be", "between", "and", "wrapping", "step", "delta", "within", "integer", "optional", "key", "max", "depth", "tags", "wire", "model", "let", "default", "true", "false",
-        "abstract", "packed",
+        "schema", "message", "messages", "constant", "parameter", "as", "be", "between", "and", "wrapping", "step", "delta", "within", "integer", "optional", "key", "max", "exactly", "depth", "tags",
+        "wire", "model", "let", "default", "true", "false", "abstract", "packed",
         "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of", "min", "clamp", "abs", "has",
         "sqrt", "cbrt", "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "hypot", "exp", "ln", "floor", "ceil", "truncate", "round", "rad", "deg",
         "network", "client", "server", "sends", "publishes", "reliable", "latest", "bulk", "at", "most", "every", "handle", "composite", "owns", "projection", "sending",

@@ -383,6 +383,29 @@ values reject a value that contains one with `wire.unresolvedRef`, before anythi
 Network routes `owns` declare which side holds the objects of a type ([Network](Network.md)); resolving over the
 network is not part of this version.
 
+### Stores
+
+> **Since: Unreleased**
+
+A [store read](Language.md#stores) asks the resolver of the type for its handles (C# `Handles`, Swift `handles`):
+with no root for every object of the type, with the root's handle, without version, for the parts of one root. The
+resolver answers in any order, and the host checks the answer and sorts it into key order:
+
+- **Not enumerable.** The default answer, no list (C# null, Swift nil), means the type does not enumerate, and the read
+  gives `nothing`. A type without a resolver, and a root value that is no handle of the root type, give `nothing`
+  without a call.
+- **Checks.** Every handle must be of the read type, composite exactly when the type is, and of the given root; none
+  may appear twice. A failed check or a throwing resolver fails the handler with `runtime.handleResolveFailed`, naming
+  the type. Versions and projections of the listed handles are dropped.
+- **Stores read from files.** A [store](Documents.md#stores) the host registers as a resolver lists every entry; its
+  type has no parts, so a root lists none.
+- **Cache.** The host asks once per type and root and handler invocation, also across pauses, and every later read of
+  the same store in that invocation reuses the answer. `[:values]` and `[:entries]` read the states of the listed
+  handles through the [cache](#handles), resolving the uncached ones in one batch in key order.
+- **Compiler.** A host may tell the compiler which types enumerate (C# `GesProgramBuilder.WithEnumerableHandleTypes`,
+  Swift `withEnumerableHandleTypes`); a store read of another type then compiles with the warning
+  `validate.handleTypeNotEnumerable`. Without it the compiler does not warn.
+
 ## Message Semantics
 
 - Message arguments are ordered `GesMessageArgument` name/value

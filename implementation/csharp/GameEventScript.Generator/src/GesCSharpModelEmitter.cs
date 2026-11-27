@@ -684,6 +684,8 @@ internal static partial class GesCSharpModelEmitter
     // A literal default as a native constant; a record calls the constructor of its model.
     private static string Native(GesModelLayout layout, GesModelPlanValue value, GesLayoutDefault fallback, string? qualifier = null, string? owner = null) => fallback.Kind switch
     {
+        _ when GesModelPlanner.Fill(value, fallback)
+            => $"new {Plain(value, qualifier, owner)}(global::System.Linq.Enumerable.Select<int, {Type(value.Element!, qualifier, owner)}>(global::System.Linq.Enumerable.Range(0, {value.Model.Max!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}), _ => {Native(layout, value.Element!, fallback, qualifier, owner)}))",
         GesSchemaDefaultKind.Boolean => fallback.Boolean ? "true" : "false",
         GesSchemaDefaultKind.Tag when value.ClosedTag => Plain(value, qualifier, owner) + "." + GesSchemaPlanner.Pascal(fallback.Value),
         GesSchemaDefaultKind.Tag => GesSchemaPlanner.Literal(fallback.Value, false),
@@ -761,6 +763,7 @@ internal static partial class GesCSharpModelEmitter
     {
         if (IsData(field.Value)) return null;
         if (field.Field.Default is { Kind: GesSchemaDefaultKind.Record or GesSchemaDefaultKind.Empty } fallback) return Native(layout, field.Value, fallback);
+        if (GesModelPlanner.Fill(field.Value, field.Field.Default)) return Native(layout, field.Value, field.Field.Default!);
         if (field.Field.Default is not null || field.Value.Nullable) return null;
         if (field.Value.Kind == GesModelKind.Schema && field.Value.Model.Packed) return null;
         return field.Value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union or GesModelKind.Poly or GesModelKind.HandleMap ? Initial(field.Value) : null;

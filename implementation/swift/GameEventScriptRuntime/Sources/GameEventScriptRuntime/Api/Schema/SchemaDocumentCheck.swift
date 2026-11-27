@@ -63,6 +63,8 @@ struct GesSchemaDocumentCheck {
         var made: [Attempt: [Made]] = [:]
         var direct: [Made] = []
         var levels: [ObjectIdentifier: Int] = [:]
+        // The fixed List types of fields whose default fills them, which may be shorter.
+        var filled: Set<ObjectIdentifier> = []
         // The path of the value being checked, and its exact path with list indices.
         var path = ""
         var position = ""
@@ -145,6 +147,10 @@ struct GesSchemaDocumentCheck {
             seen.insert(field.name)
             let value = Self.resolved(values[index], valueOffsets[index])
             if field.marker == .optional, case .nothing = value { continue }
+            // A fixed List with a literal default fills a shorter List of its field (specs/Schemas.md#fixed-lists).
+            if field.alternatives.count == 1, field.alternatives[0].exact, let fallback = field.defaultValue, fallback.kind != .field {
+                attempts.filled.insert(ObjectIdentifier(field.alternatives[0]))
+            }
             try under(field.name) { try union(field.alternatives, value, valueOffsets[index]) }
         }
         for field in schema.fields where !seen.contains(field.name) && field.defaultValue == nil && field.marker != .optional && !field.alternatives.contains(where: { $0.kind == .nothing }) {
@@ -286,6 +292,7 @@ struct GesSchemaDocumentCheck {
                 throw fail(Self.tooDeep, start)
             }
             if let max = type.max, items.count > max { throw fail(Self.outOfRange, start) }
+            if type.exact, items.count < type.max!, !attempts.filled.contains(ObjectIdentifier(type)) { throw fail(Self.outOfRange, start) }
             if let element = type.element {
                 for (index, item) in items.enumerated() { try under("[]", index: index) { try union(element, item, offsets[index]) } }
             }
@@ -334,7 +341,7 @@ struct GesSchemaDocumentCheck {
     // A handle of the field's type whose id, part and version have the declared forms. An `@Name~` field requires a version
     // or a ref; an `@Name` field takes neither.
     private func handle(_ type: GesResolvedHandle, versioned: Bool, _ text: String, _ start: Int) throws {
-        guard let handle = try? GesHandle(parsing: text), handle.typeName == type.name, handle.isComposite == (type.root != nil) else { throw fail(Self.fieldType, start) }
+        guard let handle = try? GesHandle(parsing: text), handle.typeName == type.name, handle.isComposite == type.hasPart else { throw fail(Self.fieldType, start) }
         let identity = type.root ?? type
         try handleKey(identity.id, handle, part: false, start)
         if handle.isComposite { try handleKey(type.id, handle, part: true, start) }

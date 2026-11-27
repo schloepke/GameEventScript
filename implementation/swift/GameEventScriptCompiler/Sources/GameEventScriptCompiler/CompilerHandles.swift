@@ -46,6 +46,33 @@ extension GesCompiler {
         r.mark([done])
     }
 
+    // `@X[:count]` and the other store reads, with a root those of one root's parts (specs/Language.md#stores). Reads of
+    // values or entries read states, so the type's binding needs a resolver at the first of them.
+    func storeReadExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
+        guard case .storeRead(let typeName, let rootExpression, let read) = e.kind else { preconditionFailure() }
+        let root = try rootExpression.map { try expression($0, r, scope) }
+        let opcode: GesBytecodeOpCode
+        switch read {
+        case .count: opcode = root == nil ? .countStore : .countParts
+        case .keys: opcode = root == nil ? .keysOfStore : .keysOfParts
+        case .values: opcode = root == nil ? .valuesOfStore : .valuesOfParts
+        case .entries: opcode = root == nil ? .entriesOfStore : .entriesOfParts
+        }
+        storeRead(opcode, d, root, typeName, r)
+    }
+
+    // An assembled or source store read; an assembled one names its type like a source one when the module declares it.
+    func storeRead(_ opcode: GesBytecodeOpCode, _ d: Int, _ root: Int?, _ typeName: String, _ r: GesRoutine) {
+        let name = String(typeName.dropFirst())
+        if typeName.hasPrefix("@"), handleTypes[name] != nil { namedHandleTypes.insert(name) }
+        var payload: UInt64 = 0
+        if [.valuesOfStore, .entriesOfStore, .valuesOfParts, .entriesOfParts].contains(opcode) {
+            builder.handleStateReads.append([name])
+            payload = UInt64(builder.handleStateReads.count)
+        }
+        r.emit(opcode, d, root ?? 0, builder.text(typeName), payload: payload)
+    }
+
     // `is @Name` and `is @Name~` check the handle type and, with `~`, a carried version.
     func handleTypeCheck(_ d: Int, _ value: Int, _ typeName: String, _ r: GesRoutine) {
         namedHandleTypes.insert(GesHandleTypeNames.split(typeName).name)
@@ -60,7 +87,11 @@ extension GesCompiler {
             return
         }
         switch member {
-        case "id", "version":
+        case "id":
+            // A part-less composite holds its root's id as its own, so only `@id` reads its identity as a root without a
+            // part; types whose composites all have a part keep the plain member.
+            r.emit(.memberAccess, d, builder.text(GesHandleTypeNames.hasPartlessComposite(typeName, handleTypes) ? "@id" : "id"), value)
+        case "version":
             r.emit(.memberAccess, d, builder.text(member), value)
         case "root":
             if let root = GesHandleTypeNames.commonRoot(typeName, handleTypes) {
@@ -117,6 +148,11 @@ extension GesCompiler {
     }
 }
 
+extension GesBytecodeOpCode {
+    // The store reads `countStore` through `entriesOfParts`.
+    fileprivate var isStoreReadOpcode: Bool { rawValue >= Self.countStore.rawValue && rawValue <= Self.entriesOfParts.rawValue }
+}
+
 extension GesExpression {
     // Whether the expression is a bare name, such as a parameter.
     fileprivate var isName: Bool {
@@ -134,7 +170,7 @@ extension GesBinaryBuilder {
         var firstReads: [String: UInt16] = [:]
         for address in code.indices {
             let instruction = code[address]
-            if instruction.opcode == .memberAccess && instruction.payload != 0 {
+            if (instruction.opcode == .memberAccess || instruction.opcode.isStoreReadOpcode) && instruction.payload != 0 {
                 for name in handleStateReads[Int(instruction.payload) - 1] where firstReads[name] == nil { firstReads[name] = UInt16(address) }
                 code[address] = .init(opcode: instruction.opcode, unitAndFlags: instruction.unitAndFlags, word0: instruction.word0, word1: instruction.word1, word2: instruction.word2, payload: 0)
             } else if instruction.opcode == .castCustom && Int(instruction.word2) < strings.count {

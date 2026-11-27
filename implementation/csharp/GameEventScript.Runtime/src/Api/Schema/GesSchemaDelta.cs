@@ -135,7 +135,7 @@ public static class GesSchemaDelta
                 FullText(ref source, in node, ref target, write);
                 break;
             case GesSchemaNodeKind.List:
-                var count = source.GetBits(node.Width, node.Path);
+                var count = node.Fixed ? (ulong)node.MaxCount : source.GetBits(node.Width, node.Path);
                 if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
                 if (write) target.PutBits(count, node.Width);
                 for (var item = 0UL; item < count; item++) FullField(ref source, nodes, index + 1, ref target, write);
@@ -257,7 +257,7 @@ public static class GesSchemaDelta
                 source.Seek(source.BitPosition + ((long)length * 8));
                 break;
             case GesSchemaNodeKind.List:
-                var count = source.GetBits(node.Width, node.Path);
+                var count = node.Fixed ? (ulong)node.MaxCount : source.GetBits(node.Width, node.Path);
                 for (var item = 0UL; item < count; item++) Skip(ref source, nodes, index + 1);
                 break;
             case GesSchemaNodeKind.Group:

@@ -209,6 +209,22 @@ public enum GesBytecodeOpCode: UInt8, Sendable, CaseIterable {
     case `isEmpty` = 0x44
     /// Presence/default operator.
     case `default` = 0x45
+    /// Writes the number of objects of the store `@Name` named by `TypeOperand`, or `nothing` when the type does not enumerate.
+    case `countStore` = 0x46
+    /// Writes the handles of the store `@Name` named by `TypeOperand` as a List in key order.
+    case `keysOfStore` = 0x47
+    /// Writes the states of the store `@Name` named by `TypeOperand` as a List in key order.
+    case `valuesOfStore` = 0x48
+    /// Writes the store `@Name` named by `TypeOperand` as a List of Maps with `key` and `value` in key order.
+    case `entriesOfStore` = 0x49
+    /// Writes the number of parts of the root handle in `X` in the store `@Name` named by `TypeOperand`.
+    case `countParts` = 0x4A
+    /// Writes the part handles of the root handle in `X` in the store `@Name` named by `TypeOperand` as a List in key order.
+    case `keysOfParts` = 0x4B
+    /// Writes the states of the parts of the root handle in `X` in the store `@Name` named by `TypeOperand` as a List in key order.
+    case `valuesOfParts` = 0x4C
+    /// Writes the parts of the root handle in `X` in the store `@Name` named by `TypeOperand` as a List of Maps with `key` and `value` in key order.
+    case `entriesOfParts` = 0x4D
     /// Tri-state boolean combine.
     case `or` = 0x50
     /// Tri-state boolean combine.

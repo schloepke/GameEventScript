@@ -83,6 +83,8 @@ enum GesOperand: Int, Sendable {
 }
 
 extension GesBytecodeOpCode {
+    // The store reads `countStore` through `entriesOfParts`.
+    var isStoreRead: Bool { rawValue >= Self.countStore.rawValue && rawValue <= Self.entriesOfParts.rawValue }
     var isResultSend: Bool { rawValue >= 0xDA && rawValue <= 0xDD || isNamedSend }
 
     var isNamedSend: Bool { self == .emitNamed || self == .publishNamed }
@@ -164,6 +166,14 @@ extension GesBytecodeOpCode {
         case .`hasValue`: [.targetRegister, .operandRegister]
         case .`isEmpty`: [.targetRegister, .operandRegister]
         case .`default`: [.targetRegister, .leftRegister, .rightRegister]
+        case .countStore: [.targetRegister, .customTypeName]
+        case .keysOfStore: [.targetRegister, .customTypeName]
+        case .valuesOfStore: [.targetRegister, .customTypeName]
+        case .entriesOfStore: [.targetRegister, .customTypeName]
+        case .countParts: [.targetRegister, .sourceRegister, .customTypeName]
+        case .keysOfParts: [.targetRegister, .sourceRegister, .customTypeName]
+        case .valuesOfParts: [.targetRegister, .sourceRegister, .customTypeName]
+        case .entriesOfParts: [.targetRegister, .sourceRegister, .customTypeName]
         case .`or`: [.targetRegister, .leftRegister, .rightRegister]
         case .`and`: [.targetRegister, .leftRegister, .rightRegister]
         case .`xor`: [.targetRegister, .leftRegister, .rightRegister]

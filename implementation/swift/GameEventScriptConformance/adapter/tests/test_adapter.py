@@ -32,7 +32,8 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(body['requestDigest'], 'a' * 64)
         self.assertEqual(body['implementation']['id'], 'swift')
         observation = body['observations']['adapter/control']
-        self.assertEqual(set(observation), {'status', 'dump'})
+        self.assertEqual(set(observation), {'status', 'dump', 'warnings'})
+        self.assertEqual(observation['warnings'], [])
         self.assertIn('EmitMessage', observation['dump'])
 
     def test_input_compile_errors_preserve_batch_and_expected_compile_errors(self):

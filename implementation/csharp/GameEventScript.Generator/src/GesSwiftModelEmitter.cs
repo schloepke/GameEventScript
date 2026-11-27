@@ -508,6 +508,8 @@ internal static partial class GesSwiftModelEmitter
     // A record calls the memberwise initializer of its model with the fields the literal names.
     private static string Native(GesModelLayout layout, GesModelPlanValue value, GesLayoutDefault fallback) => fallback.Kind switch
     {
+        _ when GesModelPlanner.Fill(value, fallback)
+            => $"(0..<{value.Model.Max!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}).map {{ _ -> {Type(value.Element!)} in {Native(layout, value.Element!, fallback)} }}",
         GesSchemaDefaultKind.Boolean => fallback.Boolean ? "true" : "false",
         GesSchemaDefaultKind.Tag when value.ClosedTag => "." + Name(fallback.Value),
         GesSchemaDefaultKind.Tag => GesSchemaPlanner.Literal(fallback.Value, true),

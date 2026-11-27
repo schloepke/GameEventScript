@@ -285,6 +285,10 @@ internal static partial class GesModelPlanner
     internal static int? Sibling(List<GesModelPlanField> fields, GesModelPlanField field)
         => field.Field.Default is { Kind: GesSchemaDefaultKind.Field } fallback ? fields.FindIndex(candidate => candidate.Field.Name == fallback.Value) : null;
 
+    // Whether a literal default fills a fixed List: it is the default of each of its elements.
+    internal static bool Fill(GesModelPlanValue value, GesLayoutDefault? fallback)
+        => value.Kind == GesModelKind.List && value.Model.Fixed && fallback is { Kind: not (GesSchemaDefaultKind.Field or GesSchemaDefaultKind.Empty) };
+
     // The number of a numeric default as a literal: whole digits for an integer field, otherwise a floating literal.
     internal static string Number(GesModelPlanValue value, GesLayoutDefault fallback)
     {
@@ -439,7 +443,7 @@ internal static partial class GesModelPlanner
                 text.Append(":List(");
                 Describe(value.Element!.Value, text);
                 text.Append(')');
-                if (value.Max is { } listMax) text.Append(" max ").Append(listMax);
+                if (value.Max is { } listMax) text.Append(value.Fixed ? " exactly " : " max ").Append(listMax);
                 if (value.Depth > 0) text.Append(" depth ").Append(value.Depth);
                 break;
             case GesModelKind.Values:

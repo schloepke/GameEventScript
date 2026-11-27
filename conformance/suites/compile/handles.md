@@ -908,6 +908,252 @@ error:
 
 ---
 
+## Test: a handle type alone is no value
+
+A store is read through a selector; `@Target` alone is `validate.invalidHandleUse`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-bare-type
+sources:
+  - name: store-bare-type.ges
+    program: main
+handles:
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+on Look { emit Out(store: @Target) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: validate
+  code: validate.invalidHandleUse
+  symbol: "@Target"
+  sourceName: store-bare-type.ges
+  line: 2
+  column: 27
+  endLine: 2
+  endColumn: 34
+```
+
+---
+
+## Test: a store read names the plain type
+
+A store read names its type without a reference or projection: `@Target~[:count]` is `validate.invalidHandleUse`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-read-projection
+sources:
+  - name: store-read-projection.ges
+    program: main
+handles:
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+on Look { emit Out(count: @Target~[:count]) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: validate
+  code: validate.invalidHandleUse
+  symbol: "@Target~"
+  sourceName: store-read-projection.ges
+  line: 2
+  column: 27
+  endLine: 2
+  endColumn: 42
+```
+
+---
+
+## Test: a store read of an unknown type
+
+A store read of a type outside the compilation's store is `validate.unknownHandleType`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-read-unknown-type
+sources:
+  - name: store-read-unknown-type.ges
+    program: main
+handles:
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+on Look { emit Out(count: @Ghost[:count]) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: validate
+  code: validate.unknownHandleType
+  symbol: "@Ghost"
+  sourceName: store-read-unknown-type.ges
+  line: 2
+  column: 27
+  endLine: 2
+  endColumn: 40
+```
+
+---
+
+## Test: parts need a composite type
+
+Only a composite handle type has parts: `@Target(root)` is `validate.invalidHandleUse`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-parts-without-part
+sources:
+  - name: store-parts-without-part.ges
+    program: main
+handles:
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+on Look(root) { emit Out(count: @Target(root)[:count]) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: validate
+  code: validate.invalidHandleUse
+  symbol: "@Target"
+  sourceName: store-parts-without-part.ges
+  line: 2
+  column: 33
+  endLine: 2
+  endColumn: 53
+```
+
+---
+
+## Test: a store read of a type that does not enumerate warns
+
+When the host names the types whose resolvers enumerate, a store read of another type compiles with the warning `validate.handleTypeNotEnumerable`; the read yields `nothing` at runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-read-not-enumerable
+kind: bytecode
+sources:
+  - name: store-read-not-enumerable.ges
+    program: main
+handles:
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  resolvers: []
+  enumerable: ["Drone"]
+```
+
+### Source code under test
+
+```ges
+module main
+on Look { emit Out(count: @Target[:count]) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+opcodes:
+  contains: ["CountStore"]
+warnings:
+  - phase: validate
+    code: validate.handleTypeNotEnumerable
+    symbol: "@Target"
+    sourceName: store-read-not-enumerable.ges
+    line: 2
+    column: 27
+    endLine: 2
+    endColumn: 41
+```
+
+---
+
+## Test: a store read of an enumerable type compiles without warning
+
+Store reads lower to one opcode per selector; the parts of one root take the root register.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-read-enumerable
+kind: bytecode
+sources:
+  - name: store-read-enumerable.ges
+    program: main
+handles:
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  resolvers: []
+  enumerable: ["Target", "RepoFile"]
+```
+
+### Source code under test
+
+```ges
+module main
+on Look(repository as @Repository) { emit Out(count: @Target[:count], keys: @Target[:keys], values: @Target[:values], entries: @Target[:entries], parts: @RepoFile(repository)[:count], files: @RepoFile(repository)[:keys], states: @RepoFile(repository)[:values], pairs: @RepoFile(repository)[:entries]) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+opcodes:
+  contains: ["CountStore", "KeysOfStore", "ValuesOfStore", "EntriesOfStore", "CountParts", "KeysOfParts", "ValuesOfParts", "EntriesOfParts"]
+warnings: []
+```
+
+---
+
 ## Test: a Program imports the handle types it names
 
 Each named handle type is one `HandleType` import with its link hash; the import of a type whose state is read points at the first read. `root` reads `@Root` and checks are by name.

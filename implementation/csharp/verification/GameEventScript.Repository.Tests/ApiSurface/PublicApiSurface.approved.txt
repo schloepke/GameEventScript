@@ -259,6 +259,14 @@ enum GameEventScript.Api.GesBytecodeOpCode
   enum-field HasValue = 67
   enum-field IsEmpty = 68
   enum-field Default = 69
+  enum-field CountStore = 70
+  enum-field KeysOfStore = 71
+  enum-field ValuesOfStore = 72
+  enum-field EntriesOfStore = 73
+  enum-field CountParts = 74
+  enum-field KeysOfParts = 75
+  enum-field ValuesOfParts = 76
+  enum-field EntriesOfParts = 77
   enum-field Or = 80
   enum-field And = 81
   enum-field Xor = 82
@@ -559,6 +567,7 @@ static class GameEventScript.Api.GesDiagnosticCodes
   field static System.String ValidateDuplicatePublishArgument
   field static System.String ValidateDuplicateType
   field static System.String ValidateDuplicateVariable
+  field static System.String ValidateHandleTypeNotEnumerable
   field static System.String ValidateHandleWidening
   field static System.String ValidateInvalidHandleUse
   field static System.String ValidateInvalidIdentifierCase
@@ -998,9 +1007,11 @@ sealed class GameEventScript.Api.GesProgramBuilder
   method GameEventScript.Api.GameEventScriptProgram Compile(GameEventScript.Api.GesCompileOptions options)
   method GameEventScript.Api.GesProgramBuilder AddScript(System.String text, System.String sourceName)
   method GameEventScript.Api.GesProgramBuilder WithDebugInfo(GameEventScript.Api.GesDebugInfoOptions options)
+  method GameEventScript.Api.GesProgramBuilder WithEnumerableHandleTypes(System.Collections.Generic.IEnumerable<System.String> names)
   method GameEventScript.Api.GesProgramBuilder WithExternalTypeCatalog(GameEventScript.Api.IGesExternalTypeCatalog catalog)
   method GameEventScript.Api.GesProgramBuilder WithHandleTypes(System.Collections.Generic.IEnumerable<GameEventScript.Api.GesHandleType> types)
   method GameEventScript.Api.GesProgramBuilder WithProgramVersion(System.UInt64 version)
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesDiagnostic> Warnings { get }
 static class GameEventScript.Api.GesProgramBuilderEntry
   method static GameEventScript.Api.GesProgramBuilder CreateBuilder()
 enum GameEventScript.Api.GesProgramFormatErrorCode
@@ -1318,6 +1329,7 @@ sealed class GameEventScript.Api.GesSchemaType
   property GameEventScript.Api.GesSchemaBound? Step { get }
   property GameEventScript.Api.GesSchemaBound? Upper { get }
   property GameEventScript.Api.GesSchemaTypeKind Kind { get }
+  property System.Boolean IsExact { get }
   property System.Boolean IsInteger { get }
   property System.Boolean IsVersioned { get }
   property System.Boolean IsWrapping { get }
@@ -1452,6 +1464,7 @@ enum GameEventScript.Api.GesStartState
   enum-field RuntimeError = 1
   enum-field RuntimeLimitReached = 2
 sealed class GameEventScript.Api.GesStore
+  method System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesHandle> Handles(GameEventScript.Api.GesHandle root)
   method System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesHandle> Index(GameEventScript.Api.GesSchema projection)
   method System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesStoreEntry> Module(System.String name)
   method System.Void Resolve(GameEventScript.Api.GesHandleResolveCall call)
@@ -1584,6 +1597,7 @@ sealed class GameEventScript.Api.GesWireException
   field static System.String OverlappingBuffers
   field static System.String TooDeep
   field static System.String TooLong
+  field static System.String TooShort
   field static System.String Truncated
   field static System.String TypeMismatch
   field static System.String UnknownTag
@@ -1621,6 +1635,7 @@ interface GameEventScript.Api.IGesExternalValue
   property GameEventScript.Api.GesExternalTypeDefinition Definition { get }
 interface GameEventScript.Api.IGesHandleResolver
   method GameEventScript.Runtime.Values.GesValue ResolveRef(GameEventScript.Api.GesHandle handle)
+  method System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesHandle> Handles(GameEventScript.Api.GesHandle root)
   method System.Void Resolve(GameEventScript.Api.GesHandleResolveCall call)
   method System.Void ResolveMany(GameEventScript.Api.GesHandleResolveBatch batch)
 interface GameEventScript.Api.IGesNativeMessageHandler

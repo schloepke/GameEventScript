@@ -216,6 +216,28 @@ internal static partial class GesCompiler
                         continue;
                     }
 
+                    if (field.DefaultExpression is not null && !field.ListExact)
+                    {
+                        var fill = _builder.AddLabel();
+                        var given = _builder.AddLabel();
+                        _builder.JumpIfNothing(fieldRegister, fill);
+                        _builder.Jump(given);
+                        _builder.MarkLabel(fill);
+                        if (!EmitExpressionToRegister(field.DefaultExpression, fieldRegister, context, state))
+                        {
+                            var value = EmitExpression(field.DefaultExpression, context, state);
+                            if (value.Id != fieldRegister.Id) _builder.Move(fieldRegister, value);
+                        }
+
+                        _builder.MarkLabel(given);
+                    }
+
+                    if (field.IsTypedList)
+                    {
+                        EmitTypedList(field, fieldRegister, context, state);
+                        continue;
+                    }
+
                     EmitCastInto(fieldRegister, fieldRegister, field.TypeName, context);
                     if (field.MinimumExpression is not null && field.MaximumExpression is not null)
                     {
@@ -593,6 +615,7 @@ internal static partial class GesCompiler
                 case GesMemberAccessExpressionNode member: EmitMemberAccessInto(member, destination, context, state); return true;
                 case GesCombinedCollectionExpressionNode combined: EmitCombinedCollection(destination, combined, context, state); return true;
                 case GesCollectionAccessExpressionNode access: EmitCollectionAccessInto(access, destination, context, state); return true;
+                case GesStoreReadExpressionNode storeRead: EmitStoreReadInto(storeRead, destination, context, state); return true;
                 default: return false;
             }
         }
@@ -1340,6 +1363,83 @@ internal static partial class GesCompiler
             _builder.Jump(nextLabel);
             _builder.MarkLabel(addLabel);
             _builder.NumericBinary(GesBytecodeOpCode.Add, sum, sum, value);
+        }
+
+        // A record field `:List(T)`, `:List(T) max n` or `:List(T) exactly n`: the value as a List whose elements are each cast
+        // to T; a fixed List shorter than n is padded with its fill element, the cast default. An element that does not
+        // convert, a List longer than n or a fixed List too short without a fill makes the field nothing.
+        private void EmitTypedList(GesTypeFieldDefinitionNode field, GesRegisterRef value, LoweringContext context, ExpressionState state)
+        {
+            var fills = field.ListExact && field.DefaultExpression is not null;
+            var builder = state.AllocateTemporary(_builder, context);
+            var count = state.AllocateTemporary(_builder, context);
+            var bound = state.AllocateTemporary(_builder, context);
+            var flag = state.AllocateTemporary(_builder, context);
+            var iterator = state.AllocateTemporary(_builder, context);
+            var item = state.AllocateTemporary(_builder, context);
+            var loop = _builder.AddLabel("list_next");
+            var end = _builder.AddLabel("list_end");
+            var rejected = _builder.AddLabel("list_rejected");
+            var finish = _builder.AddLabel("list_finish");
+            var invalid = _builder.AddLabel("list_invalid");
+            var done = _builder.AddLabel("list_done");
+            _builder.ListBuilderCreate(builder);
+            _builder.LoadInteger(count, 0);
+            if (field.ListBound > 0) _builder.LoadInteger(bound, field.ListBound);
+            EmitCastInto(value, value, field.TypeName, context);
+            _builder.JumpIfNothing(value, invalid);
+            _builder.Count(count, value);
+            if (field.ListBound > 0)
+            {
+                _builder.Greater(flag, count, bound);
+                _builder.JumpIfTrue(flag, invalid);
+                if (field.ListExact && !fills)
+                {
+                    _builder.Less(flag, count, bound);
+                    _builder.JumpIfTrue(flag, invalid);
+                }
+            }
+
+            _builder.IteratorCreateOrJump(iterator, value, invalid);
+            _builder.MarkLabel(loop);
+            _builder.IteratorNext(item, iterator, end);
+            EmitCastInto(item, item, field.ElementTypeName!, context);
+            _builder.JumpIfNothing(item, rejected);
+            _builder.ListBuilderAdd(builder, item);
+            _builder.Jump(loop);
+            _builder.MarkLabel(rejected);
+            _builder.IteratorClose(iterator);
+            _builder.Jump(invalid);
+            _builder.MarkLabel(end);
+            _builder.IteratorClose(iterator);
+            if (fills)
+            {
+                var padNext = _builder.AddLabel("list_pad_next");
+                _builder.Less(flag, count, bound);
+                _builder.JumpIfNotTrue(flag, finish);
+                if (!EmitExpressionToRegister(field.DefaultExpression!, item, context, state))
+                {
+                    var fill = EmitExpression(field.DefaultExpression!, context, state);
+                    if (fill.Id != item.Id) _builder.Move(item, fill);
+                }
+
+                EmitCastInto(item, item, field.ElementTypeName!, context);
+                _builder.JumpIfNothing(item, invalid);
+                var one = state.AllocateTemporary(_builder, context);
+                _builder.LoadInteger(one, 1);
+                _builder.MarkLabel(padNext);
+                _builder.ListBuilderAdd(builder, item);
+                _builder.Add(count, count, one);
+                _builder.Less(flag, count, bound);
+                _builder.JumpIfTrue(flag, padNext);
+            }
+
+            _builder.MarkLabel(finish);
+            _builder.ListBuilderFinish(value, builder);
+            _builder.Jump(done);
+            _builder.MarkLabel(invalid);
+            _builder.LoadNothing(value);
+            _builder.MarkLabel(done);
         }
 
         private void EmitFold(GesRegisterRef destination, GesRegisterRef source, GesFoldSelectorNode fold, LoweringContext context, ExpressionState state, GesExpressionNode? iteratorSource = null)

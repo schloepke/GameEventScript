@@ -83,6 +83,11 @@ public static class GesDiagnosticCodes
     /// <summary>An <c>@Name</c> names no handle type of the compilation's handle types.</summary>
     public const string ValidateUnknownHandleType = "validate.unknownHandleType";
     /// <summary>
+    /// A warning, not an error: a script reads the store of a handle type the host does not enumerate, which reads as
+    /// Nothing (<c>GesProgramBuilder.WithEnumerableHandleTypes</c>).
+    /// </summary>
+    public const string ValidateHandleTypeNotEnumerable = "validate.handleTypeNotEnumerable";
+    /// <summary>
     /// A handle type is used where it is not allowed: <c>as @Name</c> outside a parameter or field, <c>@Name~</c> or
     /// <c>h.version</c> of a type without versions, or a union mixing handle and other types.
     /// </summary>

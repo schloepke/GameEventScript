@@ -4,7 +4,7 @@
 import re
 
 from core.corpus import InvalidDocument, closed
-from checks import runtime_checks
+from checks import runtime_checks, schema_api_checks
 
 KINDS = {'scriptApi', 'loadError', 'compileError', 'compileMetadata', 'bytecode', 'bytecodeSnapshot'}
 ANSWERS = ('document', 'record', 'missing', 'notVisible', 'fail')
@@ -61,6 +61,35 @@ def ref_answer(raw):
     return {'ref': raw['ref'], 'answer': kinds[0], 'version': version(raw['version']) if kinds[0] == 'version' else None}
 
 
+def store_setup(raw):
+    """The host's stores, read from a file table like a schema API store input without projections."""
+    if isinstance(raw, dict) and 'index' in raw:
+        raise InvalidDocument('A host store reads no projections')
+    result = schema_api_checks.store_input(raw)
+    del result['index']
+    return result
+
+
+def listing(raw):
+    """One scripted listing: the handles a resolver lists for its type, or for one root's parts."""
+    closed(raw, {'type', 'root', 'handles'}, 'handle listing')
+    if not isinstance(raw.get('type'), str) or not TYPE_NAME.fullmatch(raw['type']):
+        raise InvalidDocument('A listing names a handle type without @')
+    root = raw.get('root')
+    if root is not None and (not isinstance(root, str) or not HANDLE.fullmatch(root)):
+        raise InvalidDocument('A listing root is a handle in its text form')
+    handles = raw.get('handles')
+    if not isinstance(handles, list) or any(not isinstance(text, str) or not HANDLE.fullmatch(text) for text in handles):
+        raise InvalidDocument('A listing has a list of handles in their text form')
+    return {'type': raw['type'], 'root': root, 'handles': list(handles)}
+
+
+def names(raw, label):
+    if not isinstance(raw, list) or any(not isinstance(name, str) or not TYPE_NAME.fullmatch(name) for name in raw) or len(set(raw)) != len(raw):
+        raise InvalidDocument(label + ' name distinct handle types without @')
+    return list(raw)
+
+
 def prepare(case):
     """The normalized setup of a case, or None. Every field is present in the request."""
     raw = case.metadata.get('handles')
@@ -68,21 +97,30 @@ def prepare(case):
         return None
     if case.kind not in KINDS:
         raise InvalidDocument('A handle setup belongs to compiler, loading and script cases')
-    closed(raw, {'schemas', 'hostSchemas', 'resolvers', 'answers', 'resolveRefs'}, 'handle setup')
+    closed(raw, {'schemas', 'hostSchemas', 'resolvers', 'answers', 'resolveRefs', 'stores', 'lists', 'enumerable'}, 'handle setup')
     schemas = texts(raw.get('schemas'), 'schemas')
     host = texts(raw['hostSchemas'], 'hostSchemas') if 'hostSchemas' in raw else schemas
     resolvers = raw.get('resolvers')
-    if resolvers is not None and (not isinstance(resolvers, list) or any(not isinstance(name, str) or not TYPE_NAME.fullmatch(name) for name in resolvers)
-                                  or len(set(resolvers)) != len(resolvers)):
-        raise InvalidDocument('Resolvers name distinct handle types without @')
+    if resolvers is not None:
+        names(resolvers, 'Resolvers')
+    enumerable = names(raw['enumerable'], 'Enumerable types') if 'enumerable' in raw else None
+    stores = store_setup(raw['stores']) if 'stores' in raw else None
+    lists = raw.get('lists', [])
+    if not isinstance(lists, list):
+        raise InvalidDocument('Handle listings form a list')
+    lists = [listing(item) for item in lists]
+    if len({(item['type'], item['root']) for item in lists}) != len(lists):
+        raise InvalidDocument('One listing per type and root')
+    if stores is not None and any(item['type'] in {store['type'] for store in stores['stores']} for item in lists):
+        raise InvalidDocument('A store lists its own handles')
     answers = raw.get('answers', [])
     if not isinstance(answers, list):
         raise InvalidDocument('Handle answers form a list')
     refs = raw.get('resolveRefs', [])
     if not isinstance(refs, list) or any(not isinstance(text, str) or not HANDLE.fullmatch(text) for text in refs):
         raise InvalidDocument('resolveRefs lists handles in their text form')
-    if (case.kind != 'scriptApi') and (answers or refs):
-        raise InvalidDocument('Only script cases answer state reads and resolve refs')
+    if (case.kind != 'scriptApi') and (answers or refs or lists or stores is not None):
+        raise InvalidDocument('Only script cases answer state reads, list handles, read stores and resolve refs')
     expected = (case.expected or {}).get('resolvedRefs')
     if refs:
         resolved_refs(expected, refs)
@@ -90,7 +128,8 @@ def prepare(case):
         raise InvalidDocument('resolvedRefs needs handles.resolveRefs')
     return {'schemas': schemas, 'hostSchemas': host, 'resolvers': resolvers,
             'answers': [answer(item) for item in answers if 'ref' not in item],
-            'refAnswers': [ref_answer(item) for item in answers if 'ref' in item], 'resolveRefs': list(refs)}
+            'refAnswers': [ref_answer(item) for item in answers if 'ref' in item], 'resolveRefs': list(refs),
+            'stores': stores, 'lists': lists, 'enumerable': enumerable}
 
 
 def outcome(raw, refs, index, expectation):

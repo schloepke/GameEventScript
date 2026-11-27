@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 private let compositeIdKeys = ["part", "root"]
+private let rootIdKeys = ["root"]
 
 // Handle members, type checks and lazy state reads (specs/Language.md#handles, specs/HostRuntime.md#handles).
 extension GesVirtualMachine {
@@ -21,6 +22,7 @@ extension GesVirtualMachine {
         if !handleStates.isEmpty { handleStates.removeAll(keepingCapacity: true) }
         if !handleLists.isEmpty { handleLists.removeAll(keepingCapacity: true) }
         handleListsCollected = false
+        clearStoreHandles()
         handleContext = nil
     }
 
@@ -124,17 +126,24 @@ extension GesVirtualMachine {
         case "root":
             setNothing(destination)
             return
+        // `@id` is `id` of a statically composite type of which one may be part-less: such a handle holds only its root's
+        // id, so its identity is the root alone, without a part.
+        case "@id":
+            if handle.isComposite {
+                setMap(destination, GesValueMap(canonicalKeys: compositeIdKeys, values: [handle.part, handle.id]))
+            } else {
+                setMap(destination, GesValueMap(canonicalKeys: rootIdKeys, values: [handle.id]))
+            }
+            return
         default:
             break
         }
 
-        // `@Root` names the root type of a composite, whose handle keeps the composite's identity root and version.
+        // `@Root` names the root type of a composite: a composite with a part keeps its root's identity and version, a
+        // part-less one, which holds its root's id as its own, gives the root without a version.
         if key.unicodeScalars.count > 1 && key.unicodeScalars.first == "@" {
-            if !handle.isComposite {
-                setNothing(destination)
-                return
-            }
-            setValue(destination, .handle(GesHandle.fromWire(typeName: String(key.unicodeScalars.dropFirst()), id: handle.id, version: handle.version, part: .nothing, isComposite: false)))
+            let version = handle.isComposite ? handle.version : .nothing
+            setValue(destination, .handle(GesHandle.fromWire(typeName: String(key.unicodeScalars.dropFirst()), id: handle.id, version: version, part: .nothing, isComposite: false)))
             return
         }
 
@@ -213,7 +222,7 @@ extension GesVirtualMachine {
         }
 
         if try !resolveBatch(binding, handle, projection) {
-            cache(handle, try GesHandleStates.resolve(binding, handleResolveCall, handle, projection, handleParty))
+            cacheHandleState(handle, try GesHandleStates.resolve(binding, handleResolveCall, handle, projection, handleParty))
         }
         return handleStates[key]!
     }
@@ -225,7 +234,7 @@ extension GesVirtualMachine {
         return nil
     }
 
-    private func cache(_ handle: GesHandle, _ resolved: GesHandleState) {
+    func cacheHandleState(_ handle: GesHandle, _ resolved: GesHandleState) {
         handleStates[HandleStateKey(handle: handle)] = resolved
         if resolved.notVisible { handleContext?.recordHandleNotVisible(handle.description) }
         // A read without a version picks up the resolved one, so a later read of that version sees the same state.
@@ -269,7 +278,7 @@ extension GesVirtualMachine {
 
             if batch.count == 1 { return false }
             try GesHandleStates.resolveMany(binding, batch)
-            for index in 0..<batch.count { cache(batch[index].handle, try GesHandleStates.check(binding.type, batch[index])) }
+            for index in 0..<batch.count { cacheHandleState(batch[index].handle, try GesHandleStates.check(binding.type, batch[index])) }
             return true
         }
         return false

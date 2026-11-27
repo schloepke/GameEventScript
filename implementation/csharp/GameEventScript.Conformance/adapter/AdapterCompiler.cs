@@ -6,11 +6,14 @@ using GameEventScript.Api;
 
 internal static class AdapterCompiler
 {
-    internal static GameEventScriptProgram Compile(JsonElement test, ulong programVersion = 0, string? programId = null)
+    internal static GameEventScriptProgram Compile(JsonElement test, ulong programVersion = 0, string? programId = null) => Compile(test, out _, programVersion, programId);
+
+    // Also returns the warnings of a successful compilation, in report order.
+    internal static GameEventScriptProgram Compile(JsonElement test, out IReadOnlyList<GesDiagnostic> warnings, ulong programVersion = 0, string? programId = null)
     {
         var builder = new GesProgramBuilder();
         if (test.GetProperty("kind").GetString() is "scriptApi" or "loadError") builder.WithExternalTypeCatalog(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Catalog);
-        if (AdapterHandles.From(test) is { } handles) builder.WithHandleTypes(handles.CompilerTypes);
+        if (AdapterHandles.From(test) is { } handles) handles.Configure(builder);
         foreach (var source in test.GetProperty("sources").EnumerateArray())
             if (programId is null || source.GetProperty("program").GetString() == programId) builder.AddScript(source.GetProperty("text").GetString()!, source.GetProperty("name").GetString()!);
         var options = test.GetProperty("compile");
@@ -24,6 +27,7 @@ internal static class AdapterCompiler
                 _ => throw new ArgumentException("Invalid debug option.")
             };
         var program = builder.Compile(new GesCompileOptions { DebugInfo = debug, ProgramVersion = programVersion });
+        warnings = builder.Warnings;
         if (options.GetProperty("binaryRoundTrip").GetBoolean()) program = GameEventScriptProgram.Read(program.Encode());
         return program;
     }

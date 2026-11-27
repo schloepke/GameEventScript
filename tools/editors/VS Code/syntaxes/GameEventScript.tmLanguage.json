@@ -886,6 +886,14 @@
           }
         },
         {
+          "match": "(?<=\\))[ \\t]*\\b(exactly)(?=[ \\t]+[1-9])",
+          "captures": {
+            "1": {
+              "name": "keyword.other.definition.gameeventscript"
+            }
+          }
+        },
+        {
           "match": "\\b(computed)([ \\t]+)(by)\\b",
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {

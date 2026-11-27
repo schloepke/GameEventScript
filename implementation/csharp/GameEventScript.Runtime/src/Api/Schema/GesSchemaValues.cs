@@ -296,6 +296,12 @@ public static class GesSchemaValues
     {
         if (field.Alternatives.Length != 1) return Literal(fallback, false, false, default);
         var type = field.Alternatives[0];
+        if (type.Exact) return Filled([], type.Max!.Value, TypeLiteral(type.Element![0], fallback));
+        return TypeLiteral(type, fallback);
+    }
+
+    private static GesValue TypeLiteral(GesResolvedType type, GesResolvedDefault fallback)
+    {
         if (fallback.Kind == GesSchemaDefaultKind.Empty) return type.Kind == GesSchemaTypeKind.Map ? GesValue.GesMap([], []) : GesValue.GesList([]);
         var number = type.Kind is GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity;
         return Literal(fallback, number && type.Constraints.Integer && type.Constraints.Step is null, type.Kind == GesSchemaTypeKind.Percentage, type.Unit);
@@ -401,6 +407,9 @@ public static class GesSchemaValues
                 for (var sibling = start; sibling < end; sibling = schema.Nodes[sibling].Next)
                     if (schema.Nodes[sibling].Name == fallback.Name) return Held(schema, start, end, fields, sibling, out value);
                 return index;
+            case var fallback when node.Fixed && node.Kind == GesSchemaNodeKind.List:
+                value = Filled([], node.MaxCount, FillElement(schema, index, fallback));
+                return -1;
             case var fallback:
                 value = Literal(fallback, node.Kind == GesSchemaNodeKind.Integer, node.ValueKind == GesSchemaTypeKind.Percentage, node.Unit);
                 return -1;
@@ -525,6 +534,12 @@ public static class GesSchemaValues
             case GesSchemaNodeKind.List:
                 if (value.ValueKind != GesBytecodeTypeKind.List) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
                 var items = value.AsList();
+                if (node.Fixed && items.Length < node.MaxCount && node.Default is { Kind: not GesSchemaDefaultKind.Field } fill)
+                {
+                    var given = new GesValue[items.Length];
+                    for (var item = 0; item < given.Length; item++) given[item] = items[item];
+                    items = Filled(given, node.MaxCount, FillElement(schema, index, fill)).AsList();
+                }
                 writer.BeginList(field, items.Length);
                 for (var item = 0; item < items.Length; item++) EncodeNode(ref writer, schema, index + 1, items[item], strict);
                 break;
@@ -1182,7 +1197,7 @@ public static class GesSchemaValues
 
             if (held.Kind == GesBytecodeTypeKind.Nothing && field.Marker == GesSchemaFieldMarker.Optional) continue;
             keys.Add(field.Name);
-            values.Add(StateElement(field.Alternatives, held, fieldPath, declarations));
+            values.Add(StateElement(field.Alternatives, FillState(field, held), fieldPath, declarations));
         }
 
         return GesValue.GesRecord(schema.Name, keys.ToArray(), values.ToArray());
@@ -1221,13 +1236,30 @@ public static class GesSchemaValues
         return false;
     }
 
-    private static GesValue StateLiteral(GesResolvedField field, GesResolvedDefault fallback)
+    private static GesValue StateLiteral(GesResolvedField field, GesResolvedDefault fallback) => Literal(field, fallback);
+
+    // A fixed List with a literal default fills a shorter List of a field at its end (specs/Schemas.md#fixed-lists).
+    private static GesValue FillState(GesResolvedField field, GesValue value)
     {
-        if (field.Alternatives.Length != 1) return Literal(fallback, false, false, default);
-        var type = field.Alternatives[0];
-        if (fallback.Kind == GesSchemaDefaultKind.Empty) return type.Kind == GesSchemaTypeKind.Map ? GesValue.GesMap([], []) : GesValue.GesList([]);
-        var number = type.Kind is GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity;
-        return Literal(fallback, number && type.Constraints.Integer && type.Constraints.Step is null, type.Kind == GesSchemaTypeKind.Percentage, type.Unit);
+        if (field.Alternatives is not [{ Exact: true } type] || field.Default is not { } fallback || fallback.Kind == GesSchemaDefaultKind.Field) return value;
+        if (value.Kind != GesBytecodeTypeKind.List || value.ObjectValue is not GesValue[] items || items.Length >= type.Max!.Value) return value;
+        return Filled(items, type.Max!.Value, TypeLiteral(type.Element![0], fallback));
+    }
+
+    // The elements followed by copies of the fill element up to the count.
+    private static GesValue Filled(GesValue[] items, long count, GesValue element)
+    {
+        var filled = new GesValue[count];
+        Array.Copy(items, filled, items.Length);
+        for (var index = items.Length; index < filled.Length; index++) filled[index] = element;
+        return GesValue.GesList(filled);
+    }
+
+    // The fill element of a fixed List node with a literal default, from its element node.
+    private static GesValue FillElement(GesBoundSchema schema, int index, GesResolvedDefault fallback)
+    {
+        ref readonly var element = ref schema.Nodes[index + 1];
+        return Literal(fallback, element.Kind == GesSchemaNodeKind.Integer, element.ValueKind == GesSchemaTypeKind.Percentage, element.Unit);
     }
 
     // Nested Records normalize against their schema, chosen by the Record's name among the alternatives; Lists and Map

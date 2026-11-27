@@ -318,6 +318,17 @@ public sealed class GesStore : IGesHandleResolver
         else call.SetState(entry.Value);
     }
 
+    /// <summary>Lists the handle of every entry, sorted by id, without versions; a store's type has no parts, so a root lists none.</summary>
+    /// <param name="root">Ignored unless set: a store's type is not composite, so its parts are empty.</param>
+    /// <returns>The entry handles, or an empty list for a root.</returns>
+    public IReadOnlyList<GesHandle>? Handles(GesHandle? root)
+    {
+        if (root is not null) return Array.Empty<GesHandle>();
+        var result = new GesHandle[_entries.Length];
+        for (var index = 0; index < result.Length; index++) result[index] = _entries[index].Handle.WithView(default, "");
+        return new GesReadOnlyArray<GesHandle>(result);
+    }
+
     private static Dictionary<string, GesStore> Dependencies(GesHandleType type, IReadOnlyList<GesStore>? dependencies)
     {
         if (type is null) throw new ArgumentNullException(nameof(type));

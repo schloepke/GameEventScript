@@ -14,7 +14,9 @@ LoadTag LoadHandler LoadMessage StageRegister StageNothing StageTrue
 StageFalse StageInteger StageFloat StageText StageTag StagePercentage
 CreateDice CreateVector CreatePoint CreateList CreateMap CreateRange
 CreateRangeWithStep CreateRangeIterator CreateRangeIteratorWithStep CreateRangeIteratorShort CreateRecord CreateRecordValue
-CreateExternalType HasValue IsEmpty Default Or And
+CreateExternalType HasValue IsEmpty Default CountStore KeysOfStore
+ValuesOfStore EntriesOfStore CountParts KeysOfParts ValuesOfParts EntriesOfParts
+Or And
 Xor Implies Not Equal NotEqual Less
 Greater LessOrEqual GreaterOrEqual Add Subtract Multiply
 Divide Power IntegerDivide Modulo Remainder Min

@@ -702,7 +702,11 @@ enum GesCSharpModelEmitter {
 
     // A literal default as a native constant; a record calls the constructor of its model.
     static func native(_ layout: GesModelLayout, _ value: GesModelPlanValue, _ fallback: GesLayoutDefault, _ qualifier: String = "", _ owner: String? = nil) -> String {
-        switch fallback.kind {
+        if GesModelPlanner.fill(value, fallback) {
+            return
+                "new \(plain(value, qualifier, owner))(global::System.Linq.Enumerable.Select<int, \(type(value.element!, qualifier, owner))>(global::System.Linq.Enumerable.Range(0, \(value.model.max!)), _ => \(native(layout, value.element!, fallback, qualifier, owner))))"
+        }
+        return switch fallback.kind {
         case .boolean: fallback.boolean ? "true" : "false"
         case .tag where value.closedTag: plain(value, qualifier, owner) + "." + GesSchemaPlanner.pascal(fallback.value)
         case .tag: literal(fallback.value)
@@ -779,6 +783,7 @@ enum GesCSharpModelEmitter {
     private static func allocating(_ layout: GesModelLayout, _ field: GesModelPlanField) -> String? {
         if isData(field.value) { return nil }
         if let fallback = field.field.defaultValue, fallback.kind == .record || fallback.kind == .empty { return native(layout, field.value, fallback) }
+        if GesModelPlanner.fill(field.value, field.field.defaultValue) { return native(layout, field.value, field.field.defaultValue!) }
         if field.field.defaultValue != nil || field.value.nullable { return nil }
         if field.value.kind == .schema && field.value.model.packed { return nil }
         switch field.value.kind {

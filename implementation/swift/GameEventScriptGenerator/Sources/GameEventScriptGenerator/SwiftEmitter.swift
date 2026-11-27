@@ -480,7 +480,7 @@ enum GesSwiftEmitter {
         case .quantized, .float, .integer, .point, .vector, .box, .disc: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
         case .union: return ", the selected alternative"
         case .list where encoding.poly: return ", the points of a polygon\(encoding.unit != "none" ? " in " + encoding.unit : ""), at most \(encoding.maxCount)"
-        case .list: return ", at most \(encoding.maxCount) elements"
+        case .list: return ", \(encoding.fixed ? "exactly" : "at most") \(encoding.maxCount) elements"
         default: return ""
         }
     }
@@ -783,7 +783,11 @@ enum GesSwiftEmitter {
                     "for position in \(target).indices.dropFirst() where !(\(target)[position - 1].\(handleKey(value)) < \(target)[position].\(handleKey(value))) { throw GesWireError(code: GesWireError.invalidKeyOrder, path: \(handleKeyPath(value))) }"
                 )
             }
-            code.line("try writer.write(UInt64(\(target).count), width: \(width))")
+            if value.encoding.fixed {
+                code.line("if \(target).count < \(max) { \(fail("tooShort", value)) }")
+            } else {
+                code.line("try writer.write(UInt64(\(target).count), width: \(width))")
+            }
             code.open("for item in \(target) {")
             if value.item != nil {
                 code.line("try item.__writeFields(&writer, paths, at + \(value.element!.node)\(itemLevel(value.element!)))")
@@ -877,8 +881,12 @@ enum GesSwiftEmitter {
             } else {
                 code.open("do {")
             }
-            code.line("let count = Int(try reader.read(\(width), path: \(path(value))))")
-            code.line("if count > \(max) { \(fail("invalidCount", value)) }")
+            if value.encoding.fixed {
+                code.line("let count = \(max)")
+            } else {
+                code.line("let count = Int(try reader.read(\(width), path: \(path(value))))")
+                code.line("if count > \(max) { \(fail("invalidCount", value)) }")
+            }
             code.line("\(target).removeAll(keepingCapacity: true)")
             if element.packed != nil {
                 packedList(&code, value, target, "count")

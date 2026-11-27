@@ -429,7 +429,7 @@ internal static partial class GesCSharpEmitter
             GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Box or GesLayoutKind.Disc when encoding.Unit != "none" => $", in {encoding.Unit}",
             GesLayoutKind.List when encoding.Poly => $", the points of a polygon{(encoding.Unit != "none" ? " in " + encoding.Unit : "")}, at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}",
             GesLayoutKind.Union => ", the selected alternative",
-            GesLayoutKind.List => $", at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)} elements",
+            GesLayoutKind.List => $", {(encoding.Fixed ? "exactly" : "at most")} {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)} elements",
             _ => ""
         };
     }
@@ -790,7 +790,8 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.List:
                 if (value.Depth > 0) OpenLevels(code, value, target + ".Count");
                 code.Line($"if ({target}.Count > {max}) {Throw("TooLong", value)}");
-                code.Line($"writer.Write((ulong){target}.Count, {width});");
+                if (encoding.Fixed) code.Line($"if ({target}.Count < {max}) {Throw("TooShort", value)}");
+                else code.Line($"writer.Write((ulong){target}.Count, {width});");
                 if (value.HandleMap) code.Line($"for (var position = 1; position < {target}.Count; position++) if ({target}[position].Key.CompareTo({target}[position - 1].Key) <= 0) throw new GesWireException(GesWireException.InvalidKeyOrder, {HandleKeyPath(value)});");
                 code.Line($"foreach (var item in {target})");
                 code.Open("{");
@@ -903,8 +904,13 @@ internal static partial class GesCSharpEmitter
                 }
 
                 code.Open("{");
-                code.Line($"var count = (int)reader.Read({width}, {Path(value)});");
-                code.Line($"if (count > {max}) {Throw("InvalidCount", value)}");
+                if (encoding.Fixed) code.Line($"const int count = {max};");
+                else
+                {
+                    code.Line($"var count = (int)reader.Read({width}, {Path(value)});");
+                    code.Line($"if (count > {max}) {Throw("InvalidCount", value)}");
+                }
+
                 code.Line($"{target}.Clear();");
                 if (element.Packed is not null)
                 {

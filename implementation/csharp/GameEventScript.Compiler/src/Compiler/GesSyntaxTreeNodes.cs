@@ -126,9 +126,13 @@ internal sealed record GesEventHandlerNode(
 }
 
 internal sealed record GesTypeDefinitionNode(string Name, IReadOnlyList<GesTypeFieldDefinitionNode> Fields) : GesScriptNode;
-internal sealed record GesTypeFieldDefinitionNode(string Name, string TypeName, GesExpressionNode? MinimumExpression, GesExpressionNode? MaximumExpression, GesExpressionNode? ComputedExpression, string? ConstructorLabel) : GesScriptNode
+internal sealed record GesTypeFieldDefinitionNode(string Name, string TypeName, GesExpressionNode? MinimumExpression, GesExpressionNode? MaximumExpression, GesExpressionNode? ComputedExpression, string? ConstructorLabel,
+    GesExpressionNode? DefaultExpression = null, string? ElementTypeName = null, long ListBound = 0, bool ListExact = false) : GesScriptNode
 {
     public bool IsConstructorParameter => ConstructorLabel is not null;
+
+    // Whether the field is a `:List(T)`, whose elements are cast to T and which `max n` or `exactly n` bounds.
+    public bool IsTypedList => ElementTypeName is not null;
 }
 internal sealed record GesPredicateDefinitionNode(string Name, IReadOnlyList<GesParameterNode> ParameterList, GesExpressionNode Expression) : GesScriptNode
 {
@@ -389,6 +393,21 @@ internal sealed record GesDiceCountPatternNode(int Count, GesExpressionNode? Fac
 internal sealed record GesMemberAccessExpressionNode(GesExpressionNode Target, string Member) : GesExpressionNode;
 internal sealed record GesCombinedCollectionExpressionNode(string Operation, IReadOnlyList<GesExpressionNode> Sources) : GesExpressionNode;
 internal sealed record GesForeachSelectorNode(string Identifier, GesExpressionNode Expression) : GesCollectionSelectorNode;
+
+// `@X` and `@X(root)` before their selector; only a store read may hold one (specs/Language.md#stores). The type name
+// keeps its `@`.
+internal sealed record GesStoreExpressionNode(string TypeName, GesExpressionNode? Root) : GesExpressionNode;
+
+internal enum GesStoreSelector
+{
+    Count,
+    Keys,
+    Values,
+    Entries,
+}
+
+// `@X[:count]`, `@X[:keys]`, `@X[:values]` and `@X[:entries]`, with a root the same of that root's parts.
+internal sealed record GesStoreReadExpressionNode(string TypeName, GesExpressionNode? Root, GesStoreSelector Selector) : GesExpressionNode;
 
 internal sealed record GesCollectionAccessExpressionNode(GesExpressionNode Target, GesCollectionSelectorNode Selector) : GesExpressionNode;
 

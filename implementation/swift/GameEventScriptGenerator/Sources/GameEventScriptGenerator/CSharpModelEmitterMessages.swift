@@ -31,7 +31,9 @@ extension GesCSharpModelEmitter {
         // A record default or an empty typed List is no constant, so a trailing parameter of one is null for it; free
         // data is a struct whose default value is empty.
         let record = { (index: Int) in
-            index >= trailing && (fields[index].field.defaultValue?.kind == .record || fields[index].field.defaultValue?.kind == .empty) && !isData(fields[index].value)
+            index >= trailing
+                && (fields[index].field.defaultValue?.kind == .record || fields[index].field.defaultValue?.kind == .empty || GesModelPlanner.fill(fields[index].value, fields[index].field.defaultValue))
+                && !isData(fields[index].value)
         }
         var documentation: [String] = []
         var parameters: [String] = []

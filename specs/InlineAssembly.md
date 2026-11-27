@@ -277,6 +277,14 @@ initialization, context, effect and resource checks.
 | `HasValue` | Direct; typed operands |
 | `IsEmpty` | Direct; typed operands |
 | `Default` | Direct; typed operands |
+| `CountStore` | Symbolic text pool reference |
+| `KeysOfStore` | Symbolic text pool reference |
+| `ValuesOfStore` | Symbolic text pool reference |
+| `EntriesOfStore` | Symbolic text pool reference |
+| `CountParts` | Symbolic text pool reference |
+| `KeysOfParts` | Symbolic text pool reference |
+| `ValuesOfParts` | Symbolic text pool reference |
+| `EntriesOfParts` | Symbolic text pool reference |
 | `Or` | Direct; typed operands |
 | `And` | Direct; typed operands |
 | `Xor` | Direct; typed operands |
@@ -478,7 +486,7 @@ A numeric cast or an ordinary function call does not establish that result type.
 
 `Cast`/`CheckType` accept a built-in type such as `:Number`. These are the direct
 VM operations; use `CastNumeric` for the VM's numeric conversion operation.
-`CastCustom`/`CheckCustomType` take literal type names. `CastUnit`/`CheckUnit` and
+`CastCustom`/`CheckCustomType` take literal type names; the store reads `CountStore` through `EntriesOfParts` take a literal handle type name with `@`, such as `@Hull`. `CastUnit`/`CheckUnit` and
 optional third operands of `LoadInteger`/`LoadFloat` accept `#none`, `#m`, `#s`
 and the portable unit name of every unit as a tag, such as `#degree`, `#meter`
 or `#meterPerSecond`.

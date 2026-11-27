@@ -113,9 +113,11 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             var minimum = field.MinimumExpression is null ? null : OptimizeExpression(field.MinimumExpression, knownTypeNames);
             var maximum = field.MaximumExpression is null ? null : OptimizeExpression(field.MaximumExpression, knownTypeNames);
             var computed = field.ComputedExpression is null ? null : OptimizeExpression(field.ComputedExpression, knownTypeNames);
-            optimized[index] = ReferenceEquals(minimum, field.MinimumExpression) && ReferenceEquals(maximum, field.MaximumExpression) && ReferenceEquals(computed, field.ComputedExpression)
+            var fallback = field.DefaultExpression is null ? null : OptimizeExpression(field.DefaultExpression, knownTypeNames);
+            optimized[index] = ReferenceEquals(minimum, field.MinimumExpression) && ReferenceEquals(maximum, field.MaximumExpression) && ReferenceEquals(computed, field.ComputedExpression) &&
+                               ReferenceEquals(fallback, field.DefaultExpression)
                 ? field
-                : field with { MinimumExpression = minimum, MaximumExpression = maximum, ComputedExpression = computed };
+                : field with { MinimumExpression = minimum, MaximumExpression = maximum, ComputedExpression = computed, DefaultExpression = fallback };
         }
 
         return optimized;
@@ -307,6 +309,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                 Target = OptimizeExpression(member.Target, knownTypeNames)
             },
             GesCombinedCollectionExpressionNode combined => combined with { Sources = OptimizeExpressions(combined.Sources, knownTypeNames) },
+            GesStoreExpressionNode store => store with { Root = store.Root is null ? null : OptimizeExpression(store.Root, knownTypeNames) },
+            GesStoreReadExpressionNode storeRead => storeRead with { Root = storeRead.Root is null ? null : OptimizeExpression(storeRead.Root, knownTypeNames) },
             GesCollectionAccessExpressionNode access => access with
             {
                 Target = OptimizeExpression(access.Target, knownTypeNames),

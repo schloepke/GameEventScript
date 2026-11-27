@@ -31,6 +31,18 @@ public protocol GesHandleResolver {
     /// - Throws: Any error, which ends the read of the first handle with `runtime.handleResolveFailed`; the others stay
     ///   unresolved. A `GesFatalRuntimeError` keeps its own diagnostic.
     func resolveMany(_ batch: GesHandleResolveBatch) throws
+
+    /// Lists the objects a script reads as the store `@Name`, or the parts of one root as `@Name(root)`
+    /// (specs/HostRuntime.md#stores), in any order and without versions or views. The host calls it at most once per
+    /// root and handler invocation and sorts the result into key order. The default implementation is for types that do
+    /// not enumerate: it returns nil, and the store reads as Nothing.
+    ///
+    /// - Parameter root: The root handle of a composite type with a part, whose parts to list; nil for every object of
+    ///   the type.
+    /// - Returns: The handles, or nil when the type does not enumerate.
+    /// - Throws: Any error, which ends the read with `runtime.handleResolveFailed`, as does a handle of another type or
+    ///   root or a repeated handle; a `GesFatalRuntimeError` keeps its own diagnostic.
+    func handles(root: GesHandle?) throws -> [GesHandle]?
 }
 
 extension GesHandleResolver {
@@ -49,6 +61,12 @@ extension GesHandleResolver {
     public func resolveMany(_ batch: GesHandleResolveBatch) throws {
         for index in 0..<batch.count { try resolve(batch[index]) }
     }
+
+    /// The default for types that do not enumerate: their store reads as Nothing.
+    ///
+    /// - Parameter root: Ignored.
+    /// - Returns: Always nil.
+    public func handles(root: GesHandle?) throws -> [GesHandle]? { nil }
 }
 
 /// The state reads a host asks a `GesHandleResolver` to answer together (`GesHandleResolver.resolveMany(_:)`). The host

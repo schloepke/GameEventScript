@@ -322,7 +322,7 @@
     }
 
     /// `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`, where
-    /// `:Store(@Type)` may stand for the state.
+    /// `:Store(@Type)` may stand for the state; a composite without `as { part: ... }` is part-less.
     private mutating func handle(_ offset: Int) throws -> GesSchemaDeclarationSyntax {
         var result = GesSchemaDeclarationSyntax()
         result.kind = .handle
@@ -354,6 +354,8 @@
             result.rootOffset = position
             result.root = try handleName()
             skipSpaces()
+            // Without `as { part: ... }` the composite is part-less: one per root, keyed by the root's id alone.
+            if !atWord("as") { return result }
         }
         try expectWord("as")
         skipTrivia()
@@ -790,7 +792,9 @@
                 try expect(41)
                 typeNesting -= 1
                 skipSpaces()
-                try maximum(&result)
+                // `exactly n` fixes the length where `max n` bounds it (specs/Schemas.md#fixed-lists).
+                result.exact = atWord("exactly")
+                try maximum(&result, result.exact ? "exactly" : "max")
                 try depth(&result)
             }
         case .map:
@@ -875,8 +879,8 @@
     }
 
     /// A whole number, or the name of a let that holds one.
-    private mutating func maximum(_ type: inout GesSchemaTypeSyntax) throws {
-        if !atWord("max") { return }
+    private mutating func maximum(_ type: inout GesSchemaTypeSyntax, _ keyword: String = "max") throws {
+        if !atWord(keyword) { return }
         _ = word()
         skipSpaces()
         if position < bytes.count && GesNames.lower(bytes[position]) {

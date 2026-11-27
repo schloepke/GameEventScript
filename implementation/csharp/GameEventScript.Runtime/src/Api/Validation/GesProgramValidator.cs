@@ -184,12 +184,16 @@ internal static class GesProgramValidator
             Throw(GesProgramFormatErrorCode.InvalidProgram, "Handle type binding names must be unique.", (ushort)GesSectionType.Bindings, index);
     }
 
+    // The store reads `CountStore` through `EntriesOfParts`.
+    private static bool IsStoreRead(GesBytecodeOpCode opcode) => opcode is >= GesBytecodeOpCode.CountStore and <= GesBytecodeOpCode.EntriesOfParts;
+
     // Whether an `@Name`, `@Name~`, `@Name(:P)` or `@Name(:P)~` type operand names a handle type binding, with a type name
     // as its projection; null for any other type name.
     private static bool? IsHandleTypeOperand(GameEventScriptProgram program, ushort stringIndex, HashSet<string>? handleTypeNames)
     {
         var text = program.StringConstants.Resolve(stringIndex);
-        if (text.Length == 0 || text[0] != '@') return null;
+        // `@id` is the identity member of a part-less composite's root, not a handle type name.
+        if (text.Length == 0 || text[0] != '@' || text == "@id") return null;
         var name = text.EndsWith("~", StringComparison.Ordinal) ? text[1..^1] : text[1..];
         var open = name.IndexOf('(');
         if (open >= 0)
@@ -304,6 +308,15 @@ internal static class GesProgramValidator
                     && IsHandleTypeOperand(program, stringIndex, handleTypeNames) is { } known)
                 {
                     if (!known) InvalidOperand("A handle type operand needs a handle type binding of its name.", instructionIndex);
+                    continue;
+                }
+
+                // Store reads name a handle type binding as a plain `@Name`, without a projection or `~`.
+                if (operand == GesOpcodePrinter.OperandPart.CustomTypeName && IsStoreRead(instruction.OpCode))
+                {
+                    var storeName = program.StringConstants.Resolve(stringIndex);
+                    if (IsHandleTypeOperand(program, stringIndex, handleTypeNames) != true || storeName.EndsWith("~", StringComparison.Ordinal) || storeName.IndexOf('(') >= 0)
+                        InvalidOperand("A store read names a handle type binding as `@Name`.", instructionIndex);
                     continue;
                 }
 

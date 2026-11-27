@@ -2791,3 +2791,177 @@ error:
   line: 1
   column: 24
 ```
+
+---
+
+## Test: a computed record field takes no default
+
+A computed field is no constructor parameter, so `default` before `computed by` fails syntax analysis.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: computed-record-field-takes-no-default
+kind: compileError
+level: atomic
+sources:
+  - name: "computed record field takes no default.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Wave as { origin: :Number, range: :Number default 1 computed by origin * 2 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+
+---
+
+## Test: a list field bound is a positive whole number
+
+`max` and `exactly` take a positive whole number of at most 12 digits; `0` fails syntax analysis at the bound.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: list-field-bound-is-positive-whole
+kind: compileError
+level: atomic
+sources:
+  - name: "list field bound is positive whole.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Grid as { cells: :List(:Number) exactly 0 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 1
+  column: 49
+```
+
+---
+
+## Test: a list field bound has no fraction
+
+A bound with a fraction fails syntax analysis at the bound.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: list-field-bound-has-no-fraction
+kind: compileError
+level: atomic
+sources:
+  - name: "list field bound has no fraction.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Grid as { cells: :List(:Number) max 2.5 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 1
+  column: 45
+```
+
+---
+
+## Test: a list field with an element type is not clamped
+
+`clamped` applies to scalar fields; on a `:List(T)` field it fails syntax analysis at `clamped`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: list-field-is-not-clamped
+kind: compileError
+level: atomic
+sources:
+  - name: "list field is not clamped.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Grid as { cells: :List(:Number) max 3 clamped between 0 and 1 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 1
+  column: 47
+```
+
+---
+
+## Test: a fixed list field takes no empty list default
+
+The default of `exactly n` is its fill element, so `default []` fails syntax analysis at `default`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: fixed-list-field-takes-no-empty-default
+kind: compileError
+level: atomic
+sources:
+  - name: "fixed list field takes no empty default.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Grid as { cells: :List(:Number) exactly 3 default [] }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 1
+  column: 51
+```

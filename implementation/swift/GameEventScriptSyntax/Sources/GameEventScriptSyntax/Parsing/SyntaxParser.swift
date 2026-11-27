@@ -557,23 +557,64 @@
         role(unlabeled ? .unlabeledField : .field)
         try expect(.colon)
         newlines()
-        try typeName(allowHandle: true, allowUnion: true)
+        let list = try typeName(allowHandle: true, allowUnion: true) == "list" && match(.leftParen)
+        let exact = try list && listElement()
         newlines()
-        if matchWord("clamped") {
+        if current.isIdentifier("clamped") {
+            if list { throw failure("A List field with an element type is not clamped.") }
+            advanceKeyword()
             try expectWord("between")
             _ = try expression(9)
             try expect(.operatorAnd)
             _ = try expression(9)
             newlines()
         }
+        let defaultStart = current
+        let hasDefault = match(.`default`)
+        if hasDefault {
+            newlines()
+            if exact && currentKind == .leftBracket && peekKind() == .rightBracket {
+                throw failure("The default of a fixed List is its fill element, not an empty List.", defaultStart)
+            }
+            _ = try expression(9)
+            newlines()
+        }
         var computed = false
         if matchWord("computed") {
+            if hasDefault { throw failure("Computed field cannot have a default.", defaultStart) }
             try expectWord("by")
             _ = try assemblyOrExpression()
             computed = true
         }
         if unlabeled && computed { throw failure("Computed field cannot be a parameter.", fieldStart) }
         finishNode()
+    }
+
+    // The element type and the optional bound of a `:List(T)` field after its `(`; true for `exactly`.
+    func listElement() throws -> Bool {
+        newlines()
+        try typeName()
+        newlines()
+        try expect(.rightParen)
+        var exact = false
+        if match(.max) {
+            role(.keyword)
+        } else if matchWord("exactly") {
+            exact = true
+        } else {
+            return false
+        }
+        let bound = current
+        if bound.kind != .float || !Self.isListBound(bound.text) { throw failure("A List bound is a positive whole number of at most 12 digits.", bound) }
+        advance()
+        return exact
+    }
+
+    // 1 to 12 ASCII digits without a leading zero.
+    static func isListBound(_ text: String) -> Bool {
+        let digits = text.utf8
+        guard (1...12).contains(digits.count), digits.first != UInt8(ascii: "0") else { return false }
+        return digits.allSatisfy { $0 >= UInt8(ascii: "0") && $0 <= UInt8(ascii: "9") }
     }
 
     func routineDeclaration() throws {

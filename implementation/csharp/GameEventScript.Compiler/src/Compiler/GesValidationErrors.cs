@@ -11,10 +11,20 @@ namespace GameEventScript.Compiler;
 internal sealed class GesValidationErrors
 {
     private readonly List<GesDiagnostic> _errors = [];
+    private readonly List<GesDiagnostic> _warnings = [];
 
     public int Count => _errors.Count;
 
+    // Diagnostics that do not fail the compilation, in report order.
+    public IReadOnlyList<GesDiagnostic> Warnings => _warnings;
+
     public void Add(GesParsedScript? module, string message, string symbol, GesDiagnosticSymbolKind symbolKind, string code, GesScriptNode? sourceNode = null)
+        => _errors.Add(Diagnostic(module, message, symbol, symbolKind, code, sourceNode));
+
+    public void AddWarning(GesParsedScript? module, string message, string symbol, GesDiagnosticSymbolKind symbolKind, string code, GesScriptNode? sourceNode = null)
+        => _warnings.Add(Diagnostic(module, message, symbol, symbolKind, code, sourceNode));
+
+    private static GesDiagnostic Diagnostic(GesParsedScript? module, string message, string symbol, GesDiagnosticSymbolKind symbolKind, string code, GesScriptNode? sourceNode)
     {
         var moduleName = string.IsNullOrWhiteSpace(module?.ModuleName) ? "UnknownModule" : module.ModuleName;
         var sourceName = string.IsNullOrWhiteSpace(module?.SourceName) ? "UnknownSource" : module.SourceName;
@@ -35,7 +45,7 @@ internal sealed class GesValidationErrors
             sourceLocation = sourceLocation with { SourceName = sourceName };
         }
 
-        _errors.Add(new GesDiagnostic(GesDiagnosticPhase.Validate, code, message, string.IsNullOrEmpty(symbol) ? null : symbol, symbolKind, sourceLocation, moduleName));
+        return new GesDiagnostic(GesDiagnosticPhase.Validate, code, message, string.IsNullOrEmpty(symbol) ? null : symbol, symbolKind, sourceLocation, moduleName);
     }
 
     public void AddRange(IEnumerable<GesDiagnostic> diagnostics) => _errors.AddRange(diagnostics);
@@ -199,6 +209,8 @@ internal sealed class GesValidationErrors
             GesExtensionPredicateExpressionNode extensionPredicate => FindNodeInExpression(extensionPredicate.Value, symbol),
             GesMemberAccessExpressionNode member => FindNodeInExpression(member.Target, symbol),
             GesCombinedCollectionExpressionNode combined => FindNodeInExpressions(combined.Sources, symbol),
+            GesStoreExpressionNode { Root: { } storeRoot } => FindNodeInExpression(storeRoot, symbol),
+            GesStoreReadExpressionNode { Root: { } storeReadRoot } => FindNodeInExpression(storeReadRoot, symbol),
             GesCollectionAccessExpressionNode collection => FindNodeInExpression(collection.Target, symbol) ?? FindNodeInSelector(collection.Selector, symbol),
             GesRangeExpressionNode range => FindNodeInExpression(range.FromExpression, symbol) ??
                                          FindNodeInExpression(range.ToExpression, symbol) ??

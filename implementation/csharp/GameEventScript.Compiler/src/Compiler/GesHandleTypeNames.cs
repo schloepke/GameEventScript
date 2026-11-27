@@ -52,6 +52,15 @@ internal static class GesHandleTypeNames
         return names;
     }
 
+    // Whether the alternatives share a root and one of them is a part-less composite, whose `id` is a root without a part.
+    internal static bool HasPartlessComposite(string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes)
+    {
+        if (CommonRoot(typeName, handleTypes) is null) return false;
+        foreach (var alternative in typeName.Split('|'))
+            if (handleTypes.TryGetValue(Split(alternative).Name, out var type) && type.Part is null) return true;
+        return false;
+    }
+
     // The root type all alternatives share, or null when one is no declared composite or the roots differ.
     internal static GesHandleType? CommonRoot(string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes)
     {

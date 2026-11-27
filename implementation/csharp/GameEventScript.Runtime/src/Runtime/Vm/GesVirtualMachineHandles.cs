@@ -25,6 +25,7 @@ internal partial class GesVirtualMachine
     }
 
     private static readonly string[] CompositeIdKeys = ["part", "root"];
+    private static readonly string[] RootIdKeys = ["root"];
 
     // The states the running handler invocation has read; it survives pauses and ends with the invocation.
     private Dictionary<GesHandle, GesHandleState>? _handleStates;
@@ -45,6 +46,7 @@ internal partial class GesVirtualMachine
         _handleLists?.Clear();
         _handleListsCollected = false;
         _handleContext = null;
+        ClearStoreHandles();
     }
 
     // The parts of a handle type text `@Name`, `@Name(:P)`, `@Name~` or `@Name(:P)~`, located without allocating.
@@ -170,19 +172,27 @@ internal partial class GesVirtualMachine
             case "root":
                 SetNothing(destinationRegister);
                 return;
+            // `@id` is `id` of a statically composite type of which one may be part-less: such a handle holds only its
+            // root's id, so its identity is the root alone, without a part.
+            case "@id":
+                if (handle.IsComposite)
+                {
+                    var values = new GesValue[2];
+                    values[0] = handle.Part;
+                    values[1] = handle.Id;
+                    SetMap(destinationRegister, new GesValueMap(CompositeIdKeys, values));
+                }
+                else SetMap(destinationRegister, new GesValueMap(RootIdKeys, [handle.Id]));
+
+                return;
         }
 
-        // `@Root` names the root type of a composite, whose handle keeps the composite's identity root and version.
+        // `@Root` names the root type of a composite: a composite with a part keeps its root's identity and version, a
+        // part-less one, which holds its root's id as its own, gives the root without a version.
         if (key.Length > 1 && key[0] == '@')
         {
-            if (!handle.IsComposite)
-            {
-                SetNothing(destinationRegister);
-                return;
-            }
-
             var root = new GesValue();
-            root.SetHandle(GesHandle.FromWire(key.Substring(1), handle.Id, handle.Version, default, false));
+            root.SetHandle(GesHandle.FromWire(key.Substring(1), handle.Id, handle.IsComposite ? handle.Version : default, default, false));
             SetValue(destinationRegister, in root);
             return;
         }

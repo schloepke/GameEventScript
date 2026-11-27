@@ -28576,3 +28576,285 @@ schemaApi: {"sources": ["wire messages Combat as (Hit, Died)\nwire message Hit(t
 gesBlock: expect
 schema: {"completed": {"value": {"type": ":Message", "message": {"name": "Hit", "tags": [], "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "4"}}, {"name": "damage", "value": {"type": ":Number.int64", "value": "5"}}]}}, "bytes": "0805"}, "decoded": {"value": {"type": ":Message", "message": {"name": "Hit", "tags": [], "args": [{"name": "target", "value": {"type": ":Number.int64", "value": "4"}}, {"name": "damage", "value": {"type": ":Number.int64", "value": "5"}}]}}, "byteCount": 2}}
 ```
+
+---
+
+## Test: a List of exactly n elements
+
+A List with `exactly n` holds n elements, and the wire leaves out their count.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: fixed-list
+schemaApi: {"sources": ["schema :S as {\n  cells: :List(:Number integer between 0 and 7) exactly 3 default 1\n  tags: :List(:Boolean) max 2 default []\n}\n"], "root": "S", "encode": {"type": ":S", "entries": [{"key": "cells", "value": {"type": ":List", "items": [{"type": ":Number.int64", "value": "1"}, {"type": ":Number.int64", "value": "2"}, {"type": ":Number.int64", "value": "3"}]}}, {"key": "tags", "value": {"type": ":List", "items": [{"type": ":Boolean", "value": true}]}}]}, "decode": "d10a"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"canonical": "gess1\nschema S\nfield cells List(Number integer between 0e0 7e0) exactly 3 default 1e0\nfield tags List(Boolean) max 2 default []\n", "encoded": {"bytes": "d10a"}, "decoded": {"value": {"type": ":S", "entries": [{"key": "cells", "value": {"type": ":List", "items": [{"type": ":Number.int64", "value": "1"}, {"type": ":Number.int64", "value": "2"}, {"type": ":Number.int64", "value": "3"}]}}, {"key": "tags", "value": {"type": ":List", "items": [{"type": ":Boolean", "value": true}]}}]}, "byteCount": 2}}
+```
+
+---
+
+## Test: a left-out fixed List is filled with its default
+
+On a List of exactly n elements, the default is the element that fills it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: fixed-list-fill-omitted
+schemaApi: {"sources": ["schema :S as {\n  cells: :List(:Number integer between 0 and 7) exactly 3 default 1\n  tags: :List(:Boolean) max 2 default []\n}\n"], "root": "S", "encode": {"type": ":S", "entries": []}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"encoded": {"bytes": "4900"}}
+```
+
+---
+
+## Test: a short fixed List is filled with its default
+
+The default fills the elements a shorter List lacks.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: fixed-list-fill-short
+schemaApi: {"sources": ["schema :S as {\n  cells: :List(:Number integer between 0 and 7) exactly 3 default 1\n  tags: :List(:Boolean) max 2 default []\n}\n"], "root": "S", "encode": {"type": ":S", "entries": [{"key": "cells", "value": {"type": ":List", "items": [{"type": ":Number.int64", "value": "5"}]}}]}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"encoded": {"bytes": "4d00"}}
+```
+
+---
+
+## Test: a fixed List that is too long
+
+### Case description
+
+```yaml
+gesBlock: case
+id: fixed-list-too-long
+schemaApi: {"sources": ["schema :S as {\n  cells: :List(:Number integer between 0 and 7) exactly 3 default 1\n  tags: :List(:Boolean) max 2 default []\n}\n"], "root": "S", "encode": {"type": ":S", "entries": [{"key": "cells", "value": {"type": ":List", "items": [{"type": ":Number.int64", "value": "1"}, {"type": ":Number.int64", "value": "2"}, {"type": ":Number.int64", "value": "3"}, {"type": ":Number.int64", "value": "4"}]}}]}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"encoded": {"error": {"code": "wire.tooLong", "path": "cells"}}}
+```
+
+---
+
+## Test: a max List that is too long
+
+### Case description
+
+```yaml
+gesBlock: case
+id: max-list-too-long
+schemaApi: {"sources": ["schema :S as {\n  cells: :List(:Number integer between 0 and 7) exactly 3 default 1\n  tags: :List(:Boolean) max 2 default []\n}\n"], "root": "S", "encode": {"type": ":S", "entries": [{"key": "tags", "value": {"type": ":List", "items": [{"type": ":Boolean", "value": true}, {"type": ":Boolean", "value": true}, {"type": ":Boolean", "value": true}]}}]}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"encoded": {"error": {"code": "wire.tooLong", "path": "tags"}}}
+```
+
+---
+
+## Test: a short fixed List without a default
+
+Without a default nothing fills it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: fixed-list-too-short
+schemaApi: {"sources": ["schema :P as {\n  pair: :List(:Boolean) exactly 2\n}\n"], "root": "P", "encode": {"type": ":P", "entries": [{"key": "pair", "value": {"type": ":List", "items": [{"type": ":Boolean", "value": true}]}}]}}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"encoded": {"error": {"code": "wire.tooShort", "path": "pair"}}}
+```
+
+---
+
+## Test: a fixed List in a dump
+
+A fixed List shows its count with width 0, since the wire leaves it out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dump-fixed-list
+schemaApi: {"sources": ["schema :S as {\n  cells: :List(:Number integer between 0 and 7) exactly 3 default 1\n  tags: :List(:Boolean) max 2 default []\n}\n"], "root": "S", "dump": "d10a"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"dump": {"text": "cells bit=0 width=0 value=count=3\ncells[] bit=0 width=3 value=1\ncells[] bit=3 width=3 value=2\ncells[] bit=6 width=3 value=3\ntags bit=9 width=2 value=count=1\ntags[] bit=11 width=1 value=true\nbytes 2\n", "valid": true}}
+```
+
+---
+
+## Test: the empty default of a fixed List
+
+A fixed List takes an element as its default, not `[]`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-empty-fixed-list
+schemaApi: {"sources": ["schema :S as {\n  a: :List(:Boolean) exactly 2 default []\n}\n"]}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidDefault", "line": 2, "column": 32}}
+```
+
+---
+
+## Test: a fixed List with a depth
+
+A recursive List keeps a maximum.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-fixed-list-depth
+schemaApi: {"sources": ["schema :T as {\n  kids: :List(:Self) exactly 2 depth 2\n}\n"]}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidConstraint", "line": 2, "column": 32}}
+```
+
+---
+
+## Test: a fixed List of keyed records
+
+Elements with a key may be absent from a delta, so their List keeps a maximum.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-fixed-list-keyed
+schemaApi: {"sources": ["schema :I as { id: :Number integer between 0 and 9 key }\nschema :W as {\n  items: :List(:I) exactly 2\n}\n"], "root": "W"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidConstraint", "line": 3, "column": 10}}
+```
+
+---
+
+## Test: a document fills a short fixed List
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-fixed-list-filled
+schemaApi: {"sources": ["schema :S as {\n  cells: :List(:Number integer between 0 and 7) exactly 3 default 1\n  tags: :List(:Boolean) max 2 default []\n}\n"], "document": ":Schema(:S)\ncells: [2]\n"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"document": {"ok": true}}
+```
+
+---
+
+## Test: a document with a short fixed List without a default
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-fixed-list-too-short
+schemaApi: {"sources": ["schema :P as {\n  pair: :List(:Boolean) exactly 2\n}\n"], "document": ":Schema(:P)\npair: [true]\n"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"document": {"error": {"code": "document.outOfRange", "line": 2, "column": 7}}}
+```
+
+---
+
+## Test: a document with a fixed List that is too long
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-fixed-list-too-long
+schemaApi: {"sources": ["schema :P as {\n  pair: :List(:Boolean) exactly 2\n}\n"], "document": ":Schema(:P)\npair: [true, false, true]\n"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"document": {"error": {"code": "document.outOfRange", "line": 2, "column": 7}}}
+```
+
+---
+
+## Test: a document with a max List that is too long
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-max-list-too-long
+schemaApi: {"sources": ["schema :S as {\n  cells: :List(:Number integer between 0 and 7) exactly 3 default 1\n  tags: :List(:Boolean) max 2 default []\n}\n"], "document": ":Schema(:S)\ntags: [true, true, true]\n"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"document": {"error": {"code": "document.outOfRange", "line": 2, "column": 7}}}
+```

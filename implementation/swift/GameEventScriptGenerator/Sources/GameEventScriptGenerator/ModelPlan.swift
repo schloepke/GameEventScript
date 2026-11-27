@@ -179,6 +179,12 @@ enum GesModelPlanner {
         return fields.firstIndex { $0.field.name == fallback.value }
     }
 
+    // Whether a literal default fills a fixed List: it is the default of each of its elements.
+    static func fill(_ value: GesModelPlanValue, _ fallback: GesLayoutDefault?) -> Bool {
+        guard value.kind == .list, value.model.fixed, let fallback else { return false }
+        return fallback.kind != .field && fallback.kind != .empty
+    }
+
     // The number of a numeric default as a literal: whole digits for an integer field, otherwise a floating literal.
     static func number(_ value: GesModelPlanValue, _ fallback: GesLayoutDefault) -> String {
         let parts = fallback.value.split(separator: "e")
@@ -329,7 +335,7 @@ enum GesModelPlanner {
             text += ":List("
             describe(value.element!.value, &text)
             text += ")"
-            if let max = value.max { text += " max \(max)" }
+            if let max = value.max { text += (value.fixed ? " exactly " : " max ") + "\(max)" }
             if value.depth > 0 { text += " depth \(value.depth)" }
         case .values:
             text += ":List"

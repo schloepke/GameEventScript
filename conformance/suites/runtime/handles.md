@@ -228,6 +228,81 @@ steps:
 
 ---
 
+## Test: a part-less composite is keyed by its root's id
+
+A composite without a part is one per root: `@Enemy:3` names the Enemy of the Drone 3 and equals itself across root versions, never
+the root. `root` gives the root without a version, `id.root` its id, and `id.part` is `nothing`. It orders by type name and
+then the root's id.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: partless-composite-identity
+sources:
+  - name: partless-composite-identity.ges
+    program: main
+handles:
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Brain as { aggro: :Number integer between 0 and 10 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Enemy of :Brain composite @Drone\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+on Seen(enemy as @Enemy, later as @Enemy, plain as @Enemy, drone as @Drone, items) {
+  emit Out(versions: enemy = later, root: enemy = drone, rootHandle: enemy.root, rootId: enemy.id.root, part: enemy.id.part, text: plain as :Text, versionText: enemy as :Text, sorted: items[:sort ascending])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| seen | Seen | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  seen:
+    input:
+      args:
+        - name: enemy
+          value: { type: ":Handle", value: "@Enemy:3~1" }
+        - name: later
+          value: { type: ":Handle", value: "@Enemy:3~2" }
+        - name: plain
+          value: { type: ":Handle", value: "@Enemy:3" }
+        - name: drone
+          value: { type: ":Handle", value: "@Drone:3" }
+        - name: items
+          value: { type: ":List", items: [{ type: ":Handle", value: "@Enemy:4" }, { type: ":Handle", value: "@Drone:3" }, { type: ":Handle", value: "@Enemy:3~2" }, { type: ":Handle", value: "@Drone:9" }] }
+    local:
+      - name: Out
+        args:
+          - name: versions
+            value: { type: ":Boolean", value: "true" }
+          - name: root
+            value: { type: ":Boolean", value: "false" }
+          - name: rootHandle
+            value: { type: ":Handle", value: "@Drone:3" }
+          - name: rootId
+            value: { type: ":Number.int64", value: "3" }
+          - name: part
+            value: { type: ":Nothing" }
+          - name: text
+            value: { type: ":Text", value: "@Enemy:3" }
+          - name: versionText
+            value: { type: ":Text", value: "@Enemy:3~1" }
+          - name: sorted
+            value: { type: ":List", items: [{ type: ":Handle", value: "@Drone:3" }, { type: ":Handle", value: "@Drone:9" }, { type: ":Handle", value: "@Enemy:3~2" }, { type: ":Handle", value: "@Enemy:4" }] }
+```
+
+---
+
 ## Test: a state read resolves a document answer
 
 A member other than the identity members reads the state; the resolver answers with a document naming the state schema.

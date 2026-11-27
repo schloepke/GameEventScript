@@ -47,7 +47,9 @@ internal sealed partial class GesSyntaxBinder
             else
             {
                 var selector = BindSelector(ref s);
-                source = Merge(new GesCollectionAccessExpressionNode(source!, selector), source, selector);
+                source = source is GesStoreExpressionNode store && StoreSelector(selector) is { } read
+                    ? Merge(new GesStoreReadExpressionNode(store.TypeName, store.Root, read), source, selector)
+                    : Merge(new GesCollectionAccessExpressionNode(source!, selector), source, selector);
             }
 
             c.SkipNewLines();
@@ -56,6 +58,16 @@ internal sealed partial class GesSyntaxBinder
 
         return source!;
     }
+
+    // The selectors a store reads directly: `[:count]` without a condition, `[:keys]`, `[:values]` and `[:entries]`.
+    private static GesStoreSelector? StoreSelector(GesCollectionSelectorNode selector) => selector switch
+    {
+        GesCountSelectorNode { BindingNames.Count: 0, Predicate: GesBooleanLiteralExpressionNode { Value: true } } count when count.Identifier == "value" => GesStoreSelector.Count,
+        GesExpressionSelectorNode { Expression: GesTagLiteralExpressionNode { Name: "keys" } } => GesStoreSelector.Keys,
+        GesExpressionSelectorNode { Expression: GesTagLiteralExpressionNode { Name: "values" } } => GesStoreSelector.Values,
+        GesExpressionSelectorNode { Expression: GesTagLiteralExpressionNode { Name: "entries" } } => GesStoreSelector.Entries,
+        _ => null,
+    };
 
     private GesCollectionSelectorNode BindSelector(ref Cursor c)
     {

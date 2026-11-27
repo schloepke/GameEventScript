@@ -14,10 +14,15 @@ func title(_ value: Any) -> String {
 
 enum CompilerObservations {
     static func compile(_ test: Input, programID: String? = nil, version: UInt64 = 0) throws -> GameEventScriptProgram {
-        if ForeignPrograms.inputs != nil { return try ForeignPrograms.read(test, group: programID) }
+        try compileWithWarnings(test, programID: programID, version: version).program
+    }
+
+    // Also returns the warnings of a successful compilation, in report order.
+    static func compileWithWarnings(_ test: Input, programID: String? = nil, version: UInt64 = 0) throws -> (program: GameEventScriptProgram, warnings: [GesDiagnostic]) {
+        if ForeignPrograms.inputs != nil { return (try ForeignPrograms.read(test, group: programID), []) }
         let builder = GesProgramBuilder()
         if ["scriptApi", "loadError"].contains(test["kind"]?.stringValue ?? "") { builder.withExternalTypeCatalog(RuntimeFixtures.catalog) }
-        if let handles = AdapterHandles.from(test) { builder.withHandleTypes(try handles.compilerTypes()) }
+        if let handles = AdapterHandles.from(test) { try handles.configure(builder) }
         for source in test.values("sources") where programID == nil || source["program"]?.stringValue == programID {
             builder.addScript(try source.text("text"), sourceName: try source.text("name"))
         }
@@ -33,7 +38,7 @@ enum CompilerObservations {
             }
         }
         let program = try builder.compile(options: options)
-        return test["compile"]?["binaryRoundTrip"]?.boolValue == true ? try GameEventScriptProgram.read(program.encode()) : program
+        return (test["compile"]?["binaryRoundTrip"]?.boolValue == true ? try GameEventScriptProgram.read(program.encode()) : program, builder.warnings)
     }
 
     static func diagnostic(_ value: GesDiagnostic) -> [String: Any] {
@@ -46,13 +51,14 @@ enum CompilerObservations {
         ]
     }
 
-    static func observe(_ kind: String, _ program: GameEventScriptProgram) -> [String: Any] {
-        if kind == "bytecodeSnapshot" { return ["status": "ok", "dump": program.dump()] }
+    static func observe(_ kind: String, _ program: GameEventScriptProgram, warnings: [GesDiagnostic] = []) -> [String: Any] {
+        let reported = warnings.map(diagnostic)
+        if kind == "bytecodeSnapshot" { return ["status": "ok", "dump": program.dump(), "warnings": reported] }
         if kind == "compileError" { return ["status": "ok"] }
         if kind == "bytecode" {
             var counts: [String: Int] = [:]
             for instruction in program.code { counts[title(instruction.opcode), default: 0] += 1 }
-            return ["status": "ok", "opcodes": counts]
+            return ["status": "ok", "opcodes": counts, "warnings": reported]
         }
         var signatures: [String: [String]] = [:]
         var handlers: [[String: Any]] = []
@@ -69,6 +75,7 @@ enum CompilerObservations {
                 "messageDefinitions": signatures.map { ["name": $0.key, "count": $0.value.count, "signatureIds": $0.value] as [String: Any] },
                 "programResources": ["requiredRegisterCount": program.requiredRegisterCount, "requiredCallStackDepth": program.requiredCallStackDepth], "handlerResources": handlers,
             ],
+            "warnings": reported,
         ]
     }
 }

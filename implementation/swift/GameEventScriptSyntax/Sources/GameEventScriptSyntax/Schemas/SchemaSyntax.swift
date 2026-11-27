@@ -213,6 +213,8 @@ public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
     @_spi(Syntax) public var max: Int64?
     @_spi(Syntax) public var maxName = ""
     @_spi(Syntax) public var maxOffset = 0
+    /// Whether a List's maximum was written `exactly n`: the List always holds that many elements.
+    @_spi(Syntax) public var exact = false
     /// The alternatives of a List's element.
     @_spi(Syntax) public var element: [GesSchemaTypeSyntax]?
     /// The written `depth` of a List whose element is the schema that declares it, and where it starts; 0 without one.
@@ -424,7 +426,7 @@ public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
     /// The fields a projection takes from its source, which `state` names, in written order.
     @_spi(Syntax) public var taken: [GesSchemaTakenSyntax] = []
     /// A handle declaration: its state schema, the composite root without `@`, the id or part type, the version form and the
-    /// revision's type, each with where it starts.
+    /// revision's type, each with where it starts. A part-less composite has a root and no id or part type.
     @_spi(Syntax) public var state = ""
     @_spi(Syntax) public var stateOffset = 0
     /// The handle type of a store file type, `:Store(@Type)`, without `@`; empty otherwise, when `state` names the state.

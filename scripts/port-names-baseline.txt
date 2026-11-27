@@ -120,6 +120,8 @@ only	csharp	Compiler	GesSortSelectorNode
 only	csharp	Compiler	GesSourceDocument
 only	csharp	Compiler	GesStatementBodyNode
 only	csharp	Compiler	GesStatementNode
+only	csharp	Compiler	GesStoreExpressionNode
+only	csharp	Compiler	GesStoreReadExpressionNode
 only	csharp	Compiler	GesSumSelectorNode
 only	csharp	Compiler	GesSyntaxTreeModule
 only	csharp	Compiler	GesSyntaxTreeNodeLists

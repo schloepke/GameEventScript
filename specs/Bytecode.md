@@ -101,8 +101,10 @@ Record of a schema in `P`'s source chain to `P`, reading `P` from the host's reg
 state read of the first handle type with that projection for its `EntryAddress`. The view is no part of the Program's
 other data and needs no import of its own. On a
 handle, `MemberAccess` reads `id` and `version` from the identity, `root` gives `nothing`, `@Root` (the
-root type's name with `@`, which needs a `HandleType` import) reads the root handle of a composite
-and `nothing` of another handle, and every other member reads the resolved state.
+root type's name with `@`, which needs a `HandleType` import) reads the root handle of a composite, without a
+version for a part-less composite, and `nothing` of another handle, `@id` reads the identity as a Map with `root` and
+`part` for a composite with a part and with `root` alone for any other handle (the compiler emits it for `h.id` of a
+type that may be a part-less composite; *Since: Unreleased*), and every other member reads the resolved state.
 
 Existing string and compact list pools remain important. Constants that fit the
 linear instruction shape are encoded directly in typed load instructions:
@@ -418,7 +420,7 @@ groups are:
 0x10 Group 1 continuation: emit/publish operations, casts, checks, move, access, handler binding
 0x20 Group 1 type checks, loads, argument staging, value creation
 0x30 Group 1 argument staging and value creation continuation
-0x40 Group 1 record/external type construction, presence helpers, reserved tail 0x46..0x4F
+0x40 Group 1 record/external type construction, presence helpers, store reads, reserved tail 0x4E..0x4F
 0x50 Group 2: boolean algebra, comparison, math
 0x60 Group 2 math/random/series continuation and numeric intrinsics
 0x70 Group 2 numeric/degree intrinsics and trigonometry
@@ -1530,7 +1532,15 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x43 | `HasValue` | - | result register | `XRegister`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
 | 0x44 | `IsEmpty` | - | result register | `XRegister`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
 | 0x45 | `Default` | - | result register | `XRegister`=left | `YRegister`=right | - | Presence/default operator. |
-| 0x46..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
+| 0x46 | `CountStore` | - | result register | `TypeOperand`=handle type string | - | - | Store read `@X[:count]`: the number of objects of the type, `nothing` if its resolver does not enumerate ([Host runtime](HostRuntime.md#stores)). |
+| 0x47 | `KeysOfStore` | - | result register | `TypeOperand`=handle type string | - | - | Store read `@X[:keys]`: the List of handles of every object of the type in key order, `nothing` if its resolver does not enumerate ([Host runtime](HostRuntime.md#stores)). |
+| 0x48 | `ValuesOfStore` | - | result register | `TypeOperand`=handle type string | - | - | Store read `@X[:values]`: the List of states of every object of the type in key order, `nothing` if its resolver does not enumerate ([Host runtime](HostRuntime.md#stores)). |
+| 0x49 | `EntriesOfStore` | - | result register | `TypeOperand`=handle type string | - | - | Store read `@X[:entries]`: the List of `{key, value}` Maps of every object of the type in key order, `nothing` if its resolver does not enumerate ([Host runtime](HostRuntime.md#stores)). |
+| 0x4A | `CountParts` | - | result register | `XRegister`=root | `TypeOperand`=composite handle type string | - | Store read `@X(root)[:count]`: the number of parts of one root, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
+| 0x4B | `KeysOfParts` | - | result register | `XRegister`=root | `TypeOperand`=composite handle type string | - | Store read `@X(root)[:keys]`: the List of part handles of one root in key order, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
+| 0x4C | `ValuesOfParts` | - | result register | `XRegister`=root | `TypeOperand`=composite handle type string | - | Store read `@X(root)[:values]`: the List of part states of one root in key order, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
+| 0x4D | `EntriesOfParts` | - | result register | `XRegister`=root | `TypeOperand`=composite handle type string | - | Store read `@X(root)[:entries]`: the List of `{key, value}` Maps of one root in key order, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
+| 0x4E..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
 
 ### Group 2 - Boolean Algebra, Comparison, Math And Random
 

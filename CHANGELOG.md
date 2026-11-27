@@ -135,6 +135,24 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Message arguments and set parameters accept the empty defaults `[]` for a List and `[:]` for a Map.
 - The VS Code extension offers the syntax completions of Sublime Text and TextMate: keywords, built-in types after
   `as`, `is` and `:`, and collection selectors after `[:`. The shared catalog now lists every selector and more keywords.
+- Record fields take defaults: `bearing: :Number clamped between 0 and 360 default 0` gives the field its default when
+  a constructor call, a Map cast or `parse` leaves it out or passes `nothing`; the default is cast and clamped like an
+  argument (specs/Language.md#records-and-custom-types).
+- A composite may omit its part: `handle @Enemy of :EnemyState composite @Bot` declares one object per root, keyed by
+  the root's id alone. Its handles write `@Enemy:3` and the root's version, equal no handle of the root, order by type
+  and root id, and read `h.root` without a version, `h.id.root` and `h.id.part` as `nothing`; it is sent like its root
+  and generates `EnemyHandle` with the root's id and version (specs/Schemas.md#handles).
+- Scripts read stores: `@Hull[:count]`, `[:keys]`, `[:values]` and `[:entries]` list every object of a handle type in
+  key order, `@Ship(fleet)[:keys]` the parts of one root. A resolver lists its objects through the new
+  `IGesHandleResolver.Handles` (Swift `handles(root:)`), which `GesStore` implements; a type whose resolver does not
+  list reads as `nothing`, and `GesProgramBuilder.WithEnumerableHandleTypes` lets the compiler warn about it with
+  `validate.handleTypeNotEnumerable` in the new `Warnings` (specs/Language.md#stores).
+- Bounded Lists: `:List(T) exactly n` is a fixed List of `n` elements next to `max n`, in schemas and script record
+  fields alike. Its `default` is the fill element, so a left-out or shorter List is filled; without one a shorter List
+  is `wire.tooShort` or `document.outOfRange`. It encodes without a count, generates code that fills it and reports
+  `IsExact` (Swift `isExact`); record fields take `:List(T)` with `max n` or `exactly n`, giving `nothing` for a List
+  that is too long or an element that does not convert (specs/Schemas.md#fixed-lists,
+  specs/Language.md#records-and-custom-types).
 
 ### Changed
 - Message sets move into the message namespace: `messages Name as (...)` declares a set without `:`, a route names it

@@ -164,6 +164,26 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryBuilder IsEmpty(GesRegisterRef destination, GesRegisterRef operand) => UnaryOpcode(GesBytecodeOpCode.IsEmpty, destination, operand);
 
+    // `@Name[:count]` and the other store selectors (specs/Bytecode.md#handles); `parts` reads the parts of a root.
+    // Reads of values or entries read states, so the type's binding needs a resolver at the first of them.
+    public GesBinaryBuilder ReadStore(GesBytecodeOpCode opcode, GesRegisterRef destination, string typeName)
+        => AddStoreRead(opcode, GesOperand.Register(destination), default, typeName);
+
+    public GesBinaryBuilder ReadStoreParts(GesBytecodeOpCode opcode, GesRegisterRef destination, GesRegisterRef root, string typeName)
+        => AddStoreRead(opcode, GesOperand.Register(destination), GesOperand.Register(root), typeName);
+
+    private GesBinaryBuilder AddStoreRead(GesBytecodeOpCode opcode, GesOperand destination, GesOperand root, string typeName)
+    {
+        AppendPlanItem(PlanItem.ForInstruction(new InstructionPlan(CurrentRoutineId, opcode, GesQuantityUnit.UnitNone, GesInstructionFlag.None, destination,
+            root, GesOperand.Text(typeName), default, default, default, default, default, null, null, null)
+        {
+            HandleStateTypes = opcode is GesBytecodeOpCode.ValuesOfStore or GesBytecodeOpCode.EntriesOfStore or GesBytecodeOpCode.ValuesOfParts or GesBytecodeOpCode.EntriesOfParts
+                ? [typeName.Substring(1)]
+                : null,
+        }, CurrentSourceRange));
+        return this;
+    }
+
     public GesBinaryBuilder Default(GesRegisterRef destination, GesRegisterRef value, GesRegisterRef defaultValue) => BinaryOpcode(GesBytecodeOpCode.Default, destination, value, defaultValue);
 
     public GesBinaryBuilder Or(GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right) => BinaryOpcode(GesBytecodeOpCode.Or, destination, left, right);

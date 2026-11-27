@@ -170,6 +170,11 @@ final class GesExpression {
         case list([GesExpression])
         case map([(String, GesExpression)])
         case member(GesExpression, String)
+        // `@X` and `@X(root)` before their selector; only a store read may hold one (specs/Language.md#stores). The type
+        // name keeps its `@`.
+        case store(String, GesExpression?)
+        // `@X[:count]`, `@X[:keys]`, `@X[:values]` and `@X[:entries]`, with a root the same of that root's parts.
+        case storeRead(String, GesExpression?, GesStoreSelector)
         indirect case selector(GesExpression, GesSelector)
         case combined(String, [GesExpression])
         case cast(GesExpression, String)
@@ -193,6 +198,13 @@ final class GesExpression {
         self.kind = kind
         self.location = location
     }
+}
+
+enum GesStoreSelector {
+    case count
+    case keys
+    case values
+    case entries
 }
 
 struct GesSelector {
@@ -253,7 +265,15 @@ struct GesField {
     let minimum: GesExpression?
     let maximum: GesExpression?
     let computed: GesExpression?
+    // The value of a constructor parameter whose argument is left out or gives nothing.
+    let fallback: GesExpression?
+    // The element type of a `:List(T)` field, its bound (0 for none) and whether the bound is exact.
+    var elementType: String? = nil
+    var listBound: Int64 = 0
+    var listExact = false
     let location: GesSourceLocation
+
+    var isTypedList: Bool { elementType != nil }
 }
 
 struct GesRecord {

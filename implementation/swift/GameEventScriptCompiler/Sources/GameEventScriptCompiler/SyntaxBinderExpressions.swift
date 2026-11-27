@@ -65,6 +65,7 @@ extension GesSyntaxBinder {
         case .callExpression: return try call(node)
         case .handlerLiteralExpression: return try handlerLiteral(node)
         case .parenthesizedExpression: return try parenthesized(node)
+        case .storeExpression: return try store(node)
         case .cancelExpression: return try cancel(node)
         case .sendExpression:
             var c = cursor(node)
@@ -652,6 +653,17 @@ extension GesSyntaxBinder {
     }
 
     // Parentheses leave no semantic node; the enclosed expression keeps its own range.
+    func store(_ store: GesSyntaxNode) throws -> GesExpression {
+        var c = cursor(store)
+        let start = try c.advance()
+        guard try c.match(.leftParen) else { return node(.store(start.text, nil), start, start) }
+        try c.newlines()
+        let root = try expression(&c)
+        try c.newlines()
+        try c.expect(.rightParen)
+        return node(.store(start.text, root), start, c.previous)
+    }
+
     func parenthesized(_ parenthesized: GesSyntaxNode) throws -> GesExpression {
         var c = cursor(parenthesized)
         try c.expect(.leftParen)
@@ -723,6 +735,11 @@ extension GesSyntaxBinder {
             } else {
                 guard let input = result else { throw Mismatch(token: s.position) }
                 let selector = try self.selector(&s)
+                if case .store(let typeName, let root) = input.kind, let read = Self.storeSelector(selector) {
+                    result = combined(.storeRead(typeName, root, read), input, nil, s.previous)
+                    try c.newlines()
+                    continue
+                }
                 let access = combined(.selector(input, selector), input, nil, s.previous)
                 // The object-pattern selector has no range, which leaves the whole access without one.
                 result = selector.operation == "objectMatch" ? GesExpression(access.kind, GesAstOptimizer.noRange(access.location)) : access
@@ -730,6 +747,17 @@ extension GesSyntaxBinder {
             try c.newlines()
         } while c.isNode(.collectionSelector)
         return result!
+    }
+
+    // The selectors a store reads directly: `[:count]` without a condition, `[:keys]`, `[:values]` and `[:entries]`.
+    static func storeSelector(_ selector: GesSelector) -> GesStoreSelector? {
+        switch selector.operation {
+        case "count": selector.names.isEmpty && selector.expressions.isEmpty ? .count : nil
+        case "keys": .keys
+        case "values": .values
+        case "entries": .entries
+        default: nil
+        }
     }
 
     func selector(_ c: inout Cursor) throws -> GesSelector {

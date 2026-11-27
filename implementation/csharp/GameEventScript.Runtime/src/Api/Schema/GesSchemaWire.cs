@@ -277,6 +277,7 @@ public ref struct GesSchemaWriter
         if (node.Kind != GesSchemaNodeKind.List) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         if (count > 0 && node.DepthLimit > 0) throw TooDeep(node.Path, node.DepthLimit);
         if (count < 0 || count > node.MaxCount) throw new GesWireException(GesWireException.TooLong, node.Path);
+        if (node.Fixed && count < node.MaxCount) throw new GesWireException(GesWireException.TooShort, node.Path);
         Presence(in node);
         Put((ulong)count, node.Width);
         if (count == 0)
@@ -594,7 +595,7 @@ public ref struct GesSchemaReader
     public int BeginList(GesSchemaField field)
     {
         ref readonly var node = ref Enter(field, GesSchemaNodeKind.List);
-        var count = Get(node.Width, node.Path);
+        var count = node.Fixed ? (ulong)node.MaxCount : Get(node.Width, node.Path);
         if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
         if (count == 0)
         {

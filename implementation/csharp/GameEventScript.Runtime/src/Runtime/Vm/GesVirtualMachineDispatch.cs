@@ -170,6 +170,30 @@ internal partial class GesVirtualMachine
                     case CheckType:
                         ExecuteCheckType(instruction.DestinationRegister, Register(instruction.XRegister), instruction.TypeKind);
                         break;
+                    case CountStore:
+                        ReadStore(instruction.DestinationRegister, instruction.SecondaryStringIndex, StoreSelector.Count);
+                        break;
+                    case KeysOfStore:
+                        ReadStore(instruction.DestinationRegister, instruction.SecondaryStringIndex, StoreSelector.Keys);
+                        break;
+                    case ValuesOfStore:
+                        ReadStore(instruction.DestinationRegister, instruction.SecondaryStringIndex, StoreSelector.Values);
+                        break;
+                    case EntriesOfStore:
+                        ReadStore(instruction.DestinationRegister, instruction.SecondaryStringIndex, StoreSelector.Entries);
+                        break;
+                    case CountParts:
+                        ReadStoreParts(instruction.DestinationRegister, instruction.SecondaryStringIndex, Register(instruction.XRegister), StoreSelector.Count);
+                        break;
+                    case KeysOfParts:
+                        ReadStoreParts(instruction.DestinationRegister, instruction.SecondaryStringIndex, Register(instruction.XRegister), StoreSelector.Keys);
+                        break;
+                    case ValuesOfParts:
+                        ReadStoreParts(instruction.DestinationRegister, instruction.SecondaryStringIndex, Register(instruction.XRegister), StoreSelector.Values);
+                        break;
+                    case EntriesOfParts:
+                        ReadStoreParts(instruction.DestinationRegister, instruction.SecondaryStringIndex, Register(instruction.XRegister), StoreSelector.Entries);
+                        break;
                     case CheckCustomType:
                         ExecuteCheckCustomType(instruction.DestinationRegister, Register(instruction.XRegister), instruction.SecondaryStringIndex);
                         break;

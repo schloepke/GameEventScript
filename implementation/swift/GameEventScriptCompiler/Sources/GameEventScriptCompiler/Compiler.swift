@@ -262,6 +262,17 @@ final class GesCompiler {
                 }
                 try cast(reg, value, field.type, r)
             } else {
+                if let fallback = field.fallback, !field.listExact {
+                    let fill = r.emit(.jumpIfNothing, 0, reg)
+                    let given = r.emit(.jump)
+                    r.mark([fill])
+                    _ = try expression(fallback, r, scope, destination: reg)
+                    r.mark([given])
+                }
+                if field.isTypedList {
+                    try typedList(field, reg, r, scope)
+                    continue
+                }
                 try cast(reg, reg, field.type, r)
                 if let low = field.minimum, let high = field.maximum {
                     let a = try expression(low, r, scope)
@@ -279,6 +290,66 @@ final class GesCompiler {
         r.emit(.createRecordValue, result, map, builder.text(record.name))
         r.emit(.returnValue, 0, result)
         return r
+    }
+
+    // A `:List(T)` field: casts the value to a List and each element to T; too many elements, a short exact List without
+    // a fill element or an element that gives nothing makes the field nothing, and a fill pads an exact List.
+    func typedList(_ field: GesField, _ value: Int, _ r: GesRoutine, _ scope: GesScope) throws {
+        let fills = field.listExact && field.fallback != nil
+        let builder = r.temporary()
+        let count = r.temporary()
+        let bound = r.temporary()
+        let flag = r.temporary()
+        let iterator = r.temporary()
+        let item = r.temporary()
+        var invalid: [Int] = []
+        r.emit(.listBuilderCreate, builder)
+        r.emit(.loadInteger, count)
+        if field.listBound > 0 { r.emit(.loadInteger, bound, payload: UInt64(field.listBound)) }
+        try cast(value, value, field.type, r)
+        invalid.append(r.emit(.jumpIfNothing, 0, value))
+        r.emit(.count, count, value)
+        if field.listBound > 0 {
+            r.emit(.greater, flag, count, bound)
+            invalid.append(r.emit(.jumpIfTrue, 0, flag))
+            if field.listExact && !fills {
+                r.emit(.less, flag, count, bound)
+                invalid.append(r.emit(.jumpIfTrue, 0, flag))
+            }
+        }
+        invalid.append(r.emit(.iteratorCreateOrJump, iterator, value))
+        let loop = r.mark()
+        let end = r.emit(.iteratorNext, item, iterator)
+        try cast(item, item, field.elementType!, r)
+        let rejected = r.emit(.jumpIfNothing, 0, item)
+        r.emit(.listBuilderAdd, 0, builder, item)
+        r.emit(.jump, 0, 0, loop)
+        r.mark([rejected])
+        r.emit(.iteratorClose, 0, iterator)
+        invalid.append(r.emit(.jump))
+        r.mark([end])
+        r.emit(.iteratorClose, 0, iterator)
+        var finish: [Int] = []
+        if fills, let fallback = field.fallback {
+            r.emit(.less, flag, count, bound)
+            finish.append(r.emit(.jumpIfNotTrue, 0, flag))
+            _ = try expression(fallback, r, scope, destination: item)
+            try cast(item, item, field.elementType!, r)
+            invalid.append(r.emit(.jumpIfNothing, 0, item))
+            let one = r.temporary()
+            r.emit(.loadInteger, one, payload: 1)
+            let padNext = r.mark()
+            r.emit(.listBuilderAdd, 0, builder, item)
+            r.emit(.add, count, count, one)
+            r.emit(.less, flag, count, bound)
+            r.emit(.jumpIfTrue, 0, flag, padNext)
+        }
+        r.mark(finish)
+        r.emit(.listBuilderFinish, value, builder)
+        let done = r.emit(.jump)
+        r.mark(invalid)
+        r.emit(.loadNothing, value)
+        r.mark([done])
     }
 
     // The value of a literal. GesAstOptimizer has already folded every constant expression the C# compiler folds,

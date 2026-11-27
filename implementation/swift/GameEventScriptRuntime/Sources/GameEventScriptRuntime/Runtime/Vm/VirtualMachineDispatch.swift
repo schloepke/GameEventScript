@@ -115,6 +115,14 @@ extension GesVirtualMachine {
                 case .checkCustomType:
                     let type = text(instruction.word2)
                     setBoolean(d, type.utf8.count > 1 && type.utf8.first == UInt8(ascii: "@") ? isHandleType(value(x), type) : value(x).customTypeName == type)
+                case .countStore: try readStore(d, text(instruction.word2), .count)
+                case .keysOfStore: try readStore(d, text(instruction.word2), .keys)
+                case .valuesOfStore: try readStore(d, text(instruction.word2), .values)
+                case .entriesOfStore: try readStore(d, text(instruction.word2), .entries)
+                case .countParts: try readStoreParts(d, text(instruction.word2), value(x), .count)
+                case .keysOfParts: try readStoreParts(d, text(instruction.word2), value(x), .keys)
+                case .valuesOfParts: try readStoreParts(d, text(instruction.word2), value(x), .values)
+                case .entriesOfParts: try readStoreParts(d, text(instruction.word2), value(x), .entries)
                 case .checkUnit:
                     let value = self.value(x)
                     setBoolean(d, ((value.kind == .integer || value.kind == .float) || value.spatialValue != nil) && value.unit == instruction.decodedUnit)

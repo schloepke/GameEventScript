@@ -3646,3 +3646,38 @@ error:
   line: 1
   column: 21
 ```
+
+---
+
+## Test: a list field element type must be known
+
+The element type of a `:List(T)` record field must be a known type; an unknown one is `validate.invalidTypeConstructor`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: list-field-element-type-must-be-known
+kind: compileError
+level: atomic
+sources:
+  - name: "list field element type must be known.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Grid as { cells: :List(:Cell) max 3 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  line: 1
+  column: 19
+```

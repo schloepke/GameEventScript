@@ -22,12 +22,18 @@ final class GesAstValidator {
     private(set) var definitions: [String: GesDefinition] = [:]
     private(set) var records: [String: GesRecord] = [:]
     private var diagnostics: [GesDiagnostic] = []
+    // The handle types the host enumerates, or nil when the compilation does not know; a store read of any other
+    // declared type warns.
+    let enumerableHandleTypes: Set<String>?
+    // Diagnostics that do not fail the compilation, in report order.
+    private(set) var warnings: [GesDiagnostic] = []
     // The result types of callables whose inference met no cycle. Such a result depends only on the callee, so every
     // later inference reuses it instead of inferring the callee again; see CallableResults.
     var callResults: [String: String] = [:]
 
-    init(modules: [GesModule], catalog: (any GesExternalTypeCatalog)?, handleTypes: [String: GesHandleType] = [:], handleTypeOrder: [String]? = nil, diagnostics: [GesDiagnostic] = []) {
+    init(modules: [GesModule], catalog: (any GesExternalTypeCatalog)?, handleTypes: [String: GesHandleType] = [:], handleTypeOrder: [String]? = nil, enumerableHandleTypes: Set<String>? = nil, diagnostics: [GesDiagnostic] = []) {
         self.modules = modules
+        self.enumerableHandleTypes = enumerableHandleTypes
         self.catalog = catalog
         self.handleTypes = handleTypes
         self.handleTypeOrder = handleTypeOrder ?? handleTypes.keys.sorted()
@@ -121,7 +127,10 @@ final class GesAstValidator {
                 } else if !knownType(field.type) {
                     report("validate.invalidTypeConstructor", field.location, symbol: field.type, kind: .type, message: "Unknown type ':\(field.type)' in this program.")
                 }
-                for value in [field.minimum, field.maximum, field.computed].compactMap({ $0 }) { expression(value, [:]) }
+                if let element = field.elementType, !knownType(element) {
+                    report("validate.invalidTypeConstructor", field.location, symbol: element, kind: .type, message: "Field '\(field.name)' uses unknown element type ':\(element)'.")
+                }
+                for value in [field.minimum, field.maximum, field.computed, field.fallback].compactMap({ $0 }) { expression(value, [:]) }
             }
         }
         for d in module.definitions where d.kind == "predicate" { callable(d, symbolKind: .predicate) }
@@ -247,10 +256,43 @@ final class GesAstValidator {
         case .literal, .constant, .dice, .series: break
         case .unary, .binary, .between, .range, .random, .combined, .list, .extensionCall, .assembly: operands(e, types)
         case .name, .handler, .member, .map, .generated: namedReferences(e, types)
+        case .store, .storeRead: storeReferences(e, types)
         case .call, .message, .constructor: argumentReferences(e, types)
         case .predicate, .send, .cancel, .intrinsic, .seeded, .check, .cast: checkedOperands(e, types)
         case .choice: choiceReferences(e, types)
         case .selector: selectorReferences(e, types)
+        }
+    }
+
+    // A store is read only through its selectors and named by one declared handle type without version or projection; the
+    // parts of one root need a type with a part (specs/Language.md#stores).
+    private func storeReferences(_ e: GesExpression, _ types: [String: String]) {
+        switch e.kind {
+        case .store(let typeName, let root):
+            report("validate.invalidHandleUse", e.location, symbol: typeName, kind: .type, message: "'\(typeName)' reads a store only with '[:count]', '[:keys]', '[:values]' or '[:entries]'.")
+            if let root { expression(root, types) }
+        case .storeRead(let typeName, let root, _):
+            storeName(typeName, hasRoot: root != nil, e.location)
+            if let root { expression(root, types) }
+        default: preconditionFailure()
+        }
+    }
+
+    private func storeName(_ typeName: String, hasRoot: Bool, _ location: GesSourceLocation) {
+        if typeName.utf8.contains(UInt8(ascii: "~")) || GesHandleTypeNames.hasProjection(typeName) {
+            report("validate.invalidHandleUse", location, symbol: typeName, kind: .type, message: "A store is named by its handle type alone, not '\(typeName)'.")
+            return
+        }
+        let name = String(typeName.dropFirst())
+        if let type = handleTypes[name] {
+            if hasRoot && type.part == nil {
+                report("validate.invalidHandleUse", location, symbol: typeName, kind: .type, message: "'\(typeName)(root)' lists the parts of one root; '\(typeName)' has no part.")
+            } else if let enumerableHandleTypes, !enumerableHandleTypes.contains(name) {
+                let message = "The host does not enumerate '\(typeName)', so this store reads as nothing."
+                warnings += compileError("validate.handleTypeNotEnumerable", location, symbol: typeName, kind: .type, message: message).diagnostics
+            }
+        } else {
+            report("validate.unknownHandleType", location, symbol: typeName, kind: .type, message: "Handle type '\(typeName)' is not declared.")
         }
     }
 

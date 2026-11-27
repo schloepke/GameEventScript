@@ -79,7 +79,8 @@ public final class GesSchemaParameters {
     @_spi(Generator) public var packed = false
     /// A `:Bytes max n`: a Text on the wire whose bytes need not be UTF-8.
     @_spi(Generator) public var isBytes = false
-    /// Bytes of exactly `maxCount` bytes without a count, such as the hash version of a handle; `width` is 0.
+    /// Bytes of exactly `maxCount` bytes without a count, such as the hash version of a handle, or a fixed List of exactly
+    /// `maxCount` elements; `width` is 0.
     @_spi(Generator) public var fixed = false
     /// The `depth` of a recursive List at its deepest level, which holds no element; 0 otherwise.
     @_spi(Generator) public var depthLimit = 0
@@ -692,16 +693,22 @@ enum GesSchemaBinder {
         let index = build.infos.count
         try addUnion(&build, scope, field.alternatives, field.name, path, optional: field.marker == .optional, key: top && field.marker == .key, lists)
         guard let fallback = field.defaultValue else { return }
-        if fallback.kind == .number { try checkDefault(scope, field.alternatives[0].constraints, fallback.value, fallback.offset, build.parameters) }
+        if fallback.kind == .number { try checkDefault(scope, defaultConstraints(field), fallback.value, fallback.offset, build.parameters) }
         if fallback.kind == .record { try checkRecord(scope, fallback, build.parameters) }
         build.infos[index].defaultValue = fallback
+    }
+
+    /// The constraints a number default meets: those of the field's type, or of a fixed List's element it fills.
+    private static func defaultConstraints(_ field: GesResolvedField) -> GesResolvedConstraints {
+        let type = field.alternatives[0]
+        return type.exact ? type.element![0].constraints : type.constraints
     }
 
     /// The numbers of a record literal against the bounds its parameters decide.
     private static func checkRecord(_ scope: GesFileScope, _ fallback: GesResolvedDefault, _ parameters: GesSchemaParameters?) throws {
         for entry in fallback.record?.entries ?? [] {
             if entry.value.kind == .number {
-                try checkDefault(scope, entry.field.alternatives[0].constraints, entry.value.value, entry.value.offset, parameters)
+                try checkDefault(scope, defaultConstraints(entry.field), entry.value.value, entry.value.offset, parameters)
             } else if entry.value.kind == .record {
                 try checkRecord(scope, entry.value, parameters)
             }
@@ -803,8 +810,10 @@ enum GesSchemaBinder {
             if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
             node.kind = .list
             node.maxCount = max
-            node.width = bitLength(UInt64(max))
+            node.fixed = type.exact
+            node.width = type.exact ? 0 : bitLength(UInt64(max))
             node.keyedElements = element.count == 1 && element[0].kind == .reference && element[0].reference?.fields.first?.marker == .key
+            if type.exact && node.keyedElements { throw scope.error(Code.invalidConstraint, type.offset, "A List of keyed records has a count; it cannot be fixed.") }
             node.positionWidth = bitLength(UInt64(max - 1))
             try addUnion(&build, scope, element, "[]", path + "[]", optional: false, key: false, lists + 1)
             if !build.nodes[(index + 1)...].contains(where: { $0.width > 0 || $0.optional }) { throw scope.error(Code.notEncodable, type.offset, "A List element without bits has a count that no data limits.") }
@@ -858,7 +867,7 @@ enum GesSchemaBinder {
             for field in reference.fields { try addField(&build, field.scope, field, path, lists, top: false) }
             build.levels[ObjectIdentifier(reference)] = level == 0 ? nil : level
         case .handle:
-            // The identity: the id, or a composite's root id; the version for `~`; a composite's part.
+            // The identity: the id, or a composite's root id; the version for `~`; a composite's part, if it has one.
             let handle = type.handle!
             try checkComposite(scope, handle, type.offset, build.levels)
             node.kind = .group
@@ -866,7 +875,7 @@ enum GesSchemaBinder {
             let identity = handle.root ?? handle
             try addType(&build, identity.scope, identity.id, "id", path + ".id", optional: false, key: false, lists)
             if type.versioned { try addVersion(&build, identity, path + ".version", lists) }
-            if handle.root != nil { try addType(&build, handle.scope, handle.id, "part", path + ".part", optional: false, key: false, lists) }
+            if handle.hasPart { try addType(&build, handle.scope, handle.id, "part", path + ".part", optional: false, key: false, lists) }
         case .map:
             // Entries in ascending key order, each an entry group of the key and the value.
             guard let mapKey = type.handle else {

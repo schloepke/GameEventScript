@@ -25,13 +25,14 @@ public final class GesHandleType: @unchecked Sendable {
     public let name: String
     /// The name of the state schema, without the leading `:`; empty for a store file type.
     public let stateName: String
-    /// The form of the id; nil for a composite, whose identity is its root's id and its part.
+    /// The form of the id; for a part-less composite its root's, since its identity is the root's id; nil for a composite
+    /// with a part, whose identity is its root's id and its part.
     public let id: GesHandleKey?
-    /// The form of a composite's part; nil for any other type.
+    /// The form of a composite's part; nil for a part-less composite and any other type.
     public let part: GesHandleKey?
     /// The kind of version; a composite has its root's.
     public let version: GesHandleVersionKind
-    /// The root type of a composite; nil for any other type.
+    /// The root type of a composite, with or without a part; nil for any other type.
     public internal(set) var root: GesHandleType?
     /// The handle type of the store whose files this store file type names, `:Store(@Type)`; nil for any other type
     /// (specs/Schemas.md#handles).
@@ -53,8 +54,8 @@ public final class GesHandleType: @unchecked Sendable {
         name = handle.name
         stateName = handle.state?.name ?? ""
         let key = Self.key(handle.id)
-        id = handle.root == nil ? key : nil
-        part = handle.root == nil ? nil : key
+        id = handle.hasPart ? nil : key
+        part = handle.hasPart ? key : nil
         version = handle.versionKind
         canonicalForm = GesSchemaCanonical.handleForm(handle)
         hash = GesSchemaCanonical.hash(canonicalForm)
@@ -135,8 +136,12 @@ final class GesResolvedHandle {
     var files: [GesResolvedHandle] = []
     /// The root of a composite, which is not composite itself.
     var root: GesResolvedHandle?
-    /// The id, or a composite's part.
-    var id: GesResolvedType!
+    /// The id, or a composite's part; a part-less composite has its root's id.
+    var id: GesResolvedType! {
+        get { ownId ?? root!.id }
+        set { ownId = newValue }
+    }
+    private var ownId: GesResolvedType?
     /// The type of a revision, an integer Number with an optional range.
     var revision: GesResolvedType?
     /// The link hash of the public description, kept to build it again.
@@ -151,6 +156,9 @@ final class GesResolvedHandle {
         self.syntax = syntax
     }
 
+    /// Whether a composite names a part of its root; a part-less composite is one per root and keyed by the root's id.
+    var hasPart: Bool { root != nil && syntax.id != nil }
+
     /// The declared version, or for a composite its root's.
     var versionKind: GesHandleVersionKind { root?.versionKind ?? syntax.version }
 
@@ -160,6 +168,7 @@ final class GesResolvedHandle {
         output += "handle " + name
         if let root {
             output += " composite " + root.name + "\n"
+            if !hasPart { return }
             if let store { output += "store " + store.name + "\n" }
             output += "part "
             GesSchemaCanonical.writeHandleType(id, &output)

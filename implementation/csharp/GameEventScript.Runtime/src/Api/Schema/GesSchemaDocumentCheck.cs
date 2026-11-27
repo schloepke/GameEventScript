@@ -52,6 +52,9 @@ internal sealed class GesSchemaDocumentCheck
     private readonly Dictionary<(GesResolvedType Type, GesDocumentNode Value), Made[]> _made = new();
     private readonly List<Made> _direct = new();
 
+    // The fixed List types of fields whose default fills them, which may be shorter.
+    private readonly HashSet<GesResolvedType> _filled = new();
+
     // How many records of each schema enclose the value being checked, which a recursive List counts against its depth.
     private readonly Dictionary<GesResolvedDeclaration, int> _levels = new();
 
@@ -156,6 +159,8 @@ internal sealed class GesSchemaDocumentCheck
     {
         value = Resolved(value);
         if (field.Marker == GesSchemaFieldMarker.Optional && value.Kind == GesDocumentNodeKind.Nothing) return;
+        // A fixed List with a literal default fills a shorter List of its field (specs/Schemas.md#fixed-lists).
+        if (field.Alternatives is [{ Exact: true } fixedList] && field.Default is { Kind: not GesSchemaDefaultKind.Field }) _filled.Add(fixedList);
         Union(field.Alternatives, value);
     }
 
@@ -278,6 +283,7 @@ internal sealed class GesSchemaDocumentCheck
                 Require(value, value.Kind == GesDocumentNodeKind.List);
                 if (type.Recursion is { } recursion && value.Children.Length > 0 && _levels.TryGetValue(recursion, out var reached) && reached >= type.Depth) throw Fail(TooDeep, value.Start);
                 if (type.Max is { } listMax && value.Children.Length > listMax) throw Fail(OutOfRange, value.Start);
+                if (type.Exact && value.Children.Length < type.Max!.Value && !_filled.Contains(type)) throw Fail(OutOfRange, value.Start);
                 if (type.Element is { } element)
                 {
                     for (var index = 0; index < value.Children.Length; index++)
@@ -344,7 +350,7 @@ internal sealed class GesSchemaDocumentCheck
     private void Handle(GesResolvedHandle type, bool versioned, string text, int start)
     {
         var handle = GesHandle.Parse(text);
-        if (handle.TypeName != type.Name || handle.IsComposite != (type.Root is not null)) throw Fail(FieldType, start);
+        if (handle.TypeName != type.Name || handle.IsComposite != type.HasPart) throw Fail(FieldType, start);
         var identity = type.Root ?? type;
         HandleKey(identity.Id, handle, false, start);
         if (handle.IsComposite) HandleKey(type.Id, handle, true, start);

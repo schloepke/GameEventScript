@@ -32,7 +32,8 @@ struct GesAstOptimizer {
             let minimum = field.minimum.flatMap(changed)
             let maximum = field.maximum.flatMap(changed)
             let computed = field.computed.flatMap(changed)
-            guard minimum != nil || maximum != nil || computed != nil else { return nil }
+            let fallback = field.fallback.flatMap(changed)
+            guard minimum != nil || maximum != nil || computed != nil || fallback != nil else { return nil }
             return .init(
                 name: field.name,
                 type: field.type,
@@ -40,6 +41,10 @@ struct GesAstOptimizer {
                 minimum: minimum ?? field.minimum,
                 maximum: maximum ?? field.maximum,
                 computed: computed ?? field.computed,
+                fallback: fallback ?? field.fallback,
+                elementType: field.elementType,
+                listBound: field.listBound,
+                listExact: field.listExact,
                 location: field.location
             )
         }
@@ -146,7 +151,7 @@ struct GesAstOptimizer {
     func optimizedChildren(_ kind: GesExpression.Kind) -> GesExpression.Kind? {
         switch kind {
         case .assembly, .literal, .name, .constant, .handler, .dice, .series: return nil
-        case .unary, .member, .cast, .check, .predicate: return optimizedOperand(kind)
+        case .unary, .member, .cast, .check, .predicate, .store, .storeRead: return optimizedOperand(kind)
         case .binary, .random, .seeded: return optimizedPair(kind)
         case .call, .extensionCall, .constructor, .message: return optimizedArguments(kind)
         case .between, .list, .combined, .intrinsic, .map: return optimizedItems(kind)
@@ -162,6 +167,8 @@ struct GesAstOptimizer {
         case .cast(let value, let type): return changed(value).map { .cast($0, type) }
         case .check(let value, let type): return changed(value).map { .check($0, type) }
         case .predicate(let value, let name): return value.flatMap(changed).map { .predicate($0, name) }
+        case .store(let type, let root): return root.flatMap(changed).map { .store(type, $0) }
+        case .storeRead(let type, let root, let read): return root.flatMap(changed).map { .storeRead(type, $0, read) }
         default: preconditionFailure()
         }
     }

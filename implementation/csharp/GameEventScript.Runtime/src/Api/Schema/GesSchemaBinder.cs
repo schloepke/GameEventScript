@@ -113,7 +113,8 @@ internal struct GesSchemaNode
     internal bool Packed;
     // A :Bytes max n: a Text on the wire whose bytes need not be UTF-8.
     internal bool IsBytes;
-    // Bytes of exactly MaxCount bytes without a count, such as the hash version of a handle; Width is 0.
+    // Bytes of exactly MaxCount bytes without a count, such as the hash version of a handle, or a fixed List of exactly
+    // MaxCount elements; Width is 0.
     internal bool Fixed;
     // The `depth` of a recursive List at its deepest level, which holds no element; 0 otherwise.
     internal int DepthLimit;
@@ -731,18 +732,25 @@ internal static class GesSchemaBinder
         var index = build.Nodes.Count;
         AddUnion(build, scope, field.Alternatives, field.Name, path, field.Marker == GesSchemaFieldMarker.Optional, top && field.Marker == GesSchemaFieldMarker.Key, lists);
         if (field.Default is not { } fallback) return;
-        if (fallback.Kind == GesSchemaDefaultKind.Number) CheckDefault(scope, field.Alternatives[0].Constraints, fallback.Value, fallback.Offset, Bound(build));
+        if (fallback.Kind == GesSchemaDefaultKind.Number) CheckDefault(scope, DefaultConstraints(field), fallback.Value, fallback.Offset, Bound(build));
         else if (fallback.Kind == GesSchemaDefaultKind.Record) CheckRecord(build, scope, fallback);
         var node = build.Nodes[index];
         node.Default = fallback;
         build.Nodes[index] = node;
     }
 
+    // The constraints a number default meets: those of the field's type, or of a fixed List's element it fills.
+    private static GesResolvedConstraints DefaultConstraints(GesResolvedField field)
+    {
+        var type = field.Alternatives[0];
+        return type.Exact ? type.Element![0].Constraints : type.Constraints;
+    }
+
     // The numbers of a record literal against the bounds its parameters decide.
     private static void CheckRecord(Build build, GesFileScope scope, GesResolvedDefault fallback)
     {
         foreach (var entry in fallback.Entries)
-            if (entry.Value.Kind == GesSchemaDefaultKind.Number) CheckDefault(scope, entry.Field.Alternatives[0].Constraints, entry.Value.Value, entry.Value.Offset, Bound(build));
+            if (entry.Value.Kind == GesSchemaDefaultKind.Number) CheckDefault(scope, DefaultConstraints(entry.Field), entry.Value.Value, entry.Value.Offset, Bound(build));
             else if (entry.Value.Kind == GesSchemaDefaultKind.Record) CheckRecord(build, scope, entry.Value);
     }
 
@@ -836,8 +844,10 @@ internal static class GesSchemaBinder
                 if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
                 node.Kind = GesSchemaNodeKind.List;
                 node.MaxCount = listMax;
-                node.Width = BitLength((ulong)listMax);
+                node.Fixed = type.Exact;
+                node.Width = type.Exact ? 0 : BitLength((ulong)listMax);
                 node.KeyedElements = element.Length == 1 && element[0].Kind == GesSchemaTypeKind.Reference && element[0].Reference!.Fields.Length > 0 && element[0].Reference!.Fields[0].Marker == GesSchemaFieldMarker.Key;
+                if (type.Exact && node.KeyedElements) throw scope.Error(Code.InvalidConstraint, type.Offset, "A List of keyed records has a count; it cannot be fixed.");
                 node.PositionWidth = BitLength((ulong)listMax - 1);
                 build.Nodes.Add(node);
                 AddUnion(build, scope, element, "[]", path + "[]", false, false, lists + 1);
@@ -901,7 +911,7 @@ internal static class GesSchemaBinder
                 else build.Levels[reference] = level;
                 break;
             case GesSchemaTypeKind.Handle:
-                // The identity: the id, or a composite's root id; the version for `~`; a composite's part.
+                // The identity: the id, or a composite's root id; the version for `~`; a composite's part, if it has one.
                 var handle = type.Handle!;
                 CheckComposite(scope, handle, type.Offset, build.Levels.ContainsKey);
                 node.Kind = GesSchemaNodeKind.Group;
@@ -910,7 +920,7 @@ internal static class GesSchemaBinder
                 var identity = handle.Root ?? handle;
                 AddType(build, identity.Scope, identity.Id, "id", path + ".id", false, false, lists);
                 if (type.Versioned) AddVersion(build, identity, path + ".version", lists);
-                if (handle.Root is not null) AddType(build, handle.Scope, handle.Id, "part", path + ".part", false, false, lists);
+                if (handle.HasPart) AddType(build, handle.Scope, handle.Id, "part", path + ".part", false, false, lists);
                 break;
             case GesSchemaTypeKind.Map when type.Handle is { } mapKey:
                 // Entries in ascending key order, each an entry group of the key and the value.

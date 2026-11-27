@@ -95,7 +95,8 @@ try
                 observations[id] = new { status = "ok", runtime = RuntimeObservations.Run(programs, test.GetProperty("runtime"), AdapterHandles.From(test)) };
                 continue;
             }
-            observations[id] = CompilerObservations.Success(Text(test, "kind"), AdapterCompiler.Compile(test));
+            var compiled = AdapterCompiler.Compile(test, out var warnings);
+            observations[id] = CompilerObservations.Success(Text(test, "kind"), compiled, warnings);
         }
         catch (GesCompileException exception)
         {

@@ -22,7 +22,8 @@ internal static partial class GesCompiler
             "LoadFloat" or "LoadPercentage" => "wf",
             "Jump" => "l",
             "JumpIfTrue" or "JumpIfFalse" or "JumpIfNotTrue" or "JumpIfNothing" => "rl",
-            "CastCustom" or "CheckCustomType" => "wrt",
+            "CastCustom" or "CheckCustomType" or "CountParts" or "KeysOfParts" or "ValuesOfParts" or "EntriesOfParts" => "wrt",
+            "CountStore" or "KeysOfStore" or "ValuesOfStore" or "EntriesOfStore" => "wt",
             "ParseLiteral" or "CastNumeric" or "CheckNumeric" or "CheckInteger" or "CheckFractional" or "Move" or "HasValue" or "IsEmpty" or "Not" or "Negate" or "Abs" or "LogN" or "Chance" or "Exp" or "Floor" or "Ceil" or "Truncate" or
                 "RoundHalfEven" or "RoundHalfUp" or "RoundHalfDown" or "DegreeToRadians" or "DegreeFromRadians" or "WrapDegree" or "Sin" or "Cos" or "Tan" or "Asin" or "Acos" or "Atan" or "LengthSquared" or "Normalize" or "OneRandom" or
                 "Count" or "HasAny" or "HasAll" or "KeysOfMap" or "ValuesOfMap" or "EntriesOfMap" or "First" or "Last" or "Single" or "IteratorCreate" or "Distinct" or "SortAscending" or "SortDescending" or "Reverse" or "Shuffle" or
@@ -64,6 +65,14 @@ internal static partial class GesCompiler
                 case "ParseLiteral": _builder.ParseLiteral(registers[0], registers[1]); break;
                 case "CastNumeric": _builder.CastNumeric(registers[0], registers[1]); break;
                 case "CheckCustomType": _builder.CheckCustomType(registers[0], registers[1], AssemblyText(operands[2])); break;
+                case "CountStore": AssemblyStoreRead(GameEventScript.Api.GesBytecodeOpCode.CountStore, registers[0], null, AssemblyText(operands[1])); break;
+                case "KeysOfStore": AssemblyStoreRead(GameEventScript.Api.GesBytecodeOpCode.KeysOfStore, registers[0], null, AssemblyText(operands[1])); break;
+                case "ValuesOfStore": AssemblyStoreRead(GameEventScript.Api.GesBytecodeOpCode.ValuesOfStore, registers[0], null, AssemblyText(operands[1])); break;
+                case "EntriesOfStore": AssemblyStoreRead(GameEventScript.Api.GesBytecodeOpCode.EntriesOfStore, registers[0], null, AssemblyText(operands[1])); break;
+                case "CountParts": AssemblyStoreRead(GameEventScript.Api.GesBytecodeOpCode.CountParts, registers[0], registers[1], AssemblyText(operands[2])); break;
+                case "KeysOfParts": AssemblyStoreRead(GameEventScript.Api.GesBytecodeOpCode.KeysOfParts, registers[0], registers[1], AssemblyText(operands[2])); break;
+                case "ValuesOfParts": AssemblyStoreRead(GameEventScript.Api.GesBytecodeOpCode.ValuesOfParts, registers[0], registers[1], AssemblyText(operands[2])); break;
+                case "EntriesOfParts": AssemblyStoreRead(GameEventScript.Api.GesBytecodeOpCode.EntriesOfParts, registers[0], registers[1], AssemblyText(operands[2])); break;
                 case "CheckNumeric": _builder.CheckNumeric(registers[0], registers[1]); break;
                 case "CheckInteger": _builder.CheckInteger(registers[0], registers[1]); break;
                 case "CheckFractional": _builder.CheckFractional(registers[0], registers[1]); break;

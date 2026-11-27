@@ -96,7 +96,7 @@ type        = ":Boolean"
             | ":Tag" [ tagset | "max" maximum ]
             | ":Text" [ "max" maximum ]
             | ":Bytes" [ "max" maximum ]
-            | ":List" [ "(" union ")" [ "max" maximum ] [ "depth" depth ] ]
+            | ":List" [ "(" union ")" [ ( "max" | "exactly" ) maximum ] [ "depth" depth ] ]
             | ":" TypeName
             | ":Dice" [ "max" maximum ] constraints
             | "@" TypeName [ "(" ":" TypeName ")" ] [ "~" ]
@@ -124,7 +124,7 @@ route       = ( "client" | "server" ) ( ( "sends" | "publishes" ) ( ":" TypeName
               | "owns" "@" TypeName [ "as" ":" TypeName ] [ "sending" "state" ] )
 handle      = "handle" "@" TypeName "of" ( ":" TypeName | ":Store" "(" "@" TypeName ")" )
               ( "as" "{" "id" ":" handleid sep "version" ":" version [ sep ] "}"
-              | "composite" "@" TypeName "as" "{" "part" ":" handleid [ sep ] "}" )
+              | "composite" "@" TypeName [ "as" "{" "part" ":" handleid [ sep ] "}" ] )
 handleid    = ":Number" "integer" "between" bound "and" bound | ":Text" "max" integer
 version     = ":ContentHash" | ":Hash" "(" ( "#sha256" | "#sha1" ) ")"
             | ":Number" "integer" [ "between" bound "and" bound ] | ":Nothing"
@@ -341,6 +341,7 @@ Types:
 | `:Text max n`, `:Text` | a text of at most `n` UTF-8 bytes, or any text |
 | `:Bytes max n`, `:Bytes` | at most `n` bytes, or any [Bytes](Language.md#bytes) |
 | `:List(T) max n`, `:List(T)`, `:List` | at most `n` elements of `T`, any number of them, or any elements |
+| `:List(T) exactly n` | a [fixed List](#fixed-lists) of exactly `n` elements of `T` *Since: Unreleased.* |
 | `:List(:Self) max n depth d` | a [recursive List](#recursion) of the schema that declares it, at most `d` records deep |
 | `:Dice max n between a and b`, `:Dice` | at most `n` rolls, each within the range, or any rolls |
 | `:Name` | a Record of the schema `Name` |
@@ -673,6 +674,38 @@ schema :Ground as {
   (quantity meter 0e0))`, `(boxAround …)` or `(part x (field size))`, and the field's type keeps its unit, as `computed v
   Vector(meter)`.
 
+### Fixed lists
+
+> **Since: Unreleased**
+
+`:List(T) exactly n` is a List of exactly `n` elements, such as the four wheels of a vehicle or the slots of a
+loadout; `max n` bounds a List from above only. Both are one concept: a bounded List, whose bound is written like a
+`max`, as a whole number or a let.
+
+```gess
+schema :Loadout as {
+  let slots be 4
+  wheels: :List(:Number between 0 and 1 step 0.01) exactly 4 default 1
+  weapons: :List(:Tag(#none, #laser, #rail)) exactly slots default #none
+  marks: :List(:Text max 16) exactly 2
+}
+```
+
+- **Default.** A fixed List's `default` is the element that fills it: a literal or record default of its single
+  element type, checked as that type's own default would be, as in `default 1` above; a union element takes none. A
+  value or document that leaves the field out gets `n` copies of it, and a shorter List is filled at its end. `[]`
+  on a fixed List of anything but Lists is `schema.invalidDefault`, as is any other default.
+- **Without a default** a value or document gives all `n` elements. A shorter List is `wire.tooShort` when it is
+  encoded and `document.outOfRange` when a document is checked; a longer one is `wire.tooLong` and
+  `document.outOfRange`, with or without a default.
+- **Wire.** A fixed List writes its `n` elements without a count, so `exactly 4` of a quantized element costs four
+  elements and no count bits. A typed writer begins it with exactly `n` elements; a decoder reads `n`. Its
+  [delta](#deltas) is its full encoding, as for other Lists without a key.
+- **Restrictions.** `exactly` takes no `depth`, since a recursive List ends empty at its depth, and its element is no
+  [keyed](#keyed-lists) schema, whose delta form removes and adds elements; both are `schema.invalidConstraint`.
+- **Script records** spell the same type in a [record field](Language.md#records-and-custom-types) and fill it from
+  their `default` the same way.
+
 ### Recursion
 
 > **Since: 0.5.0**
@@ -796,10 +829,16 @@ identity and the part; it has the root's version and no version of its own, so `
 `@Repository` has a version, and carries the root's version. A composite's root is a handle type that is not composite
 itself: composites have one level, and a composite of a composite is `schema.invalidHandle`.
 
+*Since: Unreleased* — part-less composites: `handle @Enemy of :EnemyState composite @Bot` without `as` declares a
+composite *without a part*: one object per root, such as the enemy view of a bot. Its identity is the root's id alone,
+its version is the root's, and it has no part, so `@Enemy~` exists exactly when `@Bot` has a version. Its handles are
+those of its own type, never equal to its root's handles; on the wire and in its text form it is written like a handle
+type that is not composite, with the root's id and version ([Language](Language.md#handles)).
+
 **Store files.** *Since: Unreleased.* `handle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 256 }`
 declares the type of the files a [store](Documents.md#stores) of `@Unit` is read from: a handle names a root, such as a
-repository at a commit, and the part is the path of a file within it. Such a *store file type* is composite, its part
-is Text, and `@Unit` is a declared handle type with a Text id that is neither composite nor a store file type itself;
+repository at a commit, and the part is the path of a file within it. Such a *store file type* is composite with a
+part, its part is Text, and `@Unit` is a declared handle type with a Text id that is neither composite nor a store file type itself;
 anything else is `schema.invalidHandle`. A store file type has no state schema: a host reads its files through the
 type's resolver as document text, never as state. It is no field, argument, List element, union alternative or Map key
 type and no network `owns` target (`schema.invalidHandle`), and scripts cannot name it: the compiler does not receive it,
@@ -1032,7 +1071,7 @@ be encoded; binding a schema that reaches another type for encoding fails with
 | `:Flags(#a, #b)` | yes | yes |
 | `:Text max n` | yes | yes |
 | `:Bytes max n` | yes | yes |
-| `:List(T) max n` with an encodable `T` | yes | yes |
+| `:List(T) max n`, `:List(T) exactly n` with an encodable `T` | yes | yes |
 | `:Poly max n` | yes | yes |
 | `:Dice max n` | yes | yes |
 | `:TypeName` with only encodable fields | yes | yes |
@@ -1057,7 +1096,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, a `max` names a let with a unit, or a computed expression combines units that have no result unit or gives another unit than its field, or a function, root or power reads a unit it does not take or a quantity's power has no literal exponent |
 | `schema.invalidRange` | a lower bound is not below its upper bound |
 | `schema.invalidStep` | a step is not positive, not exact, or a bound or delta range is no multiple of it |
-| `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field, a `max` that names a let other than a positive whole Number of at most 12 digits, a `depth` other than on a field's List of its own schema, a second `depth` in a schema, or a depth of 1 |
+| `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field, a `max` that names a let other than a positive whole Number of at most 12 digits, a `depth` other than on a field's List of its own schema, a second `depth` in a schema, or a depth of 1, or `exactly` with `depth` or on a [keyed list](#keyed-lists) |
 | `schema.notEncodable` | encoding reaches a document-only type, also when the sources are read for a [wire root](#roles) |
 | `schema.invalidKey` | a `key` breaks the [key rules](#rules), which a handle field does too |
 | `schema.invalidUnion` | a union alternative repeats a type name, also `@Name` beside `@Name~`, or has `delta within`, or a union with `:Nothing` is `optional` |
@@ -1075,7 +1114,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root with the same side and verb, or a second `owns` names the same handle type |
 | `schema.invalidHandle` | a [handle declaration](#handles) has fields other than `id` and `version` or `part`, a bound that is no literal or constant, a state that is not a declared non-abstract schema or has a field named `id`, `version` or `root`, a composite root that is composite itself, or a role; a `~` on a type without a version; a Map key other than one handle type without `~`; an `owns` route of a composite type |
 | `schema.invalidProjection` | a [projection](#projections) names a source that is no declared non-abstract, unpacked schema or projection, a field the source or a Record on a path lacks, a path through anything but a Record or into a handle, a field twice, a computed field or a field of a recursive List, or projections form a cycle; `@Name(:P)` names no projection of the handle type, a composite or store file type, or stands beside `@Name` of the same type in one union; in a network, an `owns ... as :P` whose `:P` does not narrow the state, or a route from the owner that carries the type in another view ([Network](Network.md#declaration)) *Since: Unreleased.* |
-| `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field or argument with a literal, is no literal on an argument, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
+| `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field or argument with a literal, is no literal on an argument, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a default of a [fixed List](#fixed-lists) that is no literal or record default of its single element type, a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
 `schema.invalidConstraint`, `schema.tooWide` and `schema.tooLarge` can also arise at binding,
@@ -1122,7 +1161,7 @@ GES sets no world size; only the limits apply.
 ### Largest encoding
 
 A bound schema has `MaxByteCount`, the size of its largest top-level encoding. It is computed at binding with checked arithmetic, counting every optional as
-present, every Text, Bytes, List and Dice at its `max`, and every union as its index and its largest alternative. A schema counts the larger of its largest
+present, every Text, Bytes, List and Dice at its `max` and a [fixed List](#fixed-lists) at its `n`, and every union as its index and its largest alternative. A schema counts the larger of its largest
 full record and its largest [delta](#deltas), so one buffer serves both: a Boolean's delta costs its change bit, and a field with a delta range its change bit, the
 fallback bit and the larger of both widths. It may be at most 67 108 864 bytes (64 MiB), enough for 16 million packed records of 32 bits.
 Exceeding this, or an overflow while computing it, fails binding with `schema.tooLarge`.
@@ -1192,7 +1231,7 @@ part <type>
 ```
 
 A [handle type](#handles) is a declaration reached like a schema: its `handle` line, then `id` and `version`, or for a
-composite `part` followed by its root's declaration when first reached. Its state schema is not written. `<version>` is
+composite `part`, which a part-less composite omits, followed by its root's declaration when first reached. Its state schema is not written. `<version>` is
 `Nothing`, `ContentHash`, `Hash(#sha256)`, `Hash(#sha1)` or `Number integer` with an optional range. The *handle hash*
 of a type is FNV-1a 64 over `gess1` and its declarations, so the [network hash](Network.md#network-hash) can name it.
 A [store file type](#handles) writes the `store` line with the name of its store's handle type after its `handle`
@@ -1240,7 +1279,7 @@ The variable of a projection is not written, so renaming it keeps the hash.
 | `:Text max n`, `:Text` | `Text max <n>`, `Text` |
 | `:Bytes max n`, `:Bytes` | `Bytes max <n>`, `Bytes` |
 | `:Dice max n between a and b`, `:Dice` | `Dice max <n> between <a> <b>`, each part only when written; `Dice` |
-| `:List(T) max n` | `List(<T>) max <n>`; `List(<T>)` and `List` without `max` or `T`; ` depth <d>` follows a [recursive List](#recursion) |
+| `:List(T) max n`, `:List(T) exactly n` | `List(<T>) max <n>`, `List(<T>) exactly <n>`; `List(<T>)` and `List` without `max` or `T`; ` depth <d>` follows a [recursive List](#recursion) |
 | `:TypeName`, `:Map`, ... | `TypeName`, `Map`, ... |
 | `@Name`, `@Name~` | `@Name`, `@Name~` |
 | `@Name(:P)`, `@Name(:P)~` | `@Name(P)`, `@Name(P)~` *Since: Unreleased.* |
@@ -1361,12 +1400,13 @@ caller owns the mapping from keys to objects. Message arguments have no key. A
 | `:Text max n` | UTF-8 byte count, `width(n + 1)` bits, then the bytes |
 | `:Bytes max n` | as `:Text max n`: the byte count, then the bytes, which need not be UTF-8 |
 | `:List(T) max n` | element count, `width(n + 1)` bits, then the elements; at the depth of a [recursive List](#recursion) nothing |
+| `:List(T) exactly n` | the `n` elements, without a count |
 | `:Dice max n` | roll count, `width(n + 1)` bits, then each roll as an `integer` of its range, `1` to `2^31 - 1` without one. The [value path](#value-path) writes them in descending order and a typed writer in the order of its caller; a decoder accepts any order, since creating a Dice sorts its rolls |
 | union of `n` alternatives | index in declared order, `width(n)` bits, then the alternative |
 | `:Nothing` as an alternative | no bits |
 | `:TypeName` | its fields inline |
-| `@Name` | the id, as its `integer` or `:Text max n`; for a composite the root's id, then the part |
-| `@Name~` | the id, then the version: a `:Number integer` revision as such, a hash as its 160 or 256 bits, one byte after the other; for a composite the root's id and version, then the part |
+| `@Name` | the id, as its `integer` or `:Text max n`; for a composite the root's id, then the part if it has one |
+| `@Name~` | the id, then the version: a `:Number integer` revision as such, a hash as its 160 or 256 bits, one byte after the other; for a composite the root's id and version, then the part if it has one |
 | `:Map(@Name → T) max n` | entry count, `width(n + 1)` bits, then for each entry in ascending [key order](Language.md#handles) the key as `@Name` and the value |
 
 `max` counts UTF-8 bytes for Text, characters for a Tag, which is ASCII, elements for a List,
@@ -1728,7 +1768,8 @@ complete:
 | `wire.missingVersion` | an `@Name~` field receives a handle without a version *Since: Unreleased.* |
 | `wire.unresolvedRef` | a handle that still holds a [ref](Language.md#handles) reaches the wire; only documents and the host API hold refs *Since: Unreleased.* |
 | `wire.invalidTag` | a typed writer gives a `:Tag max n` no valid tag name |
-| `wire.tooLong` | a Text, Bytes, Tag, List or Dice exceeds its `max` |
+| `wire.tooLong` | a Text, Bytes, Tag, List or Dice exceeds its `max`, or a [fixed List](#fixed-lists) has more than `n` elements |
+| `wire.tooShort` | a [fixed List](#fixed-lists) has fewer than `n` elements and no default fills it, or a typed writer begins it with fewer *Since: Unreleased.* |
 | `wire.tooDeep` | a [recursive List](#recursion) holds a record at its depth; the message names the depth |
 | `wire.bufferTooSmall` | the caller's buffer is too small |
 | `wire.fieldOrder` | a typed writer or reader uses a field out of order |
@@ -1782,7 +1823,8 @@ to a `GesSchema`, which ignores it, and takes optional parameters.
   one schema no other schema of it refers to, which is the root. A reference from a message
   or a [recursive](#recursion) schema's reference to itself does not count. Without such a source or root the check fails with `schema.unknownName`.
 - Errors use document positions: `document.missingField`, `document.unknownField`,
-  `document.fieldType`, `document.outOfRange`, `document.tooDeep` for a non-empty
+  `document.fieldType`, `document.outOfRange`, also for a [fixed List](#fixed-lists) of more elements or, without a
+  default, fewer, `document.tooDeep` for a non-empty
   [recursive List](#recursion) at its depth, and `document.unexpectedVersion` for a version or ref on a handle that
   takes none. Units are not cast implicitly.
 - An explicit form counts as the value it constructs, so `:Number(3, 'm')` checks like `3m`.
@@ -1887,8 +1929,8 @@ var positionX = reader.ReadNumber(x);                             // double, wit
   the `[]` handle. `BeginNested` enters a nested schema, Point, Vector, Box, corner of a Box (`area.lower`) or point of
   a Poly. There is no end call: the cursor knows where a list or nesting ends.
 - A handle field is entered with `BeginNested`; its parts follow as `target.id`, `target.version` for `@Name~` (an
-  `Integer` revision or the hash as `Bytes` of exactly 20 or 32 bytes) and `target.part` for a composite, where `id` is
-  the root's id. A handle Map is a list whose element `lastSeen[]` is entered with `BeginNested` and holds
+  `Integer` revision or the hash as `Bytes` of exactly 20 or 32 bytes) and `target.part` for a composite with a part,
+  where `id` is the root's id. A handle Map is a list whose element `lastSeen[]` is entered with `BeginNested` and holds
   `lastSeen[].key`, a handle, and `lastSeen[].value`; the writer and reader leave the key order to the caller. A handle
   alternative of a union is `subject:@Drone`. *Since: Unreleased.*
 - `WriteAbsent` marks an `optional` field as absent; any other write sets its presence bit.
@@ -2063,7 +2105,7 @@ decoded value, and ends with the first error, its field path and bit offset; inv
 gives exit code 1. Its text is the same in every port. Each field is one line,
 `<path> bit=<offset> width=<bits> value=<value>`, whose width includes a presence bit. The value
 is `true` or `false`, a number, a quoted Text, the [Bytes literal](Language.md#bytes) `:Bytes("…")`, `#<tag> index=<i>`, `#<tag>` for a `:Tag max n`, the set members as `#<member>` separated by spaces, or `none`, then
-` mask=<mask>` for Flags, `count=<n>` for a List or Dice,
+` mask=<mask>` for Flags, `count=<n>` for a List or Dice (a [fixed List](#fixed-lists) writes no count, so its width is 0),
 `<alternative> index=<i>` for a union, with the type name of the alternative, or `absent`. A nested
 schema, Point, Vector, Box, Box corner, Disc or Disc centre has no line of its own, only its fields; a Poly has the line of a List. A message set starts with
 the lines of its [parameters](#set-parameters), then `message <name> index=<i>`. A valid record ends with `bytes <n>`, an invalid one with
@@ -2559,8 +2601,10 @@ must reach the same handle types:
 | `@Unit`, content hash | `struct UnitHandle { let id: String; let version: GesHash32? }` | `readonly struct UnitHandle { string Id; GesHash32? Version }` |
 | `@Repository`, SHA-1 | `struct RepositoryHandle { let id: String; let version: GesHash20? }` | `readonly struct RepositoryHandle { string Id; GesHash20? Version }` |
 | `@UnitFile`, composite | `struct UnitFileHandle { let root: RepositoryHandle; let part: String; var version: GesHash20? }` | `readonly struct UnitFileHandle { RepositoryHandle Root; string Part; GesHash20? Version }` |
+| `@Enemy`, composite of `@Drone` without a part | `struct EnemyHandle { let id: Int; let version: Int? }` | `readonly struct EnemyHandle { long Id; long? Version }` |
 
-A type without a version has no `version` property, and a composite's `version` reads its root's. Swift types are
+A type without a version has no `version` property, and a composite's `version` reads its root's. A part-less
+composite holds its root's id and version itself and reaches no `<Name>Handle` of its root. Swift types are
 `Hashable`, `Comparable`, `Sendable` and `Codable`; C# types implement `IEquatable<T>`, `IComparable<T>`, `==` and `!=`.
 Equality, hashing and order use the identity only, as in [scripts](Language.md#handles), so two handles of one object
 with different versions are equal. A constructor checks the id or part against its range or `max` and throws, as does
@@ -2877,7 +2921,7 @@ fields `computed` as in the generation layout, and `takes`, the schemas it takes
 protocols it refines) and `fields` (the shared fields it requires besides those). A field has
 `name`, `path`, `optional`, `key`, `default` as in the generation layout when it has one, and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
-`tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max`, `depth` only for a [recursive List](#recursion), and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
+`tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max`, `fixed` (`true`) only for a [fixed List](#fixed-lists), `depth` only for a [recursive List](#recursion), and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
 `vector` add `unit` and `axes` (the names of an axis block), so do `box` and `disc`, whose axes may name `radius`, `poly` adds `unit`, `axes` and `max`, `schema` adds `name`, `union` adds `alternatives`, `handle` adds `name` and `versioned`, and `handleMap` adds `key`, the
 handle type, `max` and `value`, a field named `[]` (*Since: Unreleased* — handles);
 `boolean`, `nothing`, `map` and `values`, a `:List` without an element type, have none. A missing `max` is `null`.
@@ -2885,7 +2929,7 @@ A [model message](#model-message-sets) is a type with `kind` `message`, its argu
 set one with `kind` `messages`, its parameters as `fields` when it has any and `members`; schema types have `kind`
 `schema`, which only a generation with a model set writes. *Since: Unreleased.* When a type reaches a handle type, the layout adds `handles` last, ordered by name, each with `name`, `hash`,
 `state`, `version` (`none`, `revision`, `sha1`, `sha256` or `contentHash`) and either `id` or, for a composite, `root`
-and `part`, a key with `kind` `integer` and `lower` and `upper` or `kind` `text` and `max`. *Since: Unreleased* — handles.
+and `part`, for a part-less composite `root` and `id`, a key with `kind` `integer` and `lower` and `upper` or `kind` `text` and `max`. *Since: Unreleased* — handles.
 *Since: Unreleased* — projections: a [projection](#projections) type adds `conversions` after `takes`, one per source the
 generation declares, nearest first, each with `source` and `paths`, the path of every taken field from that source's root
 as `.`-joined field names in field order; a handle adds `projections`, the generated projections of its state, ordered by
@@ -2914,7 +2958,7 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   name; the state is a type of the layout only when a root reaches it otherwise, since the wire carries only the identity
   and a state need not be encodable), `id` (an `integer` or `text` encoding) and `version` (`kind` `none`, `revision`
   with the `integer` encoding, `sha1`, `sha256` or `contentHash`), or for a composite `root` and `part` instead of `id`
-  and `version`. *Since: Unreleased.*
+  and `version`; a part-less composite writes `root` before its root's `id` and `version`. *Since: Unreleased.*
 - A parameter has `name`, `type` (`Number`, `Quantity` or `Percentage`), `unit` (the portable
   unit name, or `none`) and `value`, the exact decimal of its value in base units as the binding
   hash spells it. Parameters are reached by any root and ordered by name.
@@ -2954,8 +2998,8 @@ any, then `members` and `memberWidth`; a schema
   - `flags`: `tags`, the members without `#`, and `width`, their count.
   - `text`: `tagName` for a `:Tag max n`, `maxCount` and `width`.
   - `bytes`: `maxCount` and `width`.
-  - `list`: `dice`, `maxCount`, `width`, `keyed`, `positionWidth`, `depth` only for a [recursive List](#recursion),
-    and `element`.
+  - `list`: `dice`, `maxCount`, `width`, `fixed` (`true`) only for a [fixed List](#fixed-lists), whose `width` is 0,
+    `keyed`, `positionWidth`, `depth` only for a [recursive List](#recursion), and `element`.
   - `point` and `vector`: `unit` and `axes`, the transmitted axes in order x, y, z.
   - `box`: `unit` and `corners`, the fields `lower` and `upper`, each a `point`.
   - `poly`: `unit`, `maxCount`, `width` and `element`, a `point` field with the axes x and y.

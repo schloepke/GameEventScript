@@ -38,6 +38,7 @@ enum GesSchemaLayoutJson {
                     json.key("part")
                     encoding(&json, handle.part!)
                 } else {
+                    if !handle.partlessRoot.isEmpty { json.string("root", handle.partlessRoot) }
                     json.key("id")
                     encoding(&json, handle.id!)
                     json.key("version")
@@ -256,6 +257,7 @@ enum GesSchemaLayoutJson {
         case .list:
             json.boolean("dice", encoding.dice)
             json.number("maxCount", encoding.maxCount)
+            if encoding.fixed { json.boolean("fixed", true) }
             json.number("width", Int64(encoding.width))
             json.boolean("keyed", encoding.keyed)
             json.number("positionWidth", Int64(encoding.positionWidth))

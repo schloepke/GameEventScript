@@ -1452,3 +1452,185 @@ steps:
                 - key: ready
                   value: { type: ":Boolean", value: true }
 ```
+
+---
+
+## Test: record-field-defaults-fill-left-out-arguments
+
+A field with `default` takes its default when its constructor argument is left out or gives nothing, in a static call,
+a Map cast and `parse`; the default sees earlier fields, is cast and clamped like an argument, and a given argument
+keeps its value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: record-field-defaults-fill-left-out-arguments
+kind: scriptApi
+level: atomic
+sources:
+  - name: "record field defaults fill left out arguments.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module recordfielddefaults
+record :Wave as {
+  origin: :Number,
+  bearing: :Number clamped between 0 and 360 default 400,
+  range: :Number default origin * 2,
+  name: :Text default 'w' + 'ave'
+}
+
+on Start {
+  let left be :Wave(origin: 1)
+  let given be :Wave(origin: 2, bearing: 10, range: 5, name: nothing)
+  let cast be [origin: 3] as :Wave
+  let parsed be parse ':Wave(origin: 4)'
+  emit Waves(left: left, given: given, cast: cast, parsed: parsed)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: "Waves"
+        args:
+          - name: "left"
+            value:
+              type: ":Wave"
+              entries:
+                - { key: bearing, value: { type: ":Number.int64", value: "360" } }
+                - { key: name, value: { type: ":Text", value: "wave" } }
+                - { key: origin, value: { type: ":Number.int64", value: "1" } }
+                - { key: range, value: { type: ":Number.int64", value: "2" } }
+          - name: "given"
+            value:
+              type: ":Wave"
+              entries:
+                - { key: bearing, value: { type: ":Number.int64", value: "10" } }
+                - { key: name, value: { type: ":Text", value: "wave" } }
+                - { key: origin, value: { type: ":Number.int64", value: "2" } }
+                - { key: range, value: { type: ":Number.int64", value: "5" } }
+          - name: "cast"
+            value:
+              type: ":Wave"
+              entries:
+                - { key: bearing, value: { type: ":Number.int64", value: "360" } }
+                - { key: name, value: { type: ":Text", value: "wave" } }
+                - { key: origin, value: { type: ":Number.int64", value: "3" } }
+                - { key: range, value: { type: ":Number.int64", value: "6" } }
+          - name: "parsed"
+            value:
+              type: ":Wave"
+              entries:
+                - { key: bearing, value: { type: ":Number.int64", value: "360" } }
+                - { key: name, value: { type: ":Text", value: "wave" } }
+                - { key: origin, value: { type: ":Number.int64", value: "4" } }
+                - { key: range, value: { type: ":Number.int64", value: "8" } }
+```
+
+---
+
+## Test: record-list-fields-bound-and-fill
+
+A `:List(T)` field casts each element to `T`; `max n` rejects a longer List and `exactly n` pads a shorter one with its
+fill element, the cast default. A List that is too long, or an element that does not convert, makes the field nothing,
+in a static call, a Map cast and `parse` alike.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: record-list-fields-bound-and-fill
+kind: scriptApi
+level: atomic
+sources:
+  - name: "record list fields bound and fill.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module recordlistfields
+record :Grid as {
+  cells: :List(:Number) exactly 3 default 1,
+  tags: :List(:Text) max 2 default []
+}
+
+on Start {
+  let filled be :Grid(cells: [5], tags: ['a'])
+  let omitted be :Grid()
+  let tooLong be :Grid(cells: [1, 2, 3, 4], tags: ['a', 'b', 'c'])
+  let cast be :Grid(cells: ['7', 8], tags: [1])
+  let map be [cells: [2, 2, 2], tags: ['z']] as :Grid
+  let parsed be parse ':Grid(cells: [3])'
+  emit Grids(filled: filled, omitted: omitted, tooLong: tooLong, cast: cast, map: map, parsed: parsed)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: "Grids"
+        args:
+          - name: "filled"
+            value:
+              type: ":Grid"
+              entries:
+                - { key: cells, value: { type: ":List", items: [{ type: ":Number.int64", value: "5" }, { type: ":Number.int64", value: "1" }, { type: ":Number.int64", value: "1" }] } }
+                - { key: tags, value: { type: ":List", items: [{ type: ":Text", value: "a" }] } }
+          - name: "omitted"
+            value:
+              type: ":Grid"
+              entries:
+                - { key: cells, value: { type: ":List", items: [{ type: ":Number.int64", value: "1" }, { type: ":Number.int64", value: "1" }, { type: ":Number.int64", value: "1" }] } }
+                - { key: tags, value: { type: ":List", items: [] } }
+          - name: "tooLong"
+            value:
+              type: ":Grid"
+              entries:
+                - { key: cells, value: { type: ":Nothing" } }
+                - { key: tags, value: { type: ":Nothing" } }
+          - name: "cast"
+            value:
+              type: ":Grid"
+              entries:
+                - { key: cells, value: { type: ":List", items: [{ type: ":Number.int64", value: "7" }, { type: ":Number.int64", value: "8" }, { type: ":Number.int64", value: "1" }] } }
+                - { key: tags, value: { type: ":List", items: [{ type: ":Text", value: "1" }] } }
+          - name: "map"
+            value:
+              type: ":Grid"
+              entries:
+                - { key: cells, value: { type: ":List", items: [{ type: ":Number.int64", value: "2" }, { type: ":Number.int64", value: "2" }, { type: ":Number.int64", value: "2" }] } }
+                - { key: tags, value: { type: ":List", items: [{ type: ":Text", value: "z" }] } }
+          - name: "parsed"
+            value:
+              type: ":Grid"
+              entries:
+                - { key: cells, value: { type: ":List", items: [{ type: ":Number.int64", value: "3" }, { type: ":Number.int64", value: "1" }, { type: ":Number.int64", value: "1" }] } }
+                - { key: tags, value: { type: ":List", items: [] } }
+```

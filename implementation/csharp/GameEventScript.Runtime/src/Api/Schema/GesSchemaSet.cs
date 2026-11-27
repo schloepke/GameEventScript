@@ -435,6 +435,9 @@ internal sealed class GesResolvedType
 
     internal long? Max { get; init; }
 
+    // Whether a List was written `exactly n`: it always holds Max elements (specs/Schemas.md#fixed-lists).
+    internal bool Exact { get; init; }
+
     internal GesResolvedType[]? Element { get; init; }
 
     // The `depth` of a List whose element is the schema that declares it: how many records of it nest; 0 without one.
@@ -695,7 +698,8 @@ internal sealed partial class GesFileScope
                 handle.Root = root;
             }
 
-            handle.Id = ResolveType(syntax.Id!, all);
+            if (syntax.Id is null) continue;
+            handle.Id = ResolveType(syntax.Id, all);
             if (handle.Id.Kind == GesSchemaTypeKind.Number)
                 foreach (var bound in new[] { handle.Id.Constraints.Lower!, handle.Id.Constraints.Upper! })
                     if (bound.IsParameter) throw Error(Code.InvalidHandle, bound.Offset, "A handle type's bounds are literals or constants, never parameters.");
@@ -712,7 +716,9 @@ internal sealed partial class GesFileScope
         var syntax = handle.Syntax;
         if (syntax.Root.Length == 0)
             throw Error(Code.InvalidHandle, syntax.StoreOffset, $"The store file type '@{handle.Name}' is no composite; it names the files of a root.");
-        if (syntax.Id!.Kind != GesSchemaTypeKind.Text)
+        if (syntax.Id is null)
+            throw Error(Code.InvalidHandle, syntax.RootOffset, $"The store file type '@{handle.Name}' has no part; it names a file of a root by its path.");
+        if (syntax.Id.Kind != GesSchemaTypeKind.Text)
             throw Error(Code.InvalidHandle, syntax.Id.Offset, $"The part of the store file type '@{handle.Name}' is a path, a :Text with max.");
         var target = Handle(syntax.Store, syntax.StoreOffset);
         if (target.Syntax.Store.Length > 0 || target.Syntax.Root.Length > 0 || target.Syntax.Id!.Kind != GesSchemaTypeKind.Text)
@@ -1038,6 +1044,11 @@ internal sealed partial class GesFileScope
     {
         switch (type.Kind)
         {
+            // A fixed List fills its missing elements with the default of its single element type.
+            case GesSchemaTypeKind.List when type.Exact:
+                if (type.Element is not [{ } element])
+                    throw Error(Code.InvalidDefault, written.Offset, "A fixed List takes its default for its single element type.");
+                return ResolveDefault(element, written);
             case GesSchemaTypeKind.Boolean when written.Boolean is { } boolean:
                 return new GesResolvedDefault { Kind = GesSchemaDefaultKind.Boolean, Boolean = boolean, Offset = written.Offset };
             case GesSchemaTypeKind.Tag when written.Tag is { } tag:
@@ -1268,6 +1279,7 @@ internal sealed partial class GesFileScope
 
         var max = type.MaxName.Length > 0 ? LetMax(type) : type.Max;
         if (max is <= 0) throw Error(Code.InvalidConstraint, type.Offset, "A maximum is positive.");
+        if (type.Exact && type.Depth > 0) throw Error(Code.InvalidConstraint, type.DepthOffset, "A fixed List takes no depth.");
         if (type.Kind == GesSchemaTypeKind.Dice && (type.Constraints.Integer || type.Constraints.Wrapping || type.Constraints.Step is not null || type.Constraints.Delta is not null))
             throw Error(Code.InvalidConstraint, type.Offset, "A Dice has only a range.");
         GesResolvedAxis[]? axes = null;
@@ -1292,6 +1304,7 @@ internal sealed partial class GesFileScope
             Unit = type.Unit,
             Tags = type.Tags,
             Max = max,
+            Exact = type.Exact,
             Element = type.Element is { } element ? ResolveUnion(element, all) : null,
             Depth = type.Depth,
             Constraints = constraints,
@@ -1601,7 +1614,7 @@ internal static class GesSchemaCanonical
                 builder.Append("List(");
                 if (!DefaultType(element, builder)) return false;
                 builder.Append(')');
-                if (type.Max is { } max) builder.Append(" max ").Append(max);
+                if (type.Max is { } max) builder.Append(type.Exact ? " exactly " : " max ").Append(max);
                 if (type.Depth > 0) builder.Append(" depth ").Append(type.Depth);
                 return true;
             case GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Dice:
@@ -1716,7 +1729,7 @@ internal static class GesSchemaCanonical
                     builder.Append(')');
                 }
 
-                if (type.Max is { } listMax) builder.Append(" max ").Append(listMax);
+                if (type.Max is { } listMax) builder.Append(type.Exact ? " exactly " : " max ").Append(listMax);
                 if (type.Depth > 0) builder.Append(" depth ").Append(type.Depth);
                 break;
             case GesSchemaTypeKind.Reference:

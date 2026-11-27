@@ -106,7 +106,9 @@ internal sealed partial class GesBinaryBuilder
         internal static bool HasDirectEffects(InstructionPlan instruction)
         {
             // Dynamic external-field access can call host code. Without a purity contract it is conservative, like an extension call.
-            if (instruction.OpCode is OpCode.MemberAccess or OpCode.PropertyAccess or OpCode.KeysOfMap or OpCode.ValuesOfMap or OpCode.EntriesOfMap) return true;
+            if (instruction.OpCode is OpCode.MemberAccess or OpCode.PropertyAccess or OpCode.KeysOfMap or OpCode.ValuesOfMap or OpCode.EntriesOfMap or
+                OpCode.CountStore or OpCode.KeysOfStore or OpCode.ValuesOfStore or OpCode.EntriesOfStore or OpCode.CountParts or OpCode.KeysOfParts or OpCode.ValuesOfParts or OpCode.EntriesOfParts)
+                return true;
             if (instruction.OpCode == OpCode.Cast) return instruction.Y.Kind != GesOperandKind.Type || instruction.Y.TypeKind == GesBytecodeTypeKind.Map;
             if (CanDiscardResult(instruction.OpCode)) return false;
 
@@ -141,7 +143,8 @@ internal sealed partial class GesBinaryBuilder
                     OpCode.AngleBetween2D or OpCode.AngleBetween3D or OpCode.TakeFirst or OpCode.DropFirst or OpCode.TakeLast or OpCode.DropLast or OpCode.TakeHighest or OpCode.TakeLowest or OpCode.DropHighest or OpCode.DropLowest or
                     OpCode.Count or OpCode.StartsWith or OpCode.EndsWith or OpCode.Contains or OpCode.ContainsAny or OpCode.ContainsAll or OpCode.HasAny or OpCode.HasAll or OpCode.ContainsValue or OpCode.Union or OpCode.Intersect or
                     OpCode.Zip or OpCode.KeysOfMap or OpCode.ValuesOfMap or OpCode.EntriesOfMap or OpCode.First or OpCode.Last or OpCode.Single or OpCode.IteratorCreate or OpCode.Distinct or OpCode.SortAscending or OpCode.SortDescending or
-                    OpCode.Reverse or OpCode.HasPattern or OpCode.TakePattern => true,
+                    OpCode.Reverse or OpCode.HasPattern or OpCode.TakePattern or OpCode.CountStore or OpCode.KeysOfStore or OpCode.ValuesOfStore or OpCode.EntriesOfStore or OpCode.CountParts or
+                    OpCode.KeysOfParts or OpCode.ValuesOfParts or OpCode.EntriesOfParts => true,
                 _ => false
             };
         }

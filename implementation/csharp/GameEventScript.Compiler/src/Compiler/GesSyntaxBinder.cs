@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
@@ -309,6 +310,19 @@ internal sealed partial class GesSyntaxBinder
         c.Expect(Colon);
         c.SkipNewLines();
         var typeName = BindTypeName(c.TakeNode(NodeKind.TypeReference));
+        string? elementTypeName = null;
+        long listBound = 0;
+        var listExact = false;
+        if (c.Match(LeftParen))
+        {
+            c.SkipNewLines();
+            elementTypeName = BindTypeName(c.TakeNode(NodeKind.TypeReference));
+            c.SkipNewLines();
+            c.Expect(RightParen);
+            listExact = c.MatchWord("exactly");
+            if (listExact || c.Match(Max)) listBound = long.Parse(c.Expect(Float).Text, NumberStyles.None, CultureInfo.InvariantCulture);
+        }
+
         c.SkipNewLines();
 
         GesExpressionNode? minimum = null;
@@ -323,6 +337,14 @@ internal sealed partial class GesSyntaxBinder
             c.SkipNewLines();
         }
 
+        GesExpressionNode? fallback = null;
+        if (c.Match(Default))
+        {
+            c.SkipNewLines();
+            fallback = Operand(ref c);
+            c.SkipNewLines();
+        }
+
         if (c.MatchWord("computed"))
         {
             c.ExpectWord("by");
@@ -330,7 +352,7 @@ internal sealed partial class GesSyntaxBinder
         }
 
         var constructorLabel = computed is null ? unlabeled ? GesMessageSignature.UnlabeledParameterName : name : null;
-        return Set(new GesTypeFieldDefinitionNode(name, typeName, minimum, maximum, computed, constructorLabel), start, c.Previous);
+        return Set(new GesTypeFieldDefinitionNode(name, typeName, minimum, maximum, computed, constructorLabel, fallback, elementTypeName, listBound, listExact), start, c.Previous);
     }
 
     private GesPredicateDefinitionNode BindPredicate(GesSyntaxNode node)

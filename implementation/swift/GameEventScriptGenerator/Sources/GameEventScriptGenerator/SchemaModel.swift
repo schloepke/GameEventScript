@@ -59,10 +59,12 @@ struct GesModelHandle {
     var state = ""
     var version = GesHandleVersionKind.none
 
-    // The id of a plain handle type, or the part and the root's name of a composite.
+    // The id of a plain handle type, or the part and the root's name of a composite. A part-less composite has its root's
+    // id and version as its own and builds like a plain handle; partlessRoot names its root.
     var id: GesHandleKey?
     var root: String?
     var part: GesHandleKey?
+    var partlessRoot: String?
 
     // The projections of the state that the layout holds, by name.
     var projections: [String] = []
@@ -73,7 +75,16 @@ struct GesModelHandle {
     var key: GesHandleKey { (isComposite ? part : id)! }
 
     static func of(_ handle: GesHandleType) -> GesModelHandle {
-        GesModelHandle(name: handle.name, hash: handle.hash, state: handle.stateName, version: handle.version, id: handle.id, root: handle.root?.name, part: handle.part)
+        GesModelHandle(
+            name: handle.name,
+            hash: handle.hash,
+            state: handle.stateName,
+            version: handle.version,
+            id: handle.id,
+            root: handle.part == nil ? nil : handle.root?.name,
+            part: handle.part,
+            partlessRoot: handle.part == nil ? handle.root?.name : nil
+        )
     }
 }
 
@@ -125,6 +136,8 @@ final class GesModelValue {
     var tags: [String] = []
     var tagSet = ""
     var max: Int64?
+    // A List of exactly max elements.
+    var fixed = false
     var element: GesModelField?
     // The depth of a recursive List, 0 for every other List.
     var depth = 0
@@ -419,6 +432,7 @@ enum GesModelLayoutBuilder {
         case .list where !type.element.isEmpty:
             value.kind = .list
             value.max = type.max
+            value.fixed = type.isExact
             value.depth = type.depth
             value.element = try field("[]", path + "[]", type.element)
         case .list:
@@ -532,6 +546,7 @@ enum GesModelLayoutJson {
                     json.key("part")
                     key(&json, handle.part!)
                 } else {
+                    if let partless = handle.partlessRoot { json.string("root", partless) }
                     json.key("id")
                     key(&json, handle.id!)
                 }
@@ -594,6 +609,7 @@ enum GesModelLayoutJson {
             optional(&json, "max", value.max)
         case .list:
             optional(&json, "max", value.max)
+            if value.fixed { json.boolean("fixed", true) }
             if value.depth > 0 { json.number("depth", Int64(value.depth)) }
             json.key("element")
             field(&json, value.element!, member: false, value: true)

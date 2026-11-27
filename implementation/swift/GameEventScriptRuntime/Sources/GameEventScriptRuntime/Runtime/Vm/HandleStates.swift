@@ -221,6 +221,22 @@ enum GesHandleStates {
         }
     }
 
+    // Asks the resolver for the handles of the store or of one root's parts; nil for a type that does not enumerate.
+    static func handles(_ binding: GesHandleBinding, _ root: GesHandle?) throws -> [GesHandle]? {
+        do {
+            return try binding.resolver.handles(root: root)
+        } catch let fault as any GesFatalRuntimeError {
+            throw fault
+        } catch {
+            throw fault(GesDiagnosticCodes.runtimeHandleResolveFailed, "The resolver of @\(binding.type.name) failed to list its handles.", "@" + binding.type.name, error)
+        }
+    }
+
+    // A list of handles the resolver gave that the store read cannot use.
+    static func invalidHandles(_ type: GesHandleType, _ reason: String) -> GesRuntimeError {
+        fault(GesDiagnosticCodes.runtimeHandleResolveFailed, "The resolver of @\(type.name) listed \(reason).", "@" + type.name)
+    }
+
     private static func fault(_ code: String, _ message: String, _ symbol: String, _ inner: (any Error)? = nil) -> GesRuntimeError {
         GesRuntimeError(diagnostic: .init(phase: .runtime, code: code, message: message, symbol: symbol, technicalDetails: inner.map { String(describing: $0) }))
     }

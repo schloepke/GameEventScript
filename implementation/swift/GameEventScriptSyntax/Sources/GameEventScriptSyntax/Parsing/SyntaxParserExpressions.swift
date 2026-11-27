@@ -585,6 +585,7 @@ extension GesSyntaxParser {
             guard next < tokens.count, tokens[next].isIdentifier("dice") else { throw unexpectedToken(current) }
             return try diceRoll()
         case .typeName: return try typeExpression()
+        case .handleTypeName: return try storeExpression()
         case .identifier where current.isIdentifier("from"):
             startNode(.rangeExpression)
             advanceKeyword()
@@ -635,6 +636,19 @@ extension GesSyntaxParser {
         result.depth += 1
         if result.depth > 32 { throw nestingLimit(result.start, result.end) }
         return finishNode(result)
+    }
+
+    // `@X` is the store of a handle type and `@X(root)` the parts of one root (specs/Language.md#stores).
+    func storeExpression() throws -> Expression {
+        startNode(.storeExpression)
+        advance()
+        let start = previousIndex
+        if !match(.leftParen) { return finishNode(try node(start)) }
+        newlines()
+        _ = try expression()
+        newlines()
+        try expect(.rightParen)
+        return finishNode(try node(start))
     }
 
     func randomExpression() throws -> Expression {

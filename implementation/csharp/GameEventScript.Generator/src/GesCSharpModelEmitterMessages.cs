@@ -37,7 +37,7 @@ internal static partial class GesCSharpModelEmitter
         while (trailing > 0 && (fields[trailing - 1].Field.Default is not null || Absent(fields[trailing - 1]))) trailing--;
         // A record default or an empty typed List is no constant, so a trailing parameter of one is null for it; free
         // data is a struct whose default value is empty.
-        bool RecordDefault(int index) => index >= trailing && fields[index].Field.Default is { Kind: GesSchemaDefaultKind.Record or GesSchemaDefaultKind.Empty } && !IsData(fields[index].Value);
+        bool RecordDefault(int index) => index >= trailing && (fields[index].Field.Default is { Kind: GesSchemaDefaultKind.Record or GesSchemaDefaultKind.Empty } || GesModelPlanner.Fill(fields[index].Value, fields[index].Field.Default)) && !IsData(fields[index].Value);
         var documentation = new List<string>();
         var parameters = new List<string>();
         for (var index = 0; index < fields.Count; index++)

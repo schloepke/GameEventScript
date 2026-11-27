@@ -82,10 +82,12 @@ internal sealed class GesModelHandle
     internal string State = "";
     internal GesHandleVersionKind Version;
 
-    // The id of a plain handle type, or the part and the root's name of a composite.
+    // The id of a plain handle type, or the part and the root's name of a composite. A part-less composite has its root's
+    // id and version as its own and builds like a plain handle; PartlessRoot names its root.
     internal GesHandleKey Id;
     internal string? Root;
     internal GesHandleKey Part;
+    internal string? PartlessRoot;
 
     // The projections of the state that the layout holds, by name.
     internal List<string> Projections = [];
@@ -96,7 +98,7 @@ internal sealed class GesModelHandle
     internal GesHandleKey Key => IsComposite ? Part : Id;
 
     internal static GesModelHandle Of(GesHandleType handle)
-        => new() { Name = handle.Name, Hash = handle.Hash, State = handle.StateName, Version = handle.Version, Id = handle.Id ?? default, Root = handle.Root?.Name, Part = handle.Part ?? default };
+        => new() { Name = handle.Name, Hash = handle.Hash, State = handle.StateName, Version = handle.Version, Id = handle.Id ?? default, Root = handle.Part is null ? null : handle.Root?.Name, Part = handle.Part ?? default, PartlessRoot = handle.Part is null ? handle.Root?.Name : null };
 }
 
 internal sealed class GesModelProtocol
@@ -169,6 +171,9 @@ internal sealed class GesModelValue
     internal List<string> Tags = [];
     internal string TagSet = "";
     internal long? Max;
+
+    // A List of exactly Max elements.
+    internal bool Fixed;
     internal GesModelField? Element;
 
     // The depth of a recursive List, 0 for every other List.
@@ -524,6 +529,7 @@ internal static class GesModelLayoutBuilder
             case GesSchemaTypeKind.List when type.Element.Count > 0:
                 value.Kind = GesModelKind.List;
                 value.Max = type.Max;
+                value.Fixed = type.IsExact;
                 value.Depth = type.Depth;
                 value.Element = Field("[]", path + "[]", type.Element);
                 break;
@@ -676,6 +682,7 @@ internal static class GesModelLayoutJson
                 }
                 else
                 {
+                    if (handle.PartlessRoot is { } partless) json.String("root", partless);
                     json.Key("id");
                     Key(json, handle.Id);
                 }
@@ -756,6 +763,7 @@ internal static class GesModelLayoutJson
                 break;
             case GesModelKind.List:
                 Optional(json, "max", value.Max);
+                if (value.Fixed) json.Boolean("fixed", true);
                 if (value.Depth > 0) json.Number("depth", value.Depth);
                 json.Key("element");
                 Field(json, value.Element!, member: false, value: true);

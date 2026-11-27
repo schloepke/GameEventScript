@@ -103,6 +103,9 @@ internal sealed class GesLayoutHandle
     internal string Root = "";
     internal GesLayoutEncoding? Part;
 
+    // The root of a part-less composite, which encodes like a plain handle with its root's id and version.
+    internal string PartlessRoot = "";
+
     // The form that the handle type `<Name>Handle` checks, shared with models.
     internal GesModelHandle Model = new();
 
@@ -363,6 +366,9 @@ internal sealed class GesLayoutEncoding
     internal string TagSet = "";
     internal bool TagName;
     internal long MaxCount;
+
+    // A List of exactly MaxCount elements, whose count the wire leaves out.
+    internal bool Fixed;
     internal bool Dice;
     internal bool Poly;
     internal bool Keyed;
@@ -524,7 +530,8 @@ internal static class GesSchemaLayoutBuilder
         var nodes = GesSchemaBinder.BindHandle(resolved);
         var handle = new GesLayoutHandle { Name = type.Name, Hash = type.Hash, State = type.StateName, Version = type.Version, Model = GesModelHandle.Of(type) };
         var index = 1;
-        if (type.Root is { } root)
+        if (type.Root is { } partless && type.Part is null) handle.PartlessRoot = partless.Name;
+        else if (type.Root is { } root)
         {
             handle.Root = root.Name;
             index = nodes[index].Next;
@@ -809,6 +816,7 @@ internal static class GesSchemaLayoutBuilder
     {
         encoding.Kind = GesLayoutKind.List;
         encoding.MaxCount = node.MaxCount;
+        encoding.Fixed = node.Fixed;
         encoding.Width = node.Width;
         encoding.Keyed = node.KeyedElements;
         encoding.PositionWidth = node.KeyedElements ? node.PositionWidth : 0;

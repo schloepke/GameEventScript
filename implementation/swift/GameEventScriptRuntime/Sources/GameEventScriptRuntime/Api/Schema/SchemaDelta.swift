@@ -118,7 +118,7 @@ private struct GesSchemaFullCopy {
         case .text:
             try fullText(&source, index, &target, write: write)
         case .list:
-            let count = try source.getBits(node.width, index)
+            let count = node.fixed ? UInt64(node.maxCount) : try source.getBits(node.width, index)
             if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, path(index)) }
             if write { try target.putBits(count, node.width) }
             var item: UInt64 = 0
@@ -257,7 +257,7 @@ private struct GesSchemaFullCopy {
             let length = node.fixed ? UInt64(node.maxCount) : try source.getBits(node.width, index)
             source.seek(source.bitPosition + Int(length) * 8)
         case .list:
-            let count = try source.getBits(node.width, index)
+            let count = node.fixed ? UInt64(node.maxCount) : try source.getBits(node.width, index)
             var item: UInt64 = 0
             while item < count {
                 try skip(&source, index + 1)

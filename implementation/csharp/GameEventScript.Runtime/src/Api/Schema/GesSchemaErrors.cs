@@ -92,6 +92,9 @@ public sealed class GesWireException : Exception
     /// <summary>The code <c>wire.tooLong</c>: a Text, Tag, List or Dice exceeds its <c>max</c>.</summary>
     public const string TooLong = "wire.tooLong";
 
+    /// <summary>The code <c>wire.tooShort</c>: a fixed List, written <c>exactly n</c>, holds fewer than its <c>n</c> elements.</summary>
+    public const string TooShort = "wire.tooShort";
+
     /// <summary>The code <c>wire.tooDeep</c>: a recursive List holds records deeper than its <c>depth</c>.</summary>
     public const string TooDeep = "wire.tooDeep";
 

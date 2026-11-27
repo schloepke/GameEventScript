@@ -394,6 +394,8 @@ final class GesResolvedType {
     var label = ""
     // The `depth` of a List whose element is the schema that declares it: how many records of it nest; 0 without one.
     var depth = 0
+    // Whether a List was written `exactly n`: it always holds max elements (specs/Schemas.md#fixed-lists).
+    var exact = false
     // The schema a List with depth holds itself through: its element, alone or as the one schema alternative of a union.
     var recursion: GesResolvedDeclaration? { depth > 0 ? element?.first { $0.kind == .reference }?.reference : nil }
 
@@ -617,7 +619,8 @@ final class GesFileScope {
                 }
                 handle.root = root
             }
-            let id = try resolveType(syntax.id!, all)
+            guard let idSyntax = syntax.id else { continue }
+            let id = try resolveType(idSyntax, all)
             handle.id = id
             if id.kind == .number {
                 for bound in [id.constraints.lower!, id.constraints.upper!] {
@@ -638,8 +641,11 @@ final class GesFileScope {
         if syntax.root.isEmpty {
             throw error(Code.invalidHandle, syntax.storeOffset, "The store file type '@\(handle.name)' is no composite; it names the files of a root.")
         }
-        if syntax.id!.kind != .text {
-            throw error(Code.invalidHandle, syntax.id!.offset, "The part of the store file type '@\(handle.name)' is a path, a :Text with max.")
+        guard let part = syntax.id else {
+            throw error(Code.invalidHandle, syntax.rootOffset, "The store file type '@\(handle.name)' has no part; it names a file of a root by its path.")
+        }
+        if part.kind != .text {
+            throw error(Code.invalidHandle, part.offset, "The part of the store file type '@\(handle.name)' is a path, a :Text with max.")
         }
         let target = try self.handle(syntax.store, syntax.storeOffset)
         if !target.syntax.store.isEmpty || !target.syntax.root.isEmpty || target.syntax.id!.kind != .text {
@@ -974,6 +980,10 @@ final class GesFileScope {
 
     private func resolveDefault(_ type: GesResolvedType, _ written: GesSchemaDefaultSyntax) throws -> GesResolvedDefault {
         switch type.kind {
+        // A fixed List fills its missing elements with the default of its single element type.
+        case .list where type.exact:
+            guard let element = type.element, element.count == 1 else { throw error(Code.invalidDefault, written.offset, "A fixed List takes its default for its single element type.") }
+            return try resolveDefault(element[0], written)
         case .boolean where written.boolean != nil:
             return GesResolvedDefault(kind: .boolean, boolean: written.boolean!, offset: written.offset)
         case .tag where written.tag != nil:
@@ -1172,6 +1182,7 @@ final class GesFileScope {
         }
         let max = type.maxName.isEmpty ? type.max : try letMax(type)
         if let max, max <= 0 { throw error(Code.invalidConstraint, type.offset, "A maximum is positive.") }
+        if type.exact && type.depth > 0 { throw error(Code.invalidConstraint, type.depthOffset, "A fixed List takes no depth.") }
         if type.kind == .dice && (type.constraints.integer || type.constraints.wrapping || type.constraints.step != nil || type.constraints.delta != nil) {
             throw error(Code.invalidConstraint, type.offset, "A Dice has only a range.")
         }
@@ -1202,6 +1213,7 @@ final class GesFileScope {
             offset: type.offset
         )
         resolved.depth = type.depth
+        resolved.exact = type.exact
         if !type.key.isEmpty { resolved.handle = try keyHandle(type.key, type.keyOffset) }
         return resolved
     }
@@ -1494,7 +1506,7 @@ enum GesSchemaCanonical {
             output += "List("
             if !defaultType(type.element!, &output) { return false }
             output += ")"
-            if let max = type.max { output += " max \(max)" }
+            if let max = type.max { output += (type.exact ? " exactly " : " max ") + "\(max)" }
             if type.depth > 0 { output += " depth \(type.depth)" }
             return true
         case .number, .percentage, .quantity, .dice, .point, .vector, .box, .poly, .disc:
@@ -1572,7 +1584,7 @@ enum GesSchemaCanonical {
                 writeUnion(element, &output)
                 output += ")"
             }
-            if let max = type.max { output += " max \(max)" }
+            if let max = type.max { output += (type.exact ? " exactly " : " max ") + "\(max)" }
             if type.depth > 0 { output += " depth \(type.depth)" }
         case .reference: output += type.referenceName
         case .handle:

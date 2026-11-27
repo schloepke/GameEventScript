@@ -261,6 +261,27 @@ internal static class GesHandleStates
         }
     }
 
+    // Asks the type's resolver which handles it holds, of the store or of one root's parts; null when it does not enumerate.
+    internal static IReadOnlyList<GesHandle>? Handles(GesHandleBinding binding, GesHandle? root)
+    {
+        try
+        {
+            return binding.Resolver.Handles(root);
+        }
+        catch (GesFatalRuntimeException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw Fault(GesDiagnosticCodes.RuntimeHandleResolveFailed, $"The resolver of @{binding.Type.Name} failed to list its handles.", "@" + binding.Type.Name, exception);
+        }
+    }
+
+    // A list of handles the resolver gave that the store read cannot use.
+    internal static GesVmException InvalidHandles(GesHandleType type, string reason)
+        => Fault(GesDiagnosticCodes.RuntimeHandleResolveFailed, $"The resolver of @{type.Name} listed {reason}.", "@" + type.Name);
+
     private static GesVmException Fault(string code, string message, string symbol, Exception? inner = null)
         => new(new GesDiagnostic(GesDiagnosticPhase.Runtime, code, message, Symbol: symbol,
             TechnicalDetails: inner is null ? null : GesRuntimeExceptionText.Describe(inner)), inner);

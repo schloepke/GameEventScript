@@ -464,7 +464,7 @@ enum GesCSharpEmitter {
         case .quantized, .float, .integer, .point, .vector, .box, .disc: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
         case .union: return ", the selected alternative"
         case .list where encoding.poly: return ", the points of a polygon\(encoding.unit != "none" ? " in " + encoding.unit : ""), at most \(encoding.maxCount)"
-        case .list: return ", at most \(encoding.maxCount) elements"
+        case .list: return ", \(encoding.fixed ? "exactly" : "at most") \(encoding.maxCount) elements"
         default: return ""
         }
     }
@@ -787,7 +787,11 @@ enum GesCSharpEmitter {
         case .list:
             if value.depth > 0 { openLevels(&code, value, target + ".Count") }
             code.line("if (\(target).Count > \(max)) \(fail("TooLong", value))")
-            code.line("writer.Write((ulong)\(target).Count, \(width));")
+            if value.encoding.fixed {
+                code.line("if (\(target).Count < \(max)) \(fail("TooShort", value))")
+            } else {
+                code.line("writer.Write((ulong)\(target).Count, \(width));")
+            }
             if value.handleMap {
                 code.line(
                     "for (var position = 1; position < \(target).Count; position++) if (\(target)[position].Key.CompareTo(\(target)[position - 1].Key) <= 0) throw new GesWireException(GesWireException.InvalidKeyOrder, \(handleKeyPath(value)));"
@@ -891,8 +895,12 @@ enum GesCSharpEmitter {
                 code.line("else")
             }
             code.open("{")
-            code.line("var count = (int)reader.Read(\(width), \(path(value)));")
-            code.line("if (count > \(max)) \(fail("InvalidCount", value))")
+            if value.encoding.fixed {
+                code.line("const int count = \(max);")
+            } else {
+                code.line("var count = (int)reader.Read(\(width), \(path(value)));")
+                code.line("if (count > \(max)) \(fail("InvalidCount", value))")
+            }
             code.line("\(target).Clear();")
             if element.packed != nil {
                 packedList(&code, value, target, "count")

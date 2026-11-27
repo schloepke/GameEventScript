@@ -722,6 +722,38 @@ public enum GesBytecodeOpCode : byte
     /// Writes <c>X</c> when it has a value, otherwise <c>Y</c>.
     /// </summary>
     Default = 0x45,
+    /// <summary>
+    /// Writes the number of objects of the store <c>@Name</c> named by <c>TypeOperand</c>, or <c>nothing</c> when the type does not enumerate.
+    /// </summary>
+    CountStore = 0x46,
+    /// <summary>
+    /// Writes the handles of the store <c>@Name</c> named by <c>TypeOperand</c> as a List in key order.
+    /// </summary>
+    KeysOfStore = 0x47,
+    /// <summary>
+    /// Writes the states of the store <c>@Name</c> named by <c>TypeOperand</c> as a List in key order.
+    /// </summary>
+    ValuesOfStore = 0x48,
+    /// <summary>
+    /// Writes the store <c>@Name</c> named by <c>TypeOperand</c> as a List of Maps with <c>key</c> and <c>value</c> in key order.
+    /// </summary>
+    EntriesOfStore = 0x49,
+    /// <summary>
+    /// Writes the number of parts of the root handle in <c>X</c> in the store <c>@Name</c> named by <c>TypeOperand</c>.
+    /// </summary>
+    CountParts = 0x4A,
+    /// <summary>
+    /// Writes the part handles of the root handle in <c>X</c> in the store <c>@Name</c> named by <c>TypeOperand</c> as a List in key order.
+    /// </summary>
+    KeysOfParts = 0x4B,
+    /// <summary>
+    /// Writes the states of the parts of the root handle in <c>X</c> in the store <c>@Name</c> named by <c>TypeOperand</c> as a List in key order.
+    /// </summary>
+    ValuesOfParts = 0x4C,
+    /// <summary>
+    /// Writes the parts of the root handle in <c>X</c> in the store <c>@Name</c> named by <c>TypeOperand</c> as a List of Maps with <c>key</c> and <c>value</c> in key order.
+    /// </summary>
+    EntriesOfParts = 0x4D,
 
     #endregion
 

@@ -68,6 +68,8 @@ public struct GesWireError: Error, Sendable, Equatable {
     public static let unknownTag = "wire.unknownTag"
     /// The code `wire.tooLong`: a Text, Tag, List or Dice exceeds its `max`.
     public static let tooLong = "wire.tooLong"
+    /// The code `wire.tooShort`: a fixed List, written `exactly n`, holds fewer than its `n` elements.
+    public static let tooShort = "wire.tooShort"
     /// The code `wire.tooDeep`: a recursive List holds records deeper than its `depth`.
     public static let tooDeep = "wire.tooDeep"
     /// The code `wire.bufferTooSmall`: the caller's buffer is too small.

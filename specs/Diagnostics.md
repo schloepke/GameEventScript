@@ -53,12 +53,19 @@ Validation uses the following semantic codes:
 - `validate.unknownHandleType` (an `@Name` no [handle type](Language.md#handles) of the
   compilation declares) and `validate.invalidHandleUse` (`as @Name` outside a parameter or
   field, `@Name~` or `h.version` of a type without versions, a union mixing handle and other
-  types); **Since: Unreleased**.
+  types, a [store read](Language.md#stores) with another selector, a version or projection,
+  or of the parts of a type without a part); **Since: Unreleased**.
 - `validate.invalidProjection` (`@Name(:P)` with a `:P` that is no
   [projection](Schemas.md#projections) of the type's state schema, or `as :P` from a
   value that is not of a source of `:P`) and `validate.handleWidening` (a handle of a
   projection converted or passed to the full view or to a projection it does not
   narrow); **Since: Unreleased**.
+
+A successful compilation may carry warnings, which never fail it: the compiler reports them
+in validation order through `GesProgramBuilder.Warnings` (Swift `warnings`) with the shape of an
+error. The only warning code is `validate.handleTypeNotEnumerable`, a store read of a type the
+host did not name as enumerable ([Host runtime](HostRuntime.md#stores)), located at the read;
+**Since: Unreleased**.
 
 Documents use the `document.*` codes of [Documents](Documents.md#errors) and stores the
 `store.*` codes of [reading a store](Documents.md#reading-a-store); **Since: Unreleased**

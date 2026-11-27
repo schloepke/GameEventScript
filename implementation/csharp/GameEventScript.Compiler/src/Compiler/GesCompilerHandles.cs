@@ -18,6 +18,40 @@ internal static partial class GesCompiler
 
         private void NameHandleType(string name) => _namedHandleTypes.Add(name);
 
+        // `@X[:count]` and the other store reads, with a root those of one root's parts (specs/Language.md#stores).
+        private void EmitStoreReadInto(GesStoreReadExpressionNode read, GesRegisterRef destination, LoweringContext context, ExpressionState state)
+        {
+            NameHandleType(read.TypeName.Substring(1));
+            if (read.Root is null)
+            {
+                _builder.ReadStore(read.Selector switch
+                {
+                    GesStoreSelector.Count => GesBytecodeOpCode.CountStore,
+                    GesStoreSelector.Keys => GesBytecodeOpCode.KeysOfStore,
+                    GesStoreSelector.Values => GesBytecodeOpCode.ValuesOfStore,
+                    _ => GesBytecodeOpCode.EntriesOfStore,
+                }, destination, read.TypeName);
+                return;
+            }
+
+            var root = EmitExpressionForRead(read.Root, context, state);
+            _builder.ReadStoreParts(read.Selector switch
+            {
+                GesStoreSelector.Count => GesBytecodeOpCode.CountParts,
+                GesStoreSelector.Keys => GesBytecodeOpCode.KeysOfParts,
+                GesStoreSelector.Values => GesBytecodeOpCode.ValuesOfParts,
+                _ => GesBytecodeOpCode.EntriesOfParts,
+            }, destination, root, read.TypeName);
+        }
+
+        // An assembled store read names its type like a source one, when the module declares it.
+        private void AssemblyStoreRead(GesBytecodeOpCode opcode, GesRegisterRef destination, GesRegisterRef? root, string typeName)
+        {
+            if (typeName.Length > 1 && typeName[0] == '@' && module.HandleTypes.ContainsKey(typeName.Substring(1))) NameHandleType(typeName.Substring(1));
+            if (root is { } rootRegister) _builder.ReadStoreParts(opcode, destination, rootRegister, typeName);
+            else _builder.ReadStore(opcode, destination, typeName);
+        }
+
         private void AddHandleTypes()
         {
             foreach (var name in _namedHandleTypes)
@@ -106,6 +140,10 @@ internal static partial class GesCompiler
             switch (member.Member)
             {
                 case "id":
+                    // A part-less composite holds its root's id as its own, so only `@id` reads its identity as a root
+                    // without a part; types whose composites all have a part keep the plain member.
+                    _builder.MemberAccess(destination, GesHandleTypeNames.HasPartlessComposite(typeName, module.HandleTypes) ? "@id" : "id", target);
+                    return;
                 case "version":
                     _builder.MemberAccess(destination, member.Member, target);
                     return;

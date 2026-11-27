@@ -28,7 +28,7 @@ class CompilerChecksTests(unittest.TestCase):
 
     def test_all_compiler_requests_exclude_expectations(self):
         request = requests(self.cases)
-        self.assertEqual(444, len(request['cases']))
+        self.assertEqual(456, len(request['cases']))
         for case in request['cases']:
             self.assertEqual({'id', 'kind', 'sources', 'compile', 'requires'}, set(case) - {'handles'})
             if 'handles' in case:
@@ -92,6 +92,26 @@ class CompilerChecksTests(unittest.TestCase):
         case.expected['opcodes'] = {'excludes': ['Typo']}
         with self.assertRaises(InvalidDocument):
             requests([case])
+
+    def test_warnings_are_compared_in_order_only_when_expected(self):
+        warning = {'phase': 'validate', 'code': 'validate.handleTypeNotEnumerable', 'symbol': '@Remote'}
+        case = self.case('bytecode', {'opcodes': {'contains': ['Add']}, 'warnings': [warning]})
+        observed = {'status': 'ok', 'opcodes': {'Add': 1}, 'warnings': [{**warning, 'line': 2}]}
+        self.assertEqual('passed', compare(case, observed)[0])
+        for warnings in ([], [warning, warning], [{**warning, 'symbol': '@Other'}]):
+            self.assertEqual('failed', compare(case, {**observed, 'warnings': warnings})[0])
+        self.assertEqual('failed', compare(case, {'status': 'ok', 'opcodes': {'Add': 1}})[0])
+        case.expected['warnings'] = []
+        self.assertEqual('passed', compare(case, {'status': 'ok', 'opcodes': {'Add': 1}})[0])
+        del case.expected['warnings']
+        self.assertEqual('passed', compare(case, observed)[0])
+        with self.assertRaises(InvalidDocument):
+            compare(case, {**observed, 'warnings': [{'code': 'x'}]})
+        with self.assertRaises(InvalidDocument):
+            compare(case, {'status': 'compileError', 'diagnostics': [warning], 'warnings': []})
+        error = self.case('compileError', {'error': warning, 'warnings': []})
+        with self.assertRaises(InvalidDocument):
+            requests([error])
 
     def test_metadata_resources_signatures_and_order(self):
         expected = {'programResources': {'requiredRegisterCount': 7},

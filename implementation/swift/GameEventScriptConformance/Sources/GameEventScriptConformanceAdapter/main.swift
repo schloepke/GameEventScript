@@ -71,7 +71,8 @@ do {
                     }
                     observations[id] = try ["status": "ok", "runtime": runtime(programs, test.required("runtime"), handles: AdapterHandles.from(test))]
                 } else {
-                    observations[id] = try CompilerObservations.observe(kind, CompilerObservations.compile(test))
+                    let compiled = try CompilerObservations.compileWithWarnings(test)
+                    observations[id] = CompilerObservations.observe(kind, compiled.program, warnings: compiled.warnings)
                 }
             } catch let error as GesCompileError {
                 if ["scriptApi", "loadError", "programBinary"].contains(kind) {

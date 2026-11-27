@@ -123,11 +123,11 @@ Type that runs over letters and digits and over each `_` followed by an uppercas
 `$` before an ASCII letter starts a Tag or Constant over letters and digits. A digit, or `-` before a digit, starts a
 Number that runs up to whitespace, a line break, `,`, a parenthesis, a brace, `|`, `#` or `//`, so `1cm` and `0.1°` are
 one Number. A word of ASCII letters and digits is Keyword when it is one of `schema`, `message`, `messages`, `constant`,
-`parameter`, `as`, `be`, `between`, `and`, `wrapping`, `step`, `delta`, `within`, `integer`, `optional`, `key`, `max`,
+`parameter`, `as`, `be`, `between`, `and`, `wrapping`, `step`, `delta`, `within`, `integer`, `optional`, `key`, `max`, `exactly`,
 `depth`, `tags`, `wire`, `model`, `let`, `default`, `true`, `false`, `abstract`, `with`, `all`, `without`, `computed`,
 `by`, `when`, `otherwise`, `or`, `not`, `of`, `min`, `clamp`, `abs`, `has`, `handle`, `composite`, `owns`, `projection` and `sending`, or `state` directly after `sending`; otherwise a word that starts with an
 uppercase letter, joined like a Type, is Message, and any other word is Identifier. `@` before an uppercase letter
-starts a Type joined the same way, including a directly following `(:Name)` and `~`, as in `@Unit(:UnitDisplay)~`. *Since: Unreleased — handles, projections, `sending state`.*
+starts a Type joined the same way, including a directly following `(:Name)` and `~`, as in `@Unit(:UnitDisplay)~`. *Since: Unreleased — handles, projections, `sending state`, `exactly`.*
 
 The diagnostics hold the first error of reading the source, with the code and position [Schemas](Schemas.md) defines.
 Its range covers the scalar at the position, both UTF-16 units of one outside the BMP, or has length zero at the end

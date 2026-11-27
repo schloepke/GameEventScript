@@ -236,6 +236,14 @@ public final class GesStore: GesHandleResolver {
         }
     }
 
+    /// Lists the handle of every entry, sorted by id, without versions; a store's type has no parts, so a root lists none.
+    /// - Parameter root: Ignored unless set: a store's type is not composite, so its parts are empty.
+    /// - Returns: The entry handles, or an empty list for a root.
+    public func handles(root: GesHandle?) -> [GesHandle]? {
+        if root != nil { return [] }
+        return entries.map { $0.handle.withView(.nothing, "") }
+    }
+
     // The maximum id length of a store's type and the dependencies by type name, after checking both.
     private static func dependencies(_ type: GesHandleType, _ dependencies: [GesStore]) throws -> (Int64, [String: GesStore]) {
         if type.root != nil { throw GesApiError.invalidArgument("@\(type.name) is composite; a store needs a type of its own.") }

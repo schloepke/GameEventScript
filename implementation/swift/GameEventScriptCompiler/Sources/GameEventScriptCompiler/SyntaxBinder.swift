@@ -276,6 +276,17 @@ final class GesSyntaxBinder {
         try c.expect(.colon)
         try c.newlines()
         let type = try typeName(c.takeNode(.typeReference))
+        var elementType: String?
+        var listBound: Int64 = 0
+        var listExact = false
+        if try c.match(.leftParen) {
+            try c.newlines()
+            elementType = try typeName(c.takeNode(.typeReference))
+            try c.newlines()
+            try c.expect(.rightParen)
+            listExact = try c.matchWord("exactly")
+            if try listExact || c.match(.max) { listBound = Int64(try c.expect(.float).text)! }
+        }
         try c.newlines()
         var low: GesExpression?
         var high: GesExpression?
@@ -287,11 +298,29 @@ final class GesSyntaxBinder {
             high = try expression(&c)
             try c.newlines()
         }
+        var fallback: GesExpression?
+        if try c.match(.`default`) {
+            try c.newlines()
+            fallback = try expression(&c)
+            try c.newlines()
+        }
         if try c.matchWord("computed") {
             try c.expectWord("by")
             computed = try assemblyOrExpression(&c, name)
         }
-        return .init(name: name, type: type, label: computed == nil ? (unlabeled ? "_" : name) : nil, minimum: low, maximum: high, computed: computed, location: location(fieldStart, c.previous))
+        return .init(
+            name: name,
+            type: type,
+            label: computed == nil ? (unlabeled ? "_" : name) : nil,
+            minimum: low,
+            maximum: high,
+            computed: computed,
+            fallback: fallback,
+            elementType: elementType,
+            listBound: listBound,
+            listExact: listExact,
+            location: location(fieldStart, c.previous)
+        )
     }
 
     func bindRoutine(_ declaration: GesSyntaxNode) throws -> GesDefinition {

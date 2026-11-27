@@ -72,9 +72,9 @@ internal static class GesAstValidator
     // result cache, because a callable's result depends only on the callee and holds for every caller.
     internal static void ValidateModules(IReadOnlyList<GesParsedScript> modules, IReadOnlyDictionary<string, GesCallableDefinition> definitions,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesExpressionNode> constants,
-        IReadOnlyDictionary<string, GesHandleType> handleTypes, GesValidationErrors errors)
+        IReadOnlyDictionary<string, GesHandleType> handleTypes, HashSet<string>? enumerableHandleTypes, GesValidationErrors errors)
     {
-        var callables = new ValidationCallables(definitions, handleTypes);
+        var callables = new ValidationCallables(definitions, handleTypes, enumerableHandleTypes);
         for (var index = 0; index < modules.Count; index++) ValidateModule(modules[index], callables, typeDefinitions, constants, errors);
     }
 
@@ -92,11 +92,16 @@ internal static class GesAstValidator
                 else if (!IsKnownType(field.TypeName, typeDefinitions))
                     errors.Add(parsedScript, $"Field '{field.Name}' uses unknown type ':{field.TypeName}'", field.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, field);
 
+                if (field.ElementTypeName is { } element && !IsKnownType(element, typeDefinitions))
+                    errors.Add(parsedScript, $"Field '{field.Name}' uses unknown element type ':{element}'", element, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, field);
+
                 if (field.MinimumExpression is not null) ValidateExpressionReferences(parsedScript, field.MinimumExpression, callables, typeDefinitions, errors, BuildDeclaredTypeMap([], constants));
 
                 if (field.MaximumExpression is not null) ValidateExpressionReferences(parsedScript, field.MaximumExpression, callables, typeDefinitions, errors, BuildDeclaredTypeMap([], constants));
 
                 if (field.ComputedExpression is not null) ValidateExpressionReferences(parsedScript, field.ComputedExpression, callables, typeDefinitions, errors, BuildDeclaredTypeMap([], constants));
+
+                if (field.DefaultExpression is not null) ValidateExpressionReferences(parsedScript, field.DefaultExpression, callables, typeDefinitions, errors, BuildDeclaredTypeMap([], constants));
             }
         }
 
@@ -271,8 +276,13 @@ internal static class GesAstValidator
     // callable has its result. A call of a callable still on the stack is a cycle and stays unknown.
     // The callables of one compilation with the result types of those whose classification met no cycle. Such a result depends
     // only on the callee, so every later classification reuses it instead of classifying the callee again.
-    private sealed class ValidationCallables(IReadOnlyDictionary<string, GesCallableDefinition> definitions, IReadOnlyDictionary<string, GesHandleType>? handleTypes = null)
+    private sealed class ValidationCallables(IReadOnlyDictionary<string, GesCallableDefinition> definitions, IReadOnlyDictionary<string, GesHandleType>? handleTypes = null,
+        HashSet<string>? enumerableHandleTypes = null)
     {
+        // The handle types the host enumerates, or null when the compilation does not know; a store read of any other
+        // declared type warns.
+        public HashSet<string>? EnumerableHandleTypes { get; } = enumerableHandleTypes;
+
         public IReadOnlyDictionary<string, GesCallableDefinition> Definitions { get; } = definitions;
 
         // The handle types by name without `@`; the validator checks every `@Name` against it.
@@ -433,6 +443,9 @@ internal static class GesAstValidator
             case GesMemberAccessExpressionNode memberAccess: return ClassifyMemberAccess(memberAccess, callables, typeDefinitions, declaredTypes, callableResults);
 
             case GesCollectionAccessExpressionNode collectionAccess: return ClassifyCollectionAccess(collectionAccess);
+
+            // A type that does not enumerate reads nothing, so a store read has no static type beyond its shape.
+            case GesStoreReadExpressionNode: return StaticExpressionInfo.Unknown;
 
             case GesCallExpressionNode call: return ClassifyCall(call, callables, typeDefinitions, declaredTypes, callableResults);
 
@@ -960,6 +973,18 @@ internal static class GesAstValidator
                     expression = memberAccess.Target;
                     continue;
 
+                case GesStoreExpressionNode store:
+                    errors.Add(parsedScriptContext, $"'{store.TypeName}' reads a store only with '[:count]', '[:keys]', '[:values]' or '[:entries]'.", store.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, store);
+                    if (store.Root is null) return;
+                    expression = store.Root;
+                    continue;
+
+                case GesStoreReadExpressionNode storeRead:
+                    ValidateStoreName(parsedScriptContext, storeRead, callables, errors);
+                    if (storeRead.Root is null) return;
+                    expression = storeRead.Root;
+                    continue;
+
                 case GesCollectionAccessExpressionNode collectionAccess:
                     ValidateExpressionReferences(parsedScriptContext, collectionAccess.Target, callables, typeDefinitions, errors, declaredTypes);
                     ValidateCollectionSelectorReferences(parsedScriptContext, collectionAccess.Selector, callables, typeDefinitions, errors, declaredTypes);
@@ -1297,6 +1322,27 @@ internal static class GesAstValidator
         }
 
         return -1;
+    }
+
+    // A store is named by one declared handle type without version or projection; the parts of one root need a type with
+    // a part (specs/Language.md#stores).
+    private static void ValidateStoreName(GesParsedScript parsedScriptContext, GesStoreReadExpressionNode storeRead, ValidationCallables callables, GesValidationErrors errors)
+    {
+        var handleTypes = callables.HandleTypes;
+        var typeName = storeRead.TypeName;
+        if (typeName.IndexOf('~') >= 0 || GesHandleTypeNames.HasProjection(typeName))
+        {
+            errors.Add(parsedScriptContext, $"A store is named by its handle type alone, not '{typeName}'.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, storeRead);
+            return;
+        }
+
+        var name = typeName.Substring(1);
+        if (!handleTypes.TryGetValue(name, out var type))
+            errors.Add(parsedScriptContext, $"Handle type '{typeName}' is not declared.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateUnknownHandleType, storeRead);
+        else if (storeRead.Root is not null && type.Part is null)
+            errors.Add(parsedScriptContext, $"'{typeName}(root)' lists the parts of one root; '{typeName}' has no part.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, storeRead);
+        else if (callables.EnumerableHandleTypes is { } enumerable && !enumerable.Contains(name))
+            errors.AddWarning(parsedScriptContext, $"The host does not enumerate '{typeName}', so this store reads as nothing.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateHandleTypeNotEnumerable, storeRead);
     }
 
     // Each alternative of a handle type or union is a declared `@Name`, and `@Name~` names a type with versions.

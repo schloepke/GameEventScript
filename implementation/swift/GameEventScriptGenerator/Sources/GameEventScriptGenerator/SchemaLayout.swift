@@ -60,6 +60,9 @@ final class GesLayoutHandle {
     var root = ""
     var part: GesLayoutEncoding?
 
+    // The root of a part-less composite, which encodes like a plain handle with its root's id and version.
+    var partlessRoot = ""
+
     // The form that the handle type `<Name>Handle` checks, shared with models.
     var model = GesModelHandle()
 
@@ -287,6 +290,8 @@ final class GesLayoutEncoding {
     var tagSet = ""
     var tagName = false
     var maxCount: Int64 = 0
+    // A List of exactly maxCount elements, whose count the wire leaves out.
+    var fixed = false
     var dice = false
     var poly = false
     var keyed = false
@@ -446,7 +451,9 @@ enum GesSchemaLayoutBuilder {
         handle.version = type.version
         handle.model = GesModelHandle.of(type)
         var index = 1
-        if let root = type.root {
+        if let partless = type.root, type.part == nil {
+            handle.partlessRoot = partless.name
+        } else if let root = type.root {
             handle.root = root.name
             index = nodes[index].next
             if type.version != .none { index += 1 }
@@ -694,6 +701,7 @@ enum GesSchemaLayoutBuilder {
     private static func list(_ node: GesSchemaNode, _ encoding: GesLayoutEncoding) {
         encoding.kind = .list
         encoding.maxCount = node.maxCount
+        encoding.fixed = node.fixed
         encoding.width = node.width
         encoding.keyed = node.keyedElements
         encoding.positionWidth = node.keyedElements ? node.positionWidth : 0

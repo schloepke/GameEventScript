@@ -504,6 +504,10 @@
         1: "keyword.other.definition.gameeventscript"
         3: "keyword.other.definition.gameeventscript"
     -
+      "match": "(?<=\\))[ \\t]*\\b(exactly)(?=[ \\t]+[1-9])"
+      "captures":
+        1: "keyword.other.definition.gameeventscript"
+    -
       "match": "\\b(computed)([ \\t]+)(by)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":

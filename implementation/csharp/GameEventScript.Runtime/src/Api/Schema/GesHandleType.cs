@@ -47,8 +47,8 @@ public sealed class GesHandleType
         Name = handle.Name;
         StateName = handle.State?.Name ?? "";
         var key = Key(handle.Id);
-        if (handle.Root is null) Id = key;
-        else Part = key;
+        if (handle.HasPart) Part = key;
+        else Id = key;
         Version = handle.VersionKind;
         CanonicalForm = GesSchemaCanonical.HandleForm(handle);
         Hash = GesSchemaCanonical.Hash(CanonicalForm);
@@ -60,16 +60,19 @@ public sealed class GesHandleType
     /// <summary>Gets the name of the state schema, without the leading <c>:</c>; empty for a store file type.</summary>
     public string StateName { get; }
 
-    /// <summary>Gets the form of the id; null for a composite, whose identity is its root's id and its part.</summary>
+    /// <summary>
+    /// Gets the form of the id; for a part-less composite its root's, since its identity is the root's id; null for a
+    /// composite with a part, whose identity is its root's id and its part.
+    /// </summary>
     public GesHandleKey? Id { get; }
 
-    /// <summary>Gets the form of a composite's part; null for any other type.</summary>
+    /// <summary>Gets the form of a composite's part; null for a part-less composite and any other type.</summary>
     public GesHandleKey? Part { get; }
 
     /// <summary>Gets the kind of version; a composite has its root's.</summary>
     public GesHandleVersionKind Version { get; }
 
-    /// <summary>Gets the root type of a composite; null for any other type.</summary>
+    /// <summary>Gets the root type of a composite, with or without a part; null for any other type.</summary>
     public GesHandleType? Root => _handle.Root?.Public;
 
     /// <summary>
@@ -173,8 +176,17 @@ internal sealed class GesResolvedHandle
     // The root of a composite, which is not composite itself.
     internal GesResolvedHandle? Root { get; set; }
 
-    // The id, or a composite's part.
-    internal GesResolvedType Id { get; set; } = null!;
+    // The id, or a composite's part; a part-less composite has its root's id.
+    internal GesResolvedType Id
+    {
+        get => _id ?? Root!.Id;
+        set => _id = value;
+    }
+
+    private GesResolvedType? _id;
+
+    // Whether a composite names a part of its root; a part-less composite is one per root and keyed by the root's id.
+    internal bool HasPart => Root is not null && Syntax.Id is not null;
 
     // The declared version, or for a composite its root's.
     internal GesHandleVersionKind VersionKind => Root?.VersionKind ?? Syntax.Version;
@@ -192,6 +204,7 @@ internal sealed class GesResolvedHandle
         if (Root is { } root)
         {
             builder.Append(" composite ").Append(root.Name).Append('\n');
+            if (!HasPart) return;
             if (Store is { } store) builder.Append("store ").Append(store.Name).Append('\n');
             builder.Append("part ");
             GesSchemaCanonical.WriteHandleType(Id, builder);

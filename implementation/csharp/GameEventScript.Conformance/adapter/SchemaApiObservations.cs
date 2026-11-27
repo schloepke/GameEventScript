@@ -222,38 +222,18 @@ internal static class SchemaApiObservations
     private static object Stores(GesSchemaSet set, JsonElement input)
     {
         RuntimeValues.Fields(input, "files", "stores", "refs", "latest", "index");
-        var table = input.GetProperty("files").EnumerateArray()
-            .Select(file => new StoreFile(file.GetProperty("root").GetString()!, file.GetProperty("path").GetString()!, file.GetProperty("text").GetString()!,
-                file.GetProperty("version").ValueKind == JsonValueKind.Null ? null : file.GetProperty("version").GetInt64())).ToArray();
-        var files = new StoreFiles(table);
-        var resolver = new StoreResolver(table, input.GetProperty("refs").EnumerateObject().ToDictionary(entry => entry.Name, entry => entry.Value.GetInt64(), StringComparer.Ordinal),
-            input.GetProperty("latest").ValueKind == JsonValueKind.Null ? null : input.GetProperty("latest").GetInt64());
-        var read = new List<GesStore>();
-        foreach (var store in input.GetProperty("stores").EnumerateArray())
+        List<GesStore> read;
+        try
         {
-            var type = set.HandleType(store.GetProperty("type").GetString()!);
-            try
-            {
-                if (store.GetProperty("handles").ValueKind == JsonValueKind.Array)
-                {
-                    var handles = store.GetProperty("handles").EnumerateArray().Select(handle => GesHandle.Parse(handle.GetString()!)).ToArray();
-                    read.Add(GesStore.Read(type, handles, resolver, read.ToArray()));
-                }
-                else
-                {
-                    var roots = store.GetProperty("roots").EnumerateArray()
-                        .Select(root => new GesStoreRoot(root.GetProperty("name").GetString()!, root.GetProperty("path").GetString()!)).ToArray();
-                    read.Add(GesStore.Read(type, roots, files, read.ToArray()));
-                }
-            }
-            catch (GesStoreException exception)
-            {
-                return new { errors = exception.Diagnostics.Select(StoreError).ToArray() };
-            }
-            catch (GesHandleException exception)
-            {
-                return new { failure = exception.Code };
-            }
+            read = ReadStores(set, input);
+        }
+        catch (GesStoreException exception)
+        {
+            return new { errors = exception.Diagnostics.Select(StoreError).ToArray() };
+        }
+        catch (GesHandleException exception)
+        {
+            return new { failure = exception.Code };
         }
 
         return new
@@ -268,6 +248,35 @@ internal static class SchemaApiObservations
             sources = read[^1].Sources.Select(source => source.ToString()).ToArray(),
             indexes = Indexes(read[^1], input)
         };
+    }
+
+    // Reads the stores of a store input in order, each with every earlier one as a dependency; the first failure throws.
+    internal static List<GesStore> ReadStores(GesSchemaSet set, JsonElement input)
+    {
+        var table = input.GetProperty("files").EnumerateArray()
+            .Select(file => new StoreFile(file.GetProperty("root").GetString()!, file.GetProperty("path").GetString()!, file.GetProperty("text").GetString()!,
+                file.GetProperty("version").ValueKind == JsonValueKind.Null ? null : file.GetProperty("version").GetInt64())).ToArray();
+        var files = new StoreFiles(table);
+        var resolver = new StoreResolver(table, input.GetProperty("refs").EnumerateObject().ToDictionary(entry => entry.Name, entry => entry.Value.GetInt64(), StringComparer.Ordinal),
+            input.GetProperty("latest").ValueKind == JsonValueKind.Null ? null : input.GetProperty("latest").GetInt64());
+        var read = new List<GesStore>();
+        foreach (var store in input.GetProperty("stores").EnumerateArray())
+        {
+            var type = set.HandleType(store.GetProperty("type").GetString()!);
+            if (store.GetProperty("handles").ValueKind == JsonValueKind.Array)
+            {
+                var handles = store.GetProperty("handles").EnumerateArray().Select(handle => GesHandle.Parse(handle.GetString()!)).ToArray();
+                read.Add(GesStore.Read(type, handles, resolver, read.ToArray()));
+            }
+            else
+            {
+                var roots = store.GetProperty("roots").EnumerateArray()
+                    .Select(root => new GesStoreRoot(root.GetProperty("name").GetString()!, root.GetProperty("path").GetString()!)).ToArray();
+                read.Add(GesStore.Read(type, roots, files, read.ToArray()));
+            }
+        }
+
+        return read;
     }
 
     // The handles of the last store through each requested projection, by projection name.

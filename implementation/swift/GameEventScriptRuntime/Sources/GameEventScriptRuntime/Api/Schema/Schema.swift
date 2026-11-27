@@ -92,6 +92,8 @@ public struct GesSchemaType: Sendable {
     public let label: String
     /// The maximum of a Text in UTF-8 bytes, of a List in elements or of a Poly in points, if there is one.
     public let max: Int64?
+    /// Whether a List is fixed, written `exactly n`: it always holds `max` elements, which the wire writes without a count.
+    public let isExact: Bool
     /// The alternatives of a List's element; empty when any element is allowed.
     public let element: [GesSchemaType]
     /// The `depth` of a List whose element is the schema that declares it: how many records of that schema nest in each
@@ -123,6 +125,7 @@ public struct GesSchemaType: Sendable {
         tagSet = type.tagSet
         label = type.label
         max = type.max
+        isExact = type.exact
         element = (type.element ?? []).map(GesSchemaType.init)
         depth = type.depth
         axes = (type.axes ?? []).map(GesSchemaAxisInfo.init)

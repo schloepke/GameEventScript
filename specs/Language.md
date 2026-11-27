@@ -2055,21 +2055,25 @@ store does not declare is `validate.unknownHandleType`.
 **Members.** `h.id` is the identity: an integer Number or a Text. `h.version` is the version a handle carries, a Number
 for a revision or Bytes for a hash, and `nothing` without one; on a type without versions it is
 `validate.invalidHandleUse`. For a composite, `h.root` is the root's handle with the root's version, `h.id.root` the
-root's id, `h.id.part` the part, and `h.version` the root's version. These members need no state and never resolve.
+root's id, `h.id.part` the part, and `h.version` the root's version. For a
+[part-less composite](Schemas.md#handles) `h.root` is the root's handle without a version, `h.id.root` the root's
+id and `h.id.part` `nothing`, so `h.id` reads like a composite's (*Since: Unreleased*). These members need no state and never
+resolve.
 Every other member reads a field of the object's state, and `h as :State`, with the handle type's state schema, gives
 the whole state as a plain Record of that name. A missing object reads as `nothing`. `h as :Text` gives the
 [text form](#handle-text-form). Any other cast gives `nothing`. Resolution, caching and failures are owned by
 [Host runtime](HostRuntime.md#handles).
 
 **Identity, not presence.** A handle guarantees the identity of its object, not that the object exists: the object may
-be missing when a member reads it, which then gives `nothing`. A script cannot enumerate the handles of a type; only
-the index of a [store](Documents.md#the-store-model), which the host owns, lists them.
+be missing when a member reads it, which then gives `nothing`. A script lists the objects of a type only through a
+[store read](#stores), which asks the host.
 
 **Equality and order.** Two handles are equal when they have the same type and identity; the version does not take
 part, so a handle with and one without a version of the same object are equal. A handle equals no other kind of value.
 Handles have no numeric view, so `<` and its relatives give `nothing`. Sorting, Map keys and grouping use the key order:
 Text keys first, then handles by type name in scalar order, then by identity, integer ids numerically and Text ids in
-scalar order, a composite by its root and then its part.
+scalar order, a composite by its root and then its part. A part-less composite orders by its root's identity alone
+and equals no handle of its root.
 
 **Map keys.** A Map key is a Text or a handle. `[:map x by key]` and `[:group by item => key]` keep a handle key as a
 handle instead of its text; `m[h]`, `h in m` and `m[:contains key h]` look one up. A Map literal and member syntax
@@ -2125,9 +2129,45 @@ conversion belongs to the schema and calls no resolver. A script knows the proje
 so the conversion links as a read of the first handle type with that projection: without its resolver the Program fails
 with `link.missingHandleResolver`.
 
+#### Stores
+
+> **Since: Unreleased**
+
+`@Name` followed by a selector reads the host's *store* of a handle type: every object of the type the host knows,
+such as the entries of a [store](Documents.md#stores) read from files. `@Name(root)` reads the parts of one root of a
+composite type with a part, such as the slots of one unit.
+
+```ges
+on Inspect(fleet as @Fleet) {
+  for hull in @Hull[:values] { emit Hull(name: hull.name, armor: hull.armor) }
+  emit Fleet(ships: @Ship(fleet)[:count], first: @Ship(fleet)[:keys][:first])
+}
+```
+
+| Read | Value |
+| --- | --- |
+| `@Name[:count]` | the number of objects |
+| `@Name[:keys]` | a List of their handles, without version |
+| `@Name[:values]` | a List of their states, as `h as :State` gives them; `nothing` for a missing object |
+| `@Name[:entries]` | a List of Maps `{key: handle, value: state}` |
+
+- **Order.** Every read lists in the [key order](#handles) of the handles, whatever order the host answers in.
+- **Scope.** A store covers the objects of the type in every loaded module, not only the reading Program's. Within one
+  handler invocation every read of the same store, or of the parts of the same root, sees the same handles, also
+  across a pause, and a state read once is read again from the same answer.
+- **Nothing.** When the host's resolver of the type does not enumerate, every read of its store is `nothing`, and so
+  is a read of the parts of a value that is no handle of the root type. A host may tell the compiler which types
+  enumerate; a read of another type then compiles with the warning `validate.handleTypeNotEnumerable`. How a host lists
+  and checks the handles is owned by [Host runtime](HostRuntime.md#stores).
+- **Views.** A store read is a List, so further selectors, `for` and `in` apply to it like to any List; it is computed
+  when the read runs and is no live view of later changes.
+- **Names.** A store is named by its plain type. `@Name` alone, `@Name~`, `@Name(:P)` before a selector, and
+  `@Name(root)` of a type without a part are `validate.invalidHandleUse`; a type the store does not declare is
+  `validate.unknownHandleType`. Other selectors than these four on `@Name` are `validate.invalidHandleUse` as well.
+
 #### Handle text form
 
-A handle's text is `@Type:id`, followed by `~version` when it carries one and `/part` for a composite:
+A handle's text is `@Type:id`, followed by `~version` when it carries one and `/part` for a composite with a part:
 
 | Text | Handle |
 | --- | --- |
@@ -2136,6 +2176,7 @@ A handle's text is `@Type:id`, followed by `~version` when it carries one and `/
 | `@Drone:7~120` | `@Drone` 7 at revision 120 |
 | `@UnitFile:content~3f2a…/Units/Tier1/radar.basic.gesd` | the file of a repository at a commit |
 | `@UnitSlot:drone.gnabblo/1` | slot 1 of a unit, without a version |
+| `@Enemy:3`, `@Enemy:3~120` | a part-less composite of `@Drone` 3, with the root's revision |
 
 An integer id is a decimal with an optional `-` and no leading zero. A Text id is bare when it is not empty, consists
 of the ASCII letters, digits, `.`, `_` and `-` and does not read as an integer, and otherwise quoted with `'`, a quote
@@ -2681,13 +2722,13 @@ Records are immutable map-like values with declared fields:
 ```ges
 record :Gauge as {
   current: :Number clamped between 0 and maximum,
-  maximum: :Number clamped between 0 and infinity,
+  maximum: :Number clamped between 0 and infinity default 100,
   percentage: :Percentage computed by
     0% when maximum <= 0,
     otherwise (current / maximum) as :Percentage
 }
 
-let hp be :Gauge(current: 25, maximum: 100)
+let hp be :Gauge(current: 25)
 ```
 
 Field constraints:
@@ -2705,6 +2746,25 @@ Field constraints:
 - `clamped between min and max` evaluates both bounds in the constructor frame,
   clamps the already cast numeric value, and casts the result to the field type
   again.
+- `default expression` gives a constructor parameter the value it takes when its
+  argument is left out or gives `nothing`, in a static call, a Map cast and
+  `parse` alike. It is evaluated in the constructor frame like the clamp bounds,
+  only when needed, and then cast and clamped like a given argument. A field
+  without a default binds `nothing` as before. A computed field takes no
+  default; `default` before `computed by` is `parse.syntax`. A default means the
+  same as a [schema default](Schemas.md#defaults): the value of a field that is
+  left out; since `nothing` is absence in a script, an argument that gives
+  `nothing` counts as left out. *Since: Unreleased.*
+- `:List(T)` casts every element to `T` and gives the field `nothing` when an
+  element does not convert. `max n` bounds it from above and `exactly n` makes
+  it a fixed List of `n` elements, `n` being a positive whole number of at most
+  12 digits; the same bounded List as a [schema List](Schemas.md#fixed-lists).
+  A List longer than its bound gives `nothing`. A fixed List's `default` is
+  its fill element, cast to `T`: a left-out argument becomes `n` copies of it
+  and a shorter List is filled at its end; without a default a shorter List
+  gives `nothing`. `default []` on a fixed List, `clamped` on a List field and
+  a bound other than a positive whole number are `parse.syntax`; an unknown
+  element type is `validate.invalidTypeConstructor`. *Since: Unreleased.*
 - `computed by expression` derives the field from constructor fields and fields
   computed earlier in declaration order, then casts the result to its field
   type.
@@ -2881,7 +2941,8 @@ constant_definition ::= 'constant' CONSTANT_REFERENCE 'be' scalar_literal
 
 record_definition ::= 'record' custom_type_tag 'as' '{' separators [record_field (record_field_separator record_field)*] separators '}'
 record_field_separator ::= ',' separators | separators
-record_field ::= ['_'] field_name ':' (type_reference | handle_union) ['clamped' 'between' expression 'and' expression] ['computed' 'by' expression]
+record_field ::= ['_'] field_name ':' (list_field_type | (type_reference | handle_union) ['clamped' 'between' expression 'and' expression]) ['default' expression | 'computed' 'by' expression]
+list_field_type ::= ':List' '(' type_reference ')' [('max' | 'exactly') LIST_BOUND]
 
 predicate_definition ::= 'predicate' LOWER_NAME definition_parameters 'be' expression
 function_definition ::= 'function' LOWER_NAME definition_parameters 'be' expression

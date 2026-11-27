@@ -253,7 +253,9 @@ extension GesBinaryBuilder {
         static func hasDirectEffects(_ instruction: GesBytecodeInstruction) -> Bool {
             // Dynamic external-field access can call host code. Without a purity contract it is conservative, like an extension call.
             switch instruction.opcode {
-            case .memberAccess, .propertyAccess, .keysOfMap, .valuesOfMap, .entriesOfMap: return true
+            case .memberAccess, .propertyAccess, .keysOfMap, .valuesOfMap, .entriesOfMap, .countStore, .keysOfStore, .valuesOfStore, .entriesOfStore, .countParts,
+                .keysOfParts, .valuesOfParts, .entriesOfParts:
+                return true
             case .cast: return GesBytecodeTypeKind(rawValue: instruction.word2) == .map
             default: break
             }
@@ -287,7 +289,8 @@ extension GesBinaryBuilder {
                 .cross3D, .angleBetween, .angleBetween2D, .angleBetween3D, .takeFirst, .dropFirst, .takeLast, .dropLast, .takeHighest, .takeLowest,
                 .dropHighest, .dropLowest, .count, .startsWith, .endsWith, .contains, .containsAny, .containsAll, .hasAny, .hasAll, .containsValue,
                 .union, .intersect, .zip, .keysOfMap, .valuesOfMap, .entriesOfMap, .first, .last, .single, .iteratorCreate, .distinct,
-                .sortAscending, .sortDescending, .reverse, .hasPattern, .takePattern:
+                .sortAscending, .sortDescending, .reverse, .hasPattern, .takePattern, .countStore, .keysOfStore, .valuesOfStore, .entriesOfStore,
+                .countParts, .keysOfParts, .valuesOfParts, .entriesOfParts:
                 return true
             default: return false
             }

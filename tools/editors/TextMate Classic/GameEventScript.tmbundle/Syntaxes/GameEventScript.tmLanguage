@@ -1399,6 +1399,18 @@
 				</dict>
 				<dict>
 					<key>match</key>
+					<string>(?&lt;=\))[ \t]*\b(exactly)(?=[ \t]+[1-9])</string>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+					</dict>
+				</dict>
+				<dict>
+					<key>match</key>
 					<string>\b(computed)([ \t]+)(by)\b</string>
 					<key>name</key>
 					<string>meta.keyword-phrase.gameeventscript</string>

@@ -257,6 +257,7 @@ public struct GesSchemaWriter {
         if node.kind != .list { throw GesWireError(GesWireError.typeMismatch, field.path) }
         if count > 0 && node.depthLimit > 0 { throw GesWireError.tooDeep(field.path, node.depthLimit) }
         if count < 0 || Int64(count) > node.maxCount { throw GesWireError(GesWireError.tooLong, field.path) }
+        if node.fixed && Int64(count) < node.maxCount { throw GesWireError(GesWireError.tooShort, field.path) }
         try presence(node)
         try put(UInt64(count), node.width)
         if count == 0 { return leave(node.after) }
@@ -559,7 +560,7 @@ public struct GesSchemaReader {
     public mutating func beginList(_ field: GesSchemaField) throws(GesWireError) -> Int {
         try enter(field, .list)
         let node = schema.nodes[field.index]
-        let count = try get(node.width, field.index)
+        let count = node.fixed ? UInt64(node.maxCount) : try get(node.width, field.index)
         if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, field.path) }
         if count == 0 {
             leave(node.after)

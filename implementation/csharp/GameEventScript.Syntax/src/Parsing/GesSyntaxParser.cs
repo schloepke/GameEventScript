@@ -361,11 +361,15 @@ internal sealed partial class GesSyntaxParser
         Role(isUnlabeledConstructorParameter ? GesSyntaxRole.UnlabeledField : GesSyntaxRole.Field);
         Expect(Colon);
         SkipNewLines();
-        ParseTypeName(allowHandle: true, allowUnion: true);
+        var typeName = ParseTypeName(allowHandle: true, allowUnion: true);
+        var list = typeName == "List" && Match(LeftParen);
+        var exact = list && ParseListElement();
         SkipNewLines();
 
-        if (MatchWord("clamped"))
+        if (IsWord("clamped"))
         {
+            if (list) throw new ParseException("A List field with an element type is not clamped.", Current);
+            AdvanceKeyword();
             ExpectWord("between");
             ParseEqualityExpression();
             Expect(OperatorAnd);
@@ -373,15 +377,57 @@ internal sealed partial class GesSyntaxParser
             SkipNewLines();
         }
 
+        var defaultToken = Current;
+        var hasDefault = Match(Default);
+        if (hasDefault)
+        {
+            SkipNewLines();
+            if (exact && Is(LeftBracket) && _reader.PeekSignificant(1).Kind == RightBracket)
+                throw new ParseException("The default of a fixed List is its fill element, not an empty List.", defaultToken);
+            ParseEqualityExpression();
+            SkipNewLines();
+        }
+
         var computed = MatchWord("computed");
         if (computed)
         {
+            if (hasDefault) throw new ParseException("Computed record fields cannot have a default.", defaultToken);
             ExpectWord("by");
             ParseAssemblyOrExpression();
         }
 
         if (isUnlabeledConstructorParameter && computed) throw new ParseException("Computed record fields cannot be constructor parameters.", startToken);
         _tree.FinishNode();
+    }
+
+    // The element type of a record field's `:List(T)` and its optional bound, `max n` or `exactly n` with a positive whole n
+    // of at most 12 digits. Returns whether the List is fixed.
+    private bool ParseListElement()
+    {
+        SkipNewLines();
+        ParseTypeName();
+        SkipNewLines();
+        Expect(RightParen);
+        var exact = false;
+        if (Match(Max)) Role(GesSyntaxRole.Keyword);
+        else if (MatchWord("exactly")) exact = true;
+        else return false;
+
+        var bound = Current;
+        if (bound.Kind != Float || !IsListBound(bound.Text)) throw new ParseException("A List bound is a positive whole number of at most 12 digits.", bound);
+        Advance();
+        return exact;
+    }
+
+    internal static bool IsListBound(string text)
+    {
+        if (text.Length is 0 or > 12 || text[0] == '0') return false;
+        foreach (var c in text)
+        {
+            if (c is < '0' or > '9') return false;
+        }
+
+        return true;
     }
 
     private void ParseCallableDefinition()

@@ -26,7 +26,7 @@ class HandleSetupTests(unittest.TestCase):
 
     def test_corpus_setups_normalize_with_defaults(self):
         setup = handle_setup.prepare(self.script)
-        self.assertEqual({'schemas', 'hostSchemas', 'resolvers', 'answers', 'refAnswers', 'resolveRefs'}, set(setup))
+        self.assertEqual({'schemas', 'hostSchemas', 'resolvers', 'answers', 'refAnswers', 'resolveRefs', 'stores', 'lists', 'enumerable'}, set(setup))
         self.assertTrue(setup['answers'])
         for answer in setup['answers']:
             self.assertEqual({'handle', 'answer', 'text', 'version'}, set(answer))
@@ -36,6 +36,34 @@ class HandleSetupTests(unittest.TestCase):
         self.assertEqual([], defaulted['answers'])
         self.assertEqual([], defaulted['refAnswers'])
         self.assertEqual([], defaulted['resolveRefs'])
+        self.assertIsNone(defaulted['stores'])
+        self.assertEqual([], defaulted['lists'])
+        self.assertIsNone(defaulted['enumerable'])
+
+    def test_store_listings_and_enumerable_types(self):
+        store = {'files': [{'root': 'base', 'path': 'a.gesd', 'text': 'x: 1'}], 'stores': [{'type': 'Item', 'roots': [{'name': 'base', 'path': ''}]}]}
+        listing = {'type': 'Drone', 'handles': ['@Drone:7']}
+        setup = handle_setup.prepare(self.with_setup(self.script, stores=store, lists=[listing, {**listing, 'root': '@Fleet:1'}], enumerable=['Drone', 'Item']))
+        self.assertEqual(['Item'], [item['type'] for item in setup['stores']['stores']])
+        self.assertNotIn('index', setup['stores'])
+        self.assertEqual([{'type': 'Drone', 'root': None, 'handles': ['@Drone:7']}, {'type': 'Drone', 'root': '@Fleet:1', 'handles': ['@Drone:7']}], setup['lists'])
+        self.assertEqual(['Drone', 'Item'], setup['enumerable'])
+        invalid = [
+            (self.script, {'stores': {**store, 'index': ['Kind']}}),
+            (self.script, {'stores': {**store, 'stores': []}}),
+            (self.script, {'lists': [listing, listing]}),
+            (self.script, {'lists': [{**listing, 'type': '@Drone'}]}),
+            (self.script, {'lists': [{**listing, 'root': 'Fleet:1'}]}),
+            (self.script, {'lists': [{**listing, 'handles': 'Drone:7'}]}),
+            (self.script, {'lists': [{'type': 'Item', 'handles': []}], 'stores': store}),
+            (self.script, {'enumerable': ['Drone', 'Drone']}),
+            (self.compile, {'lists': [listing]}),
+            (self.compile, {'stores': store}),
+        ]
+        for case, changes in invalid:
+            with self.subTest(changes=changes), self.assertRaises(InvalidDocument):
+                handle_setup.prepare(self.with_setup(case, **changes))
+        handle_setup.prepare(self.with_setup(self.compile, enumerable=['Drone']))
 
     def test_invalid_setups_are_rejected(self):
         answer = {'handle': '@Drone:7', 'document': '{ altitude: 1 }'}

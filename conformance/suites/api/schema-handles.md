@@ -92,6 +92,100 @@ schema: {"handle": {"canonical": "gess1\nhandle UnitFile composite Repository\np
 
 ---
 
+## Test: a part-less composite writes no part
+
+A composite without a part writes its `handle` line and then its root's declaration.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: handle-partless-composite
+schemaApi:
+  sources: ["schema :DroneState as { x: :Number integer between 0 and 9 }\nschema :BrainState as { mood: :Number integer between 0 and 3 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Brain of :BrainState composite @Drone\n"]
+  handle: "Brain"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"handle": {"canonical": "gess1\nhandle Brain composite Drone\nhandle Drone\nid Number integer between 0e0 255e0\nversion Number integer between 0e0 1e3\n", "hash": "25fc8682a3249886"}}
+```
+
+---
+
+## Test: a part-less composite of a composite
+
+A part-less composite has one level too.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: handle-partless-composite-of-composite
+schemaApi:
+  sources: ["schema :DroneState as { x: :Number integer between 0 and 9 }\nschema :BrainState as { mood: :Number integer between 0 and 3 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Brain of :BrainState composite @Drone\nhandle @Mind of :BrainState composite @Brain\n"]
+  handle: "Mind"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidHandle"}}
+```
+
+---
+
+## Test: a part-less composite on the wire
+
+A part-less composite sends its root's id and, as `@Name~`, its root's version, exactly like its root.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: handle-partless-encode
+schemaApi:
+  sources: ["schema :DroneState as { x: :Number integer between 0 and 9 }\nschema :BrainState as { mood: :Number integer between 0 and 3 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Brain of :BrainState composite @Drone\nwire schema :Seen as { brain: @Brain, pinned: @Brain~, drone: @Drone~ }\n"]
+  root: "Seen"
+  encode: {"type": ":Seen", "entries": [{"key": "brain", "value": {"type": ":Handle", "value": "@Brain:3"}}, {"key": "drone", "value": {"type": ":Handle", "value": "@Drone:3~7"}}, {"key": "pinned", "value": {"type": ":Handle", "value": "@Brain:3~7"}}]}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"encoded": {"bytes": "0303070c1c00"}}
+```
+
+---
+
+## Test: decoding a part-less composite
+
+Decoding gives the part-less composite's handles with the root's id and version.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: handle-partless-decode
+schemaApi:
+  sources: ["schema :DroneState as { x: :Number integer between 0 and 9 }\nschema :BrainState as { mood: :Number integer between 0 and 3 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Brain of :BrainState composite @Drone\nwire schema :Seen as { brain: @Brain, pinned: @Brain~, drone: @Drone~ }\n"]
+  root: "Seen"
+  decode: "0303070c1c00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"decoded": {"value": {"type": ":Seen", "entries": [{"key": "brain", "value": {"type": ":Handle", "value": "@Brain:3"}}, {"key": "drone", "value": {"type": ":Handle", "value": "@Drone:3~7"}}, {"key": "pinned", "value": {"type": ":Handle", "value": "@Brain:3~7"}}]}, "byteCount": 6}}
+```
+
+---
+
 ## Test: the state schema is not part of a sending schema's hash
 
 A wire schema that sends handles keeps its hash when the state schema changes; compare the next case.
@@ -1801,6 +1895,29 @@ gesBlock: case
 id: store-file-not-composite
 schemaApi:
   sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Store(@Unit) as { id: :Text max 64, version: :Nothing }\n"]
+  handle: "UnitFiles"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidHandle"}}
+```
+
+---
+
+## Test: a store file type without a part
+
+A store file type names a file by its path, so a part-less composite is none. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: store-file-partless
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 16 }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Hash(#sha1) }\nhandle @UnitFiles of :Store(@Unit) composite @Repository\n"]
   handle: "UnitFiles"
 ```
 

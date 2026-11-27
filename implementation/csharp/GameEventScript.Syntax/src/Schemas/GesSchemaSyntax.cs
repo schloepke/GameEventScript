@@ -175,6 +175,9 @@ internal sealed class GesSchemaTypeSyntax
 
     internal int MaxOffset { get; init; }
 
+    // Whether a List's maximum was written `exactly n`: the List always holds that many elements.
+    internal bool Exact { get; init; }
+
     // The alternatives of a List's element.
     internal GesSchemaTypeSyntax[]? Element { get; init; }
 
@@ -391,7 +394,7 @@ internal sealed class GesSchemaDeclarationSyntax
     internal GesSchemaTakenSyntax[] Taken { get; init; } = [];
 
     // A handle declaration: its state schema, the composite root without `@`, the id or part type, the version form and the
-    // revision's type, each with where it starts.
+    // revision's type, each with where it starts. A part-less composite has a root and no id or part type.
     internal string State { get; init; } = "";
 
     internal int StateOffset { get; init; }

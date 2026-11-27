@@ -20,9 +20,10 @@ internal static class CompilerObservations
         handlerName = diagnostic.HandlerName
     };
 
-    internal static object Success(string kind, GameEventScriptProgram program)
+    internal static object Success(string kind, GameEventScriptProgram program, IReadOnlyList<GesDiagnostic> warnings)
     {
-        if (kind == "bytecodeSnapshot") return new { status = "ok", dump = program.Dump() };
+        var reported = warnings.Select(Diagnostic).ToArray();
+        if (kind == "bytecodeSnapshot") return new { status = "ok", dump = program.Dump(), warnings = reported };
         if (kind == "compileError") return new { status = "ok" };
         if (kind == "bytecode")
         {
@@ -32,7 +33,7 @@ internal static class CompilerObservations
                 var name = program.Code[index].OpCode.ToString();
                 counts[name] = counts.GetValueOrDefault(name) + 1;
             }
-            return new { status = "ok", opcodes = counts };
+            return new { status = "ok", opcodes = counts, warnings = reported };
         }
         var signatures = new Dictionary<string, List<string>>(StringComparer.Ordinal);
         var handlers = new List<object>();
@@ -54,7 +55,8 @@ internal static class CompilerObservations
                 messageDefinitions = signatures.Select(pair => new { name = pair.Key, count = pair.Value.Count, signatureIds = pair.Value }).ToArray(),
                 programResources = new { requiredRegisterCount = program.RequiredRegisterCount, requiredCallStackDepth = program.RequiredCallStackDepth },
                 handlerResources = handlers
-            }
+            },
+            warnings = reported
         };
     }
 }

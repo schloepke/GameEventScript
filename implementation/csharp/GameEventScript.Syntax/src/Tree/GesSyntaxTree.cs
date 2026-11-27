@@ -54,6 +54,7 @@ internal enum GesSyntaxNodeKind : byte
     ObjectPattern,
     ObjectPatternEntry,
     ParenthesizedExpression,
+    StoreExpression,
     LiteralExpression,
     NameExpression,
     MessageExpression,

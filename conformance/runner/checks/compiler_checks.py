@@ -106,7 +106,13 @@ def expectation(case):
             diagnostic(item, expectation=True)
         return
     key = {'compileError': 'error', 'bytecode': 'opcodes', 'compileMetadata': 'metadata'}[case.kind]
-    closed(case.expected, {'gesBlock', key}, 'compiler expectation')
+    # A successful compilation may also expect its complete ordered warning list.
+    closed(case.expected, {'gesBlock', key} | ({'warnings'} if key != 'error' else set()), 'compiler expectation')
+    if 'warnings' in case.expected:
+        if not isinstance(case.expected['warnings'], list):
+            raise InvalidDocument('Invalid warning expectation')
+        for item in case.expected['warnings']:
+            diagnostic(item, expectation=True)
     if key not in case.expected or case.assembler is not None:
         raise InvalidDocument('Missing or conflicting compiler expectation')
     value = case.expected[key]
@@ -131,14 +137,14 @@ def expectation(case):
 
 def compare(case, observed):
     """Return (status, mismatches); expected compiler failures are observations, not execution errors."""
-    closed(observed, {'status', 'detail', 'diagnostics', 'dump', 'opcodes', 'metadata'}, 'compiler observation')
+    closed(observed, {'status', 'detail', 'diagnostics', 'dump', 'opcodes', 'metadata', 'warnings'}, 'compiler observation')
     status = observed.get('status')
     if status not in ('ok', 'error', 'compileError'):
         raise InvalidDocument('Invalid observation status')
     if 'detail' in observed and not isinstance(observed['detail'], str):
         raise InvalidDocument('Invalid observation detail')
     payload = {'bytecodeSnapshot': 'dump', 'bytecode': 'opcodes', 'compileMetadata': 'metadata'}.get(case.kind)
-    allowed = {'status', 'detail', 'diagnostics'} | ({payload} if status == 'ok' and payload else set())
+    allowed = {'status', 'detail', 'diagnostics'} | ({payload, 'warnings'} if status == 'ok' and payload else set())
     if set(observed) - allowed or (status == 'ok' and observed.get('diagnostics')):
         raise InvalidDocument('Conflicting compiler observations')
     diagnostics = observed.get('diagnostics', [])
@@ -148,12 +154,17 @@ def compare(case, observed):
         diagnostic(item)
     if status == 'compileError' and not diagnostics:
         raise InvalidDocument('Compiler failure without diagnostics')
+    warnings = observed.get('warnings', [])
+    if not isinstance(warnings, list):
+        raise InvalidDocument('Invalid warning sequence')
+    for item in warnings:
+        diagnostic(item)
     if status == 'error':
         return 'error', []
-    if case.kind == 'compileError':
-        def matches(expected, item):
-            return all(exact(v, item.get(k)) if v is None else k in item and exact(v, item[k]) for k, v in expected.items())
+    def matches(expected, item):
+        return all(exact(v, item.get(k)) if v is None else k in item and exact(v, item[k]) for k, v in expected.items())
 
+    if case.kind == 'compileError':
         if 'errors' in case.expected:
             expected = case.expected['errors']
             if status == 'compileError' and len(expected) == len(diagnostics) and all(matches(e, item) for e, item in zip(expected, diagnostics)):
@@ -174,6 +185,11 @@ def compare(case, observed):
     def check(path, expected, actual):
         if not exact(expected, actual):
             differences.append({'path': path, 'expected': expected, 'actual': actual})
+
+    if 'warnings' in case.expected:
+        expected = case.expected['warnings']
+        if len(expected) != len(warnings) or not all(matches(e, item) for e, item in zip(expected, warnings)):
+            differences.append({'path': '/warnings', 'expected': expected, 'actual': warnings})
 
     if case.kind == 'bytecode':
         counts = observed.get('opcodes')

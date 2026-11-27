@@ -52,6 +52,7 @@ internal static class GesSchemaLayoutJson
                 }
                 else
                 {
+                    if (handle.PartlessRoot.Length > 0) json.String("root", handle.PartlessRoot);
                     json.Key("id");
                     Encoding(json, handle.Id!);
                     json.Key("version");
@@ -332,6 +333,7 @@ internal static class GesSchemaLayoutJson
             case GesLayoutKind.List:
                 json.Boolean("dice", encoding.Dice);
                 json.Number("maxCount", encoding.MaxCount);
+                if (encoding.Fixed) json.Boolean("fixed", true);
                 json.Number("width", encoding.Width);
                 json.Boolean("keyed", encoding.Keyed);
                 json.Number("positionWidth", encoding.PositionWidth);

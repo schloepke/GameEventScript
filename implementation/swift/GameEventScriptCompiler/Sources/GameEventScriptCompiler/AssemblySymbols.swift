@@ -176,6 +176,11 @@ extension GesCompiler {
 
     func assemblySpecial(_ line: GesAssemblyLine, _ regs: [Int], _ r: GesRoutine) throws -> Bool {
         let args = line.operands
+        if let opcode = Self.assemblyStoreReads[line.name] {
+            let parts = args.count == 3
+            storeRead(opcode, regs[0], parts ? regs[1] : nil, try assemblyText(args[parts ? 2 : 1]), r)
+            return true
+        }
         if ["Add", "Subtract", "Multiply", "Divide", "Power", "IntegerDivide", "Modulo", "Remainder", "Min", "Max"].contains(line.name) && args.count == 4 {
             guard try assemblyText(args[3]) == "numeric" else { throw assemblyFailure(line.location, "Unknown arithmetic mode.") }
             let op: GesBytecodeOpCode = ["Add": .add, "Subtract": .subtract, "Multiply": .multiply, "Divide": .divide, "Power": .power, "IntegerDivide": .integerDivide, "Modulo": .modulo, "Remainder": .remainder, "Min": .min, "Max": .max][line.name]!

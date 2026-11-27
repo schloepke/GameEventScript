@@ -187,6 +187,25 @@ enum SchemaApiObservations {
     // entries of the last with its sources, the errors of the first that fails, or the code of a resolver failure.
     private static func stores(_ set: GesSchemaSet, _ input: Input) throws -> [String: Any] {
         try Validation.fields(input, ["files", "stores", "refs", "latest", "index"])
+        let read: [GesStore]
+        do {
+            read = try readStores(set, input)
+        } catch let error as GesStoreError {
+            return ["errors": error.diagnostics.map(storeError)]
+        } catch let error as GesHandleError {
+            return ["failure": error.code]
+        }
+        return [
+            "entries": try (read.last?.entries ?? []).map { entry -> [String: Any] in
+                ["id": entry.id, "handle": entry.handle.description, "origin": location(entry.origin), "value": try RuntimeValues.encode(entry.value)]
+            },
+            "sources": (read.last?.sources ?? []).map(\.description),
+            "indexes": try read.last.map { try indexes($0, input) } ?? [:],
+        ]
+    }
+
+    // Reads the stores of a store input in order, each with every earlier one as a dependency; the first failure throws.
+    static func readStores(_ set: GesSchemaSet, _ input: Input) throws -> [GesStore] {
         let table = try input.values("files").map { file in
             StoreFile(root: try file.text("root"), path: try file.text("path"), text: try file.text("text"), version: try optionalInt64(file["version"]))
         }
@@ -197,27 +216,15 @@ enum SchemaApiObservations {
         var read: [GesStore] = []
         for store in input.values("stores") {
             let type = try set.handleType(try store.text("type"))
-            do {
-                if let handles = store["handles"]?.arrayValue {
-                    let roots = try handles.map { try GesHandle(parsing: $0.stringValue ?? "") }
-                    read.append(try GesStore.read(type, roots: roots, resolver: resolver, dependencies: read))
-                } else {
-                    let roots = try store.values("roots").map { GesStoreRoot(name: try $0.text("name"), path: try $0.text("path")) }
-                    read.append(try GesStore.read(type, roots: roots, files: files, dependencies: read))
-                }
-            } catch let error as GesStoreError {
-                return ["errors": error.diagnostics.map(storeError)]
-            } catch let error as GesHandleError {
-                return ["failure": error.code]
+            if let handles = store["handles"]?.arrayValue {
+                let roots = try handles.map { try GesHandle(parsing: $0.stringValue ?? "") }
+                read.append(try GesStore.read(type, roots: roots, resolver: resolver, dependencies: read))
+            } else {
+                let roots = try store.values("roots").map { GesStoreRoot(name: try $0.text("name"), path: try $0.text("path")) }
+                read.append(try GesStore.read(type, roots: roots, files: files, dependencies: read))
             }
         }
-        return [
-            "entries": try (read.last?.entries ?? []).map { entry -> [String: Any] in
-                ["id": entry.id, "handle": entry.handle.description, "origin": location(entry.origin), "value": try RuntimeValues.encode(entry.value)]
-            },
-            "sources": (read.last?.sources ?? []).map(\.description),
-            "indexes": try read.last.map { try indexes($0, input) } ?? [:],
-        ]
+        return read
     }
 
     // The handles of the last store through each requested projection, by projection name.

@@ -188,6 +188,8 @@ extension GesCompiler {
         case .constructor: try constructorExpression(e, d, r, scope)
         case .list, .map: try collectionLiteral(e, d, r, scope)
         case .member: try memberExpression(e, d, r, scope)
+        case .storeRead: try storeReadExpression(e, d, r, scope)
+        case .store: throw compileError("compile.unsupportedConstruct", e.location, phase: .compile)
         case .combined: try combinedExpression(e, d, r, scope)
         case .selector: try selectorExpression(e, d, r, scope)
         case .intrinsic: try intrinsicExpression(e, d, r, scope)

@@ -4,6 +4,12 @@
 @_spi(Compiler) import GameEventScriptRuntime
 
 extension GesCompiler {
+    // Store reads lower like source ones, which name their handle type and mark state reads.
+    static let assemblyStoreReads: [String: GesBytecodeOpCode] = [
+        "CountStore": .countStore, "KeysOfStore": .keysOfStore, "ValuesOfStore": .valuesOfStore, "EntriesOfStore": .entriesOfStore,
+        "CountParts": .countParts, "KeysOfParts": .keysOfParts, "ValuesOfParts": .valuesOfParts, "EntriesOfParts": .entriesOfParts,
+    ]
+
     static let assemblyInstructions: [String: (GesBytecodeOpCode, String, [Int])] = [
         "Nop": (.nop, "", []),
         "RandomTake": (.randomTake, "wrr", [0, 1, 2]),
@@ -19,6 +25,14 @@ extension GesCompiler {
         "ParseLiteral": (.parseLiteral, "wr", [0, 1]),
         "CastNumeric": (.castNumeric, "wr", [0, 1]),
         "CheckCustomType": (.checkCustomType, "wrt", [0, 1, 2]),
+        "CountStore": (.countStore, "wt", [0, 2]),
+        "KeysOfStore": (.keysOfStore, "wt", [0, 2]),
+        "ValuesOfStore": (.valuesOfStore, "wt", [0, 2]),
+        "EntriesOfStore": (.entriesOfStore, "wt", [0, 2]),
+        "CountParts": (.countParts, "wrt", [0, 1, 2]),
+        "KeysOfParts": (.keysOfParts, "wrt", [0, 1, 2]),
+        "ValuesOfParts": (.valuesOfParts, "wrt", [0, 1, 2]),
+        "EntriesOfParts": (.entriesOfParts, "wrt", [0, 1, 2]),
         "CheckNumeric": (.checkNumeric, "wr", [0, 1]),
         "CheckInteger": (.checkInteger, "wr", [0, 1]),
         "CheckFractional": (.checkFractional, "wr", [0, 1]),

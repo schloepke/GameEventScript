@@ -332,7 +332,7 @@ internal sealed partial class GesSchemaSourceReader
     }
 
     // `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`, where
-    // `:Store(@Type)` may stand for the state.
+    // `:Store(@Type)` may stand for the state; a composite without `as { part: ... }` is part-less.
     private GesSchemaDeclarationSyntax ReadHandle(int offset)
     {
         SkipSpaces();
@@ -371,6 +371,22 @@ internal sealed partial class GesSchemaSourceReader
             rootOffset = _position;
             root = ReadHandleName();
             SkipSpaces();
+            // Without `as { part: ... }` the composite is part-less: one per root, keyed by the root's id alone.
+            if (!AtWord("as"))
+            {
+                return new GesSchemaDeclarationSyntax
+                {
+                    Kind = GesSchemaDeclarationKind.Handle,
+                    Name = name,
+                    Offset = offset,
+                    State = state,
+                    StateOffset = stateOffset,
+                    Store = store,
+                    StoreOffset = storeOffset,
+                    Root = root,
+                    RootOffset = rootOffset
+                };
+            }
         }
 
         ExpectWord("as");
@@ -879,6 +895,7 @@ internal sealed partial class GesSchemaSourceReader
             {
                 GesSchemaTypeSyntax[]? element = null;
                 (long? Value, string Name, int Offset) max = (null, "", 0);
+                var exact = false;
                 if (Consume('('))
                 {
                     // Every pass over a type recurses, so its nesting has a limit below any stack.
@@ -889,7 +906,9 @@ internal sealed partial class GesSchemaSourceReader
                     Expect(')');
                     _typeNesting--;
                     SkipSpaces();
-                    max = ReadMax();
+                    // `exactly n` fixes the length where `max n` bounds it (specs/Schemas.md#fixed-lists).
+                    exact = AtWord("exactly");
+                    max = ReadMax(exact ? "exactly" : "max");
                 }
 
                 var depth = 0;
@@ -913,6 +932,7 @@ internal sealed partial class GesSchemaSourceReader
                     Max = max.Value,
                     MaxName = max.Name,
                     MaxOffset = max.Offset,
+                    Exact = exact,
                     Depth = depth,
                     DepthOffset = depthOffset,
                     Offset = offset
@@ -1005,9 +1025,9 @@ internal sealed partial class GesSchemaSourceReader
     }
 
     // A whole number, or the name of a let that holds one.
-    private (long? Value, string Name, int Offset) ReadMax()
+    private (long? Value, string Name, int Offset) ReadMax(string keyword = "max")
     {
-        if (!AtWord("max")) return (null, "", 0);
+        if (!AtWord(keyword)) return (null, "", 0);
         ReadWord();
         SkipSpaces();
         if (_position < _text.Length && GesText.IsAsciiLower(_text[_position]))

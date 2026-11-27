@@ -116,9 +116,15 @@ internal static class GesSchemaFormatter
                     builder.Append("handle @").Append(declaration.Name).Append(" of :").Append(declaration.State);
                     if (declaration.Root.Length > 0)
                     {
-                        builder.Append(" composite @").Append(declaration.Root).Append(" as { part: ");
-                        Type(declaration.Id!, builder, "");
-                        builder.Append(" }\n");
+                        builder.Append(" composite @").Append(declaration.Root);
+                        if (declaration.Id is { } part)
+                        {
+                            builder.Append(" as { part: ");
+                            Type(part, builder, "");
+                            builder.Append(" }");
+                        }
+
+                        builder.Append('\n');
                         break;
                     }
 
@@ -522,8 +528,9 @@ internal static class GesSchemaFormatter
                     builder.Append(')');
                 }
 
-                if (type.Max is { } listMax) builder.Append(" max ").Append(listMax);
-                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
+                var listWord = type.Exact ? " exactly " : " max ";
+                if (type.Max is { } listMax) builder.Append(listWord).Append(listMax);
+                else if (type.MaxName.Length > 0) builder.Append(listWord).Append(type.MaxName);
                 if (type.Depth > 0) builder.Append(" depth ").Append(type.Depth);
                 return;
             case GesSchemaTypeKind.Dice:

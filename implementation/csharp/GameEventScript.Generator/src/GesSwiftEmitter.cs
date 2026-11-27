@@ -481,7 +481,7 @@ internal static partial class GesSwiftEmitter
             GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Box or GesLayoutKind.Disc when encoding.Unit != "none" => $", in {encoding.Unit}",
             GesLayoutKind.List when encoding.Poly => $", the points of a polygon{(encoding.Unit != "none" ? " in " + encoding.Unit : "")}, at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}",
             GesLayoutKind.Union => ", the selected alternative",
-            GesLayoutKind.List => $", at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)} elements",
+            GesLayoutKind.List => $", {(encoding.Fixed ? "exactly" : "at most")} {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)} elements",
             _ => ""
         };
     }
@@ -814,7 +814,8 @@ internal static partial class GesSwiftEmitter
                 code.Line($"if {target}.count > {max} {{ {Throw("tooLong", value)} }}");
                 if (value.HandleMap)
                     code.Line($"for position in {target}.indices.dropFirst() where !({target}[position - 1].{HandleKey(value)} < {target}[position].{HandleKey(value)}) {{ throw GesWireError(code: GesWireError.invalidKeyOrder, path: {HandleKeyPath(value)}) }}");
-                code.Line($"try writer.write(UInt64({target}.count), width: {width})");
+                if (encoding.Fixed) code.Line($"if {target}.count < {max} {{ {Throw("tooShort", value)} }}");
+                else code.Line($"try writer.write(UInt64({target}.count), width: {width})");
                 code.Open($"for item in {target} {{");
                 if (value.Item is not null) code.Line($"try item.__writeFields(&writer, paths, at + {value.Element!.Node.ToString(CultureInfo.InvariantCulture)}{ItemLevel(value.Element)})");
                 else Write(code, value.Element!, "item");
@@ -919,8 +920,13 @@ internal static partial class GesSwiftEmitter
                     code.Indent();
                 }
                 else code.Open("do {");
-                code.Line($"let count = Int(try reader.read({width}, path: {Path(value)}))");
-                code.Line($"if count > {max} {{ {Throw("invalidCount", value)} }}");
+                if (encoding.Fixed) code.Line($"let count = {max}");
+                else
+                {
+                    code.Line($"let count = Int(try reader.read({width}, path: {Path(value)}))");
+                    code.Line($"if count > {max} {{ {Throw("invalidCount", value)} }}");
+                }
+
                 code.Line($"{target}.removeAll(keepingCapacity: true)");
                 if (element.Packed is not null)
                 {

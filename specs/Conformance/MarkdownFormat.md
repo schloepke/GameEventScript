@@ -724,6 +724,9 @@ handles:
 | `resolvers` | sequence of distinct type names without `@` | no | host types that get a resolver; omitted means every host type, `[]` none |
 | `answers` | sequence | no | scripted resolver answers for states and refs; only `scriptApi` cases |
 | `resolveRefs` | sequence of handle text forms | no | handles the runner resolves through the host's `ResolveRef` after Start, in order; only `scriptApi` cases |
+| `stores` | mapping | no | [stores](../Documents.md#stores) the host reads from files and registers as their types' resolvers; only `scriptApi` cases |
+| `lists` | sequence | no | handles the scripted resolvers list for [store reads](../Language.md#stores); only `scriptApi` cases |
+| `enumerable` | sequence of distinct type names without `@` | no | the types the compiler is told enumerate; omitted means the compiler is not told and does not warn |
 
 Each answer names one object by the handle's text form and has exactly one of `document` (GES document text, read
 against the state schema), `record` (a data literal of the state record), `missing: true` (the object does not
@@ -764,6 +767,24 @@ resolvedRefs:
 ```
 
 `resolvedRefs` without `resolveRefs` is invalid. Every host of the case reports the same entries.
+
+`stores` has the shape of a [`schemaApi` store input](#schemaapi) without `index`: `files` and `stores`, optionally
+`refs` and `latest`. The host reads them against `hostSchemas` and registers each store as the resolver of its type;
+the other selected types get scripted resolvers. A type with a store has no answers or listing.
+
+Each `lists` entry names a `type` without `@`, an optional `root` (the text form of a root handle) and `handles`, the
+text forms the scripted resolver lists for every object of the type, or for the parts of that root, in authored order.
+A listing is unique per type and root. A scripted resolver without a listing for a type and root does not enumerate,
+so its store reads yield `nothing`:
+
+```yaml
+handles:
+  lists:
+    - type: "Ship"
+      root: "@Fleet:1"
+      handles: ["@Ship:1/7", "@Ship:1/3"]
+  enumerable: [Ship]
+```
 
 A step input may carry a handle with a ref. Receive rejects it before enqueuing anything, so the step expects
 `accepted: false` and a `rejection`, as the input rejection of [ordered steps](#ordered-steps) describes.
@@ -1184,6 +1205,10 @@ opcodes:
 
 At least one constraint is required. Opcode names are exact canonical names.
 `contains` means count greater than zero; `excludes` means zero.
+
+A `bytecode` or `compileMetadata` expectation may add `warnings`, the ordered sequence of the compiler's warnings
+(Since: Unreleased), each with the fields of a [`compileError` error](#compileerror-and-loaderror). It must match in
+length and order; `warnings: []` requires none. Without `warnings` the compiler's warnings are not compared.
 
 ### `bytecodeSnapshot`
 

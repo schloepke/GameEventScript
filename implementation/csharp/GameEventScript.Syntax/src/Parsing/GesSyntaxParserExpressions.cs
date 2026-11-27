@@ -1136,6 +1136,20 @@ internal sealed partial class GesSyntaxParser
             return Leaf(PreviousIndex);
         }
 
+        // `@X` is the store of a handle type and `@X(root)` the parts of one root (specs/Language.md#stores).
+        if (Is(HandleTypeName))
+        {
+            _tree.StartNode(GesSyntaxNodeKind.StoreExpression);
+            Advance();
+            var storeStart = PreviousIndex;
+            if (!Match(LeftParen)) return FinishNode(Node(0, storeStart));
+            SkipNewLines();
+            var root = ParseExpression();
+            SkipNewLines();
+            Expect(RightParen);
+            return FinishNode(Node(root.Depth, storeStart));
+        }
+
         if (Is(LeftParen))
         {
             // Parentheses add one level and keep the range and shape of the enclosed expression.

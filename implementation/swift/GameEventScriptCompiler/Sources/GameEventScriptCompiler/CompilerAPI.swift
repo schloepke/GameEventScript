@@ -35,6 +35,11 @@ public final class GesProgramBuilder {
     var handleTypes: [String: GesHandleType] = [:]
     // The handle type names in first declaration order, as C#'s Dictionary enumerates them; a replacement keeps its place.
     var handleTypeOrder: [String] = []
+    var enumerableHandleTypes: Set<String>?
+
+    /// The warnings of the last `compile(options:)` call, in report order; empty before the first call. Warnings do not
+    /// fail a compilation, and a failed compilation reports them as of its validation.
+    public private(set) var warnings: [GesDiagnostic] = []
 
     /// Creates an empty source builder with default compile options. `GameEventScriptProgram.makeBuilder()` is
     /// equivalent.
@@ -84,6 +89,15 @@ public final class GesProgramBuilder {
         return self
     }
 
+    /// Tells the compiler which handle types the host enumerates (`GesHandleResolver.handles(root:)`), so that a store
+    /// read of any other declared type, which reads as nothing, reports a `validate.handleTypeNotEnumerable` warning in
+    /// `warnings`. Without this call the compiler does not know and warns about none; each call replaces the previous
+    /// set. Names are written without `@`. Returns this builder.
+    @discardableResult public func withEnumerableHandleTypes(_ names: some Sequence<String>) -> Self {
+        enumerableHandleTypes = Set(names)
+        return self
+    }
+
     /// Compiles all accumulated sources into one immutable, validated Program. Explicit options override builder
     /// options for this call.
     ///
@@ -92,10 +106,12 @@ public final class GesProgramBuilder {
     public func compile(options: GesCompileOptions? = nil) throws -> GameEventScriptProgram {
         let configuration = options ?? self.options
         guard configuration.debugInfo.rawValue & ~GesDebugInfoOptions.all.rawValue == 0 else { throw GesApiError.invalidArgument("Unknown debug information option") }
+        warnings = []
         // Each source's own rules report first, in source order; the program-wide rules follow.
         var sourceDiagnostics: [GesDiagnostic] = []
         let modules = try sources.map { try GesSyntaxBinder.parse($0, validation: &sourceDiagnostics) }
-        let validator = GesAstValidator(modules: modules, catalog: catalog, handleTypes: handleTypes, handleTypeOrder: handleTypeOrder, diagnostics: sourceDiagnostics)
+        let validator = GesAstValidator(modules: modules, catalog: catalog, handleTypes: handleTypes, handleTypeOrder: handleTypeOrder, enumerableHandleTypes: enumerableHandleTypes, diagnostics: sourceDiagnostics)
+        defer { warnings = validator.warnings }
         try validator.validate()
         return try GesCompiler(validator, sources: sources, options: configuration).compile()
     }

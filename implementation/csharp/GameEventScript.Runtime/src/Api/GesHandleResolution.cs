@@ -33,6 +33,18 @@ public interface IGesHandleResolver
     GesValue ResolveRef(GesHandle handle) => throw new InvalidOperationException($"@{handle.TypeName} has no refs.");
 
     /// <summary>
+    /// Lists the objects a script reads as the store <c>@Name</c>, or the parts of one root as <c>@Name(root)</c>
+    /// (specs/HostRuntime.md#stores), in any order and without versions or views. The host calls it at most once per
+    /// root and handler invocation and sorts the result into key order. The default implementation is for types that do
+    /// not enumerate: it returns <see langword="null"/>, and the store reads as Nothing. Throwing, or a list with a
+    /// <see langword="null"/>, a handle of another type or root, or a repeated handle, ends the read with
+    /// <c>runtime.handleResolveFailed</c>.
+    /// </summary>
+    /// <param name="root">The root handle of a composite type with a part, whose parts to list; <see langword="null"/> for every object of the type.</param>
+    /// <returns>The handles, or <see langword="null"/> when the type does not enumerate.</returns>
+    IReadOnlyList<GesHandle>? Handles(GesHandle? root) => null;
+
+    /// <summary>
     /// Answers the state reads of several handles of one type and projection from one List of the current message, the
     /// read handle first and the others in List order. Each call follows the rules of
     /// <see cref="Resolve(GesHandleResolveCall)"/>. The default implementation calls <see cref="Resolve"/> for each call

@@ -110,9 +110,13 @@
             case .handle:
                 output += "handle @\(declaration.name) of :\(declaration.state)"
                 if !declaration.root.isEmpty {
-                    output += " composite @\(declaration.root) as { part: "
-                    type(declaration.id!, &output, "")
-                    output += " }\n"
+                    output += " composite @\(declaration.root)"
+                    if let part = declaration.id {
+                        output += " as { part: "
+                        type(part, &output, "")
+                        output += " }"
+                    }
+                    output += "\n"
                     break
                 }
                 output += " as { id: "
@@ -401,7 +405,8 @@
                 union(element, &output, indent)
                 output += ")"
             }
-            if let max = type.max { output += " max \(max)" } else if !type.maxName.isEmpty { output += " max \(type.maxName)" }
+            let word = type.exact ? " exactly " : " max "
+            if let max = type.max { output += word + "\(max)" } else if !type.maxName.isEmpty { output += word + type.maxName }
             if type.depth > 0 { output += " depth \(type.depth)" }
             return
         case .dice:

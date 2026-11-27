@@ -17,7 +17,7 @@ internal sealed class AdapterHandles
 
     internal static void Validate(JsonElement store)
     {
-        Fields(store, "schemas", "hostSchemas", "resolvers", "answers", "refAnswers", "resolveRefs");
+        Fields(store, "schemas", "hostSchemas", "resolvers", "answers", "refAnswers", "resolveRefs", "stores", "lists", "enumerable");
         _ = Parse(store.GetProperty("schemas"));
         _ = Parse(store.GetProperty("hostSchemas"));
         var resolvers = store.GetProperty("resolvers");
@@ -37,10 +37,24 @@ internal sealed class AdapterHandles
         }
 
         foreach (var reference in store.GetProperty("resolveRefs").EnumerateArray()) _ = GesHandle.Parse(reference.GetString()!);
+        foreach (var listing in store.GetProperty("lists").EnumerateArray())
+        {
+            Fields(listing, "type", "root", "handles");
+            if (listing.GetProperty("root").ValueKind != JsonValueKind.Null) _ = GesHandle.Parse(listing.GetProperty("root").GetString()!);
+            foreach (var handle in listing.GetProperty("handles").EnumerateArray()) _ = GesHandle.Parse(handle.GetString()!);
+        }
+
+        if (store.GetProperty("enumerable").ValueKind is not (JsonValueKind.Null or JsonValueKind.Array)) throw new ArgumentException("Invalid enumerable list.");
+        if (store.GetProperty("stores").ValueKind is not (JsonValueKind.Null or JsonValueKind.Object)) throw new ArgumentException("Invalid host stores.");
     }
 
-    // The handle types the sources may name.
-    internal GesReadOnlyArray<GesHandleType> CompilerTypes => Parse(_store.GetProperty("schemas")).HandleTypes;
+    // Gives the compiler the handle types the sources may name and, when the case says so, the types the host enumerates.
+    internal void Configure(GesProgramBuilder builder)
+    {
+        builder.WithHandleTypes(Parse(_store.GetProperty("schemas")).HandleTypes);
+        var enumerable = _store.GetProperty("enumerable");
+        if (enumerable.ValueKind == JsonValueKind.Array) builder.WithEnumerableHandleTypes(enumerable.EnumerateArray().Select(name => name.GetString()!));
+    }
 
     // Registers a fresh scripted resolver for every selected type of the host store.
     internal void Register(GesHostBuilder builder)
@@ -60,9 +74,24 @@ internal sealed class AdapterHandles
         foreach (var answer in _store.GetProperty("refAnswers").EnumerateArray())
             refAnswers[GesHandle.Parse(answer.GetProperty("ref").GetString()!).ToString()] = answer;
 
-        var resolver = new ScriptedResolver(answers, refAnswers);
-        foreach (var type in Parse(_store.GetProperty("hostSchemas")).HandleTypes)
-            if (selected is null || selected.Contains(type.Name)) builder.WithHandleResolver(type, resolver);
+        var lists = new Dictionary<(string Type, GesHandle? Root), GesHandle[]>();
+        foreach (var listing in _store.GetProperty("lists").EnumerateArray())
+        {
+            var root = listing.GetProperty("root").ValueKind == JsonValueKind.Null ? null : GesHandle.Parse(listing.GetProperty("root").GetString()!);
+            lists.Add((listing.GetProperty("type").GetString()!, root), listing.GetProperty("handles").EnumerateArray().Select(handle => GesHandle.Parse(handle.GetString()!)).ToArray());
+        }
+
+        // A store read from the case's files answers for its own type in place of the scripted resolver.
+        var set = Parse(_store.GetProperty("hostSchemas"));
+        var stores = _store.GetProperty("stores").ValueKind == JsonValueKind.Object
+            ? SchemaApiObservations.ReadStores(set, _store.GetProperty("stores")).ToDictionary(store => store.Type.Name, StringComparer.Ordinal)
+            : new Dictionary<string, GesStore>(StringComparer.Ordinal);
+        var calls = new Dictionary<GesHandle, int>();
+        foreach (var type in set.HandleTypes)
+        {
+            if (stores.TryGetValue(type.Name, out var store)) builder.WithHandleResolver(type, store);
+            else if (selected is null || selected.Contains(type.Name)) builder.WithHandleResolver(type, new ScriptedResolver(type.Name, answers, refAnswers, lists, calls));
+        }
     }
 
     // Resolves each scripted ref through the started host, in order: the returned handle or Nothing, or the failure.
@@ -96,17 +125,24 @@ internal sealed class AdapterHandles
         foreach (var name in allowed) _ = element.GetProperty(name);
     }
 
-    // Answers each object's reads in the authored order; the last answer repeats, and an object without one fails.
-    private sealed class ScriptedResolver(Dictionary<GesHandle, List<JsonElement>> answers, Dictionary<string, JsonElement> refAnswers) : IGesHandleResolver
+    // Answers each object's reads in the authored order; the last answer repeats, and an object without one fails. The
+    // resolvers of all types share the answers and the read counts; each lists its own type's scripted handles.
+    private sealed class ScriptedResolver(
+        string type,
+        Dictionary<GesHandle, List<JsonElement>> answers,
+        Dictionary<string, JsonElement> refAnswers,
+        Dictionary<(string Type, GesHandle? Root), GesHandle[]> lists,
+        Dictionary<GesHandle, int> calls) : IGesHandleResolver
     {
-        private readonly Dictionary<GesHandle, int> _calls = new();
+        /// <summary>Lists the case's scripted handles of this type, or of one root's parts; without a listing the type does not enumerate.</summary>
+        public IReadOnlyList<GesHandle>? Handles(GesHandle? root) => lists.TryGetValue((type, root), out var handles) ? handles : null;
 
         /// <summary>Answers one state read from the case's scripted answers.</summary>
         public void Resolve(GesHandleResolveCall call)
         {
             if (!answers.TryGetValue(call.Handle, out var list)) throw new InvalidOperationException("The case has no answer for " + call.Handle + ".");
-            _calls.TryGetValue(call.Handle, out var count);
-            _calls[call.Handle] = count + 1;
+            calls.TryGetValue(call.Handle, out var count);
+            calls[call.Handle] = count + 1;
             var answer = list[Math.Min(count, list.Count - 1)];
             var version = answer.GetProperty("version");
             var passed = version.ValueKind == JsonValueKind.Null ? (GesValue?)null : RuntimeValues.Decode(version);

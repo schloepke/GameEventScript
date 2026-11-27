@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+import GameEventScriptCompiler
 import GameEventScriptRuntime
 
 // The per-case handle setup: the handle types the compiler and the host know, and the scripted resolver answers
@@ -13,7 +14,7 @@ struct AdapterHandles {
     static func from(_ test: Input) -> AdapterHandles? { test["handles"].map(AdapterHandles.init) }
 
     static func validate(_ store: Input) throws {
-        try Validation.fields(store, ["schemas", "hostSchemas", "resolvers", "answers", "refAnswers", "resolveRefs"])
+        try Validation.fields(store, ["schemas", "hostSchemas", "resolvers", "answers", "refAnswers", "resolveRefs", "stores", "lists", "enumerable"])
         _ = try parse(store.required("schemas"))
         _ = try parse(store.required("hostSchemas"))
         let resolvers = try store.required("resolvers")
@@ -29,10 +30,23 @@ struct AdapterHandles {
             try Validation.require(["version", "missing", "fail"].contains(try answer.text("answer")))
         }
         for reference in try Validation.strings(store.required("resolveRefs")) { _ = try GesHandle(parsing: reference) }
+        for listing in try Validation.array(store.required("lists")) {
+            try Validation.fields(listing, ["type", "root", "handles"])
+            if try listing.required("root") != .null { _ = try GesHandle(parsing: listing.text("root")) }
+            for handle in try Validation.strings(listing.required("handles")) { _ = try GesHandle(parsing: handle) }
+        }
+        let enumerable = try store.required("enumerable")
+        if enumerable != .null { _ = try Validation.strings(enumerable) }
+        let stores = try store.required("stores")
+        try Validation.require(stores == .null || stores.objectValue != nil)
     }
 
-    // The handle types the sources may name.
-    func compilerTypes() throws -> [GesHandleType] { try Self.parse(store.required("schemas")).handleTypes }
+    // Gives the compiler the handle types the sources may name and, when the case says so, the types the host enumerates.
+    func configure(_ builder: GesProgramBuilder) throws {
+        builder.withHandleTypes(try Self.parse(store.required("schemas")).handleTypes)
+        let enumerable = try store.required("enumerable")
+        if enumerable != .null { builder.withEnumerableHandleTypes(try Validation.strings(enumerable)) }
+    }
 
     // Registers a fresh scripted resolver for every selected type of the host store.
     func register(_ builder: GesHostBuilder) throws {
@@ -43,8 +57,24 @@ struct AdapterHandles {
         // A ref is part of the text form but not of handle equality, so ref answers are found by text.
         var refAnswers: [String: Input] = [:]
         for answer in try Validation.array(store.required("refAnswers")) { refAnswers[String(describing: try GesHandle(parsing: answer.text("ref")))] = answer }
-        let resolver = ScriptedResolver(answers, refAnswers)
-        for type in try Self.parse(store.required("hostSchemas")).handleTypes where selected?.contains(type.name) ?? true { builder.withHandleResolver(resolver, for: type) }
+        var lists: [StoreListKey: [GesHandle]] = [:]
+        for listing in try Validation.array(store.required("lists")) {
+            let root = try listing.required("root") == .null ? nil : try GesHandle(parsing: listing.text("root"))
+            lists[StoreListKey(type: try listing.text("type"), root: root)] = try Validation.strings(listing.required("handles")).map { try GesHandle(parsing: $0) }
+        }
+        // A store read from the case's files answers for its own type in place of the scripted resolver.
+        let set = try Self.parse(store.required("hostSchemas"))
+        let storesInput = try store.required("stores")
+        var stores: [String: GesStore] = [:]
+        if storesInput != .null { for read in try SchemaApiObservations.readStores(set, storesInput) { stores[read.type.name] = read } }
+        let shared = ScriptedAnswers(answers, refAnswers, lists)
+        for type in set.handleTypes {
+            if let read = stores[type.name] {
+                builder.withHandleResolver(read, for: type)
+            } else if selected?.contains(type.name) ?? true {
+                builder.withHandleResolver(ScriptedResolver(type.name, shared), for: type)
+            }
+        }
     }
 
     // Resolves each scripted ref through the started host, in order: the returned handle or Nothing, or the failure.
@@ -68,22 +98,44 @@ private struct ScriptedResolverError: Error, CustomStringConvertible {
     let description: String
 }
 
-// Answers each object's reads in the authored order; the last answer repeats, and an object without one fails.
-private final class ScriptedResolver: GesHandleResolver {
-    private let answers: [GesHandle: [Input]]
-    private let refAnswers: [String: Input]
-    private var calls: [GesHandle: Int] = [:]
+private struct StoreListKey: Hashable {
+    let type: String
+    let root: GesHandle?
+}
 
-    init(_ answers: [GesHandle: [Input]], _ refAnswers: [String: Input]) {
+// The case's answers, listings and read counts, which the resolvers of all types share.
+private final class ScriptedAnswers {
+    let answers: [GesHandle: [Input]]
+    let refAnswers: [String: Input]
+    let lists: [StoreListKey: [GesHandle]]
+    var calls: [GesHandle: Int] = [:]
+
+    init(_ answers: [GesHandle: [Input]], _ refAnswers: [String: Input], _ lists: [StoreListKey: [GesHandle]]) {
         self.answers = answers
         self.refAnswers = refAnswers
+        self.lists = lists
     }
+}
+
+// Answers each object's reads in the authored order; the last answer repeats, and an object without one fails. Each
+// resolver lists its own type's scripted handles.
+private final class ScriptedResolver: GesHandleResolver {
+    private let type: String
+    private let shared: ScriptedAnswers
+
+    init(_ type: String, _ shared: ScriptedAnswers) {
+        self.type = type
+        self.shared = shared
+    }
+
+    // Lists the case's scripted handles of this type, or of one root's parts; without a listing the type does not enumerate.
+    func handles(root: GesHandle?) throws -> [GesHandle]? { shared.lists[StoreListKey(type: type, root: root)] }
 
     func resolve(_ call: GesHandleResolveCall) throws {
         let handle = call.handle
-        guard let list = answers[handle] else { throw ScriptedResolverError(description: "The case has no answer for \(handle).") }
-        let count = calls[handle] ?? 0
-        calls[handle] = count + 1
+        guard let list = shared.answers[handle] else { throw ScriptedResolverError(description: "The case has no answer for \(handle).") }
+        let count = shared.calls[handle] ?? 0
+        shared.calls[handle] = count + 1
         let answer = list[min(count, list.count - 1)]
         let version = try answer.required("version")
         let passed = version == .null ? GesValue.nothing : try RuntimeValues.decode(version)
@@ -104,7 +156,7 @@ private final class ScriptedResolver: GesHandleResolver {
 
     // Answers a ref from the case's scripted ref answers; a ref without one fails.
     func resolveRef(_ handle: GesHandle) throws -> GesValue {
-        guard let answer = refAnswers[String(describing: handle)], try answer.text("answer") != "fail" else { throw ScriptedResolverError(description: "The case's resolver fails for \(handle).") }
+        guard let answer = shared.refAnswers[String(describing: handle)], try answer.text("answer") != "fail" else { throw ScriptedResolverError(description: "The case's resolver fails for \(handle).") }
         return try answer.text("answer") == "missing" ? .nothing : RuntimeValues.decode(answer.required("version"))
     }
 }
